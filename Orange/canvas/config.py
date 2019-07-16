@@ -158,10 +158,9 @@ def init():
 
 def data_dir():
     """
-    Return the application data directory. If the directory path
+    Return the Orange application data directory. If the directory path
     does not yet exists then create it.
     """
-
     from Orange.misc import environ
     path = os.path.join(environ.data_dir(), "canvas")
     try:
@@ -172,9 +171,9 @@ def data_dir():
 
 
 def cache_dir():
-    """Return the application cache directory. If the directory path
+    """
+    Return the Orange application cache directory. If the directory path
     does not yet exists then create it.
-
     """
     from Orange.misc import environ
     path = os.path.join(environ.cache_dir(), "canvas")
