@@ -61,8 +61,13 @@ class SOM:
                 break
 
     def winners(self, x):
+        return self.winner_from_weights(
+            x, self.weights, self.ssum_weights, self.hexagonal)
+
+    @staticmethod
+    def winner_from_weights(x, weights, ssum_weights, hexagonal):
         if sp.issparse(x):
             return _som.get_winners_sparse(
-                self.weights, self.ssum_weights, x, int(self.hexagonal))
+                weights, ssum_weights, x, int(hexagonal))
         else:
-            return _som.get_winners(self.weights, x, int(self.hexagonal))
+            return _som.get_winners(weights, x, int(hexagonal))

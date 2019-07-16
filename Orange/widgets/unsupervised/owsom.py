@@ -585,7 +585,7 @@ class OWSOM(OWWidget):
             return
 
         class Optimizer(QObject):
-            update = Signal(float, SOM)
+            update = Signal(float, np.ndarray, np.ndarray)
             done = Signal(SOM)
             stopped = Signal()
 
@@ -600,7 +600,9 @@ class OWSOM(OWWidget):
                 self.widget = widget
 
             def callback(self, progress):
-                self.update.emit(progress, self.som)
+                self.update.emit(
+                    progress,
+                    self.som.weights.copy(), self.som.ssum_weights.copy())
                 return not self.widget.stop_optimization
 
             def run(self):
@@ -612,17 +614,15 @@ class OWSOM(OWWidget):
                     self.done.emit(self.som)
                     self.stopped.emit()
 
-        def update(_progress, som):
-            from AnyQt.QtWidgets import qApp
+        def update(_progress, weights, ssum_weights):
             progressbar.advance()
-            qApp.processEvents()  # This is apparently needed to advance the bar
-            self._assign_instances(som)
+            self._assign_instances(weights, ssum_weights)
             self._redraw()
 
         def done(som):
             self.set_buttons(running=False)
             progressbar.finish()
-            self._assign_instances(som)
+            self._assign_instances(som.weights, som.ssum_weights)
             self._redraw()
             # This is the first time we know what was selected (assuming that
             # initialization is not set to random)
@@ -664,10 +664,11 @@ class OWSOM(OWWidget):
         self.restart_button.setText("Stop" if running else "Restart")
         self.grid_box.setDisabled(running)
 
-    def _assign_instances(self, som):
+    def _assign_instances(self, weights, ssum_weights):
         if self.cont_x is None:
             return  # the widget is shutting down while signals still processed
-        assignments = som.winners(self.cont_x)
+        assignments = SOM.winner_from_weights(
+            self.cont_x, weights, ssum_weights, self.hexagonal)
         members = defaultdict(list)
         for i, (x, y) in enumerate(assignments):
             members[(x, y)].append(i)
