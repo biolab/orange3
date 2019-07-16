@@ -352,10 +352,10 @@ class OWSOM(OWWidget):
             self.size_y = int(5 * np.round(self.size_y / 5))
         self.rescale()
         self.redraw_grid()
+        self.set_legend_pos()
 
     def on_manual_dimension_change(self):
         self.recompute_dimensions()
-        self.set_legend_pos()
         self.replot()
 
     def on_geometry_change(self):
