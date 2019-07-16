@@ -19,18 +19,20 @@ class SOM:
                   else np.random.RandomState(self.random_seed))
         self.weights = random.rand(self.dim_y, self.dim_x, x.shape[1])
         norms = np.sum(self.weights ** 2, axis=2)
+        norms[norms == 0] = 1
         self.weights /= norms[:, :, None]
         self.ssum_weights = np.ones((self.dim_y, self.dim_x))
 
     def init_weights_pca(self, x):
         pc_length, pc = np.linalg.eig(np.cov(x.T))
         c0, c1, *_ = np.argsort(pc_length)
-        pc0, pc1 = pc[c0], pc[c1]
+        pc0, pc1 = np.real(pc[c0]), np.real(pc[c1])
         self.weights = np.empty((self.dim_y, self.dim_x, x.shape[1]))
         for i, c1 in enumerate(np.linspace(-1, 1, self.dim_y)):
             for j, c2 in enumerate(np.linspace(-1, 1, self.dim_x)):
                 self.weights[i, j] = c1 * pc0 + c2 * pc1
         norms = np.sum(self.weights ** 2, axis=2)
+        norms[norms == 0] = 1
         self.weights /= norms[:, :, None]
         self.ssum_weights = np.ones((self.dim_y, self.dim_x))
 

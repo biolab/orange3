@@ -3,8 +3,7 @@ from collections import defaultdict
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal, QObject, \
-    QThread
+from AnyQt.QtCore import Qt, QRectF, pyqtSignal as Signal, QObject, QThread
 from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, \
     QPainterPath, QKeyEvent
 from AnyQt.QtWidgets import \
@@ -37,10 +36,10 @@ class SomView(QGraphicsView):
     SelectionSet = SelectionClear | SelectionAdd
     selection_changed = Signal(set, int)
     selection_moved = Signal(QKeyEvent)
+    selection_mark_changed = Signal(set)
 
-    def __init__(self, scene, selection_rect):
+    def __init__(self, scene):
         super().__init__(scene)
-        self.__selectionRect = selection_rect
         self.__button_down_pos = None
         self.size_x = self.size_y = 1
         self.hexagonal = True
@@ -50,22 +49,39 @@ class SomView(QGraphicsView):
         self.size_y = size_y
         self.hexagonal = hexagonal
 
-    def _selection_corners(self, event):
-        def item_coordinates(x, y):
-            if self.hexagonal:
-                return x, y
-            else:
-                return (int(np.clip(np.round(x), 0, self.size_x - 1)),
-                        int(np.clip(np.round(y), 0, self.size_y - 1)))
-
+    def _get_marked_cells(self, event):
         x0, y0 = self.__button_down_pos.x(), self.__button_down_pos.y()
         pos = self.mapToScene(event.pos())
         x1, y1 = pos.x(), pos.y()
         x0, x1 = sorted((x0, x1))
         y0, y1 = sorted((y0, y1))
-        outside = x1 < -0.5 or x0 > self.size_x + 0.5 \
-            or y1 < -0.5 or y0 > self.size_y + 0.5
-        return item_coordinates(x0, y0), item_coordinates(x1, y1), outside
+
+        if self.hexagonal:
+            y0 = max(0, int(y0 / sqrt3_2 + 0.5))
+            y1 = min(self.size_y, int(np.ceil(y1 / sqrt3_2 + 0.5)))
+            selection = set()
+            for y in range(y0, y1):
+                x0_ = max(0, int(x0 + 0.5 - (y % 2) / 2))
+                x1_ = min(self.size_x - y % 2,
+                          int(np.ceil(x1 + 0.5 - (y % 2) / 2)))
+                selection |= {(x, y) for x in range(x0_, x1_)}
+            return selection
+
+        else:
+            def roundclip(z, zmax):
+                return int(np.clip(np.round(z), 0, zmax - 1))\
+
+            if x1 < -0.5 or x0 > self.size_x - 0.5 \
+                    or y1 < -0.5 or y0 > self.size_y - 0.5:
+                return set()
+
+            x0 = roundclip(x0, self.size_x)
+            y0 = roundclip(y0, self.size_y)
+            x1 = roundclip(x1, self.size_x)
+            y1 = roundclip(y1, self.size_y)
+            return {(x, y)
+                    for x in range(x0, x1 + 1)
+                    for y in range(y0, y1 + 1)}
 
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
@@ -78,34 +94,12 @@ class SomView(QGraphicsView):
         if event.buttons() != Qt.LeftButton:
             return
 
-        (x0, y0), (x1, y1), _ = self._selection_corners(event)
-        d = 0 if self.hexagonal else 0.5
-        rect = QRectF(QPointF(x0 - d, y0 - d),
-                      QPointF(x1 + d, y1 + d)).normalized()
-        self.__selectionRect.setRect(rect)
-        self.__selectionRect.show()
+        self.selection_mark_changed.emit(self._get_marked_cells(event))
         event.accept()
 
     def mouseReleaseEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
-
-        self.__selectionRect.hide()
-        (x0, y0), (x1, y1), outside = self._selection_corners(event)
-        if outside:
-            selection = set()
-        elif self.hexagonal:
-            y0 = max(0, int(y0 / sqrt3_2 + 0.5))
-            y1 = min(self.size_y, int(np.ceil(y1 / sqrt3_2 + 0.5)))
-            selection = set()
-            for y in range(y0, y1):
-                x0_ = max(0, int(x0 + 0.5 - (y % 2) / 2))
-                x1_ = min(self.size_x - y % 2,
-                          int(np.ceil(x1 + 0.5 - (y % 2) / 2)))
-                selection |= {(x, y) for x in range(x0_, x1_)}
-        else:
-            selection = {(x, y) for x in range(x0, x1 + 1)
-                         for y in range(y0, y1 + 1)}
 
         if event.modifiers() & Qt.ControlModifier:
             action = self.SelectionToggle
@@ -115,7 +109,7 @@ class SomView(QGraphicsView):
             action = self.SelectionAdd
         else:
             action = self.SelectionClear | self.SelectionAdd
-
+        selection = self._get_marked_cells(event)
         self.selection_changed.emit(selection, action)
         event.accept()
 
@@ -252,17 +246,7 @@ class OWSOM(OWWidget):
 
         self.scene = QGraphicsScene(self)
 
-        selection_rect = self.selection_rect = QGraphicsRectItem()
-        pen = QPen(QBrush(Qt.blue), 6)
-        pen.setCosmetic(True)
-        brush = QBrush(QColor(Qt.blue).lighter(190))
-        selection_rect.setPen(pen)
-        selection_rect.setBrush(brush)
-        selection_rect.setZValue(-100)
-        self.scene.addItem(selection_rect)
-        selection_rect.hide()
-
-        self.view = SomView(self.scene, selection_rect)
+        self.view = SomView(self.scene)
         self.view.setMinimumWidth(400)
         self.view.setMinimumHeight(400)
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -270,6 +254,7 @@ class OWSOM(OWWidget):
         self.view.setRenderHint(QPainter.Antialiasing)
         self.view.selection_changed.connect(self.on_selection_change)
         self.view.selection_moved.connect(self.on_selection_move)
+        self.view.selection_mark_changed.connect(self.on_selection_mark_change)
         self.mainArea.layout().addWidget(self.view)
 
         self.elements = None
@@ -311,13 +296,15 @@ class OWSOM(OWWidget):
                             self.data = data[mask]
                             self.cont_x = x[mask]
                         self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
-                        self.cont_x /= np.sum(self.cont_x, axis=0)[None, :]
+                        sums = np.sum(self.cont_x, axis=0)[None, :]
+                        sums[sums == 0] = 1
+                        self.cont_x /= sums
 
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
             self.attr_color = data.domain.class_var
-            self.openContext(data)
 
+        self.openContext(self.data)
         self.set_color_bins()
         self.create_legend()
         self.recompute_dimensions()
@@ -434,18 +421,27 @@ class OWSOM(OWWidget):
         if {(x, y)} != self.selection:
             self.on_selection_change({(x, y)})
 
-    def redraw_selection(self):
-        brushes = [QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))]
+    def on_selection_mark_change(self, marks):
+        self.redraw_selection(marks=marks)
+
+    def redraw_selection(self, marks=None):
+        mark_brush = QBrush(QColor(224, 255, 255))
+        brushes = [[QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))],
+                   [mark_brush, mark_brush]]
         sel_pen = QPen(QBrush(QColor(128, 128, 128)), 2)
         sel_pen.setCosmetic(True)
-        pens = [self._grid_pen, sel_pen]
+        mark_pen = QPen(QBrush(QColor(128, 128, 128)), 4)
+        mark_pen.setCosmetic(True)
+        pens = [[self._grid_pen, sel_pen],
+                [mark_pen, mark_pen]]
         for y in range(self.size_y):
             for x in range(self.size_x - (y % 2) * self.hexagonal):
                 cell = self.grid_cells[y, x]
                 selected = (x, y) in self.selection
-                cell.setBrush(brushes[selected])
-                cell.setPen(pens[selected])
-                cell.setZValue(selected)
+                marked = bool(marks) and (x, y) in marks
+                cell.setBrush(brushes[marked][selected])
+                cell.setPen(pens[marked][selected])
+                cell.setZValue(marked or selected)
 
     def replot(self):
         self.clear_selection()
@@ -566,6 +562,7 @@ class OWSOM(OWWidget):
         if self.grid is not None:
             self.scene.removeItem(self.grid)
         self.grid = QGraphicsItemGroup()
+        self.grid.setZValue(-200)
         self.grid_cells = np.full((self.size_y, self.size_x), None)
         for y in range(self.size_y):
             for x in range(self.size_x - (y % 2) * self.hexagonal):
@@ -607,9 +604,13 @@ class OWSOM(OWWidget):
                 return not self.widget.stop_optimization
 
             def run(self):
-                self.som.fit(self.data, N_ITERATIONS, callback=self.callback)
-                self.done.emit(self.som)
-                self.stopped.emit()
+                try:
+                    self.som.fit(self.data, N_ITERATIONS,
+                                 callback=self.callback)
+                    # Report an exception, but still remove the thread
+                finally:
+                    self.done.emit(self.som)
+                    self.stopped.emit()
 
         def update(_progress, som):
             from AnyQt.QtWidgets import qApp
