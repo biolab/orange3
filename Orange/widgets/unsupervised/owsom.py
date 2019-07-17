@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import numpy as np
 import scipy.sparse as sp
@@ -164,7 +164,7 @@ class OWSOM(OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     settingsHandler = DomainContextHandler()
-    manual_dimension = Setting(False)
+    auto_dimension = Setting(True)
     size_x = Setting(10)
     size_y = Setting(10)
     hexagonal = Setting(1)
@@ -179,6 +179,11 @@ class OWSOM(OWWidget):
 
     _grid_pen = QPen(QBrush(QColor(224, 224, 224)), 2)
     _grid_pen.setCosmetic(True)
+
+    OptControls = namedtuple(
+        "OptControls",
+        ("shape", "auto_dim", "spin_x", "spin_y", "initialization", "start")
+    )
 
     class Warning(OWWidget.Warning):
         ignoring_disc_variables = Msg("SOM ignores discrete variables.")
@@ -201,33 +206,37 @@ class OWSOM(OWWidget):
         self.selection = set()
         self.colors = self.thresholds = None
 
-        box = gui.vBox(self.controlArea, box=True)
-        hbox = gui.hBox(box)
-        self.restart_button = gui.button(
-            hbox, self, "Restart", callback=self.restart_som_pressed,
-            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
-        gui.radioButtons(
-            box, self, "initialization",
-            ("Initialize with PCA", "Random initialization",
-             "Replicable random"))
+        box = gui.vBox(self.controlArea, box="SOM")
+        shape = gui.comboBox(
+            box, self, "", items=("Hexagonal grid", "Square grid"))
+        shape.setCurrentIndex(1 - self.hexagonal)
 
-        self.grid_box = box = gui.vBox(self.controlArea, "Geometry")
-        gui.comboBox(
-            box, self, "hexagonal", items=("Square grid", "Hexagonal grid"),
-            callback=self.on_geometry_change)
         box2 = gui.indentedBox(box, 10)
-        gui.checkBox(
-            box2, self, "manual_dimension", "Set dimensions manually",
-            callback=self.on_manual_dimension_change)
+        auto_dim = gui.checkBox(
+            box2, self, "auto_dimension", "Set dimensions automatically",
+            callback=self.recompute_dimensions)
         self.manual_box = box3 = gui.hBox(box2)
         spinargs = dict(
-            widget=box3, master=self, minv=5, maxv=100, step=5,
-            alignment=Qt.AlignRight, callback=self.on_geometry_change)
-        gui.spin(value="size_x", **spinargs)
+            value="", widget=box3, master=self, minv=5, maxv=100, step=5,
+            alignment=Qt.AlignRight)
+        spin_x = gui.spin(**spinargs)
+        spin_x.setValue(self.size_x)
         gui.widgetLabel(box3, "×")
-        gui.spin(value="size_y", **spinargs)
-        self.manual_box.setDisabled(not self.manual_dimension)
+        spin_y = gui.spin(**spinargs)
+        spin_x.setValue(self.size_y)
         gui.rubber(box3)
+
+        initialization = gui.comboBox(
+            box, self, "initialization",
+            items=("Initialize with PCA", "Random initialization",
+             "Replicable random"))
+
+        start = gui.button(
+            box, self, "Restart", callback=self.restart_som_pressed,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+
+        self.opt_controls = self.OptControls(
+            shape, auto_dim, spin_x, spin_y, initialization, start)
 
         box = gui.vBox(self.controlArea, "Color")
         gui.comboBox(
@@ -261,7 +270,6 @@ class OWSOM(OWWidget):
         self.grid = None
         self.grid_cells = None
         self.legend = None
-        self.redraw_grid()
 
     @Inputs.data
     def set_data(self, data):
@@ -308,9 +316,8 @@ class OWSOM(OWWidget):
         self.set_color_bins()
         self.create_legend()
         self.recompute_dimensions()
-        self.replot()
         self._set_input_summary(data and len(data))
-        self.update_output()
+        self.start_som()
 
     def _set_input_summary(self, n_tot):
         if self.data is None:
@@ -343,29 +350,15 @@ class OWSOM(OWWidget):
         self.Error.clear()
 
     def recompute_dimensions(self):
-        self.manual_box.setEnabled(self.manual_dimension)
-        if not self.manual_dimension and self.cont_x is not None:
-            self.size_x = self.size_y = \
+        self.manual_box.setEnabled(not self.auto_dimension)
+        if not self.auto_dimension and self.cont_x is not None:
+            dimx = dimy = \
                 max(5, int(np.ceil(np.sqrt(5 * np.sqrt(self.cont_x.shape[0])))))
         else:
-            self.size_x = int(5 * np.round(self.size_x / 5))
-            self.size_y = int(5 * np.round(self.size_y / 5))
-        self.rescale()
-        self.redraw_grid()
-        self.set_legend_pos()
-
-    def on_manual_dimension_change(self):
-        self.recompute_dimensions()
-        self.replot()
-
-    def on_geometry_change(self):
-        self.set_legend_pos()
-        self.rescale()
-        if self.elements:  # Prevent having redrawn grid but with old elements
-            self.scene.removeItem(self.elements)
-            self.elements = None
-        self.redraw_grid()
-        self.replot()
+            dimx = int(5 * np.round(self.size_x / 5))
+            dimy = int(5 * np.round(self.size_y / 5))
+        self.opt_controls.spin_x.setValue(dimx)
+        self.opt_controls.spin_y.setValue(dimy)
 
     def on_attr_color_change(self):
         self.controls.pie_charts.setEnabled(self.attr_color is not None)
@@ -425,6 +418,8 @@ class OWSOM(OWWidget):
         self.redraw_selection(marks=marks)
 
     def redraw_selection(self, marks=None):
+        if self.grid_cells is None:
+            return
         mark_brush = QBrush(QColor(224, 255, 255))
         brushes = [[QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))],
                    [mark_brush, mark_brush]]
@@ -443,16 +438,38 @@ class OWSOM(OWWidget):
                 cell.setPen(pens[marked][selected])
                 cell.setZValue(marked or selected)
 
-    def replot(self):
-        self.clear_selection()
-        self._recompute_som()
-
     def restart_som_pressed(self):
         if self._optimizer_thread is not None:
             self.stop_optimization = True
         else:
+            self.start_som()
+
+    def start_som(self):
+            self.read_controls()
+            self.enable_controls(False)
+            self.update_layout()
             self.clear_selection()
             self._recompute_som()
+
+    def read_controls(self):
+        c = self.opt_controls
+        self.hexagonal = c.shape.currentIndex() == 0
+        self.size_x = c.spin_x.value()
+        self.size_y = c.spin_y.value()
+
+    def enable_controls(self, enable):
+        c = self.opt_controls
+        c.shape.setEnabled(enable)
+        c.auto_dim.setEnabled(enable)
+        c.start.setText("Start" if enable else "Stop")
+
+    def update_layout(self):
+        self.set_legend_pos()
+        if self.elements:  # Prevent having redrawn grid but with old elements
+            self.scene.removeItem(self.elements)
+            self.elements = None
+        self.redraw_grid()
+        self.rescale()
 
     def _redraw(self):
         self.Warning.missing_colors.clear()
@@ -620,7 +637,7 @@ class OWSOM(OWWidget):
             self._redraw()
 
         def done(som):
-            self.set_buttons(running=False)
+            self.enable_controls(True)
             progressbar.finish()
             self._assign_instances(som.weights, som.ssum_weights)
             self._redraw()
@@ -629,13 +646,13 @@ class OWSOM(OWWidget):
             if self.__pending_selection is not None:
                 self.on_selection_change(self.__pending_selection)
                 self.__pending_selection = None
+            self.update_output()
 
         def thread_finished():
             self._optimizer = None
             self._optimizer_thread = None
 
         progressbar = gui.ProgressBar(self, N_ITERATIONS)
-        self.set_buttons(running=True)
 
         self._optimizer = Optimizer(self.cont_x, self)
         self._optimizer_thread = QThread()
@@ -659,10 +676,6 @@ class OWSOM(OWWidget):
         self.stop_optimization_and_wait()
         self.clear()
         super().onDeleteWidget()
-
-    def set_buttons(self, running):
-        self.restart_button.setText("Stop" if running else "Restart")
-        self.grid_box.setDisabled(running)
 
     def _assign_instances(self, weights, ssum_weights):
         if self.cont_x is None:
