@@ -2,6 +2,8 @@
 Orange Canvas Configuration
 
 """
+import warnings
+
 import os
 import sys
 import itertools
@@ -15,7 +17,7 @@ import requests
 from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 from AnyQt.QtCore import Qt, QPoint, QRect
 
-from orangewidget.workflow import widgetsscheme, discovery, config
+from orangewidget.workflow import config
 
 import Orange
 
@@ -30,7 +32,7 @@ class Config(config.Config):
     Orange application configuration
     """
     OrganizationDomain = "biolab.si"
-    ApplicationName = "Orange Canvas"
+    ApplicationName = "Orange"
     ApplicationVersion = Orange.__version__
 
     @staticmethod
@@ -132,9 +134,6 @@ class Config(config.Config):
             pkg_resources.iter_entry_points("orange.widgets.tutorials")
         )
 
-    widget_discovery = discovery.WidgetDiscovery
-    workflow_constructor = widgetsscheme.WidgetsScheme
-
     APPLICATION_URLS = {
         #: Submit a bug report action in the Help menu
         "Bug Report": "https://github.com/biolab/orange3/issues",
@@ -159,10 +158,9 @@ def init():
 
 def data_dir():
     """
-    Return the application data directory. If the directory path
+    Return the Orange application data directory. If the directory path
     does not yet exists then create it.
     """
-
     from Orange.misc import environ
     path = os.path.join(environ.data_dir(), "canvas")
     try:
@@ -173,9 +171,9 @@ def data_dir():
 
 
 def cache_dir():
-    """Return the application cache directory. If the directory path
+    """
+    Return the Orange application cache directory. If the directory path
     does not yet exists then create it.
-
     """
     from Orange.misc import environ
     path = os.path.join(environ.cache_dir(), "canvas")
@@ -206,9 +204,15 @@ def log_dir():
 def widget_settings_dir():
     """
     Return the widget settings directory.
+
+    .. deprecated:: 3.23
     """
-    from Orange.misc import environ
-    return environ.widget_settings_dir()
+    warnings.warn(
+        f"'{__name__}.widget_settings_dir' is deprecated.",
+        DeprecationWarning, stacklevel=2
+    )
+    import orangewidget.settings
+    return orangewidget.settings.widget_settings_dir()
 
 
 def widgets_entry_points():
