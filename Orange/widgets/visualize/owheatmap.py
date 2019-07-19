@@ -30,6 +30,7 @@ from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical, kmeans
+from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -587,7 +588,7 @@ class OWHeatMap(widget.OWWidget):
         self.heatmap_scene.itemsBoundingRect()
         self.heatmap_scene.removeItem(item)
 
-        self.sceneView = QGraphicsView(
+        self.sceneView = StickyGraphicsView(
             self.scene,
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
@@ -646,6 +647,9 @@ class OWHeatMap(widget.OWWidget):
         self.col_dendrograms = []
         self.row_dendrograms = []
         self.selection_rects = []
+        self.sceneView.setSceneRect(QRectF())
+        self.sceneView.setHeaderSceneRect(QRectF())
+        self.sceneView.setFooterSceneRect(QRectF())
 
     @Inputs.data
     def set_dataset(self, data=None):
@@ -942,7 +946,7 @@ class OWHeatMap(widget.OWWidget):
         self.heatmap_scene.clear()
         # The top level container widget
         widget = GraphicsWidget()
-        widget.layoutDidActivate.connect(self.__update_selection_geometry)
+        widget.layoutDidActivate.connect(self.__on_layout_activate)
 
         grid = QGraphicsGridLayout()
         grid.setSpacing(self.space_x)
@@ -1210,8 +1214,41 @@ class OWHeatMap(widget.OWWidget):
 
     def __fixup_grid_layout(self):
         self.__update_margins()
+        self.__update_scene_rects()
+        self.__update_selection_geometry()
+
+    def __update_scene_rects(self):
         rect = self.scene.widget.geometry()
         self.heatmap_scene.setSceneRect(rect)
+
+        spacing = self.scene.widget.layout().rowSpacing(2)
+        headerrect = QRectF(rect)
+        headerrect.setBottom(
+            max((w.geometry().bottom()
+                 for w in (self.col_annotation_widgets_top +
+                           self.col_dendrograms)
+                 if w is not None and w.isVisible()),
+                default=rect.top())
+        )
+
+        if not headerrect.isEmpty():
+            headerrect = headerrect.adjusted(0, 0, 0, spacing / 2)
+
+        footerrect = QRectF(rect)
+        footerrect.setTop(
+            min((w.geometry().top() for w in self.col_annotation_widgets_bottom
+                 if w is not None and w.isVisible()),
+                default=rect.bottom())
+        )
+        if not footerrect.isEmpty():
+            footerrect = footerrect.adjusted(0, - spacing / 2, 0, 0)
+
+        self.sceneView.setSceneRect(rect)
+        self.sceneView.setHeaderSceneRect(headerrect)
+        self.sceneView.setFooterSceneRect(footerrect)
+
+    def __on_layout_activate(self):
+        self.__update_scene_rects()
         self.__update_selection_geometry()
 
     def __aspect_mode_changed(self):
