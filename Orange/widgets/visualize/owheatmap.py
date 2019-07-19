@@ -647,6 +647,9 @@ class OWHeatMap(widget.OWWidget):
         self.col_dendrograms = []
         self.row_dendrograms = []
         self.selection_rects = []
+        self.sceneView.setSceneRect(QRectF())
+        self.sceneView.setHeaderSceneRect(QRectF())
+        self.sceneView.setFooterSceneRect(QRectF())
 
     @Inputs.data
     def set_dataset(self, data=None):
