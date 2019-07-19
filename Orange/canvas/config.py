@@ -17,6 +17,7 @@ import requests
 from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 from AnyQt.QtCore import Qt, QPoint, QRect
 
+from orangecanvas import config as occonfig
 from orangewidget.workflow import config
 
 import Orange
@@ -26,6 +27,13 @@ OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
 
 WIDGETS_ENTRY = "orange.widgets"
 
+spec = [
+    ("startup/check-updates", bool, False, "Check for updates"),
+    ("error-reporting/machine-id", str, "", ""),
+    ("error-reporting/send-statistics", bool, False, ""),
+    ("error-reporting/permission-requested", bool, False, ""),
+]
+
 
 class Config(config.Config):
     """
@@ -34,6 +42,11 @@ class Config(config.Config):
     OrganizationDomain = "biolab.si"
     ApplicationName = "Orange"
     ApplicationVersion = Orange.__version__
+
+    def init(self):
+        super().init()
+        for t in spec:
+            occonfig.register_setting(*t)
 
     @staticmethod
     def application_icon():
