@@ -1029,6 +1029,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             ax.mousePressed.connect(self._activate_cut_line)
             ax.mouseMoved.connect(self._activate_cut_line)
             ax.mouseReleased.connect(self._activate_cut_line)
+            ax.setRange(1.0, 0.0)
             return ax
 
         self.top_axis = axis_view("top")
