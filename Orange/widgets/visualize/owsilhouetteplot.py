@@ -231,6 +231,9 @@ class OWSilhouettePlot(widget.OWWidget):
         # Clear the graphics scene and associated objects
         self.scene.clear()
         self.scene.setSceneRect(QRectF())
+        self.view.setSceneRect(QRectF())
+        self.view.setHeaderSceneRect(QRectF())
+        self.view.setFooterSceneRect(QRectF())
         self._silplot = None
 
     def _invalidate_distances(self):
