@@ -323,6 +323,7 @@ class DendrogramWidget(QGraphicsWidget):
         self._selection = OrderedDict()
         self._highlighted_item = None
         self._cluster_parent = {}
+        self.updateGeometry()
 
     def set_root(self, root):
         """Set the root cluster.
@@ -347,7 +348,7 @@ class DendrogramWidget(QGraphicsWidget):
 
             self._relayout()
             self._rescale()
-            self.updateGeometry()
+        self.updateGeometry()
 
     def item(self, node):
         """Return the DendrogramNode instance representing the cluster.
