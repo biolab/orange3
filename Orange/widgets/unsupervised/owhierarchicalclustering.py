@@ -1442,10 +1442,14 @@ class OWHierarchicalClustering(widget.OWWidget):
             rect = QRectF(rect)
             rect.setLeft(geom.left())
             return rect
-
+        margin = 3
         self.view.setSceneRect(geom)
-        self.view.setHeaderSceneRect(adjustLeft(self.top_axis.geometry()))
-        self.view.setFooterSceneRect(adjustLeft(self.bottom_axis.geometry()))
+        self.view.setHeaderSceneRect(
+            adjustLeft(self.top_axis.geometry()).adjusted(0, 0, 0, margin)
+        )
+        self.view.setFooterSceneRect(
+            adjustLeft(self.bottom_axis.geometry()).adjusted(0, -margin, 0, 0)
+        )
 
     def _dendrogram_slider_changed(self, value):
         p = QPointF(value, 0)
