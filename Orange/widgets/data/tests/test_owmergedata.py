@@ -98,8 +98,6 @@ class TestOWMergeData(WidgetTest):
 
         data_combo.setCurrentIndex(2)
         data_combo.activated.emit(2)
-        self.assertEqual(data_combo.currentIndex(), 2)
-        self.assertEqual(extra_combo.currentIndex(), 1)
 
         extra_combo.setCurrentIndex(0)
         extra_combo.activated.emit(0)
@@ -110,6 +108,82 @@ class TestOWMergeData(WidgetTest):
         extra_combo.activated.emit(1)
         self.assertEqual(data_combo.currentIndex(), 1)
         self.assertEqual(extra_combo.currentIndex(), 1)
+
+    def test_match_attr_name(self):
+        widget = self.widget
+        row = widget.attr_boxes.rows[0]
+        data_combo, extra_combo = row.left_combo, row.right_combo
+
+        domainA = Domain([DiscreteVariable("dA1", ("a", "b", "c", "d")),
+                          DiscreteVariable("dA2", ("aa", "bb")),
+                          DiscreteVariable("dA3", ("aa", "bb"))],
+                         DiscreteVariable("cls", ("aaa", "bbb", "ccc")),
+                         [DiscreteVariable("mA1", ("cc", "dd")),
+                          StringVariable("mA2")])
+        XA = np.array([[0, 0, 0], [1, 1, 0], [2, 0, 0], [3, 1, 0]])
+        yA = np.array([0, 1, 2, np.nan])
+        metasA = np.array([[0.0, "m1"], [1.0, "m2"], [np.nan, "m3"],
+                           [0.0, "m4"]]).astype(object)
+
+        domainB = Domain([DiscreteVariable("dB1", values=("a", "b", "c")),
+                          ContinuousVariable("dA2")],
+                         None,
+                         [StringVariable("cls"),
+                          DiscreteVariable("dA1", ("m4", "m5"))])
+        XB = np.array([[0, 0], [1, 1], [2, np.nan]])
+        yB = np.empty((3, 0))
+        metasB = np.array([[np.nan, np.nan], [1, 1], [0, 0]]).astype(object)
+        dataA = Table(domainA, XA, yA, metasA)
+        dataA.name = 'dataA'
+        dataA.attributes = 'dataA attributes'
+        dataB = Table(domainB, XB, yB, metasB)
+        dataB.name = 'dataB'
+        dataB.attributes = 'dataB attributes'
+
+        self.send_signal(widget.Inputs.data, dataA)
+        self.send_signal(widget.Inputs.extra_data, dataB)
+
+        # match variable if available and the other combo is Row Index
+        extra_combo.setCurrentIndex(0)
+        extra_combo.activated.emit(0)
+        data_combo.setCurrentIndex(2)
+        data_combo.activated.emit(2)
+        self.assertEqual(extra_combo.currentIndex(), 5)
+
+        # match variable if available and the other combo is ID
+        extra_combo.setCurrentIndex(1)
+        extra_combo.activated.emit(1)
+        data_combo.setCurrentIndex(2)
+        data_combo.activated.emit(2)
+        self.assertEqual(extra_combo.currentIndex(), 5)
+
+        # don't match variable if other combo is set
+        extra_combo.setCurrentIndex(4)
+        extra_combo.activated.emit(4)
+        data_combo.setCurrentIndex(2)
+        data_combo.activated.emit(2)
+        self.assertEqual(extra_combo.currentIndex(), 4)
+
+        # don't match if nothing to match to
+        extra_combo.setCurrentIndex(0)
+        extra_combo.activated.emit(0)
+        data_combo.setCurrentIndex(4)
+        data_combo.activated.emit(4)
+        self.assertEqual(extra_combo.currentIndex(), 0)
+
+        # don't match numeric with non-numeric
+        extra_combo.setCurrentIndex(0)
+        extra_combo.activated.emit(0)
+        data_combo.setCurrentIndex(3)
+        data_combo.activated.emit(3)
+        self.assertEqual(extra_combo.currentIndex(), 0)
+
+        # allow matching string with discrete
+        extra_combo.setCurrentIndex(0)
+        extra_combo.activated.emit(0)
+        data_combo.setCurrentIndex(5)
+        data_combo.activated.emit(5)
+        self.assertEqual(extra_combo.currentIndex(), 4)
 
     def test_add_row_button(self):
         boxes = self.widget.attr_boxes
@@ -725,3 +799,7 @@ class TestOWMergeData(WidgetTest):
         self.assertFalse(widget.Error.matching_id_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_index_with_sth.is_shown())
         self.assertTrue(widget.Error.matching_numeric_with_nonnum.is_shown())
+
+
+if __name__ == "__main__":
+    unittest.main()

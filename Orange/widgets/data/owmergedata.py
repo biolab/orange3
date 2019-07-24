@@ -45,11 +45,26 @@ class ConditionBox(QWidget):
             combo = self.sender()
             index = combo.currentIndex()
             model = combo.model()
-            if 0 <= index < len(combo.model()) \
-                    and isinstance(model[index], str):
-                other = ({row_items.left_combo, row_items.right_combo}
-                         - {combo}).pop()
-                other.setCurrentText(model[index])
+
+            other = ({row_items.left_combo, row_items.right_combo}
+                     - {combo}).pop()
+            other_index = other.currentIndex()
+            other_model = other.model()
+
+            if 0 <= index < len(combo.model()):
+                var = model[index]
+                if isinstance(var, str):
+                    other.setCurrentText(model[index])
+                elif isinstance(other_model[other_index], str):
+                    for other_var in other_model:
+                        if isinstance(other_var, Variable) \
+                                and var.name == other_var.name \
+                                and (type(other_var) is type(var)
+                                     or (not var.is_continuous
+                                         and not other_var.is_continuous)):
+                            other.setCurrentText(var.name)
+                            break
+
             self.emit_list()
 
         def get_combo(model):
