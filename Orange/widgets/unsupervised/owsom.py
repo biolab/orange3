@@ -22,8 +22,9 @@ from Orange.widgets.settings import \
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.annotated_data import \
-    create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
-from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
+    create_annotated_table, create_groups_table, ANNOTATED_DATA_SIGNAL_NAME
+from Orange.widgets.utils.colorpalette import \
+    ContinuousPaletteGenerator, ColorPaletteGenerator
 from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
 from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 
@@ -32,11 +33,11 @@ sqrt3_2 = np.sqrt(3) / 2
 
 
 class SomView(QGraphicsView):
-    SelectionClear, SelectionAdd, SelectionRemove, SelectionToggle = 1, 2, 4, 8
-    SelectionSet = SelectionClear | SelectionAdd
-    selection_changed = Signal(set, int)
+    SelectionSet, SelectionNewGroup, SelectionAddToGroup, SelectionRemove \
+        = range(4)
+    selection_changed = Signal(np.ndarray, int)
     selection_moved = Signal(QKeyEvent)
-    selection_mark_changed = Signal(set)
+    selection_mark_changed = Signal(np.ndarray)
 
     def __init__(self, scene):
         super().__init__(scene)
@@ -56,32 +57,28 @@ class SomView(QGraphicsView):
         x0, x1 = sorted((x0, x1))
         y0, y1 = sorted((y0, y1))
 
+        selection = np.zeros((self.size_x, self.size_y), dtype=bool)
         if self.hexagonal:
             y0 = max(0, int(y0 / sqrt3_2 + 0.5))
             y1 = min(self.size_y, int(np.ceil(y1 / sqrt3_2 + 0.5)))
-            selection = set()
             for y in range(y0, y1):
                 x0_ = max(0, int(x0 + 0.5 - (y % 2) / 2))
                 x1_ = min(self.size_x - y % 2,
                           int(np.ceil(x1 + 0.5 - (y % 2) / 2)))
-                selection |= {(x, y) for x in range(x0_, x1_)}
-            return selection
+                selection[x0_:x1_, y] = True
+        elif not(x1 < -0.5 or x0 > self.size_x - 0.5
+                 or y1 < -0.5 or y0 > self.size_y - 0.5):
 
-        else:
             def roundclip(z, zmax):
                 return int(np.clip(np.round(z), 0, zmax - 1))\
-
-            if x1 < -0.5 or x0 > self.size_x - 0.5 \
-                    or y1 < -0.5 or y0 > self.size_y - 0.5:
-                return set()
 
             x0 = roundclip(x0, self.size_x)
             y0 = roundclip(y0, self.size_y)
             x1 = roundclip(x1, self.size_x)
             y1 = roundclip(y1, self.size_y)
-            return {(x, y)
-                    for x in range(x0, x1 + 1)
-                    for y in range(y0, y1 + 1)}
+            selection[x0:x1 + 1, y0:y1 + 1] = True
+
+        return selection
 
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
@@ -101,14 +98,15 @@ class SomView(QGraphicsView):
         if event.button() != Qt.LeftButton:
             return
 
-        if event.modifiers() & Qt.ControlModifier:
-            action = self.SelectionToggle
+        if event.modifiers() & Qt.ShiftModifier:
+            if event.modifiers() & Qt.ControlModifier:
+                action = self.SelectionAddToGroup
+            else:
+                action = self.SelectionNewGroup
         elif event.modifiers() & Qt.AltModifier:
             action = self.SelectionRemove
-        elif event.modifiers() & Qt.ShiftModifier:
-            action = self.SelectionAdd
         else:
-            action = self.SelectionClear | self.SelectionAdd
+            action = self.SelectionSet
         selection = self._get_marked_cells(event)
         self.selection_changed.emit(selection, action)
         event.accept()
@@ -151,7 +149,7 @@ N_ITERATIONS = 200
 
 
 class OWSOM(OWWidget):
-    name = "Self-organizing Map"
+    name = "Self-Organizing Map"
     description = "Computation of self-organizing map."
     icon = "icons/SOM.svg"
     keywords = ["SOM"]
@@ -173,7 +171,7 @@ class OWSOM(OWWidget):
     attr_color = ContextSetting(None)
     size_by_instances = Setting(True)
     pie_charts = Setting(False)
-    selection = Setting(set(), schema_only=True)
+    selection = Setting(None, schema_only=True)
 
     graph_name = "view"
 
@@ -203,7 +201,7 @@ class OWSOM(OWWidget):
 
         self.data = self.cont_x = None
         self.cells = self.member_data = None
-        self.selection = set()
+        self.selection = None
         self.colors = self.thresholds = None
 
         box = gui.vBox(self.controlArea, box="SOM")
@@ -214,7 +212,7 @@ class OWSOM(OWWidget):
         box2 = gui.indentedBox(box, 10)
         auto_dim = gui.checkBox(
             box2, self, "auto_dimension", "Set dimensions automatically",
-            callback=self.recompute_dimensions)
+            callback=self.on_auto_dimension_changed)
         self.manual_box = box3 = gui.hBox(box2)
         spinargs = dict(
             value="", widget=box3, master=self, minv=5, maxv=100, step=5,
@@ -225,11 +223,12 @@ class OWSOM(OWWidget):
         spin_y = gui.spin(**spinargs)
         spin_x.setValue(self.size_y)
         gui.rubber(box3)
+        self.manual_box.setEnabled(not self.auto_dimension)
 
         initialization = gui.comboBox(
             box, self, "initialization",
             items=("Initialize with PCA", "Random initialization",
-             "Replicable random"))
+                   "Replicable random"))
 
         start = gui.button(
             box, self, "Restart", callback=self.restart_som_pressed,
@@ -299,7 +298,7 @@ class OWSOM(OWWidget):
                     else:
                         if np.all(mask):
                             self.data = data
-                            self.cont_x = x
+                            self.cont_x = x.copy()
                         else:
                             self.data = data[mask]
                             self.cont_x = x[mask]
@@ -350,15 +349,23 @@ class OWSOM(OWWidget):
         self.Error.clear()
 
     def recompute_dimensions(self):
+        if not self.auto_dimension or self.cont_x is None:
+            return
+        dim = max(5, int(np.ceil(np.sqrt(5 * np.sqrt(self.cont_x.shape[0])))))
+        self.opt_controls.spin_x.setValue(dim)
+        self.opt_controls.spin_y.setValue(dim)
+
+    def on_auto_dimension_changed(self):
         self.manual_box.setEnabled(not self.auto_dimension)
-        if not self.auto_dimension and self.cont_x is not None:
-            dimx = dimy = \
-                max(5, int(np.ceil(np.sqrt(5 * np.sqrt(self.cont_x.shape[0])))))
+        if self.auto_dimension:
+            self.recompute_dimensions()
         else:
-            dimx = int(5 * np.round(self.size_x / 5))
-            dimy = int(5 * np.round(self.size_y / 5))
-        self.opt_controls.spin_x.setValue(dimx)
-        self.opt_controls.spin_y.setValue(dimy)
+            spin_x = self.opt_controls.spin_x
+            spin_y = self.opt_controls.spin_y
+            dimx = int(5 * np.round(spin_x.value() / 5))
+            dimy = int(5 * np.round(spin_y.value() / 5))
+            spin_x.setValue(dimx)
+            spin_y.setValue(dimy)
 
     def on_attr_color_change(self):
         self.controls.pie_charts.setEnabled(self.attr_color is not None)
@@ -374,33 +381,35 @@ class OWSOM(OWWidget):
         self._redraw()
 
     def clear_selection(self):
-        self.selection.clear()
+        self.selection = None
         self.redraw_selection()
 
     def on_selection_change(self, selection, action=SomView.SelectionSet):
-        if action & SomView.SelectionClear:
-            self.selection.clear()
-        if action & SomView.SelectionAdd:
-            self.selection |= selection
+        if self.selection is None:
+            self.selection = np.zeros(self.grid_cells.T.shape, dtype=np.int16)
+        if action == SomView.SelectionSet:
+            self.selection[:] = 0
+            self.selection[selection] = 1
+        elif action == SomView.SelectionAddToGroup:
+            self.selection[selection] = max(1, np.max(self.selection))
+        elif action == SomView.SelectionNewGroup:
+            self.selection[selection] = 1 + np.max(self.selection)
         elif action & SomView.SelectionRemove:
-            self.selection -= selection
-        elif action & SomView.SelectionToggle:
-            self.selection ^= selection
+            self.selection[selection] = 0
         self.redraw_selection()
         self.update_output()
 
     def on_selection_move(self, event: QKeyEvent):
-        if len(self.selection) > 1:
-            return
-
-        if not self.selection:
+        if self.selection is None or not np.any(self.selection):
             if event.key() in (Qt.Key_Right, Qt.Key_Down):
                 x = y = 0
             else:
                 x = self.size_x - 1
                 y = self.size_y - 1
         else:
-            x, y = next(iter(self.selection))
+            x, y = np.nonzero(self.selection)
+            if len(x) > 1:
+                return
             if event.key() == Qt.Key_Up and y > 0:
                 y -= 1
             if event.key() == Qt.Key_Down and y < self.size_y - 1:
@@ -409,10 +418,13 @@ class OWSOM(OWWidget):
                 x -= 1
             if event.key() == Qt.Key_Right and x < self.size_x - 1:
                 x += 1
+            x -= self.hexagonal and x == self.size_x - 1 and y % 2
 
-        x -= self.hexagonal and x == self.size_x - 1 and y % 2
-        if {(x, y)} != self.selection:
-            self.on_selection_change({(x, y)})
+        if self.selection is not None and self.selection[x, y]:
+            return
+        selection = np.zeros(self.grid_cells.shape, dtype=bool)
+        selection[x, y] = True
+        self.on_selection_change(selection)
 
     def on_selection_mark_change(self, marks):
         self.redraw_selection(marks=marks)
@@ -420,23 +432,31 @@ class OWSOM(OWWidget):
     def redraw_selection(self, marks=None):
         if self.grid_cells is None:
             return
-        mark_brush = QBrush(QColor(224, 255, 255))
-        brushes = [[QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))],
-                   [mark_brush, mark_brush]]
+
         sel_pen = QPen(QBrush(QColor(128, 128, 128)), 2)
         sel_pen.setCosmetic(True)
         mark_pen = QPen(QBrush(QColor(128, 128, 128)), 4)
         mark_pen.setCosmetic(True)
-        pens = [[self._grid_pen, sel_pen],
-                [mark_pen, mark_pen]]
+        pens = [self._grid_pen, sel_pen]
+
+        mark_brush = QBrush(QColor(224, 255, 255))
+        sels = self.selection is not None and np.max(self.selection)
+        palette = ColorPaletteGenerator(number_of_colors=sels + 1)
+        brushes = [QBrush(Qt.NoBrush)] + \
+                  [QBrush(palette[i].lighter(165)) for i in range(sels)]
+
         for y in range(self.size_y):
             for x in range(self.size_x - (y % 2) * self.hexagonal):
                 cell = self.grid_cells[y, x]
-                selected = (x, y) in self.selection
-                marked = bool(marks) and (x, y) in marks
-                cell.setBrush(brushes[marked][selected])
-                cell.setPen(pens[marked][selected])
-                cell.setZValue(marked or selected)
+                marked = marks is not None and marks[x, y]
+                sel_group = self.selection is not None and self.selection[x, y]
+                if marked:
+                    cell.setBrush(mark_brush)
+                    cell.setPen(mark_pen)
+                else:
+                    cell.setBrush(brushes[sel_group])
+                    cell.setPen(pens[bool(sel_group)])
+                cell.setZValue(marked or sel_group)
 
     def restart_som_pressed(self):
         if self._optimizer_thread is not None:
@@ -445,11 +465,14 @@ class OWSOM(OWWidget):
             self.start_som()
 
     def start_som(self):
-            self.read_controls()
+        self.read_controls()
+        self.update_layout()
+        self.clear_selection()
+        if self.cont_x is not None:
             self.enable_controls(False)
-            self.update_layout()
-            self.clear_selection()
             self._recompute_som()
+        else:
+            self.update_output()
 
     def read_controls(self):
         c = self.opt_controls
@@ -502,7 +525,7 @@ class OWSOM(OWWidget):
 
     def _draw_same_color(self, sizes):
         fx, fy = self._grid_factors
-        pen = QPen(QBrush(Qt.black), 4)
+        pen = QPen(QBrush(Qt.black), 2)
         pen.setCosmetic(True)
         brush = QBrush(QColor(192, 192, 192))
         for y in range(self.size_y):
@@ -566,8 +589,8 @@ class OWSOM(OWWidget):
                     self.Warning.missing_colors(self.attr_color.name)
                 bc = np.bincount(color_dist, minlength=len(self.colors))
                 color = self.colors[np.argmax(bc)]
-                pen = QPen(QBrush(color), 4)
-                brush = QBrush(color.lighter(200 - 100 * np.max(bc) / len(members)))
+                pen = QPen(QBrush(color), 2)
+                brush = QBrush(color.lighter(200 - 80 * np.max(bc) / len(members)))
                 pen.setCosmetic(True)
                 ellipse = QGraphicsEllipseItem()
                 ellipse.setRect(x + (y % 2) * fx - r / 2, y * fy - r / 2, r, r)
@@ -723,19 +746,33 @@ class OWSOM(OWWidget):
                 self.size_y - 0.5 + leg_height / scale)
 
     def update_output(self):
-        indices = []
-        if self.data is not None:
-            for (x, y) in self.selection:
-                indices.extend(self.get_member_indices(x, y))
-        if indices:
-            self.Outputs.selected_data.send(self.data[indices])
-            self.info.set_output_summary(str(len(indices)))
+        if self.data is None:
+            self.Outputs.selected_data.send(None)
+            self.Outputs.annotated_data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
+            return
+
+        indices = np.zeros(len(self.data), dtype=int)
+        if self.selection is not None and np.any(self.selection):
+            for y in range(self.size_y):
+                for x in range(self.size_x):
+                    rows = self.get_member_indices(x, y)
+                    indices[rows] = self.selection[x, y]
+
+        if np.any(indices):
+            sel_data = create_groups_table(self.data, indices, False, "Group")
+            self.Outputs.selected_data.send(sel_data)
+            self.info.set_output_summary(str(len(sel_data)))
         else:
             self.Outputs.selected_data.send(None)
             self.info.set_output_summary(self.info.NoOutput)
 
-        self.Outputs.annotated_data.send(
-            create_annotated_table(self.data, indices or None))
+        if np.max(indices) > 1:
+            annotated = create_groups_table(self.data, indices)
+        else:
+            annotated = create_annotated_table(
+                self.data, np.flatnonzero(indices))
+        self.Outputs.annotated_data.send(annotated)
 
     def set_color_bins(self):
         if self.attr_color is None:
@@ -818,6 +855,4 @@ _hexagon_path = _draw_hexagon()
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWSOM).run(Table("heart_disease"))
-    # If run on sparse data, the widget core dumps if the user tries resizing it?!
-    # WidgetPreview(OWSOM).run(Table("/Users/janez/Downloads/deerwester.pkl"))
+    WidgetPreview(OWSOM).run(Table("iris"))
