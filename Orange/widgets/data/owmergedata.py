@@ -584,13 +584,20 @@ class OWMergeData(widget.OWWidget):
 
     @staticmethod
     def migrate_settings(settings, version=None):
+        def mig_value(x):
+            if x == "Position (index)":
+                return INDEX
+            if x == "Source position (index)":
+                return INSTANCEID
+            return x
+
         if not version:
             operations = ("augment", "merge", "combine")
-            oper = [settings["merging"]]
+            oper = operations[settings["merging"]]
             settings["attr_pairs"] = (
                 True, True,
-                [(settings[f"attr_{oper}_data"],
-                  settings[f"attr_{oper}_extra"])])
+                [(mig_value(settings[f"attr_{oper}_data"]),
+                  mig_value(settings[f"attr_{oper}_extra"]))])
             for oper in operations:
                 del settings[f"attr_{oper}_data"]
                 del settings[f"attr_{oper}_extra"]

@@ -6,6 +6,8 @@ import unittest
 import numpy as np
 import scipy.sparse as sp
 
+from AnyQt.QtCore import Qt
+
 from Orange.data import Table, Domain, DiscreteVariable, StringVariable, \
     ContinuousVariable
 from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX
@@ -108,6 +110,25 @@ class TestOWMergeData(WidgetTest):
         extra_combo.activated.emit(1)
         self.assertEqual(data_combo.currentIndex(), 1)
         self.assertEqual(extra_combo.currentIndex(), 1)
+
+    def test_attr_combo_tooltips(self):
+        row = self.widget.attr_boxes.rows[0]
+        model = row.left_combo.model()
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+
+        tip = model.data(model.index(2, 0), Qt.ToolTipRole)
+        # Test the test; if general tooltips ever change and the following
+        # assert fails, the rest of this test has to be modified accordingly
+        self.assertTrue(tip.startswith("<b>"))
+
+        # Just test that tooltip is a string (implicitly) and that it's not
+        # a generic DomainModel tooltip
+        tip = model.data(model.index(0, 0), Qt.ToolTipRole)
+        self.assertFalse(tip.startswith("<b>"))
+
+        tip = model.data(model.index(1, 0), Qt.ToolTipRole)
+        self.assertFalse(tip.startswith("<b>"))
 
     def test_match_attr_name(self):
         widget = self.widget
@@ -235,6 +256,13 @@ class TestOWMergeData(WidgetTest):
             self.assertEqual(row.add_button.isEnabled(), i == 1)
             self.assertEqual(row.add_button.text(), ["", "+"][i == 1])
 
+    def test_dont_remove_single_row(self):
+        widget = self.widget
+        rows = widget.attr_boxes.rows
+        self.assertEqual(len(rows), 1)
+        rows[0].remove_button.clicked.emit()
+        self.assertEqual(len(rows), 1)
+
     def test_retrieve_settings(self):
         widget = self.widget
         boxes = widget.attr_boxes
@@ -257,6 +285,71 @@ class TestOWMergeData(WidgetTest):
         self.assertEqual(
             widget2.attr_boxes.current_state(),
             [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+
+    def test_retrieve_settings_with_missing_var(self):
+        widget = self.widget
+        boxes = widget.attr_boxes
+        var0, var1 = self.dataA.domain.attributes[:2]
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+
+        boxes.set_state(
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+
+        domain = self.dataA.domain
+
+        # The left combo in the last row must change to INDEX due to missing var
+        data2 = self.dataA.transform(
+            Domain(domain.attributes[1:], domain.class_var, domain.metas))
+        settings = widget.settingsHandler.pack_data(widget)
+        widget2 = self.create_widget(OWMergeData, stored_settings=settings)
+        widget2.attr_boxes.set_state([(INDEX, INDEX)])
+        self.send_signals(
+            [(widget2.Inputs.data, data2),
+             (widget2.Inputs.extra_data, data2)],
+            widget=widget2)
+        self.assertEqual(
+            widget2.attr_boxes.current_state(),
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (INDEX, var1)])
+
+        # The last row is changed to INDEX, INDEX and removed as duplicate
+        data2 = self.dataA.transform(
+            Domain(domain.attributes[2:], domain.class_var, domain.metas))
+        settings = widget.settingsHandler.pack_data(widget)
+        widget2 = self.create_widget(OWMergeData, stored_settings=settings)
+        widget2.attr_boxes.set_state([(INDEX, INDEX)])
+        self.send_signals(
+            [(widget2.Inputs.data, data2),
+             (widget2.Inputs.extra_data, data2)],
+            widget=widget2)
+        self.assertEqual(
+            widget2.attr_boxes.current_state(),
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
+
+    def test_migrate_settings(self):
+        attr1, attr2, attr3, attr4, attr5 = [object() for _ in range(5)]
+        orig_settings = dict(
+            attr_augment_data=attr1, attr_augment_extra=attr2,
+            attr_merge_data=attr3, attr_merge_extra=attr4,
+            attr_combine_data=attr5, attr_combine_extra='Position (index)')
+
+        widget = self.create_widget(
+            OWMergeData, stored_settings=dict(merging=0, **orig_settings))
+        self.assertEqual(widget.attr_pairs, (True, True, [(attr1, attr2)]))
+
+        widget = self.create_widget(
+            OWMergeData, stored_settings=dict(merging=1, **orig_settings))
+        self.assertEqual(widget.attr_pairs, (True, True, [(attr3, attr4)]))
+
+        widget = self.create_widget(
+            OWMergeData, stored_settings=dict(merging=2, **orig_settings))
+        self.assertEqual(widget.attr_pairs, (True, True, [(attr5, INDEX)]))
+
+        orig_settings["attr_combine_extra"] = "Source position (index)"
+        widget = self.create_widget(
+            OWMergeData, stored_settings=dict(merging=2, **orig_settings))
+        self.assertEqual(widget.attr_pairs, (True, True, [(attr5, INSTANCEID)]))
 
     @unittest.skip("widget doesn't work this way, but could in the future")
     def test_switch_domain(self):  # pragma: no cover
@@ -321,6 +414,23 @@ class TestOWMergeData(WidgetTest):
             [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
         widget.send_report()
         # Don't crash, that's it
+
+    def test_no_matches(self):
+        """Check output is None when there are no matches in inner join"""
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
+        domA = self.dataA.domain
+        domB = self.dataB.domain
+
+        self.widget.attr_boxes.set_state([(domA["dA1"], domB["dB2"])])
+        self.widget.controls.merging.buttons[self.widget.LeftJoin].click()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+        self.widget.controls.merging.buttons[self.widget.InnerJoin].click()
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+        self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
 
     def test_output_merge_by_ids_inner(self):
         """Check output for merging option 'Find matching rows' by
