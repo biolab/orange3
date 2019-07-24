@@ -3,9 +3,9 @@ from itertools import chain, product
 
 import numpy as np
 
-from AnyQt.QtCore import pyqtSignal as Signal
-from AnyQt.QtWidgets import QApplication, QStyle, QWidget, \
-    QLabel, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout
+from AnyQt.QtCore import Qt, QModelIndex, pyqtSignal as Signal
+from AnyQt.QtWidgets import QWidget, QLabel, QComboBox, QPushButton, \
+    QVBoxLayout, QHBoxLayout
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable, Variable
@@ -154,6 +154,20 @@ class ConditionBox(QWidget):
         self.vars_changed.emit(self.current_state())
 
 
+class DomainModelWithTooltips(DomainModel):
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.ToolTipRole \
+                and isinstance(index, QModelIndex) and index.isValid():
+            if index.row() == 0:
+                return "Match rows sequentially"
+            if index.row() == 1:
+                return "Re-match rows from tables obtained from the same " \
+                       "source,\n" \
+                       "e.g. data from the same file that was split within " \
+                       "the workflow."
+        return super().data(index, role)
+
+
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
     description = "Merge datasets based on the values of selected features."
@@ -174,6 +188,25 @@ class OWMergeData(widget.OWWidget):
     OptionNames = ("Append columns from Extra data",
                    "Find matching pairs of rows",
                    "Concatenate tables")
+    OptionDescriptions = (
+        "The first table may contain, for instance, city names,\n"
+        "and the second would be a list of cities and their coordinates.\n"
+        "Columns with coordinates would then be appended to the output.",
+
+        "Input tables contain different features describing the same data "
+        "instances.\n"
+        "Output contains matched instances. Rows without matches are removed.",
+
+        "Input tables contain different features describing the same data "
+        "instances.\n"
+        "Output contains all instances. Data from merged instances is "
+        "merged into single rows."
+    )
+
+    UserAdviceMessages = [
+        widget.Message(
+            "Confused about merging options?\nSee the tooltips!",
+            "merging_types")]
 
     attr_pairs = Setting(None, schema_only=True)
     merging = Setting(LeftJoin)
@@ -210,8 +243,8 @@ class OWMergeData(widget.OWWidget):
         content = [
             INDEX, INSTANCEID,
             DomainModel.ATTRIBUTES, DomainModel.CLASSES, DomainModel.METAS]
-        self.model = DomainModel(content)
-        self.extra_model = DomainModel(content)
+        self.model = DomainModelWithTooltips(content)
+        self.extra_model = DomainModelWithTooltips(content)
 
         box = gui.hBox(self.controlArea, box=None)
         self.infoBoxData = gui.label(
@@ -221,18 +254,20 @@ class OWMergeData(widget.OWWidget):
 
         grp = gui.radioButtons(
             self.controlArea, self, "merging", box="Merging",
-            btnLabels=self.OptionNames, callback=self.change_merging)
+            btnLabels=self.OptionNames, tooltips=self.OptionDescriptions,
+            callback=self.change_merging)
         grp.layout().setSpacing(8)
 
-        self.attr_boxes = box = ConditionBox(
-            self, self.model, self.extra_model, "where", "matches")
-        box.add_row()
-        radio_width = \
-            QApplication.style().pixelMetric(QStyle.PM_ExclusiveIndicatorWidth)
-        gui.indentedBox(grp, radio_width).layout().addWidget(box)
+        self.attr_boxes = ConditionBox(
+            self, self.model, self.extra_model, "", "matches")
+        self.attr_boxes.add_row()
+        box = gui.vBox(self.controlArea, box="Row matching")
+        box.layout().addWidget(self.attr_boxes)
+
         gui.auto_commit(self.controlArea, self, "auto_apply", "&Apply",
                         box=False)
-        box.vars_changed.connect(self.commit)  # connect after auto_commit!
+        # connect after wrapping self.commit with gui.auto_commit!
+        self.attr_boxes.vars_changed.connect(self.commit)
         self.settingsAboutToBePacked.connect(self.store_combo_state)
 
     def change_merging(self):
