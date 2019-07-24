@@ -254,10 +254,14 @@ class OWMergeData(widget.OWWidget):
             str_metas = get_unique_str_metas_names(model)
             extra_str_metas = get_unique_str_metas_names(extra_model)
             for m_a, m_b in product(str_metas, extra_str_metas):
-                n_inter = len(np.intersect1d(self.data[:, m_a].metas,
-                                             self.extra_data[:, m_b].metas))
-                if n_inter > n_max_intersect:
-                    n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
+                col = self.data[:, m_a].metas
+                extra_col = self.extra_data[:, m_b].metas
+                if col.size and extra_col.size \
+                        and isinstance(col[0][0], str) \
+                        and isinstance(extra_col[0][0], str):
+                    n_inter = len(np.intersect1d(col, extra_col))
+                    if n_inter > n_max_intersect:
+                        n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
             return attr, extra_attr
 
         if self.data and self.extra_data:
