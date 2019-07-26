@@ -24,7 +24,7 @@ def _identity(x):
 
 def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
                store_models):
-    predicted, probs, model, failed = None, None, None, False
+    predicted, probs, model, failed, train_time, test_time = None, None, None, False, None, None
     try:
         if not train_data or not test_data:
             raise RuntimeError('Test fold is empty')

@@ -225,16 +225,16 @@ class TestOWTestLearners(WidgetTest):
         self.send_signal(self.widget.Inputs.learner,
                          LogisticRegressionLearner(), 0, wait=5000)
 
-        average_auc = float(model.item(0, 1).text())
+        average_auc = float(model.item(0, 3).text())
 
         simulate.combobox_activate_item(w.controls.class_selection, "Iris-setosa")
-        setosa_auc = float(model.item(0, 1).text())
+        setosa_auc = float(model.item(0, 3).text())
 
         simulate.combobox_activate_item(w.controls.class_selection, "Iris-versicolor")
-        versicolor_auc = float(model.item(0, 1).text())
+        versicolor_auc = float(model.item(0, 3).text())
 
         simulate.combobox_activate_item(w.controls.class_selection, "Iris-virginica")
-        virginica_auc = float(model.item(0, 1).text())
+        virginica_auc = float(model.item(0, 3).text())
 
         self.assertGreater(average_auc, versicolor_auc)
         self.assertGreater(average_auc, virginica_auc)
@@ -287,12 +287,12 @@ class TestOWTestLearners(WidgetTest):
     def _retrieve_scores(self):
         w = self.widget
         model = w.score_table.model
-        auc = model.item(0, 1).text()
+        auc = model.item(0, 3).text()
         auc = float(auc) if auc != "" else None
-        ca = float(model.item(0, 2).text())
-        f1 = float(model.item(0, 3).text())
-        precision = float(model.item(0, 4).text())
-        recall = float(model.item(0, 5).text())
+        ca = float(model.item(0, 4).text())
+        f1 = float(model.item(0, 5).text())
+        precision = float(model.item(0, 6).text())
+        recall = float(model.item(0, 7).text())
         return auc, ca, f1, precision, recall
 
     def _test_scores(self, train_data, test_data, learner, sampling, n_folds):
