@@ -7,7 +7,7 @@ import scipy.sparse as sp
 from Orange.data import Table
 from Orange.modelling import SVMLearner, NuSVMLearner
 from Orange.widgets import gui
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import Msg
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
@@ -31,9 +31,8 @@ class OWSVM(OWBaseLearner):
     class Outputs(OWBaseLearner.Outputs):
         support_vectors = Output("Support vectors", Table, explicit=True)
 
-    class Warning(OWWidget.Warning):
+    class Warning(OWBaseLearner.Warning):
         sparse_data = Msg('Input data is sparse, default preprocessing is to scale it.')
-        outdated_learner = Msg("Press Apply to submit changes.")
 
     #: Different types of SVMs
     SVM, Nu_SVM = range(2)
