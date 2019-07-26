@@ -499,6 +499,16 @@ class OWTestLearners(OWWidget):
             head = QStandardItem(name)
             head.setData(key, Qt.UserRole)
             results = slot.results
+            if results is not None and results.success:
+                train = QStandardItem("{:.3f}".format(results.value.train_time))
+                train.setTextAlignment(Qt.AlignRight)
+                train.setData(key, Qt.UserRole)
+                test = QStandardItem("{:.3f}".format(results.value.test_time))
+                test.setTextAlignment(Qt.AlignRight)
+                test.setData(key, Qt.UserRole)
+                row = [head, train, test]
+            else:
+                row = [head]
             if isinstance(results, Try.Fail):
                 head.setToolTip(str(results.exception))
                 head.setText("{} (error)".format(name))
@@ -512,7 +522,6 @@ class OWTestLearners(OWWidget):
                                   "{exc.__class__.__name__}: {exc!s}"
                                   .format(name=name, exc=slot.results.exception)
                                   )
-            row = [head]
 
             if class_var is not None and class_var.is_discrete and \
                     target_index is not None:
@@ -532,6 +541,7 @@ class OWTestLearners(OWWidget):
             if stats is not None:
                 for stat, scorer in zip(stats, self.scorers):
                     item = QStandardItem()
+                    item.setTextAlignment(Qt.AlignRight)
                     if stat.success:
                         item.setText("{:.3f}".format(stat.value[0]))
                     else:

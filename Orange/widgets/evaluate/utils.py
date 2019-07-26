@@ -155,16 +155,18 @@ class ScoreTable(OWComponent, QObject):
         # pylint doesn't know that self.shown_scores is a set, not a Setting
         # pylint: disable=unsupported-membership-test
         header = self.view.horizontalHeader()
-        for section, col_name in enumerate(self._column_names(), start=1):
+        for section, col_name in enumerate(self._column_names(), start=3):
             header.setSectionHidden(section, col_name not in self.shown_scores)
         self.view.resizeColumnsToContents()
         self.shownScoresChanged.emit()
 
     def update_header(self, scorers):
         # Set the correct horizontal header labels on the results_model.
-        self.model.setColumnCount(1 + len(scorers))
+        self.model.setColumnCount(3 + len(scorers))
         self.model.setHorizontalHeaderItem(0, QStandardItem("Model"))
-        for col, score in enumerate(scorers, start=1):
+        self.model.setHorizontalHeaderItem(1, QStandardItem("Train time [s]"))
+        self.model.setHorizontalHeaderItem(2, QStandardItem("Test time [s]"))
+        for col, score in enumerate(scorers, start=3):
             item = QStandardItem(score.name)
             item.setToolTip(score.long_name)
             self.model.setHorizontalHeaderItem(col, item)
