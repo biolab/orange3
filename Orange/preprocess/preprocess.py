@@ -18,7 +18,7 @@ from . import impute, discretize, transformation
 __all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
            "SklImpute", "Normalize", "Randomize", "Preprocess",
            "RemoveConstant", "RemoveNaNClasses", "RemoveNaNColumns",
-           "ProjectPCA", "ProjectCUR", "Scale", "SmartNormalize"]
+           "ProjectPCA", "ProjectCUR", "Scale", "AdaptiveNormalize"]
 
 
 class Preprocess(_RefuseDataInConstructor, Reprable):
@@ -570,12 +570,15 @@ class PreprocessorList(Preprocess):
         return data
 
 
-class SmartNormalize(Preprocess):
+class AdaptiveNormalize(Preprocess):
     """
     Construct a preprocessors that normalizes or merely scales the data.
     If the input is sparse, data is only scaled, to avoid turning it to
     dense. Parameters are diveded to those passed to Normalize or Scale
-    class. For more details, check those classes.
+    class. Scaling takes only scale parameter.
+     If the user wants to have more options with scaling,
+    they should use the preprocessing widget.
+    For more details, check Scale and Normalize widget.
 
     Parameters
     ----------
@@ -589,13 +592,13 @@ class SmartNormalize(Preprocess):
     transform_class : bool (default=False)
         passed to Normalize
 
-    center :
-        passed to Normalize as boolean and to Scale as recieved in constructor
+    center : bool(default=True)
+        passed to Normalize
 
     normalize_datetime : bool (default=False)
         passed to Normalize
 
-    scale : ScaleTypes (default: Scale.NoCentering)
+    scale : ScaleTypes (default: Scale.Span)
         passed to Scale
     """
 
@@ -604,12 +607,12 @@ class SmartNormalize(Preprocess):
                  norm_type=Normalize.NormalizeBySD,
                  transform_class=False,
                  normalize_datetime=False,
-                 center=Scale.Mean,
-                 scale=Scale.Std):
+                 center=True,
+                 scale=Scale.Span):
         self.normalize_pps = Normalize(zero_based,
                                        norm_type,
                                        transform_class,
-                                       ~(center is not False),
+                                       center,
                                        normalize_datetime)
         self.scale_pps = Scale(center=Scale.NoCentering, scale=scale)
 
