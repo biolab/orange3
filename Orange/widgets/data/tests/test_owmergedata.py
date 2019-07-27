@@ -449,15 +449,19 @@ class TestOWMergeData(WidgetTest):
         Source position (index)"""
         domain = self.dataA.domain
         result = Table(domain,
-                       np.array([[0, np.nan], [1, 1], [2, 0], [np.nan, 1]]),
-                       np.array([0, 1, 2, np.nan]),
-                       np.array([[0.0, ""], [1.0, "m2"], [np.nan, "m3"],
-                                 [np.nan, "m4"]]).astype(object))
-        self.send_signal(self.widget.Inputs.data, self.dataA[:3, [0, "cls", -1]])
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA[1:, [1, "cls", -2]])
+                       np.array([[1, 1], [2, 0], [3, np.nan], [np.nan, 0]]),
+                       np.array([1, 2, np.nan, 0]),
+                       np.array([[1.0, "m2"], [np.nan, "m3"],
+                                 [0.0, ""], [np.nan, "m1"]]).astype(object))
         self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
+        self.widget.merging = 2
         self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
-        self.assertTablesEqual(self.get_output(self.widget.Outputs.data), result)
+        self.send_signal(self.widget.Inputs.data, self.dataA[1:, [0, "cls", -1]])
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA[:3, [1, "cls", -2]])
+        out = self.get_output(self.widget.Outputs.data)
+        self.assertTablesEqual(out, result)
+        np.testing.assert_equal(
+            out.ids, np.hstack((self.dataA.ids[1:], self.dataA.ids[:1])))
 
     def test_output_merge_by_index_left(self):
         """Check output for merging option 'Append columns from Extra Data' by
@@ -579,6 +583,29 @@ class TestOWMergeData(WidgetTest):
         self.widget.attr_boxes.set_state([(domainA[0], domainB[0])])
         self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
         self.assertTablesEqual(self.get_output(self.widget.Outputs.data), result)
+
+    def test_output_merge_by_attribute_outer_same_attr(self):
+        """Values of columns from extra aata are copied to left part if they
+        match"""
+        name = StringVariable("name")
+        domainA = Domain([ContinuousVariable("x")], None, [name])
+        domainB = Domain([ContinuousVariable("y")], None, [name])
+        xA = np.array([[0], [1], [2]])
+        mA = np.array([["a"], ["b"], ["c"]])
+        xB = np.array([[4], [5], [6], [7]])
+        mB = np.array([["b"], ["d"], ["a"], ["c"]])
+        dataA = Table(domainA, xA, None, mA)
+        dataB = Table(domainB, xB, None, mB)
+
+        self.send_signal(self.widget.Inputs.data, dataA)
+        self.send_signal(self.widget.Inputs.extra_data, dataB)
+        self.widget.attr_boxes.set_state([(name, name)])
+        self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
+        out = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_equal(
+            out.X,
+            np.array([[0, 6], [1, 4], [2, 7], [np.nan, 5]]))
+        self.assertEqual(" ".join(out.metas.flatten()), "a b c d")
 
     def test_output_merge_by_class_left(self):
         """Check output for merging option 'Append columns from Extra Data' by

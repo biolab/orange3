@@ -305,8 +305,9 @@ class OWMergeData(widget.OWWidget):
             if len(state) == 1 \
                     and not any(isinstance(v, Variable) for v in state[0]):
                 l_var, r_var = best_match(box.model_left, box.model_right)
-                self._try_set_combo(box.rows[0].left_combo, l_var)
-                self._try_set_combo(box.rows[0].right_combo, r_var)
+                if l_var is not None:
+                    self._try_set_combo(box.rows[0].left_combo, l_var)
+                    self._try_set_combo(box.rows[0].right_combo, r_var)
 
     @Inputs.data
     @check_sql_input
@@ -417,9 +418,10 @@ class OWMergeData(widget.OWWidget):
         if not self._check_uniqueness(left, left_mask, right, right_mask):
             return None
         method = self._merge_methods[self.merging]
-        lefti, righti = method(self, left, left_mask, right, right_mask)
+        lefti, righti, rightu = method(self, left, left_mask, right, right_mask)
         reduced_extra_data = self._compute_reduced_extra_data(right_vars)
-        return self._join_table_by_indices(reduced_extra_data, lefti, righti)
+        return self._join_table_by_indices(
+            reduced_extra_data, lefti, righti, rightu)
 
     def _check_pair_types(self, pairs):
         for left, right in pairs:
@@ -510,34 +512,32 @@ class OWMergeData(widget.OWWidget):
         righti = np.fromiter(righti, dtype=np.int64, count=len(data))
         lefti = np.arange(len(data), dtype=np.int64)
         righti[lefti[~left_mask]] = -1
-        return lefti, righti
+        return lefti, righti, None
 
     def _inner_join_indices(self, left, left_mask, right, right_mask):
         """Use _augment_indices to compute the array of indices,
         then remove those with no match in the second table"""
-        lefti, righti = \
+        lefti, righti, _ = \
             self._left_join_indices(left, left_mask, right, right_mask)
         mask = righti != [-1]
-        return lefti[mask], righti[mask]
+        return lefti[mask], righti[mask], None
 
     def _outer_join_indices(self, left, left_mask, right, right_mask):
         """Use _augment_indices to compute the array of indices,
         then add rows in the second table without a match in the first"""
-        lefti, righti = \
+        lefti, righti, _ = \
             self._left_join_indices(left, left_mask, right, right_mask)
         unused = np.full(len(right), True)
         unused[righti] = False
         if len(right) - 1 not in righti:
             # righti can include -1, which sets the last element as used
             unused[-1] = True
-        right_over = np.arange(len(right), dtype=np.int64)[unused]
-        left_over = np.full(len(right_over), -1, np.int64)
-        return np.hstack((lefti, left_over)), np.hstack((righti, right_over))
+        return lefti, righti, np.nonzero(unused)[0]
 
     _merge_methods = [
         _left_join_indices, _inner_join_indices, _outer_join_indices]
 
-    def _join_table_by_indices(self, reduced_extra, lefti, righti):
+    def _join_table_by_indices(self, reduced_extra, lefti, righti, rightu):
         """Join (horizontally) self.data and reduced_extra, taking the pairs
         of rows given in indices"""
         if not lefti.size:
@@ -551,10 +551,20 @@ class OWMergeData(widget.OWWidget):
         string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
         metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, lefti, righti, string_cols)
+        if rightu is not None:
+            extras = self.extra_data[rightu].transform(domain)
+            X = np.vstack((X, extras.X))
+            Y = np.vstack((Y, extras.Y))
+            metas = np.vstack((metas, extras.metas))
         table = Orange.data.Table.from_numpy(domain, X, Y, metas)
         table.name = getattr(self.data, 'name', '')
         table.attributes = getattr(self.data, 'attributes', {})
-        table.ids = self.data.ids
+        if rightu is not None:
+            table.ids = np.hstack(
+                (self.data.ids, self.extra_data.ids[rightu]))
+        else:
+            table.ids = self.data.ids[lefti]
+
         return table
 
     @staticmethod
