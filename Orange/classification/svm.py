@@ -2,13 +2,12 @@ import sklearn.svm as skl_svm
 
 from Orange.classification import SklLearner, SklModel
 from Orange.base import SklLearner as SklLearnerBase
-from Orange.preprocess import Normalize
+from Orange.preprocess import AdaptiveNormalize
 
 __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner",
            "OneClassSVMLearner"]
 
-
-svm_pps = SklLearner.preprocessors + [Normalize()]
+svm_pps = SklLearner.preprocessors + [AdaptiveNormalize()]
 
 
 class SVMClassifier(SklModel):

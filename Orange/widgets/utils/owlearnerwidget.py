@@ -90,13 +90,13 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
 
     OUTPUT_MODEL_NAME = Outputs.model.name  # Attr for backcompat w/ self.send() code
 
-    def __init__(self):
+    def __init__(self, preprocessors=None):
         super().__init__()
         self.data = None
         self.valid_data = False
         self.learner = None
         self.model = None
-        self.preprocessors = None
+        self.preprocessors = preprocessors
         self.outdated_settings = False
 
         self.setup_layout()

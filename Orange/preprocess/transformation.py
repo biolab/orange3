@@ -118,8 +118,7 @@ class Normalizer(Transformation):
     def transform(self, c):
         if sp.issparse(c):
             if self.offset != 0:
-                raise ValueError('Non-zero offset in normalization '
-                                 'of sparse data')
+                raise ValueError('Normalization does not work for sparse data.')
             return c * self.factor
         else:
             return (c - self.offset) * self.factor
