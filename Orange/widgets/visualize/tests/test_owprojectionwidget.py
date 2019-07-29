@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import Mock
 
 import numpy as np
 
@@ -61,14 +61,13 @@ class TestOWProjectionWidget(WidgetTest):
         self.assertEqual(get_column(disc3, return_labels=True), disc3.values)
         with self.assertRaises(AssertionError):
             get_column(cont, return_labels=True)
-            get_column(cont, return_labels=True, merge_infrequent=True)
-            get_column(cont, merge_infrequent=True)
+        with self.assertRaises(AssertionError):
+            get_column(cont, return_labels=True, max_categories=4)
         with self.assertRaises(AssertionError):
             get_column(string, return_labels=True)
-            get_column(string, return_labels=True, merge_infrequent=True)
-            get_column(string, merge_infrequent=True)
+        with self.assertRaises(AssertionError):
+            get_column(string, return_labels=True, max_categories=4)
 
-    @patch("Orange.widgets.visualize.utils.widget.MAX_CATEGORIES", 4)
     def test_get_column_merge_infrequent(self):
         widget = self.widget
         get_column = widget.get_column
@@ -88,15 +87,15 @@ class TestOWProjectionWidget(WidgetTest):
         self.assertEqual(get_column(disc2, return_labels=True), disc2.values)
 
         np.testing.assert_almost_equal(
-            get_column(disc, merge_infrequent=True),
+            get_column(disc, max_categories=4),
             [1, 1, 1, 2, 3, 1, 1, 2, 3, 2, 2, 0, 0, 0, 3, 2, 3])
         self.assertEqual(
-            get_column(disc, merge_infrequent=True, return_labels=True),
+            get_column(disc, max_categories=4, return_labels=True),
             [disc.values[0], disc.values[1], disc.values[5], "Other"])
         np.testing.assert_almost_equal(
-            get_column(disc2, merge_infrequent=True), y)
+            get_column(disc2, max_categories=4), y)
         self.assertEqual(
-            get_column(disc2, return_labels=True, merge_infrequent=True),
+            get_column(disc2, return_labels=True, max_categories=4),
             disc2.values)
 
         # Test that get_columns modify a copy of the data and not the data

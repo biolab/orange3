@@ -163,7 +163,7 @@ class TestOWScatterPlotBase(WidgetTest):
                         np.arange(0, 30, 3, dtype=float))
         d = np.arange(10, dtype=float)
         master.get_size_data = lambda: d
-        master.get_shape_data = lambda: d
+        master.get_shape_data = lambda: d % 5 if d is not None else None
         master.get_color_data = lambda: d
         master.get_label_data = lambda: \
             np.array([str(x) for x in d], dtype=object)
@@ -187,7 +187,7 @@ class TestOWScatterPlotBase(WidgetTest):
             (x[2] - x[1]) / (x[1] - x[0]))
         self.assertEqual(
             list(data["symbol"]),
-            [graph.CurveSymbols[int(xi)] for xi in x])
+            [graph.CurveSymbols[int(xi) % 5] for xi in x])
         self.assertEqual(
             [pen.color().hue() for pen in data["pen"]],
             [graph.palette[xi].hue() for xi in x])
@@ -207,7 +207,7 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_almost_equal(s, precise_s, decimal=0)
         self.assertEqual(
             list(data["symbol"]),
-            [graph.CurveSymbols[int(xi)] for xi in x])
+            [graph.CurveSymbols[int(xi) % 5] for xi in x])
         self.assertEqual(
             [pen.color().hue() for pen in data["pen"]],
             [graph.palette[xi].hue() for xi in x])
@@ -224,7 +224,7 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_almost_equal(y, xy[1])
         self.assertEqual(
             list(data["symbol"]),
-            [graph.CurveSymbols[int(xi)] for xi in d])
+            [graph.CurveSymbols[int(xi) % 5] for xi in d])
         self.assertEqual(
             [pen.color().hue() for pen in data["pen"]],
             [graph.palette[xi].hue() for xi in d])
@@ -245,7 +245,7 @@ class TestOWScatterPlotBase(WidgetTest):
             (x[2] - x[1]) / (x[1] - x[0]))
         self.assertEqual(
             list(data["symbol"]),
-            [graph.CurveSymbols[int(xi)] for xi in x])
+            [graph.CurveSymbols[int(xi) % 5] for xi in x])
         self.assertEqual(
             [pen.color().hue() for pen in data["pen"]],
             [graph.palette[xi].hue() for xi in x])
