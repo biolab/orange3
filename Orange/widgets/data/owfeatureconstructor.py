@@ -122,10 +122,7 @@ class FeatureEditor(QFrame):
         )
         self.expressionedit = QLineEdit(
             placeholderText="Expression...",
-            toolTip="Result must be a number for numeric variables, "
-                    "and strings for text variables.\n"
-                    "For categorical, return integer indices if values are "
-                    "specified, and strings if they are not.")
+            toolTip=self.ExpressionTooltip)
 
         self.attrs_model = itemmodels.VariableListModel(
             ["Select Feature"], parent=self)
@@ -231,6 +228,7 @@ class FeatureEditor(QFrame):
 
 
 class ContinuousFeatureEditor(FeatureEditor):
+    ExpressionTooltip = "A numeric expression"
 
     def editorData(self):
         return ContinuousDescriptor(
@@ -241,6 +239,10 @@ class ContinuousFeatureEditor(FeatureEditor):
 
 
 class DateTimeFeatureEditor(FeatureEditor):
+    ExpressionTooltip = \
+        "Result must be a string in ISO-8601 format " \
+        "(e.g. 2019-07-30T15:37:27 or a part thereof),\n" \
+        "or a number of seconds since Jan 1, 1970."
 
     def editorData(self):
         return DateTimeDescriptor(
@@ -250,12 +252,16 @@ class DateTimeFeatureEditor(FeatureEditor):
 
 
 class DiscreteFeatureEditor(FeatureEditor):
+    ExpressionTooltip = \
+        "Result must be a string, if values are not explicitly given\n" \
+        "or a zero-based integer indices into a list of values given below."
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         tooltip = \
-            "If values are given, expression must return integer indices.\n" \
-            "Otherwise, expression must return strings."
+            "If values are given, above expression must return zero-based " \
+            "integer indices into that list."
         self.valuesedit = QLineEdit(placeholderText="A, B ...", toolTip=tooltip)
         self.valuesedit.textChanged.connect(self._invalidate)
 
@@ -283,6 +289,8 @@ class DiscreteFeatureEditor(FeatureEditor):
 
 
 class StringFeatureEditor(FeatureEditor):
+    ExpressionTooltip = "A string expression"
+
     def editorData(self):
         return StringDescriptor(
             name=self.nameedit.text(),
