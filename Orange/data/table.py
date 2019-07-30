@@ -295,7 +295,8 @@ class Table(MutableSequence, Storage):
 
         global _conversion_cache
 
-        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64, is_sparse=False):
+        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
+                        is_sparse=False, variables=[]):
             if not len(src_cols):
                 if is_sparse:
                     return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
@@ -331,7 +332,7 @@ class Table(MutableSequence, Storage):
             shared_cache = _conversion_cache
             for i, col in enumerate(src_cols):
                 if col is None:
-                    a[:, i] = Unknown
+                    a[:, i] = variables[i].Unknown
                 elif not isinstance(col, Integral):
                     if isinstance(col, SharedComputeValue):
                         if (id(col.compute_shared), id(source)) not in shared_cache:
@@ -394,19 +395,22 @@ class Table(MutableSequence, Storage):
                 self.domain = domain
                 conversion = domain.get_conversion(source.domain)
                 self.X = get_columns(row_indices, conversion.attributes, n_rows,
-                                     is_sparse=conversion.sparse_X)
+                                     is_sparse=conversion.sparse_X,
+                                     variables=domain.attributes)
                 if self.X.ndim == 1:
                     self.X = self.X.reshape(-1, len(self.domain.attributes))
 
                 self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
-                                     is_sparse=conversion.sparse_Y)
+                                     is_sparse=conversion.sparse_Y,
+                                     variables=domain.class_vars)
 
                 dtype = np.float64
                 if any(isinstance(var, StringVariable) for var in domain.metas):
                     dtype = np.object
                 self.metas = get_columns(row_indices, conversion.metas,
                                          n_rows, dtype,
-                                         is_sparse=conversion.sparse_metas)
+                                         is_sparse=conversion.sparse_metas,
+                                         variables=domain.metas)
                 if self.metas.ndim == 1:
                     self.metas = self.metas.reshape(-1, len(self.domain.metas))
                 if source.has_weights():
