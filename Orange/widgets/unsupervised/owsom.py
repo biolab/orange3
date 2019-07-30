@@ -679,6 +679,7 @@ class OWSOM(OWWidget):
 
         self._optimizer = Optimizer(self.cont_x, self)
         self._optimizer_thread = QThread()
+        self._optimizer_thread.setStackSize(5 * 2 ** 20)
         self._optimizer.update.connect(update)
         self._optimizer.done.connect(done)
         self._optimizer.stopped.connect(self._optimizer_thread.quit)
