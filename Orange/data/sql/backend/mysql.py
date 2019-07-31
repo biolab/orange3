@@ -24,6 +24,7 @@ class PymysqlBackend(Backend):
     connection = None
 
     def __init__(self, connection_params):
+        super().__init__(connection_params)
         connection_params.pop('port')
         self.connection_params = connection_params
         try:
@@ -76,7 +77,7 @@ class PymysqlBackend(Backend):
                     raise BackendError(str(e))
             schema_clause = """TABLE_SCHEMA IN (SELECT DISTINCT(TABLE_SCHEMA) 
             FROM information_schema.SCHEMA_PRIVILEGES WHERE GRANTEE LIKE "'{}%'")""".format(user)
-        return """SELECT table_schema as "Schema",
+        return """SELECT table_schema as "Schema", 
                           table_name AS "Name"
                        FROM information_schema.tables
                       WHERE {}""".format(schema_clause)
@@ -95,10 +96,10 @@ class PymysqlBackend(Backend):
         """
         query = "SHOW columns FROM {}".format(table_name)
         with self.execute_sql_query(query) as cur:
-            fields = [(f[0],f[1].split("(")[0].upper()) for f in cur.fetchall()]
+            fields = [(f[0], f[1].split("(")[0].upper()) for f in cur.fetchall()]
         return fields
 
-    def create_variable(self, field_name, field_metadata,
+    def create_variable(self, field_name, field_metadata, 
                         type_hints, inspect_table=None):
         """Create variable based on field information
 
@@ -121,7 +122,7 @@ class PymysqlBackend(Backend):
         if field_name in type_hints:
             var = type_hints[field_name]
         else:
-            var = self._guess_variable(field_name, field_metadata,
+            var = self._guess_variable(field_name, field_metadata, 
                                        inspect_table)
 
         field_name_q = self.quote_identifier(field_name)
@@ -137,12 +138,12 @@ class PymysqlBackend(Backend):
     def _guess_variable(self, field_name, field_metadata, inspect_table):
         type_code = field_metadata[0]
 
-        NUMERIC_TYPES = ("FLOAT","DOUBLE","DECIMAL")  # real, float8, numeric
-        INT_TYPES = ("INT","TINYINT","SMALLINT","MEDIUMINT","BIGINT")
-        DATE_TYPES = ("DATE","DATETIME","YEAR")
-        TIME_TYPES = ("TIMESTAMP","TIME")
-        CHAR_TYPES = ("CHAR","ENUM")
-        STRING_TYPES = ("VARCHAR","BLOB","TEXT","TINYBLOB","TINYTEXT ","MEDIUMBLOB","MEDIUMTEXT","LONGBLOB","LONGTEXT")
+        NUMERIC_TYPES = ("FLOAT", "DOUBLE", "DECIMAL")  # real, float8, numeric
+        INT_TYPES = ("INT", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT")
+        DATE_TYPES = ("DATE", "DATETIME", "YEAR")
+        TIME_TYPES = ("TIMESTAMP", "TIME")
+        CHAR_TYPES = ("CHAR", "ENUM")
+        STRING_TYPES = ("VARCHAR", "BLOB", "TEXT", "TINYBLOB", "TINYTEXT ", "MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT")
 
         if type_code in NUMERIC_TYPES:
             return ContinuousVariable.make(field_name)
@@ -189,8 +190,8 @@ class PymysqlBackend(Backend):
     # query related methods
 
     def create_sql_query(
-            self, table_name, fields, filters=(),
-            group_by=None, order_by=None, offset=None, limit=None,
+            self, table_name, fields, filters=(), 
+            group_by=None, order_by=None, offset=None, limit=None, 
             use_time_sample=None):
         """Construct an sql query using the provided elements.
 
@@ -209,22 +210,22 @@ class PymysqlBackend(Backend):
         -------
         string containing sql query
         """
-        query = ["SELECT",", ".join(fields),"FROM",table_name]
+        query = ["SELECT", ", ".join(fields), "FROM", table_name]
         if filters:
-            query.extend(["WHERE"," AND ".join(filters)])
+            query.extend(["WHERE", " AND ".join(filters)])
         if group_by is not None:
-            query.extend(["GROUP BY",", ".join(group_by)])
+            query.extend(["GROUP BY", ", ".join(group_by)])
         if order_by is not None:
-            query.extend(["ORDER BY",", ".join(order_by)])
+            query.extend(["ORDER BY", ", ".join(order_by)])
         if limit is not None:
-            query.extend(["LIMIT",str(limit)])
+            query.extend(["LIMIT", str(limit)])
         if offset is not None:
             if limit is not None:
-                query.extend(["OFFSET",str(offset)])
+                query.extend(["OFFSET", str(offset)])
             else:
-                query.extend(["LIMIT 18446744073709551615 OFFSET",str(offset)]) 
+                query.extend(["LIMIT 18446744073709551615 OFFSET", str(offset)]) 
         if use_time_sample is not None:
-            query.insert(1,"/*+ MAX_EXECUTION_TIME = {} */".format(use_time_sample))
+            query.insert(1, "/*+ MAX_EXECUTION_TIME = {} */".format(use_time_sample))
         return " ".join(query)
 
     @contextmanager
@@ -250,7 +251,7 @@ class PymysqlBackend(Backend):
         """
         cursor = self._get_cursor()
         if params is not None:
-            cursor.execute(query,params)
+            cursor.execute(query, params)
         else:
             cursor.execute(query)
         yield cursor
