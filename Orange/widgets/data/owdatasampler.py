@@ -42,7 +42,7 @@ class OWDataSampler(OWWidget):
 
     selectedFold: int
 
-    use_seed = Setting(False)
+    use_seed = Setting(True)
     replacement = Setting(False)
     stratify = Setting(False)
     sql_dl = Setting(False)
