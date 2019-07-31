@@ -1,12 +1,11 @@
 import logging
 from contextlib import contextmanager
 
-from Orange.util import Registry
 import mysql.connector as mysql
 
 from Orange.data import StringVariable, TimeVariable, ContinuousVariable, DiscreteVariable
 from Orange.data.sql.backend import Backend
-from Orange.data.sql.backend.base import ToSql, BackendError, TableDesc
+from Orange.data.sql.backend.base import BackendError
 
 log = logging.getLogger(__name__)
 
@@ -75,9 +74,9 @@ class PymysqlBackend(Backend):
                 except Exception as e:
                     raise ValueError(str(cur))
                     raise BackendError(str(e))
-            schema_clause = """TABLE_SCHEMA IN (SELECT DISTINCT(TABLE_SCHEMA) 
+            schema_clause = """TABLE_SCHEMA IN (SELECT DISTINCT(TABLE_SCHEMA)
             FROM information_schema.SCHEMA_PRIVILEGES WHERE GRANTEE LIKE "'{}%'")""".format(user)
-        return """SELECT table_schema as "Schema", 
+        return """SELECT table_schema as "Schema",
                           table_name AS "Name"
                        FROM information_schema.tables
                       WHERE {}""".format(schema_clause)
@@ -99,7 +98,7 @@ class PymysqlBackend(Backend):
             fields = [(f[0], f[1].split("(")[0].upper()) for f in cur.fetchall()]
         return fields
 
-    def create_variable(self, field_name, field_metadata, 
+    def create_variable(self, field_name, field_metadata,
                         type_hints, inspect_table=None):
         """Create variable based on field information
 
@@ -122,7 +121,7 @@ class PymysqlBackend(Backend):
         if field_name in type_hints:
             var = type_hints[field_name]
         else:
-            var = self._guess_variable(field_name, field_metadata, 
+            var = self._guess_variable(field_name, field_metadata,
                                        inspect_table)
 
         field_name_q = self.quote_identifier(field_name)
@@ -143,8 +142,7 @@ class PymysqlBackend(Backend):
         DATE_TYPES = ("DATE", "DATETIME", "YEAR")
         TIME_TYPES = ("TIMESTAMP", "TIME")
         CHAR_TYPES = ("CHAR", "ENUM")
-        STRING_TYPES = ("VARCHAR", "BLOB", "TEXT", "TINYBLOB", "TINYTEXT ", "MEDIUMBLOB", "MEDIUMTEXT", "LONGBLOB", "LONGTEXT")
-
+        
         if type_code in NUMERIC_TYPES:
             return ContinuousVariable.make(field_name)
 
@@ -182,7 +180,6 @@ class PymysqlBackend(Backend):
         -------
         Approximate number of rows
         """
-        cursor = self._get_cursor()
         query = "EXPLAIN " + query
         with self.execute_sql_query(query) as cur:
             return cur.fetchone()[9]
@@ -190,8 +187,8 @@ class PymysqlBackend(Backend):
     # query related methods
 
     def create_sql_query(
-            self, table_name, fields, filters=(), 
-            group_by=None, order_by=None, offset=None, limit=None, 
+            self, table_name, fields, filters=(),
+            group_by=None, order_by=None, offset=None, limit=None,
             use_time_sample=None):
         """Construct an sql query using the provided elements.
 
@@ -223,7 +220,7 @@ class PymysqlBackend(Backend):
             if limit is not None:
                 query.extend(["OFFSET", str(offset)])
             else:
-                query.extend(["LIMIT 18446744073709551615 OFFSET", str(offset)]) 
+                query.extend(["LIMIT 18446744073709551615 OFFSET", str(offset)])
         if use_time_sample is not None:
             query.insert(1, "/*+ MAX_EXECUTION_TIME = {} */".format(use_time_sample))
         return " ".join(query)
@@ -255,7 +252,7 @@ class PymysqlBackend(Backend):
         else:
             cursor.execute(query)
         yield cursor
-         
+        
 
     def quote_identifier(self, name):
         """Quote identifier name so it can be safely used in queries
@@ -284,6 +281,5 @@ class PymysqlBackend(Backend):
         -------
         unquoted name
         """
-        
+       
         return quoted_name[1:-1]
-
