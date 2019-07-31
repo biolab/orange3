@@ -157,3 +157,23 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         )
         self.widget.controls.add_scores.setChecked(1)
         self.send_signal(self.widget.Inputs.data, table)
+
+    def test_saved_selection(self):
+        self.widget.settingsHandler.pack_data(self.widget)
+        # no assert here, just test is doesn't crash on empty
+
+        iris = Table("iris")
+
+        self.send_signal(self.widget.Inputs.data, iris)
+        random.seed(42)
+        points = random.sample(range(0, len(self.data)), 20)
+        self.widget._silplot.setSelection(points)
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        w = self.create_widget(OWSilhouettePlot, stored_settings=settings)
+        self.send_signal(w.Inputs.data, iris, widget=w)
+        self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 20)
+
+
+if __name__ == "__main__":
+    unittest.main()

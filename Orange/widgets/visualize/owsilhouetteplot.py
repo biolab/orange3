@@ -76,6 +76,8 @@ class OWSilhouettePlot(widget.OWWidget):
     add_scores = settings.Setting(False)
     auto_commit = settings.Setting(True)
 
+    pending_selection = settings.ContextSetting(None, schema_only=True)
+
     Distances = [("Euclidean", Orange.distance.Euclidean),
                  ("Manhattan", Orange.distance.Manhattan),
                  ("Cosine", Orange.distance.Cosine)]
@@ -165,9 +167,17 @@ class OWSilhouettePlot(widget.OWWidget):
         self.view.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.mainArea.layout().addWidget(self.view)
 
+        self.settingsAboutToBePacked.connect(self.pack_settings)
+
     def sizeHint(self):
         sh = self.controlArea.sizeHint()
         return sh.expandedTo(QSize(600, 720))
+
+    def pack_settings(self):
+        if self.data and self._silplot is not None:
+            self.pending_selection = self._silplot.selection()
+        else:
+            self.pending_selection = None
 
     @Inputs.data
     @check_sql_input
@@ -209,6 +219,9 @@ class OWSilhouettePlot(widget.OWWidget):
         if self.data is not None:
             self._update()
             self._replot()
+            if self.pending_selection is not None and self._silplot is not None:
+                self._silplot.setSelection(self.pending_selection)
+                self.pending_selection = None
 
         self.unconditional_commit()
 
