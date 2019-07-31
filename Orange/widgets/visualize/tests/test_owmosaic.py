@@ -144,6 +144,24 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(call_args[0].name, data.domain[0].name)
         self.assertEqual(call_args[1].name, data.domain[2].name)
 
+    def test_selection_setting(self):
+        widget = self.widget
+        data = Table("iris.tab")
+        self.send_signal(widget.Inputs.data, data)
+
+        widget.select_area(
+            1,
+            QMouseEvent(QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
+                        Qt.LeftButton, Qt.KeyboardModifiers()))
+
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertEqual(widget.selection, {1})
+        self.assertIsNotNone(self.get_output(widget.Outputs.selected_data))
+
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget

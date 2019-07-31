@@ -317,6 +317,7 @@ class OWMosaicDisplay(OWWidget):
         self.discrete_data = None
         self.subset_data = None
         self.subset_indices = None
+        self.__pending_selection = None
 
         self.color_data = None
 
@@ -442,6 +443,7 @@ class OWMosaicDisplay(OWWidget):
 
         self.init_combos(self.data)
         self.openContext(self.data)
+        self.__pending_selection = self.selection
 
     @Inputs.data_subset
     def set_subset_data(self, data):
@@ -475,6 +477,11 @@ class OWMosaicDisplay(OWWidget):
     def reset_graph(self):
         self.clear_selection()
         self.update_graph()
+        if self.__pending_selection is not None:
+            self.selection = self.__pending_selection
+            self.__pending_selection = None
+            self.update_selection_rects()
+            self.send_selection()
 
     def set_color_data(self):
         if self.data is None:
