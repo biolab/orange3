@@ -5,7 +5,7 @@ import mysql.connector as mysql
 
 from Orange.data import StringVariable, TimeVariable, ContinuousVariable, DiscreteVariable
 from Orange.data.sql.backend import Backend
-from Orange.data.sql.backend.base import BackendError,ToSQL
+from Orange.data.sql.backend.base import BackendError,ToSql
 
 log = logging.getLogger(__name__)
 
