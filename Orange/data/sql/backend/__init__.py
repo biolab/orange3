@@ -9,3 +9,8 @@ try:
     from .mssql import PymssqlBackend
 except ImportError:
     pass
+
+try:
+    from .mysql import PymysqlBackend
+except ImportError:
+    pass
