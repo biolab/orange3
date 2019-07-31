@@ -79,7 +79,8 @@ class OWLogisticRegression(OWBaseLearner):
             C=self.strength_C,
             fit_intercept=self.fit_intercept,
             intercept_scaling=self.intercept_scaling,
-            preprocessors=self.preprocessors
+            preprocessors=self.preprocessors,
+            random_state=0
         )
 
     def update_model(self):
