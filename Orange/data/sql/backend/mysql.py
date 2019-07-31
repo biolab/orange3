@@ -5,7 +5,7 @@ import mysql.connector as mysql
 
 from Orange.data import StringVariable, TimeVariable, ContinuousVariable, DiscreteVariable
 from Orange.data.sql.backend import Backend
-from Orange.data.sql.backend.base import BackendError
+from Orange.data.sql.backend.base import BackendError,ToSQL
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +47,6 @@ class PymysqlBackend(Backend):
             cur.execute('SELECT VERSION()')
             if not cur.fetchall():
                 raise BackendError("_get_cursor: Connection Failed")
-                return None
             cur.reset()
             return cur
         except Exception as ex:
@@ -69,11 +68,7 @@ class PymysqlBackend(Backend):
             schema_clause = "AND table_schema = '{}'".format(schema)
         else:
             with self.execute_sql_query("SELECT CURRENT_USER()") as cur:
-                try:
-                    user = cur.fetchone()[0].split('@')[0]
-                except Exception as e:
-                    raise ValueError(str(cur))
-                    raise BackendError(str(e))
+                user = cur.fetchone()[0].split('@')[0]
             schema_clause = """TABLE_SCHEMA IN (SELECT DISTINCT(TABLE_SCHEMA)
             FROM information_schema.SCHEMA_PRIVILEGES WHERE GRANTEE LIKE "'{}%'")""".format(user)
         return """SELECT table_schema as "Schema",
@@ -142,7 +137,7 @@ class PymysqlBackend(Backend):
         DATE_TYPES = ("DATE", "DATETIME", "YEAR")
         TIME_TYPES = ("TIMESTAMP", "TIME")
         CHAR_TYPES = ("CHAR", "ENUM")
-        
+
         if type_code in NUMERIC_TYPES:
             return ContinuousVariable.make(field_name)
 
@@ -252,7 +247,6 @@ class PymysqlBackend(Backend):
         else:
             cursor.execute(query)
         yield cursor
-        
 
     def quote_identifier(self, name):
         """Quote identifier name so it can be safely used in queries
@@ -281,5 +275,4 @@ class PymysqlBackend(Backend):
         -------
         unquoted name
         """
-       
         return quoted_name[1:-1]
