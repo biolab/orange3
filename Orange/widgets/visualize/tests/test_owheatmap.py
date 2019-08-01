@@ -1,6 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import warnings
+import unittest
+from unittest.mock import patch
 
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
@@ -175,3 +177,27 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                       np.array([[1], [2], [3]]), np.array([[0], [0], [1]]))
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.row_check.setChecked(True)
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_commit') as commit:
+            self.widget.auto_commit = False
+            commit.reset_mock()
+            self.send_signal(self.widget.Inputs.data, self.titanic)
+            commit.assert_called()
+
+    def test_saved_selection(self):
+        iris = Table("iris")
+
+        self.send_signal(self.widget.Inputs.data, iris)
+        selected_indices = list(range(10, 31))
+        self.widget.selection_manager.select_rows(selected_indices)
+        self.widget.on_selection_finished()
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        w = self.create_widget(OWHeatMap, stored_settings=settings)
+        self.send_signal(w.Inputs.data, iris, widget=w)
+        self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 21)
+
+
+if __name__ == "__main__":
+    unittest.main()

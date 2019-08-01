@@ -720,6 +720,7 @@ class OWHeatMap(widget.OWWidget):
             if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
         self.update_heatmaps()
+        self.unconditional_commit()
 
     def update_heatmaps(self):
         if self.data is not None:
@@ -739,13 +740,13 @@ class OWHeatMap(widget.OWWidget):
                 self.selected_rows = []
         else:
             self.clear()
-        self.commit()
 
     def update_merge(self):
         self.kmeans_model = None
         self.merge_indices = None
         if self.data is not None and self.merge_kmeans:
             self.update_heatmaps()
+            self.commit()
 
     def _make_parts(self, data, group_var=None, group_key=None):
         """
@@ -1393,9 +1394,11 @@ class OWHeatMap(widget.OWWidget):
 
     def update_sorting_examples(self):
         self.update_heatmaps()
+        self.commit()
 
     def update_clustering_examples(self):
         self.update_heatmaps()
+        self.commit()
 
     def update_legend(self):
         for item in self.heatmap_scene.items():
