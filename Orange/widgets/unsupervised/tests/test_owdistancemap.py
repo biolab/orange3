@@ -1,6 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import random
+import unittest
+
 from Orange.distance import Euclidean
 from Orange.widgets.unsupervised.owdistancemap import OWDistanceMap
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -24,3 +26,20 @@ class TestOWDistanceMap(WidgetTest, WidgetOutputsTestMixin):
         self.widget._selection = selected_indices
         self.widget.commit()
         return selected_indices
+
+    def test_saved_selection(self):
+        self.widget.settingsHandler.pack_data(self.widget)
+        # no assert here, just test is doesn't crash on empty
+
+        self.send_signal(self.signal_name, self.signal_data)
+        random.seed(42)
+        self.widget.matrix_item.set_selections([(range(5, 10), range(8, 15))])
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        w = self.create_widget(OWDistanceMap, stored_settings=settings)
+        self.send_signal(self.signal_name, self.signal_data)
+        self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 10)
+
+
+if __name__ == "__main__":
+    unittest.main()
