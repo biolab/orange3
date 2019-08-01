@@ -122,7 +122,7 @@ class PymysqlBackend(Backend):
         field_name_q = self.quote_identifier(field_name)
         if var.is_continuous:
             if isinstance(var, TimeVariable):
-                var.to_sql = ToSql(field_name_q)
+                var.to_sql = ToSql("UNIX_TIMESTAMP({})".format(field_name_q))
             else:
                 var.to_sql = ToSql(field_name_q)
         else:  # discrete or string
