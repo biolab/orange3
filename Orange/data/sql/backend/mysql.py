@@ -1,7 +1,7 @@
 import logging
 from contextlib import contextmanager
 
-import mysql.connector as mysql
+import mysql.connector as mysql # pylint: disable=import-error
 
 from Orange.data import StringVariable, TimeVariable, ContinuousVariable, DiscreteVariable
 from Orange.data.sql.backend import Backend
