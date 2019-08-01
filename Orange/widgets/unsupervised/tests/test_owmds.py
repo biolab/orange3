@@ -53,7 +53,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         """Test if data is plotted only once but committed on every input change"""
         table = Table("heart_disease")
         self.widget.setup_plot = Mock()
-        self.widget.commit = Mock()
+        self.widget.commit = self.widget.unconditional_commit = Mock()
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.commit.reset_mock()
         self.wait_until_stop_blocking()
