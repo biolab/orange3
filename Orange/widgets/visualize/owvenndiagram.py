@@ -210,6 +210,10 @@ class OWVennDiagram(widget.OWWidget):
         del self._queue[:]
 
         self._createDiagram()
+        # If autocommit is enabled, _createDiagram already outputs data
+        # If not, call unconditional_commit from here
+        if not self.autocommit:
+            self.unconditional_commit()
         if self.data:
             self.infolabel.setText(f"{len(self.data)} datasets on input.\n")
         else:
