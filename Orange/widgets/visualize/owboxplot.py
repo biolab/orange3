@@ -804,7 +804,7 @@ class OWBoxPlot(widget.OWWidget):
             t = QGraphicsSimpleTextItem(
                 self.attribute.str_val(val) if not misssing_stats else "?")
             t.setFont(self._axis_font)
-            t.setFlags(t.flags() | QGraphicsItem.ItemIgnoresTransformations)
+            t.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
             x_start = val * scale_x - r.width() / 2
             x_finish = x_start + r.width()
@@ -820,12 +820,11 @@ class OWBoxPlot(widget.OWWidget):
 
     def draw_stat(self):
         if self.stat_test:
-            l = QGraphicsSimpleTextItem(self.stat_test)
-            l.setFont(self._axis_font)
-            l.setPos((self.scene_min_x + self.scene_max_x)/2 - l.boundingRect().width()/2,
-                     8 + self._axis_font.pixelSize()*2)
-            l.setFlags(l.flags() | QGraphicsItem.ItemIgnoresTransformations)
-            self.box_scene.addItem(l)
+            label = QGraphicsSimpleTextItem(self.stat_test)
+            label.setPos((self.scene_min_x + self.scene_max_x)/2 - label.boundingRect().width()/2,
+                         8 + self._axis_font.pixelSize()*2)
+            label.setFlag(QGraphicsItem.ItemIgnoresTransformations)
+            self.box_scene.addItem(label)
 
     def draw_axis_disc(self):
         """
