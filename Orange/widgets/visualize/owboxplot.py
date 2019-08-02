@@ -270,8 +270,8 @@ class OWBoxPlot(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.box_view)
 
-        e = gui.hBox(self.mainArea, addSpace=False)
-        self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
+        gui.hBox(self.mainArea, addSpace=False)
+        self.stat_test = ""
         self.mainArea.setMinimumWidth(300)
 
         self.stats = self.dist = self.conts = []
@@ -380,7 +380,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def reset_all_data(self):
         self.clear_scene()
-        self.infot1.setText("")
+        self.stat_test = ""
         self.attrs.clear()
         self.group_vars.set_domain(None)
         self.group_view.setEnabled(False)
@@ -494,6 +494,7 @@ class OWBoxPlot(widget.OWWidget):
         for it in chain(self.labels, self.attr_labels):
             self.box_scene.addItem(it)
         self.display_changed()
+        self.draw_stat()
 
     def display_changed(self):
         if self.dataset is None:
@@ -597,7 +598,7 @@ class OWBoxPlot(widget.OWWidget):
         self.box_scene.setSceneRect(-self.label_width - 5,
                                     -30 - len(self.boxes) * 40,
                                     self.scene_width, len(self.boxes * 40) + 90)
-        self.infot1.setText("")
+        self.stat_test = ""
         self.select_box_items()
 
     def __draw_group_labels(self, y, row):
@@ -712,6 +713,7 @@ class OWBoxPlot(widget.OWWidget):
             p = 1 - scipy.special.fdtr(df_between, df_within, F)
             return F, p
 
+        n = len(self.dataset)
         if self.compare == OWBoxPlot.CompareNone or len(self.stats) < 2:
             t = ""
         elif any(s.n <= 1 for s in self.stats):
@@ -725,7 +727,7 @@ class OWBoxPlot(widget.OWWidget):
                 # t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, p)
             else:
                 t, p = stat_ttest()
-                t = "" if np.isnan(t) else f"Student's t: {t:.3f} (p={p:.3f})"
+                t = "" if np.isnan(t) else f"Student's t: {t:.3f} (p={p:.3f}, N={n})"
         else:
             if self.compare == OWBoxPlot.CompareMedians:
                 t = ""
@@ -733,8 +735,8 @@ class OWBoxPlot(widget.OWWidget):
                 # t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, p)
             else:
                 F, p = stat_ANOVA()
-                t = "" if np.isnan(F) else f"ANOVA: {F:.3f} (p={p:.3f})"
-        self.infot1.setText("<center>%s</center>" % t)
+                t = "" if np.isnan(F) else f"ANOVA: {F:.3f} (p={p:.3f}, N={n})"
+        self.stat_test = t
 
     def mean_label(self, stat, attr, val_name):
         label = QGraphicsItemGroup()
@@ -802,7 +804,7 @@ class OWBoxPlot(widget.OWWidget):
             t = QGraphicsSimpleTextItem(
                 self.attribute.str_val(val) if not misssing_stats else "?")
             t.setFont(self._axis_font)
-            t.setFlags(t.flags() | QGraphicsItem.ItemIgnoresTransformations)
+            t.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
             x_start = val * scale_x - r.width() / 2
             x_finish = x_start + r.width()
@@ -815,6 +817,14 @@ class OWBoxPlot(widget.OWWidget):
             val += step
         self.box_scene.addLine(
             bottom * scale_x - 4, 0, top * scale_x + 4, 0, self._pen_axis)
+
+    def draw_stat(self):
+        if self.stat_test:
+            label = QGraphicsSimpleTextItem(self.stat_test)
+            label.setPos((self.scene_min_x + self.scene_max_x)/2 - label.boundingRect().width()/2,
+                         8 + self._axis_font.pixelSize()*2)
+            label.setFlag(QGraphicsItem.ItemIgnoresTransformations)
+            self.box_scene.addItem(label)
 
     def draw_axis_disc(self):
         """
@@ -1041,8 +1051,7 @@ class OWBoxPlot(widget.OWWidget):
             x *= self.scale_x
             xs.append(x * self.scale_x)
             by = y_up + pos * height
-            line(by + 12, 3)
-            line(by - 12, by - 25)
+            line(by + 12, 0)
 
         used_to = []
         last_to = to = 0
