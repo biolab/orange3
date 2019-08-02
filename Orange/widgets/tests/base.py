@@ -438,7 +438,9 @@ class WidgetLearnerTestMixin:
                 new_value = [x for x in parameter.values
                              if x != parameter.get_value()][0]
                 parameter.set_value(new_value)
-                self.widget.apply.assert_called_once_with()
+                # wait for asynchronous calls
+                self.process_events(lambda: self.widget.apply.call_args is not None)
+                self.widget.apply.assert_called_once()
 
     @staticmethod
     def _should_check_parameter(parameter, data):
