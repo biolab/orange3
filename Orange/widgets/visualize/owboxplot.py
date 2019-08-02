@@ -1051,8 +1051,7 @@ class OWBoxPlot(widget.OWWidget):
             x *= self.scale_x
             xs.append(x * self.scale_x)
             by = y_up + pos * height
-            line(by + 12, 3)
-            line(by - 12, by - 25)
+            line(by + 12, 0)
 
         used_to = []
         last_to = to = 0
