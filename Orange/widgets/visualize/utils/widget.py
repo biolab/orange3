@@ -393,6 +393,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.subset_indices = None
         self.__pending_selection = self.selection
         self._invalidated = True
+        self._domain_invalidated = True
         self.setup_gui()
 
     # GUI
@@ -446,6 +447,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self._invalidated = not (
             data_existed and self.data is not None and
             array_equal(effective_data.X, self.effective_data.X))
+        self._domain_invalidated = not (
+            data_existed and self.data is not None and
+            effective_data.domain.checksum()
+            == self.effective_data.domain.checksum())
         if self._invalidated:
             self.clear()
         self.enable_controls()
