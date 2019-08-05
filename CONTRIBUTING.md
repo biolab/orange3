@@ -11,9 +11,13 @@ Please submit contributions in accordance with the flow explained in the
 
 Installing for development
 --------------------------
-See the relevant section in the [README file].
+Install Orange as suggested in [README]. Then:
 
-[README file]: https://github.com/biolab/orange3
+    git clone https://github.com/biolab/orange3.git
+    cd orange3
+    python setup.py develop
+
+[README]: https://github.com/biolab/orange3/blob/master/README.md
 
 
 Reporting bugs
