@@ -155,7 +155,7 @@ class ScoreTable(OWComponent, QObject):
         # pylint doesn't know that self.shown_scores is a set, not a Setting
         # pylint: disable=unsupported-membership-test
         header = self.view.horizontalHeader()
-        for section, col_name in enumerate(self._column_names(), start=3):
+        for section, col_name in enumerate(self._column_names(), start=1):
             header.setSectionHidden(section, col_name not in self.shown_scores)
         self.view.resizeColumnsToContents()
         self.shownScoresChanged.emit()

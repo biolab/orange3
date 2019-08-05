@@ -24,7 +24,8 @@ def _identity(x):
 
 def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
                store_models):
-    predicted, probs, model, failed, train_time, test_time = None, None, None, False, None, None
+    predicted, probs, model, failed = None, None, None, False
+    train_time, test_time = None, None
     try:
         if not train_data or not test_data:
             raise RuntimeError('Test fold is empty')
@@ -32,7 +33,7 @@ def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
         t0 = time()
         model = learner(train_data)
         train_time = time() - t0
-        t0  = time()
+        t0 = time()
         # testing
         if train_data.domain.has_discrete_class:
             predicted, probs = model(test_data, model.ValueProbs)
