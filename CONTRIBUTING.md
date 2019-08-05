@@ -11,15 +11,13 @@ Please submit contributions in accordance with the flow explained in the
 
 Installing for development
 --------------------------
-    conda create python=3 --name orange3
-    conda activate orange3
-    
-    conda config --add channels conda-forge
+Install Orange as suggested in [README]. Then:
 
     git clone https://github.com/biolab/orange3.git
     cd orange3
     python setup.py develop
 
+[README]: https://github.com/biolab/orange3/blob/master/README.md
 
 Reporting bugs
 --------------
