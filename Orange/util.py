@@ -13,6 +13,8 @@ import warnings
 from unittest.mock import patch  # pylint: disable=unused-import
 
 # Backwards-compat
+import pkg_resources
+
 from Orange.data.util import scale  # pylint: disable=unused-import
 
 
@@ -28,6 +30,13 @@ warnings.simplefilter('default', OrangeWarning)
 
 if os.environ.get('ORANGE_DEPRECATIONS_ERROR'):
     warnings.simplefilter('error', OrangeDeprecationWarning)
+
+
+def resource_filename(path):
+    """
+    Return the resource filename path relative to the Orange package.
+    """
+    return pkg_resources.resource_filename("Orange", path)
 
 
 def deprecated(obj):

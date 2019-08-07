@@ -6,7 +6,7 @@ from orangecanvas.application.settings import UserSettingsDialog
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangewidget.workflow.mainwindow import OWCanvasMainWindow
 
-from Orange.canvas.utils.overlay import NotificationOverlay
+from orangecanvas.utils.overlay import NotificationOverlay
 
 
 class OUserSettingsDialog(UserSettingsDialog):
@@ -52,11 +52,7 @@ class MainWindow(OWCanvasMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.notification_overlay = NotificationOverlay(self.scheme_widget)
-
-    def closeEvent(self, event):
-        super().closeEvent(event)
-        if event.isAccepted():
-            self.notification_overlay.close()
+        self.notification_server = None
 
     def open_canvas_settings(self):
         # type: () -> None
@@ -66,3 +62,18 @@ class MainWindow(OWCanvasMainWindow):
         status = dlg.exec_()
         if status == 0:
             self.user_preferences_changed_notify_all()
+
+    def set_notification_server(self, notif_server):
+        self.notification_server = notif_server
+
+        # populate notification overlay with current notifications
+        for notif in self.notification_server.getNotificationQueue():
+            self.notification_overlay.addNotification(notif)
+
+        notif_server.newNotification.connect(self.notification_overlay.addNotification)
+        notif_server.nextNotification.connect(self.notification_overlay.nextWidget)
+
+    def create_new_window(self):  # type: () -> CanvasMainWindow
+        window = super().create_new_window()
+        window.set_notification_server(self.notification_server)
+        return window

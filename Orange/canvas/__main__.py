@@ -6,6 +6,7 @@ from contextlib import closing
 
 import os
 import sys
+
 import gc
 import re
 import time
@@ -28,6 +29,7 @@ from AnyQt.QtCore import (
 import pyqtgraph
 
 import orangecanvas
+from Orange import canvas
 from orangecanvas.registry import qt
 from orangecanvas.registry import WidgetRegistry, set_global_registry
 from orangecanvas.registry import cache
@@ -35,6 +37,7 @@ from orangecanvas.application.application import CanvasApplication
 from orangecanvas.application.outputview import TextStream, ExceptHook
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.gui.splashscreen import SplashScreen
+from orangecanvas.utils.overlay import Notification, NotificationServer
 from orangecanvas import config as canvasconfig
 from orangecanvas.main import (
     fix_win_pythonw_std_stream, fix_set_proxy_env, fix_macos_nswindow_tabbing,
@@ -44,9 +47,8 @@ from orangecanvas.main import (
 from orangewidget.workflow.errorreporting import handle_exception
 
 from Orange.canvas import config
-from Orange.canvas.utils.overlay import NotificationWidget, NotificationOverlay
 from Orange.canvas.mainwindow import MainWindow
-from Orange.widgets import gui
+from Orange.util import resource_filename
 from Orange.version import version as current, release as is_release
 
 
@@ -55,6 +57,16 @@ log = logging.getLogger(__name__)
 statistics_server_url = os.getenv(
     'ORANGE_STATISTICS_API_URL', "https://orange.biolab.si/usage-statistics"
 )
+
+
+def ua_string():
+    is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+    return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}'.format(
+        orange_version=current,
+        py_version='.'.join(sys.version[:3]),
+        platform=sys.platform,
+        conda='Anaconda' if is_anaconda else '',
+    )
 
 
 def make_sql_logger(level=logging.INFO):
@@ -79,50 +91,45 @@ def setup_notifications():
     show_survey = settings.value("startup/show-short-survey", True, type=bool) and \
                   settings.value("startup/launch-count", 0, type=int) >= 5
     if show_survey:
-        surveyDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
-        surveyDialog = NotificationWidget(icon=QIcon(gui.resource_filename("icons/information.png")),
-                                          title="Survey",
-                                          text="We want to understand our users better.\n"
-                                               "Would you like to take a short survey?",
-                                          standardButtons=surveyDialogButtons)
+        notif = Notification(icon=QIcon(resource_filename("canvas/icons/short-survey.png")),
+                             title="Survey",
+                             text="We want to understand our users better.\n"
+                                  "Would you like to take a short survey?",
+                             accept_button_label="Ok",
+                             reject_button_label="No")
 
-        def handle_survey_response(button):
-            if surveyDialog.buttonRole(button) == NotificationWidget.AcceptRole:
+        def handle_survey_response(role):
+            if role == notif.AcceptRole:
                 success = QDesktopServices.openUrl(
                     QUrl("https://orange.biolab.si/survey/short.html"))
                 settings.setValue("startup/show-short-survey", not success)
-            elif surveyDialog.buttonRole(button) == NotificationWidget.RejectRole:
+            elif role == notif.RejectRole:
                 settings.setValue("startup/show-short-survey", False)
 
-        surveyDialog.clicked.connect(handle_survey_response)
-
-        NotificationOverlay.registerNotification(surveyDialog)
+        notif.clicked.connect(handle_survey_response)
+        canvas.notification_server_instance.registerNotification(notif)
 
     # data collection permission
     if not settings.value("error-reporting/permission-requested", False, type=bool):
-        permDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
-        permDialog = NotificationWidget(icon=QIcon(gui.resource_filename(
-                                                                "../../distribute/icon-48.png")),
-                                        title="Anonymous Usage Statistics",
-                                        text="Do you wish to opt-in to sharing "
-                                             "statistics about how you use Orange?\n"
-                                             "All data is anonymized and used "
-                                             "exclusively for understanding how users "
-                                             "interact with Orange.",
-                                        standardButtons=permDialogButtons)
-        btnOK = permDialog.button(NotificationWidget.AcceptRole)
-        btnOK.setText("Allow")
+        notif = Notification(icon=QIcon(resource_filename("canvas/icons/statistics-request.png")),
+                             title="Anonymous Usage Statistics",
+                             text="Do you wish to opt-in to sharing "
+                                  "statistics about how you use Orange? "
+                                  "All data is anonymized and used "
+                                  "exclusively for understanding how users "
+                                  "interact with Orange.",
+                             accept_button_label="Allow",
+                             reject_button_label="No")
 
-        def handle_permission_response(button):
-            if permDialog.buttonRole(button) != permDialog.DismissRole:
+        def handle_permission_response(role):
+            if role != notif.DismissRole:
                 settings.setValue("error-reporting/permission-requested", True)
-            if permDialog.buttonRole(button) == permDialog.AcceptRole:
+            if role != notif.AcceptRole:
                 UsageStatistics.set_enabled(True)
                 settings.setValue("error-reporting/send-statistics", True)
 
-        permDialog.clicked.connect(handle_permission_response)
-
-        NotificationOverlay.registerNotification(permDialog)
+        notif.clicked.connect(handle_permission_response)
+        canvas.notification_server_instance.registerNotification(notif)
 
 
 def check_for_updates():
@@ -144,23 +151,13 @@ def check_for_updates():
                                           'Accept': 'text/plain',
                                           'Accept-Encoding': 'gzip, deflate',
                                           'Connection': 'close',
-                                          'User-Agent': self.ua_string()})
+                                          'User-Agent': ua_string()})
                     contents = urlopen(request, timeout=10).read().decode()
                 # Nothing that this fails with should make Orange crash
                 except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to check for updates')
                 else:
                     self.resultReady.emit(contents)
-
-            @staticmethod
-            def ua_string():
-                is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
-                return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}'.format(
-                    orange_version=current,
-                    py_version='.'.join(sys.version[:3]),
-                    platform=sys.platform,
-                    conda='Anaconda' if is_anaconda else '',
-                )
 
         def compare_versions(latest):
             version = pkg_resources.parse_version
@@ -169,25 +166,21 @@ def check_for_updates():
                     latest == skipped:
                 return
 
-            questionButtons = NotificationWidget.Ok | NotificationWidget.Close
-            question = NotificationWidget(icon=QIcon(gui.resource_filename('icons/Dlg_down3.png')),
-                                          title='Orange Update Available',
-                                          text='Current version: <b>{}</b><br>'
-                                               'Latest version: <b>{}</b>'.format(current, latest),
-                                          textFormat=Qt.RichText,
-                                          standardButtons=questionButtons,
-                                          acceptLabel="Download",
-                                          rejectLabel="Skip this Version")
+            notif = Notification(title='Orange Update Available',
+                                 text='Current version: <b>{}</b><br>'
+                                      'Latest version: <b>{}</b>'.format(current, latest),
+                                 accept_button_label="Download",
+                                 reject_button_label="Skip this Version",
+                                 icon=QIcon(resource_filename("canvas/icons/update.png")))
 
-            def handle_click(b):
-                if question.buttonRole(b) == question.RejectRole:
+            def handle_click(role):
+                if role == notif.RejectRole:
                     settings.setValue('startup/latest-skipped-version', latest)
-                if question.buttonRole(b) == question.AcceptRole:
+                if role == notif.AcceptRole:
                     QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
 
-            question.clicked.connect(handle_click)
-
-            NotificationOverlay.registerNotification(question)
+            notif.clicked.connect(handle_click)
+            canvas.notification_server_instance.registerNotification(notif)
 
         thread = GetLatestVersion()
         thread.resultReady.connect(compare_versions)
@@ -444,6 +437,14 @@ def main(argv=None):
     canvas_window.setAttribute(Qt.WA_DeleteOnClose)
     canvas_window.setWindowIcon(config.application_icon())
 
+    # initialize notification server, set to initial canvas
+    notif_server = NotificationServer()
+    canvas.notification_server_instance = notif_server
+    canvas_window.set_notification_server(notif_server)
+
+    # initialize notifications
+    setup_notifications()
+
     if stylesheet_string is not None:
         canvas_window.setStyleSheet(stylesheet_string)
 
@@ -519,9 +520,6 @@ def main(argv=None):
         log.info("Loading a scheme from an `QFileOpenEvent` for %r",
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
-
-    # initialize notifications
-    setup_notifications()
 
     # local references prevent destruction
     update_check = check_for_updates()
