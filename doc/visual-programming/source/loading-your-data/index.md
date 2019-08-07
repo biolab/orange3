@@ -113,9 +113,9 @@ If you are using LibreOffice, simply save your files in Excel (.xlsx) format (av
 
 ## Datetime Format
 
-To avoid ambiguity, Orange supports date and/or time formatted in one of [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formats. E.g., the following values are all valid::
+To avoid ambiguity, Orange supports date and/or time formatted in one of the [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formats. For example, the following values are all valid:
 
     2016
     2016-12-27
-    2016-12-27 14:20:51+02:00
+    2016-12-27 14:20:51
     16:20
