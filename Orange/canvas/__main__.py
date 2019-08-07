@@ -2,10 +2,12 @@
 Orange Canvas main entry point
 
 """
+from collections import defaultdict
 from contextlib import closing
 
 import os
 import sys
+from datetime import date
 
 import gc
 import re
@@ -21,6 +23,7 @@ from unittest.mock import patch
 from urllib.request import urlopen, Request
 
 import pkg_resources
+import yaml
 
 from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
 from AnyQt.QtCore import (
@@ -45,6 +48,7 @@ from orangecanvas.main import (
 )
 
 from orangewidget.workflow.errorreporting import handle_exception
+from Orange.util import literal_eval, requirementsSatisfied
 
 from Orange.canvas import config
 from Orange.canvas.mainwindow import MainWindow
@@ -124,7 +128,7 @@ def setup_notifications():
         def handle_permission_response(role):
             if role != notif.DismissRole:
                 settings.setValue("error-reporting/permission-requested", True)
-            if role != notif.AcceptRole:
+            if role == notif.AcceptRole:
                 UsageStatistics.set_enabled(True)
                 settings.setValue("error-reporting/send-statistics", True)
 
@@ -187,6 +191,155 @@ def check_for_updates():
         thread.start()
         return thread
     return None
+
+
+def open_link(url: QUrl):
+    if url.scheme() == "orange":
+        # define custom actions within Orange here
+        pass
+    else:
+        QDesktopServices.openUrl(url)
+
+
+class YAMLNotification:
+    """
+    Class used for safe loading of yaml file.
+    """
+    # pylint: disable=redefined-builtin
+    def __init__(self, id=None, type=None, start=None, end=None, requirements=None, icon=None,
+                 title=None, text=None, link=None, accept_button_label=None,
+                 reject_button_label=None):
+        self.id = id
+        self.type = type
+        self.start = start
+        self.end = end
+        self.requirements = requirements
+        self.icon = icon
+        self.title = title
+        self.text = text
+        self.link = link
+        self.accept_button_label = accept_button_label
+        self.reject_button_label = reject_button_label
+
+    def toNotification(self):
+        return Notification(title=self.title,
+                            text=self.text,
+                            accept_button_label=self.accept_button_label,
+                            reject_button_label=self.reject_button_label,
+                            icon=QIcon(resource_filename(self.icon)))
+
+    @staticmethod
+    def yamlConstructor(loader, node):
+        fields = loader.construct_mapping(node)
+        return YAMLNotification(**fields)
+
+
+yaml.add_constructor(u'!Notification', YAMLNotification.yamlConstructor, Loader=yaml.SafeLoader)
+
+
+def pull_notifications():
+    Version = pkg_resources.parse_version
+
+    settings = QSettings()
+    # create settings_dict for notif requirements purposes (read-only)
+    spec = canvasconfig.spec + config.spec
+    settings_dict = canvasconfig.Settings(defaults=spec, store=settings)
+
+    # map of installed addon name -> version
+    installed_list = [ep.dist for ep in config.addon_entry_points()
+                      if ep.dist is not None]
+    installed = defaultdict(lambda: "-1")
+    for addon in installed_list:
+        installed[addon.project_name] = addon.version
+
+    # get set of already displayed notification IDs, stored in settings["notifications/displayed"]
+    displayedIDs = literal_eval(settings.value("notifications/displayed", "set()", str))
+
+    # get notification feed from Github
+    class GetNotifFeed(QThread):
+        resultReady = pyqtSignal(str)
+
+        def run(self):
+            try:
+                request = Request('https://orange.biolab.si/notification-feed',
+                                  headers={
+                                      'Accept': 'text/plain',
+                                      'Connection': 'close',
+                                      'User-Agent': ua_string(),
+                                      'Cache-Control': 'no-cache',
+                                      'Pragma': 'no-cache'})
+                contents = urlopen(request, timeout=10).read().decode()
+            # Nothing that this fails with should make Orange crash
+            except Exception:  # pylint: disable=broad-except
+                log.exception('Failed to pull notification feed')
+            else:
+                self.resultReady.emit(contents)
+
+    thread = GetNotifFeed()
+
+    def parse_yaml_notification(YAMLnotif: YAMLNotification):
+        # check if notification has been displayed and responded to previously
+        if YAMLnotif.id and YAMLnotif.id in displayedIDs:
+            return
+
+        # check if type is filtered by user
+        allowAnnouncements = settings.value('notifications/announcements', True, bool)
+        allowBlog = settings.value('notifications/blog', True, bool)
+        allowNewFeatures = settings.value('notifications/new-features', True, bool)
+        if YAMLnotif.type and \
+                (YAMLnotif.type == 'announcement' and not allowAnnouncements
+                 or YAMLnotif.type == 'blog' and not allowBlog
+                 or YAMLnotif.type == 'new-features' and not allowNewFeatures):
+            return
+
+        # check time validity
+        today = date.today()
+        if (YAMLnotif.start and YAMLnotif.start >= today) or \
+                (YAMLnotif.end and YAMLnotif.end <= today):
+            return
+
+        # check requirements
+        reqs = YAMLnotif.requirements
+        # Orange/addons version
+        if reqs and 'installed' in reqs and \
+                not requirementsSatisfied(reqs['installed'], installed, req_type=Version):
+            return
+        # local config values
+        if reqs and 'local_config' in reqs and \
+                not requirementsSatisfied(reqs['local_config'], settings_dict):
+            return
+
+        # if no custom icon is set, default to notif type icon
+        if YAMLnotif.icon is None and YAMLnotif.type is not None:
+            YAMLnotif.icon = "canvas/icons/" + YAMLnotif.type + ".png"
+
+        # instantiate and return Notification
+        notif = YAMLnotif.toNotification()
+
+        # connect link to notification
+        notif.accepted.connect(lambda: open_link(QUrl(YAMLnotif.link)))
+
+        # remember notification id
+        def remember_notification(role):
+            # if notification was accepted or rejected, write its ID to preferences
+            if role == notif.DismissRole or YAMLnotif.id is None:
+                return
+
+            displayedIDs.add(YAMLnotif.id)
+            settings.setValue("notifications/displayed", repr(displayedIDs))
+        notif.clicked.connect(remember_notification)
+
+        # display notification
+        canvas.notification_server_instance.registerNotification(notif)
+
+    def setup_notification_feed(feed_str):
+        feed = yaml.safe_load(feed_str)
+        for YAMLnotif in feed:
+            parse_yaml_notification(YAMLnotif)
+
+    thread.resultReady.connect(setup_notification_feed)
+    thread.start()
+    return thread
 
 
 def send_usage_statistics():
@@ -524,6 +677,7 @@ def main(argv=None):
     # local references prevent destruction
     update_check = check_for_updates()
     send_stat = send_usage_statistics()
+    pull_notifs = pull_notifications()
 
     # Tee stdout and stderr into Output dock
     log_view = canvas_window.output_view()
@@ -558,6 +712,7 @@ def main(argv=None):
     del canvas_window
     del update_check
     del send_stat
+    del pull_notifs
 
     app.processEvents()
     app.flush()

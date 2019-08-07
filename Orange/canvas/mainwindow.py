@@ -47,6 +47,41 @@ class OUserSettingsDialog(UserSettingsDialog):
 
         tab.setLayout(form)
 
+        # Notifications Tab
+        tab = QWidget()
+        self.addTab(tab, self.tr("Notifications"),
+                    toolTip="Settings related to notifications")
+
+        form = QFormLayout()
+
+        notifs = QWidget(self, objectName="notifications-group")
+        notifs.setLayout(QVBoxLayout())
+        notifs.layout().setContentsMargins(0, 0, 0, 0)
+
+        cb1 = QCheckBox(self.tr("Announcements"), self,
+                        toolTip="Show notifications about Biolab announcements.\n"
+                                "This entails events and courses hosted by the developers of "
+                                "Orange.")
+
+        cb2 = QCheckBox(self.tr("Blog posts"), self,
+                        toolTip="Show notifications about blog posts.\n"
+                                "We'll only send you the highlights.")
+        cb3 = QCheckBox(self.tr("New features"), self,
+                        toolTip="Show notifications about new features in Orange when a new "
+                                "version is downloaded and installed, should the new version "
+                                "entail notable updates.")
+
+        self.bind(cb1, "checked", "notifications/announcements")
+        self.bind(cb2, "checked", "notifications/blog")
+        self.bind(cb3, "checked", "notifications/new-features")
+
+        notifs.layout().addWidget(cb1)
+        notifs.layout().addWidget(cb2)
+        notifs.layout().addWidget(cb3)
+
+        form.addRow(self.tr("Show notifications about"), notifs)
+        tab.setLayout(form)
+
 
 class MainWindow(OWCanvasMainWindow):
     def __init__(self, *args, **kwargs):
