@@ -440,6 +440,9 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attr_x, self.attr_y = self.attribute_selection_list[:2]
             self.attribute_selection_list = None
         super().handleNewSignals()
+        if self._domain_invalidated:
+            self.graph.update_axes()
+            self._domain_invalidated = False
         self._vizrank_color_change()
 
     @Inputs.features
