@@ -1,6 +1,6 @@
 import Orange
 
-average = lambda x: sum(x)/len(x)
+average = lambda x: sum(x) / len(x)
 
 data = Orange.data.Table("iris")
 print("%-15s %s" % ("Feature", "Mean"))

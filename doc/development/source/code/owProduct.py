@@ -1,6 +1,7 @@
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
+
 class OWProduct(widget.OWWidget):
     name = "Product"
     id = "orange.widgets.data.multiplier"
@@ -10,8 +11,7 @@ class OWProduct(widget.OWWidget):
     category = ""
     keywords = ["list", "of", "keywords"]
     outputs = [("Product", int)]
-    inputs = [("First factor", int, "get_first"),
-              ("Second factor", int, "get_second")]
+    inputs = [("First factor", int, "get_first"), ("Second factor", int, "get_second")]
 
     want_main_area = False
 
@@ -21,9 +21,12 @@ class OWProduct(widget.OWWidget):
         self.first = self.second = None
         self.product = None
 
-        self.result = gui.label(self.controlArea, self,
-                                "%(first)s times %(second)s is %(product)s",
-                                box="Result")
+        self.result = gui.label(
+            self.controlArea,
+            self,
+            "%(first)s times %(second)s is %(product)s",
+            box="Result",
+        )
         self.result.hide()
 
     def get_first(self, n):

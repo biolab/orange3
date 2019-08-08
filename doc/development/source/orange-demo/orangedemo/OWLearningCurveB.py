@@ -17,18 +17,19 @@ from Orange.evaluation.testing import Results
 
 class OWLearningCurveB(OWWidget):
     name = "Learning Curve (B)"
-    description = ("Takes a dataset and a set of learners and shows a "
-                   "learning curve in a table")
+    description = (
+        "Takes a dataset and a set of learners and shows a " "learning curve in a table"
+    )
     icon = "icons/LearningCurve.svg"
     priority = 1010
 
-# [start-snippet-1]
+    # [start-snippet-1]
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True)
         test_data = Input("Test Data", Orange.data.Table)
-        learner = Input("Learner", Orange.classification.Learner,
-                        multiple=True)
-# [end-snippet-1]
+        learner = Input("Learner", Orange.classification.Learner, multiple=True)
+
+    # [end-snippet-1]
 
     #: cross validation folds
     folds = settings.Setting(5)
@@ -50,7 +51,7 @@ class OWLearningCurveB(OWWidget):
             ("Classification Accuracy", Orange.evaluation.scoring.CA),
             ("AUC", Orange.evaluation.scoring.AUC),
             ("Precision", Orange.evaluation.scoring.Precision),
-            ("Recall", Orange.evaluation.scoring.Recall)
+            ("Recall", Orange.evaluation.scoring.Recall),
         ]
         #: input data on which to construct the learning curve
         self.data = None
@@ -67,37 +68,59 @@ class OWLearningCurveB(OWWidget):
 
         # GUI
         box = gui.widgetBox(self.controlArea, "Info")
-        self.infoa = gui.widgetLabel(box, 'No data on input.')
-        self.infob = gui.widgetLabel(box, 'No learners.')
+        self.infoa = gui.widgetLabel(box, "No data on input.")
+        self.infob = gui.widgetLabel(box, "No learners.")
 
         gui.separator(self.controlArea)
 
         box = gui.widgetBox(self.controlArea, "Evaluation Scores")
-        gui.comboBox(box, self, "scoringF",
-                     items=[x[0] for x in self.scoring],
-                     callback=self._invalidate_curves)
+        gui.comboBox(
+            box,
+            self,
+            "scoringF",
+            items=[x[0] for x in self.scoring],
+            callback=self._invalidate_curves,
+        )
 
         gui.separator(self.controlArea)
 
         box = gui.widgetBox(self.controlArea, "Options")
-        gui.spin(box, self, 'folds', 2, 100, step=1,
-                 label='Cross validation folds:  ', keyboardTracking=False,
-                 callback=lambda:
-                 self._invalidate_results() if self.commitOnChange else None)
-        gui.spin(box, self, 'steps', 2, 100, step=1,
-                 label='Learning curve points:  ', keyboardTracking=False,
-                 callback=[self.updateCurvePoints,
-                           lambda: self._invalidate_results() if self.commitOnChange else None])
-        gui.checkBox(box, self, 'commitOnChange', 'Apply setting on any change')
-        self.commitBtn = gui.button(box, self, "Apply Setting",
-                                    callback=self._invalidate_results,
-                                    disabled=True)
+        gui.spin(
+            box,
+            self,
+            "folds",
+            2,
+            100,
+            step=1,
+            label="Cross validation folds:  ",
+            keyboardTracking=False,
+            callback=lambda: self._invalidate_results()
+            if self.commitOnChange
+            else None,
+        )
+        gui.spin(
+            box,
+            self,
+            "steps",
+            2,
+            100,
+            step=1,
+            label="Learning curve points:  ",
+            keyboardTracking=False,
+            callback=[
+                self.updateCurvePoints,
+                lambda: self._invalidate_results() if self.commitOnChange else None,
+            ],
+        )
+        gui.checkBox(box, self, "commitOnChange", "Apply setting on any change")
+        self.commitBtn = gui.button(
+            box, self, "Apply Setting", callback=self._invalidate_results, disabled=True
+        )
 
         gui.rubber(self.controlArea)
 
         # table widget
-        self.table = gui.table(self.mainArea,
-                               selectionMode=QTableWidget.NoSelection)
+        self.table = gui.table(self.mainArea, selectionMode=QTableWidget.NoSelection)
 
     ##########################################################################
     # slots: handle input signals
@@ -114,9 +137,9 @@ class OWLearningCurveB(OWWidget):
         self.data = data
 
         if data is not None:
-            self.infoa.setText('%d instances in input dataset' % len(data))
+            self.infoa.setText("%d instances in input dataset" % len(data))
         else:
-            self.infoa.setText('No data on input.')
+            self.infoa.setText("No data on input.")
 
         self.commitBtn.setEnabled(self.data is not None)
 
@@ -186,8 +209,11 @@ class OWLearningCurveB(OWWidget):
     def _update(self):
         assert self.data is not None
         # collect all learners for which results have not yet been computed
-        need_update = [(id, learner) for id, learner in self.learners.items()
-                       if self.results[id] is None]
+        need_update = [
+            (id, learner)
+            for id, learner in self.learners.items()
+            if self.results[id] is None
+        ]
         if not need_update:
             return
         learners = [learner for _, learner in need_update]
@@ -195,12 +221,14 @@ class OWLearningCurveB(OWWidget):
         if self.testdata is None:
             # compute the learning curve result for all learners in one go
             results = learning_curve(
-                learners, self.data, folds=self.folds,
-                proportions=self.curvePoints,
+                learners, self.data, folds=self.folds, proportions=self.curvePoints
             )
         else:
             results = learning_curve_with_test_data(
-                learners, self.data, self.testdata, times=self.folds,
+                learners,
+                self.data,
+                self.testdata,
+                times=self.folds,
                 proportions=self.curvePoints,
             )
         # split the combined result into per learner/model results
@@ -211,8 +239,7 @@ class OWLearningCurveB(OWWidget):
 
     def _update_curve_points(self):
         for id in self.learners:
-            curve = [self.scoring[self.scoringF][1](x)[0]
-                     for x in self.results[id]]
+            curve = [self.scoring[self.scoringF][1](x)[0] for x in self.results[id]]
             self.curves[id] = curve
 
     def _update_table(self):
@@ -221,9 +248,11 @@ class OWLearningCurveB(OWWidget):
         self.table.setColumnCount(len(self.learners))
 
         self.table.setHorizontalHeaderLabels(
-            [learner.name for _, learner in self.learners.items()])
+            [learner.name for _, learner in self.learners.items()]
+        )
         self.table.setVerticalHeaderLabels(
-            ["{:.2f}".format(p) for p in self.curvePoints])
+            ["{:.2f}".format(p) for p in self.curvePoints]
+        )
 
         if self.data is None:
             return
@@ -231,7 +260,8 @@ class OWLearningCurveB(OWWidget):
         for column, curve in enumerate(self.curves.values()):
             for row, point in enumerate(curve):
                 self.table.setItem(
-                    row, column, QTableWidgetItem("{:.5f}".format(point)))
+                    row, column, QTableWidgetItem("{:.5f}".format(point))
+                )
 
         for i in range(len(self.learners)):
             sh = self.table.sizeHintForColumn(i)
@@ -239,9 +269,9 @@ class OWLearningCurveB(OWWidget):
             self.table.setColumnWidth(i, max(sh, cwidth))
 
     def updateCurvePoints(self):
-        self.curvePoints = [(x + 1.)/self.steps for x in range(self.steps)]
+        self.curvePoints = [(x + 1.0) / self.steps for x in range(self.steps)]
 
-# [start-snippet-3]
+    # [start-snippet-3]
     def test_run_signals(self):
         data = Orange.data.Table("iris")
         indices = numpy.random.permutation(len(data))
@@ -253,21 +283,24 @@ class OWLearningCurveB(OWWidget):
         self.set_testdataset(testdata)
 
         l1 = Orange.classification.NaiveBayesLearner()
-        l1.name = 'Naive Bayes'
+        l1.name = "Naive Bayes"
         self.set_learner(l1, 1)
 
         l2 = Orange.classification.LogisticRegressionLearner()
-        l2.name = 'Logistic Regression'
+        l2.name = "Logistic Regression"
         self.set_learner(l2, 2)
 
         l4 = Orange.classification.SklTreeLearner()
         l4.name = "Decision Tree"
         self.set_learner(l4, 3)
+
+
 # [end-snippet-3]
 
 
-def learning_curve(learners, data, folds=10, proportions=None,
-                   random_state=None, callback=None):
+def learning_curve(
+    learners, data, folds=10, proportions=None, random_state=None, callback=None
+):
 
     if proportions is None:
         proportions = numpy.linspace(0.0, 1.0, 10 + 1, endpoint=True)[1:]
@@ -281,24 +314,34 @@ def learning_curve(learners, data, folds=10, proportions=None,
 
     if callback is not None:
         parts_count = len(proportions)
-        callback_wrapped = lambda part: \
-            lambda value: callback(value / parts_count + part / parts_count)
+        callback_wrapped = lambda part: lambda value: callback(
+            value / parts_count + part / parts_count
+        )
     else:
         callback_wrapped = lambda part: None
 
     results = [
         Orange.evaluation.CrossValidation(
-            data, learners, k=folds,
+            data,
+            learners,
+            k=folds,
             preprocessor=lambda data, p=p: select_proportion_preproc(data, p),
-            callback=callback_wrapped(i))
+            callback=callback_wrapped(i),
+        )
         for i, p in enumerate(proportions)
     ]
     return results
 
 
-def learning_curve_with_test_data(learners, traindata, testdata, times=10,
-                                  proportions=None, random_state=None,
-                                  callback=None):
+def learning_curve_with_test_data(
+    learners,
+    traindata,
+    testdata,
+    times=10,
+    proportions=None,
+    random_state=None,
+    callback=None,
+):
     if proportions is None:
         proportions = numpy.linspace(0.0, 1.0, 10 + 1, endpoint=True)[1:]
 
@@ -311,27 +354,35 @@ def learning_curve_with_test_data(learners, traindata, testdata, times=10,
 
     if callback is not None:
         parts_count = len(proportions) * times
-        callback_wrapped = lambda part: \
-            lambda value: callback(value / parts_count + part / parts_count)
+        callback_wrapped = lambda part: lambda value: callback(
+            value / parts_count + part / parts_count
+        )
     else:
         callback_wrapped = lambda part: None
 
     results = [
-        [Orange.evaluation.TestOnTestData(
-            traindata, testdata, learners,
-            preprocessor=lambda data, p=p: select_proportion_preproc(data, p),
-            callback=callback_wrapped(i * times + t))
-         for t in range(times)]
-        for i, p in enumerate(proportions)]
-    results = [reduce(results_add, res, Orange.evaluation.Results())
-               for res in results]
+        [
+            Orange.evaluation.TestOnTestData(
+                traindata,
+                testdata,
+                learners,
+                preprocessor=lambda data, p=p: select_proportion_preproc(data, p),
+                callback=callback_wrapped(i * times + t),
+            )
+            for t in range(times)
+        ]
+        for i, p in enumerate(proportions)
+    ]
+    results = [reduce(results_add, res, Orange.evaluation.Results()) for res in results]
     return results
 
 
 def results_add(x, y):
     def is_empty(res):
-        return (getattr(res, "models", None) is None
-                and getattr(res, "row_indices", None) is None)
+        return (
+            getattr(res, "models", None) is None
+            and getattr(res, "row_indices", None) is None
+        )
 
     if is_empty(x):
         return y
