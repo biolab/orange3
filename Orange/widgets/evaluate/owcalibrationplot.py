@@ -35,7 +35,7 @@ Metrics = [MetricDefinition(*args) for args in (
      "<p><b>Sensitivity</b> (falling) is the proportion of correctly "
      "detected positive instances (TP&nbsp;/&nbsp;P).</p>"
      "<p><b>Specificity</b> (rising) is the proportion of detected "
-     "negative instances (TP&nbsp;/&nbsp;N).</p>"),
+     "negative instances (TN&nbsp;/&nbsp;N).</p>"),
     ("Precision and recall",
      (Curves.precision, Curves.recall),
      ("prec", "recall"),
