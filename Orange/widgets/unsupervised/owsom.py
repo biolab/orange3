@@ -1,4 +1,5 @@
 from collections import defaultdict, namedtuple
+from xml.sax.saxutils import escape
 
 import numpy as np
 import scipy.sparse as sp
@@ -570,6 +571,26 @@ class OWSOM(OWWidget):
                 int_col[color_column >= thresh] = i
         return int_col
 
+    def _tooltip(self, colors, distribution):
+        if self.attr_color.is_discrete:
+            values = self.attr_color.values
+        else:
+            values = self._bin_names()
+        tot = np.sum(distribution)
+        nbhp = "\N{NON-BREAKING HYPHEN}"
+        return '<table style="white-space: nowrap">' + "".join(f"""
+            <tr>
+                <td>
+                    <font color={color.name()}>■</font>
+                    <b>{escape(val).replace("-", nbhp)}</b>:
+                </td>
+                <td>
+                    {n} ({n / tot * 100:.1f}&nbsp;%)
+                </td>
+            </tr>
+            """ for color, val, n in zip(colors, values, distribution) if n) \
+            + "</table>"
+
     def _draw_pie_charts(self, sizes):
         fx, fy = self._grid_factors
         color_column = self._get_color_column()
@@ -578,12 +599,14 @@ class OWSOM(OWWidget):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = sizes[x, y]
                 if not r:
+                    self.grid_cells[y, x].setToolTip("")
                     continue
                 members = self.get_member_indices(x, y)
                 color_dist = np.bincount(color_column[members],
                                          minlength=len(colors))
-                color_dist = color_dist.astype(float) / len(members)
-                pie = PieChart(color_dist, r / 2, colors)
+                rel_color_dist = color_dist.astype(float) / len(members)
+                pie = PieChart(rel_color_dist, r / 2, colors)
+                pie.setToolTip(self._tooltip(colors, color_dist))
                 self.elements.addToGroup(pie)
                 pie.setPos(x + (y % 2) * fx, y * fy)
 
@@ -609,6 +632,7 @@ class OWSOM(OWWidget):
                 ellipse.setRect(x + (y % 2) * fx - r / 2, y * fy - r / 2, r, r)
                 ellipse.setPen(pen)
                 ellipse.setBrush(brush)
+                ellipse.setToolTip(self._tooltip(self.colors, bc))
                 self.elements.addToGroup(ellipse)
 
     def redraw_grid(self):
@@ -811,12 +835,7 @@ class OWSOM(OWWidget):
         if self.attr_color.is_discrete:
             names = self.attr_color.values
         else:
-            sval = self.attr_color.repr_val
-            names = \
-                [f"< {sval(self.thresholds[0])}"] \
-                + [f"{sval(x)} - {sval(y)}"
-                   for x, y in zip(self.thresholds, self.thresholds[1:])] \
-                + [f"≥ {sval(self.thresholds[-1])}"]
+            names = self._bin_names()
 
         items = []
         size = 8
@@ -837,6 +856,14 @@ class OWSOM(OWWidget):
                                      0))
         self.scene.addItem(self.legend)
         self.set_legend_pos()
+
+    def _bin_names(self):
+        sval = self.attr_color.repr_val
+        return \
+            [f"< {sval(self.thresholds[0])}"] \
+            + [f"{sval(x)} - {sval(y)}"
+               for x, y in zip(self.thresholds, self.thresholds[1:])] \
+            + [f"≥ {sval(self.thresholds[-1])}"]
 
     def set_legend_pos(self):
         if self.legend is None:
