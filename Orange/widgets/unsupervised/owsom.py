@@ -187,6 +187,8 @@ class OWSOM(OWWidget):
         ignoring_disc_variables = Msg("SOM ignores discrete variables.")
         missing_colors = \
             Msg("Some data instances have undefined value of '{}'.")
+        missing_values = \
+            Msg("{} data instance{} with undefined value(s) {} not shown.")
 
     class Error(OWWidget.Error):
         no_numeric_variables = Msg("Data contains no numeric columns.")
@@ -272,6 +274,36 @@ class OWSOM(OWWidget):
 
     @Inputs.data
     def set_data(self, data):
+        def prepare_data():
+            if len(cont_attrs) < len(attrs):
+                self.Warning.ignoring_disc_variables()
+            x = Table.from_table(Domain(cont_attrs), data).X
+            if sp.issparse(x):
+                self.data = data
+                self.cont_x = x.tocsr()
+            else:
+                mask = np.all(np.isfinite(x), axis=1)
+                if not np.any(mask):
+                    self.Error.no_defined_rows()
+                else:
+                    if np.all(mask):
+                        self.data = data
+                        self.cont_x = x.copy()
+                    else:
+                        self.data = data[mask]
+                        self.cont_x = x[mask]
+                    self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
+                    sums = np.sum(self.cont_x, axis=0)[None, :]
+                    sums[sums == 0] = 1
+                    self.cont_x /= sums
+
+        def set_warnings():
+            missing = len(data) - len(self.data)
+            if missing == 1:
+                self.Warning.missing_values(1, "", "is")
+            elif missing > 1:
+                self.Warning.missing_values(missing, "s", "are")
+
         self.stop_optimization_and_wait()
 
         self.closeContext()
@@ -285,31 +317,12 @@ class OWSOM(OWWidget):
             if not cont_attrs:
                 self.Error.no_numeric_variables()
             else:
-                if len(cont_attrs) < len(attrs):
-                    self.Warning.ignoring_disc_variables()
-                x = Table.from_table(Domain(cont_attrs), data).X
-                if sp.issparse(x):
-                    self.data = data
-                    self.cont_x = x.tocsr()
-                else:
-                    mask = np.all(np.isfinite(x), axis=1)
-                    if not np.any(mask):
-                        self.Error.no_defined_rows()
-                    else:
-                        if np.all(mask):
-                            self.data = data
-                            self.cont_x = x.copy()
-                        else:
-                            self.data = data[mask]
-                            self.cont_x = x[mask]
-                        self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
-                        sums = np.sum(self.cont_x, axis=0)[None, :]
-                        sums[sums == 0] = 1
-                        self.cont_x /= sums
+                prepare_data()
 
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
             self.attr_color = data.domain.class_var
+            set_warnings()
 
         self.openContext(self.data)
         self.set_color_bins()

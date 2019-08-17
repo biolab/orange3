@@ -89,9 +89,24 @@ class TestOWSOM(WidgetTest):
 
         self.send_signal(widget.Inputs.data, self.iris)
         self.assertFalse(widget.Error.no_defined_rows.is_shown())
+        self.assertTrue(widget.Warning.missing_values.is_shown())
         np.testing.assert_almost_equal(
             widget.data.Y.flatten(), [1] * 50 + [2] * 50)
         self.assertEqual(widget.cont_x.shape, (100, 4))
+
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.Warning.missing_values.is_shown())
+
+    def test_missing_one_row_data(self):
+        widget = self.widget
+        self.iris.X[5, 0] = np.nan
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertFalse(widget.Error.no_defined_rows.is_shown())
+        self.assertTrue(widget.Warning.missing_values.is_shown())
+
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.Warning.missing_values.is_shown())
 
     def test_sparse_data(self):
         widget = self.widget
