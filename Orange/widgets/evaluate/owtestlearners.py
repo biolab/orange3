@@ -533,7 +533,7 @@ class OWTestLearners(OWWidget):
                 for stat, scorer in zip(stats, self.scorers):
                     item = QStandardItem()
                     if stat.success:
-                        item.setText("{:.3f}".format(stat.value[0]))
+                        item.setData(float(stat.value[0]), Qt.DisplayRole)
                     else:
                         item.setToolTip(str(stat.exception))
                         if scorer.name in self.score_table.shown_scores:
