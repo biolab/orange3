@@ -277,10 +277,10 @@ class TestOWTestLearners(WidgetTest):
         # Ensure that the click on header caused an ascending sort
         # Ascending sort means that wrong model should be listed first
         self.assertEqual(header.sortIndicatorOrder(), Qt.AscendingOrder)
-        self.assertEqual(view.model().item(0, 0).text(), "VersicolorLearner")
+        self.assertEqual(view.model().index(0, 0).data(), "VersicolorLearner")
 
         self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
-        self.assertEqual(view.model().item(0, 0).text(), "SetosaLearner")
+        self.assertEqual(view.model().index(0, 0).data(), "SetosaLearner")
 
         self.widget.hide()
 
@@ -365,10 +365,11 @@ class TestOWTestLearners(WidgetTest):
                 [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yynnn"))
         )
 
-        self.assertTupleEqual(self._test_scores(
-            table_train, table_test, LogisticRegressionLearner(),
-            OWTestLearners.TestOnTest, None),
-                              (0.667, 0.8, 0.8, 0.867, 0.8))
+        np.testing.assert_almost_equal(
+            self._test_scores(table_train, table_test,
+                              LogisticRegressionLearner(),
+                              OWTestLearners.TestOnTest, None),
+            (2 / 3, 0.8, 0.8, 13 / 15, 0.8))
 
     def test_scores_cross_validation(self):
         """
