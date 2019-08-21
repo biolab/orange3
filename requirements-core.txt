@@ -1,5 +1,5 @@
 pip>=9.0
-numpy>=1.13.0
+numpy==1.16.*  # because of numba-numpy issue, remove restriction after it is fixed
 scipy>=0.16.1
 scikit-learn>=0.20.0
 bottleneck>=1.0.0
