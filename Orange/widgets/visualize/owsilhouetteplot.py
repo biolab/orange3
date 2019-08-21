@@ -10,8 +10,8 @@ import sklearn.metrics
 
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsWidget, QGraphicsGridLayout,
-    QGraphicsSimpleTextItem, QGraphicsRectItem, QStyleOptionGraphicsItem,
-    QSizePolicy, QWidget, QWIDGETSIZE_MAX, QVBoxLayout
+    QGraphicsRectItem, QStyleOptionGraphicsItem, QSizePolicy, QWidget,
+    QVBoxLayout, QGraphicsSimpleTextItem, QWIDGETSIZE_MAX,
 )
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
@@ -31,9 +31,8 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.graphicstextlist import TextListWidget
+from Orange.widgets.utils.graphicslayoutitem import SimpleLayoutItem
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.unsupervised.owhierarchicalclustering import \
-    WrapperLayoutItem
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
@@ -724,10 +723,16 @@ class SilhouettePlot(QGraphicsWidget):
 
             if group.label:
                 layout.addItem(Line(orientation=Qt.Vertical), i + 1, 1)
-                label = QGraphicsSimpleTextItem(self)
-                label.setText("{} ({})".format(escape(group.label),
-                                               len(group.scores)))
-                item = WrapperLayoutItem(label, Qt.Vertical, parent=self)
+                label = QGraphicsSimpleTextItem(
+                    "{} ({})".format(group.label, len(group.scores)), self
+                )
+                label.setRotation(-90)
+                item = SimpleLayoutItem(
+                    label,
+                    anchor=(0., 1.0),
+                    anchorItem=(0., 0.),
+                )
+                item.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
                 layout.addItem(item, i + 1, 0, Qt.AlignCenter)
 
             textlist = TextListWidget(self, font=font)
