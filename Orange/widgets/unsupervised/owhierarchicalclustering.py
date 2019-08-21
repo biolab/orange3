@@ -12,7 +12,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsPathItem,
     QGraphicsScene, QGridLayout, QSizePolicy,
-    QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox,
+    QGraphicsSimpleTextItem, QAction, QComboBox,
     QGraphicsItemGroup, QGraphicsGridLayout, QGraphicsSceneMouseEvent
 )
 from AnyQt.QtGui import (
@@ -1608,49 +1608,6 @@ def qfont_scaled(font, factor):
     elif font.pixelSize() != -1:
         scaled.setPixelSize(int(font.pixelSize() * factor))
     return scaled
-
-
-class WrapperLayoutItem(QGraphicsLayoutItem):
-    """A Graphics layout item wrapping a QGraphicsItem allowing it
-    to be managed by a layout.
-    """
-    def __init__(self, item, orientation=Qt.Horizontal, parent=None):
-        QGraphicsLayoutItem.__init__(self, parent)
-        self.orientation = orientation
-        self.item = item
-        if orientation == Qt.Vertical:
-            self.item.setRotation(-90)
-            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        else:
-            self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-
-    def setGeometry(self, rect):
-        QGraphicsLayoutItem.setGeometry(self, rect)
-        if self.orientation == Qt.Horizontal:
-            self.item.setPos(rect.topLeft())
-        else:
-            self.item.setPos(rect.bottomLeft())
-
-    def sizeHint(self, which, constraint=QSizeF()):
-        if which == Qt.PreferredSize:
-            size = self.item.boundingRect().size()
-            if self.orientation == Qt.Horizontal:
-                return size
-            else:
-                return QSizeF(size.height(), size.width())
-        else:
-            return QSizeF()
-
-    def setFont(self, font):
-        self.item.setFont(font)
-        self.updateGeometry()
-
-    def setText(self, text):
-        self.item.setText(text)
-        self.updateGeometry()
-
-    def setToolTip(self, tip):
-        self.item.setToolTip(tip)
 
 
 class AxisItem(pg.AxisItem):
