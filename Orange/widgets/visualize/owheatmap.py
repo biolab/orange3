@@ -318,11 +318,11 @@ class RowPart(RowPart):  # pylint: disable=function-redefined
                                cluster, cluster_ordered)
 
     @property
-    def is_empty(self):
+    def can_cluster(self):
         if isinstance(self.indices, slice):
-            return (self.indices.stop - self.indices.start) == 0
+            return (self.indices.stop - self.indices.start) > 1
         else:
-            return len(self.indices) == 0
+            return len(self.indices) > 1
 
     @property
     def cluster_ord(self):
@@ -794,7 +794,7 @@ class OWHeatMap(widget.OWWidget):
             else:
                 cluster_ord = None
 
-            if not row.is_empty:
+            if row.can_cluster:
                 need_dist = cluster is None or cluster_ord is None
                 if need_dist:
                     subset = data[row.indices]
