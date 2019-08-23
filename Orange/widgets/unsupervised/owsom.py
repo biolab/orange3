@@ -8,7 +8,7 @@ from AnyQt.QtCore import Qt, QRectF, pyqtSignal as Signal, QObject, QThread
 from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, \
     QPainterPath, QKeyEvent
 from AnyQt.QtWidgets import \
-    QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
+    QGraphicsView, QGraphicsScene, \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
     QGraphicsPathItem
 
@@ -57,12 +57,13 @@ class SomView(QGraphicsView):
         x1, y1 = pos.x(), pos.y()
         x0, x1 = sorted((x0, x1))
         y0, y1 = sorted((y0, y1))
-
         selection = np.zeros((self.size_x, self.size_y), dtype=bool)
         if self.hexagonal:
             y0 = max(0, int(y0 / sqrt3_2 + 0.5))
             y1 = min(self.size_y, int(np.ceil(y1 / sqrt3_2 + 0.5)))
             for y in range(y0, y1):
+                if x1 < 0:
+                    continue
                 x0_ = max(0, int(x0 + 0.5 - (y % 2) / 2))
                 x1_ = min(self.size_x - y % 2,
                           int(np.ceil(x1 + 0.5 - (y % 2) / 2)))
@@ -143,6 +144,26 @@ class PieChart(QGraphicsItem):
             painter.setPen(Qt.NoPen)
             painter.drawPie(self.boundingRect(), int(start_angle), int(angle))
             start_angle += angle
+        painter.restore()
+
+
+class ColoredCircle(QGraphicsItem):
+    def __init__(self, r, color, proportion):
+        super().__init__()
+        self.r = r
+        self.color = color
+        self.proportion = proportion
+
+    def boundingRect(self):
+        return QRectF(-self.r, -self.r, 2 * self.r, 2 * self.r)
+
+    def paint(self, painter, _option, _index):
+        painter.save()
+        pen = QPen(QBrush(self.color), 2)
+        pen.setCosmetic(True)
+        painter.setPen(pen)
+        painter.setBrush(QBrush(self.color.lighter(200 - 80 * self.proportion)))
+        painter.drawEllipse(self.boundingRect())
         painter.restore()
 
 
@@ -539,18 +560,16 @@ class OWSOM(OWWidget):
 
     def _draw_same_color(self, sizes):
         fx, fy = self._grid_factors
-        pen = QPen(QBrush(Qt.black), 2)
-        pen.setCosmetic(True)
-        brush = QBrush(QColor(192, 192, 192))
+        color = QColor(64, 64, 64)
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = sizes[x, y]
+                n = len(self.get_member_indices(x, y))
                 if not r:
                     continue
-                ellipse = QGraphicsEllipseItem()
-                ellipse.setRect(x + (y % 2) * fx - r / 2, y * fy - r / 2, r, r)
-                ellipse.setPen(pen)
-                ellipse.setBrush(brush)
+                ellipse = ColoredCircle(r / 2, color, 0)
+                ellipse.setPos(x + (y % 2) * fx, y * fy)
+                ellipse.setToolTip(f"{n} instances")
                 self.elements.addToGroup(ellipse)
 
     def _get_color_column(self):
@@ -625,13 +644,8 @@ class OWSOM(OWWidget):
                     self.Warning.missing_colors(self.attr_color.name)
                 bc = np.bincount(color_dist, minlength=len(self.colors))
                 color = self.colors[np.argmax(bc)]
-                pen = QPen(QBrush(color), 2)
-                brush = QBrush(color.lighter(200 - 80 * np.max(bc) / len(members)))
-                pen.setCosmetic(True)
-                ellipse = QGraphicsEllipseItem()
-                ellipse.setRect(x + (y % 2) * fx - r / 2, y * fy - r / 2, r, r)
-                ellipse.setPen(pen)
-                ellipse.setBrush(brush)
+                ellipse = ColoredCircle(r / 2, color, np.max(bc) / len(members))
+                ellipse.setPos(x + (y % 2) * fx, y * fy)
                 ellipse.setToolTip(self._tooltip(self.colors, bc))
                 self.elements.addToGroup(ellipse)
 

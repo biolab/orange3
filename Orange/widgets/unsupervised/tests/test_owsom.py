@@ -248,29 +248,19 @@ class TestOWSOM(WidgetTest):
         widget.controls.attr_color.activated[int].emit(0)
         a = widget.elements.childItems()[0]
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8),
-                         (0.5, np.sqrt(3) / 2, 0.8),
-                         (1, np.sqrt(3), 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-            self.assertEqual(e.brush().color().getRgb(),
-                             a.brush().color().getRgb())
-            self.assertEqual(e.pen().color().getRgb(),
-                             a.pen().color().getRgb())
+                        [(0, 0, 0.4),
+                         (0.5, np.sqrt(3) / 2, 0.4),
+                         (1, np.sqrt(3), 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+            self.assertEqual(e.color.getRgb(), a.color.getRgb())
 
         widget.opt_controls.shape.setCurrentIndex(1)
         widget.opt_controls.start.clicked.emit()
         a = widget.elements.childItems()[0]
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8), (0, 1, 0.8), (1, 2, 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-            self.assertEqual(e.brush().color().getRgb(),
-                             a.brush().color().getRgb())
-            self.assertEqual(e.pen().color().getRgb(),
-                             a.pen().color().getRgb())
+                        [(0, 0, 0.4), (0, 1, 0.4), (1, 2, 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+            self.assertEqual(e.color.getRgb(), a.color.getRgb())
 
     @_patch_recompute_som
     def test_diff_color_same_size(self):
@@ -282,37 +272,21 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
         a, b, c = widget.elements.childItems()
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8),
-                         (0.5, np.sqrt(3) / 2, 0.8),
-                         (1, np.sqrt(3), 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-        self.assertEqual(a.brush().color().getRgb(),
-                         b.brush().color().getRgb())
-        self.assertEqual(a.pen().color().getRgb(),
-                         b.pen().color().getRgb())
-        self.assertNotEqual(a.brush().color().getRgb(),
-                            c.brush().color().getRgb())
-        self.assertNotEqual(a.pen().color().getRgb(),
-                            c.pen().color().getRgb())
+                        [(0, 0, 0.4),
+                         (0.5, np.sqrt(3) / 2, 0.4),
+                         (1, np.sqrt(3), 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+        self.assertEqual(a.color.getRgb(), b.color.getRgb())
+        self.assertNotEqual(a.color.getRgb(), c.color.getRgb())
 
         widget.opt_controls.shape.setCurrentIndex(1)
         widget.opt_controls.start.clicked.emit()
         a, b, c = widget.elements.childItems()
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8), (0, 1, 0.8), (1, 2, 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-        self.assertEqual(a.brush().color().getRgb(),
-                         b.brush().color().getRgb())
-        self.assertEqual(a.pen().color().getRgb(),
-                         b.pen().color().getRgb())
-        self.assertNotEqual(a.brush().color().getRgb(),
-                            c.brush().color().getRgb())
-        self.assertNotEqual(a.pen().color().getRgb(),
-                            c.pen().color().getRgb())
+                        [(0, 0, 0.4), (0, 1, 0.4), (1, 2, 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+        self.assertEqual(a.color.getRgb(), b.color.getRgb())
+        self.assertNotEqual(a.color.getRgb(), c.color.getRgb())
 
     @_patch_recompute_som
     def test_same_color_diff_size(self):
@@ -326,31 +300,21 @@ class TestOWSOM(WidgetTest):
         widget.controls.attr_color.activated[int].emit(0)
         a = widget.elements.childItems()[0]
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8 * (30 / 100)),
-                         (0.5, np.sqrt(3) / 2, 0.8 * (20 / 100)),
-                         (1, np.sqrt(3), 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-            self.assertEqual(e.brush().color().getRgb(),
-                             a.brush().color().getRgb())
-            self.assertEqual(e.pen().color().getRgb(),
-                             a.pen().color().getRgb())
+                        [(0, 0, 0.4 * (30 / 100)),
+                         (0.5, np.sqrt(3) / 2, 0.4 * (20 / 100)),
+                         (1, np.sqrt(3), 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+            self.assertEqual(e.color.getRgb(), a.color.getRgb())
 
         widget.opt_controls.shape.setCurrentIndex(1)
         widget.opt_controls.start.clicked.emit()
         a = widget.elements.childItems()[0]
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8 * 30 / 100),
-                         (0, 1, 0.8 * 20 / 100),
-                         (1, 2, 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-            self.assertEqual(e.brush().color().getRgb(),
-                             a.brush().color().getRgb())
-            self.assertEqual(e.pen().color().getRgb(),
-                             a.pen().color().getRgb())
+                        [(0, 0, 0.4 * 30 / 100),
+                         (0, 1, 0.4 * 20 / 100),
+                         (1, 2, 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+            self.assertEqual(e.color.getRgb(), a.color.getRgb())
 
     @_patch_recompute_som
     def test_diff_color_diff_size(self):
@@ -362,39 +326,23 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
         a, b, c = widget.elements.childItems()
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8 * 30 / 100),
-                         (0.5, np.sqrt(3) / 2, 0.8 * 20 / 100),
-                         (1, np.sqrt(3), 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-        self.assertEqual(a.brush().color().getRgb(),
-                         b.brush().color().getRgb())
-        self.assertEqual(a.pen().color().getRgb(),
-                         b.pen().color().getRgb())
-        self.assertNotEqual(a.brush().color().getRgb(),
-                            c.brush().color().getRgb())
-        self.assertNotEqual(a.pen().color().getRgb(),
-                            c.pen().color().getRgb())
+                        [(0, 0, 0.4 * 30 / 100),
+                         (0.5, np.sqrt(3) / 2, 0.4 * 20 / 100),
+                         (1, np.sqrt(3), 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+        self.assertEqual(a.color.getRgb(), b.color.getRgb())
+        self.assertNotEqual(a.color.getRgb(), c.color.getRgb())
 
         widget.opt_controls.shape.setCurrentIndex(1)
         widget.opt_controls.start.clicked.emit()
         a, b, c = widget.elements.childItems()
         for e, t in zip(widget.elements.childItems(),
-                        [(0, 0, 0.8 * 30 / 100),
-                         (0, 1, 0.8 * 20 / 100),
-                         (1, 2, 0.8)]):
-            r = e.rect()
-            w = r.width()
-            np.testing.assert_almost_equal((r.x() + w / 2, r.y() + w / 2, w), t)
-        self.assertEqual(a.brush().color().getRgb(),
-                         b.brush().color().getRgb())
-        self.assertEqual(a.pen().color().getRgb(),
-                         b.pen().color().getRgb())
-        self.assertNotEqual(a.brush().color().getRgb(),
-                            c.brush().color().getRgb())
-        self.assertNotEqual(a.pen().color().getRgb(),
-                            c.pen().color().getRgb())
+                        [(0, 0, 0.4 * 30 / 100),
+                         (0, 1, 0.4 * 20 / 100),
+                         (1, 2, 0.4)]):
+            np.testing.assert_almost_equal((e.x(), e.y(), e.r), t)
+        self.assertEqual(a.color.getRgb(), b.color.getRgb())
+        self.assertNotEqual(a.color.getRgb(), c.color.getRgb())
 
     @_patch_recompute_som
     def test_pie_charts(self):
