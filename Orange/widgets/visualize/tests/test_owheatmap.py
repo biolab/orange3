@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
-from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.preprocess import Continuize
 from Orange.widgets.visualize.owheatmap import OWHeatMap
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
@@ -168,3 +168,10 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
             colors[r] = c.red(), c.green(), c.blue()
         unique_colors = len(np.unique(colors, axis=0))
         self.assertLessEqual(len(data)*self.widget.threshold_low, unique_colors)
+
+    def test_cls_with_single_instance(self):
+        table = Table(Domain([ContinuousVariable("c1")],
+                             [DiscreteVariable("c2", values=["a", "b"])]),
+                      np.array([[1], [2], [3]]), np.array([[0], [0], [1]]))
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.row_check.setChecked(True)
