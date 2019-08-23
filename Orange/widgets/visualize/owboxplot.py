@@ -957,10 +957,13 @@ class OWBoxPlot(widget.OWWidget):
         var_line = line(stat.mean - stat.dev, 0, stat.mean + stat.dev, 0)
         var_line.setPen(self._pen_paramet)
         box.extend([whisker1, whisker2, vert_line, mean_line, var_line])
-        if stat.q25 is not None and stat.q75 is not None:
+        if stat.q25 is not None or stat.q75 is not None:
+            # if any of them is None it means that its value is equal to median
+            box_from = stat.q25 or stat.median
+            box_to = stat.q75 or stat.median
             mbox = FilterGraphicsRectItem(
-                stat.conditions, stat.q25 * scale_x, -height / 2,
-                (stat.q75 - stat.q25) * scale_x, height)
+                stat.conditions, box_from * scale_x, -height / 2,
+                (box_to - box_from) * scale_x, height)
             mbox.setBrush(self._box_brush)
             mbox.setPen(QPen(Qt.NoPen))
             mbox.setZValue(-200)
