@@ -91,28 +91,6 @@ def make_stdout_handler(level, fmt=None):
 
 def setup_notifications():
     settings = QSettings()
-    # If run for the fifth time, prompt short survey
-    show_survey = settings.value("startup/show-short-survey", True, type=bool) and \
-                  settings.value("startup/launch-count", 0, type=int) >= 5
-    if show_survey:
-        notif = Notification(icon=QIcon(resource_filename("canvas/icons/short-survey.png")),
-                             title="Survey",
-                             text="We want to understand our users better.\n"
-                                  "Would you like to take a short survey?",
-                             accept_button_label="Ok",
-                             reject_button_label="No")
-
-        def handle_survey_response(role):
-            if role == notif.AcceptRole:
-                success = QDesktopServices.openUrl(
-                    QUrl("https://orange.biolab.si/survey/short.html"))
-                settings.setValue("startup/show-short-survey", not success)
-            elif role == notif.RejectRole:
-                settings.setValue("startup/show-short-survey", False)
-
-        notif.clicked.connect(handle_survey_response)
-        canvas.notification_server_instance.registerNotification(notif)
-
     # data collection permission
     if not settings.value("error-reporting/permission-requested", False, type=bool):
         notif = Notification(icon=QIcon(resource_filename("canvas/icons/statistics-request.png")),
