@@ -135,11 +135,20 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         select_group(1)  # Class
         order_check.setChecked(True)
         self.assertEqual([x.name for x in attributes],
-                         ['thal', 'major vessels colored', 'chest pain',
-                          'ST by exercise', 'max HR', 'exerc ind ang',
-                          'slope peak exc ST', 'gender', 'age', 'rest SBP',
-                          'rest ECG', 'cholesterol',
-                          'fasting blood sugar > 120', 'diameter narrowing'])
+                         ['thal',
+                          'chest pain',
+                          'major vessels colored',
+                          'ST by exercise',
+                          'max HR',
+                          'exerc ind ang',
+                          'slope peak exc ST',
+                          'gender',
+                          'age',
+                          'rest ECG',
+                          'rest SBP',
+                          'cholesterol',
+                          'fasting blood sugar > 120',
+                          'diameter narrowing'])
 
     def test_box_order_when_missing_stats(self):
         self.widget.compare = 1
