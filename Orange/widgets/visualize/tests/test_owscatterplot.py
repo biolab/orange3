@@ -634,7 +634,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         # send features (same as default ones)
         self.send_signal(self.widget.Inputs.features,
                          AttributeList(self.data.domain.attributes[:2]))
-        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.assertListEqual(self.widget.effective_variables, [])
         self.widget.setup_plot.assert_called_once()
 
         # send data
@@ -685,7 +685,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         # send features (not the same as defaults)
         self.send_signal(self.widget.Inputs.features,
                          AttributeList(self.data.domain.attributes[2:4]))
-        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.assertListEqual(self.widget.effective_variables, [])
         self.widget.setup_plot.assert_called_once()
 
         # send data

@@ -297,7 +297,7 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     @property
     def effective_variables(self):
-        return [self.attr_x, self.attr_y]
+        return [self.attr_x, self.attr_y] if self.attr_x and self.attr_y else []
 
     def _vizrank_color_change(self):
         self.vizrank.initialize()

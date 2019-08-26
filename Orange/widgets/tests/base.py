@@ -730,6 +730,21 @@ class ProjectionWidgetTestMixin:
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
+    def test_hidden_effective_variables(self, timeout=DEFAULT_TIMEOUT):
+        hidden_var1 = ContinuousVariable("c1")
+        hidden_var1.attributes["hidden"] = True
+        hidden_var2 = ContinuousVariable("c2")
+        hidden_var2.attributes["hidden"] = True
+        class_vars = [DiscreteVariable("cls", values=["a", "b"])]
+        table = Table(Domain([hidden_var1, hidden_var2], class_vars),
+                      np.array([[0., 1.], [2., 3.]]),
+                      np.array([[0.], [1.]]))
+        self.send_signal(self.widget.Inputs.data, table)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data, table)
+
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
     def test_embedding_missing_values(self):
