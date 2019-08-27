@@ -1,13 +1,44 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
 from unittest.mock import Mock
 
 import numpy as np
 
 from Orange.data import Table, Domain
 from Orange import distance
-from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS
+from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS, \
+    DistanceRunner
 from Orange.widgets.tests.base import WidgetTest
+
+
+class TestDistanceRunner(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.iris = Table("iris")[::5]
+
+    def test_run(self):
+        for _, metric in METRICS:
+            # between rows, normalized
+            dist1 = DistanceRunner.run(self.iris, metric, True, 0, Mock())
+            dist2 = metric(self.iris, axis=1, impute=True, normalize=True)
+            np.testing.assert_array_equal(dist1, dist2)
+
+            # between rows, not normalized
+            dist1 = DistanceRunner.run(self.iris, metric, False, 0, Mock())
+            dist2 = metric(self.iris, axis=1, impute=True, normalize=False)
+            np.testing.assert_array_equal(dist1, dist2)
+
+            # between columns, normalized
+            dist1 = DistanceRunner.run(self.iris, metric, True, 1, Mock())
+            dist2 = metric(self.iris, axis=0, impute=True, normalize=True)
+            np.testing.assert_array_equal(dist1, dist2)
+
+            # between columns, not normalized
+            dist1 = DistanceRunner.run(self.iris, metric, False, 1, Mock())
+            dist2 = metric(self.iris, axis=0, impute=True, normalize=False)
+            np.testing.assert_array_equal(dist1, dist2)
 
 
 class TestOWDistances(WidgetTest):
@@ -27,6 +58,7 @@ class TestOWDistances(WidgetTest):
         for i, (_, metric) in enumerate(METRICS):
             self.widget.metrics_combo.activated.emit(i)
             self.widget.metrics_combo.setCurrentIndex(i)
+            self.wait_until_stop_blocking()
             self.send_signal(self.widget.Inputs.data, self.iris)
             if metric.supports_normalization:
                 expected = metric(self.iris, normalize=self.widget.normalized_dist)
@@ -42,8 +74,10 @@ class TestOWDistances(WidgetTest):
         data is removed from input"""
         self.widget.metric_idx = 2
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
         self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.wait_until_stop_blocking()
         self.assertTrue(self.widget.Error.no_continuous_features.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
@@ -53,32 +87,39 @@ class TestOWDistances(WidgetTest):
             if name == "Jaccard":
                 break
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_stop_blocking()
         self.assertTrue(self.widget.Error.no_binary_features.is_shown())
         self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
 
         self.send_signal(self.widget.Inputs.data, None)
+        self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_binary_features.is_shown())
         self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
 
         self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_binary_features.is_shown())
         self.assertTrue(self.widget.Warning.ignoring_nonbinary.is_shown())
 
         self.send_signal(self.widget.Inputs.data, None)
+        self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_binary_features.is_shown())
         self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
 
         self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_binary_features.is_shown())
         self.assertTrue(self.widget.Warning.ignoring_nonbinary.is_shown())
 
         dom = self.titanic.domain
         dom = Domain(dom.attributes[1:], dom.class_var)
         self.send_signal(self.widget.Inputs.data, self.titanic.transform(dom))
+        self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_binary_features.is_shown())
         self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
 
         self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
+        self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_binary_features.is_shown())
         self.assertFalse(self.widget.Warning.ignoring_discrete.is_shown())
 
@@ -93,10 +134,12 @@ class TestOWDistances(WidgetTest):
 
         mock = Mock(side_effect=ValueError)
         self.widget.compute_distances(mock, self.iris)
+        self.wait_until_stop_blocking()
         self.assertTrue(self.widget.Error.distances_value_error.is_shown())
 
         mock = Mock(side_effect=MemoryError)
         self.widget.compute_distances(mock, self.iris)
+        self.wait_until_stop_blocking()
         self.assertEqual(len(self.widget.Error.active), 1)
         self.assertTrue(self.widget.Error.distances_memory_error.is_shown())
 
@@ -110,5 +153,6 @@ class TestOWDistances(WidgetTest):
             if metric == distance.Bhattacharyya:
                 break
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_stop_blocking()
         self.assertTrue(self.widget.Error.distances_value_error.is_shown())
         self.iris.X[0, 0] *= -1

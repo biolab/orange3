@@ -6,6 +6,7 @@ import Orange.data
 import Orange.misc
 from Orange import distance
 from Orange.widgets import gui, settings
+from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
@@ -26,7 +27,22 @@ METRICS = [
 ]
 
 
-class OWDistances(OWWidget):
+class DistanceRunner:
+    @staticmethod
+    def run(data: Orange.data.Table, metric: distance, normalized_dist: bool,
+            axis: int, state: TaskState) -> Orange.misc.DistMatrix:
+        if data is None:
+            return None
+
+        state.set_status("Calculating...")
+        if metric.supports_normalization and normalized_dist:
+            return metric(data, axis=1 - axis, impute=True,
+                          normalize=True)
+        else:
+            return metric(data, axis=1 - axis, impute=True)
+
+
+class OWDistances(OWWidget, ConcurrentWidgetMixin):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
@@ -65,13 +81,15 @@ class OWDistances(OWWidget):
         imputing_data = Msg("Missing values were imputed")
 
     def __init__(self):
-        super().__init__()
+        OWWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
 
         self.data = None
 
-        gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
-                         box="Distances between", callback=self._invalidate
-                        )
+        gui.radioButtons(
+            self.controlArea, self, "axis", ["Rows", "Columns"],
+            box="Distances between", callback=self._invalidate
+        )
         box = gui.widgetBox(self.controlArea, "Distance Metric")
         self.metrics_combo = gui.comboBox(
             box, self, "metric_idx",
@@ -93,6 +111,7 @@ class OWDistances(OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
+        self.cancel()
         self.data = data
         self.refresh_metrics()
         self.unconditional_commit()
@@ -106,8 +125,7 @@ class OWDistances(OWWidget):
     def commit(self):
         # pylint: disable=invalid-sequence-index
         metric = METRICS[self.metric_idx][1]
-        dist = self.compute_distances(metric, self.data)
-        self.Outputs.distances.send(dist)
+        self.compute_distances(metric, self.data)
 
     def compute_distances(self, metric, data):
         def _check_sparse():
@@ -152,22 +170,34 @@ class OWDistances(OWWidget):
             return True
 
         self.clear_messages()
-        if data is None:
-            return None
-        for check in (_check_sparse,
-                      _fix_discrete, _fix_missing, _fix_nonbinary):
-            if not check():
-                return None
-        try:
-            if metric.supports_normalization and self.normalized_dist:
-                return metric(data, axis=1 - self.axis, impute=True,
-                              normalize=True)
-            else:
-                return metric(data, axis=1 - self.axis, impute=True)
-        except ValueError as e:
+        if data is not None:
+            for check in (_check_sparse, _fix_discrete,
+                          _fix_missing, _fix_nonbinary):
+                if not check():
+                    data = None
+                    break
+
+        self.start(DistanceRunner.run, data, metric,
+                   self.normalized_dist, self.axis)
+
+    def on_partial_result(self, _):
+        pass
+
+    def on_done(self, result: Orange.misc.DistMatrix):
+        assert isinstance(result, Orange.misc.DistMatrix) or result is None
+        self.Outputs.distances.send(result)
+
+    def on_exception(self, e):
+        if isinstance(e, ValueError):
             self.Error.distances_value_error(e)
-        except MemoryError:
+        elif isinstance(e, MemoryError):
             self.Error.distances_memory_error()
+        else:
+            raise e
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     def _invalidate(self):
         self.commit()
