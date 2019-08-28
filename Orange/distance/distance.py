@@ -714,21 +714,16 @@ class Hamming(Distance):
     supports_discrete = True
 
     def fit(self, data):
-        x = _orange_to_numpy(data)
         if self.axis == 0:
-            return HammingColumnsModel(self.axis, self.impute, x)
+            return HammingColumnsModel(self.axis, self.impute)
         else:
-            return HammingRowsModel(self.axis, self.impute, x)
+            return HammingRowsModel(self.axis, self.impute)
 
 
 class HammingColumnsModel(DistanceModel):
     """
     Model for computation of Hamming distances between columns.
     """
-    def __init__(self, axis, impute, x):
-        super().__init__(axis, impute)
-        self.x = x
-
     def __call__(self, e1, e2=None, impute=None):
         if impute is not None:
             self.impute = impute
@@ -742,10 +737,6 @@ class HammingRowsModel(DistanceModel):
     """
     Model for computation of Hamming distances between rows.
     """
-    def __init__(self, axis, impute, x):
-        super().__init__(axis, impute)
-        self.x = x
-
     def __call__(self, e1, e2=None, impute=None):
         if impute is not None:
             self.impute = impute
