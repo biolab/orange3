@@ -906,31 +906,32 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
         self.assertEqual(dist_dense[0][2], 1)
         self.assertEqual(dist_sparse[0][2], 1)
 
+
 class HammingDistanceTest(FittedDistanceTest):
     Distance = distance.Hamming
 
     def test_hamming_col(self):
-        assert_almost_equal = np.testing.assert_almost_equal
-        data = self.disc_data
-        dist = distance.Hamming(data, axis=0)
-
-        assert_almost_equal(
-            dist,
-            [[0, 2/3, 1/3],
-             [2/3, 0, 1/3],
-             [1/3, 1/3, 0]])
+        np.testing.assert_almost_equal(
+            self.Distance(self.disc_data, axis=0),
+            [[0, 2 / 3, 1 / 3],
+             [2 / 3, 0, 1 / 3],
+             [1 / 3, 1 / 3, 0]])
 
     def test_hamming_row(self):
-        assert_almost_equal = np.testing.assert_almost_equal
-        data = self.disc_data
-        dist = distance.Hamming(data)
-
-        assert_almost_equal(
-            dist,
-            [[0, 2/3, 1],
-             [2/3, 0, 2/3],
-             [1, 2/3, 0]]
+        np.testing.assert_almost_equal(
+            self.Distance(self.disc_data),
+            [[0, 2 / 3, 1],
+             [2 / 3, 0, 2 / 3],
+             [1, 2 / 3, 0]]
         )
+
+    def test_hamming_row_secondary_data(self):
+        np.testing.assert_almost_equal(
+            self.Distance(self.disc_data, self.disc_data[:2]),
+            [[0, 2 / 3],
+             [2 / 3, 0],
+             [1, 2 / 3]])
+
 
 if __name__ == "__main__":
     unittest.main()

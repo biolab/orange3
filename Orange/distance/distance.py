@@ -706,6 +706,7 @@ class MahalanobisDistance:
             return cls
         return Mahalanobis(axis=axis).fit(data)
 
+
 class Hamming(Distance):
     supports_sparse = False
     supports_missing = False
@@ -718,6 +719,7 @@ class Hamming(Distance):
             return HammingColumnsModel(self.axis, self.impute, x)
         else:
             return HammingRowsModel(self.axis, self.impute, x)
+
 
 class HammingColumnsModel(DistanceModel):
     """
@@ -735,6 +737,7 @@ class HammingColumnsModel(DistanceModel):
     def compute_distances(self, x1, x2=None):
         return pairwise_distances(x1.T, metric='hamming')
 
+
 class HammingRowsModel(DistanceModel):
     """
     Model for computation of Hamming distances between rows.
@@ -749,4 +752,4 @@ class HammingRowsModel(DistanceModel):
         return super().__call__(e1, e2)
 
     def compute_distances(self, x1, x2=None):
-        return pairwise_distances(x1, metric='hamming')
+        return pairwise_distances(x1, x2, metric='hamming')
