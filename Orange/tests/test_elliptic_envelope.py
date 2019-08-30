@@ -41,3 +41,22 @@ class TestEllipticEnvelopeLearner(unittest.TestCase):
         y_mahal, y_pred = zip(*sorted(zip(y_mahal, y_pred), reverse=True))
         self.assertTrue(all(i == -1 for i in y_pred[:int(self.cont * n)]))
         self.assertTrue(all(i == 1 for i in y_pred[int(self.cont * n):]))
+
+    def test_EllipticEnvelope_ignores_y(self):
+        domain = Domain((ContinuousVariable("x1"), ContinuousVariable("x2")),
+                        class_vars=(ContinuousVariable("y1"), ContinuousVariable("y2")))
+        X = np.random.random((40, 2))
+        Y = np.random.random((40, 2))
+        table = Table(domain, X, Y)
+        classless_table = table.transform(Domain(table.domain.attributes))
+        learner = EllipticEnvelopeLearner()
+        classless_model = learner(classless_table)
+        model = learner(table)
+        pred1 = classless_model(classless_table)
+        pred2 = classless_model(table)
+        pred3 = model(classless_table)
+        pred4 = model(table)
+
+        np.testing.assert_array_equal(pred1, pred2)
+        np.testing.assert_array_equal(pred2, pred3)
+        np.testing.assert_array_equal(pred3, pred4)

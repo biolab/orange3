@@ -183,9 +183,8 @@ class OWOutliers(widget.OWWidget):
                 support_fraction=self.support_fraction
                 if self.empirical_covariance else None,
                 contamination=self.cont / 100.)
-        data = self.data.transform(Domain(self.data.domain.attributes))
-        model = learner(data)
-        y_pred = model(data)
+        model = learner(self.data)
+        y_pred = model(self.data)
         amended_data = self.amended_data(model)
         return np.array(y_pred), amended_data
 
