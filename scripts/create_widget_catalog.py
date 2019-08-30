@@ -5,6 +5,9 @@ from os import path, makedirs
 from AnyQt.QtGui import QImage, QPainter
 from AnyQt.QtWidgets import QGraphicsScene, QApplication, QWidget, QGraphicsView, QHBoxLayout
 from AnyQt.QtCore import QRectF, Qt, QTimer
+# QWebEngineWidgets must be imported before QCoreApplication is created.
+# It will fail with an import error if imported (first time) after.
+import AnyQt.QtWebEngineWidgets  # pylint: disable=unused-import
 
 from orangecanvas.canvas.items import NodeItem
 from orangecanvas.help import HelpManager
