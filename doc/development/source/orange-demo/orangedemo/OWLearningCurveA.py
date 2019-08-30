@@ -16,7 +16,8 @@ from Orange.evaluation.testing import Results
 class OWLearningCurveA(OWWidget):
     name = "Learning Curve (A)"
     description = (
-        "Takes a dataset and a set of learners and shows a " "learning curve in a table"
+        "Takes a dataset and a set of learners and shows a learning curve in "
+        "a table."
     )
     icon = "icons/LearningCurve.svg"
     priority = 1000

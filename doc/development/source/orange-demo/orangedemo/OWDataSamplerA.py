@@ -4,6 +4,7 @@ import numpy
 
 import Orange.data
 from Orange.widgets import widget, gui
+from Orange.widgets.utils.signals import Input, Output
 
 
 class OWDataSamplerA(widget.OWWidget):
@@ -12,8 +13,11 @@ class OWDataSamplerA(widget.OWWidget):
     icon = "icons/DataSamplerA.svg"
     priority = 10
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Sampled Data", Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        sample = Output("Sampled Data", Orange.data.Table)
 
     want_main_area = False
 
@@ -23,35 +27,36 @@ class OWDataSamplerA(widget.OWWidget):
         # GUI
         box = gui.widgetBox(self.controlArea, "Info")
         self.infoa = gui.widgetLabel(
-            box, 'No data on input yet, waiting to get something.')
+            box, "No data on input yet, waiting to get something.")
         self.infob = gui.widgetLabel(box, '')
 # [end-snippet-1]
 
 # [start-snippet-2]
+    @Inputs.data
     def set_data(self, dataset):
         if dataset is not None:
-            self.infoa.setText('%d instances in input data set' % len(dataset))
+            self.infoa.setText("%d instances in input data set" % len(dataset))
             indices = numpy.random.permutation(len(dataset))
             indices = indices[:int(numpy.ceil(len(dataset) * 0.1))]
             sample = dataset[indices]
-            self.infob.setText('%d sampled instances' % len(sample))
-            self.send("Sampled Data", sample)
+            self.infob.setText("%d sampled instances" % len(sample))
+            self.Outputs.sample.send(sample)
         else:
             self.infoa.setText(
-                'No data on input yet, waiting to get something.')
+                "No data on input yet, waiting to get something.")
             self.infob.setText('')
-            self.send("Sampled Data", None)
+            self.Outputs.sample.send(None)
 # [end-snippet-2]
 
 # [start-snippet-3]
 
 
 def main(argv=sys.argv):
-    from PyQt4.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     app = QApplication(list(argv))
-    args = app.argv()
-    if len(argv) > 1:
-        filename = argv[1]
+    args = app.arguments()
+    if len(args) > 1:
+        filename = args[1]
     else:
         filename = "iris"
 
