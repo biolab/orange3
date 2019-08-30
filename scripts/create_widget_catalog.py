@@ -118,18 +118,13 @@ class IconWidget(QWidget):
         self.scene.addItem(node)
 
     def render_as_png(self, filename):
-        png = self.__transparent_png()
-        painter = QPainter(png)
+        img = QImage(50, 50, QImage.Format_ARGB32)
+        img.fill(Qt.transparent)
+        painter = QPainter(img)
         painter.setRenderHint(QPainter.Antialiasing, 1)
         self.scene.render(painter, QRectF(0, 0, 50, 50), QRectF(-25, -25, 50, 50))
         painter.end()
-        png.save(filename)
-
-    def __transparent_png(self):
-        # PyQt is stupid and does not increment reference count on bg
-        w = h = 50
-        self.__bg = bg = b"\xff\xff\x00" * w * h * 4
-        return QImage(bg, w, h, QImage.Format_ARGB32)
+        img.save(filename)
 
 
 if __name__ == '__main__':
