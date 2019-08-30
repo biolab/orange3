@@ -706,6 +706,7 @@ class MahalanobisDistance:
             return cls
         return Mahalanobis(axis=axis).fit(data)
 
+
 class Hamming(Distance):
     supports_sparse = False
     supports_missing = False
@@ -713,20 +714,16 @@ class Hamming(Distance):
     supports_discrete = True
 
     def fit(self, data):
-        x = _orange_to_numpy(data)
         if self.axis == 0:
-            return HammingColumnsModel(self.axis, self.impute, x)
+            return HammingColumnsModel(self.axis, self.impute)
         else:
-            return HammingRowsModel(self.axis, self.impute, x)
+            return HammingRowsModel(self.axis, self.impute)
+
 
 class HammingColumnsModel(DistanceModel):
     """
     Model for computation of Hamming distances between columns.
     """
-    def __init__(self, axis, impute, x):
-        super().__init__(axis, impute)
-        self.x = x
-
     def __call__(self, e1, e2=None, impute=None):
         if impute is not None:
             self.impute = impute
@@ -735,18 +732,15 @@ class HammingColumnsModel(DistanceModel):
     def compute_distances(self, x1, x2=None):
         return pairwise_distances(x1.T, metric='hamming')
 
+
 class HammingRowsModel(DistanceModel):
     """
     Model for computation of Hamming distances between rows.
     """
-    def __init__(self, axis, impute, x):
-        super().__init__(axis, impute)
-        self.x = x
-
     def __call__(self, e1, e2=None, impute=None):
         if impute is not None:
             self.impute = impute
         return super().__call__(e1, e2)
 
     def compute_distances(self, x1, x2=None):
-        return pairwise_distances(x1, metric='hamming')
+        return pairwise_distances(x1, x2, metric='hamming')
