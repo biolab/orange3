@@ -6,10 +6,11 @@ from AnyQt.QtGui import QImage, QPainter
 from AnyQt.QtWidgets import QGraphicsScene, QApplication, QWidget, QGraphicsView, QHBoxLayout
 from AnyQt.QtCore import QRectF, Qt, QTimer
 
-from orangecanvas import config
 from orangecanvas.canvas.items import NodeItem
 from orangecanvas.help import HelpManager
-from orangecanvas.registry.qt import QtWidgetDiscovery, QtWidgetRegistry
+from orangecanvas.registry import WidgetRegistry
+
+from Orange.canvas.config import Config as OConfig
 
 
 class WidgetCatalog:
@@ -62,20 +63,13 @@ class WidgetCatalog:
 
     @staticmethod
     def __get_widget_registry():
-        widget_discovery = QtWidgetDiscovery()
-        widget_registry = QtWidgetRegistry()
-        widget_discovery.found_category.connect(
-            widget_registry.register_category
-        )
-        widget_discovery.found_widget.connect(
-            widget_registry.register_widget
-        )
-        widget_discovery.run(config.widgets_entry_points())
+        widget_registry = WidgetRegistry()
+        widget_discovery = OConfig.widget_discovery(widget_registry)
+        widget_discovery.run(OConfig.widgets_entry_points())
 
         # Fixup category.widgets list
         for cat, widgets in widget_registry._categories_dict.values():
             cat.widgets = widgets
-
         return widget_registry
 
     def __get_icon(self, widget, category=None):
