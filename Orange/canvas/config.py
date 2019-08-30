@@ -18,6 +18,7 @@ from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 from AnyQt.QtCore import Qt, QPoint, QRect
 
 from orangecanvas import config as occonfig
+from orangecanvas.utils.settings import config_slot
 from orangewidget.workflow import config
 
 import Orange
@@ -29,10 +30,29 @@ WIDGETS_ENTRY = "orange.widgets"
 
 spec = [
     ("startup/check-updates", bool, False, "Check for updates"),
+
+    ("startup/launch-count", int, 0, ""),
+
     ("error-reporting/machine-id", str, "", ""),
+
     ("error-reporting/send-statistics", bool, False, ""),
+
     ("error-reporting/permission-requested", bool, False, ""),
+
+    ("notifications/announcements", bool, True,
+     "Show notifications about Biolab announcements"),
+
+    ("notifications/blog", bool, True,
+     "Show notifications about blog posts"),
+
+    ("notifications/new-features", bool, True,
+     "Show notifications about new features"),
+
+    ("notifications/displayed", str, 'set()',
+     "Serialized set of notification IDs which have already been displayed")
 ]
+
+spec = [config_slot(*t) for t in spec]
 
 
 class Config(config.Config):
@@ -230,6 +250,10 @@ def widget_settings_dir():
 
 def widgets_entry_points():
     return Config.widgets_entry_points()
+
+
+def addon_entry_points():
+    return Config.addon_entry_points()
 
 
 def splash_screen():

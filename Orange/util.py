@@ -1,4 +1,5 @@
 """Various small utilities that might be useful everywhere"""
+import logging
 import os
 import inspect
 from enum import Enum as _Enum
@@ -6,14 +7,24 @@ from functools import wraps, partial
 from operator import attrgetter
 from itertools import chain, count, repeat
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 import warnings
+
+try:
+    from AnyQt.QtCore import pyqtWrapperType
+except ImportError:
+    from sip import wrappertype as pyqtWrapperType
 
 # Exposed here for convenience. Prefer patching to try-finally blocks
 from unittest.mock import patch  # pylint: disable=unused-import
 
 # Backwards-compat
+import pkg_resources
+
 from Orange.data.util import scale  # pylint: disable=unused-import
+
+
+log = logging.getLogger(__name__)
 
 
 class OrangeWarning(UserWarning):
@@ -28,6 +39,13 @@ warnings.simplefilter('default', OrangeWarning)
 
 if os.environ.get('ORANGE_DEPRECATIONS_ERROR'):
     warnings.simplefilter('error', OrangeDeprecationWarning)
+
+
+def resource_filename(path):
+    """
+    Return the resource filename path relative to the Orange package.
+    """
+    return pkg_resources.resource_filename("Orange", path)
 
 
 def deprecated(obj):
@@ -82,11 +100,82 @@ def deprecated(obj):
     return decorator if alternative else decorator(obj)
 
 
+def literal_eval(literal):
+    import ast
+    # ast.literal_eval does not parse empty set ¯\_(ツ)_/¯
+
+    if literal == "set()":
+        return set()
+    return ast.literal_eval(literal)
+
+
+op_map = {
+    '==': lambda a, b: a == b,
+    '>=': lambda a, b: a >= b,
+    '<=': lambda a, b: a <= b,
+    '>': lambda a, b: a > b,
+    '<': lambda a, b: a < b
+}
+
+
+_Requirement = namedtuple("_Requirement", ["name", "op", "value"])
+
+
+bool_map = {
+    "True": True,
+    "true": True,
+    1: True,
+    "False": False,
+    "false": False,
+    0: False
+}
+
+
+def requirementsSatisfied(required_state, local_state, req_type=None):
+    """
+    Checks a list of requirements against a dictionary representing local state.
+
+    Args:
+        required_state ([str]): List of strings representing required state
+                                using comparison operators
+        local_state (dict): Dictionary representing current state
+        req_type (type): Casts values to req_type before comparing them.
+                         Defaults to local_state type.
+    """
+    for req_string in required_state:
+        # parse requirement
+        req = None
+        for op_str in op_map:
+            split = req_string.split(op_str)
+            # if operation is not in req_string, continue
+            if len(split) == 2:
+                req = _Requirement(split[0], op_map[op_str], split[1])
+                break
+
+        if req is None:
+            log.error("Invalid requirement specification: %s", req_string)
+            return False
+
+        compare_type = req_type or type(local_state[req.name])
+        # check if local state satisfies required state (specification)
+        if compare_type is bool:
+            # boolean is a special case, where simply casting to bool does not produce target result
+            required_value = bool_map[req.value]
+        else:
+            required_value = compare_type(req.value)
+        local_value = compare_type(local_state[req.name])
+
+        # finally, compare the values
+        if not req.op(local_value, required_value):
+            return False
+    return True
+
+
 def try_(func, default=None):
     """Try return the result of func, else return default."""
     try:
         return func()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return default
 
 

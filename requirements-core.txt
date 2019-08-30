@@ -20,3 +20,4 @@ python-louvain>=0.13
 requests
 openTSNE>=0.3.0
 pandas
+pyyaml
