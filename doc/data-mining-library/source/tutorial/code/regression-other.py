@@ -17,6 +17,8 @@ regressors = [learner(train) for learner in learners]
 print("y   ", " ".join("%5s" % l.name for l in regressors))
 
 for d in test:
-    print(("{:<5}" + " {:5.1f}"*len(regressors)).format(
-        d.get_class(),
-        *(r(d) for r in regressors)))
+    print(
+        ("{:<5}" + " {:5.1f}" * len(regressors)).format(
+            d.get_class(), *(r(d) for r in regressors)
+        )
+    )

@@ -21,10 +21,16 @@ class OWWidgetNumber(OWWidget):
     def __init__(self):
         super().__init__()
 
-        gui.lineEdit(self.controlArea, self, "number", "Enter a number",
-                     box="Number",
-                     callback=self.number_changed,
-                     valueType=int, validator=QIntValidator())
+        gui.lineEdit(
+            self.controlArea,
+            self,
+            "number",
+            "Enter a number",
+            box="Number",
+            callback=self.number_changed,
+            valueType=int,
+            validator=QIntValidator(),
+        )
         self.number_changed()
 
     def number_changed(self):

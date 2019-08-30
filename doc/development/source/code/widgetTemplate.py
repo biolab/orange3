@@ -1,6 +1,7 @@
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
+
 class OWWidgetName(widget.OWWidget):
     name = "Widget Name"
     id = "orange.widgets.widget_category.widget_name"
