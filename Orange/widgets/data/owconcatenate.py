@@ -153,11 +153,11 @@ class OWConcatenate(widget.OWWidget):
             del self.more_data[sig_id]
 
     def handleNewSignals(self):
-        self.Error.clear()
         self.mergebox.setDisabled(self.primary_data is not None)
         if self.incompatible_types():
             self.Error.bow_concatenation()
         else:
+            self.Error.bow_concatenation.clear()
             self.unconditional_apply()
 
     def incompatible_types(self):
