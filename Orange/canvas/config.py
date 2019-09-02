@@ -2,6 +2,7 @@
 Orange Canvas Configuration
 
 """
+import uuid
 import warnings
 
 import os
@@ -33,7 +34,7 @@ spec = [
 
     ("startup/launch-count", int, 0, ""),
 
-    ("error-reporting/machine-id", str, "", ""),
+    ("error-reporting/machine-id", str, str(uuid.uuid4()), ""),
 
     ("error-reporting/send-statistics", bool, False, ""),
 
