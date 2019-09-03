@@ -65,11 +65,12 @@ statistics_server_url = os.getenv(
 
 def ua_string():
     is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
-    return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}'.format(
+    return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}:{uuid}'.format(
         orange_version=current,
-        py_version='.'.join(sys.version[:3]),
+        py_version='.'.join(str(a) for a in sys.version_info[:3]),
         platform=sys.platform,
         conda='Anaconda' if is_anaconda else '',
+        uuid=QSettings().value("error-reporting/machine-id", "", str),
     )
 
 
