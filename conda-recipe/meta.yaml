@@ -34,7 +34,7 @@ requirements:
   run:
     - python
     - setuptools
-    - numpy         >=1.9.0
+    - numpy         >=1.16.0
     - scipy
     - scikit-learn  >=0.20
     - bottleneck    >=1.0.0
@@ -51,7 +51,7 @@ requirements:
     - commonmark
     - serverfiles
     - matplotlib    >=2.0.0
-    - opentsne      >=0.3.0
+    - opentsne      >=0.3.11
     - pandas
     - pyyaml
 
