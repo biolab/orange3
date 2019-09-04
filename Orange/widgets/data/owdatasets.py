@@ -364,7 +364,7 @@ class OWDataSets(OWWidget):
         self.view.resizeColumnToContents(0)
         self.view.setColumnWidth(
             1, min(self.view.sizeHintForColumn(1),
-                   self.view.fontMetrics().width("X" * 24)))
+                   self.view.fontMetrics().width("X" * 37)))
 
         header = self.view.header()
         header.restoreState(self.header_state)
@@ -532,7 +532,7 @@ class OWDataSets(OWWidget):
 
     @staticmethod
     def sizeHint():
-        return QSize(900, 600)
+        return QSize(1100, 500)
 
     def closeEvent(self, event):
         self.splitter_state = bytes(self.splitter.saveState())
