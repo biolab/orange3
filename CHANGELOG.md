@@ -5,6 +5,36 @@ Change Log
 ------------
 * ...
 
+[3.23.0] - 2019-09-05
+--------------------
+##### Enhancements
+* Pull YAML feed of notifications on startup, refactor notifications ([#3933](../../pull/3933))
+* Widget for Self-Organizing Maps ([#3928](../../pull/3928))
+* DBSCAN widget ([#3917](../../pull/3917))
+* BoxPlot: Write the anova/t-test statistic onto the plot. ([#3945](../../pull/3945))
+* Feature Constructor: Easier categorical features, allow creation of date/time, easier use of string data ([#3936](../../pull/3936))
+* Merge data allows matching by multiple pairs of columns ([#3919](../../pull/3919))
+* Sticky graphics header/footer views ([#3930](../../pull/3930))
+* Shiny renewed widget Distributions ([#3896](../../pull/3896))
+* Calibration plot (add performance curves) and a new Calibrated Learner widget ([#3881](../../pull/3881))
+* Added Specificity as a new score in Test&Score ([#3907](../../pull/3907))
+* Separate canvas and base widget ([#3772](../../pull/3772))
+
+##### Bugfixes
+* Conda Installer: Restore compatibility with latest anaconda python ([#4004](../../pull/4004))
+* Scatter plot: Hidden variables fix ([#3985](../../pull/3985))
+* Boxplot fix ([#3983](../../pull/3983))
+* Heat map: Cannot cluster a single instance ([#3980](../../pull/3980))
+* Test and Score: Sort numerically, not alphabetically ([#3951](../../pull/3951))
+* OWProjectionWidgetBase: Update when domain is changed ([#3946](../../pull/3946))
+* Change normalization to Scaling in SVM ([#3898](../../pull/3898))
+* Restore usage tracking ([#3921](../../pull/3921))
+* main: Fix widget settings directory path to clear ([#3932](../../pull/3932))
+* Backcompatibility stubs ([#3926](../../pull/3926))
+* OWNeighbours fix manual apply for some options ([#3911](../../pull/3911))
+* Documentation links ([#3897](../../pull/3897))
+* Update output on new input, even if auto commit is disabled ([#3844](../../pull/3844))
+
 
 [3.22.0] - 2019-06-26
 --------------------
@@ -1128,7 +1158,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.22.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.23.0...HEAD
+[3.23.0]: https://github.com/biolab/orange3/compare/3.22.0...3.23.0
 [3.22.0]: https://github.com/biolab/orange3/compare/3.21.0...3.22.0
 [3.21.0]: https://github.com/biolab/orange3/compare/3.20.1...3.21.0
 [3.20.1]: https://github.com/biolab/orange3/compare/3.20.0...3.20.1
