@@ -59,3 +59,6 @@ if not exist "%ACTIVATE_BAT%" (
     echo @echo off >  "%ACTIVATE_BAT%"
     echo call "%CONDA_BASE_PREFIX%\Scripts\activate.bat" "%PREFIX%" >> "%ACTIVATE_BAT%"
 )
+
+rem # install custom sitecustomize module
+copy sitecustomize.py "%PREFIX%\Lib\
