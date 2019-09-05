@@ -105,7 +105,6 @@ class TestOWBaseLearner(WidgetTest):
             LEARNER = KNNLearner
 
         w1 = self.create_widget(WidgetA)
-        self.assertEqual(w1.learner_name, "A")
         w1.learner_name = "MyWidget"
 
         settings = w1.settingsHandler.pack_data(w1)

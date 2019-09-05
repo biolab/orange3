@@ -1,6 +1,7 @@
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 
+
 class OWMultiplier(widget.OWWidget):
     name = "Multiplier"
     id = "orange.widgets.data.multiplier"
@@ -22,13 +23,18 @@ class OWMultiplier(widget.OWWidget):
         self.n = None
         self.product = 0
 
-        gui.radioButtonsInBox(self.controlArea, self, "factor",
+        gui.radioButtonsInBox(
+            self.controlArea,
+            self,
+            "factor",
             ("None", "Double", "Triple", "Quadruple"),
-            box="Multiply", callback=self.do_multiply)
+            box="Multiply",
+            callback=self.do_multiply,
+        )
 
-        self.result = gui.label(self.controlArea, self,
-                                "The product is %(product)i",
-                                box="Result")
+        self.result = gui.label(
+            self.controlArea, self, "The product is %(product)i", box="Result"
+        )
         self.result.hide()
 
         gui.rubber(self.controlArea)

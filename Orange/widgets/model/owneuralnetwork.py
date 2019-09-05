@@ -135,7 +135,7 @@ class OWNNLearner(OWBaseLearner):
         form.addRow(
             "Maximal number of iterations:",
             gui.spin(
-                None, self, "max_iterations", 10, 10000, step=10,
+                None, self, "max_iterations", 10, 1000000, step=10,
                 label="Max iterations:", orientation=Qt.Horizontal,
                 alignment=Qt.AlignRight, callback=self.settings_changed))
 

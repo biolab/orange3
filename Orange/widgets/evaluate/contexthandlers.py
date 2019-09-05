@@ -1,47 +1,30 @@
+from Orange.data import Variable
 from Orange.widgets import settings
-from Orange.widgets.utils import getdeepattr
 
 
 class EvaluationResultsContextHandler(settings.ContextHandler):
-    def __init__(self, targetAttr, selectedAttr):
-        super().__init__()
-        self.targetAttr, self.selectedAttr = targetAttr, selectedAttr
+    """Context handler for evaluation results"""
 
-    #noinspection PyMethodOverriding
-    def match(self, context, cnames, cvalues):
-        return (cnames, cvalues) == (
-            context.classifierNames, context.classValues) and 2
+    def open_context(self, widget, classes, classifier_names):
+        if isinstance(classes, Variable):
+            if classes.is_discrete:
+                classes = classes.values
+            else:
+                classes = None
+        super().open_context(widget, classes, classifier_names)
 
-    def fast_save(self, widget, name, value):
-        context = widget.current_context
-        if name == self.targetAttr:
-            context.targetClass = value
-        elif name == self.selectedAttr:
-            context.selectedClassifiers = list(value)
+    def new_context(self, classes, classifier_names):
+        context = super().new_context()
+        context.classes = classes
+        context.classifier_names = classifier_names
+        return context
 
-    def settings_from_widget(self, widget, *args):
-        super().settings_from_widget(widget, *args)
-        context = widget.current_context
-        context.targetClass = getdeepattr(widget, self.targetAttr)
-        context.selectedClassifiers = list(getdeepattr(self.selectedAttr))
-
-    def settings_to_widget(self, widget, *args):
-        super().settings_to_widget(widget, *args)
-        context = widget.current_context
-        if context.targetClass is not None:
-            setattr(widget, self.targetAttr, context.targetClass)
-        if context.selectedClassifiers is not None:
-            setattr(widget, self.selectedAttr, context.selectedClassifiers)
-
-    #noinspection PyMethodOverriding
-    def find_or_create_context(self, widget, results):
-        cnames = [c.name for c in results.classifiers]
-        cvalues = results.classValues
-        context, isNew = super().find_or_create_context(
-            widget, results.classifierNames, results.classValues)
-        if isNew:
-            context.classifierNames = results.classifierNames
-            context.classValues = results.classValues
-            context.selectedClassifiers = None
-            context.targetClass = None
-        return context, isNew
+    def match(self, context, classes, classifier_names):
+        if classifier_names != context.classifier_names:
+            return self.NO_MATCH
+        elif isinstance(classes, Variable) and classes.is_continuous:
+            return (self.PERFECT_MATCH if context.classes is None
+                    else self.NO_MATCH)
+        else:
+            return (self.PERFECT_MATCH if context.classes == classes
+                    else self.NO_MATCH)

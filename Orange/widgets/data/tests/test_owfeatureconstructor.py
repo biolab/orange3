@@ -8,14 +8,15 @@ import copy
 import numpy as np
 
 from Orange.data import (Table, Domain, StringVariable,
-                         ContinuousVariable, DiscreteVariable)
+                         ContinuousVariable, DiscreteVariable, TimeVariable)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
-    FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler)
+    FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler,
+    DateTimeDescriptor)
 
 from Orange.widgets.data.owfeatureconstructor import (
     freevars, validate_exp, FeatureFunc
@@ -34,13 +35,33 @@ class FeatureConstructorTest(unittest.TestCase):
                                 values=values, ordered=False)]
         )
         data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(desc, data.domain.variables),
+                            construct_variables(desc, data),
                             data.domain.class_vars,
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
         self.assertEqual(data.domain[name].values, list(values))
         for i in range(3):
             self.assertEqual(data[i * 50, name], values[i])
+
+    def test_construct_variables_discrete_no_values(self):
+        data = Table("iris")
+        name = 'Discrete Variable'
+        expression = "str(iris)[-1]"  # last letter - a or r
+        values = ()
+        desc = PyListModel(
+            [DiscreteDescriptor(name=name, expression=expression,
+                                values=values, ordered=False)]
+        )
+        data = Table(Domain(list(data.domain.attributes) +
+                            construct_variables(desc, data),
+                            data.domain.class_vars,
+                            data.domain.metas), data)
+        newvar = data.domain[name]
+        self.assertTrue(isinstance(newvar, DiscreteVariable))
+        self.assertEqual(set(data.domain[name].values), set("ar"))
+        for i in range(3):
+            inst = data[i * 50]
+            self.assertEqual(str(inst[name]), str(inst["iris"])[-1])
 
     def test_construct_variables_continuous(self):
         data = Table("iris")
@@ -51,13 +72,29 @@ class FeatureConstructorTest(unittest.TestCase):
                                   number_of_decimals=2)]
         )
         data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(featuremodel, data.domain.variables),
+                            construct_variables(featuremodel, data),
                             data.domain.class_vars,
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
         for i in range(3):
             self.assertEqual(data[i * 50, name],
                              pow(data[i * 50, 0] + data[i * 50, 1], 2))
+
+    def test_construct_variables_datetime(self):
+        data = Table("housing")
+        name = 'Date'
+        expression = '"2019-07-{:02}".format(int(MEDV/3))'
+        featuremodel = PyListModel(
+            [DateTimeDescriptor(name=name, expression=expression)]
+        )
+        data = Table(Domain(list(data.domain.attributes) +
+                            construct_variables(featuremodel, data),
+                            data.domain.class_vars,
+                            data.domain.metas), data)
+        self.assertTrue(isinstance(data.domain[name], TimeVariable))
+        for row in data:
+            self.assertEqual("2019-07-{:02}".format(int(row["MEDV"] / 3)),
+                             str(row["Date"])[:10])
 
     def test_construct_variables_string(self):
         data = Table("iris")
@@ -69,7 +106,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data = Table(Domain(data.domain.attributes,
                             data.domain.class_vars,
                             list(data.domain.metas) +
-                            construct_variables(desc, data.domain.variables)),
+                            construct_variables(desc, data)),
                      data)
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
@@ -86,7 +123,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                   expression="_0_1 + _1",
                                   number_of_decimals=3)]
         )
-        nv = construct_variables(desc, data.domain.variables)
+        nv = construct_variables(desc, data)
         ndata = Table(Domain(nv, None), data)
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
@@ -204,26 +241,40 @@ class TestTools(unittest.TestCase):
 
 class FeatureFuncTest(unittest.TestCase):
     def test_reconstruct(self):
-        f = FeatureFunc("a * x + c", [("x", "x")], {"a": 2, "c": 10})
-        self.assertEqual(f({"x": 2}), 14)
+        iris = Table("iris")
+        inst1 = iris[0]
+        val1 = 2 * inst1["sepal width"] + 10
+        inst2 = iris[100]
+        val2 = 2 * inst2["sepal width"] + 10
+
+        f = FeatureFunc("a * sepal_width + c",
+                        [("sepal_width", iris.domain["sepal width"])],
+                        {"a": 2, "c": 10})
+        self.assertAlmostEqual(f(inst1), val1)
         f1 = pickle.loads(pickle.dumps(f))
-        self.assertEqual(f1({"x": 2}), 14)
+        self.assertAlmostEqual(f1(inst1), val1)
         fc = copy.copy(f)
-        self.assertEqual(fc({"x": 3}), 16)
+        self.assertEqual(fc(inst2), val2)
 
     def test_repr(self):
         self.assertEqual(repr(FeatureFunc("a + 1", [("a", 2)])),
-                         "FeatureFunc('a + 1', [('a', 2)], {})")
+                         "FeatureFunc('a + 1', [('a', 2)], {}, None)")
 
     def test_call(self):
-        f = FeatureFunc("a + 1", [("a", "a")])
-        self.assertEqual(f({"a": 2}), 3)
-
         iris = Table("iris")
         f = FeatureFunc("sepal_width + 10",
                         [("sepal_width", iris.domain["sepal width"])])
         r = f(iris)
         np.testing.assert_array_equal(r, iris.X[:, 1] + 10)
+        self.assertEqual(f(iris[0]), iris[0]["sepal width"] + 10)
+
+    def test_string_casting(self):
+        zoo = Table("zoo")
+        f = FeatureFunc("name[0]",
+                        [("name", zoo.domain["name"])])
+        r = f(zoo)
+        self.assertEqual(r, [x[0] for x in zoo.metas[:, 0]])
+        self.assertEqual(f(zoo[0]), str(zoo[0, "name"])[0])
 
 
 class OWFeatureConstructorTests(WidgetTest):
@@ -257,7 +308,7 @@ class OWFeatureConstructorTests(WidgetTest):
         self.widget.setData(data)
         discreteFeatureEditor = DiscreteFeatureEditor()
 
-        discreteFeatureEditor.valuesedit.setText("")
+        discreteFeatureEditor.valuesedit.setText("A")
         discreteFeatureEditor.nameedit.setText("D1")
         discreteFeatureEditor.expressionedit.setText("iris")
         self.widget.addFeature(

@@ -153,7 +153,7 @@ class OWConcatenate(widget.OWWidget):
 
     def handleNewSignals(self):
         self.mergebox.setDisabled(self.primary_data is not None)
-        self.apply()
+        self.unconditional_apply()
 
     def apply(self):
         tables, domain, source_var = [], None, None

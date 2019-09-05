@@ -1,14 +1,14 @@
 import sklearn.svm as skl_svm
 
-from Orange.classification import SklLearner, SklModel
 from Orange.base import SklLearner as SklLearnerBase
-from Orange.preprocess import Normalize
+from Orange.classification import SklLearner, SklModel
+from Orange.data import Domain
+from Orange.preprocess import AdaptiveNormalize
 
 __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner",
            "OneClassSVMLearner"]
 
-
-svm_pps = SklLearner.preprocessors + [Normalize()]
+svm_pps = SklLearner.preprocessors + [AdaptiveNormalize()]
 
 
 class SVMClassifier(SklModel):
@@ -77,6 +77,10 @@ class OneClassSVMLearner(SklLearnerBase):
                  max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+    def __call__(self, data):
+        classless_data = data.transform(Domain(data.domain.attributes))
+        return super().__call__(classless_data)
 
     def fit(self, X, Y=None, W=None):
         clf = self.__wraps__(**self.params)

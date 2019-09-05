@@ -2,175 +2,76 @@
 Orange Canvas main entry point
 
 """
+from collections import defaultdict
+from contextlib import closing
 
 import os
 import sys
+from datetime import date
+
 import gc
 import re
 import time
 import logging
+import signal
 from logging.handlers import RotatingFileHandler
 import optparse
 import pickle
 import shlex
 import shutil
 from unittest.mock import patch
-from urllib.request import urlopen, Request, getproxies
+from urllib.request import urlopen, Request
 
 import pkg_resources
+import yaml
 
 from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
 from AnyQt.QtCore import (
     Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
 )
+import pyqtgraph
 
+import orangecanvas
 from Orange import canvas
-from Orange.canvas.application.application import CanvasApplication
-from Orange.canvas.application.canvasmain import CanvasMainWindow
-from Orange.canvas.application.outputview import TextStream, ExceptHook
-from Orange.canvas.application.errorreporting import handle_exception
+from orangecanvas.registry import qt
+from orangecanvas.registry import WidgetRegistry, set_global_registry
+from orangecanvas.registry import cache
+from orangecanvas.application.application import CanvasApplication
+from orangecanvas.application.outputview import TextStream, ExceptHook
+from orangecanvas.document.usagestatistics import UsageStatistics
+from orangecanvas.gui.splashscreen import SplashScreen
+from orangecanvas.utils.overlay import Notification, NotificationServer
+from orangecanvas import config as canvasconfig
+from orangecanvas.main import (
+    fix_win_pythonw_std_stream, fix_set_proxy_env, fix_macos_nswindow_tabbing,
+    breeze_dark,
+)
 
-from Orange.canvas.gui.splashscreen import SplashScreen
-from Orange.canvas.config import cache_dir
+from orangewidget.workflow.errorreporting import handle_exception
+from Orange.util import literal_eval, requirementsSatisfied
+
 from Orange.canvas import config
-from Orange.canvas.document.usagestatistics import UsageStatistics
+from Orange.canvas.mainwindow import MainWindow
+from Orange.util import resource_filename
+from Orange.version import version as current, release as is_release
 
-from Orange.canvas.registry import qt
-from Orange.canvas.registry import WidgetRegistry, set_global_registry
-from Orange.canvas.registry import cache
-from Orange.canvas.utils.overlay import NotificationWidget, NotificationOverlay
-from Orange.widgets import gui
 
 log = logging.getLogger(__name__)
 
-# The modules below are imported on the fly (and used just there) for clarity
-# pylint: disable=wrong-import-order
-# pylint: disable=wrong-import-position
-
-# Allow termination with CTRL + C
-import signal
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-# Disable pyqtgraph's atexit and QApplication.aboutToQuit cleanup handlers.
-import pyqtgraph
-pyqtgraph.setConfigOption("exitCleanup", False)
+statistics_server_url = os.getenv(
+    'ORANGE_STATISTICS_API_URL', "https://orange.biolab.si/usage-statistics"
+)
 
 
-default_proxies = None
-
-
-def fix_osx_10_9_private_font():
-    # Fix fonts on Os X (QTBUG 47206, 40833, 32789)
-    if sys.platform == "darwin":
-        import platform
-        try:
-            version = platform.mac_ver()[0]
-            version = float(version[:version.rfind(".")])
-            if version >= 10.11:  # El Capitan
-                QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
-            elif version >= 10.10:  # Yosemite
-                QFont.insertSubstitution(".Helvetica Neue DeskInterface",
-                                         "Helvetica Neue")
-            elif version >= 10.9:
-                QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
-        except AttributeError:
-            pass
-
-
-def fix_macos_nswindow_tabbing():
-    """
-    Disable automatic NSWindow tabbing on macOS Sierra and higher.
-
-    See QTBUG-61707
-    """
-    import ctypes
-    import ctypes.util
-    import platform
-
-    if sys.platform != "darwin":
-        return
-    ver, _, _ = platform.mac_ver()
-    ver = tuple(map(int, ver.split(".")[:2]))
-    if ver < (10, 12):
-        return
-
-    c_char_p, c_void_p = ctypes.c_char_p, ctypes.c_void_p
-    id = Sel = Class = c_void_p
-
-    def annotate(func, restype, argtypes):
-        func.restype = restype
-        func.argtypes = argtypes
-        return func
-    try:
-        libobjc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("libobjc"))
-        # Load AppKit.framework which contains NSWindow class
-        # pylint: disable=unused-variable
-        AppKit = ctypes.cdll.LoadLibrary(ctypes.util.find_library("AppKit"))
-        objc_getClass = annotate(
-            libobjc.objc_getClass, Class, [c_char_p])
-        objc_msgSend = annotate(
-            libobjc.objc_msgSend, id, [id, Sel])
-        sel_registerName = annotate(
-            libobjc.sel_registerName, Sel, [c_char_p])
-        class_getClassMethod = annotate(
-            libobjc.class_getClassMethod, c_void_p, [Class, Sel])
-    except (OSError, AttributeError):
-        return
-
-    NSWindow = objc_getClass(b"NSWindow")
-    if NSWindow is None:
-        return
-    setAllowsAutomaticWindowTabbing = sel_registerName(
-        b'setAllowsAutomaticWindowTabbing:'
+def ua_string():
+    is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+    return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}:{uuid}'.format(
+        orange_version=current,
+        py_version='.'.join(str(a) for a in sys.version_info[:3]),
+        platform=sys.platform,
+        conda='Anaconda' if is_anaconda else '',
+        uuid=QSettings().value("error-reporting/machine-id", "", str),
     )
-    # class_respondsToSelector does not work (for class methods)
-    if class_getClassMethod(NSWindow, setAllowsAutomaticWindowTabbing):
-        # [NSWindow setAllowsAutomaticWindowTabbing: NO]
-        objc_msgSend(
-            NSWindow,
-            setAllowsAutomaticWindowTabbing,
-            ctypes.c_bool(False),
-        )
-
-
-def fix_win_pythonw_std_stream():
-    """
-    On windows when running without a console (using pythonw.exe) the
-    std[err|out] file descriptors are invalid and start throwing exceptions
-    when their buffer is flushed (`http://bugs.python.org/issue706263`_)
-
-    """
-    if sys.platform == "win32" and \
-            os.path.basename(sys.executable) == "pythonw.exe":
-        if sys.stdout is None:
-            sys.stdout = open(os.devnull, "w")
-        if sys.stderr is None:
-            sys.stderr = open(os.devnull, "w")
-
-
-def fix_set_proxy_env():
-    """
-    Set http_proxy/https_proxy environment variables (for requests, pip, ...)
-    from user-specified settings or, if none, from system settings on OS X
-    and from registry on Windos.
-    """
-    # save default proxies so that setting can be reset
-    global default_proxies
-    if default_proxies is None:
-        default_proxies = getproxies()  # can also read windows and macos settings
-
-    settings = QSettings()
-    proxies = getproxies()
-    for scheme in set(["http", "https"]) | set(proxies):
-        from_settings = settings.value("network/" + scheme + "-proxy", "", type=str)
-        from_default = default_proxies.get(scheme, "")
-        env_scheme = scheme + '_proxy'
-        if from_settings:
-            os.environ[env_scheme] = from_settings
-        elif from_default:
-            os.environ[env_scheme] = from_default  # crucial for windows/macos support
-        else:
-            os.environ.pop(env_scheme, "")
 
 
 def make_sql_logger(level=logging.INFO):
@@ -181,56 +82,38 @@ def make_sql_logger(level=logging.INFO):
     sql_log.addHandler(handler)
 
 
+def make_stdout_handler(level, fmt=None):
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    if fmt:
+        handler.setFormatter(logging.Formatter(fmt))
+    return handler
+
+
 def setup_notifications():
-    settings = config.settings()
-
-    # If run for the fifth time, prompt short survey
-    show_survey = settings["startup/show-short-survey"] and \
-                  settings["startup/launch-count"] >= 5
-    if show_survey:
-        surveyDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
-        surveyDialog = NotificationWidget(icon=QIcon(gui.resource_filename("icons/information.png")),
-                                          title="Survey",
-                                          text="We want to understand our users better.\n"
-                                               "Would you like to take a short survey?",
-                                          standardButtons=surveyDialogButtons)
-
-        def handle_survey_response(button):
-            if surveyDialog.buttonRole(button) == NotificationWidget.AcceptRole:
-                success = QDesktopServices.openUrl(
-                    QUrl("https://orange.biolab.si/survey/short.html"))
-                settings["startup/show-short-survey"] = not success
-            elif surveyDialog.buttonRole(button) == NotificationWidget.RejectRole:
-                settings["startup/show-short-survey"] = False
-
-        surveyDialog.clicked.connect(handle_survey_response)
-
-        NotificationOverlay.registerNotification(surveyDialog)
-
+    settings = QSettings()
     # data collection permission
-    if not settings["error-reporting/permission-requested"]:
-        permDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
-        permDialog = NotificationWidget(icon=QIcon(gui.resource_filename(
-                                                                "../../distribute/icon-48.png")),
-                                        title="Anonymous Usage Statistics",
-                                        text="Do you wish to opt-in to sharing "
-                                             "statistics about how you use Orange?\n"
-                                             "All data is anonymized and used "
-                                             "exclusively for understanding how users "
-                                             "interact with Orange.",
-                                        standardButtons=permDialogButtons)
-        btnOK = permDialog.button(NotificationWidget.AcceptRole)
-        btnOK.setText("Allow")
+    if not settings.value("error-reporting/permission-requested", False, type=bool) and \
+            not settings.value("error-reporting/send-statistics", False, bool):
+        notif = Notification(icon=QIcon(resource_filename("canvas/icons/statistics-request.png")),
+                             title="Anonymous Usage Statistics",
+                             text="Do you wish to opt-in to sharing "
+                                  "statistics about how you use Orange? "
+                                  "All data is anonymized and used "
+                                  "exclusively for understanding how users "
+                                  "interact with Orange.",
+                             accept_button_label="Allow",
+                             reject_button_label="No")
 
-        def handle_permission_response(button):
-            if permDialog.buttonRole(button) != permDialog.DismissRole:
-                settings["error-reporting/permission-requested"] = True
-            if permDialog.buttonRole(button) == permDialog.AcceptRole:
-                settings["error-reporting/send-statistics"] = True
+        def handle_permission_response(role):
+            if role != notif.DismissRole:
+                settings.setValue("error-reporting/permission-requested", True)
+            if role == notif.AcceptRole:
+                UsageStatistics.set_enabled(True)
+                settings.setValue("error-reporting/send-statistics", True)
 
-        permDialog.clicked.connect(handle_permission_response)
-
-        NotificationOverlay.registerNotification(permDialog)
+        notif.clicked.connect(handle_permission_response)
+        canvas.notification_server_instance.registerNotification(notif)
 
 
 def check_for_updates():
@@ -242,8 +125,6 @@ def check_for_updates():
     if check_updates and time.time() - last_check_time > ONE_DAY:
         settings.setValue('startup/last-update-check-time', int(time.time()))
 
-        from Orange.version import version as current
-
         class GetLatestVersion(QThread):
             resultReady = pyqtSignal(str)
 
@@ -254,23 +135,13 @@ def check_for_updates():
                                           'Accept': 'text/plain',
                                           'Accept-Encoding': 'gzip, deflate',
                                           'Connection': 'close',
-                                          'User-Agent': self.ua_string()})
+                                          'User-Agent': ua_string()})
                     contents = urlopen(request, timeout=10).read().decode()
                 # Nothing that this fails with should make Orange crash
                 except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to check for updates')
                 else:
                     self.resultReady.emit(contents)
-
-            @staticmethod
-            def ua_string():
-                is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
-                return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}'.format(
-                    orange_version=current,
-                    py_version='.'.join(sys.version[:3]),
-                    platform=sys.platform,
-                    conda='Anaconda' if is_anaconda else '',
-                )
 
         def compare_versions(latest):
             version = pkg_resources.parse_version
@@ -279,25 +150,21 @@ def check_for_updates():
                     latest == skipped:
                 return
 
-            questionButtons = NotificationWidget.Ok | NotificationWidget.Close
-            question = NotificationWidget(icon=QIcon(gui.resource_filename('icons/Dlg_down3.png')),
-                                          title='Orange Update Available',
-                                          text='Current version: <b>{}</b><br>'
-                                               'Latest version: <b>{}</b>'.format(current, latest),
-                                          textFormat=Qt.RichText,
-                                          standardButtons=questionButtons,
-                                          acceptLabel="Download",
-                                          rejectLabel="Skip this Version")
+            notif = Notification(title='Orange Update Available',
+                                 text='Current version: <b>{}</b><br>'
+                                      'Latest version: <b>{}</b>'.format(current, latest),
+                                 accept_button_label="Download",
+                                 reject_button_label="Skip this Version",
+                                 icon=QIcon(resource_filename("canvas/icons/update.png")))
 
-            def handle_click(b):
-                if question.buttonRole(b) != question.DismissRole:
+            def handle_click(role):
+                if role == notif.RejectRole:
                     settings.setValue('startup/latest-skipped-version', latest)
-                if question.buttonRole(b) == question.AcceptRole:
+                if role == notif.AcceptRole:
                     QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
 
-            question.clicked.connect(handle_click)
-
-            NotificationOverlay.registerNotification(question)
+            notif.clicked.connect(handle_click)
+            canvas.notification_server_instance.registerNotification(notif)
 
         thread = GetLatestVersion()
         thread.resultReady.connect(compare_versions)
@@ -306,12 +173,195 @@ def check_for_updates():
     return None
 
 
+def open_link(url: QUrl):
+    if url.scheme() == "orange":
+        # define custom actions within Orange here
+        pass
+    else:
+        QDesktopServices.openUrl(url)
+
+
+class YAMLNotification:
+    """
+    Class used for safe loading of yaml file.
+    """
+    # pylint: disable=redefined-builtin
+    def __init__(self, id=None, type=None, start=None, end=None, requirements=None, icon=None,
+                 title=None, text=None, link=None, accept_button_label=None,
+                 reject_button_label=None):
+        self.id = id
+        self.type = type
+        self.start = start
+        self.end = end
+        self.requirements = requirements
+        self.icon = icon
+        self.title = title
+        self.text = text
+        self.link = link
+        self.accept_button_label = accept_button_label
+        self.reject_button_label = reject_button_label
+
+    def toNotification(self):
+        return Notification(title=self.title,
+                            text=self.text,
+                            accept_button_label=self.accept_button_label,
+                            reject_button_label=self.reject_button_label,
+                            icon=QIcon(resource_filename(self.icon)))
+
+    @staticmethod
+    def yamlConstructor(loader, node):
+        fields = loader.construct_mapping(node)
+        return YAMLNotification(**fields)
+
+
+yaml.add_constructor(u'!Notification', YAMLNotification.yamlConstructor, Loader=yaml.SafeLoader)
+
+
+def pull_notifications():
+    Version = pkg_resources.parse_version
+
+    settings = QSettings()
+    # create settings_dict for notif requirements purposes (read-only)
+    spec = canvasconfig.spec + config.spec
+    settings_dict = canvasconfig.Settings(defaults=spec, store=settings)
+
+    # map of installed addon name -> version
+    installed_list = [ep.dist for ep in config.addon_entry_points()
+                      if ep.dist is not None]
+    installed = defaultdict(lambda: "-1")
+    for addon in installed_list:
+        installed[addon.project_name] = addon.version
+
+    # get set of already displayed notification IDs, stored in settings["notifications/displayed"]
+    displayedIDs = literal_eval(settings.value("notifications/displayed", "set()", str))
+
+    # get notification feed from Github
+    class GetNotifFeed(QThread):
+        resultReady = pyqtSignal(str)
+
+        def run(self):
+            try:
+                request = Request('https://orange.biolab.si/notification-feed',
+                                  headers={
+                                      'Accept': 'text/plain',
+                                      'Connection': 'close',
+                                      'User-Agent': ua_string(),
+                                      'Cache-Control': 'no-cache',
+                                      'Pragma': 'no-cache'})
+                contents = urlopen(request, timeout=10).read().decode()
+            # Nothing that this fails with should make Orange crash
+            except Exception:  # pylint: disable=broad-except
+                log.exception('Failed to pull notification feed')
+            else:
+                self.resultReady.emit(contents)
+
+    thread = GetNotifFeed()
+
+    def parse_yaml_notification(YAMLnotif: YAMLNotification):
+        # check if notification has been displayed and responded to previously
+        if YAMLnotif.id and YAMLnotif.id in displayedIDs:
+            return
+
+        # check if type is filtered by user
+        allowAnnouncements = settings.value('notifications/announcements', True, bool)
+        allowBlog = settings.value('notifications/blog', True, bool)
+        allowNewFeatures = settings.value('notifications/new-features', True, bool)
+        if YAMLnotif.type and \
+                (YAMLnotif.type == 'announcement' and not allowAnnouncements
+                 or YAMLnotif.type == 'blog' and not allowBlog
+                 or YAMLnotif.type == 'new-features' and not allowNewFeatures):
+            return
+
+        # check time validity
+        today = date.today()
+        if (YAMLnotif.start and YAMLnotif.start >= today) or \
+                (YAMLnotif.end and YAMLnotif.end <= today):
+            return
+
+        # check requirements
+        reqs = YAMLnotif.requirements
+        # Orange/addons version
+        if reqs and 'installed' in reqs and \
+                not requirementsSatisfied(reqs['installed'], installed, req_type=Version):
+            return
+        # local config values
+        if reqs and 'local_config' in reqs and \
+                not requirementsSatisfied(reqs['local_config'], settings_dict):
+            return
+
+        # if no custom icon is set, default to notif type icon
+        if YAMLnotif.icon is None and YAMLnotif.type is not None:
+            YAMLnotif.icon = "canvas/icons/" + YAMLnotif.type + ".png"
+
+        # instantiate and return Notification
+        notif = YAMLnotif.toNotification()
+
+        # connect link to notification
+        notif.accepted.connect(lambda: open_link(QUrl(YAMLnotif.link)))
+
+        # remember notification id
+        def remember_notification(role):
+            # if notification was accepted or rejected, write its ID to preferences
+            if role == notif.DismissRole or YAMLnotif.id is None:
+                return
+
+            displayedIDs.add(YAMLnotif.id)
+            settings.setValue("notifications/displayed", repr(displayedIDs))
+        notif.clicked.connect(remember_notification)
+
+        # display notification
+        canvas.notification_server_instance.registerNotification(notif)
+
+    def setup_notification_feed(feed_str):
+        feed = yaml.safe_load(feed_str)
+        for YAMLnotif in feed:
+            parse_yaml_notification(YAMLnotif)
+
+    thread.resultReady.connect(setup_notification_feed)
+    thread.start()
+    return thread
+
+
 def send_usage_statistics():
+    def send_statistics(url):
+        """Send the statistics to the remote at `url`"""
+        import json
+        import requests
+        settings = QSettings()
+        if not settings.value("error-reporting/send-statistics", False,
+                              type=bool):
+            log.info("Not sending usage statistics (preferences setting).")
+            return
+        if not UsageStatistics.is_enabled():
+            log.info("Not sending usage statistics (disabled).")
+            return
+
+        is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+
+        usage = UsageStatistics()
+        data = usage.load()
+        for d in data:
+            d["Orange Version"] = d.pop("Application Version", "")
+            d["Anaconda"] = is_anaconda
+        try:
+            r = requests.post(url, files={'file': json.dumps(data)})
+            if r.status_code != 200:
+                log.warning("Error communicating with server while attempting to send "
+                            "usage statistics.")
+                return
+            # success - wipe statistics file
+            log.info("Usage statistics sent.")
+            with open(usage.filename(), 'w', encoding="utf-8") as f:
+                json.dump([], f)
+        except (ConnectionError, requests.exceptions.RequestException):
+            log.warning("Connection error while attempting to send usage statistics.")
+        except Exception:  # pylint: disable=broad-except
+            log.warning("Failed to send usage statistics.", exc_info=True)
+
     class SendUsageStatistics(QThread):
         def run(self):
             try:
-                usage = UsageStatistics()
-                usage.send_statistics()
+                send_statistics(statistics_server_url)
             except Exception:  # pylint: disable=broad-except
                 # exceptions in threads would crash Orange
                 log.warning("Failed to send usage statistics.")
@@ -322,6 +372,11 @@ def send_usage_statistics():
 
 
 def main(argv=None):
+    # Allow termination with CTRL + C
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    # Disable pyqtgraph's atexit and QApplication.aboutToQuit cleanup handlers.
+    pyqtgraph.setConfigOption("exitCleanup", False)
+
     if argv is None:
         argv = sys.argv
 
@@ -370,27 +425,16 @@ def main(argv=None):
     # and write to the old file descriptors)
     fix_win_pythonw_std_stream()
 
-    # Try to fix fonts on OSX Mavericks
-    fix_osx_10_9_private_font()
-
     # Try to fix macOS automatic window tabbing (Sierra and later)
     fix_macos_nswindow_tabbing()
 
-    # File handler should always be at least INFO level so we need
-    # the application root level to be at least at INFO.
-    root_level = min(levels[options.log_level], logging.INFO)
-    rootlogger = logging.getLogger(canvas.__name__)
-    rootlogger.setLevel(root_level)
-
-    # Initialize SQL query and execution time logger (in SqlTable)
-    sql_level = min(levels[options.log_level], logging.INFO)
-    make_sql_logger(sql_level)
-
-    # Standard output stream handler at the requested level
-    stream_hander = logging.StreamHandler()
-    stream_hander.setLevel(level=levels[options.log_level])
-    rootlogger.addHandler(stream_hander)
-
+    logging.basicConfig(
+        level=levels[options.log_level],
+        handlers=[make_stdout_handler(levels[options.log_level])]
+    )
+    # set default application configuration
+    config_ = config.Config()
+    canvasconfig.set_default(config_)
     log.info("Starting 'Orange Canvas' application.")
 
     qt_argv = argv[:1]
@@ -416,6 +460,7 @@ def main(argv=None):
 
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
+    config_.init()
     if app.style().metaObject().className() == "QFusionStyle":
         if fusiontheme == "breeze-dark":
             app.setPalette(breeze_dark())
@@ -426,8 +471,9 @@ def main(argv=None):
         log.info("Switching default stylesheet to darkorange")
         defaultstylesheet = "darkorange.qss"
 
-    # NOTE: config.init() must be called after the QApplication constructor
-    config.init()
+    # Initialize SQL query and execution time logger (in SqlTable)
+    sql_level = min(levels[options.log_level], logging.INFO)
+    make_sql_logger(sql_level)
 
     clear_settings_flag = os.path.join(
         config.widget_settings_dir(), "DELETE_ON_START")
@@ -442,13 +488,22 @@ def main(argv=None):
     # Set http_proxy environment variables, after (potentially) clearing settings
     fix_set_proxy_env()
 
+    # Setup file log handler for the select logger list - this is always
+    # at least INFO
+    level = min(levels[options.log_level], logging.INFO)
     file_handler = logging.FileHandler(
         filename=os.path.join(config.log_dir(), "canvas.log"),
         mode="w"
     )
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+    )
+    file_handler.setLevel(level)
 
-    file_handler.setLevel(root_level)
-    rootlogger.addHandler(file_handler)
+    for namespace in ["orangecanvas", "orangewidget", "Orange"]:
+        logger = logging.getLogger(namespace)
+        logger.setLevel(level)
+        logger.addHandler(file_handler)
 
     # intercept any QFileOpenEvent requests until the main window is
     # fully initialized.
@@ -466,8 +521,11 @@ def main(argv=None):
     app.fileOpenRequest.connect(onrequest)
 
     settings = QSettings()
-
     settings.setValue('startup/launch-count', settings.value('startup/launch-count', 0, int) + 1)
+
+    if settings.value("error-reporting/send-statistics", False, type=bool) \
+            and is_release:
+        UsageStatistics.set_enabled(True)
 
     stylesheet = options.stylesheet or defaultstylesheet
     stylesheet_string = None
@@ -481,7 +539,7 @@ def main(argv=None):
                 # no extension
                 stylesheet = os.path.extsep.join([stylesheet, "qss"])
 
-            pkg_name = canvas.__name__
+            pkg_name = orangecanvas.__name__
             resource = "styles/" + stylesheet
 
             if pkg_resources.resource_exists(pkg_name, resource):
@@ -508,12 +566,20 @@ def main(argv=None):
                 log.info("%r style sheet not found.", stylesheet)
 
     # Add the default canvas_icons search path
-    dirpath = os.path.abspath(os.path.dirname(canvas.__file__))
+    dirpath = os.path.abspath(os.path.dirname(orangecanvas.__file__))
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
-    canvas_window = CanvasMainWindow()
+    canvas_window = MainWindow()
     canvas_window.setAttribute(Qt.WA_DeleteOnClose)
     canvas_window.setWindowIcon(config.application_icon())
+
+    # initialize notification server, set to initial canvas
+    notif_server = NotificationServer()
+    canvas.notification_server_instance = notif_server
+    canvas_window.set_notification_server(notif_server)
+
+    # initialize notifications
+    setup_notifications()
 
     if stylesheet_string is not None:
         canvas_window.setStyleSheet(stylesheet_string)
@@ -523,16 +589,9 @@ def main(argv=None):
     else:
         reg_cache = None
 
-    widget_discovery = qt.QtWidgetDiscovery(cached_descriptions=reg_cache)
-
     widget_registry = qt.QtWidgetRegistry()
-
-    widget_discovery.found_category.connect(
-        widget_registry.register_category
-    )
-    widget_discovery.found_widget.connect(
-        widget_registry.register_widget
-    )
+    widget_discovery = config_.widget_discovery(
+        widget_registry, cached_descriptions=reg_cache)
 
     want_splash = \
         settings.value("startup/show-splash-screen", True, type=bool) and \
@@ -547,23 +606,28 @@ def main(argv=None):
         def show_message(message):
             splash_screen.showMessage(message, color=color)
 
-        widget_discovery.discovery_start.connect(splash_screen.show)
-        widget_discovery.discovery_process.connect(show_message)
-        widget_discovery.discovery_finished.connect(splash_screen.hide)
+        widget_registry.category_added.connect(show_message)
 
     log.info("Running widget discovery process.")
 
-    cache_filename = os.path.join(cache_dir(), "widget-registry.pck")
+    cache_filename = os.path.join(config.cache_dir(), "widget-registry.pck")
     if options.no_discovery:
         with open(cache_filename, "rb") as f:
             widget_registry = pickle.load(f)
         widget_registry = qt.QtWidgetRegistry(widget_registry)
     else:
+        if want_splash:
+            splash_screen.show()
         widget_discovery.run(config.widgets_entry_points())
+        if want_splash:
+            splash_screen.hide()
+            splash_screen.deleteLater()
+
         # Store cached descriptions
         cache.save_registry_cache(widget_discovery.cached_descriptions)
         with open(cache_filename, "wb") as f:
             pickle.dump(WidgetRegistry(widget_registry), f)
+
     set_global_registry(widget_registry)
     canvas_window.set_widget_registry(widget_registry)
     canvas_window.show()
@@ -593,15 +657,13 @@ def main(argv=None):
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
 
-    # initialize notifications
-    setup_notifications()
-
     # local references prevent destruction
     update_check = check_for_updates()
     send_stat = send_usage_statistics()
+    pull_notifs = pull_notifications()
 
     # Tee stdout and stderr into Output dock
-    log_view = canvas_window.log_view()
+    log_view = canvas_window.output_view()
 
     stdout = TextStream()
     stdout.stream.connect(log_view.write)
@@ -617,10 +679,12 @@ def main(argv=None):
         stderr.flushed.connect(sys.stderr.flush)
 
     log.info("Entering main event loop.")
+    excepthook = ExceptHook(stream=stderr)
+    excepthook.handledException.connect(handle_exception)
     try:
-        with patch('sys.excepthook',
-                   ExceptHook(stream=stderr,
-                              handledException=handle_exception)),\
+        with closing(stdout),\
+             closing(stderr),\
+             patch('sys.excepthook', excepthook),\
              patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):
             status = app.exec_()
@@ -631,6 +695,7 @@ def main(argv=None):
     del canvas_window
     del update_check
     del send_stat
+    del pull_notifs
 
     app.processEvents()
     app.flush()
@@ -639,44 +704,6 @@ def main(argv=None):
 
     del app
     return status
-
-
-def breeze_dark():
-    # 'Breeze Dark' color scheme from KDE.
-    text = QColor(239, 240, 241)
-    textdisabled = QColor(98, 108, 118)
-    window = QColor(49, 54, 59)
-    base = QColor(35, 38, 41)
-    highlight = QColor(61, 174, 233)
-    link = QColor(41, 128, 185)
-
-    light = QColor(69, 76, 84)
-    mid = QColor(43, 47, 52)
-    dark = QColor(28, 31, 34)
-    shadow = QColor(20, 23, 25)
-
-    palette = QPalette()
-    palette.setColor(QPalette.Window, window)
-    palette.setColor(QPalette.WindowText, text)
-    palette.setColor(QPalette.Disabled, QPalette.WindowText, textdisabled)
-    palette.setColor(QPalette.Base, base)
-    palette.setColor(QPalette.AlternateBase, window)
-    palette.setColor(QPalette.ToolTipBase, window)
-    palette.setColor(QPalette.ToolTipText, text)
-    palette.setColor(QPalette.Text, text)
-    palette.setColor(QPalette.Disabled, QPalette.Text, textdisabled)
-    palette.setColor(QPalette.Button, window)
-    palette.setColor(QPalette.ButtonText, text)
-    palette.setColor(QPalette.Disabled, QPalette.ButtonText, textdisabled)
-    palette.setColor(QPalette.BrightText, Qt.white)
-    palette.setColor(QPalette.Highlight, highlight)
-    palette.setColor(QPalette.HighlightedText, text)
-    palette.setColor(QPalette.Light, light)
-    palette.setColor(QPalette.Mid, mid)
-    palette.setColor(QPalette.Dark, dark)
-    palette.setColor(QPalette.Shadow, shadow)
-    palette.setColor(QPalette.Link, link)
-    return palette
 
 
 if __name__ == "__main__":

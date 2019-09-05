@@ -64,15 +64,18 @@ def create_annotated_table(data, selected_indices):
 
 def create_groups_table(data, selection,
                         include_unselected=True,
-                        var_name=ANNOTATED_DATA_FEATURE_NAME):
+                        var_name=ANNOTATED_DATA_FEATURE_NAME,
+                        values=None):
     if data is None:
         return None
     max_sel = np.max(selection)
-    values = ["G{}".format(i + 1) for i in range(max_sel)]
+    if values is None:
+        values = ["G{}".format(i + 1) for i in range(max_sel)]
+        if include_unselected:
+            values.append("Unselected")
     if include_unselected:
         # Place Unselected instances in the "last group", so that the group
         # colors and scatter diagram marker colors will match
-        values.append("Unselected")
         mask = (selection != 0)
         selection = selection.copy()
         selection[mask] = selection[mask] - 1

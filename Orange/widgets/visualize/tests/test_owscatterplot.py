@@ -16,7 +16,7 @@ from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.colorpalette import DefaultRGBColors
 from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
-from Orange.widgets.visualize.utils.widget import MAX_CATEGORIES
+from Orange.widgets.visualize.utils.widget import MAX_COLORS
 from Orange.widgets.widget import AttributeList
 
 
@@ -585,11 +585,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             pen_data, _ = self.widget.graph.get_colors()
             self.assertEqual(max, len(np.unique([id(p) for p in pen_data])), )
 
-        assert_equal(prepare_data(), MAX_CATEGORIES)
+        assert_equal(prepare_data(), MAX_COLORS)
         # data with nan value
         data = prepare_data()
         data.Y[42] = np.nan
-        assert_equal(data, MAX_CATEGORIES + 1)
+        assert_equal(data, MAX_COLORS + 1)
 
     def test_change_data(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -634,7 +634,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         # send features (same as default ones)
         self.send_signal(self.widget.Inputs.features,
                          AttributeList(self.data.domain.attributes[:2]))
-        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.assertListEqual(self.widget.effective_variables, [])
         self.widget.setup_plot.assert_called_once()
 
         # send data
@@ -685,7 +685,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         # send features (not the same as defaults)
         self.send_signal(self.widget.Inputs.features,
                          AttributeList(self.data.domain.attributes[2:4]))
-        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.assertListEqual(self.widget.effective_variables, [])
         self.widget.setup_plot.assert_called_once()
 
         # send data

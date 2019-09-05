@@ -3,10 +3,10 @@ import numpy as np
 from AnyQt.QtCore import (
     QRectF, QLineF, QObject, QEvent, Qt, pyqtSignal as Signal
 )
-from AnyQt.QtGui import QTransform
+from AnyQt.QtGui import QTransform, QFontMetrics
 from AnyQt.QtWidgets import (
     QGraphicsLineItem, QGraphicsSceneMouseEvent, QPinchGesture,
-    QGraphicsItemGroup)
+    QGraphicsItemGroup, QWidget)
 
 import pyqtgraph as pg
 
@@ -386,3 +386,20 @@ def wrap_legend_items(items, max_width, hspacing, vspacing):
     for yi, line in enumerate(lines):
         create_line(line, yi, fixed_width=fixed_width)
     return paragraph
+
+
+class ElidedLabelsAxis(pg.AxisItem):
+    """
+    Horizontal axis that elides long text labels
+
+    The class assumes that ticks with labels are distributed equally, and that
+    standard `QWidget.font()` is used for printing them.
+    """
+    def generateDrawSpecs(self, p):
+        axis_spec, tick_specs, text_specs = super().generateDrawSpecs(p)
+        bounds = self.mapRectFromParent(self.geometry())
+        max_width = 0.9 * bounds.width() / (len(text_specs) or 1)
+        elide = QFontMetrics(QWidget().font()).elidedText
+        text_specs = [(rect, flags, elide(text, Qt.ElideRight, max_width))
+                      for rect, flags, text in text_specs]
+        return axis_spec, tick_specs, text_specs

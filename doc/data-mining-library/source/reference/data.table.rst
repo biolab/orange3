@@ -96,6 +96,10 @@ Inspection
 Row manipulation
 ----------------
 
+.. note::
+   Methods that change the table length, that is, all methods in this section
+   except for `Table.shuffle` are deprecated and will be removed in Orange 3.24.
+
 .. automethod:: Table.append
 .. automethod:: Table.extend
 .. automethod:: Table.insert

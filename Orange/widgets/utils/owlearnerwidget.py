@@ -65,7 +65,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
     LEARNER = None
     supports_sparse = True
 
-    learner_name = Setting(None, schema_only=True)
+    learner_name = Setting("", schema_only=True)
     want_main_area = False
     resizing_enabled = False
     auto_apply = Setting(True)
@@ -90,15 +90,13 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
 
     OUTPUT_MODEL_NAME = Outputs.model.name  # Attr for backcompat w/ self.send() code
 
-    def __init__(self):
+    def __init__(self, preprocessors=None):
         super().__init__()
         self.data = None
         self.valid_data = False
         self.learner = None
-        if self.learner_name is None:
-            self.learner_name = self.name
         self.model = None
-        self.preprocessors = None
+        self.preprocessors = preprocessors
         self.outdated_settings = False
 
         self.setup_layout()
@@ -149,7 +147,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         if self.learner and issubclass(self.LEARNER, Fitter):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
-            self.learner.name = self.learner_name
+            self.learner.name = self.learner_name or self.name
         self.Outputs.learner.send(self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
@@ -168,7 +166,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             except BaseException as exc:
                 self.show_fitting_failed(exc)
             else:
-                self.model.name = self.learner_name
+                self.model.name = self.learner_name or self.name
                 self.model.instances = self.data
         self.Outputs.model.send(self.model)
 
@@ -198,7 +196,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
 
     def _change_name(self, instance, output):
         if instance:
-            instance.name = self.learner_name
+            instance.name = self.learner_name or self.name
             if self.auto_apply:
                 output.send(instance)
 
@@ -207,7 +205,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self._change_name(self.model, self.Outputs.model)
 
     def send_report(self):
-        self.report_items((("Name", self.learner_name),))
+        self.report_items((("Name", self.learner_name or self.name),))
 
         model_parameters = self.get_learner_parameters()
         if model_parameters:
@@ -264,6 +262,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
     def add_learner_name_widget(self):
         self.name_line_edit = gui.lineEdit(
             self.controlArea, self, 'learner_name', box='Name',
+            placeholderText=self.name,
             tooltip='The name will identify this model in other widgets',
             orientation=Qt.Horizontal, callback=self.learner_name_changed)
 

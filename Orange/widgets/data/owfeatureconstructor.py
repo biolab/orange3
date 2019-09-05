@@ -25,8 +25,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
     QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
-    QPushButton, QMenu, QListView, QFrame
-)
+    QPushButton, QMenu, QListView, QFrame, QLabel)
 from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
@@ -45,6 +44,9 @@ FeatureDescriptor = \
 ContinuousDescriptor = \
     namedtuple("ContinuousDescriptor",
                ["name", "expression", "number_of_decimals"])
+DateTimeDescriptor = \
+    namedtuple("DateTimeDescriptor",
+               ["name", "expression"])
 DiscreteDescriptor = \
     namedtuple("DiscreteDescriptor",
                ["name", "expression", "values", "ordered"])
@@ -58,6 +60,10 @@ def make_variable(descriptor, compute_value):
             descriptor.name,
             descriptor.number_of_decimals,
             compute_value)
+    if isinstance(descriptor, DateTimeDescriptor):
+        return Orange.data.TimeVariable(
+            descriptor.name,
+            compute_value=compute_value, have_date=True, have_time=True)
     elif isinstance(descriptor, DiscreteDescriptor):
         return Orange.data.DiscreteVariable(
             descriptor.name,
@@ -115,8 +121,8 @@ class FeatureEditor(QFrame):
                                    QSizePolicy.Fixed)
         )
         self.expressionedit = QLineEdit(
-            placeholderText="Expression..."
-        )
+            placeholderText="Expression...",
+            toolTip=self.ExpressionTooltip)
 
         self.attrs_model = itemmodels.VariableListModel(
             ["Select Feature"], parent=self)
@@ -222,6 +228,7 @@ class FeatureEditor(QFrame):
 
 
 class ContinuousFeatureEditor(FeatureEditor):
+    ExpressionTooltip = "A numeric expression"
 
     def editorData(self):
         return ContinuousDescriptor(
@@ -231,15 +238,37 @@ class ContinuousFeatureEditor(FeatureEditor):
         )
 
 
+class DateTimeFeatureEditor(FeatureEditor):
+    ExpressionTooltip = \
+        "Result must be a string in ISO-8601 format " \
+        "(e.g. 2019-07-30T15:37:27 or a part thereof),\n" \
+        "or a number of seconds since Jan 1, 1970."
+
+    def editorData(self):
+        return DateTimeDescriptor(
+            name=self.nameedit.text(),
+            expression=self.expressionedit.text()
+        )
+
+
 class DiscreteFeatureEditor(FeatureEditor):
+    ExpressionTooltip = \
+        "Result must be a string, if values are not explicitly given\n" \
+        "or a zero-based integer indices into a list of values given below."
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.valuesedit = QLineEdit()
+        tooltip = \
+            "If values are given, above expression must return zero-based " \
+            "integer indices into that list."
+        self.valuesedit = QLineEdit(placeholderText="A, B ...", toolTip=tooltip)
         self.valuesedit.textChanged.connect(self._invalidate)
 
         layout = self.layout()
-        layout.addRow(self.tr("Values"), self.valuesedit)
+        label = QLabel(self.tr("Values (optional)"))
+        label.setToolTip(tooltip)
+        layout.addRow(label, self.valuesedit)
 
     def setEditorData(self, data, domain):
         self.valuesedit.setText(
@@ -260,6 +289,8 @@ class DiscreteFeatureEditor(FeatureEditor):
 
 
 class StringFeatureEditor(FeatureEditor):
+    ExpressionTooltip = "A string expression"
+
     def editorData(self):
         return StringDescriptor(
             name=self.nameedit.text(),
@@ -270,6 +301,7 @@ class StringFeatureEditor(FeatureEditor):
 _VarMap = {
     DiscreteDescriptor: vartype(Orange.data.DiscreteVariable()),
     ContinuousDescriptor: vartype(Orange.data.ContinuousVariable()),
+    DateTimeDescriptor: vartype(Orange.data.TimeVariable()),
     StringDescriptor: vartype(Orange.data.StringVariable())
 }
 
@@ -347,6 +379,7 @@ class OWFeatureConstructor(OWWidget):
 
     EDITORS = [
         (ContinuousDescriptor, ContinuousFeatureEditor),
+        (DateTimeDescriptor, DateTimeFeatureEditor),
         (DiscreteDescriptor, DiscreteFeatureEditor),
         (StringDescriptor, StringFeatureEditor)
     ]
@@ -412,14 +445,19 @@ class OWFeatureConstructor(OWWidget):
         disc = menu.addAction("Categorical")
         disc.triggered.connect(
             lambda: self.addFeature(
-                DiscreteDescriptor(generate_newname("D{}"), "",
-                                   ("A", "B"), False))
+                DiscreteDescriptor(generate_newname("D{}"), "", (), False))
         )
         string = menu.addAction("Text")
         string.triggered.connect(
             lambda: self.addFeature(
                 StringDescriptor(generate_newname("S{}"), ""))
         )
+        datetime = menu.addAction("Date/Time")
+        datetime.triggered.connect(
+            lambda: self.addFeature(
+                DateTimeDescriptor(generate_newname("T{}"), ""))
+        )
+
         menu.addSeparator()
         self.duplicateaction = menu.addAction("Duplicate Selected Variable")
         self.duplicateaction.triggered.connect(self.duplicateFeature)
@@ -593,6 +631,11 @@ class OWFeatureConstructor(OWWidget):
         return final
 
     def apply(self):
+        def report_error(err):
+            log = logging.getLogger(__name__)
+            log.error("", exc_info=True)
+            self.error("".join(format_exception_only(type(err), err)).rstrip())
+
         self.Error.clear()
 
         if self.data is None:
@@ -600,8 +643,12 @@ class OWFeatureConstructor(OWWidget):
 
         desc = list(self.featuremodel)
         desc = self._validate_descriptors(desc)
-        source_vars = self.data.domain.variables + self.data.domain.metas
-        new_variables = construct_variables(desc, source_vars)
+        try:
+            new_variables = construct_variables(desc, self.data)
+        # user's expression can contain arbitrary errors
+        except Exception as err:  # pylint: disable=broad-except
+            report_error(err)
+            return
 
         attrs = [var for var in new_variables if var.is_primitive()]
         metas = [var for var in new_variables if not var.is_primitive()]
@@ -616,9 +663,7 @@ class OWFeatureConstructor(OWWidget):
         # user's expression can contain arbitrary errors
         # pylint: disable=broad-except
         except Exception as err:
-            log = logging.getLogger(__name__)
-            log.error("", exc_info=True)
-            self.error("".join(format_exception_only(type(err), err)).rstrip())
+            report_error(err)
             return
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
@@ -637,6 +682,8 @@ class OWFeatureConstructor(OWWidget):
                     "; ordered" * feature.ordered)
             elif isinstance(feature, ContinuousDescriptor):
                 items[feature.name] = "{} (numeric)".format(feature.expression)
+            elif isinstance(feature, DateTimeDescriptor):
+                items[feature.name] = "{} (date/time)".format(feature.expression)
             else:
                 items[feature.name] = "{} (text)".format(feature.expression)
         self.report_items(
@@ -815,11 +862,12 @@ def validate_exp(exp):
         raise ValueError(exp)
 
 
-def construct_variables(descriptions, source_vars):
+def construct_variables(descriptions, data):
     # subs
     variables = []
+    source_vars = data.domain.variables + data.domain.metas
     for desc in descriptions:
-        _, func = bind_variable(desc, source_vars)
+        desc, func = bind_variable(desc, source_vars, data)
         var = make_variable(desc, func)
         variables.append(var)
     return variables
@@ -832,7 +880,7 @@ def sanitized_name(name):
     return sanitized
 
 
-def bind_variable(descriptor, env):
+def bind_variable(descriptor, env, data):
     """
     (descriptor, env) ->
         (descriptor, (instance -> value) | (table -> value list))
@@ -847,10 +895,35 @@ def bind_variable(descriptor, env):
                    if name in variables]
 
     values = {}
+    cast = None
+    nan = float("nan")
+
     if isinstance(descriptor, DiscreteDescriptor):
-        values = [sanitized_name(v) for v in descriptor.values]
-        values = {name: i for i, name in enumerate(values)}
-    return descriptor, FeatureFunc(descriptor.expression, source_vars, values)
+        if not descriptor.values:
+            str_func = FeatureFunc(descriptor.expression, source_vars)
+            values = sorted({str(x) for x in str_func(data)})
+            values = {name: i for i, name in enumerate(values)}
+            descriptor = descriptor._replace(values=values)
+
+            def cast(x):  # pylint: disable=function-redefined
+                return values.get(x, nan)
+
+        else:
+            values = [sanitized_name(v) for v in descriptor.values]
+            values = {name: i for i, name in enumerate(values)}
+
+    if isinstance(descriptor, DateTimeDescriptor):
+        parse = Orange.data.TimeVariable("_").parse
+
+        def cast(e):  # pylint: disable=function-redefined
+            if isinstance(e, (int, float)):
+                return e
+            if e == "" or e is None:
+                return np.nan
+            return parse(e)
+
+    func = FeatureFunc(descriptor.expression, source_vars, values, cast)
+    return descriptor, func
 
 
 def make_lambda(expression, args, env=None):
@@ -978,23 +1051,33 @@ class FeatureFunc:
     extra_env : Optional[Dict[str, Any]]
         Extra environment specifying constant values to be made available
         in expression. It must not shadow names in `args`
+    cast: Optional[Callable]
+        A function for casting the expressions result to the appropriate
+        type (e.g. string representation of date/time variables to floats)
     """
-    def __init__(self, expression, args, extra_env=None):
+    def __init__(self, expression, args, extra_env=None, cast=None):
         self.expression = expression
         self.args = args
         self.extra_env = dict(extra_env or {})
         self.func = make_lambda(ast.parse(expression, mode="eval"),
                                 [name for name, _ in args], self.extra_env)
+        self.cast = cast
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
             return [self(inst) for inst in instance]
         else:
-            args = [instance[var] for _, var in self.args]
-            return self.func(*args)
+            args = [str(instance[var])
+                    if instance.domain[var].is_string else instance[var]
+                    for _, var in self.args]
+            y = self.func(*args)
+            if self.cast:
+                y = self.cast(y)
+            return y
 
     def __reduce__(self):
-        return type(self), (self.expression, self.args, self.extra_env)
+        return type(self), (self.expression, self.args,
+                            self.extra_env, self.cast)
 
     def __repr__(self):
         return "{0.__name__}{1!r}".format(*self.__reduce__())

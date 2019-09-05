@@ -1,17 +1,15 @@
 import numbers
 
-from AnyQt.QtWidgets import QFormLayout
-from AnyQt.QtGui import QColor
-from AnyQt.QtCore import Qt
-
 import numpy
-import pyqtgraph as pg
+from AnyQt.QtWidgets import QFormLayout
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
@@ -31,7 +29,7 @@ class OWPCA(widget.OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        transformed_data = Output("Transformed data", Table)
+        transformed_data = Output("Transformed Data", Table, replaces=["Transformed data"])
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 
@@ -63,7 +61,6 @@ class OWPCA(widget.OWWidget):
         self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
-        self._line = False
         self._init_projector()
 
         # Components Selection
@@ -106,19 +103,9 @@ class OWPCA(widget.OWWidget):
         gui.auto_commit(self.controlArea, self, "auto_commit", "Apply",
                         checkbox_label="Apply automatically")
 
-        self.plot = pg.PlotWidget(background="w")
-
-        axis = self.plot.getAxis("bottom")
-        axis.setLabel("Principal Components")
-        axis = self.plot.getAxis("left")
-        axis.setLabel("Proportion of variance")
-        self.plot_horlabels = []
-        self.plot_horlines = []
-
-        self.plot.getViewBox().setMenuEnabled(False)
-        self.plot.getViewBox().setMouseEnabled(False, False)
-        self.plot.showGrid(True, True, alpha=0.5)
-        self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
+        self.plot = SliderGraph(
+            "Principal Components", "Proportion of variance",
+            self._on_cut_changed)
 
         self.mainArea.layout().addWidget(self.plot)
         self._update_normalize()
@@ -139,11 +126,11 @@ class OWPCA(widget.OWWidget):
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
         if isinstance(data, Table):
-            if len(data.domain.attributes) == 0:
+            if not data.domain.attributes:
                 self.Error.no_features()
                 self.clear_outputs()
                 return
-            if len(data) == 0:
+            if not data:
                 self.Error.no_instances()
                 self.clear_outputs()
                 return
@@ -189,10 +176,7 @@ class OWPCA(widget.OWWidget):
         self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
-        self._line = None
-        self.plot_horlabels = []
-        self.plot_horlines = []
-        self.plot.clear()
+        self.plot.clear_plot()
 
     def clear_outputs(self):
         self.Outputs.transformed_data.send(None)
@@ -200,72 +184,33 @@ class OWPCA(widget.OWWidget):
         self.Outputs.pca.send(self._pca_projector)
 
     def _setup_plot(self):
-        self.plot.clear()
         if self._pca is None:
+            self.plot.clear_plot()
             return
 
         explained_ratio = self._variance_ratio
         explained = self._cumulative
+        cutpos = self._nselected_components()
         p = min(len(self._variance_ratio), self.maxp)
 
-        self.plot.plot(numpy.arange(p), explained_ratio[:p],
-                       pen=pg.mkPen(QColor(Qt.red), width=2),
-                       antialias=True,
-                       name="Variance")
-        self.plot.plot(numpy.arange(p), explained[:p],
-                       pen=pg.mkPen(QColor(Qt.darkYellow), width=2),
-                       antialias=True,
-                       name="Cumulative Variance")
+        self.plot.update(
+            numpy.arange(1, p+1), [explained_ratio[:p], explained[:p]],
+            [Qt.red, Qt.darkYellow], cutpoint_x=cutpos)
 
-        cutpos = self._nselected_components() - 1
-        self._line = pg.InfiniteLine(
-            angle=90, pos=cutpos, movable=True, bounds=(0, p - 1))
-        self._line.setCursor(Qt.SizeHorCursor)
-        self._line.setPen(pg.mkPen(QColor(Qt.black), width=2))
-        self._line.sigPositionChanged.connect(self._on_cut_changed)
-        self.plot.addItem(self._line)
-
-        self.plot_horlines = (
-            pg.PlotCurveItem(pen=pg.mkPen(QColor(Qt.blue), style=Qt.DashLine)),
-            pg.PlotCurveItem(pen=pg.mkPen(QColor(Qt.blue), style=Qt.DashLine)))
-        self.plot_horlabels = (
-            pg.TextItem(color=QColor(Qt.black), anchor=(1, 0)),
-            pg.TextItem(color=QColor(Qt.black), anchor=(1, 1)))
-        for item in self.plot_horlabels + self.plot_horlines:
-            self.plot.addItem(item)
-        self._set_horline_pos()
-
-        self.plot.setRange(xRange=(0.0, p - 1), yRange=(0.0, 1.0))
         self._update_axis()
 
-    def _set_horline_pos(self):
-        cutidx = self.ncomponents - 1
-        for line, label, curve in zip(self.plot_horlines, self.plot_horlabels,
-                                      (self._variance_ratio, self._cumulative)):
-            y = curve[cutidx]
-            line.setData([-1, cutidx], 2 * [y])
-            label.setPos(cutidx, y)
-            label.setPlainText("{:.3f}".format(y))
-
-    def _on_cut_changed(self, line):
-        # cut changed by means of a cut line over the scree plot.
-        value = int(round(line.value()))
-        self._line.setValue(value)
-        current = self._nselected_components()
-        components = value + 1
+    def _on_cut_changed(self, components):
 
         if not (self.ncomponents == 0 and
                 components == len(self._variance_ratio)):
             self.ncomponents = components
-
-        self._set_horline_pos()
 
         if self._pca is not None:
             var = self._cumulative[components - 1]
             if numpy.isfinite(var):
                 self.variance_covered = int(var * 100)
 
-        if current != self._nselected_components():
+        if components != self._nselected_components():
             self._invalidate_selection()
 
     def _update_selection_component_spin(self):
@@ -284,9 +229,7 @@ class OWPCA(widget.OWWidget):
         if numpy.isfinite(var):
             self.variance_covered = int(var * 100)
 
-        if numpy.floor(self._line.value()) + 1 != cut:
-            self._line.setValue(cut - 1)
-
+        self.plot.set_cut_point(cut)
         self._invalidate_selection()
 
     def _update_selection_variance_spin(self):
@@ -298,8 +241,7 @@ class OWPCA(widget.OWWidget):
                                  self.variance_covered / 100.0) + 1
         cut = min(cut, len(self._cumulative))
         self.ncomponents = cut
-        if numpy.floor(self._line.value()) + 1 != cut:
-            self._line.setValue(cut - 1)
+        self.plot.set_cut_point(cut)
         self._invalidate_selection()
 
     def _update_normalize(self):
@@ -340,13 +282,13 @@ class OWPCA(widget.OWWidget):
         p = min(len(self._variance_ratio), self.maxp)
         axis = self.plot.getAxis("bottom")
         d = max((p-1)//(self.axis_labels-1), 1)
-        axis.setTicks([[(i, str(i+1)) for i in range(0, p, d)]])
+        axis.setTicks([[(i, str(i)) for i in range(1, p + 1, d)]])
 
     def commit(self):
         transformed = components = None
         if self._pca is not None:
             if self._transformed is None:
-                # Compute the full transform (MAX_COMPONENTS components) only once.
+                # Compute the full transform (MAX_COMPONENTS components) once.
                 self._transformed = self._pca(self.data)
             transformed = self._transformed
 
@@ -357,9 +299,10 @@ class OWPCA(widget.OWWidget):
             )
             transformed = transformed.from_table(domain, transformed)
             # prevent caching new features by defining compute_value
-            dom = Domain([ContinuousVariable(a.name, compute_value=lambda _: None)
-                          for a in self._pca.orig_domain.attributes],
-                         metas=[StringVariable(name='component')])
+            dom = Domain(
+                [ContinuousVariable(a.name, compute_value=lambda _: None)
+                 for a in self._pca.orig_domain.attributes],
+                metas=[StringVariable(name='component')])
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
                                 dtype=object).T

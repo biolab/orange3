@@ -1,5 +1,6 @@
 import Orange
-data = Orange.data.Table('iris')
+
+data = Orange.data.Table("iris")
 learner = Orange.classification.CN2UnorderedLearner()
 
 # consider up to 10 solution streams at one time

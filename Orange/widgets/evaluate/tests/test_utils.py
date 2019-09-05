@@ -3,8 +3,11 @@
 import unittest
 import collections
 
+import numpy as np
+
 from AnyQt.QtWidgets import QMenu
-from AnyQt.QtCore import QPoint
+from AnyQt.QtGui import QStandardItem
+from AnyQt.QtCore import QPoint, Qt
 
 from Orange.widgets.evaluate.utils import ScoreTable
 from Orange.widgets.tests.base import GuiTest
@@ -69,6 +72,49 @@ class TestScoreTable(GuiTest):
             self.assertEqual(i == 0,
                              not header.isSectionHidden(i),
                              msg="error in section {}({})".format(i, name))
+
+    def test_sorting(self):
+        def order(n=5):
+            return "".join(model.index(i, 0).data() for i in range(n))
+
+        score_table = ScoreTable(None)
+
+        data = [
+            ["D", 11.0, 15.3],
+            ["C", 5.0, -15.4],
+            ["b", 20.0, np.nan],
+            ["A", None, None],
+            ["E", "", 0.0]
+        ]
+        for data_row in data:
+            row = []
+            for x in data_row:
+                item = QStandardItem()
+                if x is not None:
+                    item.setData(x, Qt.DisplayRole)
+                row.append(item)
+            score_table.model.appendRow(row)
+
+        model = score_table.view.model()
+
+        model.sort(0, Qt.AscendingOrder)
+        self.assertEqual(order(), "AbCDE")
+
+        model.sort(0, Qt.DescendingOrder)
+        self.assertEqual(order(), "EDCbA")
+
+        model.sort(1, Qt.AscendingOrder)
+        self.assertEqual(order(3), "CDb")
+
+        model.sort(1, Qt.DescendingOrder)
+        self.assertEqual(order(3), "bDC")
+
+        model.sort(2, Qt.AscendingOrder)
+        self.assertEqual(order(3), "CED")
+
+        model.sort(2, Qt.DescendingOrder)
+        self.assertEqual(order(3), "DEC")
+
 
 if __name__ == "__main__":
     unittest.main()

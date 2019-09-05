@@ -6,7 +6,8 @@ import numpy as np
 
 from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
-from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
+    QSortFilterProxyModel
 from sklearn.exceptions import UndefinedMetricWarning
 
 from Orange.data import Variable, DiscreteVariable, ContinuousVariable
@@ -47,7 +48,7 @@ def results_for_preview(data_name=""):
     from Orange.classification import \
         LogisticRegressionLearner, SVMLearner, NuSVMLearner
 
-    data = Table(data_name or "ionosphere")
+    data = Table(data_name or "heart_disease")
     results = CrossValidation(
         data,
         [LogisticRegressionLearner(penalty="l2"),
@@ -98,6 +99,32 @@ def scorer_caller(scorer, ovr_results, target=None):
     return thunked
 
 
+class ScoreModel(QSortFilterProxyModel):
+    def lessThan(self, left, right):
+        def is_bad(x):
+            return not isinstance(x, (int, float, str)) \
+                   or isinstance(x, float) and np.isnan(x)
+
+        left = left.data()
+        right = right.data()
+        is_ascending = self.sortOrder() == Qt.AscendingOrder
+
+        # bad entries go below; if both are bad, left remains above
+        if is_bad(left) or is_bad(right):
+            return is_bad(right) == is_ascending
+
+        # for data of different types, numbers are at the top
+        if type(left) is not type(right):
+            return isinstance(left, float) == is_ascending
+
+        # case insensitive comparison for strings
+        if isinstance(left, str):
+            return left.upper() < right.upper()
+
+        # otherwise, compare numbers
+        return left < right
+
+
 class ScoreTable(OWComponent, QObject):
     shown_scores = \
         Setting(set(chain(*BUILTIN_SCORERS_ORDER.values())))
@@ -108,6 +135,12 @@ class ScoreTable(OWComponent, QObject):
         def sizeHint(self, *args):
             size = super().sizeHint(*args)
             return QSize(size.width(), size.height() + 6)
+
+        def displayText(self, value, locale):
+            if isinstance(value, float):
+                return f"{value:.3f}"
+            else:
+                return super().displayText(value, locale)
 
     def __init__(self, master):
         QObject.__init__(self)
@@ -125,7 +158,9 @@ class ScoreTable(OWComponent, QObject):
 
         self.model = QStandardItemModel(master)
         self.model.setHorizontalHeaderLabels(["Method"])
-        self.view.setModel(self.model)
+        self.sorted_model = ScoreModel()
+        self.sorted_model.setSourceModel(self.model)
+        self.view.setModel(self.sorted_model)
         self.view.setItemDelegate(self.ItemDelegate())
 
     def _column_names(self):
@@ -162,9 +197,11 @@ class ScoreTable(OWComponent, QObject):
 
     def update_header(self, scorers):
         # Set the correct horizontal header labels on the results_model.
-        self.model.setColumnCount(1 + len(scorers))
+        self.model.setColumnCount(3 + len(scorers))
         self.model.setHorizontalHeaderItem(0, QStandardItem("Model"))
-        for col, score in enumerate(scorers, start=1):
+        self.model.setHorizontalHeaderItem(1, QStandardItem("Train time [s]"))
+        self.model.setHorizontalHeaderItem(2, QStandardItem("Test time [s]"))
+        for col, score in enumerate(scorers, start=3):
             item = QStandardItem(score.name)
             item.setToolTip(score.long_name)
             self.model.setHorizontalHeaderItem(col, item)

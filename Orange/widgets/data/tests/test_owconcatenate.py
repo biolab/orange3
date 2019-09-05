@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -108,6 +109,13 @@ class TestOWConcatenate(WidgetTest):
         self.assertFalse(self.widget.mergebox.isEnabled())
         self.send_signal(self.widget.Inputs.primary_data, None)
         self.assertTrue(self.widget.mergebox.isEnabled())
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_apply') as apply:
+            self.widget.auto_commit = False
+            apply.reset_mock()
+            self.send_signal(self.widget.Inputs.primary_data, self.iris)
+            apply.assert_called()
 
 
 class TestTools(unittest.TestCase):

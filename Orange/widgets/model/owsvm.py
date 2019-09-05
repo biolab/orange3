@@ -2,10 +2,12 @@ from collections import OrderedDict
 
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QLabel, QGridLayout
+import scipy.sparse as sp
 
 from Orange.data import Table
 from Orange.modelling import SVMLearner, NuSVMLearner
 from Orange.widgets import gui
+from Orange.widgets.widget import Msg
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
@@ -27,7 +29,11 @@ class OWSVM(OWBaseLearner):
     LEARNER = SVMLearner
 
     class Outputs(OWBaseLearner.Outputs):
-        support_vectors = Output("Support vectors", Table, explicit=True)
+        support_vectors = Output("Support Vectors", Table, explicit=True,
+                                 replaces=["Support vectors"])
+
+    class Warning(OWBaseLearner.Warning):
+        sparse_data = Msg('Input data is sparse, default preprocessing is to scale it.')
 
     #: Different types of SVMs
     SVM, Nu_SVM = range(2)
@@ -199,6 +205,12 @@ class OWSVM(OWBaseLearner):
     def _on_kernel_changed(self):
         self._show_right_kernel()
         self.settings_changed()
+
+    def set_data(self, data):
+        self.Warning.sparse_data.clear()
+        super().set_data(data)
+        if self.data and sp.issparse(self.data.X):
+            self.Warning.sparse_data()
 
     def create_learner(self):
         kernel = ["linear", "poly", "rbf", "sigmoid"][self.kernel_type]

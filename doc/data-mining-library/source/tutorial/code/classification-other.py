@@ -19,6 +19,8 @@ print("original class ", " ".join("%-5s" % l.name for l in classifiers))
 
 c_values = data.domain.class_var.values
 for d in test:
-    print(("{:<15}" + " {:.3f}"*len(classifiers)).format(
-        c_values[int(d.get_class())],
-        *(c(d, 1)[target] for c in classifiers)))
+    print(
+        ("{:<15}" + " {:.3f}" * len(classifiers)).format(
+            c_values[int(d.get_class())], *(c(d, 1)[target] for c in classifiers)
+        )
+    )

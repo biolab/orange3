@@ -1,4 +1,5 @@
 import Orange
+
 data = Orange.data.Table("lenses")
 print("Attributes:", ", ".join(x.name for x in data.domain.attributes))
 print("Class:", data.domain.class_var.name)

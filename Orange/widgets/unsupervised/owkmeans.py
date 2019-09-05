@@ -423,14 +423,17 @@ class OWKMeans(widget.OWWidget):
 
         QTimer.singleShot(100, self.adjustSize)
 
-    def invalidate(self):
+    def invalidate(self, unconditional=False):
         self.cancel()
         self.Error.clear()
         self.Warning.clear()
         self.clusterings = {}
         self.table_model.clear_scores()
 
-        self.commit()
+        if unconditional:
+            self.unconditional_commit()
+        else:
+            self.commit()
 
     def update_results(self):
         scores = [mk if isinstance(mk, str) else silhouette_score(
@@ -539,7 +542,7 @@ class OWKMeans(widget.OWWidget):
             if self.auto_commit:
                 self.send_data()
         else:
-            self.invalidate()
+            self.invalidate(unconditional=True)
 
     def send_report(self):
         # False positives (Setting is not recognized as int)

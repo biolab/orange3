@@ -443,25 +443,24 @@ class TestOWKMeans(WidgetTest):
         table3 = table1.copy()
         table3.X[:, 0] = 1
 
-        with patch.object(self.widget, 'commit') as commit:
+        with patch.object(self.widget, 'unconditional_commit') as commit:
             self.send_signal(self.widget.Inputs.data, table1)
             self.commit_and_wait()
-            call_count = commit.call_count
+            commit.reset_mock()
 
             # Sending data with same X should not recompute the clustering
             self.send_signal(self.widget.Inputs.data, table2)
-            self.commit_and_wait()
-            self.assertEqual(call_count, commit.call_count)
+            commit.assert_not_called()
 
             # Sending data with different X should recompute the clustering
             self.send_signal(self.widget.Inputs.data, table3)
-            self.commit_and_wait()
-            self.assertEqual(call_count + 1, commit.call_count)
+            commit.assert_called_once()
 
     def test_correct_smart_init(self):
         # due to a bug where wrong init was passed to _compute_clustering
         self.send_signal(self.widget.Inputs.data, self.iris[::10], wait=5000)
         self.widget.smart_init = 0
+        self.widget.clusterings = {}
         with patch.object(self.widget, "_compute_clustering",
                           wraps=self.widget._compute_clustering) as compute:
             self.commit_and_wait()

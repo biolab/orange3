@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from scipy.sparse import csr_matrix
+
 from Orange.widgets.model.owsvm import OWSVM
 from Orange.widgets.tests.base import (
     WidgetTest,
@@ -7,6 +9,7 @@ from Orange.widgets.tests.base import (
     ParameterMapping,
     WidgetLearnerTestMixin
 )
+from Orange.data import Table
 
 
 class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
@@ -87,3 +90,12 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
             self.widget.kernel_box.buttons[i].click()
             self.assertEqual([self.widget._kernel_params[j].box.isHidden()
                               for j in range(3)], hidden)
+
+    def test_sparse_warning(self):
+        """Check if the user is warned about sparse input"""
+        data = Table("iris")
+        self.send_signal("Data", data)
+        self.assertFalse(self.widget.Warning.sparse_data.is_shown())
+        data.X = csr_matrix(data.X)
+        self.send_signal("Data", data)
+        self.assertTrue(self.widget.Warning.sparse_data.is_shown())

@@ -1,5 +1,5 @@
 pip>=9.0
-numpy>=1.13.0
+numpy>=1.16.0
 scipy>=0.16.1
 scikit-learn>=0.20.0
 bottleneck>=1.0.0
@@ -18,5 +18,6 @@ serverfiles		# for Data Sets synchronization
 networkx
 python-louvain>=0.13
 requests
-openTSNE>=0.3.0
+openTSNE>=0.3.11
 pandas
+pyyaml

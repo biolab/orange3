@@ -142,7 +142,8 @@ class TestOWNeighbors(WidgetTest):
         """Check compute distances and apply are called when receiving signal"""
         widget = self.widget
         cdist = widget.compute_distances = Mock()
-        apply = widget.apply = Mock()
+        apply = widget.unconditional_apply = Mock()
+        self.widget.auto_apply = False
         data = Table("iris")
         self.send_signal(widget.Inputs.data, data)
         cdist.assert_called()

@@ -125,7 +125,7 @@ class State(enum.Enum):
 
 
 class OWTestLearners(OWWidget):
-    name = "Test & Score"
+    name = "Test and Score"
     description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
     priority = 100
@@ -315,7 +315,7 @@ class OWTestLearners(OWWidget):
             # Removed
             self._invalidate([key])
             del self.learners[key]
-        else:
+        elif learner is not None:
             self.learners[key] = InputLearner(learner, None, None)
             self._invalidate([key])
 
@@ -499,6 +499,16 @@ class OWTestLearners(OWWidget):
             head = QStandardItem(name)
             head.setData(key, Qt.UserRole)
             results = slot.results
+            if results is not None and results.success:
+                train = QStandardItem("{:.3f}".format(results.value.train_time))
+                train.setTextAlignment(Qt.AlignRight)
+                train.setData(key, Qt.UserRole)
+                test = QStandardItem("{:.3f}".format(results.value.test_time))
+                test.setTextAlignment(Qt.AlignRight)
+                test.setData(key, Qt.UserRole)
+                row = [head, train, test]
+            else:
+                row = [head]
             if isinstance(results, Try.Fail):
                 head.setToolTip(str(results.exception))
                 head.setText("{} (error)".format(name))
@@ -512,7 +522,6 @@ class OWTestLearners(OWWidget):
                                   "{exc.__class__.__name__}: {exc!s}"
                                   .format(name=name, exc=slot.results.exception)
                                   )
-            row = [head]
 
             if class_var is not None and class_var.is_discrete and \
                     target_index is not None:
@@ -532,8 +541,9 @@ class OWTestLearners(OWWidget):
             if stats is not None:
                 for stat, scorer in zip(stats, self.scorers):
                     item = QStandardItem()
+                    item.setTextAlignment(Qt.AlignRight)
                     if stat.success:
-                        item.setText("{:.3f}".format(stat.value[0]))
+                        item.setData(float(stat.value[0]), Qt.DisplayRole)
                     else:
                         item.setToolTip(str(stat.exception))
                         if scorer.name in self.score_table.shown_scores:
@@ -735,7 +745,8 @@ class OWTestLearners(OWWidget):
 
         if self.resampling == OWTestLearners.TestOnTest:
             test_f = partial(
-                Orange.evaluation.TestOnTestData(store_data=True),
+                Orange.evaluation.TestOnTestData(
+                    store_data=True, store_models=True),
                 self.data, self.test_data, learners_c, self.preprocessor
             )
         else:
@@ -756,7 +767,8 @@ class OWTestLearners(OWWidget):
                     stratified=self.shuffle_stratified,
                     random_state=rstate)
             elif self.resampling == OWTestLearners.TestOnTrain:
-                sampler = Orange.evaluation.TestOnTrainingData()
+                sampler = Orange.evaluation.TestOnTrainingData(
+                    store_models=True)
             else:
                 assert False, "self.resampling %s" % self.resampling
 
@@ -916,7 +928,7 @@ def results_add_by_model(x, y):
         res.probabilities = np.vstack((x.probabilities, y.probabilities))
 
     if x.models is not None:
-        res.models = [xm + ym for xm, ym in zip(x.models, y.models)]
+        res.models = np.hstack((x.models, y.models))
     return res
 
 

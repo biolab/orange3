@@ -28,7 +28,12 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
-MAX_CATEGORIES = 11  # maximum number of colors or shapes (including Other)
+# maximum number of colors (including Other)
+MAX_COLORS = 11
+
+# maximum number of shapes (including Other)
+MAX_SHAPES = len(OWScatterPlotBase.CurveSymbols) - 1
+
 MAX_POINTS_IN_TOOLTIP = 5
 
 
@@ -99,7 +104,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         return None
 
     def get_column(self, attr, filter_valid=True,
-                   merge_infrequent=False, return_labels=False):
+                   max_categories=None, return_labels=False):
         """
         Retrieve the data from the given column in the data table
 
@@ -109,10 +114,10 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
           actually primitive,
         - filters out invalid data (if `filter_valid` is `True`),
         - merges infrequent (discrete) values into a single value
-          (if `merge_infrequent` is `True`).
+          (if `max_categories` is set).
 
         Tha latter feature is used for shapes and labels, where only a
-        set number (`MAX`) of different values is shown, and others are
+        specified number of different values is shown, and others are
         merged into category 'Other'. In this case, the method may return
         either the data (e.g. color indices, shape indices) or the list
         of retained values, followed by `['Other']`.
@@ -120,7 +125,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         Args:
             attr (:obj:~Orange.data.Variable): the column to extract
             filter_valid (bool): filter out invalid data (default: `True`)
-            merge_infrequent (bool): merge infrequent values (default: `False`);
+            max_categories (int): merge infrequent values (default: `None`);
                 ignored for non-discrete attributes
             return_labels (bool): return a list of labels instead of data
                 (default: `False`)
@@ -131,9 +136,9 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         if attr is None:
             return None
 
-        needs_merging = \
-            attr.is_discrete \
-            and merge_infrequent and len(attr.values) >= MAX_CATEGORIES
+        needs_merging = attr.is_discrete \
+                        and max_categories is not None \
+                        and len(attr.values) >= max_categories
         if return_labels and not needs_merging:
             assert attr.is_discrete
             return attr.values
@@ -148,7 +153,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
 
         dist = bincount(all_data, max_val=len(attr.values) - 1)[0]
         infrequent = np.zeros(len(attr.values), dtype=bool)
-        infrequent[np.argsort(dist)[:-(MAX_CATEGORIES-1)]] = True
+        infrequent[np.argsort(dist)[:-(max_categories-1)]] = True
         if return_labels:
             return [value for value, infreq in zip(attr.values, infrequent)
                     if not infreq] + ["Other"]
@@ -157,7 +162,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
             freq_vals = [i for i, f in enumerate(infrequent) if not f]
             for i, infreq in enumerate(infrequent):
                 if infreq:
-                    result[all_data == i] = MAX_CATEGORIES - 1
+                    result[all_data == i] = max_categories - 1
                 else:
                     result[all_data == i] = freq_vals.index(i)
             return result
@@ -187,7 +192,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
     # Colors
     def get_color_data(self):
         """Return the column corresponding to color data"""
-        return self.get_column(self.attr_color, merge_infrequent=True)
+        return self.get_column(self.attr_color, max_categories=MAX_COLORS)
 
     def get_color_labels(self):
         """
@@ -200,7 +205,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
             return None
         if not self.attr_color.is_discrete:
             return self.attr_color.str_val
-        return self.get_column(self.attr_color, merge_infrequent=True,
+        return self.get_column(self.attr_color, max_categories=MAX_COLORS,
                                return_labels=True)
 
     def is_continuous_color(self):
@@ -224,8 +229,8 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         colors = self.attr_color.colors
         if self.attr_color.is_discrete:
             return ColorPaletteGenerator(
-                number_of_colors=min(len(colors), MAX_CATEGORIES),
-                rgb_colors=colors if len(colors) <= MAX_CATEGORIES
+                number_of_colors=min(len(colors), MAX_COLORS),
+                rgb_colors=colors if len(colors) <= MAX_COLORS
                 else DefaultRGBColors)
         else:
             return ContinuousPaletteGenerator(*colors)
@@ -266,10 +271,10 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         Returns:
             (list of str): labels
         """
-        return self.get_column(self.attr_shape, merge_infrequent=True)
+        return self.get_column(self.attr_shape, max_categories=MAX_SHAPES)
 
     def get_shape_labels(self):
-        return self.get_column(self.attr_shape, merge_infrequent=True,
+        return self.get_column(self.attr_shape, max_categories=MAX_SHAPES,
                                return_labels=True)
 
     def impute_shapes(self, shape_data, default_symbol):
@@ -388,6 +393,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.subset_indices = None
         self.__pending_selection = self.selection
         self._invalidated = True
+        self._domain_invalidated = True
         self.setup_gui()
 
     # GUI
@@ -441,6 +447,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self._invalidated = not (
             data_existed and self.data is not None and
             array_equal(effective_data.X, self.effective_data.X))
+        self._domain_invalidated = not (
+            data_existed and self.data is not None and
+            effective_data.domain.checksum()
+            == self.effective_data.domain.checksum())
         if self._invalidated:
             self.clear()
         self.enable_controls()

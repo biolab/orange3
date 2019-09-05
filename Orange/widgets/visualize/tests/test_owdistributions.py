@@ -1,100 +1,470 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,protected-access
+import os
+import unittest
+from unittest.mock import Mock
+
+import numpy as np
+from AnyQt.QtCore import QItemSelection
 
 from Orange.data import Table, Domain, DiscreteVariable
-from Orange.data.table import dataset_dirs
-from Orange.tests import test_dirname
-from Orange.widgets.tests.base import WidgetTest, datasets
-from Orange.widgets.tests.utils import table_dense_sparse
+from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owdistributions import OWDistributions
 
 
 class TestOWDistributions(WidgetTest):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        dataset_dirs.append(test_dirname())
-        cls.data = Table("datasets/test9.tab")
-        cls.iris = Table("iris")
-
     def setUp(self):
-        self.widget = self.create_widget(OWDistributions)
+        self.widget = self.create_widget(OWDistributions)  #: OWDistributions
+        self.iris = Table("iris")
 
-    def test_metas(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
+    def _set_cvar(self, cvar):
+        combo = self.widget.controls.cvar
+        self.widget.cvar = cvar
+        combo.activated[int].emit(combo.currentIndex())
+        combo.activated[str].emit(combo.currentText())
 
-        # check metas in list views
-        for meta in self.data.domain.metas:
-            if meta.is_discrete or meta.is_continuous:
-                self.assertIn(meta, self.widget.varmodel)
-        for meta in self.data.domain.metas:
-            if meta.is_discrete:
-                self.assertIn(meta, self.widget.groupvarmodel)
+    def _set_fitter(self, i):
+        combo = self.widget.controls.fitted_distribution
+        combo.setCurrentIndex(i)
+        combo.activated[int].emit(combo.currentIndex())
+        combo.activated[str].emit(combo.currentText())
 
-        # select meta attribute
-        self.widget.controls.disc_cont.setChecked(True)
-        self.widget.variable_idx = 2
-        self.widget._setup()
+    def _set_var(self, var):
+        listview = self.widget.controls.var
+        model = listview.model()
+        index = var if isinstance(var, int) else model.indexOf(var)
+        selectionmodel = listview.selectionModel()
+        oldselection = selectionmodel.selection()
+        newselection = QItemSelection()
+        newselection.select(model.index(index, 0), model.index(index, 0))
+        selectionmodel.select(newselection, selectionmodel.ClearAndSelect)
+        selectionmodel.selectionChanged.emit(newselection, oldselection)
 
-    def test_remove_data(self):
-        """Check widget when data is removed"""
-        prob = self.widget.controls.show_prob
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertEqual(prob.count(), 5)
-        self.assertEqual(self.widget.controls.groupvar_idx.count(), 2)
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(prob.count(), 0)
-        self.assertEqual(self.widget.controls.groupvar_idx.count(), 0)
+    @staticmethod
+    def _set_check(checkbox, value):
+        checkbox.setCheckState(value)
+        checkbox.toggled[bool].emit(value)
 
-    def test_discretize_meta(self):
-        """The widget discretizes continuous meta attributes"""
-        domain = self.iris.domain
-        mdomain = Domain(domain.attributes[:-1], domain.class_var,
-                         metas=domain.attributes[-1:])
-        miris = Table(mdomain, self.iris)
-        self.send_signal(self.widget.Inputs.data, miris)
+    def _set_slider(self, i):
+        slider = self.widget.controls.number_of_bins
+        slider.setValue(i)
+        slider.valueChanged[int].emit(i)
+        slider.sliderReleased.emit()
+
+    def test_set_data(self):
+        """Basic test of set_data and removal of data"""
         widget = self.widget
-        widget.disc_cont = True
-        widget.varview.selectionModel().select(
-            widget.varview.model().index(4, 0))
-        self.assertIsInstance(widget.var, DiscreteVariable)
-        self.assertEqual(widget.var.name, mdomain.metas[0].name)
+        var_model = widget.controls.var.model()
+        cvar_model = widget.controls.cvar.model()
 
-    def test_variable_group_combinations(self):
-        """Check widget for all combinations of variable and group for dataset
-        with constant columns and missing data"""
-        self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_cls")))
-        for groupvar_idx in range(len(self.widget.groupvarmodel)):
-            self.widget.groupvar_idx = groupvar_idx
-            for var_idx in range(len(self.widget.varmodel)):
-                self.widget.variable_idx = var_idx
-                self.widget._setup()
+        domain = self.iris.domain
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertEqual({var.name for var in var_model},
+                         {var.name for var in domain.variables})
+        self.assertEqual(list(cvar_model),
+                         [None, DomainModel.Separator, domain.class_var])
+        self.assertIs(widget.var, domain[0])
+        self.assertIs(widget.cvar, domain.class_var)
+        np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
+        np.testing.assert_equal(widget.valid_group_data, self.iris.Y)
+        self.assertEqual(
+            len(self.get_output(widget.Outputs.histogram_data)), 150)
+        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
 
-    def test_no_distributions(self):
-        """
-        Do not fail when there is no data and when sb clicks
-        "Show relative frequencies".
-        GH-2383
-        GH-2428
-        """
-        cb = self.widget.controls.relative_freq
-        self.send_signal(self.widget.Inputs.data, None)
-        cb.click()
-        self.send_signal(self.widget.Inputs.data, self.data)
-        cb.setChecked(False)
-        cb.click()
-        self.send_signal(self.widget.Inputs.data, None)
-        cb.setChecked(True)
-        cb.click()
+        # Data gone: clean up
+        widget.selection.add(0)
+        widget._clear_plot = Mock()
+        self.send_signal(widget.Inputs.data, None)
+        self.assertEqual(len(var_model), 0)
+        self.assertEqual(list(cvar_model), [None])
+        self.assertIsNone(widget.var)
+        self.assertIsNone(widget.cvar)
 
-    @table_dense_sparse
-    def test_binning_numeric_variables(self, prepare_table):
-        """The widget should not crash when checking `Bin numeric variables`"""
-        data = prepare_table(self.iris)
-        self.send_signal(self.widget.Inputs.data, data)
+        self.assertEqual(widget.selection, set())
+        self.assertIsNone(widget.valid_data)
+        self.assertIsNone(widget.valid_group_data)
+        self.assertIsNone(self.get_output(widget.Outputs.histogram_data))
+        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+        widget._clear_plot.assert_called()
 
-        self.widget.controls.disc_cont.setChecked(True)
-        self.wait_until_stop_blocking()
+    def test_set_data_no_class_no_discrete(self):
+        """Widget is properly set up when there is no class and discrete vars"""
+        widget = self.widget
+        var_model = widget.controls.var.model()
+        cvar_model = widget.controls.cvar.model()
 
-        self.widget.controls.disc_cont.setChecked(False)
-        self.wait_until_stop_blocking()
+        domain = Domain(self.iris.domain.attributes, [])
+        data = self.iris.transform(domain)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertEqual({var.name for var in var_model},
+                         {var.name for var in domain.attributes})
+        self.assertEqual(list(cvar_model), [None])
+        self.assertIs(widget.var, domain[0])
+        self.assertIs(widget.cvar, None)
+        np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
+        self.assertIsNone(widget.valid_group_data)
+        self.assertEqual(
+            len(self.get_output(widget.Outputs.histogram_data)), 150)
+        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+    def test_set_data_no_class(self):
+        """Widget is properly set up when there is no class"""
+        widget = self.widget
+        var_model = widget.controls.var.model()
+        cvar_model = widget.controls.cvar.model()
+        iris = self.iris
+
+        domain = Domain(iris.domain.attributes + iris.domain.class_vars)
+        data = iris.transform(domain)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertEqual({var.name for var in var_model},
+                         {var.name for var in domain.attributes})
+        self.assertEqual(list(cvar_model),
+                         [None, DomainModel.Separator, iris.domain.class_var])
+        self.assertIs(widget.var, domain[0])
+        self.assertIs(widget.cvar, None)
+        np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
+        self.assertIsNone(widget.valid_group_data)
+        self.assertEqual(
+            len(self.get_output(widget.Outputs.histogram_data)), 150)
+        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+    def test_set_data_reg_class(self):
+        """Widget is properly set up when the target is numeric"""
+        widget = self.widget
+        var_model = widget.controls.var.model()
+        cvar_model = widget.controls.cvar.model()
+        iris = self.iris
+
+        domain = Domain(iris.domain.attributes[:3] + iris.domain.class_vars,
+                        iris.domain.attributes[3])
+        data = iris.transform(domain)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertEqual({var.name for var in var_model},
+                         {var.name for var in domain.variables})
+        self.assertEqual(list(cvar_model),
+                         [None, DomainModel.Separator, iris.domain.class_var])
+        self.assertIs(widget.var, domain[0])
+        self.assertIs(widget.cvar, None)
+        np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
+        self.assertIsNone(widget.valid_group_data)
+        self.assertEqual(
+            len(self.get_output(widget.Outputs.histogram_data)), 150)
+        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+    def test_set_data_reg_class_no_discrete(self):
+        """Widget is properly set up with regression and no discrete vars"""
+        widget = self.widget
+        var_model = widget.controls.var.model()
+        cvar_model = widget.controls.cvar.model()
+        iris = self.iris
+
+        domain = Domain(iris.domain.attributes[:3], iris.domain.attributes[3])
+        data = iris.transform(domain)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertEqual({var.name for var in var_model},
+                         {var.name for var in domain.variables})
+        self.assertEqual(list(cvar_model), [None])
+        self.assertIs(widget.var, domain[0])
+        self.assertIs(widget.cvar, None)
+        np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
+        self.assertIsNone(widget.valid_group_data)
+        self.assertEqual(
+            len(self.get_output(widget.Outputs.histogram_data)), 150)
+        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+    def test_switch_var(self):
+        """Widget reset and recomputes when changing var"""
+        widget = self.widget
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        binnings = widget.binnings.copy()
+        valid_data = widget.valid_data.copy()
+        widget.selection.add(1)
+        widget._clear_plot = Mock()
+        widget.apply = Mock()
+
+        self._set_var(2)
+        self.assertFalse(binnings[0].shape == widget.binnings[0].shape
+                         and np.allclose(binnings[0], widget.binnings[0]))
+        self.assertFalse(valid_data.shape == widget.valid_data.shape
+                         and np.allclose(valid_data, widget.valid_data))
+        self.assertEqual(widget.selection, set())
+        widget._clear_plot.assert_called()
+        widget.apply.assert_called()
+
+    def test_switch_cvar(self):
+        """Widget reset and recomputes when changing splitting variable"""
+        widget = self.widget
+
+        y = self.iris.domain.class_var
+        extra = DiscreteVariable("foo", values=["a", "b"])
+        domain = Domain(self.iris.domain.attributes + (extra, ), y)
+        data = self.iris.transform(domain)
+        data.X[:75, -1] = 0
+        data.X[75:120, -1] = 1
+        self.send_signal(widget.Inputs.data, data)
+        self._set_var(2)
+        self._set_cvar(y)
+
+        binnings = widget.binnings
+        valid_data = widget.valid_data.copy()
+        widget.selection.add(1)
+        widget._clear_plot = Mock()
+        widget.apply = Mock()
+
+        self.assertEqual(len(widget.valid_group_data), 150)
+
+        self._set_cvar(extra)
+        self.assertIs(binnings, widget.binnings)
+        np.testing.assert_equal(valid_data[:120], widget.valid_data)
+        self.assertEqual(len(widget.valid_group_data), 120)
+        self.assertEqual(widget.selection, {1})
+        widget._clear_plot.assert_called()
+        widget.apply.assert_called()
+        widget._clear_plot.reset_mock()
+        widget.apply.reset_mock()
+
+        self._set_cvar(None)
+        self.assertIs(binnings, widget.binnings)
+        np.testing.assert_equal(valid_data, widget.valid_data)
+        self.assertIsNone(widget.valid_group_data)
+        self.assertEqual(widget.selection, {1})
+        widget._clear_plot.assert_called()
+        widget.apply.assert_called()
+
+    def test_on_bins_changed(self):
+        """Widget replots and outputs data when the number of bins is changed"""
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+
+        self._set_slider(0)
+        widget.selection.add(1)
+        n_bars = len(widget.bar_items)
+        widget.apply = Mock()
+
+        self._set_slider(1)
+        self.assertEqual(widget.selection, set())
+        self.assertGreater(n_bars, len(widget.bar_items))
+        widget.apply.assert_called_once()
+
+    def test_set_valid_data(self):
+        """Widget handles nans in data"""
+        widget = self.widget
+        err_def_var = widget.Error.no_defined_values_var
+        err_def_pair = widget.Error.no_defined_values_pair
+        warn_nans = widget.Warning.ignored_nans
+
+        domain = self.iris.domain
+
+        self.assertIsNone(widget.var)
+        self.assertIsNone(widget.cvar)
+        self.assertIsNone(widget.valid_data)
+        self.assertIsNone(widget.valid_group_data)
+        self.assertFalse(widget.is_valid)
+
+        widget.valid_data = Mock()
+        widget.group_valid_data = Mock()
+        widget.set_valid_data()
+        self.assertIsNone(widget.valid_data)
+        self.assertIsNone(widget.valid_group_data)
+        self.assertFalse(widget.is_valid)
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertIsNotNone(widget.valid_data)
+        self.assertIsNotNone(widget.valid_group_data)
+        self.assertTrue(widget.is_valid)
+
+        X, Y = self.iris.X, self.iris.Y
+        X[:, 0] = np.nan
+        X[:50, 1] = np.nan
+        X[:100, 2] = np.nan
+        Y[75:] = np.nan
+        self.send_signal(widget.Inputs.data, self.iris)
+
+        self._set_var(domain[0])
+        self._set_cvar(domain.class_var)
+        self.assertIs(widget.var, domain[0])
+        self.assertIs(widget.cvar, domain.class_var)
+        self.assertIsNone(widget.valid_data)
+        self.assertIsNone(widget.valid_group_data)
+        self.assertFalse(widget.is_valid)
+        self.assertTrue(err_def_var.is_shown())
+        self.assertFalse(err_def_pair.is_shown())
+        self.assertFalse(warn_nans.is_shown())
+
+        self._set_var(domain[1])
+        self.assertIs(widget.var, domain[1])
+        self.assertIs(widget.cvar, domain.class_var)
+        np.testing.assert_equal(widget.valid_data, X[50:75, 1])
+        np.testing.assert_equal(widget.valid_group_data, Y[50:75])
+        self.assertTrue(widget.is_valid)
+        self.assertFalse(err_def_var.is_shown())
+        self.assertFalse(err_def_pair.is_shown())
+        self.assertTrue(warn_nans.is_shown())
+
+        self._set_var(domain[2])
+        self.assertIs(widget.var, domain[2])
+        self.assertIs(widget.cvar, domain.class_var)
+        self.assertIsNone(widget.valid_data)
+        self.assertIsNone(widget.valid_group_data)
+        self.assertFalse(widget.is_valid)
+        self.assertFalse(err_def_var.is_shown())
+        self.assertTrue(err_def_pair.is_shown())
+        self.assertFalse(warn_nans.is_shown())
+
+        self._set_var(domain[3])
+        self.assertIs(widget.var, domain[3])
+        self.assertIs(widget.cvar, domain.class_var)
+        np.testing.assert_equal(widget.valid_data, X[:75, 3])
+        np.testing.assert_equal(widget.valid_group_data, Y[:75])
+        self.assertTrue(widget.is_valid)
+        self.assertFalse(err_def_var.is_shown())
+        self.assertFalse(err_def_pair.is_shown())
+        self.assertTrue(warn_nans.is_shown())
+
+        self._set_var(domain[0])
+        self._set_cvar(None)
+        self.assertIs(widget.var, domain[0])
+        self.assertIsNone(widget.cvar)
+        self.assertIsNone(widget.valid_data)
+        self.assertIsNone(widget.valid_group_data)
+        self.assertFalse(widget.is_valid)
+        self.assertTrue(err_def_var.is_shown())
+        self.assertFalse(err_def_pair.is_shown())
+        self.assertFalse(warn_nans.is_shown())
+
+        self._set_var(domain[1])
+        self.assertIs(widget.var, domain[1])
+        self.assertIsNone(widget.cvar)
+        np.testing.assert_equal(widget.valid_data, X[50:, 1])
+        self.assertIsNone(widget.valid_group_data)
+        self.assertTrue(widget.is_valid)
+        self.assertFalse(err_def_var.is_shown())
+        self.assertFalse(err_def_pair.is_shown())
+        self.assertTrue(warn_nans.is_shown())
+
+        self._set_var(domain[3])
+        self.assertIs(widget.var, domain[3])
+        self.assertIsNone(widget.cvar)
+        np.testing.assert_equal(widget.valid_data, X[:, 3])
+        self.assertIsNone(widget.valid_group_data)
+        self.assertTrue(widget.is_valid)
+        self.assertFalse(err_def_var.is_shown())
+        self.assertFalse(err_def_pair.is_shown())
+        self.assertFalse(warn_nans.is_shown())
+
+    def test_controls_disabling(self):
+        """Widget changes gui for continuous/discrete variables and grouping"""
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+
+        cont = self.iris.domain[0]
+        disc = self.iris.domain.class_var
+        cont_box = widget.continuous_box
+        show_probs = widget.controls.show_probs
+        stacked = widget.controls.stacked_columns
+
+        self._set_var(cont)
+        self._set_cvar(disc)
+        self.assertTrue(cont_box.isEnabled())
+        self.assertTrue(show_probs.isEnabled())
+        self.assertTrue(stacked.isEnabled())
+
+        self._set_var(cont)
+        self._set_cvar(None)
+        self.assertTrue(cont_box.isEnabled())
+        self.assertFalse(show_probs.isEnabled())
+        self.assertFalse(stacked.isEnabled())
+
+        self._set_var(disc)
+        self._set_cvar(None)
+        self.assertFalse(cont_box.isEnabled())
+        self.assertFalse(show_probs.isEnabled())
+        self.assertFalse(stacked.isEnabled())
+
+        self._set_var(disc)
+        self._set_cvar(disc)
+        self.assertFalse(cont_box.isEnabled())
+        self.assertTrue(show_probs.isEnabled())
+        self.assertTrue(stacked.isEnabled())
+
+    if os.getenv("CI"):
+        # Testing all combinations takes 10-15 seconds; this should take < 2s
+        # Code for fitter, stacked_columns and show_probs is independent, so
+        # changing them simultaneously doesn't significantly degrade the tests
+        def test_plot_types_combinations(self):
+            """Check that the widget doesn't crash at any plot combination"""
+            from AnyQt.QtWidgets import qApp
+
+            widget = self.widget
+            c = widget.controls
+            self.send_signal(widget.Inputs.data, self.iris)
+            cont = self.iris.domain[0]
+            disc = self.iris.domain.class_var
+            for var in (cont, disc):
+                for cvar in (disc, None):
+                    for b in [0, 1]:
+                        self._set_var(var)
+                        self._set_cvar(cvar)
+                        self._set_fitter(2 * b)
+                        self._set_check(c.stacked_columns, b)
+                        self._set_check(c.show_probs, b)
+                        qApp.processEvents()
+    else:
+        def test_plot_types_combinations(self):
+            """Check that the widget doesn't crash at any plot combination"""
+            # pylint: disable=too-many-nested-blocks
+            from AnyQt.QtWidgets import qApp
+
+            widget = self.widget
+            c = widget.controls
+            self.send_signal(widget.Inputs.data, self.iris)
+            cont = self.iris.domain[0]
+            disc = self.iris.domain.class_var
+            for var in (cont, disc):
+                for cvar in (disc, None):
+                    for fitter in [0, 2]:
+                        for cumulative in [False, True]:
+                            for stack in [False, True]:
+                                for show_probs in [False, True]:
+                                    self._set_var(var)
+                                    self._set_cvar(cvar)
+                                    self._set_fitter(fitter)
+                                    self._set_check(c.cumulative_distr,
+                                                    cumulative)
+                                    self._set_check(c.stacked_columns, stack)
+                                    self._set_check(c.show_probs, show_probs)
+                                    qApp.processEvents()
+
+    def test_selection_grouping(self):
+        """Widget groups consecutive selected bars"""
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+        self._set_slider(0)
+        widget.selection = {1, 2, 3, 5, 6, 9}
+        widget.plot_mark.addItem = Mock()
+        widget.show_selection()
+        widget._on_end_selecting()
+        self.assertEqual(widget.plot_mark.addItem.call_count, 3)
+        out_selected = self.get_output(widget.Outputs.selected_data)
+        self.assertEqual(
+            len(out_selected.domain[ANNOTATED_DATA_FEATURE_NAME].values), 3)
+
+    def test_report(self):
+        """Report doesn't crash"""
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+        widget.send_report()
+
+
+if __name__ == "__main__":
+    unittest.main()

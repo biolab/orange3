@@ -109,7 +109,18 @@ class TestAnnotatedData(unittest.TestCase):
         selection[group_indices[:10]] = 1
         selection[group_indices[10:]] = 2
         table = create_groups_table(self.zoo, selection)
+        selvar = table.domain["Selected"]
         self.assertEqual(
-            len(SameValue(table.domain["Selected"], "Unselected")(table)),
+            len(SameValue(selvar, "Unselected")(table)),
             len(self.zoo) - len(group_indices)
         )
+        self.assertEqual(selvar.values, ["G1", "G2", "Unselected"])
+
+    def test_create_groups_table_set_values(self):
+        group_indices = random.sample(range(0, len(self.zoo)), 20)
+        selection = np.zeros(len(self.zoo), dtype=np.uint8)
+        selection[group_indices[:10]] = 1
+        selection[group_indices[10:]] = 2
+        values = ("this", "that", "rest")
+        table = create_groups_table(self.zoo, selection, values=values)
+        self.assertEqual(tuple(table.domain["Selected"].values), values)

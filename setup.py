@@ -31,7 +31,7 @@ from distutils.command import install_data, sdist, config, build
 
 NAME = 'Orange3'
 
-VERSION = '3.22.0'
+VERSION = '3.23.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -84,6 +84,9 @@ EXTRAS_REQUIRE = {
 }
 
 ENTRY_POINTS = {
+    "orange.widgets": (
+        "Orange Widgets = Orange.widgets",
+    ),
     "orange.canvas.help": (
         "html-index = Orange.widgets:WIDGET_HELP_PATH",
     ),
@@ -188,8 +191,7 @@ PACKAGE_DATA = {
     "Orange": ["datasets/*.{}".format(ext)
                for ext in ["tab", "csv", "basket", "info", "dst", "metadata"]],
     "Orange.canvas": ["icons/*.png", "icons/*.svg"],
-    "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
-    "Orange.canvas.application.workflows": ["*.ows"],
+    "Orange.canvas.workflows": ["*.ows"],
     "Orange.widgets": ["icons/*.png",
                        "icons/*.svg"],
     "Orange.widgets.report": ["icons/*.svg", "*.html"],

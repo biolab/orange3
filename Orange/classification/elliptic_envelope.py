@@ -1,7 +1,7 @@
 import sklearn.covariance as skl_covariance
 
 from Orange.base import SklLearner, SklModel
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
 
 __all__ = ["EllipticEnvelopeLearner"]
@@ -35,3 +35,7 @@ class EllipticEnvelopeLearner(SklLearner):
                  random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+    def __call__(self, data):
+        classless_data = data.transform(Domain(data.domain.attributes))
+        return super().__call__(classless_data)

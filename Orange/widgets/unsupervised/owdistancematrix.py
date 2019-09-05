@@ -288,7 +288,7 @@ class OWDistanceMatrix(widget.OWWidget):
             self.openContext(distances, annotations)
             self._update_labels()
             self.tableview.resizeColumnsToContents()
-        self.commit()
+        self.unconditional_commit()
 
     def _invalidate_annotations(self):
         if self.distances is not None:

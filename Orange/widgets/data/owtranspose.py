@@ -93,7 +93,7 @@ class OWTranspose(OWWidget):
         self.set_controls()
         if self.feature_model:
             self.openContext(data)
-        self.apply()
+        self.unconditional_apply()
 
     def set_controls(self):
         self.feature_model.set_domain(self.data and self.data.domain)

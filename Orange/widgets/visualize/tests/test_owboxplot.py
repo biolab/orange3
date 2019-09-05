@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 from AnyQt.QtCore import QItemSelectionModel
@@ -231,6 +232,12 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
             if m.data(idx) == value:
                 list.selectionModel().setCurrentIndex(
                     idx, QItemSelectionModel.ClearAndSelect)
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'commit') as apply:
+            apply.reset_mock()
+            self.send_signal(self.widget.Inputs.data, self.zoo)
+            apply.assert_called()
 
 
 class TestUtils(unittest.TestCase):

@@ -2,6 +2,7 @@
 # pylint: disable=arguments-differ
 from warnings import warn
 from collections import namedtuple
+from time import time
 
 import numpy as np
 
@@ -13,7 +14,8 @@ __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "ShuffleSplit", "TestOnTestData", "sample", "CrossValidationFeature"]
 
 _MpResults = namedtuple('_MpResults', ('fold_i', 'learner_i', 'model',
-                                       'failed', 'n_values', 'values', 'probs'))
+                                       'failed', 'n_values', 'values',
+                                       'probs', 'train_time', 'test_time'))
 
 
 def _identity(x):
@@ -23,19 +25,27 @@ def _identity(x):
 def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
                store_models):
     predicted, probs, model, failed = None, None, None, False
+    train_time, test_time = None, None
     try:
         if not train_data or not test_data:
             raise RuntimeError('Test fold is empty')
+        # training
+        t0 = time()
         model = learner(train_data)
+        train_time = time() - t0
+        t0 = time()
+        # testing
         if train_data.domain.has_discrete_class:
             predicted, probs = model(test_data, model.ValueProbs)
         elif train_data.domain.has_continuous_class:
             predicted = model(test_data, model.Value)
+        test_time = time() - t0
     # Different models can fail at any time raising any exception
     except Exception as ex:  # pylint: disable=broad-except
         failed = ex
     return _MpResults(fold_i, learner_i, store_models and model,
-                      failed, len(test_data), predicted, probs)
+                      failed, len(test_data), predicted, probs,
+                      train_time, test_time)
 
 
 class Results:
@@ -72,6 +82,10 @@ class Results:
             corresponding to testing data subsets, that is,
             `row_indices[folds[i]]` contains row indices used in fold i, so
             `data[row_indices[folds[i]]]` is the corresponding testing data
+
+        train_time (np.ndarray): training times of batches
+
+        test_time (np.ndarray): testing times of batches
     """
     def __init__(self, data=None, *,
                  nmethods=None, nrows=None, nclasses=None,
@@ -79,7 +93,8 @@ class Results:
                  row_indices=None, folds=None, score_by_folds=True,
                  learners=None, models=None, failed=None,
                  actual=None, predicted=None, probabilities=None,
-                 store_data=None, store_models=None):
+                 store_data=None, store_models=None,
+                 train_time=None, test_time=None):
         """
         Construct an instance.
 
@@ -138,6 +153,9 @@ class Results:
         self.probabilities = probabilities
         self.failed = failed
 
+        self.train_time = train_time
+        self.test_time = test_time
+
         # Guess the rest -- or check for ambguities
         def set_or_raise(value, exp_values, msg):
             for exp_value in exp_values:
@@ -171,7 +189,7 @@ class Results:
             "mismatching number of class values")
         nmethods = set_or_raise(
             nmethods, [learners is not None and len(learners),
-                       models is not None and len(models),
+                       models is not None and models.shape[1],
                        failed is not None and len(failed),
                        predicted is not None and predicted.shape[0],
                        probabilities is not None and probabilities.shape[0]],
@@ -311,13 +329,15 @@ class Results:
             res.actual = self.actual
             res.folds = self.folds
             res.score_by_folds = self.score_by_folds
+            res.test_time = self.test_time[i]
+            res.train_time = self.train_time[i]
 
             res.predicted = self.predicted[(i,), :]
             if getattr(self, "probabilities", None) is not None:
                 res.probabilities = self.probabilities[(i,), :, :]
 
             if self.models is not None:
-                res.models = self.models[:, i]
+                res.models = self.models[:, i:i + 1]
 
             res.failed = [self.failed[i]]
             yield res
@@ -365,7 +385,7 @@ class Validation:
                                  "and train_data are omitted")
             return self
 
-        warn("calling Validation's constructor with data and learners"
+        warn("calling Validation's constructor with data and learners "
              "is deprecated;\nconstruct an instance and call it",
              DeprecationWarning, stacklevel=2)
 
@@ -429,7 +449,10 @@ class Validation:
             domain=data.domain,
             nrows=len(row_indices), learners=learners,
             row_indices=row_indices, folds=folds, actual=actual,
-            score_by_folds=self.score_by_folds)
+            score_by_folds=self.score_by_folds,
+            train_time=np.zeros((len(learners),)),
+            test_time=np.zeros((len(learners),)))
+
         if self.store_models:
             results.models = np.tile(None, (len(indices), len(learners)))
         self._collect_part_results(results, part_results)
@@ -506,6 +529,8 @@ class Validation:
                 results.models[res.fold_i][res.learner_i] = res.model
 
             results.predicted[res.learner_i][result_slice] = res.values
+            results.train_time[res.learner_i] += res.train_time
+            results.test_time[res.learner_i] += res.test_time
             if res.probs is not None:
                 results.probabilities[res.learner_i][result_slice, :] = \
                     res.probs
@@ -711,7 +736,10 @@ class TestOnTestData(Validation):
             row_indices=np.arange(len(test_data)),
             folds=(Ellipsis, ),
             actual=test_data.Y.ravel(),
-            score_by_folds=self.score_by_folds)
+            score_by_folds=self.score_by_folds,
+            train_time=np.zeros((len(learners),)),
+            test_time=np.zeros((len(learners),)))
+
         if self.store_models:
             results.models = np.tile(None, (1, len(learners)))
         self._collect_part_results(results, part_results)

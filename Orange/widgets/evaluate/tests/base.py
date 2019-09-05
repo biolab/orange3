@@ -17,6 +17,6 @@ class EvaluateTest:
             classification.NaiveBayesLearner(),
             classification.SGDClassificationLearner()
         ]
-        res = evaluation.CrossValidation(data, learners, k=2, store_data=True)
+        res = evaluation.CrossValidation(k=2, store_data=True)(data, learners)
         # this is a mixin; pylint: disable=no-member
         self.send_signal("Evaluation Results", res)

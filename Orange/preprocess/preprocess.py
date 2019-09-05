@@ -18,7 +18,7 @@ from . import impute, discretize, transformation
 __all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
            "SklImpute", "Normalize", "Randomize", "Preprocess",
            "RemoveConstant", "RemoveNaNClasses", "RemoveNaNColumns",
-           "ProjectPCA", "ProjectCUR", "Scale"]
+           "ProjectPCA", "ProjectCUR", "Scale", "AdaptiveNormalize"]
 
 
 class Preprocess(_RefuseDataInConstructor, Reprable):
@@ -568,3 +568,55 @@ class PreprocessorList(Preprocess):
         for pp in self.preprocessors:
             data = pp(data)
         return data
+
+
+class AdaptiveNormalize(Preprocess):
+    """
+    Construct a preprocessors that normalizes or merely scales the data.
+    If the input is sparse, data is only scaled, to avoid turning it to
+    dense. Parameters are diveded to those passed to Normalize or Scale
+    class. Scaling takes only scale parameter.
+     If the user wants to have more options with scaling,
+    they should use the preprocessing widget.
+    For more details, check Scale and Normalize widget.
+
+    Parameters
+    ----------
+
+    zero_based : bool (default=True)
+        passed to Normalize
+
+    norm_type : NormTypes (default: Normalize.NormalizeBySD)
+        passed to Normalize
+
+    transform_class : bool (default=False)
+        passed to Normalize
+
+    center : bool(default=True)
+        passed to Normalize
+
+    normalize_datetime : bool (default=False)
+        passed to Normalize
+
+    scale : ScaleTypes (default: Scale.Span)
+        passed to Scale
+    """
+
+    def __init__(self,
+                 zero_based=True,
+                 norm_type=Normalize.NormalizeBySD,
+                 transform_class=False,
+                 normalize_datetime=False,
+                 center=True,
+                 scale=Scale.Span):
+        self.normalize_pps = Normalize(zero_based,
+                                       norm_type,
+                                       transform_class,
+                                       center,
+                                       normalize_datetime)
+        self.scale_pps = Scale(center=Scale.NoCentering, scale=scale)
+
+    def __call__(self, data):
+        if sp.issparse(data.X):
+            return self.scale_pps(data)
+        return self.normalize_pps(data)

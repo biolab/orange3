@@ -10,6 +10,7 @@ from Orange.classification import LogisticRegressionLearner, SklTreeLearner, Nai
                                   MajorityLearner
 from Orange.evaluation import AUC, CA, Results, Recall, \
     Precision, TestOnTrainingData, scoring, LogLoss, F1, CrossValidation
+from Orange.evaluation.scoring import Specificity
 from Orange.preprocess import discretize, Discretize
 from Orange.tests import test_filename
 
@@ -365,6 +366,72 @@ class TestLogLoss(unittest.TestCase):
         ll_calc = self._log_loss(actual, probab)
         ll_orange = LogLoss(results)
         self.assertAlmostEqual(ll_calc, ll_orange[0])
+
+
+class TestSpecificity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.score = Specificity()
+
+    def test_specificity_iris(self):
+        learner = LogisticRegressionLearner(preprocessors=[])
+        res = TestOnTrainingData()(self.iris, [learner])
+        self.assertAlmostEqual(self.score(res, average='weighted')[0],
+                               (1 + 0.99 + 0.95) / 3, 5)
+        self.assertAlmostEqual(self.score(res, target=1)[0], 99 / (99 + 1), 5)
+        self.assertAlmostEqual(self.score(res, target=1, average=None)[0],
+                               99 / (99 + 1), 5)
+        self.assertAlmostEqual(self.score(res, target=1, average='weighted')[0],
+                               99 / (99 + 1), 5)
+        self.assertAlmostEqual(self.score(res, target=0, average=None)[0], 1, 5)
+        self.assertAlmostEqual(self.score(res, target=2, average=None)[0],
+                               95 / (95 + 5), 5)
+
+    def test_precision_multiclass(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01234")),
+            actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
+        results.predicted = np.array([[0, 4, 4, 1, 2, 0, 1, 2, 3, 2],
+                                      [0, 1, 4, 1, 1, 0, 0, 2, 3, 1]])
+        res = self.score(results, average='weighted')
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 0.9, 5)
+
+        for target, prob in ((0, 7 / 8),
+                             (1, 5 / 8),
+                             (2, 1),
+                             (3, 1),
+                             (4, 1)):
+            res = self.score(results, target=target, average=None)
+            self.assertEqual(res[0], 1.)
+            self.assertEqual(res[1], prob)
+
+    def test_precision_binary(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01")),
+            actual=[0, 1, 1, 1, 0, 0, 1, 0, 0, 1])
+        results.predicted = np.array([[0, 1, 1, 1, 0, 0, 1, 0, 0, 1],
+                                      [0, 1, 1, 1, 0, 0, 1, 1, 1, 0]])
+        res = self.score(results)
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 3 / 5)
+        res_target = self.score(results, target=1)
+        self.assertEqual(res[0], res_target[0])
+        self.assertEqual(res[1], res_target[1])
+        res_target = self.score(results, target=0)
+        self.assertEqual(res_target[0], 1.)
+        self.assertAlmostEqual(res_target[1], 4 / 5)
+
+    def test_errors(self):
+        learner = LogisticRegressionLearner(preprocessors=[])
+        res = TestOnTrainingData()(self.iris, [learner])
+
+        # binary average does not work for number of classes different than 2
+        self.assertRaises(ValueError, self.score, res, average="binary")
+
+        # implemented only weighted and binary averaging
+        self.assertRaises(ValueError, self.score, res, average="abc")
 
 
 if __name__ == '__main__':
