@@ -31,7 +31,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.widget import Input, Output, Msg
 
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
@@ -53,21 +53,29 @@ class OWVennDiagram(widget.OWWidget):
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
-    inputhints: dict
+    class Error(widget.OWWidget.Error):
+        domain_mismatch = Msg("Input data domains do not match.")
+        instances_mismatch = Msg("Data sets do not contain the same instances.")
+
     selection: list
 
     # Selected disjoint subset indices
+<<<<<<< HEAD
     selection = settings.Setting([], schema_only=True)
     #: Stored input set hints
     #: {(index, inputname, attributes): (selectedattrname, itemsettitle)}
     #: The 'selectedattrname' can be None
     inputhints = settings.Setting({})
+=======
+    selection = settings.Setting([])
+>>>>>>> Implement venn over columns, simplify over rows.
     #: Use identifier columns for instance matching
     useidentifiers = settings.Setting(True)
     #: Output unique items (one output row for every unique instance `key`)
     #: or preserve all duplicates in the output.
     output_duplicates = settings.Setting(False)
     autocommit = settings.Setting(True)
+    usecols = settings.Setting(False)
 
     graph_name = "scene"
 
@@ -89,11 +97,27 @@ class OWVennDiagram(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(box, "No data on input.\n")
 
+        self.elementsBox = gui.radioButtonsInBox(
+            self.controlArea, self, 'usecols', [], 
+            box="Elements", callback=self._on_elements_changed
+        )
+
+        self.useRowsButton = gui.appendRadioButton(
+            self.elementsBox, "Rows (data instances)"
+        )
+
+        self.useColumnsButton = gui.appendRadioButton(
+            self.elementsBox, "Columns (features)"
+        )
+
         self.identifiersBox = gui.radioButtonsInBox(
             self.controlArea, self, "useidentifiers", [],
-            box="Data Instance Identifiers",
+            box="Row identifier",
             callback=self._on_useidentifiersChanged
         )
+
+        self.identifiersBox.setEnabled(not self.usecols)
+
         self.useequalityButton = gui.appendRadioButton(
             self.identifiersBox, "Use instance equality"
         )
@@ -105,23 +129,21 @@ class OWVennDiagram(widget.OWWidget):
         )
         self.inputsBox.setEnabled(bool(self.useidentifiers))
 
-        for i in range(5):
-            box = gui.vBox(self.inputsBox, "Dataset #%i" % (i + 1),
-                           addSpace=False)
-            box.setFlat(True)
-            model = itemmodels.VariableListModel(parent=self)
-            cb = gui.OrangeComboBox(
+        box = gui.vBox(self.inputsBox, 'feature', addSpace=False)
+        box.setFlat(True)
+        model = itemmodels.VariableListModel(parent=self)
+        self.cb = cb = gui.OrangeComboBox(
                 minimumContentsLength=12,
                 sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
             )
-            cb.setModel(model)
-            cb.activated[int].connect(self._on_inputAttrActivated)
-            box.setEnabled(False)
-            # Store the combo in the box for later use.
-            box.combo_box = cb
-            box.layout().addWidget(cb)
-
+        cb.setModel(model)
+        cb.activated[int].connect(self._on_inputAttrActivated)
+        box.setEnabled(False)
+        # Store the combo in the box for later use.
+        box.combo_box = cb
+        box.layout().addWidget(cb)
         gui.rubber(self.controlArea)
+
 
         box = gui.vBox(self.controlArea, "Output")
         gui.checkBox(box, self, "output_duplicates", "Output duplicates",
@@ -153,17 +175,19 @@ class OWVennDiagram(widget.OWWidget):
     def setData(self, data, key=None):
         self.error()
         if not self._inputUpdate:
-            # Store hints only on the first setData call.
-            self._storeHints()
             self._inputUpdate = True
-
+        
         if key in self.data:
             if data is None:
                 # Remove the input
-                self._remove(key)
+                index = list(self.data.keys()).index(key)
+                # Clear possible warnings.
+                self.warning()
+                del self.data[key]
             else:
                 # Update existing item
-                self._update(key, data)
+                self.data[key] = self.data[key]._replace(name=data.name, table=data)
+
         elif data is not None:
             # TODO: Allow setting more them 5 inputs and let the user
             # select the 5 to display.
@@ -171,44 +195,52 @@ class OWVennDiagram(widget.OWWidget):
                 self.error("Venn diagram accepts at most five datasets.")
                 return
             # Add a new input
-            self._add(key, data)
+            self.data[key] = _InputData(key, data.name, data)
+        self._setInterAttributes()
+
+    def data_equality(self):
+        """ Checks if all input datasets have same ids. """
+        if not self.data.values():
+            return True
+        sets = []
+        for val in self.data.values():
+            sets.append(set(val.table.ids))
+        inter = reduce(set.intersection, sets)
+        if len(inter) == max(map(len, sets)):
+            return True
+        return False
+
+    def settings_compatible(self):
+        self.Error.domain_mismatch.clear()
+        self.Error.instances_mismatch.clear()
+        if not self.usecols:
+            domains = [input.table.domain for input in self.data.values()]
+            samedomain = all((d1 == d2) for d1, d2 in pairwise(domains))
+            if not samedomain:
+                self.vennwidget.clear()
+                self.Error.domain_mismatch()
+                return False
+            self.samedomain = samedomain
+            has_identifiers = all(source_attributes(input.table.domain)
+                                for input in self.data.values())
+            self.useidentifiersButton.setEnabled(
+                has_identifiers)
+            self.inputsBox.setEnabled(has_identifiers)
+            return True
+        else:
+            if not self.data_equality():
+                self.vennwidget.clear()
+                self.Error.instances_mismatch()
+                return False
+            return True
 
     def handleNewSignals(self):
         self._inputUpdate = False
+        self.vennwidget.clear()
+        if not self.settings_compatible():
+            return
 
-        # Check if all inputs are from the same domain.
-        domains = [input.table.domain for input in self.data.values()]
-        samedomain = all(domain_eq(d1, d2) for d1, d2 in pairwise(domains))
-
-        self.samedomain = samedomain
-
-        has_identifiers = all(source_attributes(input.table.domain)
-                              for input in self.data.values())
-        has_any_identifiers = any(source_attributes(input.table.domain)
-                                  for input in self.data.values())
-        self.useequalityButton.setEnabled(samedomain)
-        self.useidentifiersButton.setEnabled(
-            has_any_identifiers or len(self.data) == 0)
-        self.inputsBox.setEnabled(has_any_identifiers)
-
-        if not samedomain and has_any_identifiers and not self.useidentifiers:
-            self.useidentifiers = 1
-        elif samedomain and not has_identifiers:
-            self.useidentifiers = 0
-
-        incremental = all(inc for _, inc in self._queue)
-
-        if incremental:
-            # Only received updated data on existing link.
-            self._updateItemsets()
-        else:
-            # Links were removed and/or added.
-            self._createItemsets()
-            self._restoreHints()
-            self._updateItemsets()
-
-        del self._queue[:]
-
+        self._createItemsets()
         self._createDiagram()
         # If autocommit is enabled, _createDiagram already outputs data
         # If not, call unconditional_commit from here
@@ -222,20 +254,9 @@ class OWVennDiagram(widget.OWWidget):
         self._updateInfo()
         super().handleNewSignals()
 
-    def _invalidate(self, keys=None, incremental=True):
-        """
-        Invalidate input for a list of input keys.
-        """
-        if keys is None:
-            keys = list(self.data.keys())
-
-        self._queue.extend((key, incremental) for key in keys)
-
     def itemsetAttr(self, key):
-        index = list(self.data.keys()).index(key)
-        _, combo = self._controlAtIndex(index)
-        model = combo.model()
-        attr_index = combo.currentIndex()
+        model = self.cb.model()
+        attr_index = self.cb.currentIndex()
         if attr_index >= 0:
             return model[attr_index]
         else:
@@ -246,84 +267,45 @@ class OWVennDiagram(widget.OWWidget):
         combo = group_box.combo_box
         return group_box, combo
 
-    def _setAttributes(self, index, attrs):
-        box, combo = self._controlAtIndex(index)
-        model = combo.model()
+    def intersectionStringAttrs(self):
+        atrs = None
+        for data_ in self.data.values():
+            if atrs == None:
+                atrs = set(string_attributes(data_.table.domain))
+            else:
+                atrs = atrs.intersection(set(string_attributes(data_.table.domain)))
+        if atrs is not None:
+            return list(atrs)
+        return atrs
 
-        if attrs is None:
+    def _setInterAttributes(self):
+        box = self.inputsBox.layout().itemAt(0).widget()
+        combo = box.combo_box
+        model = combo.model()
+        atrs = self.intersectionStringAttrs()
+        if (atrs is None) or (len(atrs) == 0):
+            self.useidentifiers = False
             model[:] = []
             box.setEnabled(False)
         else:
-            if model[:] != attrs:
-                model[:] = attrs
-
+            model[:] = atrs
             box.setEnabled(True)
 
-    def _add(self, key, table):
-        name = table.name
-        index = len(self.data)
-        attrs = source_attributes(table.domain)
-
-        self.data[key] = _InputData(key, name, table)
-
-        self._setAttributes(index, attrs)
-
-        self._invalidate([key], incremental=False)
-
-        item = self.inputsBox.layout().itemAt(index)
-        box = item.widget()
-        box.setTitle("Dataset: {}".format(name))
-
-    def _remove(self, key):
-        index = list(self.data.keys()).index(key)
-
-        # Clear possible warnings.
-        self.warning()
-
-        self._setAttributes(index, None)
-
-        del self.data[key]
-
-        layout = self.inputsBox.layout()
-        item = layout.takeAt(index)
-        layout.addItem(item)
-        inputs = list(self.data.values())
-
-        for i in range(5):
-            box, _ = self._controlAtIndex(i)
-            if i < len(inputs):
-                title = "Dataset: {}".format(inputs[i].name)
-            else:
-                title = "Dataset #{}".format(i + 1)
-            box.setTitle(title)
-
-        self._invalidate([key], incremental=False)
-
-    def _update(self, key, table):
-        name = table.name
-        index = list(self.data.keys()).index(key)
-        attrs = source_attributes(table.domain)
-
-        self.data[key] = self.data[key]._replace(name=name, table=table)
-
-        self._setAttributes(index, attrs)
-        self._invalidate([key])
-
-        item = self.inputsBox.layout().itemAt(index)
-        box = item.widget()
-        box.setTitle("Dataset: {}".format(name))
-
     def _itemsForInput(self, key):
+        """
+        Calculates input for venn diagram, according to users settings.
+        """
         useidentifiers = self.useidentifiers or not self.samedomain
 
         def items_by_key(key, input):
-            attr = self.itemsetAttr(key)
-            if attr is not None:
+            model = self.cb.model()
+            attr_index = self.cb.currentIndex()
+            if attr_index >= 0:
+                attr = model[attr_index]
                 return [str(inst[attr]) for inst in input.table
                         if not numpy.isnan(inst[attr])]
             else:
                 return []
-
         def items_by_eq(key, input):
             return list(map(ComparableInstance, input.table))
 
@@ -345,12 +327,21 @@ class OWVennDiagram(widget.OWWidget):
                 item = item._replace(name=name, title=name)
             self.itemsets[key] = item
 
+    def _itemsFromDomain(self, table):
+        return table.domain.attributes + table.domain.metas + table.domain.class_vars
+        
     def _createItemsets(self):
+        """
+        Create itemsets over rows or columns (domains) of input tables.
+        """
         olditemsets = dict(self.itemsets)
         self.itemsets.clear()
 
         for key, input in self.data.items():
-            items = self._itemsForInput(key)
+            if self.usecols:
+                items = self._itemsFromDomain(input.table)
+            else:
+                items = self._itemsForInput(key)
             name = input.name
             if key in olditemsets and olditemsets[key].name == name:
                 # Reuse the title (which might have been changed by the user)
@@ -361,47 +352,12 @@ class OWVennDiagram(widget.OWWidget):
             itemset = _ItemSet(key=key, name=name, title=title, items=items)
             self.itemsets[key] = itemset
 
-    def _storeHints(self):
-        if self.data:
-            self.inputhints.clear()
-            for i, (key, input) in enumerate(self.data.items()):
-                attrs = source_attributes(input.table.domain)
-                attrs = tuple(attr.name for attr in attrs)
-                selected = self.itemsetAttr(key)
-                if selected is not None:
-                    attr_name = selected.name
-                else:
-                    attr_name = None
-                itemset = self.itemsets[key]
-                self.inputhints[(i, input.name, attrs)] = \
-                    (attr_name, itemset.title)
-
-    def _restoreHints(self):
-        settings = []
-        for i, (key, input) in enumerate(self.data.items()):
-            attrs = source_attributes(input.table.domain)
-            attrs = tuple(attr.name for attr in attrs)
-            hint = self.inputhints.get((i, input.name, attrs), None)
-            if hint is not None:
-                attr, name = hint
-                attr_ind = attrs.index(attr) if attr is not None else -1
-                settings.append((attr_ind, name))
-            else:
-                return
-
-        # all inputs match the stored hints
-        for i, key in enumerate(self.itemsets):
-            attr, itemtitle = settings[i]
-            self.itemsets[key] = self.itemsets[key]._replace(title=itemtitle)
-            _, cb = self._controlAtIndex(i)
-            cb.setCurrentIndex(attr)
-
     def _createDiagram(self):
         self._updating = True
 
         oldselection = list(self.selection)
 
-        self.vennwidget.clear()
+        #self.vennwidget.clear()
         n = len(self.itemsets)
         self.disjoint = disjoint(set(s.items) for s in self.itemsets.values())
 
@@ -475,6 +431,8 @@ class OWVennDiagram(widget.OWWidget):
                              .format(", ".join(no_idx[:-1]), no_idx[-1]))
 
     def _on_selectionChanged(self):
+        if not self.settings_compatible():
+            return 
         if self._updating:
             return
 
@@ -489,10 +447,17 @@ class OWVennDiagram(widget.OWWidget):
     def _on_useidentifiersChanged(self):
         self.inputsBox.setEnabled(self.useidentifiers == 1)
         # Invalidate all itemsets
-        self._invalidate()
         self._updateItemsets()
         self._createDiagram()
 
+        self._updateInfo()
+
+    def _on_elements_changed(self):
+        self.identifiersBox.setEnabled(not self.usecols)
+        if not self.settings_compatible():
+            return
+        self._createItemsets()
+        self._createDiagram()
         self._updateInfo()
 
     def _on_inputAttrActivated(self, attr_index):
@@ -511,7 +476,6 @@ class OWVennDiagram(widget.OWWidget):
 
         key, _ = inputs[index]
 
-        self._invalidate([key])
         self._updateItemsets()
         self._createDiagram()
 
@@ -523,6 +487,38 @@ class OWVennDiagram(widget.OWWidget):
     def invalidateOutput(self):
         self.commit()
 
+    def create_from_columns(self, columns):
+        """
+        If venn diagram is over columns, columns are selected from first dataset that has them.
+        Annotated data retains all columns from all datasets and adds an attribute 
+        """
+        selected = []
+        annotated = []
+        for column in columns:
+            name = column.name
+            for value in self.data.values():
+                table = value.table
+                if column in table.domain:
+                    selected.append(table[:, name])
+                    break
+
+        for value in self.data.values():
+            table = value.table
+            for atr in table.domain:
+                t = table[:, atr.name]
+                t.domain[0].attributes['selected'] = atr in columns
+                annotated.append(t)
+
+        if selected:
+            selected = Orange.data.Table.concatenate(selected, axis=1)
+        else:
+            selected = None
+        if annotated:
+            annotated = Orange.data.Table.concatenate(annotated, axis=1)
+        else:
+            annotated = None
+        return selected, annotated
+            
     def commit(self):
         selected_subsets = []
         annotated_data = None
@@ -532,6 +528,12 @@ class OWVennDiagram(widget.OWWidget):
             set.union, [self.disjoint[index] for index in self.selection],
             set()
         )
+
+        if self.usecols:
+            selected_data, annotated_data = self.create_from_columns(selected_items)
+            self.Outputs.selected_data.send(selected_data)
+            self.Outputs.annotated_data.send(annotated_data)
+            return
 
         def match(val):
             if numpy.isnan(val):
@@ -638,10 +640,6 @@ class OWVennDiagram(widget.OWWidget):
         self.Outputs.selected_data.send(data)
         self.Outputs.annotated_data.send(annotated_data)
 
-    def getSettings(self, *args, **kwargs):
-        self._storeHints()
-        return super().getSettings(self, *args, **kwargs)
-
     def send_report(self):
         self.report_plot()
 
@@ -664,14 +662,6 @@ def pairwise(iterable):
         first = second
 
 
-# Custom domain comparison (domains do not seem to compare equal
-# even if they have exactly the same variables).
-# TODO: What about metas.
-def domain_eq(d1, d2):
-    return d1.variables == d2.variables
-
-
-# Comparing/hashing Orange.data.Instance across domains ignoring metas.
 class ComparableInstance:
     __slots__ = ["inst", "domain", "__hash"]
 
@@ -687,7 +677,7 @@ class ComparableInstance:
     def __eq__(self, other):
         # XXX: comparing NaN with different payload
         return (isinstance(other, ComparableInstance)
-                and domain_eq(self.domain, other.domain)
+                and (self.domain == other.domain)
                 and self.inst.x.data.tobytes() == other.inst.x.data.tobytes()
                 and self.inst.y.data.tobytes() == other.inst.y.data.tobytes())
 
@@ -966,7 +956,6 @@ def source_attributes(domain):
     """
     return string_attributes(domain)  # + discrete_attributes(domain)
 
-
 def disjoint(sets):
     """
     Return all disjoint subsets.
@@ -988,7 +977,6 @@ def disjoint(sets):
         disjoint_sets[i] = s
 
     return disjoint_sets
-
 
 def disjoint_set_label(i, n, simplify=False):
     """
@@ -1023,6 +1011,7 @@ class VennSetItem(QGraphicsPathItem):
 
 # TODO: Use palette's selected/highligted text / background colors to
 # indicate selection
+
 
 class VennIntersectionArea(QGraphicsPathItem):
     def __init__(self, parent=None, text=""):
