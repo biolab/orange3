@@ -93,7 +93,8 @@ def make_stdout_handler(level, fmt=None):
 def setup_notifications():
     settings = QSettings()
     # data collection permission
-    if not settings.value("error-reporting/permission-requested", False, type=bool):
+    if not settings.value("error-reporting/permission-requested", False, type=bool) and \
+            not settings.value("error-reporting/send-statistics", False, bool):
         notif = Notification(icon=QIcon(resource_filename("canvas/icons/statistics-request.png")),
                              title="Anonymous Usage Statistics",
                              text="Do you wish to opt-in to sharing "
