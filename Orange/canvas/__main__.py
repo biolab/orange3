@@ -93,7 +93,8 @@ def make_stdout_handler(level, fmt=None):
 def setup_notifications():
     settings = QSettings()
     # data collection permission
-    if not settings.value("error-reporting/permission-requested", False, type=bool):
+    if not settings.value("error-reporting/permission-requested", False, type=bool) and \
+            not settings.value("error-reporting/send-statistics", False, bool):
         notif = Notification(icon=QIcon(resource_filename("canvas/icons/statistics-request.png")),
                              title="Anonymous Usage Statistics",
                              text="Do you wish to opt-in to sharing "
@@ -335,10 +336,13 @@ def send_usage_statistics():
             log.info("Not sending usage statistics (disabled).")
             return
 
+        is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+
         usage = UsageStatistics()
         data = usage.load()
         for d in data:
             d["Orange Version"] = d.pop("Application Version", "")
+            d["Anaconda"] = is_anaconda
         try:
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
