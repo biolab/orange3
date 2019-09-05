@@ -336,10 +336,13 @@ def send_usage_statistics():
             log.info("Not sending usage statistics (disabled).")
             return
 
+        is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+
         usage = UsageStatistics()
         data = usage.load()
         for d in data:
             d["Orange Version"] = d.pop("Application Version", "")
+            d["Anaconda"] = is_anaconda
         try:
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
