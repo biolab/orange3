@@ -1,6 +1,5 @@
 import unittest
 import warnings
-from distutils.version import LooseVersion
 from itertools import chain
 from functools import partial, wraps
 
@@ -8,7 +7,6 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
     SparseEfficiencyWarning
 
-import Orange
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
     unique, var, nanstd, nanvar, nanmode, FDR
@@ -306,17 +304,6 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_almost_equal(
             np.array([0.00033, 0.0004, 0.00005, 0.00038, 0.00025]),
             result, decimal=5)
-
-    def test_array_equal_deprecated(self):
-        """This test is to be included in the 3.22 release and will fail in
-        version 3.24. This serves as a reminder to remove the deprecated method
-        and this test."""
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.24"):
-            self.fail(
-                "`Orange.statistics.util.array_equal` was deprecated in "
-                "version 3.22, and there have been two minor versions in "
-                "between. Please remove the deprecated method from the module."
-            )
 
 
 class TestNanmean(unittest.TestCase):

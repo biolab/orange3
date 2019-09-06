@@ -14,12 +14,6 @@ from scipy import sparse as sp
 
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
-from Orange.data.util import array_equal
-from Orange.util import deprecated
-
-# For backwards compatibility
-array_equal = deprecated("Orange.data.util.array_equal")(array_equal)
-
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):
     """ Count the number of nans (undefined) values per row. """
