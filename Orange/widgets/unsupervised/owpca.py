@@ -250,7 +250,7 @@ class OWPCA(widget.OWWidget):
             self._invalidate_selection()
 
     def _init_projector(self):
-        self._pca_projector = PCA(n_components=MAX_COMPONENTS)
+        self._pca_projector = PCA(n_components=MAX_COMPONENTS, random_state=0)
         self._pca_projector.component = self.ncomponents
         self._pca_preprocessors = PCA.preprocessors
 
