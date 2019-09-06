@@ -2,7 +2,7 @@ import operator
 import os
 import warnings
 import zlib
-from collections import MutableSequence, Iterable, Sequence, Sized
+from collections import Iterable, Sequence, Sized
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
@@ -19,13 +19,12 @@ from Orange.data import (
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
-from Orange.data.util import SharedComputeValue, vstack, hstack, \
+from Orange.data.util import SharedComputeValue, \
     assure_array_dense, assure_array_sparse, \
     assure_column_dense, assure_column_sparse, get_unique_names_duplicates
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
     sparse_implicit_zero_weights
-from Orange.util import flatten
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
 
@@ -44,11 +43,6 @@ chaining of domain conversions also works with caching even with descendants
 of Table."""
 _conversion_cache = None
 _conversion_cache_lock = RLock()
-
-
-def pending_deprecation_resize(name):
-    warnings.warn(f"Method Table.{name} will be removed in Orange 3.24",
-                  OrangeDeprecationWarning)
 
 
 class DomainTransformationError(Exception):
@@ -176,7 +170,7 @@ class Columns:
 
 
 # noinspection PyPep8Naming
-class Table(MutableSequence, Storage):
+class Table(Sequence, Storage):
     __file__ = None
     name = "untitled"
 
@@ -645,7 +639,7 @@ class Table(MutableSequence, Storage):
             data = cls(data)
         return data
 
-    # Helper function for __setitem__ and insert:
+    # Helper function for __setitem__:
     # Set the row of table data matrices
     # noinspection PyProtectedMember
     def _set_row(self, example, row):
@@ -684,39 +678,6 @@ class Table(MutableSequence, Storage):
         return all(x in (Storage.DENSE, Storage.MISSING)
                    for x in (self.X_density(), self.Y_density(),
                              self.metas_density()))
-
-    # A helper function for extend and insert
-    # Resize X, Y, metas and W.
-    def _resize_all(self, new_length):
-        old_length = self.X.shape[0]
-        if old_length == new_length:
-            return
-        if not self._check_all_dense():
-            raise ValueError("Tables with sparse data cannot be resized")
-        try:
-            self.X.resize(new_length, self.X.shape[1])
-            self._Y.resize(new_length, self._Y.shape[1])
-            self.metas.resize(new_length, self.metas.shape[1])
-            if self.W.ndim == 2:
-                self.W.resize((new_length, 0))
-            else:
-                self.W.resize(new_length)
-            self.ids.resize(new_length)
-        except Exception:
-            if self.X.shape[0] == new_length:
-                self.X.resize(old_length, self.X.shape[1])
-            if self._Y.shape[0] == new_length:
-                self._Y.resize(old_length, self._Y.shape[1])
-            if self.metas.shape[0] == new_length:
-                self.metas.resize(old_length, self.metas.shape[1])
-            if self.W.shape[0] == new_length:
-                if self.W.ndim == 2:
-                    self.W.resize((old_length, 0))
-                else:
-                    self.W.resize(old_length)
-            if self.ids.shape[0] == new_length:
-                self.ids.resize(old_length)
-            raise
 
     def __getitem__(self, key):
         if isinstance(key, Integral):
@@ -841,18 +802,6 @@ class Table(MutableSequence, Storage):
             if len(meta_cols):
                 self.metas[row_idx, meta_cols] = value
 
-    def __delitem__(self, key):
-        pending_deprecation_resize("__delitem__(key)")
-        if not self._check_all_dense():
-            raise ValueError("Rows of sparse data cannot be deleted")
-        if key is ...:
-            key = range(len(self))
-        self.X = np.delete(self.X, key, axis=0)
-        self.Y = np.delete(self._Y, key, axis=0)
-        self.metas = np.delete(self.metas, key, axis=0)
-        self.W = np.delete(self.W, key, axis=0)
-        self.ids = np.delete(self.ids, key, axis=0)
-
     def __len__(self):
         return self.X.shape[0]
 
@@ -869,103 +818,9 @@ class Table(MutableSequence, Storage):
         s += "\n]"
         return s
 
-    def clear(self):
-        """
-        Remove all rows from the table.
-
-        This method is deprecated and will be removed in Orange 3.24.
-        """
-        pending_deprecation_resize("clear()")
-        if not self._check_all_dense():
-            raise ValueError("Tables with sparse data cannot be cleared")
-        del self[...]
-
-    def append(self, instance):
-        """
-        Append a data instance to the table.
-
-        This method is deprecated and will be removed in Orange 3.24.
-
-        :param instance: a data instance
-        :type instance: Orange.data.Instance or a sequence of values
-        """
-        pending_deprecation_resize("append(inst)")
-        self.insert(len(self), instance)
-
-    def insert(self, row, instance):
-        """
-        Insert a data instance into the table.
-
-        This method is deprecated and will be removed in Orange 3.24.
-
-        :param row: row index
-        :type row: int
-        :param instance: a data instance
-        :type instance: Orange.data.Instance or a sequence of values
-        """
-        pending_deprecation_resize("insert(i, inst)")
-        if row < 0:
-            row += len(self)
-        if row < 0 or row > len(self):
-            raise IndexError("Index out of range")
-        self.ensure_copy()  # ensure that numpy arrays are single-segment for resize
-        self._resize_all(len(self) + 1)
-        if row < len(self):
-            self.X[row + 1:] = self.X[row:-1]
-            self._Y[row + 1:] = self._Y[row:-1]
-            self.metas[row + 1:] = self.metas[row:-1]
-            self.W[row + 1:] = self.W[row:-1]
-            self.ids[row + 1:] = self.ids[row:-1]
-        try:
-            self._set_row(instance, row)
-            if self.W.shape[-1]:
-                self.W[row] = 1
-        except Exception:
-            self.X[row:-1] = self.X[row + 1:]
-            self._Y[row:-1] = self._Y[row + 1:]
-            self.metas[row:-1] = self.metas[row + 1:]
-            self.W[row:-1] = self.W[row + 1:]
-            self.ids[row:-1] = self.ids[row + 1:]
-            self._resize_all(len(self) - 1)
-            raise
-
-    def extend(self, instances):
-        """
-        Extend the table with the given instances. The instances can be given
-        as a table of the same or a different domain, or a sequence. In the
-        latter case, each instances can be given as
-        :obj:`~Orange.data.Instance` or a sequence of values (e.g. list,
-        tuple, numpy.array).
-
-        This method is deprecated and will be removed in Orange 3.24.
-
-        :param instances: additional instances
-        :type instances: Orange.data.Table or a sequence of instances
-        """
-        pending_deprecation_resize("extend(insts)")
-        if isinstance(instances, Table) and instances.domain == self.domain:
-            self.X = vstack((self.X, instances.X))
-            self._Y = vstack((self._Y, instances._Y))
-            self.metas = vstack((self.metas, instances.metas))
-            self.W = vstack((self.W, instances.W))
-            self.ids = hstack((self.ids, instances.ids))
-        else:
-            try:
-                old_length = len(self)
-                self._resize_all(old_length + len(instances))
-                for i, example in enumerate(instances):
-                    self[old_length + i] = example
-                    try:
-                        self.ids[old_length + i] = example.id
-                    except AttributeError:
-                        self.ids[old_length + i] = self.new_id()
-            except Exception:
-                self._resize_all(old_length)
-                raise
-
     @classmethod
-    def concatenate(cls, tables, axis=1):
-        """Return concatenation of `tables` by `axis`."""
+    def concatenate(cls, tables, axis=0):
+        """Concatenate tables into a new table"""
         def vstack(arrs):
             return [np, sp][any(sp.issparse(arr) for arr in arrs)].vstack(arrs)
 
@@ -983,54 +838,32 @@ class Table(MutableSequence, Storage):
         def collect(attr):
             return [getattr(arr, attr) for arr in tables]
 
+        if axis == 1:
+            raise ValueError("concatenate no longer supports axis 1")
         if not tables:
             raise ValueError('need at least one table to concatenate')
         if len(tables) == 1:
             return tables[0].copy()
-        CONCAT_ROWS, CONCAT_COLS = 0, 1
-        if axis == CONCAT_ROWS:
-            domain = tables[0].domain
-            if any(table.domain != domain for table in tables):
-                raise ValueError('concatenated tables must have the same domain')
+        domain = tables[0].domain
+        if any(table.domain != domain for table in tables):
+            raise ValueError('concatenated tables must have the same domain')
 
-            conc = cls.from_numpy(
-                domain,
-                vstack(collect("X")),
-                merge1d(collect("Y")),
-                vstack(collect("metas")),
-                merge1d(collect("W"))
-            )
-            conc.ids = np.hstack([table.ids for table in tables])
-            names = [table.name for table in tables if table.name != "untitled"]
-            if names:
-                conc.name = names[0]
-            # TODO: Add attributes = {} to __init__
-            conc.attributes = getattr(conc, "attributes", {})
-            for table in reversed(tables):
-                conc.attributes.update(table.attributes)
-            return conc
-        elif axis == CONCAT_COLS:
-            pending_deprecation_resize("concatenate with axis=1")
-            if reduce(operator.iand,
-                      (set(map(operator.attrgetter('name'),
-                               chain(t.domain.variables, t.domain.metas)))
-                       for t in tables)):
-                raise ValueError('Concatenating two domains with variables '
-                                 'with same name is undefined')
-            domain = Domain(flatten(t.domain.attributes for t in tables),
-                            flatten(t.domain.class_vars for t in tables),
-                            flatten(t.domain.metas for t in tables))
-
-            def ndmin(A):
-                return A if A.ndim > 1 else A.reshape(A.shape[0], 1)
-
-            table = Table.from_numpy(domain,
-                                     np.hstack(tuple(ndmin(t.X) for t in tables)),
-                                     np.hstack(tuple(ndmin(t.Y) for t in tables)),
-                                     np.hstack(tuple(ndmin(t.metas) for t in tables)),
-                                     np.hstack(tuple(ndmin(t.W) for t in tables)))
-            return table
-        raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
+        conc = cls.from_numpy(
+            domain,
+            vstack(collect("X")),
+            merge1d(collect("Y")),
+            vstack(collect("metas")),
+            merge1d(collect("W"))
+        )
+        conc.ids = np.hstack(map(operator.attrgetter("ids"), tables))
+        names = [table.name for table in tables if table.name != "untitled"]
+        if names:
+            conc.name = names[0]
+        # TODO: Add attributes = {} to __init__
+        conc.attributes = getattr(conc, "attributes", {})
+        for table in reversed(tables):
+            conc.attributes.update(table.attributes)
+        return conc
 
     def is_view(self):
         """
