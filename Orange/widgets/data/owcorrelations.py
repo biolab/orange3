@@ -196,6 +196,32 @@ class CorrelationRank(VizRankDialogAttrPair):
         header = self.rank_table.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
+    def start(self, task, *args, **kwargs):
+        self.__set_state_ready()
+        super().start(task, *args, **kwargs)
+        self.master.progressBarInit()
+        self.master.setBlocking(True)
+
+    def cancel(self):
+        super().cancel()
+        self.__set_state_ready()
+
+    def _connect_signals(self, state):
+        super()._connect_signals(state)
+        state.progress_changed.connect(self.master.progressBarSet)
+
+    def _disconnect_signals(self, state):
+        super()._disconnect_signals(state)
+        state.progress_changed.disconnect(self.master.progressBarSet)
+
+    def _on_task_done(self, future):
+        super()._on_task_done(future)
+        self.__set_state_ready()
+
+    def __set_state_ready(self):
+        self.master.progressBarFinished()
+        self.master.setBlocking(False)
+
 
 class OWCorrelations(OWWidget):
     name = "Correlations"

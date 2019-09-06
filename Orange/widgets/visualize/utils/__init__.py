@@ -366,7 +366,8 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
             self.progressBarInit()
             self.before_running()
             self.start(run_vizrank, self.compute_score,
-                       self.iterate_states(self.saved_state), self.scores)
+                       self.iterate_states(self.saved_state), self.scores,
+                       self.saved_progress, self.state_count())
         else:
             self.button.setText("Continue")
             self.button.repaint()
@@ -382,8 +383,8 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
         pass
 
 
-def run_vizrank(compute_score: Callable, states: Iterator,
-                scores: List, task: TaskState):
+def run_vizrank(compute_score: Callable, states: Iterator, scores: List,
+                progress: int, state_count: int, task: TaskState):
     res = Result(queue=Queue(), scores=None)
     scores = scores.copy()
 
@@ -406,6 +407,8 @@ def run_vizrank(compute_score: Callable, states: Iterator,
         while True:
             if task.is_interruption_requested():
                 return res
+            task.set_progress_value(int(progress * 100 / max(1, state_count)))
+            progress += 1
             state = copy.copy(next_state)
             next_state = copy.copy(next(states))
             do_work(state, next_state)
