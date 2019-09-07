@@ -211,28 +211,49 @@ class Model(Reprable):
                         .format(type(data).__name__))
 
     def __call__(self, data, ret=Value):
+        multitarget = len(self.domain.class_vars) > 1
+
+        def one_hot_probs(value):
+            if not multitarget:
+                return one_hot(value)
+
+            max_card = max(len(c.values) for c in self.domain.class_vars)
+            probs = np.zeros(value.shape + (max_card,), float)
+            for i in range(len(self.domain.class_vars)):
+                probs[:, i, :] = one_hot(value[:, i])
+            return probs
+
         def fix_dim(x):
             return x[0] if one_d else x
 
-        def backmap_value(value):
-            return value if backmapper is None else backmapper(value)
+        def backmap_value(value, probs):
+            if backmapper is None:
+                return value
+            value = backmapper(value)
+            nans = np.isnan(value)  # What happens if there's just a single value?
+
+            if not np.any(nans):
+                return value
+            if probs is not None:
+                value[nans] = backmapper(np.argmax(probs[nans], axis=1))
+            else:
+                value[nans] = np.RandomState(0).choice(
+                    backmapper(np.arange(0, len(dataclass.values) - 1))
+                    (np.sum(nans), ))
+            return value
 
         def backmap_probs(probs):
             if backmapper is None:
                 return probs
             new_probs = np.zeros((len(probs), len(dataclass.values)),
                                  dtype=probs.dtype)
-            missing = set(range(len(dataclass.values)))
             for col in range(probs.shape[1]):
                 target = backmapper(col)
                 if not np.isnan(target):
                     new_probs[:, int(target)] = probs[:, col]
-                    missing.remove(int(target))
-            if missing:
-                rest = (1 - np.sum(new_probs, axis=1)) / len(missing)
-                for col in missing:
-                    new_probs[:, col] = rest
-
+            tots = np.sum(new_probs, axis=1)
+            tots[tots == 0] = 1
+            new_probs = new_probs / tots[:, None]
             return new_probs
 
         if not 0 <= ret <= 2:
@@ -290,7 +311,6 @@ class Model(Reprable):
                             .format(type(data).__name__))
 
         # Parse the result into value and probs
-        multitarget = len(self.domain.class_vars) > 1
         if isinstance(prediction, tuple):
             value, probs = prediction
         elif prediction.ndim == 1 + multitarget:
@@ -302,31 +322,34 @@ class Model(Reprable):
                             prediction.ndim)
 
         # Ensure that we have what we need to return
-        if ret != Model.Probs and value is None:
-            value = np.argmax(probs, axis=-1)
+        # Also, backmap probs and values if needed
+        if probs is None and (ret != Model.Value or backmapper is not None):
+            probs = one_hot_probs(value)
+        if backmapper is not None:
+            probs = backmap_probs(probs)
+
+        if ret != Model.Probs:
+            if value is None:
+                value = np.argmax(probs, axis=-1)
+            elif backmapper is not None:
+                value = backmap_value(value, probs)
+
         if ret != Model.Value and probs is None:
-            if multitarget:
-                max_card = max(len(c.values)
-                               for c in self.domain.class_vars)
-                probs = np.zeros(value.shape + (max_card,), float)
-                for i in range(len(self.domain.class_vars)):
-                    probs[:, i, :] = one_hot(value[:, i])
-            else:
-                probs = one_hot(value)
             if ret == Model.ValueProbs:
-                return fix_dim(backmap_value(value)), fix_dim(backmap_probs(probs))
+                return (fix_dim(backmap_value(value, probs)),
+                        fix_dim(backmap_probs(probs)))
             else:
                 return fix_dim(backmap_probs(probs))
 
         # Return what we need to
         if ret == Model.Probs:
-            return fix_dim(backmap_probs(probs))
+            return fix_dim(probs)
         if isinstance(data, Instance) and not multitarget:
-            value = backmap_value(Value(self.domain.class_var, value[0]))
+            value = [Value(self.domain.class_var, value[0])]
         if ret == Model.Value:
-            return fix_dim(backmap_value(value))
+            return fix_dim(value)
         else:  # ret == Model.ValueProbs
-            return fix_dim(backmap_value(value)), fix_dim(backmap_probs(probs))
+            return fix_dim(value), fix_dim(probs)
 
     def __getstate__(self):
         """Skip (possibly large) data when pickling models"""
