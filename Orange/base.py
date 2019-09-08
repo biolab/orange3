@@ -247,6 +247,8 @@ class Model(Reprable):
 
             dataclasses = data.domain.class_vars
             modelclasses = self.domain.class_vars
+            if not (modelclasses and dataclasses):
+                return None, []  # classless model or data; don't touch
             if len(dataclasses) != len(modelclasses):
                 raise DomainTransformationError(
                     "Mismatching number of model's classes and data classes")
