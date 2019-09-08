@@ -366,7 +366,7 @@ class Table(Sequence, Storage):
                     cached = _conversion_cache.get((id(domain), id(source)))
                     if cached:
                         return cached
-                if domain == source.domain:
+                if domain is source.domain:
                     table = cls.from_table_rows(source, row_indices)
                     # assure resulting domain is the instance passed on input
                     table.domain = domain
