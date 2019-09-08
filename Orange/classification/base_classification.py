@@ -1,5 +1,3 @@
-from itertools import count
-
 import numpy as np
 
 from Orange.base import Learner, Model, SklLearner, SklModel
@@ -34,10 +32,9 @@ class SklModelClassification(SklModel, ModelClassification):
         if not self.supports_multiclass:
             probs = probs[:, np.newaxis, :]
         probs_ext = np.zeros((len(probs), len(class_vars), max_values))
-        for c, cvar, used_vals in zip(count(), class_vars, self.used_vals):
-            for i, cv in enumerate(cvar.values):
-                if cv in used_vals:
-                    probs_ext[:, c, cv] = probs[:, c, used_vals.index(c)]
+        for c, used_vals in enumerate(self.used_vals):
+            for i, cv in enumerate(used_vals):
+                probs_ext[:, c, cv] = probs[:, c, i]
         if not self.supports_multiclass:
             probs_ext = probs_ext[:, 0, :]
         return values, probs_ext

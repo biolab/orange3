@@ -117,7 +117,7 @@ class Learner(ReprableWithPreprocessors):
                             self.__class__.__name__)
 
         model = self._fit_model(data)
-        model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
+        model.used_vals = [np.unique(y).astype(int) for y in data.Y[:, None].T]
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
@@ -226,53 +226,31 @@ class Model(Reprable):
         def fix_dim(x):
             return x[0] if one_d else x
 
-        def backmap_value(value, probs):
-            if backmapper is None:
-                return value
-            value = backmapper(value)
-            nans = np.isnan(value)  # What happens if there's just a single value?
+        def data_to_model_domain():
+            if data.domain == self.domain:
+                return data
 
-            if not np.any(nans):
-                return value
-            if probs is not None:
-                value[nans] = backmapper(np.argmax(probs[nans], axis=1))
-            else:
-                value[nans] = np.RandomState(0).choice(
-                    backmapper(np.arange(0, len(dataclass.values) - 1))
-                    (np.sum(nans), ))
-            return value
+            if self.original_domain.attributes != data.domain.attributes \
+                    and data.X.size \
+                    and not np.isnan(data.X).all():
+                new_data = data.transform(self.original_domain)
+                if np.isnan(new_data.X).all():
+                    raise DomainTransformationError(
+                        "domain transformation produced no defined values")
+                return new_data.transform(self.domain)
 
-        def backmap_probs(probs):
-            if backmapper is None:
-                return probs
-            new_probs = np.zeros((len(probs), len(dataclass.values)),
-                                 dtype=probs.dtype)
-            for col in range(probs.shape[1]):
-                target = backmapper(col)
-                if not np.isnan(target):
-                    new_probs[:, int(target)] = probs[:, col]
-            tots = np.sum(new_probs, axis=1)
-            tots[tots == 0] = 1
-            new_probs = new_probs / tots[:, None]
-            return new_probs
+            return data.transform(self.domain)
 
-        if not 0 <= ret <= 2:
-            raise ValueError("invalid value of argument 'ret'")
-        if ret > 0 and any(v.is_continuous for v in self.domain.class_vars):
-            raise ValueError("cannot predict continuous distributions")
+        def get_backmappers():
+            backmappers = []
+            n_values = []
 
-        # Call the predictor
-        one_d = False
-        backmapper = None
-        if isinstance(data, np.ndarray):
-            one_d = data.ndim == 1
-            prediction = self.predict(np.atleast_2d(data))
-        elif isinstance(data, scipy.sparse.csr.csr_matrix):
-            prediction = self.predict(data)
-        elif isinstance(data, (Table, Instance)):
-            if data.domain.class_var is not None:
-                dataclass = data.domain.class_var
-                modelclass = self.domain.class_var
+            dataclasses = data.domain.class_vars
+            modelclasses = self.domain.class_vars
+            if len(dataclasses) != len(modelclasses):
+                raise DomainTransformationError(
+                    "Mismatching number of model's classes and data classes")
+            for dataclass, modelclass in zip(dataclasses, modelclasses):
                 if dataclass != modelclass:
                     if dataclass.name != modelclass.name:
                         raise DomainTransformationError(
@@ -283,26 +261,99 @@ class Model(Reprable):
                             f"Variables '{modelclass.name}' in the model is "
                             "incompatible with the variable of the same name "
                             "in the data.")
-                if dataclass.is_discrete and dataclass is not modelclass:
-                    backmapper = dataclass.get_mapper_from(modelclass)
+                n_values.append(dataclass.is_discrete and len(dataclass.values))
+                if dataclass is not modelclass and dataclass.is_discrete:
+                    backmappers.append(dataclass.get_mapper_from(modelclass))
+                else:
+                    backmappers.append(None)
+            if all(x is None for x in backmappers):
+                backmappers = None
+            return backmappers, n_values
 
-            if isinstance(data, Instance):
-                data = Table(data.domain, [data])
-                one_d = True
-            if data.domain != self.domain:
-                if self.original_domain.attributes != data.domain.attributes \
-                        and data.X.size \
-                        and not np.isnan(data.X).all():
-                    data = data.transform(self.original_domain)
-                    if np.isnan(data.X).all():
-                        raise DomainTransformationError(
-                            "domain transformation produced no defined values")
-                data = data.transform(self.domain)
+        def backmap_value(value, probs, n_values, backmappers):
+            if backmappers is None:
+                return value
+
+            if value.ndim == 2:  # For multitarget, recursive call by columns
+                new_value = np.zeros(value.shape)
+                for i, n_value, backmapper in zip(
+                        itertools.count(), n_values, backmappers):
+                    new_value[:, i] = backmap_value(
+                        value[:, i], probs[:, i, :], [n_value], [backmapper])
+                return new_value
+
+            backmapper = backmappers[0]
+            if backmapper is None:
+                return value
+
+            value = backmapper(value)
+            nans = np.isnan(value)
+            if not np.any(nans):
+                return value
+            if probs is not None:
+                value[nans] = backmapper(np.argmax(probs[nans], axis=1))
+            else:
+                value[nans] = np.RandomState(0).choice(
+                    backmapper(np.arange(0, n_values[0] - 1))
+                    (np.sum(nans), ))
+            return value
+
+        def backmap_probs(probs, n_values, backmappers):
+            if backmappers is None:
+                return probs
+
+            if probs.ndim == 3:
+                new_probs = np.zeros((len(probs), len(n_values), max(n_values)),
+                                     dtype=probs.dtype)
+                for i, n_value, backmapper in zip(
+                        itertools.count(), n_values, backmappers):
+                    new_probs[:, i, :n_value] = backmap_probs(
+                        probs[:, i, :], [n_value], [backmapper])
+                return new_probs
+
+            backmapper = backmappers[0]
+            if backmapper is None:
+                return probs
+            n_value = n_values[0]
+            new_probs = np.zeros((len(probs), n_value), dtype=probs.dtype)
+            for col in range(probs.shape[1]):
+                target = backmapper(col)
+                if not np.isnan(target):
+                    new_probs[:, int(target)] = probs[:, col]
+            tots = np.sum(new_probs, axis=1)
+            zero_sum = tots == 0
+            new_probs[zero_sum] = 1
+            tots[zero_sum] = n_value
+            new_probs = new_probs / tots[:, None]
+            return new_probs
+
+        if not 0 <= ret <= 2:
+            raise ValueError("invalid value of argument 'ret'")
+        if ret > 0 and any(v.is_continuous for v in self.domain.class_vars):
+            raise ValueError("cannot predict continuous distributions")
+
+        # Convert 1d structures to 2d and remember doing it
+        one_d = True
+        if isinstance(data, Instance):
+            data = Table(data.domain, [data])
+        elif isinstance(data, (list, tuple)) \
+                and not isinstance(data[0], (list, tuple)):
+            data = [data]
+        elif isinstance(data, np.ndarray) and data.ndim == 1:
+            data = np.atleast_2d(data)
+        else:
+            one_d = False
+
+        # Call the predictor
+        backmappers = None
+        n_values = []
+        if isinstance(data, (np.ndarray, scipy.sparse.csr.csr_matrix)):
+            prediction = self.predict(data)
+        elif isinstance(data, Table):
+            backmappers, n_values = get_backmappers()
+            data = data_to_model_domain()
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
-            if not isinstance(data[0], (list, tuple)):
-                data = [data]
-                one_d = True
             data = Table.from_list(self.original_domain, data)
             data = data.transform(self.domain)
             prediction = self.predict_storage(data)
@@ -321,25 +372,17 @@ class Model(Reprable):
             raise TypeError("model returned a %i-dimensional array",
                             prediction.ndim)
 
-        # Ensure that we have what we need to return
-        # Also, backmap probs and values if needed
-        if probs is None and (ret != Model.Value or backmapper is not None):
+        # Ensure that we have what we need to return; backmapp everything
+        if probs is None and (ret != Model.Value or backmappers is not None):
             probs = one_hot_probs(value)
-        if backmapper is not None:
-            probs = backmap_probs(probs)
-
+        if probs is not None:
+            probs = backmap_probs(probs, n_values, backmappers)
         if ret != Model.Probs:
             if value is None:
                 value = np.argmax(probs, axis=-1)
-            elif backmapper is not None:
-                value = backmap_value(value, probs)
-
-        if ret != Model.Value and probs is None:
-            if ret == Model.ValueProbs:
-                return (fix_dim(backmap_value(value, probs)),
-                        fix_dim(backmap_probs(probs)))
+                # probs are already backmapped
             else:
-                return fix_dim(backmap_probs(probs))
+                value = backmap_value(value, probs, n_values, backmappers)
 
         # Return what we need to
         if ret == Model.Probs:

@@ -124,6 +124,6 @@ class Fitter(Learner):
 class SklFitter(Fitter):
     def _fit_model(self, data):
         model = super()._fit_model(data)
-        model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
+        model.used_vals = [np.unique(y).astype(int) for y in data.Y[:, None].T]
         model.params = self.get_params(data)
         return model
