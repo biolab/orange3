@@ -438,8 +438,8 @@ class TestOWMergeData(WidgetTest):
         domain = self.dataA.domain
         result = Table(domain, np.array([[1, 1], [2, 0]]), np.array([1, 2]),
                        np.array([[1.0, "m2"], [np.nan, "m3"]]).astype(object))
-        self.send_signal(self.widget.Inputs.data, self.dataA[:3, [0, "cls", -1]])
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA[1:, [1, "cls", -2]])
+        self.send_signal(self.widget.Inputs.data, self.dataA[:3, [0, "clsA", -1]])
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA[1:, [1, "clsA", -2]])
         self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
         self.widget.controls.merging.buttons[self.widget.InnerJoin].click()
         self.assertTablesEqual(self.get_output(self.widget.Outputs.data), result)
@@ -456,8 +456,8 @@ class TestOWMergeData(WidgetTest):
         self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
         self.widget.merging = 2
         self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
-        self.send_signal(self.widget.Inputs.data, self.dataA[1:, [0, "cls", -1]])
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA[:3, [1, "cls", -2]])
+        self.send_signal(self.widget.Inputs.data, self.dataA[1:, [0, "clsA", -1]])
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA[:3, [1, "clsA", -2]])
         out = self.get_output(self.widget.Outputs.data)
         self.assertTablesEqual(out, result)
         np.testing.assert_equal(
