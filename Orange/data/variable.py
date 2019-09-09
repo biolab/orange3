@@ -603,17 +603,56 @@ class DiscreteVariable(Variable):
 
     def get_mapper_from(self, other):
         mapping = self.get_mapping_from(other)
+        if not mapping.size:
+            # Nans in data are temporarily replaced with 0, mapped and changed
+            # back to nans. This would fail is mapping[0] is out of range.
+            mapping = np.array([np.nan])
 
-        def mapper(value):
+        def mapper(value, col_idx=None):
+
+            # In-place mapping
+            if col_idx is not None:
+                if sp.issparse(value) and mapping[0] != 0:
+                    raise ValueError(
+                        "In-place mapping of sparse matrices must map 0 to 0")
+
+                # CSR requires mapping of non-contiguous area
+                if sp.isspmatrix_csr(value):
+                    col = value.indices == col_idx
+                    nans = np.isnan(value.data) * col
+                    value.data[nans] = 0
+                    value.data[col] = mapping[value.data[col].astype(int)]
+                    value.data[nans] = np.nan
+                    return
+
+                # Dense and CSC map a contiguous area
+                if isinstance(value, np.ndarray) and value.ndim == 2:
+                    col = value[:, col_idx]
+                elif sp.isspmatrix_csc(value):
+                    col = value.data[value.indptr[col_idx]
+                                     :value.indptr[col_idx + 1]]
+                else:
+                    raise ValueError(
+                        "In-place column mapping requires a 2d array or"
+                        "a csc or csr matrix.")
+
+                nans = np.isnan(col)
+                col[nans] = 0
+                col[:] = mapping[col.astype(int)]
+                col[nans] = np.nan
+                return
+
+            # Mapping into a copy
             if isinstance(value, (int, float)):
-                if not mapping.size:
-                    return np.nan
                 return mapping[int(value)] if value == value else value
             if isinstance(value, str):
                 return mapping[other.values.index(value)]
             if isinstance(value, np.ndarray):
-                if not mapping.size:
-                    return np.full(value.shape, np.nan)
+                if not (value.ndim == 1
+                        or value.ndim != 2 and min(value.shape) != 1):
+                    raise ValueError(
+                        f"Column mapping can't map {value.ndim}-d objects")
+
                 if value.dtype == object:
                     value = value.astype(float)  # this happens with metas
                 try:
@@ -626,11 +665,14 @@ class DiscreteVariable(Variable):
                 value[nans] = np.nan
                 return value
             if sp.issparse(value):
+                if min(value.shape) != 1:
+                    raise ValueError("Column mapping can't map "
+                                     f"{value.ndim}-dimensional objects")
+                if mapping[0] != 0 and not np.isnan(mapping[0]):
+                    return mapper(np.array(value.todense()).flatten())
                 value = value.copy()
-                if not mapping.size:
-                    value.data[:] = np.nan
-                else:
-                    value.data = mapping[value.data.astype(int, copy=False)]
+                value.data = mapper(value.data)
+                return value
             if isinstance(value, Iterable):
                 if not mapping.size:
                     return type(value)(np.nan for nan in value)

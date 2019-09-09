@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from io import StringIO
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
@@ -225,6 +226,157 @@ class TestDiscreteVariable(VariableTest):
         d2 = pickle.loads(s)
         self.assertSequenceEqual(d2.values, ["one", "two", "three"])
         self.assertSequenceEqual(d1.values, ["one", "two"])
+
+    def test_mapper_dense(self):
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        self.assertEqual(mapper(0), 2)
+        self.assertTrue(np.isnan(mapper(1)))
+        self.assertEqual(mapper(2), 1)
+
+        self.assertEqual(mapper(0.), 2)
+        self.assertTrue(np.isnan(mapper(1.)))
+        self.assertEqual(mapper(2.), 1)
+        self.assertTrue(np.isnan(mapper(np.nan)))
+
+        self.assertEqual(mapper("a"), 2)
+        self.assertTrue(np.isnan(mapper("b")))
+        self.assertEqual(mapper("c"), 1)
+
+        arr = np.array([0, 0, 2, 1, 0, 1, np.nan])
+        self.assertIsNot(mapper(arr), arr)
+        np.testing.assert_array_equal(
+            mapper(arr), np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+        # dtype=int can have no nans; isnan shouldn't crash the mapper
+
+        arr_int = arr[:-1].astype(int)
+        self.assertIsNot(mapper(arr_int), arr_int)
+        np.testing.assert_array_equal(
+            mapper(arr_int), np.array([2, 2, 1, np.nan, 2, np.nan]))
+
+        arr_obj = arr.astype(object)
+        self.assertIsNot(mapper(arr_obj), arr_obj)
+        np.testing.assert_array_equal(
+            mapper(arr_obj), np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+
+        arr_list = list(arr)
+        self.assertIsNot(mapper(arr_list), arr_list)
+        self.assertTrue(all(x == y or (x != x and y != y) for x, y in zip(
+            mapper(arr_list), [2, 2, 1, np.nan, 2, np.nan, np.nan])))
+
+        self.assertTrue(x == y or (x != x and y != y) for x, y in zip(
+            mapper(tuple(arr)),
+            (2, 2, 1, np.nan, 2, np.nan, np.nan)))
+
+        self.assertRaises(ValueError, mapper, object())
+
+    def test_mapper_sparse(self):
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        arr = np.array([0, 0, 2, 1, 0, 1, np.nan])
+
+        # 0 does map to 0 -> convert to dense
+        marr = mapper(sp.csr_matrix(arr))
+        self.assertIsInstance(marr, np.ndarray)
+        np.testing.assert_array_equal(
+            marr,
+            np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+
+        marr = mapper(sp.csr_matrix(arr))
+        self.assertIsInstance(marr, np.ndarray)
+        np.testing.assert_array_equal(
+            marr,
+            np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+
+        # 0 maps to 0 -> keep sparse
+        acd = DiscreteVariable("a", values=list("acd"))
+        mapper = acd.get_mapper_from(abc)
+
+        arr_csr = sp.csr_matrix(arr)
+        marr = mapper(arr_csr)
+        self.assertIsNot(arr_csr, marr)
+        self.assertTrue(sp.isspmatrix_csr(marr))
+        np.testing.assert_array_equal(
+            marr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan]]))
+
+        arr_csc = sp.csc_matrix(arr)
+        marr = mapper(arr_csc)
+        self.assertIsNot(arr_csc, marr)
+        self.assertTrue(sp.isspmatrix_csc(marr))
+        np.testing.assert_array_equal(
+            marr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan]]))
+
+    def test_mapper_inplace(self):
+        s = list(range(7))
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        arr = np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr, np.array([[2, 2, 1, np.nan, 2, np.nan, np.nan], s]).T)
+
+        self.assertRaises(ValueError, mapper, sp.csr_matrix(arr), 0)
+        self.assertRaises(ValueError, mapper, [1, 2, 3], 0)
+        self.assertRaises(ValueError, mapper, 1, 0)
+
+        acd = DiscreteVariable("a", values=list("acd"))
+        mapper = acd.get_mapper_from(abc)
+
+        arr = np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr, np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
+
+        arr = sp.csr_matrix(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
+
+        arr = sp.csc_matrix(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
+
+    def test_mapper_dim_check(self):
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        self.assertRaises(ValueError, mapper, np.zeros((7, 2)))
+        self.assertRaises(ValueError, mapper, sp.csr_matrix(np.zeros((7, 2))))
+        self.assertRaises(ValueError, mapper, sp.csc_matrix(np.zeros((7, 2))))
+
+    def test_mapper_from_no_values(self):
+        abc = DiscreteVariable("a", values=[])
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        arr = np.full(7, np.nan)
+        self.assertIsNot(mapper(arr), arr)
+        np.testing.assert_array_equal(mapper(arr), arr)
+
+        arr_csr = sp.csr_matrix(arr)
+        self.assertIsNot(arr_csr, mapper(arr_csr))
+        np.testing.assert_array_equal(
+            mapper(arr_csr).todense(), np.atleast_2d(arr))
+
+        arr_csc = sp.csc_matrix(arr)
+        self.assertIsNot(arr_csc, mapper(arr_csc))
+        np.testing.assert_array_equal(
+            mapper(arr_csc).todense(), np.atleast_2d(arr))
+
+        self.assertRaises(ValueError, mapper, sp.csr_matrix(arr), 0)
+        self.assertRaises(ValueError, mapper, sp.csc_matrix(arr), 0)
 
 
 @variabletest(ContinuousVariable)
