@@ -21,7 +21,7 @@ def _w(s):  # pylint: disable=invalid-name
     return s.replace("/", os.sep)
 
 
-class TestOWSaveBase(WidgetTest):
+class OWSaveBaseTest(WidgetTest):
     def setUp(self):
         with open_widget_classes():
             class OWSaveMockWriter(OWSave):
@@ -35,7 +35,65 @@ class TestOWSaveBase(WidgetTest):
         self.iris = Table("iris")
 
 
-class TestOWSave(TestOWSaveBase):
+class TestOWSaveBase(WidgetTest):
+    # Directly testing the base class would require too much mocking, so we
+    # test the OWSave widget instead. (This tests also already existed before
+    # the base class was factored out.)
+    # Here are just additional tests that do not require a lot of mocking
+    def setUp(self):
+        with open_widget_classes():
+            class OWSaveMockWriter(OWSaveBase):
+                name = "Mock save"
+                writer = Mock()
+                writer.EXTENSIONS = [".csv"]
+                writer.SUPPORT_COMPRESSED = True
+                writer.SUPPORT_SPARSE_DATA = False
+                writer.OPTIONAL_TYPE_ANNOTATIONS = False
+                writers = [writer]
+                filters = {"csv (*.csv)": writer}
+
+        self.widget = self.create_widget(OWSaveMockWriter)  # type: OWSave
+        self.iris = Table("iris")
+
+    def test_no_data_no_save(self):
+        widget = self.widget
+
+        write = widget.writer.write = Mock()
+        widget.save_file_as = Mock()
+
+        widget.filename = "foo.tab"
+        widget.save_file()
+        write.assert_not_called()
+
+        widget.filename = ""
+        widget.save_file()
+        widget.save_file_as.assert_called()
+        write.assert_not_called()
+
+    def test_save_calls_writer(self):
+        widget = self.widget
+
+        widget.writer = Mock()
+        write = widget.writer.write = Mock()
+        widget.filename = "foo"
+        widget.data = object()
+
+        widget.save_file()
+        write.assert_called_with(widget.filename, widget.data)
+
+    def test_base_methods(self):
+        """Default methods do not crash and do something sensible"""
+        widget = self.widget
+
+        widget.update_status()
+        self.assertEqual(widget.initial_start_dir(),
+                         os.path.expanduser(f"~{os.sep}"))
+        self.assertEqual(widget.suggested_name(), "")
+        self.assertIs(widget.valid_filters(), widget.filters)
+        self.assertIs(widget.default_valid_filter(), widget.filter)
+
+
+class TestOWSave(OWSaveBaseTest):
     def test_dataset(self):
         widget = self.widget
         widget.auto_save = True
@@ -391,7 +449,7 @@ class TestFunctionalOWSave(WidgetTest):
 
 
 @unittest.skipUnless(sys.platform == "linux", "Tests for dialog on Linux")
-class TestOWSaveLinuxDialog(TestOWSaveBase):
+class TestOWSaveLinuxDialog(OWSaveBaseTest):
     def test_get_save_filename_linux(self):
         widget = self.widget
         widget.initial_start_dir = lambda: "baz"
@@ -449,7 +507,7 @@ class TestOWSaveLinuxDialog(TestOWSaveBase):
 
 @unittest.skipUnless(sys.platform in ("darwin", "win32"),
                      "Test for native dialog on Windows and macOS")
-class TestOWSaveDarwinDialog(TestOWSaveBase):  # pragma: no cover
+class TestOWSaveDarwinDialog(OWSaveBaseTest):  # pragma: no cover
     if sys.platform == "darwin":
         @staticmethod
         def remove_star(filt):
