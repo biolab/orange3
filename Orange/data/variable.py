@@ -674,8 +674,6 @@ class DiscreteVariable(Variable):
                 value.data = mapper(value.data)
                 return value
             if isinstance(value, Iterable):
-                if not mapping.size:
-                    return type(value)(np.nan for nan in value)
                 return type(value)(mapping[int(val)] if val == val else val
                                    for val in value)
             raise ValueError(

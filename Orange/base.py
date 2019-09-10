@@ -272,7 +272,7 @@ class Model(Reprable):
                 backmappers = None
             return backmappers, n_values
 
-        def backmap_value(value, probs, n_values, backmappers):
+        def backmap_value(value, mapped_probs, n_values, backmappers):
             if backmappers is None:
                 return value
 
@@ -292,8 +292,8 @@ class Model(Reprable):
             nans = np.isnan(value)
             if not np.any(nans):
                 return value
-            if probs is not None:
-                value[nans] = backmapper(np.argmax(probs[nans], axis=1))
+            if mapped_probs is not None:
+                value[nans] = np.argmax(mapped_probs[nans], axis=1)
             else:
                 value[nans] = np.RandomState(0).choice(
                     backmapper(np.arange(0, n_values[0] - 1))
