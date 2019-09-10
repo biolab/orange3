@@ -199,8 +199,7 @@ class CorrelationRank(VizRankDialogAttrPair):
     def start(self, task, *args, **kwargs):
         self.__set_state_ready()
         super().start(task, *args, **kwargs)
-        self.master.progressBarInit()
-        self.master.setBlocking(True)
+        self.__set_state_busy()
 
     def cancel(self):
         super().cancel()
@@ -209,10 +208,12 @@ class CorrelationRank(VizRankDialogAttrPair):
     def _connect_signals(self, state):
         super()._connect_signals(state)
         state.progress_changed.connect(self.master.progressBarSet)
+        state.status_changed.connect(self.master.setStatusMessage)
 
     def _disconnect_signals(self, state):
         super()._disconnect_signals(state)
         state.progress_changed.disconnect(self.master.progressBarSet)
+        state.status_changed.disconnect(self.master.setStatusMessage)
 
     def _on_task_done(self, future):
         super()._on_task_done(future)
@@ -221,6 +222,11 @@ class CorrelationRank(VizRankDialogAttrPair):
     def __set_state_ready(self):
         self.master.progressBarFinished()
         self.master.setBlocking(False)
+        self.master.setStatusMessage("")
+
+    def __set_state_busy(self):
+        self.master.progressBarInit()
+        self.master.setBlocking(True)
 
 
 class OWCorrelations(OWWidget):
@@ -276,7 +282,6 @@ class OWCorrelations(OWWidget):
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
             None, self, None, self._vizrank_selection_changed)
-        self.vizrank.progressBar = self.progressBar
         self.vizrank.button.setEnabled(False)
         self.vizrank.threadStopped.connect(self._vizrank_stopped)
 

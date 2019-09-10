@@ -203,14 +203,14 @@ class LinProjVizRankTests(WidgetTest):
     def test_discrete_class(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         run_vizrank(self.vizrank.compute_score,
-                    self.vizrank.iterate_states(None),
+                    self.vizrank.iterate_states, None,
                     [], 0, self.vizrank.state_count(), Mock())
 
     def test_continuous_class(self):
         data = Table("housing")[::100]
         self.send_signal(self.widget.Inputs.data, data)
         run_vizrank(self.vizrank.compute_score,
-                    self.vizrank.iterate_states(None),
+                    self.vizrank.iterate_states, None,
                     [], 0, self.vizrank.state_count(), Mock())
 
     def test_set_attrs(self):

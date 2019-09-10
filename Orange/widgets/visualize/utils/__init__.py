@@ -6,7 +6,7 @@ from bisect import bisect_left
 from operator import attrgetter
 from queue import Queue, Empty
 from types import SimpleNamespace as namespace
-from typing import Optional, Iterable, List, Callable, Iterator
+from typing import Optional, Iterable, List, Callable
 
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
@@ -366,7 +366,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
             self.progressBarInit()
             self.before_running()
             self.start(run_vizrank, self.compute_score,
-                       self.iterate_states(self.saved_state), self.scores,
+                       self.iterate_states, self.saved_state, self.scores,
                        self.saved_progress, self.state_count())
         else:
             self.button.setText("Continue")
@@ -383,8 +383,14 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
         pass
 
 
-def run_vizrank(compute_score: Callable, states: Iterator, scores: List,
+def run_vizrank(compute_score: Callable, iterate_states: Callable,
+                saved_state: Optional[Iterable], scores: List,
                 progress: int, state_count: int, task: TaskState):
+    task.set_status("Getting combinations...")
+    task.set_progress_value(0.1)
+    states = iterate_states(saved_state)
+
+    task.set_status("Getting scores...")
     res = Result(queue=Queue(), scores=None)
     scores = scores.copy()
 

@@ -31,7 +31,8 @@ class TestRunner(unittest.TestCase):
         # run through all states
         task.is_interruption_requested.return_value = False
         states = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
-        res = run_vizrank(compute_score, chain(states), scores, 0, 6, task)
+        res = run_vizrank(compute_score, lambda initial: chain(states),
+                          None, scores, 0, 6, task)
 
         next_state = self.assertQueueEqual(
             res.queue, [0, 0, 0, 3, 2, 5], compute_score,
@@ -41,7 +42,7 @@ class TestRunner(unittest.TestCase):
         self.assertListEqual(res.scores, res_scores)
         self.assertIsNot(scores, res.scores)
         self.assertEqual(task.set_partial_result.call_count, 6)
-        self.assertEqual(task.set_progress_value.call_count, 6)
+        self.assertEqual(task.set_progress_value.call_count, 7)
 
     def test_run_vizrank_interrupt(self):
         scores, task = [], Mock()
@@ -49,7 +50,8 @@ class TestRunner(unittest.TestCase):
         task.is_interruption_requested.side_effect = lambda: \
             True if task.is_interruption_requested.call_count > 2 else False
         states = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)]
-        res = run_vizrank(compute_score, chain(states), scores, 0, 6, task)
+        res = run_vizrank(compute_score, lambda initial: chain(states),
+                          None, scores, 0, 6, task)
 
         next_state = self.assertQueueEqual(
             res.queue, [0, 0], compute_score, states[:2], states[1:3])
@@ -58,14 +60,14 @@ class TestRunner(unittest.TestCase):
         self.assertListEqual(res.scores, res_scores)
         self.assertIsNot(scores, res.scores)
         self.assertEqual(task.set_partial_result.call_count, 2)
-        self.assertEqual(task.set_progress_value.call_count, 2)
+        self.assertEqual(task.set_progress_value.call_count, 3)
         task.set_progress_value.assert_called_with(int(1 / 6 * 100))
 
         # continue calculation through all states
         task.is_interruption_requested.side_effect = lambda: False
         i = states.index(next_state)
-        res = run_vizrank(compute_score, chain(states[i:]),
-                          res_scores, 2, 6, task)
+        res = run_vizrank(compute_score, lambda initial: chain(states[i:]),
+                          None, res_scores, 2, 6, task)
 
         next_state = self.assertQueueEqual(
             res.queue, [0, 3, 2, 5], compute_score, states[2:],
@@ -75,7 +77,7 @@ class TestRunner(unittest.TestCase):
         self.assertListEqual(res.scores, res_scores)
         self.assertIsNot(scores, res.scores)
         self.assertEqual(task.set_partial_result.call_count, 6)
-        self.assertEqual(task.set_progress_value.call_count, 6)
+        self.assertEqual(task.set_progress_value.call_count, 8)
         task.set_progress_value.assert_called_with(int(5 / 6 * 100))
 
     def assertQueueEqual(self, queue, positions, f, states, next_states):
@@ -101,7 +103,8 @@ class TestVizRankDialog(WidgetTest):
         def invoke_on_partial_result():
             widget.on_partial_result(run_vizrank(
                 widget.compute_score,
-                widget.iterate_states(widget.saved_state),
+                widget.iterate_states,
+                widget.saved_state,
                 widget.scores,
                 widget.saved_progress,
                 widget.state_count(),
