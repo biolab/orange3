@@ -7,6 +7,7 @@ from operator import attrgetter
 from queue import Queue, Empty
 from types import SimpleNamespace as namespace
 from typing import Optional, Iterable, List, Callable
+from threading import Timer
 
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
@@ -393,6 +394,7 @@ def run_vizrank(compute_score: Callable, iterate_states: Callable,
     task.set_status("Getting scores...")
     res = Result(queue=Queue(), scores=None)
     scores = scores.copy()
+    can_set_partial_result = True
 
     def do_work(st, next_st):
         try:
@@ -405,7 +407,10 @@ def run_vizrank(compute_score: Callable, iterate_states: Callable,
         except Exception:  # ignore current state in case of any problem
             pass
         res.scores = scores.copy()
-        task.set_partial_result(res)
+
+    def reset_flag():
+        nonlocal can_set_partial_result
+        can_set_partial_result = True
 
     state = None
     next_state = next(states)
@@ -418,8 +423,18 @@ def run_vizrank(compute_score: Callable, iterate_states: Callable,
             state = copy.copy(next_state)
             next_state = copy.copy(next(states))
             do_work(state, next_state)
+            # for simple scores (e.g. correlations widget) and many feature
+            # combinations, the 'partial_result_ready' signal (emitted by
+            # invoking 'task.set_partial_result') was emitted too frequently
+            # for a longer period of time and therefore causing the widget
+            # being unresponsive
+            if can_set_partial_result:
+                task.set_partial_result(res)
+                can_set_partial_result = False
+                Timer(0.01, reset_flag).start()
     except StopIteration:
         do_work(state, None)
+        task.set_partial_result(res)
     return res
 
 

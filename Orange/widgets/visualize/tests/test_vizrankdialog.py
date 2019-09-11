@@ -41,7 +41,7 @@ class TestRunner(unittest.TestCase):
         res_scores = sorted([compute_score(x) for x in states])
         self.assertListEqual(res.scores, res_scores)
         self.assertIsNot(scores, res.scores)
-        self.assertEqual(task.set_partial_result.call_count, 6)
+        self.assertEqual(task.set_partial_result.call_count, 2)
         self.assertEqual(task.set_progress_value.call_count, 7)
 
     def test_run_vizrank_interrupt(self):
@@ -59,7 +59,7 @@ class TestRunner(unittest.TestCase):
         res_scores = sorted([compute_score(x) for x in states[:2]])
         self.assertListEqual(res.scores, res_scores)
         self.assertIsNot(scores, res.scores)
-        self.assertEqual(task.set_partial_result.call_count, 2)
+        self.assertEqual(task.set_partial_result.call_count, 1)
         self.assertEqual(task.set_progress_value.call_count, 3)
         task.set_progress_value.assert_called_with(int(1 / 6 * 100))
 
@@ -76,7 +76,7 @@ class TestRunner(unittest.TestCase):
         res_scores = sorted([compute_score(x) for x in states])
         self.assertListEqual(res.scores, res_scores)
         self.assertIsNot(scores, res.scores)
-        self.assertEqual(task.set_partial_result.call_count, 6)
+        self.assertEqual(task.set_partial_result.call_count, 3)
         self.assertEqual(task.set_progress_value.call_count, 8)
         task.set_progress_value.assert_called_with(int(5 / 6 * 100))
 
