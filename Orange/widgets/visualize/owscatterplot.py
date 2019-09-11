@@ -43,7 +43,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
     def check_preconditions(self):
         self.Information.add_message(
-            "color_required", "Color variable must be selected")
+            "color_required", "Color variable is not selected")
         self.Information.color_required.clear()
         if not super().check_preconditions():
             return False
@@ -301,16 +301,20 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     def _vizrank_color_change(self):
         self.vizrank.initialize()
-        is_enabled = self.data is not None and not self.data.is_sparse() and \
-            len(self.xy_model) > 2 and len(self.data[self.valid_data]) > 1 \
-            and np.all(np.nan_to_num(np.nanstd(self.data.X, 0)) != 0)
-        self.vizrank_button.setEnabled(
-            is_enabled and self.attr_color is not None and
-            not np.isnan(self.data.get_column_view(
-                self.attr_color)[0].astype(float)).all())
-        text = "Color variable has to be selected." \
-            if is_enabled and self.attr_color is None else ""
-        self.vizrank_button.setToolTip(text)
+        err_msg = ""
+        if self.data is None:
+            err_msg = "No data on input"
+        elif self.data.is_sparse():
+            err_msg = "Data is sparse"
+        elif len(self.xy_model) < 3:
+            err_msg = "Not enough features for ranking"
+        elif self.attr_color is None:
+            err_msg = "Color variable is not selected"
+        elif np.isnan(self.data.get_column_view(
+                self.attr_color)[0].astype(float)).all():
+            err_msg = "Color variable has no values"
+        self.vizrank_button.setEnabled(not err_msg)
+        self.vizrank_button.setToolTip(err_msg)
 
     def set_data(self, data):
         super().set_data(data)
