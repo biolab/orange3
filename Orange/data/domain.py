@@ -260,7 +260,12 @@ class Domain:
 
     def _get_equivalent(self, var):
         if isinstance(var, Variable):
-            for myvar in chain(self.variables, self.metas):
+            index = self._indices.get(var.name)
+            if index is not None:
+                if index >= 0:
+                    myvar = self.variables[index]
+                else:
+                    myvar = self.metas[-1 - index]
                 if myvar == var:
                     return myvar
         return None
