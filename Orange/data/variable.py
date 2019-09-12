@@ -341,7 +341,7 @@ class Variable(Reprable, metaclass=VariableMeta):
     def __eq__(self, other):
         return type(self) is type(other) \
                and self.name == other.name \
-               and self._compute_value is other._compute_value
+               and self._compute_value == other._compute_value
 
     def __hash__(self):
         return hash((self.name, type(self), self._compute_value))
