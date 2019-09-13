@@ -397,6 +397,61 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                    new=lambda *_1, **_2: lambda data: np.arange(len(data))):
             self.widget.vizrank.score_heuristic()
 
+    def test_vizrank_enabled(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertTrue(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "")
+        self.assertTrue(self.widget.vizrank.button.isEnabled())
+        self.widget.vizrank.button.click()
+
+    def test_vizrank_enabled_no_data(self):
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "No data on input")
+
+    def test_vizrank_enabled_sparse_data(self):
+        self.send_signal(self.widget.Inputs.data, self.data.to_sparse())
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "Data is sparse")
+
+    def test_vizrank_enabled_constant_data(self):
+        domain = Domain([ContinuousVariable("c1"),
+                         ContinuousVariable("c2"),
+                         ContinuousVariable("c3"),
+                         ContinuousVariable("c4")],
+                        DiscreteVariable("cls", values=["a", "b"]))
+        X = np.zeros((10, 4))
+        table = Table(domain, X, np.random.randint(2, size=10))
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "")
+        self.assertTrue(self.widget.vizrank_button.isEnabled())
+        self.assertTrue(self.widget.vizrank.button.isEnabled())
+        self.widget.vizrank.button.click()
+
+    def test_vizrank_enabled_two_features(self):
+        self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(),
+                         "Not enough features for ranking")
+
+    def test_vizrank_enabled_no_color_var(self):
+        self.send_signal(self.widget.Inputs.data, self.data[:, :3])
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(),
+                         "Color variable is not selected")
+
+    def test_vizrank_enabled_color_var_nans(self):
+        domain = Domain([ContinuousVariable("c1"),
+                         ContinuousVariable("c2"),
+                         ContinuousVariable("c3"),
+                         ContinuousVariable("c4")],
+                        DiscreteVariable("cls", values=["a", "b"]))
+        table = Table(domain, np.random.random((10, 4)), np.full(10, np.nan))
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(),
+                         "Color variable has no values")
+
     def test_auto_send_selection(self):
         """
         Scatter Plot automatically sends selection only when the checkbox Send automatically
