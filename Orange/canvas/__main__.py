@@ -218,9 +218,13 @@ yaml.add_constructor(u'!Notification', YAMLNotification.yamlConstructor, Loader=
 
 
 def pull_notifications():
+    settings = QSettings()
+    check_notifs = settings.value("notifications/check-notifications", True, bool)
+    if not check_notifs:
+        return None
+
     Version = pkg_resources.parse_version
 
-    settings = QSettings()
     # create settings_dict for notif requirements purposes (read-only)
     spec = canvasconfig.spec + config.spec
     settings_dict = canvasconfig.Settings(defaults=spec, store=settings)

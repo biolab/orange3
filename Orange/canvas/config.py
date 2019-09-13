@@ -40,6 +40,8 @@ spec = [
 
     ("error-reporting/permission-requested", bool, False, ""),
 
+    ("notifications/check-notifications", bool, True, "Check for notifications"),
+
     ("notifications/announcements", bool, True,
      "Show notifications about Biolab announcements"),
 
