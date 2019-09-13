@@ -40,6 +40,7 @@ FULLVERSION = VERSION
 DESCRIPTION = 'Orange, a component-based data mining framework.'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
 LONG_DESCRIPTION = open(README_FILE).read()
+LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown',
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'http://orange.biolab.si/'
@@ -454,6 +455,7 @@ def setup_package():
         version=FULLVERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
+        long_description_content_type=LONG_DESCRIPTION_CONTENT_TYPE,
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
         url=URL,
