@@ -6,7 +6,8 @@ from bisect import bisect_left
 from operator import attrgetter
 from queue import Queue, Empty
 from types import SimpleNamespace as namespace
-from typing import Optional, Iterable, List, Callable, Iterator
+from typing import Optional, Iterable, List, Callable
+from threading import Timer
 
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
@@ -366,7 +367,8 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
             self.progressBarInit()
             self.before_running()
             self.start(run_vizrank, self.compute_score,
-                       self.iterate_states(self.saved_state), self.scores)
+                       self.iterate_states, self.saved_state, self.scores,
+                       self.saved_progress, self.state_count())
         else:
             self.button.setText("Continue")
             self.button.repaint()
@@ -382,10 +384,17 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
         pass
 
 
-def run_vizrank(compute_score: Callable, states: Iterator,
-                scores: List, task: TaskState):
+def run_vizrank(compute_score: Callable, iterate_states: Callable,
+                saved_state: Optional[Iterable], scores: List,
+                progress: int, state_count: int, task: TaskState):
+    task.set_status("Getting combinations...")
+    task.set_progress_value(0.1)
+    states = iterate_states(saved_state)
+
+    task.set_status("Getting scores...")
     res = Result(queue=Queue(), scores=None)
     scores = scores.copy()
+    can_set_partial_result = True
 
     def do_work(st, next_st):
         try:
@@ -398,7 +407,10 @@ def run_vizrank(compute_score: Callable, states: Iterator,
         except Exception:  # ignore current state in case of any problem
             pass
         res.scores = scores.copy()
-        task.set_partial_result(res)
+
+    def reset_flag():
+        nonlocal can_set_partial_result
+        can_set_partial_result = True
 
     state = None
     next_state = next(states)
@@ -406,11 +418,23 @@ def run_vizrank(compute_score: Callable, states: Iterator,
         while True:
             if task.is_interruption_requested():
                 return res
+            task.set_progress_value(int(progress * 100 / max(1, state_count)))
+            progress += 1
             state = copy.copy(next_state)
             next_state = copy.copy(next(states))
             do_work(state, next_state)
+            # for simple scores (e.g. correlations widget) and many feature
+            # combinations, the 'partial_result_ready' signal (emitted by
+            # invoking 'task.set_partial_result') was emitted too frequently
+            # for a longer period of time and therefore causing the widget
+            # being unresponsive
+            if can_set_partial_result:
+                task.set_partial_result(res)
+                can_set_partial_result = False
+                Timer(0.01, reset_flag).start()
     except StopIteration:
         do_work(state, None)
+        task.set_partial_result(res)
     return res
 
 

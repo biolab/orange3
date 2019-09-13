@@ -196,6 +196,38 @@ class CorrelationRank(VizRankDialogAttrPair):
         header = self.rank_table.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
+    def start(self, task, *args, **kwargs):
+        self.__set_state_ready()
+        super().start(task, *args, **kwargs)
+        self.__set_state_busy()
+
+    def cancel(self):
+        super().cancel()
+        self.__set_state_ready()
+
+    def _connect_signals(self, state):
+        super()._connect_signals(state)
+        state.progress_changed.connect(self.master.progressBarSet)
+        state.status_changed.connect(self.master.setStatusMessage)
+
+    def _disconnect_signals(self, state):
+        super()._disconnect_signals(state)
+        state.progress_changed.disconnect(self.master.progressBarSet)
+        state.status_changed.disconnect(self.master.setStatusMessage)
+
+    def _on_task_done(self, future):
+        super()._on_task_done(future)
+        self.__set_state_ready()
+
+    def __set_state_ready(self):
+        self.master.progressBarFinished()
+        self.master.setBlocking(False)
+        self.master.setStatusMessage("")
+
+    def __set_state_busy(self):
+        self.master.progressBarInit()
+        self.master.setBlocking(True)
+
 
 class OWCorrelations(OWWidget):
     name = "Correlations"
@@ -250,7 +282,6 @@ class OWCorrelations(OWWidget):
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
             None, self, None, self._vizrank_selection_changed)
-        self.vizrank.progressBar = self.progressBar
         self.vizrank.button.setEnabled(False)
         self.vizrank.threadStopped.connect(self._vizrank_stopped)
 

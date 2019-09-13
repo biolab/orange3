@@ -229,6 +229,7 @@ class TestOWCorrelations(WidgetTest):
                            if attr.is_continuous]
         self.assertEqual(len(feature_combo.model()), len(cont_attributes) + 1)
 
+        self.wait_until_stop_blocking()
         self.send_signal(self.widget.Inputs.data, Table("housing"))
         self.assertEqual(len(feature_combo.model()), 14)
 
@@ -281,6 +282,7 @@ class TestOWCorrelations(WidgetTest):
         """Test report """
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         self.widget.report_button.click()
+        self.wait_until_stop_blocking()
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
