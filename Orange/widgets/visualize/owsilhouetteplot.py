@@ -76,7 +76,7 @@ class OWSilhouettePlot(widget.OWWidget):
     add_scores = settings.Setting(False)
     auto_commit = settings.Setting(True)
 
-    pending_selection = settings.ContextSetting(None, schema_only=True)
+    pending_selection = settings.Setting(None, schema_only=True)
 
     Distances = [("Euclidean", Orange.distance.Euclidean),
                  ("Manhattan", Orange.distance.Manhattan),
@@ -175,7 +175,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def pack_settings(self):
         if self.data and self._silplot is not None:
-            self.pending_selection = self._silplot.selection()
+            self.pending_selection = list(self._silplot.selection())
         else:
             self.pending_selection = None
 
@@ -220,7 +220,10 @@ class OWSilhouettePlot(widget.OWWidget):
             self._update()
             self._replot()
             if self.pending_selection is not None and self._silplot is not None:
-                self._silplot.setSelection(self.pending_selection)
+                # If selection contains indices that are too large, the data
+                # file must had been modified, so we ignore selection
+                if max(self.pending_selection) < len(self.data):
+                    self._silplot.setSelection(np.array(self.pending_selection))
                 self.pending_selection = None
 
         self.unconditional_commit()

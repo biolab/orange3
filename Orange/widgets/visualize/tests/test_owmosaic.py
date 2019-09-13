@@ -154,13 +154,35 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
             QMouseEvent(QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
                         Qt.LeftButton, Qt.KeyboardModifiers()))
 
+        # Changing the data must reset the selection
+        self.send_signal(widget.Inputs.data, Table("titanic"))
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        widget.select_area(
+            1,
+            QMouseEvent(QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
+                        Qt.LeftButton, Qt.KeyboardModifiers()))
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        # Setting data to None must reset the selection
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(bool(widget.selection))
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
 
         self.send_signal(widget.Inputs.data, data)
-        self.assertEqual(widget.selection, {1})
-        self.assertIsNotNone(self.get_output(widget.Outputs.selected_data))
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        w = self.create_widget(OWMosaicDisplay, stored_settings=settings)
+        self.assertFalse(bool(widget.selection))
+        self.send_signal(w.Inputs.data, data, widget=w)
+        self.assertEqual(w.selection, {1})
+        self.assertIsNotNone(self.get_output(w.Outputs.selected_data, widget=w))
 
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although

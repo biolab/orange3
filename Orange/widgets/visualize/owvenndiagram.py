@@ -57,7 +57,7 @@ class OWVennDiagram(widget.OWWidget):
     selection: list
 
     # Selected disjoint subset indices
-    selection = settings.Setting([])
+    selection = settings.Setting([], schema_only=True)
     #: Stored input set hints
     #: {(index, inputname, attributes): (selectedattrname, itemsettitle)}
     #: The 'selectedattrname' can be None
