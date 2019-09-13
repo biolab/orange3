@@ -52,6 +52,7 @@ from Orange.util import literal_eval, requirementsSatisfied, resource_filename
 from Orange.version import version as current, release as is_release
 from Orange.canvas import config
 from Orange.canvas.mainwindow import MainWindow
+from Orange.widgets.settings import widget_settings_dir
 
 
 log = logging.getLogger(__name__)
@@ -469,15 +470,12 @@ def main(argv=None):
     sql_level = min(levels[options.log_level], logging.INFO)
     make_sql_logger(sql_level)
 
-    clear_settings_flag = os.path.join(
-        config.widget_settings_dir(), "DELETE_ON_START")
+    clear_settings_flag = os.path.join(widget_settings_dir(), "DELETE_ON_START")
 
     if options.clear_widget_settings or \
             os.path.isfile(clear_settings_flag):
         log.info("Clearing widget settings")
-        shutil.rmtree(
-            config.widget_settings_dir(),
-            ignore_errors=True)
+        shutil.rmtree(widget_settings_dir(), ignore_errors=True)
 
     # Set http_proxy environment variables, after (potentially) clearing settings
     fix_set_proxy_env()
