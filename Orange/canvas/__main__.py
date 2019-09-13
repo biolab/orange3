@@ -663,7 +663,7 @@ def main(argv=None):
         stdout.flushed.connect(sys.stdout.flush)
 
     stderr = TextStream()
-    error_writer = log_view.formated(color=Qt.red)
+    error_writer = log_view.formatted(color=Qt.red)
     stderr.stream.connect(error_writer.write)
     if sys.stderr:
         stderr.stream.connect(sys.stderr.write)
