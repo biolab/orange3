@@ -322,6 +322,12 @@ def send_usage_statistics():
             log.info("Not sending usage statistics (disabled).")
             return
 
+        if settings.contains('error-reporting/machine-id'):
+            machine_id = settings.value('error-reporting/machine-id')
+        else:
+            machine_id = uuid.uuid4()
+            settings.setValue('error-reporting/machine-id', machine_id)
+
         is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
 
         usage = UsageStatistics()
@@ -329,6 +335,7 @@ def send_usage_statistics():
         for d in data:
             d["Orange Version"] = d.pop("Application Version", "")
             d["Anaconda"] = is_anaconda
+            d["UUID"] = machine_id
         try:
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
