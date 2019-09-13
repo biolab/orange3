@@ -15,6 +15,17 @@ from scipy import sparse as sp
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 
+def _eliminate_zeros(x):
+    """Eliminate zeros from sparse matrix, or raise appropriate warning."""
+    if hasattr(x, "eliminate_zeros"):
+        x.eliminate_zeros()
+    else:
+        warnings.warn(
+            f"`{x.__type__}` does not implement `eliminate_zeros`. Some values "
+            f"in the sparse matrix may by explicit zeros."
+        )
+
+
 def _count_nans_per_row_sparse(X, weights, dtype=None):
     """ Count the number of nans (undefined) values per row. """
     if weights is not None:
@@ -178,11 +189,11 @@ def countnans(x, weights=None, axis=None, dtype=None, keepdims=False):
     """
     if not sp.issparse(x):
         x = np.asanyarray(x)
-        isnan = np.isnan(x)
+        is_nan = np.isnan(x)
         if weights is not None and weights.shape == x.shape:
-            isnan = isnan * weights
+            is_nan = is_nan * weights
 
-        counts = isnan.sum(axis=axis, dtype=dtype, keepdims=keepdims)
+        counts = is_nan.sum(axis=axis, dtype=dtype, keepdims=keepdims)
         if weights is not None and weights.shape != x.shape:
             counts = counts * weights
     else:
@@ -443,8 +454,8 @@ def nanvar(x, axis=None, ddof=0):
     def nanvar_sparse(x):
         n_vals = np.prod(x.shape) - np.sum(np.isnan(x.data))
         n_zeros = np.prod(x.shape) - len(x.data)
-        mean = np.nansum(x.data) / n_vals
-        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / (n_vals - ddof)
+        avg = np.nansum(x.data) / n_vals
+        return (np.nansum((x.data - avg) ** 2) + avg ** 2 * n_zeros) / (n_vals - ddof)
 
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
 
@@ -595,6 +606,57 @@ def var(x, axis=None, ddof=0):
 def std(x, axis=None, ddof=0):
     """ Equivalent of np.std that supports sparse and dense matrices. """
     return np.sqrt(var(x, axis=axis, ddof=ddof))
+
+
+def nan_to_num(x, copy=True):
+    """ Equivalent of np.nan_to_num that supports sparse and dense matrices. """
+    if not sp.issparse(x):
+        return np.nan_to_num(x, copy=copy)
+
+    if copy:
+        x = x.copy()
+    np.nan_to_num(x.data, copy=False)
+    _eliminate_zeros(x)
+    return x
+
+
+def isnan(x, out=None):
+    """ Equivalent of np.isnan that supports sparse and dense matrices. """
+    if not sp.issparse(x):
+        return np.isnan(x, out=out)
+
+    if out is None:
+        x = x.copy()
+    elif out is not x:
+        raise ValueError(
+            "The `out` parameter can only be set `x` when using sparse matrices"
+        )
+
+    np.isnan(x.data, out=x.data)
+    _eliminate_zeros(x)
+    return x
+
+
+def any_nan(x, axis=None):
+    """ Check if any of the values in a matrix is nan. """
+    if not sp.issparse(x):
+        return np.isnan(x).any(axis=axis)
+
+    if axis is None:
+        return np.isnan(x.data).any()
+
+    if axis == 0:
+        x = x.tocsc()
+    elif axis == 1:
+        x = x.tocsr()
+
+    ax = x.ndim - axis - 1
+    result = np.zeros(x.shape[ax], dtype=bool)
+    for i in range(x.shape[ax]):
+        vals = x.data[x.indptr[i]:x.indptr[i + 1]]
+        result[i] = np.isnan(vals).any()
+
+    return result
 
 
 def FDR(p_values: Iterable, dependent=False, m=None, ordered=False) -> Iterable:
