@@ -2,6 +2,7 @@
 Orange Canvas main entry point
 
 """
+import uuid
 from collections import defaultdict
 from contextlib import closing
 
@@ -64,13 +65,16 @@ statistics_server_url = os.getenv(
 
 
 def ua_string():
+    settings = QSettings()
+
     is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+    machine_id = settings.value("error-reporting/machine-id", "", str)
     return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}:{uuid}'.format(
         orange_version=current,
         py_version='.'.join(str(a) for a in sys.version_info[:3]),
         platform=sys.platform,
         conda='Anaconda' if is_anaconda else '',
-        uuid=QSettings().value("error-reporting/machine-id", "", str),
+        uuid=machine_id if settings.value("error-reporting/send-statistics", False, bool) else ''
     )
 
 
