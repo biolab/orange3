@@ -94,32 +94,6 @@ def make_stdout_handler(level, fmt=None):
     return handler
 
 
-def setup_notifications():
-    settings = QSettings()
-    # data collection permission
-    if not settings.value("error-reporting/permission-requested", False, type=bool) and \
-            not settings.value("error-reporting/send-statistics", False, bool):
-        notif = Notification(icon=QIcon(resource_filename("canvas/icons/statistics-request.png")),
-                             title="Anonymous Usage Statistics",
-                             text="Do you wish to opt-in to sharing "
-                                  "statistics about how you use Orange? "
-                                  "All data is anonymized and used "
-                                  "exclusively for understanding how users "
-                                  "interact with Orange.",
-                             accept_button_label="Allow",
-                             reject_button_label="No")
-
-        def handle_permission_response(role):
-            if role != notif.DismissRole:
-                settings.setValue("error-reporting/permission-requested", True)
-            if role == notif.AcceptRole:
-                UsageStatistics.set_enabled(True)
-                settings.setValue("error-reporting/send-statistics", True)
-
-        notif.clicked.connect(handle_permission_response)
-        canvas.notification_server_instance.registerNotification(notif)
-
-
 def check_for_updates():
     settings = QSettings()
     check_updates = settings.value('startup/check-updates', True, type=bool)
@@ -180,6 +154,14 @@ def check_for_updates():
 def open_link(url: QUrl):
     if url.scheme() == "orange":
         # define custom actions within Orange here
+        if url.host() == "enable-statistics":
+            settings = QSettings()
+
+            settings.setValue("error-reporting/send-statistics", True)
+            UsageStatistics.set_enabled(True)
+
+            if not settings.contains('error-reporting/machine-id'):
+                settings.setValue('error-reporting/machine-id', uuid.uuid4())
         pass
     else:
         QDesktopServices.openUrl(url)
@@ -581,9 +563,6 @@ def main(argv=None):
     notif_server = NotificationServer()
     canvas.notification_server_instance = notif_server
     canvas_window.set_notification_server(notif_server)
-
-    # initialize notifications
-    setup_notifications()
 
     if stylesheet_string is not None:
         canvas_window.setStyleSheet(stylesheet_string)
