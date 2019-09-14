@@ -210,6 +210,94 @@ class Model(Reprable):
         raise TypeError("Unrecognized argument (instance of '{}')"
                         .format(type(data).__name__))
 
+    def get_backmappers(self, data):
+        backmappers = []
+        n_values = []
+
+        dataclasses = data.domain.class_vars
+        modelclasses = self.domain.class_vars
+        if not (modelclasses and dataclasses):
+            return None, []  # classless model or data; don't touch
+        if len(dataclasses) != len(modelclasses):
+            raise DomainTransformationError(
+                "Mismatching number of model's classes and data classes")
+        for dataclass, modelclass in zip(dataclasses, modelclasses):
+            if dataclass != modelclass:
+                if dataclass.name != modelclass.name:
+                    raise DomainTransformationError(
+                        f"Model for '{modelclass.name}' "
+                        f"cannot predict '{dataclass.name}'")
+                else:
+                    raise DomainTransformationError(
+                        f"Variables '{modelclass.name}' in the model is "
+                        "incompatible with the variable of the same name "
+                        "in the data.")
+            n_values.append(dataclass.is_discrete and len(dataclass.values))
+            if dataclass is not modelclass and dataclass.is_discrete:
+                backmappers.append(dataclass.get_mapper_from(modelclass))
+            else:
+                backmappers.append(None)
+        if all(x is None for x in backmappers):
+            backmappers = None
+        return backmappers, n_values
+
+    def backmap_value(self, value, mapped_probs, n_values, backmappers):
+        if backmappers is None:
+            return value
+
+        if value.ndim == 2:  # For multitarget, recursive call by columns
+            new_value = np.zeros(value.shape)
+            for i, n_value, backmapper in zip(
+                    itertools.count(), n_values, backmappers):
+                new_value[:, i] = self.backmap_value(
+                    value[:, i], mapped_probs[:, i, :], [n_value], [backmapper])
+            return new_value
+
+        backmapper = backmappers[0]
+        if backmapper is None:
+            return value
+
+        value = backmapper(value)
+        nans = np.isnan(value)
+        if not np.any(nans):
+            return value
+        if mapped_probs is not None:
+            value[nans] = np.argmax(mapped_probs[nans], axis=1)
+        else:
+            value[nans] = np.RandomState(0).choice(
+                backmapper(np.arange(0, n_values[0] - 1))
+                (np.sum(nans), ))
+        return value
+
+    def backmap_probs(self, probs, n_values, backmappers):
+        if backmappers is None:
+            return probs
+
+        if probs.ndim == 3:
+            new_probs = np.zeros((len(probs), len(n_values), max(n_values)),
+                                 dtype=probs.dtype)
+            for i, n_value, backmapper in zip(
+                    itertools.count(), n_values, backmappers):
+                new_probs[:, i, :n_value] = self.backmap_probs(
+                    probs[:, i, :], [n_value], [backmapper])
+            return new_probs
+
+        backmapper = backmappers[0]
+        if backmapper is None:
+            return probs
+        n_value = n_values[0]
+        new_probs = np.zeros((len(probs), n_value), dtype=probs.dtype)
+        for col in range(probs.shape[1]):
+            target = backmapper(col)
+            if not np.isnan(target):
+                new_probs[:, int(target)] = probs[:, col]
+        tots = np.sum(new_probs, axis=1)
+        zero_sum = tots == 0
+        new_probs[zero_sum] = 1
+        tots[zero_sum] = n_value
+        new_probs = new_probs / tots[:, None]
+        return new_probs
+
     def __call__(self, data, ret=Value):
         multitarget = len(self.domain.class_vars) > 1
 
@@ -241,94 +329,6 @@ class Model(Reprable):
 
             return data.transform(self.domain)
 
-        def get_backmappers():
-            backmappers = []
-            n_values = []
-
-            dataclasses = data.domain.class_vars
-            modelclasses = self.domain.class_vars
-            if not (modelclasses and dataclasses):
-                return None, []  # classless model or data; don't touch
-            if len(dataclasses) != len(modelclasses):
-                raise DomainTransformationError(
-                    "Mismatching number of model's classes and data classes")
-            for dataclass, modelclass in zip(dataclasses, modelclasses):
-                if dataclass != modelclass:
-                    if dataclass.name != modelclass.name:
-                        raise DomainTransformationError(
-                            f"Model for '{modelclass.name}' "
-                            f"cannot predict '{dataclass.name}'")
-                    else:
-                        raise DomainTransformationError(
-                            f"Variables '{modelclass.name}' in the model is "
-                            "incompatible with the variable of the same name "
-                            "in the data.")
-                n_values.append(dataclass.is_discrete and len(dataclass.values))
-                if dataclass is not modelclass and dataclass.is_discrete:
-                    backmappers.append(dataclass.get_mapper_from(modelclass))
-                else:
-                    backmappers.append(None)
-            if all(x is None for x in backmappers):
-                backmappers = None
-            return backmappers, n_values
-
-        def backmap_value(value, mapped_probs, n_values, backmappers):
-            if backmappers is None:
-                return value
-
-            if value.ndim == 2:  # For multitarget, recursive call by columns
-                new_value = np.zeros(value.shape)
-                for i, n_value, backmapper in zip(
-                        itertools.count(), n_values, backmappers):
-                    new_value[:, i] = backmap_value(
-                        value[:, i], probs[:, i, :], [n_value], [backmapper])
-                return new_value
-
-            backmapper = backmappers[0]
-            if backmapper is None:
-                return value
-
-            value = backmapper(value)
-            nans = np.isnan(value)
-            if not np.any(nans):
-                return value
-            if mapped_probs is not None:
-                value[nans] = np.argmax(mapped_probs[nans], axis=1)
-            else:
-                value[nans] = np.RandomState(0).choice(
-                    backmapper(np.arange(0, n_values[0] - 1))
-                    (np.sum(nans), ))
-            return value
-
-        def backmap_probs(probs, n_values, backmappers):
-            if backmappers is None:
-                return probs
-
-            if probs.ndim == 3:
-                new_probs = np.zeros((len(probs), len(n_values), max(n_values)),
-                                     dtype=probs.dtype)
-                for i, n_value, backmapper in zip(
-                        itertools.count(), n_values, backmappers):
-                    new_probs[:, i, :n_value] = backmap_probs(
-                        probs[:, i, :], [n_value], [backmapper])
-                return new_probs
-
-            backmapper = backmappers[0]
-            if backmapper is None:
-                return probs
-            n_value = n_values[0]
-            new_probs = np.zeros((len(probs), n_value), dtype=probs.dtype)
-            for col in range(probs.shape[1]):
-                target = backmapper(col)
-                if not np.isnan(target):
-                    new_probs[:, int(target)] = probs[:, col]
-            tots = np.sum(new_probs, axis=1)
-            zero_sum = tots == 0
-            new_probs[zero_sum] = 1
-            tots[zero_sum] = n_value
-            new_probs = new_probs / tots[:, None]
-            return new_probs
-
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if ret > 0 and any(v.is_continuous for v in self.domain.class_vars):
@@ -352,7 +352,7 @@ class Model(Reprable):
         if isinstance(data, (np.ndarray, scipy.sparse.csr.csr_matrix)):
             prediction = self.predict(data)
         elif isinstance(data, Table):
-            backmappers, n_values = get_backmappers()
+            backmappers, n_values = self.get_backmappers(data)
             data = data_to_model_domain()
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
@@ -378,13 +378,13 @@ class Model(Reprable):
         if probs is None and (ret != Model.Value or backmappers is not None):
             probs = one_hot_probs(value)
         if probs is not None:
-            probs = backmap_probs(probs, n_values, backmappers)
+            probs = self.backmap_probs(probs, n_values, backmappers)
         if ret != Model.Probs:
             if value is None:
                 value = np.argmax(probs, axis=-1)
                 # probs are already backmapped
             else:
-                value = backmap_value(value, probs, n_values, backmappers)
+                value = self.backmap_value(value, probs, n_values, backmappers)
 
         # Return what we need to
         if ret == Model.Probs:
