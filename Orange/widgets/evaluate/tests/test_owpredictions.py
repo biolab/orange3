@@ -50,71 +50,37 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(len(evres.data), 0)
 
     def test_mismatching_targets(self):
-        error = self.widget.Error
+        warning = self.widget.Warning
 
-        titanic = Table("titanic")
-        majority_titanic = ConstantLearner()(titanic)
-        majority_iris = ConstantLearner()(self.iris)
+        maj_iris = ConstantLearner()(self.iris)
+        dom = self.iris.domain
+        iris3 = self.iris.transform(Domain(dom[:3], dom[3]))
+        maj_iris3 = ConstantLearner()(iris3)
+
+        self.send_signal(self.widget.Inputs.predictors, maj_iris, 1)
+        self.send_signal(self.widget.Inputs.predictors, maj_iris3, 2)
+        self.assertFalse(warning.wrong_targets.is_shown())
 
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.send_signal(self.widget.Inputs.predictors, majority_iris, 1)
-        self.send_signal(self.widget.Inputs.predictors, majority_titanic, 2)
-        self.assertFalse(error.predictors_target_mismatch.is_shown())
-        self.assertTrue(error.data_target_mismatch.is_shown())
-
-        self.send_signal(self.widget.Inputs.predictors, None, 1)
-        self.assertFalse(error.predictors_target_mismatch.is_shown())
-        self.assertTrue(error.data_target_mismatch.is_shown())
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(error.predictors_target_mismatch.is_shown())
-        self.assertFalse(error.data_target_mismatch.is_shown())
+        self.assertTrue(warning.wrong_targets.is_shown())
 
         self.send_signal(self.widget.Inputs.predictors, None, 2)
-        self.assertFalse(error.predictors_target_mismatch.is_shown())
-        self.assertFalse(error.data_target_mismatch.is_shown())
+        self.assertFalse(warning.wrong_targets.is_shown())
 
-        self.send_signal(self.widget.Inputs.predictors, majority_titanic, 2)
-        self.assertFalse(error.predictors_target_mismatch.is_shown())
-        self.assertFalse(error.data_target_mismatch.is_shown())
-
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertFalse(error.predictors_target_mismatch.is_shown())
-        self.assertTrue(error.data_target_mismatch.is_shown())
-
-        self.send_signal(self.widget.Inputs.predictors, majority_iris, 2)
-        self.assertFalse(error.predictors_target_mismatch.is_shown())
-        self.assertFalse(error.data_target_mismatch.is_shown())
-        output = self.get_output(self.widget.Outputs.predictions)
-        self.assertEqual(len(output.domain.metas), 4)
+        self.send_signal(self.widget.Inputs.predictors, maj_iris3, 2)
+        self.assertTrue(warning.wrong_targets.is_shown())
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.send_signal(self.widget.Inputs.predictors, majority_iris, 1)
-        self.send_signal(self.widget.Inputs.predictors, majority_titanic, 3)
-        self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertTrue(error.predictors_target_mismatch.is_shown())
+        self.assertFalse(warning.wrong_targets.is_shown())
 
     def test_no_class_on_test(self):
         """Allow test data with no class"""
-        error = self.widget.Error
-
         titanic = Table("titanic")
         majority_titanic = ConstantLearner()(titanic)
-        majority_iris = ConstantLearner()(self.iris)
 
         no_class = Table(Domain(titanic.domain.attributes, None), titanic)
         self.send_signal(self.widget.Inputs.predictors, majority_titanic, 1)
         self.send_signal(self.widget.Inputs.data, no_class)
-        out = self.get_output(self.widget.Outputs.predictions)
-        np.testing.assert_allclose(out.get_column_view("constant")[0], 0)
-
-        self.send_signal(self.widget.Inputs.predictors, majority_iris, 2)
-        self.assertTrue(error.predictors_target_mismatch.is_shown())
-        self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
-
-        self.send_signal(self.widget.Inputs.predictors, None, 2)
-        self.send_signal(self.widget.Inputs.data, titanic)
         out = self.get_output(self.widget.Outputs.predictions)
         np.testing.assert_allclose(out.get_column_view("constant")[0], 0)
 
