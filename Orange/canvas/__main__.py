@@ -14,8 +14,8 @@ import gc
 import re
 import time
 import logging
-import signal
 from logging.handlers import RotatingFileHandler
+import signal
 import optparse
 import pickle
 import shlex
@@ -33,28 +33,25 @@ from AnyQt.QtCore import (
 import pyqtgraph
 
 import orangecanvas
-from Orange import canvas
-from orangecanvas.registry import qt
-from orangecanvas.registry import WidgetRegistry, set_global_registry
-from orangecanvas.registry import cache
+from orangecanvas import config as canvasconfig
+from orangecanvas.registry import qt, WidgetRegistry, set_global_registry, cache
 from orangecanvas.application.application import CanvasApplication
 from orangecanvas.application.outputview import TextStream, ExceptHook
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.gui.splashscreen import SplashScreen
 from orangecanvas.utils.overlay import Notification, NotificationServer
-from orangecanvas import config as canvasconfig
 from orangecanvas.main import (
     fix_win_pythonw_std_stream, fix_set_proxy_env, fix_macos_nswindow_tabbing,
     breeze_dark,
 )
 
 from orangewidget.workflow.errorreporting import handle_exception
-from Orange.util import literal_eval, requirementsSatisfied
 
+from Orange import canvas
+from Orange.util import literal_eval, requirementsSatisfied, resource_filename
+from Orange.version import version as current, release as is_release
 from Orange.canvas import config
 from Orange.canvas.mainwindow import MainWindow
-from Orange.util import resource_filename
-from Orange.version import version as current, release as is_release
 
 
 log = logging.getLogger(__name__)
