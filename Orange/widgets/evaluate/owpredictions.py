@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy
 from AnyQt.QtWidgets import (
     QTableView, QListWidget, QSplitter, QStyledItemDelegate,
-    QToolTip, QStyle, QApplication)
+    QToolTip, QStyle, QApplication, QSizePolicy)
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
@@ -59,18 +59,8 @@ class OWPredictions(OWWidget):
     settingsHandler = settings.ClassValuesContextHandler()
     score_table = settings.SettingProvider(ScoreTable)
 
-    #: Display the full input dataset or only the target variable columns
-    show_attrs = settings.Setting(True)
-    #: Show predicted values
-    show_predictions = settings.Setting(True)
     #: List of selected class value indices in the `class_values` list
     selected_classes = settings.ContextSetting([])
-    #: Draw colored distribution bars
-    draw_dist = settings.Setting(True)
-
-    output_attrs = settings.Setting(True)
-    output_predictions = settings.Setting(True)
-    output_probabilities = settings.Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -80,66 +70,31 @@ class OWPredictions(OWWidget):
         self.class_values = []  # type: List[str]
         self._delegates = []
 
-        box = gui.vBox(self.controlArea, "Show", spacing=-1, addSpace=False)
-
-        gui.widgetLabel(box, "Show probabilities for:")
-        gui.listBox(box, self, "selected_classes", "class_values",
+        gui.listBox(self.controlArea, self, "selected_classes", "class_values",
+                    box="Show probabibilities for",
                     callback=self._update_prediction_delegate,
                     selectionMode=QListWidget.MultiSelection,
-                    addSpace=False)
-        gui.checkBox(box, self, "show_predictions", "Show predicted class",
-                     callback=self._update_prediction_delegate)
-        gui.checkBox(box, self, "draw_dist", "Distribution bars",
-                     callback=self._update_prediction_delegate)
-
-        box = gui.vBox(self.controlArea, "Data View")
-        gui.checkBox(box, self, "show_attrs", "Show full dataset",
-                     callback=self._update_column_visibility)
-        gui.button(box, self, "Restore Original Order",
+                    addSpace=False,
+                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred))
+        gui.rubber(self.controlArea)
+        gui.button(self.controlArea, self, "Restore Original Order",
                    callback=self._reset_order,
                    tooltip="Show rows in the original order")
 
-        box = gui.vBox(self.controlArea, "Output", spacing=-1)
-        self.checkbox_class = gui.checkBox(
-            box, self, "output_attrs", "Original data",
-            callback=self.commit)
-        self.checkbox_class = gui.checkBox(
-            box, self, "output_predictions", "Predictions",
-            callback=self.commit)
-        self.checkbox_prob = gui.checkBox(
-            box, self, "output_probabilities", "Probabilities",
-            callback=self.commit)
-
-        gui.rubber(self.controlArea)
-
-        self.vsplitter = gui.vBox(self.mainArea)
-
-        self.splitter = QSplitter(
-            orientation=Qt.Horizontal,
-            childrenCollapsible=False,
-            handleWidth=2,
-        )
+        table_opts = dict(horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
+                          horizontalScrollMode=QTableView.ScrollPerPixel,
+                          selectionMode=QTableView.NoSelection,
+                          focusPolicy=Qt.StrongFocus)
         self.dataview = TableView(
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-            horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-            horizontalScrollMode=QTableView.ScrollPerPixel,
-            selectionMode=QTableView.NoSelection,
-            focusPolicy=Qt.StrongFocus
-        )
+            **table_opts)
         self.predictionsview = TableView(
-            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
-            horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-            horizontalScrollMode=QTableView.ScrollPerPixel,
-            selectionMode=QTableView.NoSelection,
-            focusPolicy=Qt.StrongFocus,
             sortingEnabled=True,
-        )
-
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
+            **table_opts)
         self.dataview.verticalHeader().hide()
-
         dsbar = self.dataview.verticalScrollBar()
         psbar = self.predictionsview.verticalScrollBar()
-
         psbar.valueChanged.connect(dsbar.setValue)
         dsbar.valueChanged.connect(psbar.setValue)
 
@@ -147,13 +102,15 @@ class OWPredictions(OWWidget):
         self.predictionsview.verticalHeader().setDefaultSectionSize(22)
         self.dataview.verticalHeader().sectionResized.connect(
             lambda index, _, size:
-            self.predictionsview.verticalHeader().resizeSection(index, size)
-        )
+            self.predictionsview.verticalHeader().resizeSection(index, size))
 
+        self.splitter = QSplitter(
+            orientation=Qt.Horizontal, childrenCollapsible=False, handleWidth=2)
         self.splitter.addWidget(self.predictionsview)
         self.splitter.addWidget(self.dataview)
 
         self.score_table = ScoreTable(self)
+        self.vsplitter = gui.vBox(self.mainArea)
         self.vsplitter.layout().addWidget(self.splitter)
         self.vsplitter.layout().addWidget(self.score_table.view)
 
@@ -172,7 +129,6 @@ class OWPredictions(OWWidget):
             modelproxy = TableSortProxyModel()
             modelproxy.setSourceModel(model)
             self.dataview.setModel(modelproxy)
-            self._update_column_visibility()
 
         self._invalidate_predictions()
 
@@ -338,12 +294,6 @@ class OWPredictions(OWWidget):
             details += f" ({n_predictors - n_valid} failed)"
         self.info.set_input_summary(summary, details)
 
-        discrete_predictors = any(
-            slot.predictor.domain.class_var.is_discrete
-            for slot in self.predictors.values())
-        self.checkbox_class.setEnabled(discrete_predictors)
-        self.checkbox_prob.setEnabled(discrete_predictors)
-
     def _invalidate_predictions(self):
         for inputid, pred in list(self.predictors.items()):
             self.predictors[inputid] = pred._replace(results=None)
@@ -387,15 +337,6 @@ class OWPredictions(OWWidget):
         self._update_data_sort_order()
         self.predictionsview.resizeColumnsToContents()
 
-    def _update_column_visibility(self):
-        if self.data:
-            domain = self.data.domain
-            first_attr = len(domain.class_vars) + len(domain.metas)
-            for i in range(first_attr, first_attr + len(domain.attributes)):
-                self.dataview.setColumnHidden(i, not self.show_attrs)
-            if domain.class_var:
-                self.dataview.setColumnHidden(0, False)
-
     def _update_data_sort_order(self):
         datamodel = self.dataview.model()  # data model proxy
         predmodel = self.predictionsview.model()  # predictions model proxy
@@ -433,11 +374,7 @@ class OWPredictions(OWWidget):
             target = slot.predictor.domain.class_var
             shown_probs = () if target.is_continuous else \
                 [i for i, name in enumerate(target.values) if name in selected]
-            if not shown_probs and not self.show_predictions:
-                self.predictionsview.setColumnHidden(col, True)
-                continue
-            delegate = PredictionsItemDelegate(
-                target, self.show_predictions, shown_probs)
+            delegate = PredictionsItemDelegate(target, shown_probs)
             # QAbstractItemView does not take ownership of delegates, so we must
             self._delegates.append(delegate)
             self.predictionsview.setItemDelegateForColumn(col, delegate)
@@ -497,7 +434,7 @@ class OWPredictions(OWWidget):
             else:
                 self._add_regression_out_columns(slot, newmetas, newcolumns)
 
-        attrs = list(self.data.domain.attributes) if self.output_attrs else []
+        attrs = list(self.data.domain.attributes)
         metas = list(self.data.domain.metas) + newmetas
         domain = Orange.data.Domain(attrs, self.class_var, metas=metas)
         predictions = self.data.transform(domain)
@@ -507,7 +444,8 @@ class OWPredictions(OWWidget):
             predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
         self.Outputs.predictions.send(predictions)
 
-    def _add_classification_out_columns(self, slot, newmetas, newcolumns):
+    @staticmethod
+    def _add_classification_out_columns(slot, newmetas, newcolumns):
         # Mapped or unmapped predictions?!
         # Or provide a checkbox so the user decides?
         pred = slot.predictor
@@ -515,10 +453,9 @@ class OWPredictions(OWWidget):
         values = pred.domain.class_var.values
         newmetas.append(DiscreteVariable(name=name, values=values))
         newcolumns.append(slot.results.unmapped_predicted.reshape(-1, 1))
-        if self.output_probabilities:
-            newmetas += [ContinuousVariable(name=f"{name} ({value})")
-                         for value in values]
-            newcolumns.append(slot.results.unmapped_probabilities)
+        newmetas += [ContinuousVariable(name=f"{name} ({value})")
+                     for value in values]
+        newcolumns.append(slot.results.unmapped_probabilities)
 
     @staticmethod
     def _add_regression_out_columns(slot, newmetas, newcolumns):
@@ -563,21 +500,19 @@ class OWPredictions(OWWidget):
                               header_rows=1, header_columns=1)
 
 
-
 class PredictionsItemDelegate(QStyledItemDelegate):
     """
     A Item Delegate for custom formatting of predictions/probabilities
     """
-    def __init__(self, target, show_predictions, shown_probabilities=(),
-                 parent=None, **kwargs):
+    def __init__(self, target, shown_probabilities=(), parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.target = target
         self.colors = None if target.is_continuous else \
                 [QColor(*color) for color in target.colors]
         self.shown_probabilities = self.fmt = self.tooltip = None  # set below
-        self.setFormat(show_predictions, shown_probabilities)
+        self.setFormat(shown_probabilities)
 
-    def setFormat(self, show_predictions, shown_probabilities=()):
+    def setFormat(self, shown_probabilities=()):
         self.shown_probabilities = shown_probabilities
         target = self.target
         if target.is_continuous:
@@ -586,7 +521,7 @@ class PredictionsItemDelegate(QStyledItemDelegate):
             self.fmt = " \N{RIGHTWARDS ARROW} ".join(
                 [" : ".join(f"{{dist[{i}]:.2f}}" for i in shown_probabilities)]
                 * bool(shown_probabilities)
-                + ["{value!s}"] * show_predictions)
+                + ["{value!s}"])
         self.tooltip = "" if not shown_probabilities else \
             f"p({', '.join(target.values[i] for i in shown_probabilities)})"
 
