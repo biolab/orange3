@@ -11,7 +11,7 @@ from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
 
 import scipy.special
-from scipy.stats import f_oneway, chisquare
+from scipy.stats import f_oneway, chi2_contingency
 
 import Orange.data
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values
@@ -129,8 +129,8 @@ class OWBoxPlot(widget.OWWidget):
     when the user changes display settings or colors.
 
     For discrete attributes, the flow is a bit simpler: the elements are not
-    constructed in advance (by layout_changed). Instead, layout_changed and
-    display_changed call display_changed_disc that draws everything.
+    constructed in advance (by layout_changed). Instead, _display_changed_disc
+    draws everything.
     """
     name = "Box Plot"
     description = "Visualize the distribution of feature values in a box plot."
@@ -343,21 +343,7 @@ class OWBoxPlot(widget.OWWidget):
                 groups = [group for group in groups if len(group)]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
-                # Chi-square with the given distribution into groups
-                # (see degrees of freedom in computation of the p-value)
-                if not attr.values or not group_var.values:
-                    return 2
-                observed = np.array(
-                    contingency.get_contingency(data, group_var, attr))
-                observed = observed[observed.sum(axis=1) != 0, :]
-                observed = observed[:, observed.sum(axis=0) != 0]
-                if min(observed.shape) < 2:
-                    return 2
-                expected = \
-                    np.outer(observed.sum(axis=1), observed.sum(axis=0)) / \
-                    np.sum(observed)
-                p = chisquare(observed.ravel(), f_exp=expected.ravel(),
-                              ddof=n_groups - 1)[1]
+                p = self._chi_square(group_var, attr)[1]
             if math.isnan(p):
                 return 2
             return p
@@ -377,6 +363,18 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.reset_attrs(domain)
         self.attribute = attribute
+
+    def _chi_square(self, group_var, attr):
+        # Chi-square with the given distribution into groups
+        if not attr.values or not group_var.values:
+            return 0, 2, 0
+        observed = np.array(
+            contingency.get_contingency(self.dataset, group_var, attr))
+        observed = observed[observed.sum(axis=1) != 0, :]
+        observed = observed[:, observed.sum(axis=0) != 0]
+        if min(observed.shape) < 2:
+            return 0, 2, 0
+        return chi2_contingency(observed)[:3]
 
     def reset_all_data(self):
         self.clear_scene()
@@ -479,31 +477,32 @@ class OWBoxPlot(widget.OWWidget):
         if self.dataset is None or len(self.conts) == len(self.dist) == 0:
             return
 
-        if not self.is_continuous:
-            self.display_changed_disc()
-            return
+        if self.is_continuous:
+            self.mean_labels = [self.mean_label(stat, attr, lab)
+                                for stat, lab in zip(self.stats, self.label_txts)]
+            self.draw_axis()
+            self.boxes = [self.box_group(stat) for stat in self.stats]
+            self.labels = [self.label_group(stat, attr, mean_lab)
+                           for stat, mean_lab in zip(self.stats, self.mean_labels)]
+            self.attr_labels = [QGraphicsSimpleTextItem(lab)
+                                for lab in self.label_txts]
+            for it in chain(self.labels, self.attr_labels):
+                self.box_scene.addItem(it)
 
-        self.mean_labels = [self.mean_label(stat, attr, lab)
-                            for stat, lab in zip(self.stats, self.label_txts)]
-        self.draw_axis()
-        self.boxes = [self.box_group(stat) for stat in self.stats]
-        self.labels = [self.label_group(stat, attr, mean_lab)
-                       for stat, mean_lab in zip(self.stats, self.mean_labels)]
-        self.attr_labels = [QGraphicsSimpleTextItem(lab)
-                            for lab in self.label_txts]
-        for it in chain(self.labels, self.attr_labels):
-            self.box_scene.addItem(it)
         self.display_changed()
-        self.draw_stat()
 
     def display_changed(self):
-        if self.dataset is None:
+        if self.dataset is None or self.attribute is None:
             return
 
-        if not self.is_continuous:
-            self.display_changed_disc()
-            return
+        if self.is_continuous:
+            self._display_changed_cont()
+        else:
+            self._display_changed_disc()
+        self.draw_stat()
+        self.select_box_items()
 
+    def _display_changed_cont(self):
         self.order = list(range(len(self.stats)))
         criterion = self._sorting_criteria_attrs[self.compare]
         if criterion:
@@ -549,12 +548,10 @@ class OWBoxPlot(widget.OWWidget):
                    self.scene_width, len(self.stats) * heights + 90)
         self.box_scene.setSceneRect(r)
 
-        self.compute_tests()
-        self.show_posthoc()
-        self.select_box_items()
+        self._compute_tests_cont()
+        self._show_posthoc()
 
-    def display_changed_disc(self):
-        assert not self.is_continuous
+    def _display_changed_disc(self):
         self.clear_scene()
         self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts_all]
@@ -598,8 +595,7 @@ class OWBoxPlot(widget.OWWidget):
         self.box_scene.setSceneRect(-self.label_width - 5,
                                     -30 - len(self.boxes) * 40,
                                     self.scene_width, len(self.boxes * 40) + 90)
-        self.stat_test = ""
-        self.select_box_items()
+        self._compute_tests_disc()
 
     def __draw_group_labels(self, y, row):
         """Draw group labels
@@ -673,7 +669,7 @@ class OWBoxPlot(widget.OWWidget):
             self.box_scene.addItem(item)
 
     # noinspection PyPep8Naming
-    def compute_tests(self):
+    def _compute_tests_cont(self):
         # The t-test and ANOVA are implemented here since they efficiently use
         # the widget-specific data in self.stats.
         # The non-parametric tests can't do this, so we use statistics.tests
@@ -737,6 +733,16 @@ class OWBoxPlot(widget.OWWidget):
                 F, p = stat_ANOVA()
                 t = "" if np.isnan(F) else f"ANOVA: {F:.3f} (p={p:.3f}, N={n})"
         self.stat_test = t
+
+    def _compute_tests_disc(self):
+        if self.group_var is None or self.attribute is None:
+            self.stat_test = ""
+        else:
+            chi, p, dof = self._chi_square(self.group_var, self.attribute)
+            if np.isnan(p):
+                self.stat_test = ""
+            else:
+                self.stat_test = f"χ²: {chi:.2f} (p={p:.3f}, dof={dof})"
 
     def mean_label(self, stat, attr, val_name):
         label = QGraphicsItemGroup()
@@ -821,7 +827,8 @@ class OWBoxPlot(widget.OWWidget):
     def draw_stat(self):
         if self.stat_test:
             label = QGraphicsSimpleTextItem(self.stat_test)
-            label.setPos((self.scene_min_x + self.scene_max_x)/2 - label.boundingRect().width()/2,
+            brect = self.box_scene.sceneRect()
+            label.setPos(brect.center().x() - label.boundingRect().width()/2,
                          8 + self._axis_font.pixelSize()*2)
             label.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             self.box_scene.addItem(label)
@@ -1024,7 +1031,7 @@ class OWBoxPlot(widget.OWWidget):
         self.Outputs.annotated_data.send(
             create_annotated_table(self.dataset, selection))
 
-    def show_posthoc(self):
+    def _show_posthoc(self):
         def line(y0, y1):
             it = self.box_scene.addLine(x, y0, x, y1, self._post_line_pen)
             it.setZValue(-100)
