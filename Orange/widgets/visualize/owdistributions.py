@@ -323,8 +323,7 @@ class OWDistributions(OWWidget):
             box, self, "show_probs", "Show probabilities",
             callback=self._on_show_probabilities_changed)
 
-        gui.auto_commit(
-            self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
+        gui.auto_apply(self.controlArea, self, commit=self.apply)
 
         self._set_smoothing_visibility()
         self._setup_plots()

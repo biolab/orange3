@@ -154,8 +154,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(self.info_box)
 
-        gui.auto_commit(
-            self.controlArea, self, "auto_commit", "Apply", commit=self.apply)
+        gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
 
         self.plotview = pg.GraphicsView(background="w")
         self.plot = pg.PlotItem(enableMenu=False)

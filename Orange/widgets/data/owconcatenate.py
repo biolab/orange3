@@ -132,9 +132,7 @@ class OWConcatenate(widget.OWWidget):
         cb.disables.append(ibox)
         cb.makeConsistent()
 
-        box = gui.auto_commit(
-            self.controlArea, self, "auto_commit", "Apply", commit=self.apply,
-            orientation=Qt.Horizontal, checkbox_label="Apply automatically")
+        box = gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 

@@ -326,9 +326,7 @@ class OWColor(widget.OWWidget):
         self.cont_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(cont_view)
 
-        box = gui.auto_commit(
-            self.controlArea, self, "auto_apply", "Apply",
-            orientation=Qt.Horizontal, checkbox_label="Apply automatically")
+        box = gui.auto_apply(self.controlArea, self, "auto_apply")
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 

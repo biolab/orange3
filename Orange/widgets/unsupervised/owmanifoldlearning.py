@@ -269,9 +269,7 @@ class OWManifoldLearning(OWWidget):
             output_box, self, "n_components", 1, 10, label="Components:",
             alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
-        self.apply_button = gui.auto_commit(
-            self.controlArea, self, "auto_apply", "&Apply",
-            box=False, commit=self.apply)
+        self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
 
     def manifold_method_changed(self):
         self.params_widget.hide()

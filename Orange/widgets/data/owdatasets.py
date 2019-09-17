@@ -234,7 +234,7 @@ class OWDataSets(OWWidget):
         )
         self.mainArea.layout().addWidget(self.splitter)
         self.controlArea.layout().addStretch(10)
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Data")
+        gui.auto_send(self.controlArea, self, "auto_commit")
 
         proxy = QSortFilterProxyModel()
         proxy.setFilterKeyColumn(-1)

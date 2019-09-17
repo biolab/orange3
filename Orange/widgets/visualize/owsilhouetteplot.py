@@ -153,9 +153,7 @@ class OWSilhouettePlot(widget.OWWidget):
         # Thunk the call to commit to call conditional commit
         gui.checkBox(box, self, "add_scores", "Add silhouette scores",
                      callback=lambda: self.commit())
-        gui.auto_commit(
-            box, self, "auto_commit", "Commit",
-            auto_label="Auto commit", box=False)
+        gui.auto_send(box, self, "auto_commit", box=False)
         # Ensure that the controlArea is not narrower than buttonsArea
         self.controlArea.layout().addWidget(self.buttonsArea)
 

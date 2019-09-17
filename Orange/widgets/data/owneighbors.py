@@ -86,8 +86,7 @@ class OWNeighbors(OWWidget):
             # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
             callback=lambda: self.apply())
 
-        self.apply_button = gui.auto_commit(
-            self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
+        self.apply_button = gui.auto_apply(self.controlArea, self, commit=self.apply)
 
     def _set_label_text(self, name):
         data = getattr(self, name)

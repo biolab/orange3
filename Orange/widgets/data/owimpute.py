@@ -245,10 +245,7 @@ class OWImpute(OWWidget):
 
         self.variable_button_group = button_group
 
-        box = gui.auto_commit(
-            self.controlArea, self, "autocommit", "Apply",
-            orientation=Qt.Horizontal,
-            checkbox_label="Apply automatically")
+        box = gui.auto_apply(self.controlArea, self, "autocommit")
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 

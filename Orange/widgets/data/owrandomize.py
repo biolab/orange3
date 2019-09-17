@@ -67,9 +67,7 @@ class OWRandomize(OWWidget):
             box, self, "random_seed", "Replicable shuffling",
             callback=self._shuffle_check_changed)
 
-        self.apply_button = gui.auto_commit(
-            self.controlArea, self, "auto_apply", "&Apply",
-            box=False, commit=self.apply)
+        self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
 
     @property
     def parts(self):

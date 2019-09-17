@@ -215,9 +215,7 @@ class OWSelectRows(widget.OWWidget):
         gui.rubber(self.buttonsArea.layout())
         layout.addWidget(self.buttonsArea, 1, 0)
 
-        acbox = gui.auto_commit(
-            None, self, "auto_commit", label="Send", orientation=Qt.Horizontal,
-            checkbox_label="Send automatically")
+        acbox = gui.auto_send(None, self, "auto_commit")
         layout.addWidget(acbox, 1, 1)
 
         self.set_data(None)

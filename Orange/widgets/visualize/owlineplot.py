@@ -503,8 +503,7 @@ class OWLinePlot(OWWidget):
         plot_gui.box_zoom_select(self.controlArea)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit",
-                        "Send Selection", "Send Automatically")
+        gui.auto_send(self.controlArea, self, "auto_commit")
 
     def __show_profiles_changed(self):
         self.check_display_options()

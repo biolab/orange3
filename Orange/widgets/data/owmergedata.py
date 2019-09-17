@@ -264,8 +264,7 @@ class OWMergeData(widget.OWWidget):
         box = gui.vBox(self.controlArea, box="Row matching")
         box.layout().addWidget(self.attr_boxes)
 
-        gui.auto_commit(self.controlArea, self, "auto_apply", "&Apply",
-                        box=False)
+        gui.auto_apply(self.controlArea, self, box=False)
         # connect after wrapping self.commit with gui.auto_commit!
         self.attr_boxes.vars_changed.connect(self.commit)
         self.settingsAboutToBePacked.connect(self.store_combo_state)

@@ -934,8 +934,7 @@ class OWPaintData(OWWidget):
             tBox, self, "Reset to Input Data", self.reset_to_input)
         self.btResetToInput.setDisabled(True)
 
-        gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send")
+        gui.auto_send(self.controlArea, self, "autocommit")
 
         # main area GUI
         viewbox = PaintViewBox(enableMouse=False)

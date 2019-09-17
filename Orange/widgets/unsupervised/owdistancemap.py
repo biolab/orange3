@@ -338,8 +338,7 @@ class OWDistanceMap(widget.OWWidget):
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         self.controlArea.layout().addStretch()
 
-        gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send Selected")
+        gui.auto_send(self.controlArea, self, "autocommit")
 
         self.view = pg.GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)

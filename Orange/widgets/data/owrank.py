@@ -291,7 +291,7 @@ class OWRank(OWWidget):
 
         selMethBox.layout().addLayout(grid)
 
-        gui.auto_commit(selMethBox, self, "auto_apply", "Send", box=False)
+        gui.auto_send(selMethBox, self, "auto_apply", box=False)
 
         self.resize(690, 500)
 

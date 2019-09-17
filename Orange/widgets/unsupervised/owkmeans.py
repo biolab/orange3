@@ -215,9 +215,8 @@ class OWKMeans(widget.OWWidget):
             sb, self, "max_iterations", controlWidth=60, valueType=int,
             validator=QIntValidator(), callback=self.invalidate)
 
-        self.apply_button = gui.auto_commit(
-            self.buttonsArea, self, "auto_commit", "Apply", box=None,
-            commit=self.commit)
+        self.apply_button = gui.auto_apply(self.buttonsArea, self, "auto_commit", box=None,
+                                           commit=self.commit)
         gui.rubber(self.controlArea)
 
         box = gui.vBox(self.mainArea, box="Silhouette Scores")
