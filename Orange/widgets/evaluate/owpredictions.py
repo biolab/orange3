@@ -305,7 +305,7 @@ class OWPredictions(OWWidget):
             name = learner_name(pred.predictor)
             head = QStandardItem(name)
             #            head.setData(key, Qt.UserRole)
-            row = [head]
+            row = [head, QStandardItem("N/A"), QStandardItem("N/A")]
             results = self.predictors[inputid].results
             if isinstance(results, str):
                 head.setToolTip(results)
