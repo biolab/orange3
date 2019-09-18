@@ -147,7 +147,7 @@ def leaf_indices(tree):
     return [leaf.value.index for leaf in hierarchical.leaves(tree)]
 
 
-def palette_gradient(colors, discrete=False):
+def palette_gradient(colors):
     n = len(colors)
     stops = np.linspace(0.0, 1.0, n, endpoint=True)
     gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]

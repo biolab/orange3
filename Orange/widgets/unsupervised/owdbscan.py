@@ -1,9 +1,7 @@
 import sys
 
 import numpy as np
-from scipy import spatial
 from AnyQt.QtWidgets import QApplication
-from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QColor
 from sklearn.metrics import pairwise_distances
 
