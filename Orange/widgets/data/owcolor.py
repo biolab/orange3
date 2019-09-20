@@ -1,9 +1,10 @@
 """
 Widget for assigning colors to variables
 """
+from itertools import chain
 
 import numpy as np
-from AnyQt.QtCore import Qt, QSize, QAbstractTableModel
+from AnyQt.QtCore import Qt, QSize, QAbstractTableModel, QModelIndex
 from AnyQt.QtGui import QColor, QFont, QImage, QBrush, qRgb
 from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView
 
@@ -16,6 +17,23 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 ColorRole = next(gui.OrangeUserRole)
+
+
+class AttrDesc:
+    def __init__(self, var, name=None, colors=None, values=None):
+        self.var = var
+        self.name = name
+        self.colors = colors
+        self.values = values
+
+    def get_name(self):
+        return self.name or self.var.name
+
+    def get_colors(self):
+        return self.colors or self.var.colors
+
+    def get_values(self):
+        return self.values or self.var.values
 
 
 # noinspection PyMethodOverriding
@@ -41,10 +59,10 @@ class ColorTableModel(QAbstractTableModel):
         self.variables = variables
         self.modelReset.emit()
 
-    def rowCount(self, parent):
+    def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else self.n_rows()
 
-    def columnCount(self, parent):
+    def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else self.n_columns()
 
     def n_rows(self):
@@ -55,7 +73,7 @@ class ColorTableModel(QAbstractTableModel):
         # Only valid for the first column
         row = index.row()
         if role in (Qt.DisplayRole, Qt.EditRole):
-            return self.variables[row].name
+            return self.variables[row].get_name()
         if role == Qt.FontRole:
             font = QFont()
             font.setBold(True)
@@ -83,28 +101,25 @@ class DiscColorTableModel(ColorTableModel):
     # pylint: disable=missing-docstring
     def n_columns(self):
         return bool(self.variables) and \
-               1 + max(len(var.values) for var in self.variables)
+               1 + max(len(row.var.values) for row in self.variables)
 
     def data(self, index, role=Qt.DisplayRole):
         # pylint: disable=too-many-return-statements
         row, col = index.row(), index.column()
         if col == 0:
             return ColorTableModel.data(self, index, role)
-        var = self.variables[row]
-        if col > len(var.values):
+        desc = self.variables[row]
+        if col > len(desc.var.values):
             return None
         if role in (Qt.DisplayRole, Qt.EditRole):
-            return var.values[col - 1]
-        try:
-            color = var.colors[col - 1]
-        except (AttributeError, IndexError):
-            return None
+            return desc.get_values()[col - 1]
+        color = desc.get_colors()[col - 1]
         if role == Qt.DecorationRole:
             return QColor(*color)
         if role == Qt.ToolTipRole:
             return self._encode_color(color)
         if role == ColorRole:
-            return var.colors[col - 1]
+            return color
         return None
 
     # noinspection PyMethodOverriding
@@ -112,10 +127,15 @@ class DiscColorTableModel(ColorTableModel):
         row, col = index.row(), index.column()
         if col == 0:
             return ColorTableModel.setData(self, index, value, role)
+        desc = self.variables[row]
         if role == ColorRole:
-            self.variables[row].set_color(col - 1, value[:3])
+            if not desc.colors:
+                desc.colors = desc.var.colors.tolist()
+            desc.colors[col - 1] = value[:3]
         elif role == Qt.EditRole:
-            self.variables[row].values[col - 1] = value
+            if not desc.values:
+                desc.values = list(desc.var.values)
+            desc.values[col - 1] = value
         else:
             return False
         self.dataChanged.emit(index, index)
@@ -139,7 +159,8 @@ class ContColorTableModel(ColorTableModel):
 
         def _column1():
             if role == Qt.DecorationRole:
-                continuous_palette = ContinuousPaletteGenerator(*var.colors)
+                continuous_palette = \
+                    ContinuousPaletteGenerator(*desc.get_colors())
                 line = continuous_palette.getRGB(np.arange(0, 1, 1 / 256))
                 data = np.arange(0, 256, dtype=np.int8). \
                     reshape((1, 256)). \
@@ -150,10 +171,11 @@ class ContColorTableModel(ColorTableModel):
                 img.data = data
                 return img
             if role == Qt.ToolTipRole:
-                return "{} - {}".format(self._encode_color(var.colors[0]),
-                                        self._encode_color(var.colors[1]))
+                colors = desc.get_colors()
+                return f"{self._encode_color(colors[0])} " \
+                       f"- {self._encode_color(colors[1])}"
             if role == ColorRole:
-                return var.colors
+                return desc.get_colors()
             return None
 
         def _column2():
@@ -166,7 +188,7 @@ class ContColorTableModel(ColorTableModel):
             return None
 
         row, col = index.row(), index.column()
-        var = self.variables[row]
+        desc = self.variables[row]
         if 0 <= col <= 2:
             return [_column0, _column1, _column2][col]()
 
@@ -183,9 +205,9 @@ class ContColorTableModel(ColorTableModel):
         return True
 
     def copy_to_all(self, index):
-        colors = self.variables[index.row()].colors
-        for row in range(self.n_rows()):
-            self.variables[row].colors = colors
+        colors = self.variables[index.row()].get_colors()
+        for desc in self.variables:
+            desc.colors = colors
         self.dataChanged.emit(self.index(0, 1), self.index(self.n_rows(), 1))
 
 
@@ -199,6 +221,7 @@ class ColorTable(QTableView):
         self.verticalHeader().hide()
         self.setShowGrid(False)
         self.setSelectionMode(QTableView.NoSelection)
+        self.setEditTriggers(QTableView.NoEditTriggers)
         self.setItemDelegate(HorizontalGridDelegate())
         self.setModel(model)
 
@@ -296,8 +319,8 @@ class OWColor(widget.OWWidget):
 
     settingsHandler = settings.PerfectDomainContextHandler(
         match_values=settings.PerfectDomainContextHandler.MATCH_VALUES_ALL)
-    disc_data = settings.ContextSetting([])
-    cont_data = settings.ContextSetting([])
+    disc_colors = settings.ContextSetting([])
+    cont_colors = settings.ContextSetting([])
     color_settings = settings.Setting(None)
     selected_schema_index = settings.Setting(0)
     auto_apply = settings.Setting(True)
@@ -308,8 +331,8 @@ class OWColor(widget.OWWidget):
         super().__init__()
         self.data = None
         self.orig_domain = self.domain = None
-        self.disc_colors = []
-        self.cont_colors = []
+        self.disc_dict = {}
+        self.cont_dict = {}
 
         box = gui.hBox(self.controlArea, "Discrete Variables")
         self.disc_model = DiscColorTableModel()
@@ -334,19 +357,6 @@ class OWColor(widget.OWWidget):
     def sizeHint():
         return QSize(500, 570)
 
-    def _create_proxies(self, variables):
-        part_vars = []
-        for var in variables:
-            if var.is_discrete or var.is_continuous:
-                var = var.make_proxy()
-                if var.is_discrete:
-                    var.values = var.values[:]
-                    self.disc_colors.append(var)
-                else:
-                    self.cont_colors.append(var)
-            part_vars.append(var)
-        return part_vars
-
     @Inputs.data
     def set_data(self, data):
         """Handle data input signal"""
@@ -356,53 +366,58 @@ class OWColor(widget.OWWidget):
         if data is None:
             self.data = self.domain = None
         else:
-            domain = self.orig_domain = data.domain
-            domain = Orange.data.Domain(self._create_proxies(domain.attributes),
-                                        self._create_proxies(domain.class_vars),
-                                        self._create_proxies(domain.metas))
-            self.openContext(data)
-            self.data = data.transform(domain)
-            self.disc_model.set_data(self.disc_colors)
-            self.cont_model.set_data(self.cont_colors)
-            self.disc_view.resizeColumnsToContents()
-            self.cont_view.resizeColumnsToContents()
+            self.data = data
+            for var in chain(data.domain.variables, data.domain.metas):
+                if var.is_discrete:
+                    self.disc_colors.append(AttrDesc(var))
+                elif var.is_continuous:
+                    self.cont_colors.append(AttrDesc(var))
+
+        self.disc_model.set_data(self.disc_colors)
+        self.cont_model.set_data(self.cont_colors)
+        self.disc_view.resizeColumnsToContents()
+        self.cont_view.resizeColumnsToContents()
+        self.openContext(data)
+        self.disc_dict = {k.var.name: k for k in self.disc_colors}
+        self.cont_dict = {k.var.name: k for k in self.cont_colors}
         self.unconditional_commit()
-
-    def storeSpecificSettings(self):
-        # Store the colors that were changed -- but not others
-        self.current_context.disc_data = \
-            [(var.name, var.values, "colors" in var.attributes and var.colors)
-             for var in self.disc_colors]
-        self.current_context.cont_data = \
-            [(var.name, "colors" in var.attributes and var.colors)
-             for var in self.cont_colors]
-
-    def retrieveSpecificSettings(self):
-        disc_data = getattr(self.current_context, "disc_data", ())
-        for var, (name, values, colors) in zip(self.disc_colors, disc_data):
-            var.name = name
-            var.values = values[:]
-            if colors is not False:
-                var.colors = colors
-        cont_data = getattr(self.current_context, "cont_data", ())
-        for var, (name, colors) in zip(self.cont_colors, cont_data):
-            var.name = name
-            if colors is not False:
-                var.colors = colors
 
     def _on_data_changed(self, *args):
         self.commit()
 
     def commit(self):
-        self.Outputs.data.send(self.data)
+        def make(vars):
+            new_vars = []
+            for var in vars:
+                source = self.disc_dict if var.is_discrete else self.cont_dict
+                desc = source.get(var.name)
+                if desc:
+                    name = desc.get_name()
+                    if var.is_discrete:
+                        var = var.copy(name=name, values=desc.get_values())
+                    else:
+                        var = var.copy(name=name)
+                    var.colors = desc.colors
+                new_vars.append(var)
+            return new_vars
+
+        if self.data is None:
+            self.Outputs.data.send(None)
+            return
+
+        dom = self.data.domain
+        new_domain = Orange.data.Domain(
+            make(dom.attributes), make(dom.class_vars), make(dom.metas))
+        new_data = self.data.transform(new_domain)
+        self.Outputs.data.send(new_data)
 
     def send_report(self):
         """Send report"""
-        def _report_variables(variables, orig_variables):
+        def _report_variables(variables):
             from Orange.widgets.report import colored_square as square
 
             def was(n, o):
-                return n if n == o else "{} (was: {})".format(n, o)
+                return n if n == o else f"{n} (was: {o})"
 
             # definition of td element for continuous gradient
             # with support for pre-standard css (needed at least for Qt 4.8)
@@ -420,36 +435,36 @@ class OWColor(widget.OWWidget):
                 '"></span></td>'
 
             rows = ""
-            for var, ovar in zip(variables, orig_variables):
+            for var in variables:
                 if var.is_discrete:
+                    desc = self.disc_dict[var.name]
                     values = "    \n".join(
                         "<td>{} {}</td>".
-                        format(square(*var.colors[i]), was(value, ovalue))
-                        for i, (value, ovalue) in
-                        enumerate(zip(var.values, ovar.values)))
+                        format(square(*color), was(value, old_value))
+                        for color, value, old_value in
+                        zip(desc.get_colors(), desc.get_values(), var.values))
                 elif var.is_continuous:
-                    col = var.colors
+                    desc = self.cont_dict[var.name]
+                    col = desc.get_colors()
                     colors = col[0][:3] + ("black, " * col[2], ) + col[1][:3]
                     values = cont_tpl.format(*colors * len(defs))
                 else:
                     continue
-                name = was(var.name, ovar.name)
+                names = was(desc.get_name(), desc.var.name)
                 rows += '<tr style="height: 2em">\n' \
                         '  <th style="text-align: right">{}</th>{}\n</tr>\n'. \
-                    format(name, values)
+                    format(names, values)
             return rows
 
         if not self.data:
             return
-        domain = self.data.domain
-        orig_domain = self.orig_domain
+        dom = self.data.domain
         sections = (
-            (name, _report_variables(vars, ovars))
-            for name, vars, ovars in (
-                ("Features", domain.attributes, orig_domain.attributes),
-                ("Outcome" + "s" * (len(domain.class_vars) > 1),
-                 domain.class_vars, orig_domain.class_vars),
-                ("Meta attributes", domain.metas, orig_domain.metas)))
+            (name, _report_variables(vars))
+            for name, vars in (
+                ("Features", dom.attributes),
+                ("Outcome" + "s" * (len(dom.class_vars) > 1), dom.class_vars),
+                ("Meta attributes", dom.metas)))
         table = "".join("<tr><th>{}</th></tr>{}".format(name, rows)
                         for name, rows in sections if rows)
         if table:

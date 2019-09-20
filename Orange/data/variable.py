@@ -696,13 +696,15 @@ class DiscreteVariable(Variable):
     def colors(self):
         if self._colors is not None:
             colors = np.array(self._colors)
+        elif not self.values:
+            colors = np.zeros((0, 3))  # to match additional colors in vstacks
         else:
             from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
             default = tuple(ColorPaletteGenerator.palette(self))
             colors = self.attributes.get('colors', ())
             colors = tuple(hex_to_color(color) for color in colors) \
                     + default[len(colors):]
-        colors = np.array(colors)
+            colors = np.array(colors)
         colors.flags.writeable = False
         return colors
 
