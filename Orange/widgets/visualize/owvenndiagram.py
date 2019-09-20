@@ -57,7 +57,7 @@ class OWVennDiagram(widget.OWWidget):
     selection: list
 
     # Selected disjoint subset indices
-    selection = settings.Setting([])
+    selection = settings.Setting([], schema_only=True)
     #: Stored input set hints
     #: {(index, inputname, attributes): (selectedattrname, itemsettitle)}
     #: The 'selectedattrname' can be None
@@ -210,6 +210,10 @@ class OWVennDiagram(widget.OWWidget):
         del self._queue[:]
 
         self._createDiagram()
+        # If autocommit is enabled, _createDiagram already outputs data
+        # If not, call unconditional_commit from here
+        if not self.autocommit:
+            self.unconditional_commit()
         if self.data:
             self.infolabel.setText(f"{len(self.data)} datasets on input.\n")
         else:

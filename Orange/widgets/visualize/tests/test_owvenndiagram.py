@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from unittest.mock import patch
 from collections import defaultdict
 
 import numpy as np
@@ -180,6 +181,13 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, self.data[50:], 2)
         self.send_signal(self.signal_name, self.data[:0], 3)
 
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_commit') as commit:
+            self.widget.autocommit = False
+            commit.reset_mock()
+            self.send_signal(self.signal_name, self.data[:100], 1)
+            commit.assert_called()
+
 
 class GroupTableIndicesTest(unittest.TestCase):
 
@@ -269,3 +277,7 @@ class TestVennUtilities(unittest.TestCase):
 
         copied = copy_descriptor(var, "cux")
         self.assertEqual(copied.name, "cux")
+
+
+if __name__ == "__main__":
+    unittest.main()

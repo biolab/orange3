@@ -211,7 +211,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
     def test_plot_once(self):
         """Test if data is plotted only once but committed on every input change"""
         self.widget.setup_plot = Mock()
-        self.widget.commit = Mock()
+        self.widget.commit = self.widget.unconditional_commit = Mock()
 
         self.send_signal(self.widget.Inputs.data, self.data)
         # TODO: The base widget immediately calls `setup_plot` and `commit`

@@ -1,4 +1,5 @@
-from unittest.mock import Mock
+import unittest
+from unittest.mock import Mock, patch
 
 from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -57,3 +58,14 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         # false positive, pylint: disable=unsubscriptable-object
         self.assertEqual(
             self.widget.set_corner_text.call_args[0][1], "\na\nb\nc")
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_commit') as commit:
+            self.widget.auto_commit = False
+            commit.reset_mock()
+            self.send_signal(self.widget.Inputs.data, self.data)
+            commit.assert_called()
+
+
+if __name__ == "__main__":
+    unittest.main()

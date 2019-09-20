@@ -474,7 +474,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             self.setup_plot()
         else:
             self.graph.update_point_props()
-        self.commit()
+        self.unconditional_commit()
 
     def _handle_subset_data(self):
         self.Warning.subset_independent.clear()

@@ -536,7 +536,7 @@ class OWDataTable(OWWidget):
             self.selected_cols = []
 
         self.set_selection()
-        self.commit()
+        self.unconditional_commit()
 
     def _setup_table_view(self, view, data):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)

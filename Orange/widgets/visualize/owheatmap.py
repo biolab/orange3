@@ -427,6 +427,7 @@ class OWHeatMap(widget.OWWidget):
 
     palette_index = settings.Setting(_default_palette_index)
     column_label_pos = settings.Setting(PositionTop)
+    selected_rows = settings.Setting(None, schema_only=True)
 
     auto_commit = settings.Setting(True)
 
@@ -454,6 +455,7 @@ class OWHeatMap(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        self.__pending_selection = self.selected_rows
 
         # set default settings
         self.space_x = 10
@@ -719,7 +721,14 @@ class OWHeatMap(widget.OWWidget):
             self.openContext(self.data)
             if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
+
         self.update_heatmaps()
+        if data is not None and self.__pending_selection is not None:
+            self.selection_manager.select_rows(self.__pending_selection)
+            self.selected_rows = self.__pending_selection
+            self.__pending_selection = None
+
+        self.unconditional_commit()
 
     def update_heatmaps(self):
         if self.data is not None:
@@ -739,13 +748,13 @@ class OWHeatMap(widget.OWWidget):
                 self.selected_rows = []
         else:
             self.clear()
-        self.commit()
 
     def update_merge(self):
         self.kmeans_model = None
         self.merge_indices = None
         if self.data is not None and self.merge_kmeans:
             self.update_heatmaps()
+            self.commit()
 
     def _make_parts(self, data, group_var=None, group_key=None):
         """
@@ -1393,9 +1402,11 @@ class OWHeatMap(widget.OWWidget):
 
     def update_sorting_examples(self):
         self.update_heatmaps()
+        self.commit()
 
     def update_clustering_examples(self):
         self.update_heatmaps()
+        self.commit()
 
     def update_legend(self):
         for item in self.heatmap_scene.items():

@@ -264,6 +264,13 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_commit') as commit:
+            self.widget.auto_commit = False
+            commit.reset_mock()
+            self.send_signal(self.widget.Inputs.data, self.titanic)
+            commit.assert_called()
+
 
 class TestSegmentsIntersection(unittest.TestCase):
     def test_ccw(self):

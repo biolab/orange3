@@ -547,7 +547,7 @@ class OWLinePlot(OWWidget):
 
         self.openContext(data)
         self.setup_plot()
-        self.commit()
+        self.unconditional_commit()
 
     def check_data(self):
         def error(err):
