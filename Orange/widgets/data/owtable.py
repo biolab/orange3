@@ -28,6 +28,7 @@ from AnyQt.QtCore import pyqtSlot as Slot
 import Orange.data
 from Orange.data.storage import Storage
 from Orange.data.table import Table
+from Orange.data import StringVariable
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
@@ -55,6 +56,7 @@ class RichTableModel(TableModel):
 
         self._header_flags = RichTableModel.Name
         self._continuous = [var.is_continuous for var in self.vars]
+        self._string = [isinstance(var, StringVariable) for var in self.vars]
         labels = []
         for var in self.vars:
             if isinstance(var, Orange.data.Variable):
@@ -63,6 +65,7 @@ class RichTableModel(TableModel):
             {label for label in labels if not label.startswith("_")}))
 
     def data(self, index, role=Qt.DisplayRole,
+             _Qt_DisplayRole=Qt.DisplayRole,
              # for faster local lookup
              _BarRole=gui.TableBarItem.BarRole):
         # pylint: disable=arguments-differ
@@ -76,6 +79,9 @@ class RichTableModel(TableModel):
                 return (val - dist.min) / (dist.max - dist.min)
             else:
                 return None
+        if role == _Qt_DisplayRole and self._string[index.column()]:
+            val = super().data(index, TableModel.ValueRole)
+            return str(val)[:100]
         elif role == Qt.TextAlignmentRole and self._continuous[index.column()]:
             return Qt.AlignRight | Qt.AlignVCenter
         else:
