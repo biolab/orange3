@@ -11,11 +11,13 @@ from datetime import datetime, timezone
 from io import StringIO
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
 from Orange.data.io import CSVReader
 from Orange.tests.base import create_pickling_tests
+from Orange.util import OrangeDeprecationWarning
 
 
 def is_on_path(name):
@@ -40,21 +42,15 @@ def is_on_path(name):
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
 class VariableTest:
-    def setUp(self):
-        self.varcls._clear_all_caches()
-
     def test_dont_pickle_anonymous_variables(self):
-        self.assertRaises(pickle.PickleError, pickle.dumps, self.varcls())
-
-    def test_dont_store_anonymous_variables(self):
-        self.varcls()
-        self.assertEqual(len(self.varcls._all_vars), 0)
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertRaises(pickle.PickleError, pickle.dumps, self.varcls())
 
     def test_dont_make_anonymous_variables(self):
-        self.assertRaises(ValueError, self.varcls.make, "")
+        self.assertWarns(OrangeDeprecationWarning, self.varcls.make, "")
 
     def test_copy_copies_attributes(self):
-        var = self.varcls()
+        var = self.varcls("x")
         var.attributes["a"] = "b"
         var2 = var.copy(compute_value=None)
         self.assertIn("a", var2.attributes)
@@ -89,45 +85,45 @@ class TestVariable(unittest.TestCase):
         self.assertRaises(RuntimeError, self.var.repr_val, None)
 
     def test_properties(self):
-        a = ContinuousVariable()
+        a = ContinuousVariable("y")
         self.assertTrue(a.is_continuous)
         self.assertFalse(a.is_discrete)
         self.assertFalse(a.is_string)
         self.assertTrue(a.is_primitive())
 
-        a = DiscreteVariable()
+        a = DiscreteVariable("d")
         self.assertFalse(a.is_continuous)
         self.assertTrue(a.is_discrete)
         self.assertFalse(a.is_string)
         self.assertTrue(a.is_primitive())
 
-        a = StringVariable()
+        a = StringVariable("s")
         self.assertFalse(a.is_continuous)
         self.assertFalse(a.is_discrete)
         self.assertTrue(a.is_string)
         self.assertFalse(a.is_primitive())
 
     def test_properties_as_predicates(self):
-        a = ContinuousVariable()
+        a = ContinuousVariable("y")
         self.assertTrue(Variable.is_continuous(a))
         self.assertFalse(Variable.is_discrete(a))
         self.assertFalse(Variable.is_string(a))
         self.assertTrue(Variable.is_primitive(a))
 
-        a = StringVariable()
+        a = StringVariable("s")
         self.assertFalse(Variable.is_continuous(a))
         self.assertFalse(Variable.is_discrete(a))
         self.assertTrue(Variable.is_string(a))
         self.assertFalse(Variable.is_primitive(a))
 
     def test_strange_eq(self):
-        a = ContinuousVariable()
-        b = ContinuousVariable()
+        a = ContinuousVariable("a")
+        b = ContinuousVariable("a")
         self.assertEqual(a, a)
-        self.assertNotEqual(a, b)
+        self.assertEqual(a, b)
+        self.assertIsNot(a, b)
         self.assertNotEqual(a, "somestring")
-        # It the next assert ever fails (randomly) blame @janezd
-        self.assertNotEqual(hash(a), hash(b))
+        self.assertEqual(hash(a), hash(b))
 
 
 def variabletest(varcls):
@@ -150,53 +146,6 @@ class TestDiscreteVariable(VariableTest):
         # TODO: with self.assertRaises(ValueError): var.to_val(2)
         with self.assertRaises(ValueError):
             var.to_val("G")
-
-    def test_find_compatible_unordered(self):
-        gend = DiscreteVariable("gend", values=["F", "M"])
-
-        find_comp = DiscreteVariable._find_compatible
-        self.assertIs(find_comp("gend"), gend)
-        self.assertIs(find_comp("gend", values=["F"]), gend)
-        self.assertIs(find_comp("gend", values=["F", "M"]), gend)
-        self.assertIs(find_comp("gend", values=["M", "F"]), gend)
-
-        # Incompatible since it is ordered
-        self.assertIsNone(find_comp("gend", values=["M", "F"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["F", "M"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["F"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["M"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["N"], ordered=True))
-
-        # Incompatible due to empty intersection
-        self.assertIsNone(find_comp("gend", values=["N"]))
-
-        # Compatible, adds values
-        self.assertIs(find_comp("gend", values=["F", "N", "R"]), gend)
-        self.assertEqual(gend.values, ["F", "M", "N", "R"])
-
-    def test_find_compatible_ordered(self):
-        abc = DiscreteVariable("abc", values="abc", ordered=True)
-
-        find_comp = DiscreteVariable._find_compatible
-
-        self.assertIsNone(find_comp("abc"))
-        self.assertIsNone(find_comp("abc", list("abc")))
-        self.assertIs(find_comp("abc", ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a"], ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a", "b"], ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a", "b", "c"], ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a", "b", "c", "d"], ordered=True), abc)
-
-        abd = DiscreteVariable.make(
-            "abc", values=["a", "d", "b"], ordered=True)
-        self.assertIsNot(abc, abd)
-
-        abc_un = DiscreteVariable.make("abc", values=["a", "b", "c"])
-        self.assertIsNot(abc_un, abc)
-
-        self.assertIs(
-            find_comp("abc", values=["a", "d", "b"], ordered=True), abd)
-        self.assertIs(find_comp("abc", values=["a", "b", "c"]), abc_un)
 
     def test_make(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
@@ -273,21 +222,170 @@ class TestDiscreteVariable(VariableTest):
         self.assertSequenceEqual(d2.values, d2_values)
         self.assertSequenceEqual(d1c.values, d1.values)
         s = pickle.dumps(d2)
-        DiscreteVariable._clear_all_caches()  # [comment redacted]
         d1 = DiscreteVariable("A", values=["one", "two"])
         d2 = pickle.loads(s)
-        self.assertSequenceEqual(d2.values, ["two", "one", "three"])
+        self.assertSequenceEqual(d2.values, ["one", "two", "three"])
+        self.assertSequenceEqual(d1.values, ["one", "two"])
+
+    def test_mapper_dense(self):
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        self.assertEqual(mapper(0), 2)
+        self.assertTrue(np.isnan(mapper(1)))
+        self.assertEqual(mapper(2), 1)
+
+        self.assertEqual(mapper(0.), 2)
+        self.assertTrue(np.isnan(mapper(1.)))
+        self.assertEqual(mapper(2.), 1)
+        self.assertTrue(np.isnan(mapper(np.nan)))
+
+        self.assertEqual(mapper("a"), 2)
+        self.assertTrue(np.isnan(mapper("b")))
+        self.assertEqual(mapper("c"), 1)
+
+        arr = np.array([0, 0, 2, 1, 0, 1, np.nan])
+        self.assertIsNot(mapper(arr), arr)
+        np.testing.assert_array_equal(
+            mapper(arr), np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+        # dtype=int can have no nans; isnan shouldn't crash the mapper
+
+        arr_int = arr[:-1].astype(int)
+        self.assertIsNot(mapper(arr_int), arr_int)
+        np.testing.assert_array_equal(
+            mapper(arr_int), np.array([2, 2, 1, np.nan, 2, np.nan]))
+
+        arr_obj = arr.astype(object)
+        self.assertIsNot(mapper(arr_obj), arr_obj)
+        np.testing.assert_array_equal(
+            mapper(arr_obj), np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+
+        arr_list = list(arr)
+        self.assertIsNot(mapper(arr_list), arr_list)
+        self.assertTrue(all(x == y or (x != x and y != y) for x, y in zip(
+            mapper(arr_list), [2, 2, 1, np.nan, 2, np.nan, np.nan])))
+
+        self.assertTrue(x == y or (x != x and y != y) for x, y in zip(
+            mapper(tuple(arr)),
+            (2, 2, 1, np.nan, 2, np.nan, np.nan)))
+
+        self.assertRaises(ValueError, mapper, object())
+
+    def test_mapper_sparse(self):
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        arr = np.array([0, 0, 2, 1, 0, 1, np.nan])
+
+        # 0 does map to 0 -> convert to dense
+        marr = mapper(sp.csr_matrix(arr))
+        self.assertIsInstance(marr, np.ndarray)
+        np.testing.assert_array_equal(
+            marr,
+            np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+
+        marr = mapper(sp.csr_matrix(arr))
+        self.assertIsInstance(marr, np.ndarray)
+        np.testing.assert_array_equal(
+            marr,
+            np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
+
+        # 0 maps to 0 -> keep sparse
+        acd = DiscreteVariable("a", values=list("acd"))
+        mapper = acd.get_mapper_from(abc)
+
+        arr_csr = sp.csr_matrix(arr)
+        marr = mapper(arr_csr)
+        self.assertIsNot(arr_csr, marr)
+        self.assertTrue(sp.isspmatrix_csr(marr))
+        np.testing.assert_array_equal(
+            marr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan]]))
+
+        arr_csc = sp.csc_matrix(arr)
+        marr = mapper(arr_csc)
+        self.assertIsNot(arr_csc, marr)
+        self.assertTrue(sp.isspmatrix_csc(marr))
+        np.testing.assert_array_equal(
+            marr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan]]))
+
+    def test_mapper_inplace(self):
+        s = list(range(7))
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        arr = np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr, np.array([[2, 2, 1, np.nan, 2, np.nan, np.nan], s]).T)
+
+        self.assertRaises(ValueError, mapper, sp.csr_matrix(arr), 0)
+        self.assertRaises(ValueError, mapper, [1, 2, 3], 0)
+        self.assertRaises(ValueError, mapper, 1, 0)
+
+        acd = DiscreteVariable("a", values=list("acd"))
+        mapper = acd.get_mapper_from(abc)
+
+        arr = np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr, np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
+
+        arr = sp.csr_matrix(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
+
+        arr = sp.csc_matrix(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
+        mapper(arr, 0)
+        np.testing.assert_array_equal(
+            arr.todense(),
+            np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
+
+    def test_mapper_dim_check(self):
+        abc = DiscreteVariable("a", values=list("abc"))
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        self.assertRaises(ValueError, mapper, np.zeros((7, 2)))
+        self.assertRaises(ValueError, mapper, sp.csr_matrix(np.zeros((7, 2))))
+        self.assertRaises(ValueError, mapper, sp.csc_matrix(np.zeros((7, 2))))
+
+    def test_mapper_from_no_values(self):
+        abc = DiscreteVariable("a", values=[])
+        dca = DiscreteVariable("a", values=list("dca"))
+        mapper = dca.get_mapper_from(abc)
+
+        arr = np.full(7, np.nan)
+        self.assertIsNot(mapper(arr), arr)
+        np.testing.assert_array_equal(mapper(arr), arr)
+
+        arr_csr = sp.csr_matrix(arr)
+        self.assertIsNot(arr_csr, mapper(arr_csr))
+        np.testing.assert_array_equal(
+            mapper(arr_csr).todense(), np.atleast_2d(arr))
+
+        arr_csc = sp.csc_matrix(arr)
+        self.assertIsNot(arr_csc, mapper(arr_csc))
+        np.testing.assert_array_equal(
+            mapper(arr_csc).todense(), np.atleast_2d(arr))
+
+        self.assertRaises(ValueError, mapper, sp.csr_matrix(arr), 0)
+        self.assertRaises(ValueError, mapper, sp.csc_matrix(arr), 0)
 
 
 @variabletest(ContinuousVariable)
 class TestContinuousVariable(VariableTest):
     def test_make(self):
-        ContinuousVariable._clear_cache()
         age1 = ContinuousVariable.make("age")
         age2 = ContinuousVariable.make("age")
-        age3 = ContinuousVariable("age")
         self.assertEqual(age1, age2)
-        self.assertNotEqual(age1, age3)
+        self.assertIsNot(age1, age2)
 
     def test_decimals(self):
         a = ContinuousVariable("a", 4)
@@ -464,16 +562,10 @@ PickleStringVariable = create_pickling_tests(
 
 
 class VariableTestMakeProxy(unittest.TestCase):
-    def setUp(self):
-        Variable._clear_all_caches()
-
     def test_make_proxy_disc(self):
         abc = DiscreteVariable("abc", values="abc", ordered=True)
         abc1 = abc.make_proxy()
         abc2 = abc1.make_proxy()
-        self.assertIs(abc.master, abc)
-        self.assertIs(abc1.master, abc)
-        self.assertIs(abc2.master, abc)
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)
@@ -481,16 +573,13 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(hash(abc1), hash(abc2))
 
         abcx = DiscreteVariable("abc", values="abc", ordered=True)
-        self.assertNotEqual(abc, abcx)
+        self.assertEqual(abc, abcx)
+        self.assertIsNot(abc, abcx)
 
         abc1p = pickle.loads(pickle.dumps(abc1))
-        self.assertIs(abc1p.master, abc)
         self.assertEqual(abc1p, abc)
 
         abcp, abc1p, abc2p = pickle.loads(pickle.dumps((abc, abc1, abc2)))
-        self.assertIs(abcp.master, abcp.master)
-        self.assertIs(abc1p.master, abcp.master)
-        self.assertIs(abc2p.master, abcp.master)
         self.assertEqual(abcp, abc1p)
         self.assertEqual(abcp, abc2p)
         self.assertEqual(abc1p, abc2p)
@@ -499,9 +588,6 @@ class VariableTestMakeProxy(unittest.TestCase):
         abc = ContinuousVariable("abc")
         abc1 = abc.make_proxy()
         abc2 = abc1.make_proxy()
-        self.assertIs(abc.master, abc)
-        self.assertIs(abc1.master, abc)
-        self.assertIs(abc2.master, abc)
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)

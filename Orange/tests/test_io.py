@@ -98,7 +98,6 @@ class TestLocate(unittest.TestCase):
 class TestReader(unittest.TestCase):
 
     def setUp(self):
-        Variable._clear_all_caches()
         data.table.dataset_dirs.append(test_dirname())
 
     def tearDown(self):

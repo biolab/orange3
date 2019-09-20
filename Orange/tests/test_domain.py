@@ -20,7 +20,6 @@ from Orange.util import OrangeDeprecationWarning
 
 
 def create_domain(*ss):
-    Variable._clear_all_caches()
     vars = dict(
         age=ContinuousVariable(name="AGE"),
         gender=DiscreteVariable(name="Gender", values=["M", "F"]),
@@ -443,7 +442,6 @@ class TestDomainInit(unittest.TestCase):
         np.testing.assert_almost_equal(pre1.X, pre2.X)
 
     def test_unpickling_recreates_known_domains(self):
-        Variable._clear_all_caches()
         domain = Domain([])
         unpickled_domain = pickle.loads(pickle.dumps(domain))
         self.assertTrue(hasattr(unpickled_domain, '_known_domains'))

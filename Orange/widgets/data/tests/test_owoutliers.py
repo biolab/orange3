@@ -45,3 +45,7 @@ class TestOWOutliers(WidgetTest):
         data = Table(a)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertIsNot(self.get_output(self.widget.Outputs.inliers), None)
+
+
+if __name__ == "__main__":
+    unittest.main()

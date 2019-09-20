@@ -366,7 +366,7 @@ class Table(Sequence, Storage):
                     cached = _conversion_cache.get((id(domain), id(source)))
                     if cached:
                         return cached
-                if domain == source.domain:
+                if domain is source.domain:
                     table = cls.from_table_rows(source, row_indices)
                     # assure resulting domain is the instance passed on input
                     table.domain = domain
@@ -694,14 +694,15 @@ class Table(Sequence, Storage):
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
                 if 0 <= col_idx < len(self.domain.attributes):
-                    return Value(var, self.X[row_idx, col_idx])
+                    val = self.X[row_idx, col_idx]
                 elif col_idx >= len(self.domain.attributes):
-                    return Value(
-                        var,
-                        self._Y[row_idx,
-                                col_idx - len(self.domain.attributes)])
-                elif col_idx < 0:
-                    return Value(var, self.metas[row_idx, -1 - col_idx])
+                    val = self._Y[row_idx,
+                                  col_idx - len(self.domain.attributes)]
+                else:
+                    val = self.metas[row_idx, -1 - col_idx]
+                if isinstance(col_idx, DiscreteVariable) and var is not col_idx:
+                    val = col_idx.get_mapper_from(var)(val)
+                return Value(var, val)
             else:
                 row_idx = [row_idx]
 
@@ -753,6 +754,9 @@ class Table(Sequence, Storage):
                     raise ValueError("Invalid number of values")
             else:
                 col_idx, values = [col_idx], [value]
+            if isinstance(col_idx, DiscreteVariable) \
+                    and self.domain[col_idx] != col_idx:
+                values = self.domain[col_idx].get_mapper_from(col_idx)(values)
             for val, col_idx in zip(values, col_idx):
                 if not isinstance(val, Integral):
                     val = self.domain[col_idx].to_val(val)
@@ -1023,15 +1027,23 @@ class Table(Sequence, Storage):
             else:
                 return M, False
 
-        if not isinstance(index, Integral):
-            index = self.domain.index(index)
-        if index >= 0:
-            if index < self.X.shape[1]:
-                return rx(self.X[:, index])
-            else:
-                return rx(self._Y[:, index - self.X.shape[1]])
+        if isinstance(index, Integral):
+            col_index = index
         else:
-            return rx(self.metas[:, -1 - index])
+            col_index = self.domain.index(index)
+        if col_index >= 0:
+            if col_index < self.X.shape[1]:
+                col = rx(self.X[:, col_index])
+            else:
+                col = rx(self._Y[:, col_index - self.X.shape[1]])
+        else:
+            col = rx(self.metas[:, -1 - col_index])
+
+        if isinstance(index, DiscreteVariable) \
+                and index.values != self.domain[col_index].values:
+            col = index.get_mapper_from(self.domain[col_index])(col[0]), col[1]
+            col[0].flags.writeable = False
+        return col
 
     def _filter_is_defined(self, columns=None, negate=False):
         # structure of function is obvious; pylint: disable=too-many-branches

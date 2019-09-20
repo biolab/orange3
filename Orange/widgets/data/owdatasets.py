@@ -581,9 +581,9 @@ class _FetchState:
 
 def variable_icon(name):
     if name == "categorical":
-        return gui.attributeIconDict[Orange.data.DiscreteVariable()]
+        return gui.attributeIconDict[Orange.data.DiscreteVariable("x")]
     elif name == "numeric":  # ??
-        return gui.attributeIconDict[Orange.data.ContinuousVariable()]
+        return gui.attributeIconDict[Orange.data.ContinuousVariable("x")]
     else:
         return gui.attributeIconDict[-1]
 

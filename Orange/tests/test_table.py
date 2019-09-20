@@ -21,7 +21,6 @@ from Orange.data.table import _optimize_indices
 
 class TableTestCase(unittest.TestCase):
     def setUp(self):
-        Variable._clear_all_caches()
         data.table.dataset_dirs.append(test_dirname())
 
     def tearDown(self):

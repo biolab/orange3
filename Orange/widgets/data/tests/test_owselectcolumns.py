@@ -15,8 +15,8 @@ from Orange.widgets.data.owselectcolumns \
 from Orange.widgets.data.owrank import OWRank
 from Orange.widgets.widget import AttributeList
 
-Continuous = vartype(ContinuousVariable())
-Discrete = vartype(DiscreteVariable())
+Continuous = vartype(ContinuousVariable("c"))
+Discrete = vartype(DiscreteVariable("d"))
 
 
 class TestSelectAttributesDomainContextHandler(TestCase):

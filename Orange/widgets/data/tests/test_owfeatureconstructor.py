@@ -116,8 +116,9 @@ class FeatureConstructorTest(unittest.TestCase):
     @staticmethod
     def test_construct_numeric_names():
         data = Table("iris")
-        data.domain.attributes[0].name = "0.1"
-        data.domain.attributes[1].name = "1"
+        newdomain = Domain((ContinuousVariable("0.1"), ContinuousVariable("1"))
+                           + data.domain.attributes[2:], data.domain.class_var)
+        data = Table.from_numpy(newdomain, data.X, data.Y)
         desc = PyListModel(
             [ContinuousDescriptor(name="S",
                                   expression="_0_1 + _1",
@@ -127,8 +128,6 @@ class FeatureConstructorTest(unittest.TestCase):
         ndata = Table(Domain(nv, None), data)
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
-        # pylint: disable=protected-access
-        ContinuousVariable._clear_all_caches()
 
 
 class TestTools(unittest.TestCase):

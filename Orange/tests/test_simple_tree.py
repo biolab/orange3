@@ -43,7 +43,6 @@ class TestSimpleTreeLearner(unittest.TestCase):
         self.data_reg = Orange.data.Table.from_numpy(domain_reg, X, y_reg)
 
     def test_SimpleTree_classification(self):
-        Orange.data.Variable._clear_all_caches()
         lrn = SimpleTreeCls()
         clf = lrn(self.data_cls)
         p = clf(self.data_cls, clf.Probs)

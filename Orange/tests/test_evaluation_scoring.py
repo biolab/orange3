@@ -320,7 +320,7 @@ class TestAUC(unittest.TestCase):
         probabilities[0, :, 1] = predicted[0]
         probabilities[0, :, 0] = 1 - predicted[0]
         results = Results(
-            nmethods=1, domain=Domain([], [DiscreteVariable(values='01')]),
+            nmethods=1, domain=Domain([], [DiscreteVariable("x", values='01')]),
             actual=actual, predicted=predicted)
         results.probabilities = probabilities
         return AUC(results)[0]

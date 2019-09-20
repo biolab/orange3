@@ -140,7 +140,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         """Test if empty clusters are not displayed and warning is shown"""
         data = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3])
 
-        table = Table.from_numpy(Domain([ContinuousVariable()]),
+        table = Table.from_numpy(Domain([ContinuousVariable("y")]),
                                  data.reshape((9, 1)))
         self.widget.controls.merge_kmeans.setChecked(True)
 
@@ -156,7 +156,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         # Before 201906 thresholds modified the palette and decreased
         # the number of colors used.
         data = np.arange(1000).reshape(-1, 1)
-        table = Table.from_numpy(Domain([ContinuousVariable()]), data)
+        table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.threshold_high = 0.05
         self.widget.update_color_schema()

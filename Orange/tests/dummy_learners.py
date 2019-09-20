@@ -1,6 +1,7 @@
 import numpy as np
 
 from Orange.classification import SklLearner, SklModel
+from Orange.classification.base_classification import SklModelClassification
 
 
 class DummyLearner(SklLearner):
@@ -12,16 +13,21 @@ class DummyLearner(SklLearner):
         return DummyPredictor(value, prob)
 
 
-class DummyPredictor(SklModel):
+class DummySklModel:
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
 
     def predict(self, X):
-        rows = X.shape[0]
-        value = np.tile(self.value, rows)
-        probs = np.tile(self.prob, (rows, 1))
-        return value, probs
+        return np.tile(self.value, len(X))
+
+    def predict_proba(self, X):
+        return np.tile(self.prob, (len(X), 1))
+
+
+class DummyPredictor(SklModelClassification):
+    def __init__(self, value, prob):
+        SklModel.__init__(self, DummySklModel(value, prob))
 
 
 class DummyMulticlassLearner(SklLearner):
@@ -44,13 +50,18 @@ class DummyMulticlassLearner(SklLearner):
         return DummyMulticlassPredictor(value, prob)
 
 
-class DummyMulticlassPredictor(SklModel):
+class DummySklMulticlassModel:
     def __init__(self, value, prob):
         self.value = value
         self.prob = prob
 
     def predict(self, X):
-        rows = X.shape[0]
-        value = np.tile(self.value, (rows, 1))
-        probs = np.tile(self.prob, (rows, 1, 1))
-        return value, probs
+        return np.tile(self.value, (len(X), 1))
+
+    def predict_proba(self, X):
+        return np.tile(self.prob, (len(X), 1, 1))
+
+
+class DummyMulticlassPredictor(SklModelClassification):
+    def __init__(self, value, prob):
+        SklModel.__init__(self, DummySklMulticlassModel(value, prob))

@@ -150,3 +150,13 @@ class TestRemover(unittest.TestCase):
                           if c.is_discrete], [['1', '2', '3'], ['2']])
         self.assertDictEqual(attr_res,
                              {'removed': 0, 'reduced': 1, 'sorted': 0})
+
+    def test_remove_mapping(self):
+        data = Table("iris")
+        x = np.vstack((data.X[:50], data.X[100:]))
+        y = np.hstack((data.Y[:50], data.Y[100:]))
+        data = Table.from_numpy(data.domain, x, y)
+        remover = Remove(class_flags=Remove.RemoveUnusedValues)
+        cleaned = remover(data)
+        np.testing.assert_array_equal(cleaned.Y[:50], 0)
+        np.testing.assert_array_equal(cleaned.Y[50:], 1)

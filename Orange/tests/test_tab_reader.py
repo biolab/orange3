@@ -22,7 +22,6 @@ def read_tab_file(filename):
 class TestTabReader(unittest.TestCase):
 
     def setUp(self):
-        DiscreteVariable._clear_cache()
         self.data = Table([[1, 2, 3]])
 
     def test_read_easy(self):
@@ -154,19 +153,6 @@ class TestTabReader(unittest.TestCase):
         file = io.StringIO(samplefile)
         t2 = read_tab_file(file)
         self.assertEqual(t1.domain[0], t2.domain[0])
-
-    def test_reuse_variables(self):
-        file1 = io.StringIO("\n".join("xd dbac"))
-        t1 = read_tab_file(file1)
-
-        self.assertSequenceEqual(t1.domain['x'].values, 'abcd')
-        np.testing.assert_almost_equal(t1.X.ravel(), [3, 1, 0, 2])
-
-        file2 = io.StringIO("\n".join("xd hgacb"))
-        t2 = read_tab_file(file2)
-
-        self.assertSequenceEqual(t2.domain['x'].values, 'abcdgh')
-        np.testing.assert_almost_equal(t2.X.ravel(), [5, 4, 0, 2, 1])
 
     def test_renaming(self):
         simplefile = """\

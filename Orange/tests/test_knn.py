@@ -33,7 +33,7 @@ class TestKNNLearner(unittest.TestCase):
     def test_random(self):
         nrows, ncols = 1000, 5
         x = np.random.randint(-20, 51, (nrows, ncols))
-        y = np.random.randint(-2, 3, (nrows, 1))
+        y = np.random.randint(0, 9, (nrows, 1))
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
         attr = (ContinuousVariable('Feature 1'),
@@ -41,7 +41,7 @@ class TestKNNLearner(unittest.TestCase):
                 ContinuousVariable('Feature 3'),
                 ContinuousVariable('Feature 4'),
                 ContinuousVariable('Feature 5'))
-        class_vars = (DiscreteVariable('Target 1'),)
+        class_vars = (DiscreteVariable('Target 1', values=list("abcdefghij")),)
         domain = Domain(attr, class_vars)
         t = Table(domain, x1, y1)
         lrn = KNNLearner()
