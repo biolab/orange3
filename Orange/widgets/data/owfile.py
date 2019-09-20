@@ -133,6 +133,18 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     class NoFileSelected:
         pass
 
+    UserAdviceMessages = [
+        widget.Message(
+            "Use CSV File Import widget for advanced options "
+            "for comma-separated files",
+            "use-csv-file-import"),
+        widget.Message(
+            "This widget loads only tabular data. Use other widgets to load "
+            "other data types like models, distance matrices and networks.",
+            "other-data-types"
+        )
+    ]
+
     def __init__(self):
         super().__init__()
         RecentPathsWComboMixin.__init__(self)
