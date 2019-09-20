@@ -54,6 +54,19 @@ class OUserSettingsDialog(UserSettingsDialog):
 
         form = QFormLayout()
 
+        box = QWidget()
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        cb = QCheckBox(
+            self.tr("Enable notifications"), self,
+            toolTip="Pull and display a notification feed."
+        )
+        self.bind(cb, "checked", "notifications/check-notifications")
+
+        layout.addWidget(cb)
+        box.setLayout(layout)
+        form.addRow(self.tr("On startup"), box)
+
         notifs = QWidget(self, objectName="notifications-group")
         notifs.setLayout(QVBoxLayout())
         notifs.layout().setContentsMargins(0, 0, 0, 0)
@@ -68,8 +81,8 @@ class OUserSettingsDialog(UserSettingsDialog):
                                 "We'll only send you the highlights.")
         cb3 = QCheckBox(self.tr("New features"), self,
                         toolTip="Show notifications about new features in Orange when a new "
-                                "version is downloaded and installed, should the new version "
-                                "entail notable updates.")
+                                "version is downloaded and installed,\n"
+                                "should the new version entail notable updates.")
 
         self.bind(cb1, "checked", "notifications/announcements")
         self.bind(cb2, "checked", "notifications/blog")
