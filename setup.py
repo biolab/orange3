@@ -40,19 +40,19 @@ FULLVERSION = VERSION
 DESCRIPTION = 'Orange, a component-based data mining framework.'
 README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
 LONG_DESCRIPTION = open(README_FILE).read()
-LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown',
+LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown'
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'http://orange.biolab.si/'
 LICENSE = 'GPLv3+'
 
-KEYWORDS = (
+KEYWORDS = [
     'data mining',
     'machine learning',
     'artificial intelligence',
-)
+]
 
-CLASSIFIERS = (
+CLASSIFIERS = [
     'Development Status :: 4 - Beta',
     'Environment :: X11 Applications :: Qt',
     'Environment :: Console',
@@ -68,7 +68,7 @@ CLASSIFIERS = (
     'Intended Audience :: Education',
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
-)
+]
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
 
