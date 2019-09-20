@@ -239,9 +239,7 @@ class OWDiscretize(widget.OWWidget):
 
         self.controlbox = controlbox
 
-        box = gui.auto_commit(self.controlArea, self, "autosend", "Apply",
-                              orientation=Qt.Horizontal,
-                              checkbox_label="Apply automatically")
+        box = gui.auto_apply(self.controlArea, self, "autosend")
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 

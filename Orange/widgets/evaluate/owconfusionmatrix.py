@@ -140,8 +140,7 @@ class OWConfusionMatrix(widget.OWWidget):
                      "Probabilities",
                      callback=self._invalidate)
 
-        gui.auto_commit(self.outputbox, self, "autocommit",
-                        "Send Selected", "Send Automatically", box=False)
+        gui.auto_apply(self.outputbox, self, "autocommit", box=False)
 
         self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
 

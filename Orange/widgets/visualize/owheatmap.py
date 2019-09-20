@@ -147,7 +147,7 @@ def leaf_indices(tree):
     return [leaf.value.index for leaf in hierarchical.leaves(tree)]
 
 
-def palette_gradient(colors, discrete=False):
+def palette_gradient(colors):
     n = len(colors)
     stops = np.linspace(0.0, 1.0, n, endpoint=True)
     gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]
@@ -569,12 +569,7 @@ class OWHeatMap(widget.OWWidget):
                      callback=self.__aspect_mode_changed)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea,
-                        self,
-                        "auto_commit",
-                        "Send Selection",
-                        "Send Automatically"
-                       )
+        gui.auto_send(self.controlArea, self, "auto_commit")
 
         # Scene with heatmap
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)

@@ -437,8 +437,7 @@ class OWDataTable(OWWidget):
             None, self, "Restore Original Order", callback=self.restore_order,
             tooltip="Show rows in the original order", autoDefault=False)
         self.buttonsArea.layout().insertWidget(0, reset)
-        gui.auto_commit(self.buttonsArea, self, "auto_commit",
-                        "Send Selected Rows", "Send Automatically")
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # GUI with tabs
         self.tabs = gui.tabWidget(self.mainArea)

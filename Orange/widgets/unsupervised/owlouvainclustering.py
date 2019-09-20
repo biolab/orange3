@@ -139,10 +139,9 @@ class OWLouvainClustering(widget.OWWidget):
             "Smaller values tend to produce more clusters and larger values "
             "retrieve less clusters."
         )
-        self.apply_button = gui.auto_commit(
-            self.controlArea, self, "auto_commit", "Apply", box=None,
-            commit=lambda: self.commit(),
-            callback=lambda: self._on_auto_commit_changed(),
+        self.apply_button = gui.auto_apply(
+            self.controlArea, self, "auto_commit", box=None,
+            commit=lambda: self.commit(), callback=lambda: self._on_auto_commit_changed()
         )  # type: QWidget
 
     def _preprocess_data(self):

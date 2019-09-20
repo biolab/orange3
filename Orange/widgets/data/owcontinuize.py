@@ -94,7 +94,7 @@ class OWContinuize(widget.OWWidget):
             btnLabels=self.value_ranges,
             callback=self.settings_changed)
 
-        gui.auto_commit(self.buttonsArea, self, "autosend", "Apply", box=False)
+        gui.auto_apply(self.buttonsArea, self, "autosend", box=False)
 
         self.data = None
 

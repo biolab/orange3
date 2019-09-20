@@ -86,7 +86,7 @@ class OWDistances(OWWidget):
         _, metric = METRICS[self.metric_idx]
         self.normalization_check.setEnabled(metric.supports_normalization)
 
-        gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
+        gui.auto_apply(self.controlArea, self, "autocommit")
         self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
     @Inputs.data

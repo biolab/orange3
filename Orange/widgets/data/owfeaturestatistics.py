@@ -754,10 +754,7 @@ class OWFeatureStatistics(widget.OWWidget):
         self.cb_color_var.activated.connect(self.__color_var_changed)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(
-            self.buttonsArea, self, 'auto_commit', 'Send Selected Rows',
-            'Send Automatically',
-        )
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # Main area
         self.model = FeatureStatisticsTableModel(parent=self)

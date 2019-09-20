@@ -100,8 +100,7 @@ class OWPCA(widget.OWWidget):
 
         self.controlArea.layout().addStretch()
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Apply",
-                        checkbox_label="Apply automatically")
+        gui.auto_apply(self.controlArea, self, "auto_commit")
 
         self.plot = SliderGraph(
             "Principal Components", "Proportion of variance",

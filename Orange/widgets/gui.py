@@ -21,7 +21,7 @@ from orangewidget.gui import (
     miscellanea, setLayout, separator, rubber, widgetBox, hBox, vBox,
     indentedBox, widgetLabel, label, spin, doubleSpin, checkBox, lineEdit,
     button, toolButton, radioButtons, radioButtonsInBox, appendRadioButton,
-    hSlider, labeledSlider, valueSlider, auto_commit,
+    hSlider, labeledSlider, valueSlider, auto_commit, auto_send, auto_apply,
 
     # ItemDataRole's
     BarRatioRole, BarBrushRole, SortOrderRole, LinkRole,
@@ -68,7 +68,7 @@ __all__ = [
     "checkBox", "lineEdit", "button", "toolButton",
     "radioButtons", "radioButtonsInBox", "appendRadioButton",
     "hSlider", "labeledSlider", "valueSlider",
-    "auto_commit", "ProgressBar",
+    "auto_commit", "auto_send", "auto_apply", "ProgressBar",
     "VerticalLabel", "tabWidget", "createTabPage", "table", "tableItem",
     "VisibleHeaderSectionContextEventFilter", "checkButtonOffsetHint",
     "toolButtonSizeHint", "FloatSlider", "ControlGetter",  "VerticalScrollArea",
