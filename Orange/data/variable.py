@@ -451,7 +451,7 @@ class Variable(Reprable, metaclass=VariableMeta):
         # Use make to unpickle variables.
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
-    def copy(self, compute_value=None, name=None, **kwargs):
+    def copy(self, compute_value=None, *, name=None, **kwargs):
         var = type(self)(name=name or self.name,
                          compute_value=compute_value or self.compute_value,
                          sparse=self.sparse, **kwargs)
@@ -565,7 +565,7 @@ class ContinuousVariable(Variable):
 
     str_val = repr_val
 
-    def copy(self, compute_value=None, name=None, **kwargs):
+    def copy(self, compute_value=None, *, name=None, **kwargs):
         var = super().copy(compute_value=compute_value, name=name,
                            number_of_decimals=self.number_of_decimals,
                            **kwargs)
@@ -789,22 +789,7 @@ class DiscreteVariable(Variable):
                                self.values, self.ordered), \
             __dict__
 
-    @staticmethod
-    def ordered_values(values):
-        """
-        Return a sorted list of values. If there exists a prescribed order for
-        such set of values, it is returned. Otherwise, values are sorted
-        alphabetically.
-        """
-        for presorted in DiscreteVariable.presorted_values:
-            if values == set(presorted):
-                return presorted
-        try:
-            return sorted(values, key=float)
-        except ValueError:
-            return sorted(values)
-
-    def copy(self, compute_value=None, name=None, **_):
+    def copy(self, compute_value=None, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
                             values=self.values, ordered=self.ordered)
 
@@ -920,7 +905,7 @@ class TimeVariable(ContinuousVariable):
         self.have_date = have_date
         self.have_time = have_time
 
-    def copy(self, compute_value=None, name=None, **_):
+    def copy(self, compute_value=None, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
                             have_date=self.have_date, have_time=self.have_time)
 
