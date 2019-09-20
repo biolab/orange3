@@ -16,7 +16,7 @@
 	.st10{fill:none;stroke:#333333;stroke-width:2;stroke-linejoin:round;stroke-miterlimit:10;}
 </style>
 <g>
-	<rect x="6.9" y="11.1" class="st2" width="34.3" height="25.7"/>
+	<rect x="6.9" y="11.1" class="st2" width="34.3" height="25.7" fill="white"/>
 	<line class="st2" x1="6.9" y1="19.7" x2="41.1" y2="19.7"/>
 	<line class="st2" x1="6.9" y1="28.3" x2="41.1" y2="28.3"/>
 	<line class="st2" x1="15.4" y1="11.1" x2="15.4" y2="36.9"/>
