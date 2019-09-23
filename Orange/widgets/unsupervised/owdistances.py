@@ -5,7 +5,8 @@ import bottleneck as bn
 import Orange.data
 import Orange.misc
 from Orange import distance
-from Orange.widgets import gui, settings
+from Orange.widgets import gui
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -27,6 +28,10 @@ METRICS = [
 ]
 
 
+class InterruptException(Exception):
+    pass
+
+
 class DistanceRunner:
     @staticmethod
     def run(data: Orange.data.Table, metric: distance, normalized_dist: bool,
@@ -34,12 +39,16 @@ class DistanceRunner:
         if data is None:
             return None
 
+        def callback(i: float) -> bool:
+            state.set_progress_value(i)
+            if state.is_interruption_requested():
+                raise InterruptException
+
         state.set_status("Calculating...")
+        kwargs = {"axis": 1 - axis, "impute": True, "callback": callback}
         if metric.supports_normalization and normalized_dist:
-            return metric(data, axis=1 - axis, impute=True,
-                          normalize=True)
-        else:
-            return metric(data, axis=1 - axis, impute=True)
+            kwargs["normalize"] = True
+        return metric(data, **kwargs)
 
 
 class OWDistances(OWWidget, ConcurrentWidgetMixin):
@@ -56,14 +65,14 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
     settings_version = 2
 
-    axis = settings.Setting(0)        # type: int
-    metric_idx = settings.Setting(0)  # type: int
+    axis = Setting(0)        # type: int
+    metric_idx = Setting(0)  # type: int
 
     #: Use normalized distances if the metric supports it.
     #: The default is `True`, expect when restoring from old pre v2 settings
     #: (see `migrate_settings`).
-    normalized_dist = settings.Setting(True)  # type: bool
-    autocommit = settings.Setting(True)       # type: bool
+    normalized_dist = Setting(True)  # type: bool
+    autocommit = Setting(True)       # type: bool
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
@@ -187,13 +196,15 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         assert isinstance(result, Orange.misc.DistMatrix) or result is None
         self.Outputs.distances.send(result)
 
-    def on_exception(self, e):
-        if isinstance(e, ValueError):
-            self.Error.distances_value_error(e)
-        elif isinstance(e, MemoryError):
+    def on_exception(self, ex):
+        if isinstance(ex, ValueError):
+            self.Error.distances_value_error(ex)
+        elif isinstance(ex, MemoryError):
             self.Error.distances_memory_error()
+        elif isinstance(ex, InterruptException):
+            pass
         else:
-            raise e
+            raise ex
 
     def onDeleteWidget(self):
         self.shutdown()

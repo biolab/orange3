@@ -26,8 +26,8 @@ class EuclideanRowsModel(FittedDistanceModel):
     def __init__(self, attributes, impute, normalize,
                  continuous, discrete,
                  means, stdvars, dist_missing2_cont,
-                 dist_missing_disc, dist_missing2_disc):
-        super().__init__(attributes, 1, impute)
+                 dist_missing_disc, dist_missing2_disc, callback):
+        super().__init__(attributes, 1, impute, callback)
         self.normalize = normalize
         self.continuous = continuous
         self.discrete = discrete
@@ -93,8 +93,9 @@ class EuclideanColumnsModel(FittedDistanceModel):
     Means are used as offsets for normalization, and two deviations are
     used for scaling.
     """
-    def __init__(self, attributes, impute, normalize, means, stdvars):
-        super().__init__(attributes, 0, impute)
+    def __init__(self, attributes, impute, normalize, means, stdvars,
+                 callback=None):
+        super().__init__(attributes, 0, impute, callback)
         self.normalize = normalize
         self.means = means
         self.vars = stdvars
@@ -135,9 +136,11 @@ class Euclidean(FittedDistance):
     fallback = SklDistance('euclidean')
     rows_model_type = EuclideanRowsModel
 
-    def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+    def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False,
+                callback=None):
         # pylint: disable=arguments-differ
-        return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
+        return super().__new__(cls, e1, e2, axis, impute, callback,
+                               normalize=normalize)
 
     def get_continuous_stats(self, column):
         """
@@ -180,7 +183,8 @@ class Euclidean(FittedDistance):
         if self.normalize and not stdvars.all():
             raise ValueError("some columns are constant")
         return EuclideanColumnsModel(
-            attributes, self.impute, self.normalize, means, stdvars)
+            attributes, self.impute, self.normalize, means, stdvars,
+            self.callback)
 
 
 class ManhattanRowsModel(FittedDistanceModel):
@@ -193,8 +197,8 @@ class ManhattanRowsModel(FittedDistanceModel):
     def __init__(self, attributes, impute, normalize,
                  continuous, discrete,
                  medians, mads, dist_missing2_cont,
-                 dist_missing_disc, dist_missing2_disc):
-        super().__init__(attributes, 1, impute)
+                 dist_missing_disc, dist_missing2_disc, callback=None):
+        super().__init__(attributes, 1, impute, callback)
         self.normalize = normalize
         self.continuous = continuous
         self.discrete = discrete
@@ -250,8 +254,9 @@ class ManhattanColumnsModel(FittedDistanceModel):
     used for scaling.
     """
 
-    def __init__(self, attributes, impute, normalize, medians, mads):
-        super().__init__(attributes, 0, impute)
+    def __init__(self, attributes, impute, normalize, medians, mads,
+                 callback=None):
+        super().__init__(attributes, 0, impute, callback)
         self.normalize = normalize
         self.medians = medians
         self.mads = mads
@@ -271,9 +276,11 @@ class Manhattan(FittedDistance):
     fallback = SklDistance('manhattan')
     rows_model_type = ManhattanRowsModel
 
-    def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+    def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False,
+                callback=None):
         # pylint: disable=arguments-differ
-        return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
+        return super().__new__(cls, e1, e2, axis, impute, callback,
+                               normalize=normalize)
 
     def get_continuous_stats(self, column):
         """
@@ -310,7 +317,8 @@ class Manhattan(FittedDistance):
                 "some columns have zero absolute distance from median, "
                 "or no values")
         return ManhattanColumnsModel(
-            attributes, self.impute, self.normalize, medians, mads)
+            attributes, self.impute, self.normalize, medians, mads,
+            self.callback)
 
 
 class Cosine(FittedDistance):

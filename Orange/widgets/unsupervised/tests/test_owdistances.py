@@ -5,8 +5,9 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from Orange.data import Table, Domain
 from Orange import distance
+from Orange.data import Table, Domain
+from Orange.misc import DistMatrix
 from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS, \
     DistanceRunner
 from Orange.widgets.tests.base import WidgetTest
@@ -17,28 +18,51 @@ class TestDistanceRunner(unittest.TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.iris = Table("iris")[::5]
+        cls.iris.X[0, 2] = np.nan
+        cls.iris.X[1, 3] = np.nan
+        cls.iris.X[2, 1] = np.nan
+        cls.zoo = Table("zoo")[::5]
+        cls.zoo.X[0, 2] = np.nan
+        cls.zoo.X[1, 3] = np.nan
+        cls.zoo.X[2, 1] = np.nan
 
     def test_run(self):
-        for _, metric in METRICS:
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+        for name, metric in METRICS:
+            data = self.iris
+            if not metric.supports_missing:
+                data = distance.impute(data)
+            elif name == "Jaccard":
+                data = self.zoo
+
             # between rows, normalized
-            dist1 = DistanceRunner.run(self.iris, metric, True, 0, Mock())
-            dist2 = metric(self.iris, axis=1, impute=True, normalize=True)
-            np.testing.assert_array_equal(dist1, dist2)
+            dist1 = DistanceRunner.run(data, metric, True, 0, state)
+            dist2 = metric(data, axis=1, impute=True, normalize=True)
+            self.assertDistMatrixEqual(dist1, dist2)
 
             # between rows, not normalized
-            dist1 = DistanceRunner.run(self.iris, metric, False, 0, Mock())
-            dist2 = metric(self.iris, axis=1, impute=True, normalize=False)
-            np.testing.assert_array_equal(dist1, dist2)
+            dist1 = DistanceRunner.run(data, metric, False, 0, state)
+            dist2 = metric(data, axis=1, impute=True, normalize=False)
+            self.assertDistMatrixEqual(dist1, dist2)
 
             # between columns, normalized
-            dist1 = DistanceRunner.run(self.iris, metric, True, 1, Mock())
-            dist2 = metric(self.iris, axis=0, impute=True, normalize=True)
-            np.testing.assert_array_equal(dist1, dist2)
+            dist1 = DistanceRunner.run(data, metric, True, 1, state)
+            dist2 = metric(data, axis=0, impute=True, normalize=True)
+            self.assertDistMatrixEqual(dist1, dist2)
 
             # between columns, not normalized
-            dist1 = DistanceRunner.run(self.iris, metric, False, 1, Mock())
-            dist2 = metric(self.iris, axis=0, impute=True, normalize=False)
-            np.testing.assert_array_equal(dist1, dist2)
+            dist1 = DistanceRunner.run(data, metric, False, 1, state)
+            dist2 = metric(data, axis=0, impute=True, normalize=False)
+            self.assertDistMatrixEqual(dist1, dist2)
+
+    def assertDistMatrixEqual(self, dist1, dist2):
+        self.assertIsInstance(dist1, DistMatrix)
+        self.assertIsInstance(dist2, DistMatrix)
+        self.assertEqual(dist1.axis, dist2.axis)
+        self.assertEqual(dist1.row_items, dist2.row_items)
+        self.assertEqual(dist1.col_items, dist2.col_items)
+        np.testing.assert_array_almost_equal(dist1, dist2)
 
 
 class TestOWDistances(WidgetTest):
@@ -59,14 +83,13 @@ class TestOWDistances(WidgetTest):
             self.widget.metrics_combo.activated.emit(i)
             self.widget.metrics_combo.setCurrentIndex(i)
             self.wait_until_stop_blocking()
-            self.send_signal(self.widget.Inputs.data, self.iris)
             if metric.supports_normalization:
                 expected = metric(self.iris, normalize=self.widget.normalized_dist)
             else:
                 expected = metric(self.iris)
 
             if metric is not distance.Jaccard:
-                np.testing.assert_array_equal(
+                np.testing.assert_array_almost_equal(
                     expected, self.get_output(self.widget.Outputs.distances))
 
     def test_error_message(self):
@@ -156,3 +179,7 @@ class TestOWDistances(WidgetTest):
         self.wait_until_stop_blocking()
         self.assertTrue(self.widget.Error.distances_value_error.is_shown())
         self.iris.X[0, 0] *= -1
+
+
+if __name__ == "__main__":
+    unittest.main()
