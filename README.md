@@ -1,9 +1,9 @@
 Orange
 ======
 
-[![Join the chat at https://gitter.im/biolab/orange3](https://badges.gitter.im/biolab/orange3.svg)](https://gitter.im/biolab/orange3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![build: passing](https://img.shields.io/travis/biolab/orange3.svg)](https://travis-ci.org/biolab/orange3)
-[![codecov](https://codecov.io/gh/biolab/orange3/branch/master/graph/badge.svg)](https://codecov.io/gh/biolab/orange3)
+[![Discord Chat](https://img.shields.io/discord/624519803914158080?style=plastic)](https://discord.gg/47gRDUQ)
+[![build: passing](https://img.shields.io/travis/biolab/orange3?style=plastic)](https://travis-ci.org/biolab/orange3)
+[![codecov](https://img.shields.io/codecov/c/github/biolab/orange3?style=plastic)](https://codecov.io/gh/biolab/orange3)
 
 [Orange] is a component-based data mining software. It includes a range of data
 visualization, exploration, preprocessing and modeling techniques. It can be
