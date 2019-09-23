@@ -677,7 +677,7 @@ class OWTestLearners(OWWidget):
 
     @Slot(float)
     def setProgressValue(self, value):
-        self.progressBarSet(value, processEvents=False)
+        self.progressBarSet(value)
 
     def __update(self):
         self.__needupdate = False
@@ -821,7 +821,7 @@ class OWTestLearners(OWWidget):
         task.future = self.__executor.submit(testfunc)
         task.future.add_done_callback(ondone)
 
-        self.progressBarInit(processEvents=None)
+        self.progressBarInit()
         self.setBlocking(True)
         self.setStatusMessage("Running")
 
@@ -838,7 +838,7 @@ class OWTestLearners(OWWidget):
             return
 
         self.setBlocking(False)
-        self.progressBarFinished(processEvents=None)
+        self.progressBarFinished()
         self.setStatusMessage("")
         result = task.future
         assert result.done()
