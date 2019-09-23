@@ -1,7 +1,7 @@
 Orange
 ======
 
-[![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/47gRDUQ)  
+[![Discord Chat](https://img.shields.io/discord/624519803914158080?style=plastic)](https://discord.gg/47gRDUQ)  
 [![build: passing](https://img.shields.io/travis/biolab/orange3.svg)](https://travis-ci.org/biolab/orange3)
 [![codecov](https://codecov.io/gh/biolab/orange3/branch/master/graph/badge.svg)](https://codecov.io/gh/biolab/orange3)
 
