@@ -1,5 +1,5 @@
-k-Means Clustering
-==================
+k-Means
+=======
 
 Groups items using the k-Means clustering algorithm.
 

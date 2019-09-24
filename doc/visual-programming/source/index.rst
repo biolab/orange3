@@ -126,6 +126,7 @@ Unsupervised
    widgets/unsupervised/mds
    widgets/unsupervised/tsne
    widgets/unsupervised/manifoldlearning
+   widgets/unsupervised/selforganizingmap
 
 
 Evaluation
