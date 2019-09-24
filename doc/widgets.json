@@ -1,0 +1,757 @@
+[
+ [
+  "Data",
+  [
+   {
+    "text": "File",
+    "doc": "visual-programming/source/widgets/data/file.md",
+    "icon": "../Orange/widgets/data/icons/File.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "file",
+     "load",
+     "read",
+     "open"
+    ]
+   },
+   {
+    "text": "CSV File Import",
+    "doc": "visual-programming/source/widgets/data/csvfileimport.md",
+    "icon": "../Orange/widgets/data/icons/CSVFile.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "file",
+     "load",
+     "read",
+     "open",
+     "csv"
+    ]
+   },
+   {
+    "text": "Datasets",
+    "doc": "visual-programming/source/widgets/data/datasets.md",
+    "icon": "../Orange/widgets/data/icons/DataSets.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "online"
+    ]
+   },
+   {
+    "text": "SQL Table",
+    "doc": "visual-programming/source/widgets/data/sqltable.md",
+    "icon": "../Orange/widgets/data/icons/SQLTable.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "load"
+    ]
+   },
+   {
+    "text": "Data Table",
+    "doc": "visual-programming/source/widgets/data/datatable.md",
+    "icon": "../Orange/widgets/data/icons/Table.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Paint Data",
+    "doc": "visual-programming/source/widgets/data/paintdata.md",
+    "icon": "../Orange/widgets/data/icons/PaintData.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "create",
+     "draw"
+    ]
+   },
+   {
+    "text": "Data Info",
+    "doc": "visual-programming/source/widgets/data/datainfo.md",
+    "icon": "../Orange/widgets/data/icons/DataInfo.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "information",
+     "inspect"
+    ]
+   },
+   {
+    "text": "Data Sampler",
+    "doc": "visual-programming/source/widgets/data/datasampler.md",
+    "icon": "../Orange/widgets/data/icons/DataSampler.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "random"
+    ]
+   },
+   {
+    "text": "Select Columns",
+    "doc": "visual-programming/source/widgets/data/selectcolumns.md",
+    "icon": "../Orange/widgets/data/icons/SelectColumns.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "filter"
+    ]
+   },
+   {
+    "text": "Select Rows",
+    "doc": "visual-programming/source/widgets/data/selectrows.md",
+    "icon": "../Orange/widgets/data/icons/SelectRows.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "filter"
+    ]
+   },
+   {
+    "text": "Pivot Table",
+    "doc": "visual-programming/source/widgets/data/pivot.md",
+    "icon": "../Orange/widgets/data/icons/Pivot.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "pivot",
+     "group",
+     "aggregate"
+    ]
+   },
+   {
+    "text": "Rank",
+    "doc": "visual-programming/source/widgets/data/rank.md",
+    "icon": "../Orange/widgets/data/icons/Rank.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Correlations",
+    "doc": "visual-programming/source/widgets/data/correlations.md",
+    "icon": "../Orange/widgets/data/icons/Correlations.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Merge Data",
+    "doc": "visual-programming/source/widgets/data/mergedata.md",
+    "icon": "../Orange/widgets/data/icons/MergeData.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "join"
+    ]
+   },
+   {
+    "text": "Concatenate",
+    "doc": "visual-programming/source/widgets/data/concatenate.md",
+    "icon": "../Orange/widgets/data/icons/Concatenate.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "append",
+     "join",
+     "extend"
+    ]
+   },
+   {
+    "text": "Select by Data Index",
+    "doc": "visual-programming/source/widgets/data/select-by-data-index.md",
+    "icon": "../Orange/widgets/data/icons/SelectByDataIndex.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Transpose",
+    "doc": "visual-programming/source/widgets/data/transpose.md",
+    "icon": "../Orange/widgets/data/icons/Transpose.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Randomize",
+    "doc": "visual-programming/source/widgets/data/randomize.md",
+    "icon": "../Orange/widgets/data/icons/Random.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Preprocess",
+    "doc": "visual-programming/source/widgets/data/preprocess.md",
+    "icon": "../Orange/widgets/data/icons/Preprocess.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "process"
+    ]
+   },
+   {
+    "text": "Apply Domain",
+    "doc": "visual-programming/source/widgets/data/applydomain.md",
+    "icon": "../Orange/widgets/data/icons/Transform.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "transform"
+    ]
+   },
+   {
+    "text": "Impute",
+    "doc": "visual-programming/source/widgets/data/impute.md",
+    "icon": "../Orange/widgets/data/icons/Impute.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "substitute",
+     "missing"
+    ]
+   },
+   {
+    "text": "Outliers",
+    "doc": "visual-programming/source/widgets/data/outliers.md",
+    "icon": "../Orange/widgets/data/icons/Outliers.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "inlier"
+    ]
+   },
+   {
+    "text": "Edit Domain",
+    "doc": "visual-programming/source/widgets/data/editdomain.md",
+    "icon": "../Orange/widgets/data/icons/EditDomain.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "rename",
+     "drop",
+     "reorder",
+     "order"
+    ]
+   },
+   {
+    "text": "Python Script",
+    "doc": "visual-programming/source/widgets/data/pythonscript.md",
+    "icon": "../Orange/widgets/data/icons/PythonScript.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "file",
+     "program"
+    ]
+   },
+   {
+    "text": "Color",
+    "doc": "visual-programming/source/widgets/data/color.md",
+    "icon": "../Orange/widgets/data/icons/Colors.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Continuize",
+    "doc": "visual-programming/source/widgets/data/continuize.md",
+    "icon": "../Orange/widgets/data/icons/Continuize.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Create Class",
+    "doc": "visual-programming/source/widgets/data/createclass.md",
+    "icon": "../Orange/widgets/data/icons/CreateClass.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Discretize",
+    "doc": "visual-programming/source/widgets/data/discretize.md",
+    "icon": "../Orange/widgets/data/icons/Discretize.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Feature Constructor",
+    "doc": "visual-programming/source/widgets/data/featureconstructor.md",
+    "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Feature Statistics",
+    "doc": "visual-programming/source/widgets/data/featurestatistics.md",
+    "icon": "../Orange/widgets/data/icons/FeatureStatistics.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Neighbors",
+    "doc": "visual-programming/source/widgets/data/neighbors.md",
+    "icon": "../Orange/widgets/data/icons/Neighbors.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Purge Domain",
+    "doc": "visual-programming/source/widgets/data/purgedomain.md",
+    "icon": "../Orange/widgets/data/icons/PurgeDomain.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "remove",
+     "delete",
+     "unused"
+    ]
+   },
+   {
+    "text": "Save Data",
+    "doc": "visual-programming/source/widgets/data/save.md",
+    "icon": "../Orange/widgets/data/icons/Save.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   }
+  ]
+ ],
+ [
+  "Visualize",
+  [
+   {
+    "text": "Tree Viewer",
+    "doc": "visual-programming/source/widgets/visualize/treeviewer.md",
+    "icon": "../Orange/widgets/visualize/icons/TreeViewer.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Box Plot",
+    "doc": "visual-programming/source/widgets/visualize/boxplot.md",
+    "icon": "../Orange/widgets/visualize/icons/BoxPlot.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "whisker"
+    ]
+   },
+   {
+    "text": "Distributions",
+    "doc": "visual-programming/source/widgets/visualize/distributions.md",
+    "icon": "../Orange/widgets/visualize/icons/Distribution.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Scatter Plot",
+    "doc": "visual-programming/source/widgets/visualize/scatterplot.md",
+    "icon": "../Orange/widgets/visualize/icons/ScatterPlot.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Line Plot",
+    "doc": "visual-programming/source/widgets/visualize/lineplot.md",
+    "icon": "../Orange/widgets/visualize/icons/LinePlot.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Sieve Diagram",
+    "doc": "visual-programming/source/widgets/visualize/sievediagram.md",
+    "icon": "../Orange/widgets/visualize/icons/SieveDiagram.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Mosaic Display",
+    "doc": "visual-programming/source/widgets/visualize/mosaicdisplay.md",
+    "icon": "../Orange/widgets/visualize/icons/MosaicDisplay.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "FreeViz",
+    "doc": "visual-programming/source/widgets/visualize/freeviz.md",
+    "icon": "../Orange/widgets/visualize/icons/Freeviz.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "viz"
+    ]
+   },
+   {
+    "text": "Linear Projection",
+    "doc": "visual-programming/source/widgets/visualize/linearprojection.md",
+    "icon": "../Orange/widgets/visualize/icons/LinearProjection.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Radviz",
+    "doc": "visual-programming/source/widgets/visualize/radviz.md",
+    "icon": "../Orange/widgets/visualize/icons/Radviz.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "viz"
+    ]
+   },
+   {
+    "text": "Heat Map",
+    "doc": "visual-programming/source/widgets/visualize/heatmap.md",
+    "icon": "../Orange/widgets/visualize/icons/Heatmap.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Venn Diagram",
+    "doc": "visual-programming/source/widgets/visualize/venndiagram.md",
+    "icon": "../Orange/widgets/visualize/icons/VennDiagram.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Silhouette Plot",
+    "doc": "visual-programming/source/widgets/visualize/silhouetteplot.md",
+    "icon": "../Orange/widgets/visualize/icons/SilhouettePlot.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Pythagorean Tree",
+    "doc": "visual-programming/source/widgets/visualize/pythagoreantree.md",
+    "icon": "../Orange/widgets/visualize/icons/PythagoreanTree.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "fractal"
+    ]
+   },
+   {
+    "text": "Pythagorean Forest",
+    "doc": "visual-programming/source/widgets/visualize/pythagoreanforest.md",
+    "icon": "../Orange/widgets/visualize/icons/PythagoreanForest.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "fractal"
+    ]
+   },
+   {
+    "text": "CN2 Rule Viewer",
+    "doc": "visual-programming/source/widgets/visualize/cn2ruleviewer.md",
+    "icon": "../Orange/widgets/visualize/icons/CN2RuleViewer.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   },
+   {
+    "text": "Nomogram",
+    "doc": "visual-programming/source/widgets/visualize/nomogram.md",
+    "icon": "../Orange/widgets/visualize/icons/Nomogram.svg",
+    "background": "#FFB7B1",
+    "keywords": []
+   }
+  ]
+ ],
+ [
+  "Model",
+  [
+   {
+    "text": "Constant",
+    "doc": "visual-programming/source/widgets/model/constant.md",
+    "icon": "../Orange/widgets/model/icons/Constant.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "majority",
+     "mean"
+    ]
+   },
+   {
+    "text": "CN2 Rule Induction",
+    "doc": "visual-programming/source/widgets/model/cn2ruleinduction.md",
+    "icon": "../Orange/widgets/model/icons/CN2RuleInduction.svg",
+    "background": "#FAC1D9",
+    "keywords": []
+   },
+   {
+    "text": "Calibrated Learner",
+    "doc": null,
+    "icon": "../Orange/widgets/model/icons/CalibratedLearner.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "calibration",
+     "threshold"
+    ]
+   },
+   {
+    "text": "kNN",
+    "doc": "visual-programming/source/widgets/model/knn.md",
+    "icon": "../Orange/widgets/model/icons/KNN.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "k nearest",
+     "knearest",
+     "neighbor",
+     "neighbour"
+    ]
+   },
+   {
+    "text": "Tree",
+    "doc": "visual-programming/source/widgets/model/tree.md",
+    "icon": "../Orange/widgets/model/icons/Tree.svg",
+    "background": "#FAC1D9",
+    "keywords": []
+   },
+   {
+    "text": "Random Forest",
+    "doc": "visual-programming/source/widgets/model/randomforest.md",
+    "icon": "../Orange/widgets/model/icons/RandomForest.svg",
+    "background": "#FAC1D9",
+    "keywords": []
+   },
+   {
+    "text": "SVM",
+    "doc": "visual-programming/source/widgets/model/svm.md",
+    "icon": "../Orange/widgets/model/icons/SVM.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "support vector machines"
+    ]
+   },
+   {
+    "text": "Linear Regression",
+    "doc": "visual-programming/source/widgets/model/linearregression.md",
+    "icon": "../Orange/widgets/model/icons/LinearRegression.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "ridge",
+     "lasso",
+     "elastic net"
+    ]
+   },
+   {
+    "text": "Logistic Regression",
+    "doc": "visual-programming/source/widgets/model/logisticregression.md",
+    "icon": "../Orange/widgets/model/icons/LogisticRegression.svg",
+    "background": "#FAC1D9",
+    "keywords": []
+   },
+   {
+    "text": "Naive Bayes",
+    "doc": "visual-programming/source/widgets/model/naivebayes.md",
+    "icon": "../Orange/widgets/model/icons/NaiveBayes.svg",
+    "background": "#FAC1D9",
+    "keywords": []
+   },
+   {
+    "text": "AdaBoost",
+    "doc": "visual-programming/source/widgets/model/adaboost.md",
+    "icon": "../Orange/widgets/model/icons/AdaBoost.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "boost"
+    ]
+   },
+   {
+    "text": "Neural Network",
+    "doc": "visual-programming/source/widgets/model/neuralnetwork.md",
+    "icon": "../Orange/widgets/model/icons/NN.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "mlp"
+    ]
+   },
+   {
+    "text": "Stochastic Gradient Descent",
+    "doc": "visual-programming/source/widgets/model/stochasticgradient.md",
+    "icon": "../Orange/widgets/model/icons/SGD.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "sgd"
+    ]
+   },
+   {
+    "text": "Stacking",
+    "doc": "visual-programming/source/widgets/model/stacking.md",
+    "icon": "../Orange/widgets/model/icons/Stacking.svg",
+    "background": "#FAC1D9",
+    "keywords": []
+   },
+   {
+    "text": "Save Model",
+    "doc": "visual-programming/source/widgets/model/savemodel.md",
+    "icon": "../Orange/widgets/model/icons/SaveModel.svg",
+    "background": "#FAC1D9",
+    "keywords": []
+   },
+   {
+    "text": "Load Model",
+    "doc": "visual-programming/source/widgets/model/loadmodel.md",
+    "icon": "../Orange/widgets/model/icons/LoadModel.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "file",
+     "open"
+    ]
+   }
+  ]
+ ],
+ [
+  "Evaluate",
+  [
+   {
+    "text": "Test and Score",
+    "doc": "visual-programming/source/widgets/evaluate/testandscore.md",
+    "icon": "../Orange/widgets/evaluate/icons/TestLearners1.svg",
+    "background": "#C3F3F3",
+    "keywords": []
+   },
+   {
+    "text": "Predictions",
+    "doc": "visual-programming/source/widgets/evaluate/predictions.md",
+    "icon": "../Orange/widgets/evaluate/icons/Predictions.svg",
+    "background": "#C3F3F3",
+    "keywords": []
+   },
+   {
+    "text": "Confusion Matrix",
+    "doc": "visual-programming/source/widgets/evaluate/confusionmatrix.md",
+    "icon": "../Orange/widgets/evaluate/icons/ConfusionMatrix.svg",
+    "background": "#C3F3F3",
+    "keywords": []
+   },
+   {
+    "text": "ROC Analysis",
+    "doc": "visual-programming/source/widgets/evaluate/rocanalysis.md",
+    "icon": "../Orange/widgets/evaluate/icons/ROCAnalysis.svg",
+    "background": "#C3F3F3",
+    "keywords": []
+   },
+   {
+    "text": "Lift Curve",
+    "doc": "visual-programming/source/widgets/evaluate/liftcurve.md",
+    "icon": "../Orange/widgets/evaluate/icons/LiftCurve.svg",
+    "background": "#C3F3F3",
+    "keywords": []
+   },
+   {
+    "text": "Calibration Plot",
+    "doc": "visual-programming/source/widgets/evaluate/calibrationplot.md",
+    "icon": "../Orange/widgets/evaluate/icons/CalibrationPlot.svg",
+    "background": "#C3F3F3",
+    "keywords": []
+   }
+  ]
+ ],
+ [
+  "Unsupervised",
+  [
+   {
+    "text": "Distance File",
+    "doc": "visual-programming/source/widgets/unsupervised/distancefile.md",
+    "icon": "../Orange/widgets/unsupervised/icons/DistanceFile.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "load",
+     "read",
+     "open"
+    ]
+   },
+   {
+    "text": "Distance Matrix",
+    "doc": "visual-programming/source/widgets/unsupervised/distancematrix.md",
+    "icon": "../Orange/widgets/unsupervised/icons/DistanceMatrix.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "t-SNE",
+    "doc": "visual-programming/source/widgets/unsupervised/tsne.md",
+    "icon": "../Orange/widgets/unsupervised/icons/TSNE.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "tsne"
+    ]
+   },
+   {
+    "text": "Distance Map",
+    "doc": "visual-programming/source/widgets/unsupervised/distancemap.md",
+    "icon": "../Orange/widgets/unsupervised/icons/DistanceMap.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "Hierarchical Clustering",
+    "doc": "visual-programming/source/widgets/unsupervised/hierarchicalclustering.md",
+    "icon": "../Orange/widgets/unsupervised/icons/HierarchicalClustering.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "k-Means",
+    "doc": "visual-programming/source/widgets/unsupervised/kmeans.md",
+    "icon": "../Orange/widgets/unsupervised/icons/KMeans.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "kmeans",
+     "clustering"
+    ]
+   },
+   {
+    "text": "Louvain Clustering",
+    "doc": "visual-programming/source/widgets/unsupervised/louvainclustering.md",
+    "icon": "../Orange/widgets/unsupervised/icons/LouvainClustering.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "DBSCAN",
+    "doc": "visual-programming/source/widgets/unsupervised/DBSCAN.md",
+    "icon": "../Orange/widgets/unsupervised/icons/DBSCAN.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "Manifold Learning",
+    "doc": "visual-programming/source/widgets/unsupervised/manifoldlearning.md",
+    "icon": "../Orange/widgets/unsupervised/icons/Manifold.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "PCA",
+    "doc": "visual-programming/source/widgets/unsupervised/PCA.md",
+    "icon": "../Orange/widgets/unsupervised/icons/PCA.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "principal component analysis",
+     "linear transformation"
+    ]
+   },
+   {
+    "text": "Correspondence Analysis",
+    "doc": "visual-programming/source/widgets/unsupervised/correspondenceanalysis.md",
+    "icon": "../Orange/widgets/unsupervised/icons/CorrespondenceAnalysis.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "Distances",
+    "doc": "visual-programming/source/widgets/unsupervised/distances.md",
+    "icon": "../Orange/widgets/unsupervised/icons/Distance.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "Distance Transformation",
+    "doc": "visual-programming/source/widgets/unsupervised/distancetransformation.md",
+    "icon": "../Orange/widgets/unsupervised/icons/DistancesTransformation.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
+    "text": "MDS",
+    "doc": "visual-programming/source/widgets/unsupervised/mds.md",
+    "icon": "../Orange/widgets/unsupervised/icons/MDS.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "multidimensional scaling",
+     "multi dimensional scaling"
+    ]
+   },
+   {
+    "text": "Save Distance Matrix",
+    "doc": "visual-programming/source/widgets/unsupervised/savedistancematrix.md",
+    "icon": "../Orange/widgets/unsupervised/icons/SaveDistances.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "distance matrix",
+     "save"
+    ]
+   },
+   {
+    "text": "Self-Organizing Map",
+    "doc": "visual-programming/source/widgets/unsupervised/selforganizingmap.md",
+    "icon": "../Orange/widgets/unsupervised/icons/SOM.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "SOM"
+    ]
+   }
+  ]
+ ]
+]
