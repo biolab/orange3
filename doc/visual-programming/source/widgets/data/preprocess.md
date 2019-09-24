@@ -14,7 +14,7 @@ Preprocesses data with selected methods.
 
 Preprocessing is crucial for achieving better-quality analysis results. The **Preprocess** widget offers several preprocessing methods that can be combined in a single preprocessing pipeline. Some methods are available as separate widgets, which offer advanced techniques and greater parameter tuning.
 
-![](images/Preprocess-Stamped.png)
+![](images/preprocess-stamped.png)
 
 1. List of preprocessors. Double click the preprocessors you wish to use and shuffle their order by dragging them up or down. You can also add preprocessors by dragging them from the left menu to the right.
 2. Preprocessing pipeline.
