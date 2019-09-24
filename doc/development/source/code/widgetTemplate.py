@@ -4,6 +4,7 @@ from Orange.widgets.settings import Setting
 
 class OWWidgetName(widget.OWWidget):
     name = "Widget Name"
+    short_name = "Name"
     id = "orange.widgets.widget_category.widget_name"
     description = ""
     icon = "icons/Unknown.svg"
