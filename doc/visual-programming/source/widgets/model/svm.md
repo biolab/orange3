@@ -41,7 +41,7 @@ The widget works for both classification and regression tasks.
 Examples
 --------
 
-In the first (regression) example, we have used *housing* dataset and split the data into two data subsets (*Data Sample* and *Remaining Data*) with [Data Sampler](../data/datasampler.md). The sample was sent to SVM which produced a *Model*, which was then used in [Predictions](../evaluation/predictions.md) to predict the values in *Remaining Data*. A similar schema can be used if the data is already in two separate files; in this case, two [File](../data/file.md) widgets would be used instead of the [File](../data/file.md) - [Data Sampler](../data/datasampler.md) combination.
+In the first (regression) example, we have used *housing* dataset and split the data into two data subsets (*Data Sample* and *Remaining Data*) with [Data Sampler](../data/datasampler.md). The sample was sent to SVM which produced a *Model*, which was then used in [Predictions](../evaluate/predictions.md) to predict the values in *Remaining Data*. A similar schema can be used if the data is already in two separate files; in this case, two [File](../data/file.md) widgets would be used instead of the [File](../data/file.md) - [Data Sampler](../data/datasampler.md) combination.
 
 ![](images/SVM-Predictions.png)
 
