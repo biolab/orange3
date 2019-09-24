@@ -30,11 +30,11 @@ Predict using an ensemble of decision trees.
 Examples
 --------
 
-For classification tasks, we use *iris* dataset. Connect it to [Predictions](../evaluation/predictions.md). Then, connect [File](../data/file.md) to **Random Forest** and [Tree](../model/tree.md) and connect them further to [Predictions](../evaluation/predictions.md). Finally, observe the predictions for the two models.
+For classification tasks, we use *iris* dataset. Connect it to [Predictions](../evaluate/predictions.md). Then, connect [File](../data/file.md) to **Random Forest** and [Tree](../model/tree.md) and connect them further to [Predictions](../evaluate/predictions.md). Finally, observe the predictions for the two models.
 
 ![](images/RandomForest-classification.png)
 
-For regressions tasks, we will use *housing* data. Here, we will compare different models, namely **Random Forest**, [Linear Regression](../model/linearregression.md) and [Constant](../model/constant.md), in the [Test & Score](../evaluation/testandscore.md) widget.
+For regressions tasks, we will use *housing* data. Here, we will compare different models, namely **Random Forest**, [Linear Regression](../model/linearregression.md) and [Constant](../model/constant.md), in the [Test & Score](../evaluate/testandscore.md) widget.
 
 ![](images/RandomForest-regression.png)
 

@@ -20,8 +20,8 @@ The [Calibration Plot](https://en.wikipedia.org/wiki/Calibration_curve)plots cla
 Example
 -------
 
-At the moment, the only widget which gives the right type of signal needed by the **Calibration Plot** is [Test & Score](../evaluation/testandscore.md). The Calibration Plot will hence always follow Test & Score and, since it has no outputs, no other widgets follow it.
+At the moment, the only widget which gives the right type of signal needed by the **Calibration Plot** is [Test & Score](../evaluate/testandscore.md). The Calibration Plot will hence always follow Test & Score and, since it has no outputs, no other widgets follow it.
 
-Here is a typical example, where we compare three classifiers (namely [Naive Bayes](../model/naivebayes.md), [Tree](../model/tree.md) and [Constant](../model/constant.md)) and input them into [Test & Score](../evaluation/testandscore.md). We used the *Titanic* dataset. Test & Score then displays evaluation results for each classifier. Then we draw **Calibration Plot** and [ROC Analysis](../evaluation/rocanalysis.md) widgets from Test & Score to further analyze the performance of classifiers. **Calibration Plot** enables you to see prediction accuracy of class probabilities in a plot.
+Here is a typical example, where we compare three classifiers (namely [Naive Bayes](../model/naivebayes.md), [Tree](../model/tree.md) and [Constant](../model/constant.md)) and input them into [Test & Score](../evaluate/testandscore.md). We used the *Titanic* dataset. Test & Score then displays evaluation results for each classifier. Then we draw **Calibration Plot** and [ROC Analysis](../evaluate/rocanalysis.md) widgets from Test & Score to further analyze the performance of classifiers. **Calibration Plot** enables you to see prediction accuracy of class probabilities in a plot.
 
 ![](images/CalibrationPlot-example.png)

@@ -32,6 +32,6 @@ Linear regression works only on regression tasks.
 Example
 -------
 
-Below, is a simple workflow with *housing* dataset. We trained **Linear Regression** and [Random Forest](../model/randomforest.md) and evaluated their performance in [Test & Score](../evaluation/testandscore.md).
+Below, is a simple workflow with *housing* dataset. We trained **Linear Regression** and [Random Forest](../model/randomforest.md) and evaluated their performance in [Test & Score](../evaluate/testandscore.md).
 
 ![](images/LinearRegression-regression.png)

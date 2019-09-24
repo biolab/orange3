@@ -70,6 +70,6 @@ Then we will send the *Data Sample* into [Preprocess](../data/preprocess.md). We
 
 Finally, **Predictions** also needs the data to predict on. We will use the output of [Data Sampler](../data/datasampler.md) for prediction, but this time not the *Data Sample*, but the *Remaining Data*, this is the data that wasn't used for training the model.
 
-Notice how we send the remaining data directly to **Predictions** without applying any preprocessing. This is because Orange handles preprocessing on new data internally to prevent any errors in the model construction. The exact same preprocessor that was used on the training data will be used for predictions. The same process applies to [Test & Score](../evaluation/testandscore.md).
+Notice how we send the remaining data directly to **Predictions** without applying any preprocessing. This is because Orange handles preprocessing on new data internally to prevent any errors in the model construction. The exact same preprocessor that was used on the training data will be used for predictions. The same process applies to [Test & Score](../evaluate/testandscore.md).
 
-![](../evaluation/images/Predictions-Example2.png)
+![](../evaluate/images/Predictions-Example2.png)

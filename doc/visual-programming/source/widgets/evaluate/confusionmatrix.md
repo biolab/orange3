@@ -14,7 +14,7 @@ Shows proportions between the predicted and actual class.
 
 The [Confusion Matrix](https://en.wikipedia.org/wiki/Confusion_matrix) gives the number/proportion of instances between the predicted and actual class. The selection of the elements in the matrix feeds the corresponding instances into the output signal. This way, one can observe which specific instances were misclassified and how.
 
-The widget usually gets the evaluation results from [Test & Score](../evaluation/testandscore.md); an example of the schema is shown below.
+The widget usually gets the evaluation results from [Test & Score](../evaluate/testandscore.md); an example of the schema is shown below.
 
 ![](images/ConfusionMatrix-stamped.png)
 
@@ -41,7 +41,7 @@ The following workflow demonstrates what this widget can be used for.
 
 ![](images/ConfusionMatrix-Schema.png)
 
-[Test & Score](../evaluation/testandscore.md) gets the data from [File](../data/file.md) and two learning algorithms from [Naive Bayes](../model/naivebayes.md) and [Tree](../model/tree.md). It performs cross-validation or some other train-and-test procedures to get class predictions by both algorithms for all (or some) data instances. The test results are fed into the **Confusion Matrix**, where we can observe how many instances were misclassified and in which way.
+[Test & Score](../evaluate/testandscore.md) gets the data from [File](../data/file.md) and two learning algorithms from [Naive Bayes](../model/naivebayes.md) and [Tree](../model/tree.md). It performs cross-validation or some other train-and-test procedures to get class predictions by both algorithms for all (or some) data instances. The test results are fed into the **Confusion Matrix**, where we can observe how many instances were misclassified and in which way.
 
 In the output, we used [Data Table](../data/datatable.md) to show the instances we selected in the confusion matrix. If we, for instance, click *Misclassified*, the table will contain all instances which were misclassified by the selected method.
 

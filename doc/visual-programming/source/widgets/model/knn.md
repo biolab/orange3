@@ -37,6 +37,6 @@ The first example is a classification task on *iris* dataset. We compare the res
 
 ![](images/Constant-classification.png)
 
-The second example is a regression task. This workflow shows how to use the *Learner* output. For the purpose of this example, we used the *housing* dataset. We input the **kNN** prediction model into [Predictions](../evaluation/predictions.md) and observe the predicted values.
+The second example is a regression task. This workflow shows how to use the *Learner* output. For the purpose of this example, we used the *housing* dataset. We input the **kNN** prediction model into [Predictions](../evaluate/predictions.md) and observe the predicted values.
 
 ![](images/kNN-regression.png)

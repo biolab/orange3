@@ -23,7 +23,7 @@ The widget receives a dataset and one or more predictors (predictive models, not
 4. Select the desired output.
 5. Predictions.
 
-The widget show the probabilities and final decisions of [predictive models](https://en.wikipedia.org/wiki/Predictive_modelling). The output of the widget is another dataset, where predictions are appended as new meta attributes. You can select which features you wish to output (original data, predictions, probabilities). The result can be observed in a [Data Table](../data/datatable.md). If the predicted data includes true class values, the result of prediction can also be observed in a [Confusion Matrix](../evaluation/confusionmatrix.md).
+The widget show the probabilities and final decisions of [predictive models](https://en.wikipedia.org/wiki/Predictive_modelling). The output of the widget is another dataset, where predictions are appended as new meta attributes. You can select which features you wish to output (original data, predictions, probabilities). The result can be observed in a [Data Table](../data/datatable.md). If the predicted data includes true class values, the result of prediction can also be observed in a [Confusion Matrix](../evaluate/confusionmatrix.md).
 
 Examples
 --------
@@ -32,11 +32,11 @@ In the first example, we will use *Attrition - Train* data from the [Datasets](.
 
 For predictions we need both the training data, which we have loaded in the first **Datasets** widget and the data to predict, which we will load in another [Datasets](../data/datasets.md) widget. We will use *Attrition - Predict* data this time. Connect the second data set to **Predictions**. Now we can see predictions for the three data instances from the second data set.
 
-The [Tree](../model/tree.md) model predicts none of the employees will leave the company. You can try other model and see if predictions change. Or test the predictive scores first in the [Test & Score](../evaluation/testandscore.md) widget.
+The [Tree](../model/tree.md) model predicts none of the employees will leave the company. You can try other model and see if predictions change. Or test the predictive scores first in the [Test & Score](../evaluate/testandscore.md) widget.
 
 ![](images/Predictions-Example1.png)
 
-In the second example, we will see how to properly use [Preprocess](../data/preprocess.md) with **Predictions** or [Test & Score](../evaluation/testandscore.md).
+In the second example, we will see how to properly use [Preprocess](../data/preprocess.md) with **Predictions** or [Test & Score](../evaluate/testandscore.md).
 
 This time we are using the *heart disease.tab* data from the [File](../data/file.md) widget. You can access the data through the dropdown menu. This is a dataset with 303 patients that came to the doctor suffering from a chest pain. After the tests were done, some patients were found to have diameter narrowing and others did not (this is our class variable).
 
@@ -46,6 +46,6 @@ Then we will send the *Data Sample* into [Preprocess](../data/preprocess.md). We
 
 Finally, **Predictions** also needs the data to predict on. We will use the output of [Data Sampler](../data/datasampler.md) for prediction, but this time not the *Data Sample*, but the *Remaining Data*, this is the data that wasn't used for training the model.
 
-Notice how we send the remaining data directly to **Predictions** without applying any preprocessing. This is because Orange handles preprocessing on new data internally to prevent any errors in the model construction. The exact same preprocessor that was used on the training data will be used for predictions. The same process applies to [Test & Score](../evaluation/testandscore.md).
+Notice how we send the remaining data directly to **Predictions** without applying any preprocessing. This is because Orange handles preprocessing on new data internally to prevent any errors in the model construction. The exact same preprocessor that was used on the training data will be used for predictions. The same process applies to [Test & Score](../evaluate/testandscore.md).
 
 ![](images/Predictions-Example2.png)

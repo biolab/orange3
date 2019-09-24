@@ -57,10 +57,10 @@ The **Stochastic Gradient Descent** widget uses [stochastic gradient descent](ht
 Examples
 --------
 
-For the classification task, we will use *iris* dataset and test two models on it. We connected [Stochastic Gradient Descent](../model/stochasticgradient.md) and [Tree](../model/tree.md) to [Test & Score](../evaluation/testandscore.md). We also connected [File](../data/file.md) to **Test & Score** and observed model performance in the widget.
+For the classification task, we will use *iris* dataset and test two models on it. We connected [Stochastic Gradient Descent](../model/stochasticgradient.md) and [Tree](../model/tree.md) to [Test & Score](../evaluate/testandscore.md). We also connected [File](../data/file.md) to **Test & Score** and observed model performance in the widget.
 
 ![](images/StochasticGradientDescent-classification.png)
 
-For the regression task, we will compare three different models to see which predict what kind of results. For the purpose of this example, the *housing* dataset is used. We connect the [File](../data/file.md) widget to **Stochastic Gradient Descent**, [Linear Regression](../model/linearregression.md) and [kNN](../model/knn.md) widget and all four to the [Predictions](../evaluation/predictions.md) widget.
+For the regression task, we will compare three different models to see which predict what kind of results. For the purpose of this example, the *housing* dataset is used. We connect the [File](../data/file.md) widget to **Stochastic Gradient Descent**, [Linear Regression](../model/linearregression.md) and [kNN](../model/knn.md) widget and all four to the [Predictions](../evaluate/predictions.md) widget.
 
 ![](images/StochasticGradientDescent-regression.png)
