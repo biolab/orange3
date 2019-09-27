@@ -41,7 +41,7 @@ class OWConcatenate(widget.OWWidget):
         data = Output("Data", Orange.data.Table)
 
     class Error(widget.OWWidget.Error):
-        bow_concatenation = Msg("Incompatible types")
+        bow_concatenation = Msg("Inputs must be of the same type.")
 
     merge_type: int
     append_source_column: bool
@@ -214,8 +214,12 @@ class OWConcatenate(widget.OWWidget):
         self.Outputs.data.send(data)
 
     def _merge_type_changed(self, ):
-        if self.primary_data is None and self.more_data:
-            self.apply()
+        if self.incompatible_types():
+            self.Error.bow_concatenation()
+        else:
+            self.Error.bow_concatenation.clear()
+            if self.primary_data is None and self.more_data:
+                self.apply()
 
     def _source_changed(self):
         self.apply()
