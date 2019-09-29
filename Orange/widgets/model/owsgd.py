@@ -17,6 +17,7 @@ MAXINT = 2 ** 31 - 1
 
 class OWSGD(OWBaseLearner):
     name = 'Stochastic Gradient Descent'
+    short_name = 'SGD'
     description = 'Minimize an objective function using a stochastic ' \
                   'approximation of gradient descent.'
     icon = "icons/SGD.svg"

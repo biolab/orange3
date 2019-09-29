@@ -172,6 +172,7 @@ N_ITERATIONS = 200
 
 class OWSOM(OWWidget):
     name = "Self-Organizing Map"
+    short_name = "SOM"
     description = "Computation of self-organizing map."
     icon = "icons/SOM.svg"
     keywords = ["SOM"]

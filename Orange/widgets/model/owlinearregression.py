@@ -16,6 +16,7 @@ from Orange.widgets.widget import Output
 
 class OWLinearRegression(OWBaseLearner):
     name = "Linear Regression"
+    short_name = "Lin Reg"
     description = "A linear regression algorithm with optional L1 (LASSO), " \
                   "L2 (ridge) or L1L2 (elastic net) regularization."
     icon = "icons/LinearRegression.svg"
