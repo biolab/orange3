@@ -125,8 +125,13 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         time.sleep(0.1)
         self.process_events()
-        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 3)
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 2)
         self.assertEqual(self.widget.controls.feature.count(), 4)
+        self.assertEqual(self.widget.controls.feature.currentText(), "MEDV")
+
+        data = self.housing[:5, 13:]
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
 
     def test_output_data(self):
         """Check dataset on output"""

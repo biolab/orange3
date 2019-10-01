@@ -365,7 +365,11 @@ class OWCorrelations(OWWidget):
 
     def set_feature_model(self):
         self.feature_model.set_domain(self.cont_data and self.cont_data.domain)
-        self.feature = None
+        data = self.data
+        if self.cont_data and data.domain.has_continuous_class:
+            self.feature = self.cont_data.domain[data.domain.class_var.name]
+        else:
+            self.feature = None
 
     def apply(self):
         self.vizrank.initialize()
