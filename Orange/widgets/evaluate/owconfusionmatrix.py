@@ -118,6 +118,7 @@ class OWConfusionMatrix(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         no_regression = Msg("Confusion Matrix cannot show regression results.")
         invalid_values = Msg("Evaluation Results input contains invalid values")
+        empty_input = widget.Msg("Empty result on input. Nothing to display.")
 
     def __init__(self):
         super().__init__()
@@ -245,11 +246,14 @@ class OWConfusionMatrix(widget.OWWidget):
         if results is not None and results.data is not None:
             data = results.data[results.row_indices]
 
+        self.Error.no_regression.clear()
+        self.Error.empty_input.clear()
         if data is not None and not data.domain.has_discrete_class:
             self.Error.no_regression()
             data = results = None
-        else:
-            self.Error.no_regression.clear()
+        elif results is not None and not results.actual.size:
+            self.Error.empty_input()
+            data = results = None
 
         nan_values = False
         if results is not None:

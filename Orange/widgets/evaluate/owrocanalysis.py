@@ -303,10 +303,6 @@ class OWROCAnalysis(widget.OWWidget):
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
 
-    class Warning(widget.OWWidget.Warning):
-        empty_results = widget.Msg(
-            "Empty results on input. There is nothing to display.")
-
     target_index = settings.Setting(0)
     selected_classifiers = []
 
