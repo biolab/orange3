@@ -9,7 +9,7 @@ import numpy as np
 
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
-    QGraphicsScene, QGridLayout, QFormLayout, QSizePolicy,
+    QGraphicsScene, QGridLayout, QSizePolicy,
     QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox,
     QGraphicsItemGroup, QGraphicsGridLayout, QGraphicsSceneMouseEvent
 )
@@ -29,6 +29,7 @@ import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
     leaves, prune, top_clusters
+from Orange.data.util import get_unique_names
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels, combobox
@@ -863,17 +864,10 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Dendrogram zoom factor
     zoom_factor = settings.Setting(0)
 
-    append_clusters = settings.Setting(True)
-    cluster_role = settings.Setting(2)
-    cluster_name = settings.Setting("Cluster")
     autocommit = settings.Setting(True)
 
     graph_name = "scene"
 
-    #: Cluster variable domain role
-    AttributeRole, ClassRole, MetaRole = 0, 1, 2
-
-    cluster_roles = ["Attribute", "Class variable", "Meta variable"]
     basic_annotations = ["None", "Enumeration"]
 
     class Error(widget.OWWidget.Error):
@@ -986,30 +980,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.addActions([zoom_in, zoom_out, zoom_reset])
 
         self.controlArea.layout().addStretch()
-
-        box = gui.vBox(self.controlArea, "Output")
-        gui.checkBox(box, self, "append_clusters", "Append cluster IDs",
-                     callback=self._invalidate_output)
-
-        ibox = gui.indentedBox(box)
-        name_edit = gui.lineEdit(ibox, self, "cluster_name")
-        name_edit.editingFinished.connect(self._invalidate_output)
-
-        cb = gui.comboBox(
-            ibox, self, "cluster_role", callback=self._invalidate_output,
-            items=self.cluster_roles
-        )
-        form = QFormLayout(
-            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
-            labelAlignment=Qt.AlignLeft,
-            spacing=8
-        )
-        form.addRow("Name:", name_edit)
-        form.addRow("Place:", cb)
-
-        ibox.layout().addSpacing(5)
-        ibox.layout().addLayout(form)
-        ibox.layout().addSpacing(5)
 
         gui.auto_send(box, self, "autocommit", box=False)
 
@@ -1336,48 +1306,26 @@ class OWHierarchicalClustering(widget.OWWidget):
 
             mask = c != len(maps)
 
-            if self.append_clusters:
-                clust_var = Orange.data.DiscreteVariable(
-                    str(self.cluster_name),
-                    values=["C{}".format(i + 1)
-                            for i in range(len(maps))] +
-                    ["Other"]
-                )
-                data, domain = items, items.domain
+            data, domain = items, items.domain
+            attrs = domain.attributes
+            classes = domain.class_vars
+            metas = domain.metas
 
-                attrs = domain.attributes
-                class_ = domain.class_vars
-                metas = domain.metas
+            var_name = get_unique_names(domain, "Cluster")
+            values = [f"C{i + 1}" for i in range(len(maps))]
 
-                if self.cluster_role == self.AttributeRole:
-                    attrs = attrs + (clust_var,)
-                elif self.cluster_role == self.ClassRole:
-                    class_ = class_ + (clust_var,)
-                elif self.cluster_role == self.MetaRole:
-                    metas = metas + (clust_var,)
-
-                domain = Orange.data.Domain(attrs, class_, metas)
-                data = items.transform(domain)
-                data.get_column_view(clust_var)[0][:] = c
-            else:
-                data = items
+            clust_var = Orange.data.DiscreteVariable(
+                var_name, values=values + ["Other"])
+            domain = Orange.data.Domain(attrs, classes, metas + (clust_var,))
+            data = items.transform(domain)
+            data.get_column_view(clust_var)[0][:] = c
 
             if selected_indices:
                 selected_data = data[mask]
-                if self.append_clusters:
-                    def remove_other_value(vars_):
-                        vars_ = list(vars_)
-                        clust_var = vars_[-1].copy()
-                        clust_var.values.pop()
-                        vars_[-1] = clust_var
-                        return vars_
-                    if self.cluster_role == self.AttributeRole:
-                        attrs = remove_other_value(attrs)
-                    elif self.cluster_role == self.ClassRole:
-                        class_ = remove_other_value(class_)
-                    elif self.cluster_role == self.MetaRole:
-                        metas = remove_other_value(metas)
-                    selected_data.domain = Domain(attrs, class_, metas)
+                clust_var = Orange.data.DiscreteVariable(
+                    var_name, values=values)
+                selected_data.domain = Domain(
+                    attrs, classes, metas + (clust_var, ))
 
         elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
             # Select columns
@@ -1610,11 +1558,6 @@ class OWHierarchicalClustering(widget.OWWidget):
             ("Prunning",
              self.pruning != 0 and "{} levels".format(self.max_depth)),
             ("Selection", sel),
-            ("Cluster ID in output",
-             self.append_clusters and
-             "{} (as {})".format(
-                 self.cluster_name,
-                 self.cluster_roles[self.cluster_role].lower()))
         ))
         self.report_plot()
 
