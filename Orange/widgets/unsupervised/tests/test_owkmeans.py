@@ -45,6 +45,7 @@ class TestOWKMeans(WidgetTest):
             OWKMeans, stored_settings={"auto_commit": False, "version": 2}
         )  # type: OWKMeans
         self.iris = Table("iris")
+        self.iris.X[0, 0] = np.nan
 
     def tearDown(self):
         self.widget.onDeleteWidget()
@@ -263,10 +264,11 @@ class TestOWKMeans(WidgetTest):
                 model, "set_scores", wraps=model.set_scores) as set_scores:
             self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
             scores, start_k = set_scores.call_args[0]
+            X = self.widget.preproces(self.iris).X
             self.assertEqual(
                 scores,
                 [km if isinstance(km, str) else silhouette_score(
-                    self.iris.X, km(self.iris))
+                    X, km(self.iris))
                  for km in (widget.clusterings[k] for k in range(3, 9))]
             )
             self.assertEqual(start_k, 3)
