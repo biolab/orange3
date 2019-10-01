@@ -43,12 +43,6 @@ def ensure_local(index_url, file_path, local_cache_path,
     return localfiles.localpath_download(*file_path, callback=progress_advance)
 
 
-def format_info(n_all, n_cached):
-    plural = lambda x: '' if x == 1 else 's'
-    return "{} dataset{}\n{} dataset{} cached".format(
-        n_all, plural(n_all), n_cached if n_cached else 'No', plural(n_cached))
-
-
 def format_exception(error):
     # type: (BaseException) -> str
     return "\n".join(traceback.format_exception_only(type(error), error))
@@ -132,6 +126,8 @@ class OWDataSets(OWWidget):
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
     keywords = ["online"]
 
+    want_control_area = False
+
     # The following constants can be overridden in a subclass
     # to reuse this widget for a different repository
     # Take care when refactoring! (used in e.g. single-cell)
@@ -186,14 +182,8 @@ class OWDataSets(OWWidget):
 
         self.__awaiting_state = None  # type: Optional[_FetchState]
 
-        box = gui.widgetBox(self.controlArea, "Info")
-
-        self.infolabel = QLabel(text="Initializing...\n\n")
-        box.layout().addWidget(self.infolabel)
-
-        gui.widgetLabel(self.mainArea, "Filter")
         self.filterLineEdit = QLineEdit(
-            textChanged=self.filter
+            textChanged=self.filter, placeholderText="Search for data set ..."
         )
         self.mainArea.layout().addWidget(self.filterLineEdit)
 
@@ -233,8 +223,9 @@ class OWDataSets(OWWidget):
             setattr(self, "splitter_state", bytes(self.splitter.saveState()))
         )
         self.mainArea.layout().addWidget(self.splitter)
-        self.controlArea.layout().addStretch(10)
-        gui.auto_send(self.controlArea, self, "auto_commit")
+        box = gui.hBox(self.mainArea)
+        gui.rubber(box)
+        gui.auto_send(box, self, "auto_commit")
 
         proxy = QSortFilterProxyModel()
         proxy.setFilterKeyColumn(-1)
@@ -369,10 +360,6 @@ class OWDataSets(OWWidget):
         header = self.view.header()
         header.restoreState(self.header_state)
 
-        # Update the info text
-        self.infolabel.setText(
-            format_info(model.rowCount(), len(self.allinfo_local)))
-
         if current_index != -1:
             selmodel = self.view.selectionModel()
             selmodel.select(
@@ -390,9 +377,6 @@ class OWDataSets(OWWidget):
             info.islocal = info.file_path in localinfo
             item.setData(" " if info.islocal else "", Qt.DisplayRole)
             allinfo.append(info)
-
-        self.infolabel.setText(format_info(
-            model.rowCount(), sum(info.islocal for info in allinfo)))
 
     def selected_dataset(self):
         """
