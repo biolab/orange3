@@ -7,8 +7,12 @@ import numpy as np
 from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
+from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
+from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
+from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
+from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch
@@ -48,6 +52,38 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         evres = self.get_output(self.widget.Outputs.evaluation_results)
         self.assertEqual(len(evres.data), 0)
+
+    def test_no_values_target(self):
+        train = Table("titanic")
+        model = ConstantLearner()(train)
+        self.send_signal(self.widget.Inputs.predictors, model)
+        domain = Domain([DiscreteVariable("status", values=["first", "third"]),
+                         DiscreteVariable("age", values=["adult", "child"]),
+                         DiscreteVariable("sex", values=["female", "male"])],
+                        [DiscreteVariable("survived", values=[])])
+        test = Table(domain, np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]),
+                     np.full((3, 1), np.nan))
+        self.send_signal(self.widget.Inputs.data, test)
+        pred = self.get_output(self.widget.Outputs.predictions)
+        self.assertEqual(len(pred), len(test))
+
+        results = self.get_output(self.widget.Outputs.evaluation_results)
+
+        cm_widget = self.create_widget(OWConfusionMatrix)
+        self.send_signal(cm_widget.Inputs.evaluation_results, results,
+                         widget=cm_widget)
+
+        ra_widget = self.create_widget(OWROCAnalysis)
+        self.send_signal(ra_widget.Inputs.evaluation_results, results,
+                         widget=ra_widget)
+
+        lc_widget = self.create_widget(OWLiftCurve)
+        self.send_signal(lc_widget.Inputs.evaluation_results, results,
+                         widget=lc_widget)
+
+        cp_widget = self.create_widget(OWCalibrationPlot)
+        self.send_signal(cp_widget.Inputs.evaluation_results, results,
+                         widget=cp_widget)
 
     def test_mismatching_targets(self):
         warning = self.widget.Warning
