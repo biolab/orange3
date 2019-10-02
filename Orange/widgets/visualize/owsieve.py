@@ -107,18 +107,18 @@ class OWSieveDiagram(OWWidget):
         self.areas = []
         self.selection = set()
 
-        self.attr_box = gui.hBox(self.mainArea)
+        attr_box = gui.hBox(self.mainArea)
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
         combo_args = dict(
-            widget=self.attr_box, master=self, contentsLength=12,
+            widget=attr_box, master=self, contentsLength=12,
             callback=self.attr_changed, sendSelectedValue=True, valueType=str,
             model=self.domain_model)
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)
-        gui.widgetLabel(self.attr_box, "\u2715", sizePolicy=fixed_size)
+        gui.widgetLabel(attr_box, "\u2715", sizePolicy=fixed_size)
         gui.comboBox(value="attr_y", **combo_args)
         self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
-            self.attr_box, self, "Score Combinations", self.set_attr)
+            attr_box, self, "Score Combinations", self.set_attr)
         self.vizrank_button.setSizePolicy(*fixed_size)
 
         self.canvas = QGraphicsScene()
@@ -250,10 +250,9 @@ class OWSieveDiagram(OWWidget):
         """
         Use the attributes from the input signal if the signal is present
         and at least two attributes appear in the domain. If there are
-        multiple, use the first two. Combos are disabled if inputs are used.
+        multiple, use the first two.
         """
         self.warning()
-        self.attr_box.setEnabled(True)
         if not self.input_features:  # None or empty
             return
         features = [f for f in self.input_features if f in self.domain_model]
@@ -263,7 +262,6 @@ class OWSieveDiagram(OWWidget):
             return
         old_attrs = self.attr_x, self.attr_y
         self.attr_x, self.attr_y = [f for f in (features * 2)[:2]]
-        self.attr_box.setEnabled(False)
         if (self.attr_x, self.attr_y) != old_attrs:
             self.selection = set()
             self.update_graph()
