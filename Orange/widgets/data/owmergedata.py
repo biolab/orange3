@@ -221,9 +221,9 @@ class OWMergeData(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         matching_numeric_with_nonnum = Msg(
-            "Numeric and non-numeric columns ({} and {}) can't be matched.")
-        matching_index_with_sth = Msg("Row index cannot by matched with {}.")
-        matching_id_with_sth = Msg("Instance cannot by matched with {}.")
+            "Numeric and non-numeric columns ({} and {}) cannot be matched.")
+        matching_index_with_sth = Msg("Row index cannot be matched with {}.")
+        matching_id_with_sth = Msg("Instance cannot be matched with {}.")
         nonunique_left = Msg(
             "Some combinations of values on the left appear in multiple rows.\n"
             "For this type of merging, every possible combination of values "
