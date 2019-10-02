@@ -118,6 +118,16 @@ class Namespace(SimpleNamespace):
             self.title = self.filename
 
 
+class TreeViewWithReturn(QTreeView):
+    returnPressed = Signal()
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Return:
+            self.returnPressed.emit()
+        else:
+            super().keyPressEvent(e)
+
+
 class OWDataSets(OWWidget):
     name = "Datasets"
     description = "Load a dataset from an online repository"
@@ -160,8 +170,6 @@ class OWDataSets(OWWidget):
     #: Selected dataset id
     selected_id = settings.Setting(None)   # type: Optional[str]
 
-    auto_commit = settings.Setting(False)  # type: bool
-
     #: main area splitter state
     splitter_state = settings.Setting(b'')  # type: bytes
     header_state = settings.Setting(b'')    # type: bytes
@@ -189,16 +197,18 @@ class OWDataSets(OWWidget):
 
         self.splitter = QSplitter(orientation=Qt.Vertical)
 
-        self.view = QTreeView(
+        self.view = TreeViewWithReturn(
             sortingEnabled=True,
             selectionMode=QTreeView.SingleSelection,
             alternatingRowColors=True,
             rootIsDecorated=False,
             editTriggers=QTreeView.NoEditTriggers,
             uniformRowHeights=True,
+            toolTip="Press Return or double-click to send"
         )
         # the method doesn't exists yet, pylint: disable=unnecessary-lambda
-        self.view.doubleClicked.connect(lambda: self.unconditional_commit())
+        self.view.doubleClicked.connect(self.commit)
+        self.view.returnPressed.connect(self.commit)
         box = gui.widgetBox(self.splitter, "Description", addToLayout=False)
         self.descriptionlabel = QLabel(
             wordWrap=True,
@@ -223,9 +233,6 @@ class OWDataSets(OWWidget):
             setattr(self, "splitter_state", bytes(self.splitter.saveState()))
         )
         self.mainArea.layout().addWidget(self.splitter)
-        box = gui.hBox(self.mainArea)
-        gui.rubber(box)
-        gui.auto_send(box, self, "auto_commit")
 
         proxy = QSortFilterProxyModel()
         proxy.setFilterKeyColumn(-1)
@@ -365,6 +372,7 @@ class OWDataSets(OWWidget):
             selmodel.select(
                 self.view.model().mapFromSource(model.index(current_index, 0)),
                 QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
+            self.commit()
 
     def __update_cached_state(self):
         model = self.view.model().sourceModel()
@@ -416,8 +424,6 @@ class OWDataSets(OWWidget):
         else:
             self.descriptionlabel.setText("")
             self.selected_id = None
-
-        self.commit()
 
     def commit(self):
         """
