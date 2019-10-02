@@ -262,8 +262,8 @@ class OWCorrelations(OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.data = None
-        self.cont_data = None
+        self.data = None  # type: Table
+        self.cont_data = None  # type: Table
 
         # GUI
         box = gui.vBox(self.mainArea)
@@ -347,9 +347,9 @@ class OWCorrelations(OWWidget):
                 self.Warning.not_enough_inst()
             else:
                 domain = data.domain
-                cont_attrs = [a for a in domain.attributes if a.is_continuous]
-                cont_dom = Domain(cont_attrs, domain.class_vars, domain.metas)
-                cont_data = Table.from_table(cont_dom, data)
+                cont_vars = [a for a in domain.class_vars + domain.metas +
+                             domain.attributes if a.is_continuous]
+                cont_data = Table.from_table(Domain(cont_vars), data)
                 remover = Remove(Remove.RemoveConstant)
                 cont_data = remover(cont_data)
                 if remover.attr_results["removed"]:
@@ -365,7 +365,11 @@ class OWCorrelations(OWWidget):
 
     def set_feature_model(self):
         self.feature_model.set_domain(self.cont_data and self.cont_data.domain)
-        self.feature = None
+        data = self.data
+        if self.cont_data and data.domain.has_continuous_class:
+            self.feature = self.cont_data.domain[data.domain.class_var.name]
+        else:
+            self.feature = None
 
     def apply(self):
         self.vizrank.initialize()
