@@ -449,7 +449,7 @@
    },
    {
     "text": "Calibrated Learner",
-    "doc": null,
+    "doc": "visual-programming/source/widgets/model/calibratedlearner.md",
     "icon": "../Orange/widgets/model/icons/CalibratedLearner.svg",
     "background": "#FAC1D9",
     "keywords": [
