@@ -60,6 +60,23 @@ class VariableTest:
         # Attributes of original value should not change
         self.assertEqual(var.attributes["a"], "b")
 
+    def test_rename(self):
+        var = self.varcls_modified("x")
+        var2 = var.copy(name="x2")
+        self.assertIsInstance(var2, type(var))
+        self.assertIsNot(var, var2)
+        self.assertEqual(var2.name, "x2")
+        var.__dict__.pop("_name")
+        var2.__dict__.pop("_name")
+        self.assertDictEqual(var.__dict__, var2.__dict__)
+
+    def varcls_modified(self, name):
+        var = self.varcls(name)
+        var._compute_value = lambda x: x
+        var.sparse = True
+        var.attributes = {"a": 1}
+        return var
+
 
 class TestVariable(unittest.TestCase):
     @classmethod
@@ -378,6 +395,12 @@ class TestDiscreteVariable(VariableTest):
         self.assertRaises(ValueError, mapper, sp.csr_matrix(arr), 0)
         self.assertRaises(ValueError, mapper, sp.csc_matrix(arr), 0)
 
+    def varcls_modified(self, name):
+        var = super().varcls_modified(name)
+        var.values = ["A", "B"]
+        var.ordered = True
+        return var
+
 
 @variabletest(ContinuousVariable)
 class TestContinuousVariable(VariableTest):
@@ -418,6 +441,11 @@ class TestContinuousVariable(VariableTest):
 
         a.colors = ((3, 2, 1), (6, 5, 4), True)
         self.assertEqual(a.colors, ((3, 2, 1), (6, 5, 4), True))
+
+    def varcls_modified(self, name):
+        var = super().varcls_modified(name)
+        var.number_of_decimals = 5
+        return var
 
 
 @variabletest(StringVariable)
@@ -537,6 +565,13 @@ time,continuous
         var = TimeVariable('time', have_date=1)
         self.assertTrue(var.have_date)
         self.assertFalse(var.have_time)
+
+    def varcls_modified(self, name):
+        var = super().varcls_modified(name)
+        var.number_of_decimals = 5
+        var.have_date = 1
+        var.have_time = 1
+        return var
 
 
 PickleContinuousVariable = create_pickling_tests(

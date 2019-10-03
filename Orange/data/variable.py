@@ -1,4 +1,3 @@
-import collections
 import re
 import warnings
 from collections import Iterable
@@ -215,7 +214,8 @@ class Value(float):
 
     def __hash__(self):
         if self.variable.is_discrete:
-            # It is not possible to hash the id and the domain value to the same number as required by __eq__.
+            # It is not possible to hash the id and the domain value to the
+            # same number as required by __eq__.
             # hash(1) == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1)) == hash("green")
             # User should hash directly ids or domain values instead.
             raise TypeError("unhashable type - cannot hash values of discrete variables!")
@@ -451,8 +451,10 @@ class Variable(Reprable, metaclass=VariableMeta):
         # Use make to unpickle variables.
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
-    def copy(self, compute_value):
-        var = type(self)(self.name, compute_value=compute_value, sparse=self.sparse)
+    def copy(self, compute_value=None, name=None, **kwargs):
+        var = type(self)(name=name or self.name,
+                         compute_value=compute_value or self.compute_value,
+                         sparse=self.sparse, **kwargs)
         var.attributes = dict(self.attributes)
         return var
 
@@ -507,6 +509,10 @@ class ContinuousVariable(Variable):
     def format_str(self):
         return self._format_str
 
+    @format_str.setter
+    def format_str(self, value):
+        self._format_str = value
+
     @property
     def colors(self):
         if self._colors is None:
@@ -559,9 +565,12 @@ class ContinuousVariable(Variable):
 
     str_val = repr_val
 
-    def copy(self, compute_value=None):
-        var = type(self)(self.name, self.number_of_decimals, compute_value, sparse=self.sparse)
-        var.attributes = dict(self.attributes)
+    def copy(self, compute_value=None, name=None, **kwargs):
+        var = super().copy(compute_value=compute_value, name=name,
+                           number_of_decimals=self.number_of_decimals,
+                           **kwargs)
+        var.adjust_decimals = self.adjust_decimals
+        var.format_str = self._format_str
         return var
 
 
@@ -795,11 +804,9 @@ class DiscreteVariable(Variable):
         except ValueError:
             return sorted(values)
 
-    def copy(self, compute_value=None):
-        var = DiscreteVariable(self.name, self.values, self.ordered,
-                               compute_value, sparse=self.sparse)
-        var.attributes = dict(self.attributes)
-        return var
+    def copy(self, compute_value=None, name=None, **_):
+        return super().copy(compute_value=compute_value, name=name,
+                            values=self.values, ordered=self.ordered)
 
 
 class StringVariable(Variable):
@@ -913,11 +920,9 @@ class TimeVariable(ContinuousVariable):
         self.have_date = have_date
         self.have_time = have_time
 
-    def copy(self, compute_value=None):
-        copy = super().copy(compute_value=compute_value)
-        copy.have_date = self.have_date
-        copy.have_time = self.have_time
-        return copy
+    def copy(self, compute_value=None, name=None, **_):
+        return super().copy(compute_value=compute_value, name=name,
+                            have_date=self.have_date, have_time=self.have_time)
 
     @staticmethod
     def _tzre_sub(s, _subtz=re.compile(r'([+-])(\d\d):(\d\d)$').sub):
