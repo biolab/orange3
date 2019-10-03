@@ -14,7 +14,7 @@ from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
     QStyleOptionViewItem, QStyledItemDelegate, QStyle, QApplication
 )
-from AnyQt.QtGui import QStandardItemModel, QStandardItem
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QObject, QThread, QModelIndex, QSortFilterProxyModel,
     QItemSelectionModel,
@@ -157,6 +157,8 @@ class OWDataSets(OWWidget):
         ['tags', {'label': 'Tags'}]
     ]  # type: List[str, dict]
 
+    IndicatorBrushes = (QBrush(Qt.darkGray), QBrush(QColor(0, 192, 0)))
+
     class Error(OWWidget.Error):
         no_remote_datasets = Msg("Could not fetch dataset list")
 
@@ -180,6 +182,9 @@ class OWDataSets(OWWidget):
         self.allinfo_remote = {}
 
         self.local_cache_path = os.path.join(data_dir(), self.DATASET_DIR)
+        # current_output does not equal selected_id when, for instance, the
+        # data is still downloading
+        self.current_output = None
 
         self._header_labels = [
             header['label'] for _, header in self.HEADER_SCHEMA]
@@ -260,7 +265,7 @@ class OWDataSets(OWWidget):
         self.view.setItemDelegate(UniformHeightDelegate(self))
         self.view.setItemDelegateForColumn(
             self.Header.islocal,
-            UniformHeightIndicatorDelegate(self, role=Qt.DisplayRole)
+            UniformHeightIndicatorDelegate(self, role=Qt.DisplayRole, indicatorSize=4)
         )
         self.view.setItemDelegateForColumn(
             self.Header.size,
@@ -309,6 +314,7 @@ class OWDataSets(OWWidget):
             datainfo = self._parse_info(file_path)
             item1 = QStandardItem()
             item1.setData(" " if datainfo.islocal else "", Qt.DisplayRole)
+            item1.setData(self.IndicatorBrushes[0], Qt.ForegroundRole)
             item1.setData(datainfo, Qt.UserRole)
             item2 = QStandardItem(datainfo.title)
             item3 = QStandardItem()
@@ -382,8 +388,12 @@ class OWDataSets(OWWidget):
         for i in range(model.rowCount()):
             item = model.item(i, 0)
             info = item.data(Qt.UserRole)
-            info.islocal = info.file_path in localinfo
-            item.setData(" " if info.islocal else "", Qt.DisplayRole)
+            is_local = info.file_path in localinfo
+            is_current = (is_local and
+                          os.path.join(self.local_cache_path, *info.file_path)
+                          == self.current_output)
+            item.setData(" " * (is_local + is_current), Qt.DisplayRole)
+            item.setData(self.IndicatorBrushes[is_current], Qt.ForegroundRole)
             allinfo.append(info)
 
     def selected_dataset(self):
@@ -471,7 +481,7 @@ class OWDataSets(OWWidget):
                 self.setBlocking(False)
                 self.commit_cached(di.file_path)
         else:
-            self.Outputs.data.send(None)
+            self.load_and_output(None)
 
     @Slot(object)
     def __commit_complete(self, f):
@@ -495,18 +505,11 @@ class OWDataSets(OWWidget):
             log.exception("Error:")
             self.error(format_exception(ex))
             path = None
-
-        self.__update_cached_state()
-
-        if path is not None:
-            data = self.load_data(path)
-        else:
-            data = None
-        self.Outputs.data.send(data)
+        self.load_and_output(path)
 
     def commit_cached(self, file_path):
         path = LocalFiles(self.local_cache_path).localpath(*file_path)
-        self.Outputs.data.send(self.load_data(path))
+        self.load_and_output(path)
 
     @Slot()
     def __progress_advance(self):
@@ -529,7 +532,18 @@ class OWDataSets(OWWidget):
         self.header_state = bytes(self.view.header().saveState())
         super().closeEvent(event)
 
-    def load_data(self, path):  # pylint: disable=no-self-use
+    def load_and_output(self, path):
+        if path is None:
+            self.Outputs.data.send(None)
+        else:
+            data = self.load_data(path)
+            self.Outputs.data.send(data)
+
+        self.current_output = path
+        self.__update_cached_state()
+
+    @staticmethod
+    def load_data(path):
         return Orange.data.Table(path)
 
     def list_remote(self):
