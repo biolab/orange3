@@ -9,7 +9,7 @@ from AnyQt.QtWidgets import QWidget, QLabel, QComboBox, QPushButton, \
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable, Variable
-from Orange.data.util import hstack
+from Orange.data.util import hstack, get_unique_names_duplicates
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -217,7 +217,8 @@ class OWMergeData(widget.OWWidget):
     resizing_enabled = False
 
     class Warning(widget.OWWidget.Warning):
-        duplicate_names = Msg("Duplicate variable names in output.")
+        renamed_vars = Msg("Some variables have been renamed "
+                           "to avoid duplicates.\n{}")
 
     class Error(widget.OWWidget.Error):
         matching_numeric_with_nonnum = Msg(
@@ -379,19 +380,9 @@ class OWMergeData(widget.OWWidget):
                 f"{len(data.domain) + len(data.domain.metas)} variables"
 
     def commit(self):
-        self.Error.clear()
-        self.Warning.duplicate_names.clear()
-        if not self.data or not self.extra_data:
-            merged_data = None
-        else:
-            merged_data = self.merge()
-            if merged_data:
-                merged_domain = merged_data.domain
-                var_names = [var.name for var in chain(merged_domain.variables,
-                                                       merged_domain.metas)]
-                if len(set(var_names)) != len(var_names):
-                    self.Warning.duplicate_names()
-        self.Outputs.data.send(merged_data)
+        self.clear_messages()
+        merged = None if not self.data or not self.extra_data else self.merge()
+        self.Outputs.data.send(merged)
 
     def send_report(self):
         # pylint: disable=invalid-sequence-index
@@ -544,6 +535,7 @@ class OWMergeData(widget.OWWidget):
         domain = Orange.data.Domain(
             *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
               for x in ("attributes", "class_vars", "metas")))
+        domain = self._domain_rename_duplicates(domain)
         X = self._join_array_by_indices(self.data.X, reduced_extra.X, lefti, righti)
         Y = self._join_array_by_indices(
             np.c_[self.data.Y], np.c_[reduced_extra.Y], lefti, righti)
@@ -565,6 +557,29 @@ class OWMergeData(widget.OWWidget):
             table.ids = self.data.ids[lefti]
 
         return table
+
+    def _domain_rename_duplicates(self, domain):
+        """Check for duplicate variable names in domain. If any, rename
+        the variables, by replacing them with new ones (names are
+        appended a number). """
+        attrs, cvars, metas = [], [], []
+        n_attrs, n_cvars, n_metas = (len(domain.attributes),
+                                     len(domain.class_vars), len(domain.metas))
+        lists = [attrs] * n_attrs + [cvars] * n_cvars + [metas] * n_metas
+
+        variables = domain.variables + domain.metas
+        proposed_names = [m.name for m in variables]
+        unique_names = get_unique_names_duplicates(proposed_names)
+        duplicates = set()
+        for p_name, u_name, var, c in zip(proposed_names, unique_names,
+                                          variables, lists):
+            if p_name != u_name:
+                duplicates.add(p_name)
+                var = var.copy(name=u_name)
+            c.append(var)
+        if duplicates:
+            self.Warning.renamed_vars(", ".join(duplicates))
+        return Orange.data.Domain(attrs, cvars, metas)
 
     @staticmethod
     def _join_array_by_indices(left, right, lefti, righti, string_cols=None):

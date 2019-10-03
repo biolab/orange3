@@ -937,6 +937,22 @@ class TestOWMergeData(WidgetTest):
         self.assertFalse(widget.Error.matching_index_with_sth.is_shown())
         self.assertTrue(widget.Error.matching_numeric_with_nonnum.is_shown())
 
+    def test_duplicate_names(self):
+        domain = Domain([ContinuousVariable("C1")],
+                        metas=[DiscreteVariable("Feature", values=["A", "B"])])
+        data = Table(domain, np.array([[1.], [0.]]),
+                     metas=np.array([[1.], [0.]]))
+        domain = Domain([ContinuousVariable("C1")],
+                        metas=[StringVariable("Feature")])
+        extra_data = Table(domain, np.array([[1.], [0.]]),
+                           metas=np.array([["A"], ["B"]]))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.extra_data, extra_data)
+        self.assertTrue(self.widget.Warning.renamed_vars.is_shown())
+        merged_data = self.get_output(self.widget.Outputs.data)
+        self.assertListEqual([m.name for m in merged_data.domain.metas],
+                             ["Feature (1)", "Feature (2)"])
+
 
 if __name__ == "__main__":
     unittest.main()
