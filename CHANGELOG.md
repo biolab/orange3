@@ -5,6 +5,12 @@ Change Log
 ------------
 * ...
 
+[3.23.1] - 2019-10-03
+--------------------
+##### Bugfixes
+* Addons install with conda by default
+
+
 [3.23.0] - 2019-09-05
 --------------------
 ##### Enhancements
@@ -1158,7 +1164,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.23.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.23.1...HEAD
+[3.23.1]: https://github.com/biolab/orange3/compare/3.23.1...3.23.0
 [3.23.0]: https://github.com/biolab/orange3/compare/3.22.0...3.23.0
 [3.22.0]: https://github.com/biolab/orange3/compare/3.21.0...3.22.0
 [3.21.0]: https://github.com/biolab/orange3/compare/3.20.1...3.21.0
