@@ -310,6 +310,7 @@ class OWTestLearners(OWWidget):
         learner : Optional[Orange.base.Learner]
         key : Any
         """
+        self.cancel()
         if key in self.learners and learner is None:
             # Removed
             self._invalidate([key])
@@ -327,6 +328,7 @@ class OWTestLearners(OWWidget):
         ----------
         data : Optional[Orange.data.Table]
         """
+        self.cancel()
         self.Information.data_sampled.clear()
         self.Error.train_data_empty.clear()
         self.Error.class_required.clear()
@@ -390,6 +392,7 @@ class OWTestLearners(OWWidget):
         ----------
         data : Optional[Orange.data.Table]
         """
+        self.cancel()
         self.Information.test_data_sampled.clear()
         self.Error.test_data_empty.clear()
         if data is not None and not data:
@@ -445,11 +448,13 @@ class OWTestLearners(OWWidget):
         """
         Set the input preprocessor to apply on the training data.
         """
+        self.cancel()
         self.preprocessor = preproc
         self._invalidate()
 
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
+        self.cancel()
         self._update_class_selection()
         self.score_table.update_header(self.scorers)
         self.update_stats_model()
@@ -814,8 +819,9 @@ class OWTestLearners(OWWidget):
         task.progress_changed.connect(self.setProgressValue)
         task.watcher.finished.connect(self.__task_complete)
 
+        self.Outputs.evaluations_results.invalidate()
+        self.Outputs.predictions.invalidate()
         self.progressBarInit()
-        self.setBlocking(True)
         self.setStatusMessage("Running")
 
         self.__state = State.Running
@@ -826,7 +832,6 @@ class OWTestLearners(OWWidget):
         # handle a completed task
         assert self.thread() is QThread.currentThread()
         assert self.__task is not None and self.__task.future is f
-        self.setBlocking(False)
         self.progressBarFinished()
         self.setStatusMessage("")
         assert f.done()
@@ -878,7 +883,6 @@ class OWTestLearners(OWWidget):
             task.cancel()
             task.progress_changed.disconnect(self.setProgressValue)
             task.watcher.finished.disconnect(self.__task_complete)
-            self.setBlocking(False)
             self.progressBarFinished()
 
     def onDeleteWidget(self):
