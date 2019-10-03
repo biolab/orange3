@@ -54,6 +54,8 @@ requirements:
     - opentsne      >=0.3.11
     - pandas
     - pyyaml
+    - orange-canvas-core  >=0.1.7
+    - orange-widget-base
 
 test:
   # Python imports
