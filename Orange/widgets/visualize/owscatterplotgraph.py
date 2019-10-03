@@ -1208,7 +1208,15 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         cont_color = self.master.is_continuous_color()
         shape_labels = self.master.get_shape_labels()
         color_labels = self.master.get_color_labels()
-        if shape_labels == color_labels and shape_labels is not None:
+        if not cont_color and shape_labels is not None \
+                and shape_labels == color_labels:
+            colors = self.master.get_color_data()
+            shapes = self.master.get_shape_data()
+            mask = np.isfinite(colors) * np.isfinite(shapes)
+            combined = (colors == shapes)[mask].all()
+        else:
+            combined = False
+        if combined:
             self._update_combined_legend(shape_labels)
         else:
             self._update_shape_legend(shape_labels)
