@@ -436,7 +436,7 @@ class OWKMeans(widget.OWWidget):
 
     def update_results(self):
         scores = [mk if isinstance(mk, str) else silhouette_score(
-            self.data.X, mk.labels) for mk in (
+            self.preproces(self.data).X, mk.labels) for mk in (
                 self.clusterings[k] for k in range(self.k_from, self.k_to + 1))]
         best_row = max(
             range(len(scores)), default=0,
@@ -569,4 +569,4 @@ class OWKMeans(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWKMeans).run(Table("iris.tab"))
+    WidgetPreview(OWKMeans).run(Table("heart_disease"))
