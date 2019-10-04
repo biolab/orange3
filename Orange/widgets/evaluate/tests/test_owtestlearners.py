@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 # pylint: disable=protected-access
 import unittest
+import warnings
 
 import numpy as np
 from AnyQt.QtCore import Qt
@@ -381,6 +382,14 @@ class TestOWTestLearners(WidgetTest):
                     Table("iris")[::15], None, LogisticRegressionLearner(),
                     OWTestLearners.KFold, 0),
                 (0.8, 0.5, 0.5, 0.5, 0.5))))
+
+    def test_no_pregressbar_warning(self):
+        data = Table("iris")[::15]
+
+        with warnings.catch_warnings(record=True) as w:
+            self.send_signal(self.widget.Inputs.train_data, data)
+            self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0)
+            assert not w
 
 
 class TestHelpers(unittest.TestCase):
