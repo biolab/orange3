@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 from scipy import stats
+from scipy.spatial.distance import cdist
 from scipy import sparse as sp
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
@@ -643,6 +644,21 @@ class PearsonR(CorrelationDistance):
 class PearsonRAbsolute(CorrelationDistance):
     def fit(self, _):
         return PearsonModel(True, self.axis, self.impute)
+
+def _bhattacharyya(a, b):
+    # not a real metric, does not obey triangle inequality
+    return -np.log(np.sum(np.sqrt(a*b)))
+
+class Bhattacharyya(Distance):
+    def fit(self, data):
+        return BhattacharyyaModel(self.axis, self.impute)
+
+class BhattacharyyaModel(DistanceModel):
+
+    def compute_distances(self, x1, x2):
+        if x2 is None:
+            x2 = x1
+        return cdist(x1, x2, _bhattacharyya)
 
 
 class Mahalanobis(Distance):

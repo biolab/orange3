@@ -21,7 +21,8 @@ METRICS = [
     ("Absolute Spearman", distance.SpearmanRAbsolute),
     ("Pearson", distance.PearsonR),
     ("Absolute Pearson", distance.PearsonRAbsolute),
-    ("Hamming", distance.Hamming)
+    ("Hamming2", distance.Hamming),
+    ('Bhattacharyya', distance.Bhattacharyya)
 ]
 
 
