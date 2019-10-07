@@ -499,6 +499,23 @@ class TestOWKMeans(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         self.assertTrue(self.widget.Error.no_attributes.is_shown())
 
+    def test_saved_selection(self):
+        self.widget.send_data = Mock()
+        self.widget.optimize_k = True
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.wait_until_stop_blocking()
+        self.widget.table_view.selectRow(2)
+        self.assertEqual(self.widget.selected_row(), 2)
+        self.assertEqual(self.widget.send_data.call_count, 3)
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        w = self.create_widget(OWKMeans, stored_settings=settings)
+        w.send_data = Mock()
+        self.send_signal(w.Inputs.data, self.data, widget=w)
+        self.wait_until_stop_blocking(widget=w)
+        self.assertEqual(w.send_data.call_count, 2)
+        self.assertEqual(self.widget.selected_row(), w.selected_row())
+
 
 if __name__ == "__main__":
     unittest.main()
