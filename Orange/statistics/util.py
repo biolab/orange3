@@ -659,6 +659,32 @@ def any_nan(x, axis=None):
     return result
 
 
+def all_nan(x, axis=None):
+    """
+    Check if all of the values in a matrix is nan. Works for sparse matrix too.
+    """
+    if not sp.issparse(x):
+        return np.isnan(x).all(axis=axis)
+
+    if axis is None:
+        # when x.nnz < actual shape there are zero values which are not nan
+        return np.prod(x.shape) == x.nnz and np.isnan(x.data).all()
+
+    if axis == 0:
+        x = x.tocsc()
+    elif axis == 1:
+        x = x.tocsr()
+
+    ax = x.ndim - axis - 1
+    axis_len = x.shape[axis]
+    result = np.zeros(x.shape[ax], dtype=bool)
+    for i in range(x.shape[ax]):
+        vals = x.data[x.indptr[i]:x.indptr[i + 1]]
+        result[i] = axis_len == len(vals) and np.isnan(vals).all()
+
+    return result
+
+
 def FDR(p_values: Iterable, dependent=False, m=None, ordered=False) -> Iterable:
     """ `False Discovery Rate <http://en.wikipedia.org/wiki/False_discovery_rate>`_
         correction on a list of p-values.
