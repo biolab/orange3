@@ -159,7 +159,7 @@ def open_link(url: QUrl):
             UsageStatistics.set_enabled(True)
 
             if not settings.contains('error-reporting/machine-id'):
-                settings.setValue('error-reporting/machine-id', uuid.uuid4())
+                settings.setValue('error-reporting/machine-id', str(uuid.uuid4()))
         pass
     else:
         QDesktopServices.openUrl(url)
@@ -327,7 +327,7 @@ def send_usage_statistics():
         if settings.contains('error-reporting/machine-id'):
             machine_id = settings.value('error-reporting/machine-id')
         else:
-            machine_id = uuid.uuid4()
+            machine_id = str(uuid.uuid4())
             settings.setValue('error-reporting/machine-id', machine_id)
 
         is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
