@@ -262,8 +262,8 @@ def pull_notifications():
 
         # check time validity
         today = date.today()
-        if (YAMLnotif.start and YAMLnotif.start >= today) or \
-                (YAMLnotif.end and YAMLnotif.end <= today):
+        if (YAMLnotif.start and YAMLnotif.start > today) or \
+                (YAMLnotif.end and YAMLnotif.end < today):
             return
 
         # check requirements
