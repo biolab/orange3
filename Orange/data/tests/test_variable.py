@@ -195,8 +195,6 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertIsNone(var._colors)
         self.assertEqual(var.colors.shape, (2, 3))
-        self.assertIs(var._colors, var.colors)
-        self.assertEqual(var.colors.shape, (2, 3))
         self.assertFalse(var.colors.flags.writeable)
 
         var.colors = np.arange(6).reshape((2, 3))
@@ -204,8 +202,6 @@ class TestDiscreteVariable(VariableTest):
         self.assertFalse(var.colors.flags.writeable)
         with self.assertRaises(ValueError):
             var.colors[0] = [42, 41, 40]
-        var.set_color(0, [42, 41, 40])
-        np.testing.assert_almost_equal(var.colors, [[42, 41, 40], [3, 4, 5]])
 
         var = DiscreteVariable.make("x", values=["A", "B"])
         var.attributes["colors"] = ['#0a0b0c', '#0d0e0f']
@@ -216,11 +212,8 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(len(var.colors), 2)
         var.add_value('e')
         self.assertEqual(len(var.colors), 3)
-        user_defined = (0, 0, 0)
-        var.set_color(2, user_defined)
         var.add_value('k')
         self.assertEqual(len(var.colors), 4)
-        np.testing.assert_array_equal(var.colors[2], user_defined)
 
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
@@ -433,7 +426,6 @@ class TestContinuousVariable(VariableTest):
     def test_colors(self):
         a = ContinuousVariable("a")
         self.assertEqual(a.colors, ((0, 0, 255), (255, 255, 0), False))
-        self.assertIs(a.colors, a._colors)
 
         a = ContinuousVariable("a")
         a.attributes["colors"] = ['#010203', '#040506', True]

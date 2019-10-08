@@ -11,7 +11,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import _variable
-from Orange.util import Registry, color_to_hex, hex_to_color, Reprable, \
+from Orange.util import Registry, hex_to_color, Reprable,\
     OrangeDeprecationWarning
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
@@ -326,6 +326,14 @@ class Variable(Reprable, metaclass=VariableMeta):
     def name(self):
         return self._name
 
+    @property
+    def colors(self):  # unreachable; pragma: no cover
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        self._colors = value
+
     def make_proxy(self):
         """
         Copy the variable and set the master to `self.master` or to `self`.
@@ -451,7 +459,7 @@ class Variable(Reprable, metaclass=VariableMeta):
         # Use make to unpickle variables.
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
-    def copy(self, compute_value=None, name=None, **kwargs):
+    def copy(self, compute_value=None, *, name=None, **kwargs):
         var = type(self)(name=name or self.name,
                          compute_value=compute_value or self.compute_value,
                          sparse=self.sparse, **kwargs)
@@ -513,22 +521,16 @@ class ContinuousVariable(Variable):
     def format_str(self, value):
         self._format_str = value
 
-    @property
+    @Variable.colors.getter
     def colors(self):
-        if self._colors is None:
-            try:
-                col1, col2, black = self.attributes["colors"]
-                self._colors = (hex_to_color(col1), hex_to_color(col2), black)
-            except (KeyError, ValueError):
-                # Stored colors were not available or invalid, use defaults
-                self._colors = ((0, 0, 255), (255, 255, 0), False)
-        return self._colors
-
-    @colors.setter
-    def colors(self, value):
-        col1, col2, black = self._colors = value
-        self.attributes["colors"] = \
-            [color_to_hex(col1), color_to_hex(col2), black]
+        if self._colors is not None:
+            return self._colors
+        try:
+            col1, col2, black = self.attributes["colors"]
+            return (hex_to_color(col1), hex_to_color(col2), black)
+        except (KeyError, ValueError):
+            # User-provided colors were not available or invalid
+            return ((0, 0, 255), (255, 255, 0), False)
 
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
@@ -565,7 +567,7 @@ class ContinuousVariable(Variable):
 
     str_val = repr_val
 
-    def copy(self, compute_value=None, name=None, **kwargs):
+    def copy(self, compute_value=None, *, name=None, **kwargs):
         var = super().copy(compute_value=compute_value, name=name,
                            number_of_decimals=self.number_of_decimals,
                            **kwargs)
@@ -690,29 +692,21 @@ class DiscreteVariable(Variable):
 
         return mapper
 
-    @property
+    @Variable.colors.getter
     def colors(self):
-        if self._colors is None:
+        if self._colors is not None:
+            colors = np.array(self._colors)
+        elif not self.values:
+            colors = np.zeros((0, 3))  # to match additional colors in vstacks
+        else:
             from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
-            self._colors = ColorPaletteGenerator.palette(self)
-            colors = self.attributes.get('colors')
-            if colors:
-                self._colors[:len(colors)] = [hex_to_color(color) for color in colors]
-            self._colors.flags.writeable = False
-        return self._colors
-
-    @colors.setter
-    def colors(self, value):
-        self._colors = value
-        self._colors.flags.writeable = False
-        self.attributes["colors"] = [color_to_hex(col) for col in value]
-
-    def set_color(self, i, color):
-        self.colors = self.colors
-        self._colors.flags.writeable = True
-        self._colors[i, :] = color
-        self._colors.flags.writeable = False
-        self.attributes["colors"][i] = color_to_hex(color)
+            default = tuple(ColorPaletteGenerator.palette(self))
+            colors = self.attributes.get('colors', ())
+            colors = tuple(hex_to_color(color) for color in colors) \
+                    + default[len(colors):]
+            colors = np.array(colors)
+        colors.flags.writeable = False
+        return colors
 
     def to_val(self, s):
         """
@@ -789,22 +783,7 @@ class DiscreteVariable(Variable):
                                self.values, self.ordered), \
             __dict__
 
-    @staticmethod
-    def ordered_values(values):
-        """
-        Return a sorted list of values. If there exists a prescribed order for
-        such set of values, it is returned. Otherwise, values are sorted
-        alphabetically.
-        """
-        for presorted in DiscreteVariable.presorted_values:
-            if values == set(presorted):
-                return presorted
-        try:
-            return sorted(values, key=float)
-        except ValueError:
-            return sorted(values)
-
-    def copy(self, compute_value=None, name=None, **_):
+    def copy(self, compute_value=None, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
                             values=self.values, ordered=self.ordered)
 
@@ -920,7 +899,7 @@ class TimeVariable(ContinuousVariable):
         self.have_date = have_date
         self.have_time = have_time
 
-    def copy(self, compute_value=None, name=None, **_):
+    def copy(self, compute_value=None, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
                             have_date=self.have_date, have_time=self.have_time)
 
