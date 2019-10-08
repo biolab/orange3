@@ -831,8 +831,8 @@ class OWCSVFileImport(widget.OWWidget):
         task = state = TaskState()
         state.future = ...
         state.watcher = qconcurrent.FutureWatcher()
-        state.progressChanged.connect(self.__set_read_progress,
-                                      Qt.QueuedConnection)
+        state.progressChanged.connect(
+            self.__set_read_progress, Qt.DirectConnection)
 
         def progress_(i, j):
             task.emitProgressChangedOrCancel(i, j)
@@ -1298,8 +1298,15 @@ class TaskState(QObject):
     #: progress state, second value is the total progress to complete
     #: (-1 if unknown)
     progressChanged = Signal('qint64', 'qint64')
+    __progressChanged = Signal('qint64', 'qint64')
     #: Was cancel requested.
     cancel = False
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # route the signal via this object's queue
+        self.__progressChanged.connect(
+            self.progressChanged, Qt.QueuedConnection)
 
     def emitProgressChangedOrCancel(self, current, total):
         # type: (int, int) -> None
@@ -1309,7 +1316,7 @@ class TaskState(QObject):
         if self.cancel:
             raise TaskState.UserCancelException()
         else:
-            self.progressChanged.emit(current, total)
+            self.__progressChanged.emit(current, total)
 
 
 class TextReadWrapper(io.TextIOWrapper):
