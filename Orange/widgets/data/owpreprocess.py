@@ -23,7 +23,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
-    ProjectCUR, Scale as _Scale, Randomize as _Randomize
+    ProjectCUR, Scale as _Scale, Randomize as _Randomize, SelectDense
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.overlay import OverlayWidget
@@ -250,6 +250,37 @@ class ContinuizeEditor(BaseEditor):
     def __repr__(self):
         return self.Continuizers[self.__treatment]
 
+class SelectDenseEditor(BaseEditor):
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+        self.sparse_tresh = 5
+        form = QFormLayout()
+        self.cspin = QSpinBox(minimum=1, maximum=100, value=self.sparse_tresh)
+        self.cspin.valueChanged[int].connect(self.setTresh)
+        self.cspin.editingFinished.connect(self.edited)
+
+        form.addRow("Min % of nonzero values:", self.cspin)
+        self.layout().addLayout(form)
+
+    def setTresh(self, tresh):
+        if self.sparse_tresh != tresh:
+            self.sparse_tresh = tresh
+            self.cspin.setValue(tresh)
+            self.changed.emit()
+
+    def parameters(self):
+        return {'sparse_tresh':self.sparse_tresh}
+
+    def setParameters(self, params):
+        self.setTresh(params.get('sparse_tresh', 5))
+
+    @staticmethod
+    def createinstance(params):
+        params = dict(params)
+        treshold = params.pop('sparse_tresh', 5)
+        return SelectDense(treshold=treshold/100)
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
@@ -921,6 +952,12 @@ PREPROCESS_ACTIONS = [
         Description("Randomize",
                     icon_path("Random.svg")),
         Randomize
+    ),
+    PreprocessAction(
+        "Remove Sparse", "orange.preprocess.select_dense", "Feature Selectiom",
+        Description("Remove Sparse Features",
+                    icon_path("SelectColumns.svg")),
+        SelectDenseEditor
     ),
     PreprocessAction(
         "PCA", "orange.preprocess.pca", "PCA",

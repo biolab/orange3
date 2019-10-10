@@ -9,12 +9,12 @@ from unittest.mock import Mock
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, \
     SelectRandomFeatures, EqualFreq, RemoveNaNColumns, DropInstances, \
     EqualWidth, SelectBestFeatures, RemoveNaNRows, Preprocess, Scale, \
     Randomize, Continuize, Discretize, Impute, SklImpute, Normalize, \
-    ProjectCUR, ProjectPCA, RemoveConstant, AdaptiveNormalize
+    ProjectCUR, ProjectPCA, RemoveConstant, AdaptiveNormalize, SelectDense
 from Orange.util import OrangeDeprecationWarning
 
 
@@ -189,3 +189,27 @@ class TestAdaptiveNormalize(unittest.TestCase):
         true_out = Scale(center=Scale.NoCentering, scale=Scale.Span)(self.data)
         np.testing.assert_array_equal(out, true_out)
         self.data = self.data.X.toarray()
+
+
+class TestSelectDense(unittest.TestCase):
+
+    def setUp(self):
+        domain = Domain([ContinuousVariable('a'), ContinuousVariable('b')])
+        self.data = Table.from_numpy(domain, np.zeros((3, 2)))
+        self.data[1:, 1] = 7
+
+    def test_dense(self):
+        true_out = self.data[:, 1]
+        true_out.X = true_out.X.reshape(-1, 1)
+        out = SelectDense(0.5)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_sparse(self):
+        true_out = self.data[:, 1]
+        true_out.X = csr_matrix(true_out.X)
+        out = SelectDense(0.5)(self.data).X
+        np.testing.assert_array_equal(out, true_out)
+
+
+if __name__ == '__main__':
+    unittest.main()

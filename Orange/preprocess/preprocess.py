@@ -18,7 +18,8 @@ from . import impute, discretize, transformation
 __all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
            "SklImpute", "Normalize", "Randomize", "Preprocess",
            "RemoveConstant", "RemoveNaNClasses", "RemoveNaNColumns",
-           "ProjectPCA", "ProjectCUR", "Scale", "AdaptiveNormalize"]
+           "ProjectPCA", "ProjectCUR", "Scale", "SelectDense",
+           "AdaptiveNormalize"]
 
 
 class Preprocess(_RefuseDataInConstructor, Reprable):
@@ -568,6 +569,32 @@ class PreprocessorList(Preprocess):
         for pp in self.preprocessors:
             data = pp(data)
         return data
+
+class SelectDense(Preprocess):
+    """
+    Select dense features. Denseness is determined according to
+    user-defined treshold.
+
+    Parameters
+    ----------
+    treshold : float
+        Minimal proportion of non-zero entries of a feature
+    """
+
+    def __init__(self, treshold=0.05):
+        self.treshold = treshold
+
+    def __call__(self, data):
+        if sp.issparse(data.X):
+            data_csc = sp.csc_matrix(data.X)
+            h, w = data_csc.shape
+            sparsness = [data_csc[:, i].count_nonzero()/h for i in range(w)]
+        else:
+            sparsness = np.count_nonzero(data.X, axis=0)/ data.X.shape[0]
+        att = [a for a, s in zip(data.domain.attributes, sparsness) if s >= self.treshold]
+        domain = Orange.data.Domain(att, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.transform(domain)
 
 
 class AdaptiveNormalize(Preprocess):
