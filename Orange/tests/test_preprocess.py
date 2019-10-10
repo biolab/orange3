@@ -139,7 +139,7 @@ class TestReprs(unittest.TestCase):
                     Randomize, ProjectPCA, ProjectCUR, Scale,
                     EqualFreq, EqualWidth, EntropyMDL, SelectBestFeatures,
                     SelectRandomFeatures, RemoveNaNColumns, DoNotImpute, DropInstances,
-                    Average, Default]
+                    Average, Default, SelectDense]
 
         for preproc in preprocs:
             repr_str = repr(preproc())

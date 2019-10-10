@@ -103,11 +103,11 @@ class Discretize(Preprocess):
             else:
                 return var
 
-        def discretized(vars, do_discretize):
+        def discretized(vars_, do_discretize):
             if do_discretize:
-                vars = (transform(var) for var in vars)
-                vars = [var for var in vars if var is not None]
-            return vars
+                vars_ = (transform(var) for var in vars_)
+                vars_ = [var for var in vars_ if var is not None]
+            return vars_
 
         method = self.method or discretize.EqualFreq()
         domain = Orange.data.Domain(
@@ -423,7 +423,8 @@ class Randomize(Preprocess):
             new_data.metas = self.randomize(new_data.metas, r3)
         return new_data
 
-    def randomize(self, table, rand_state=None):
+    @staticmethod
+    def randomize(table, rand_state=None):
         rstate = np.random.RandomState(rand_state)
         if sp.issparse(table):
             table = table.tocsc()  # type: sp.spmatrix

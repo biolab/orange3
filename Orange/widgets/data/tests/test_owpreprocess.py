@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring
 import numpy as np
 
-from Orange.data import Table, Domain
+from Orange.data import Table
 from Orange.preprocess import (
     Randomize, Scale, Discretize, Continuize, Impute, ProjectPCA, ProjectCUR
 )
@@ -47,7 +47,7 @@ class TestOWPreprocess(WidgetTest):
         self.widget.set_model(model)
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(self.widget.Outputs.preprocessed_data)
-        print(np.count_nonzero(output.X[:,0]))
+        print(np.count_nonzero(output.X[:, 0]))
         np.testing.assert_array_equal(output.X, data.X[:, 1:])
         np.testing.assert_array_equal(output.Y, data.Y)
         np.testing.assert_array_equal(output.metas, data.metas)
@@ -261,4 +261,3 @@ class TestCUREditor(WidgetTest):
         self.assertIsInstance(p, ProjectCUR)
         self.assertEqual(p.rank, 5)
         self.assertEqual(p.max_error, 0.5)
-
