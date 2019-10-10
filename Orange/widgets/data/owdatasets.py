@@ -457,7 +457,7 @@ class OWDataSets(OWWidget):
                 # TODO: There are possible pending __progress_advance queued
                 self.__awaiting_state.pb.advance.disconnect(
                     self.__progress_advance)
-                self.progressBarFinished(processEvents=None)
+                self.progressBarFinished()
                 self.__awaiting_state = None
 
             if not di.islocal:
@@ -465,7 +465,7 @@ class OWDataSets(OWWidget):
                 callback = lambda pr=pr: pr.advance.emit()
                 pr.advance.connect(self.__progress_advance, Qt.QueuedConnection)
 
-                self.progressBarInit(processEvents=None)
+                self.progressBarInit()
                 self.setStatusMessage("Fetching...")
                 self.setBlocking(True)
 
@@ -492,7 +492,7 @@ class OWDataSets(OWWidget):
         assert self.__awaiting_state.future is f
 
         if self.isBlocking():
-            self.progressBarFinished(processEvents=None)
+            self.progressBarFinished()
             self.setBlocking(False)
             self.setStatusMessage("")
 
@@ -514,7 +514,7 @@ class OWDataSets(OWWidget):
     @Slot()
     def __progress_advance(self):
         assert QThread.currentThread() is self.thread()
-        self.progressBarAdvance(1, processEvents=None)
+        self.progressBarAdvance(1)
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
