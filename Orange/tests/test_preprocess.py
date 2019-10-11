@@ -206,6 +206,7 @@ class TestSelectDense(unittest.TestCase):
 
     def test_sparse(self):
         true_out = self.data[:, 1]
+        self.data.X = csr_matrix(self.data.X)
         true_out.X = csr_matrix(true_out.X)
         out = SelectDense(0.5)(self.data).X
         np.testing.assert_array_equal(out, true_out)

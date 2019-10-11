@@ -255,32 +255,32 @@ class SelectDenseEditor(BaseEditor):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.setLayout(QVBoxLayout())
-        self.sparse_tresh = 5
+        self.sparse_thresh = 5
         form = QFormLayout()
-        self.cspin = QSpinBox(minimum=1, maximum=100, value=self.sparse_tresh)
-        self.cspin.valueChanged[int].connect(self.setTresh)
+        self.cspin = QSpinBox(minimum=1, maximum=100, value=self.sparse_thresh)
+        self.cspin.valueChanged[int].connect(self.setThresh)
         self.cspin.editingFinished.connect(self.edited)
 
         form.addRow("Min % of nonzero values:", self.cspin)
         self.layout().addLayout(form)
 
-    def setTresh(self, tresh):
-        if self.sparse_tresh != tresh:
-            self.sparse_tresh = tresh
-            self.cspin.setValue(tresh)
+    def setThresh(self, thresh):
+        if self.sparse_thresh != thresh:
+            self.sparse_thresh = thresh
+            self.cspin.setValue(thresh)
             self.changed.emit()
 
     def parameters(self):
-        return {'sparse_tresh':self.sparse_tresh}
+        return {'sparse_thresh':self.sparse_thresh}
 
     def setParameters(self, params):
-        self.setTresh(params.get('sparse_tresh', 5))
+        self.setThresh(params.get('sparse_thresh', 5))
 
     @staticmethod
     def createinstance(params):
         params = dict(params)
-        treshold = params.pop('sparse_tresh', 5)
-        return SelectDense(treshold=treshold/100)
+        threshold = params.pop('sparse_thresh', 5)
+        return SelectDense(threshold=threshold/100)
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
@@ -954,7 +954,7 @@ PREPROCESS_ACTIONS = [
         Randomize
     ),
     PreprocessAction(
-        "Remove Sparse", "orange.preprocess.select_dense", "Feature Selectiom",
+        "Remove Sparse", "orange.preprocess.select_dense", "Feature Selection",
         Description("Remove Sparse Features",
                     icon_path("SelectColumns.svg")),
         SelectDenseEditor

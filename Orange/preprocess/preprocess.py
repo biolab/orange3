@@ -578,12 +578,12 @@ class SelectDense(Preprocess):
 
     Parameters
     ----------
-    treshold : float
+    threshold : float
         Minimal proportion of non-zero entries of a feature
     """
 
-    def __init__(self, treshold=0.05):
-        self.treshold = treshold
+    def __init__(self, threshold=0.05):
+        self.threshold = threshold
 
     def __call__(self, data):
         if sp.issparse(data.X):
@@ -592,7 +592,7 @@ class SelectDense(Preprocess):
             sparsness = [data_csc[:, i].count_nonzero()/h for i in range(w)]
         else:
             sparsness = np.count_nonzero(data.X, axis=0)/ data.X.shape[0]
-        att = [a for a, s in zip(data.domain.attributes, sparsness) if s >= self.treshold]
+        att = [a for a, s in zip(data.domain.attributes, sparsness) if s >= self.threshold]
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
         return data.transform(domain)
