@@ -142,6 +142,7 @@ class OWKMeans(widget.OWWidget):
     max_iterations = Setting(300)
     n_init = Setting(10)
     smart_init = Setting(0)  # KMeans++
+    selection = Setting(None, schema_only=True)  # type: Optional[int]
     auto_commit = Setting(True)
 
     settings_version = 2
@@ -158,6 +159,7 @@ class OWKMeans(widget.OWWidget):
         super().__init__()
 
         self.data = None  # type: Optional[Table]
+        self.__pending_selection = self.selection  # type: Optional[int]
         self.clusterings = {}
 
         self.__executor = ThreadExecutor(parent=self)
@@ -443,9 +445,16 @@ class OWKMeans(widget.OWWidget):
             key=lambda x: 0 if isinstance(scores[x], str) else scores[x]
         )
         self.table_model.set_scores(scores, self.k_from)
-        self.table_view.selectRow(best_row)
+        self.apply_selection(best_row)
         self.table_view.setFocus(Qt.OtherFocusReason)
         self.table_view.resizeRowsToContents()
+
+    def apply_selection(self, best_row):
+        pending = best_row
+        if self.__pending_selection is not None:
+            pending = self.__pending_selection
+            self.__pending_selection = None
+        self.table_view.selectRow(pending)
 
     def selected_row(self):
         indices = self.table_view.selectedIndexes()
@@ -454,6 +463,7 @@ class OWKMeans(widget.OWWidget):
         return indices[0].row()
 
     def select_row(self):
+        self.selection = self.selected_row()
         self.send_data()
 
     def preproces(self, data):
@@ -535,6 +545,7 @@ class OWKMeans(widget.OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.data, old_data = data, self.data
+        self.selection = None
 
         # Do not needlessly recluster the data if X hasn't changed
         if old_data and self.data and array_equal(self.data.X, old_data.X):
