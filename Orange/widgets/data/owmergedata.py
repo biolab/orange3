@@ -409,7 +409,8 @@ class OWMergeData(widget.OWWidget):
             return None
         method = self._merge_methods[self.merging]
         lefti, righti, rightu = method(self, left, left_mask, right, right_mask)
-        reduced_extra_data = self._compute_reduced_extra_data(right_vars)
+        reduced_extra_data = \
+            self._compute_reduced_extra_data(right_vars, lefti, righti, rightu)
         return self._join_table_by_indices(
             reduced_extra_data, lefti, righti, rightu)
 
@@ -446,18 +447,40 @@ class OWMergeData(widget.OWWidget):
                 ok = False
         return ok
 
-    def _compute_reduced_extra_data(self, extra_vars):
+    def _compute_reduced_extra_data(self,
+                                    right_match_vars, lefti, righti, rightu):
         """Prepare a table with extra columns that will appear in the merged
         table"""
         domain = self.data.domain
         extra_domain = self.extra_data.domain
-        all_vars = set(chain(domain.variables, domain.metas))
 
-        if self.merging != self.OuterJoin:
-            all_vars |= set(extra_vars)
-        extra_vars = chain(extra_domain.variables, extra_domain.metas)
-        return self.extra_data[:, [var for var in extra_vars
-                                   if var not in all_vars]]
+        def var_needed(var):
+            if rightu is not None and rightu.size:
+                return True
+            if var in right_match_vars and self.merging != self.OuterJoin:
+                return False
+            if var not in domain:
+                return True
+            both_defined = (lefti != -1) * (righti != -1)
+            left_col = \
+                self.data.get_column_view(var)[0][lefti[both_defined]]
+            right_col = \
+                self.extra_data.get_column_view(var)[0][righti[both_defined]]
+            if var.is_primitive():
+                left_col = left_col.astype(float)
+                right_col = right_col.astype(float)
+                mask_left = np.isfinite(left_col)
+                mask_right = np.isfinite(right_col)
+                return not (
+                    np.all(mask_left == mask_right)
+                    and np.all(left_col[mask_left] == right_col[mask_right]))
+            else:
+                return not np.all(left_col == right_col)
+
+        extra_vars = [
+            var for var in chain(extra_domain.variables, extra_domain.metas)
+            if var_needed(var)]
+        return self.extra_data[:, extra_vars]
 
     @staticmethod
     def _values(data, var, mask):
@@ -532,18 +555,29 @@ class OWMergeData(widget.OWWidget):
         of rows given in indices"""
         if not lefti.size:
             return None
-        domain = Orange.data.Domain(
-            *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
-              for x in ("attributes", "class_vars", "metas")))
-        domain = self._domain_rename_duplicates(domain)
-        X = self._join_array_by_indices(self.data.X, reduced_extra.X, lefti, righti)
+        lt_dom = self.data.domain
+        xt_dom = reduced_extra.domain
+        domain = self._domain_rename_duplicates(
+            lt_dom.attributes + xt_dom.attributes,
+            lt_dom.class_vars + xt_dom.class_vars,
+            lt_dom.metas + xt_dom.metas)
+        X = self._join_array_by_indices(
+            self.data.X, reduced_extra.X, lefti, righti)
         Y = self._join_array_by_indices(
             np.c_[self.data.Y], np.c_[reduced_extra.Y], lefti, righti)
         string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
         metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, lefti, righti, string_cols)
         if rightu is not None:
-            extras = self.extra_data[rightu].transform(domain)
+            # This domain is used for transforming the extra rows for outer join
+            # It must use the original - not renamed - variables from right, so
+            # values are copied,
+            # but new domain for the left, so renamed values are *not* copied
+            right_domain = Orange.data.Domain(
+                domain.attributes[:len(lt_dom.attributes)] + xt_dom.attributes,
+                domain.class_vars[:len(lt_dom.class_vars)] + xt_dom.class_vars,
+                domain.metas[:len(lt_dom.metas)] + xt_dom.metas)
+            extras = self.extra_data[rightu].transform(right_domain)
             X = np.vstack((X, extras.X))
             Y = np.vstack((Y, extras.Y))
             metas = np.vstack((metas, extras.metas))
@@ -558,28 +592,27 @@ class OWMergeData(widget.OWWidget):
 
         return table
 
-    def _domain_rename_duplicates(self, domain):
+    def _domain_rename_duplicates(self, attributes, class_vars, metas):
         """Check for duplicate variable names in domain. If any, rename
         the variables, by replacing them with new ones (names are
         appended a number). """
-        attrs, cvars, metas = [], [], []
-        n_attrs, n_cvars, n_metas = (len(domain.attributes),
-                                     len(domain.class_vars), len(domain.metas))
-        lists = [attrs] * n_attrs + [cvars] * n_cvars + [metas] * n_metas
+        attrs, cvars, mets = [], [], []
+        n_attrs, n_cvars, n_metas = len(attributes), len(class_vars), len(metas)
+        lists = [attrs] * n_attrs + [cvars] * n_cvars + [mets] * n_metas
 
-        variables = domain.variables + domain.metas
-        proposed_names = [m.name for m in variables]
+        all_vars = attributes + class_vars + metas
+        proposed_names = [m.name for m in all_vars]
         unique_names = get_unique_names_duplicates(proposed_names)
         duplicates = set()
         for p_name, u_name, var, c in zip(proposed_names, unique_names,
-                                          variables, lists):
+                                          all_vars, lists):
             if p_name != u_name:
                 duplicates.add(p_name)
                 var = var.copy(name=u_name)
             c.append(var)
         if duplicates:
             self.Warning.renamed_vars(", ".join(duplicates))
-        return Orange.data.Domain(attrs, cvars, metas)
+        return Orange.data.Domain(attrs, cvars, mets)
 
     @staticmethod
     def _join_array_by_indices(left, right, lefti, righti, string_cols=None):
