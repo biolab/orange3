@@ -313,7 +313,7 @@ class DomainEditor(QTableView):
                 col_data = self._to_column(col_data, is_sparse)
             elif tpe == StringVariable:
                 var = tpe.make(name)
-                if type(orig_var) == DiscreteVariable:
+                if type(orig_var) in [DiscreteVariable, TimeVariable]:
                     col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
                                 for x in self._iter_vals(col_data)]
                 elif type(orig_var) == ContinuousVariable:
