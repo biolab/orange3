@@ -245,7 +245,7 @@ class OWSOM(OWWidget):
         spin_x.setValue(self.size_x)
         gui.widgetLabel(box3, "×")
         spin_y = gui.spin(**spinargs)
-        spin_x.setValue(self.size_y)
+        spin_y.setValue(self.size_y)
         gui.rubber(box3)
         self.manual_box.setEnabled(not self.auto_dimension)
 
