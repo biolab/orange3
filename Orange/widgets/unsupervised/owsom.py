@@ -13,7 +13,7 @@ from AnyQt.QtWidgets import \
     QGraphicsPathItem
 
 from Orange.data import Table, Domain
-from Orange.preprocess import decimal_binnings
+from Orange.preprocess import decimal_binnings, time_binnings
 from Orange.projection.som import SOM
 
 from Orange.widgets import gui
@@ -226,7 +226,7 @@ class OWSOM(OWWidget):
         self.data = self.cont_x = None
         self.cells = self.member_data = None
         self.selection = None
-        self.colors = self.thresholds = None
+        self.colors = self.thresholds = self.bin_labels = None
 
         box = gui.vBox(self.controlArea, box="SOM")
         shape = gui.comboBox(
@@ -374,7 +374,7 @@ class OWSOM(OWWidget):
         self.data = self.cont_x = None
         self.cells = self.member_data = None
         self.attr_color = None
-        self.colors = self.thresholds = None
+        self.colors = self.thresholds = self.bin_labels = None
         if self.elements is not None:
             self.scene.removeItem(self.elements)
             self.elements = None
@@ -828,13 +828,22 @@ class OWSOM(OWWidget):
 
     def set_color_bins(self):
         if self.attr_color is None:
-            self.thresholds = self.colors = None
+            self.thresholds = self.bin_labels = self.colors = None
         elif self.attr_color.is_discrete:
-            self.thresholds = None
+            self.thresholds = self.bin_labels = None
             self.colors = [QColor(*color) for color in self.attr_color.colors]
         else:
             col = self.data.get_column_view(self.attr_color)[0].astype(float)
-            self.thresholds = decimal_binnings(col, min_bins=4)[0][1:-1]
+            if self.attr_color.is_time:
+                binning = time_binnings(col, min_bins=4)[-1]
+            else:
+                binning = decimal_binnings(col, min_bins=4)[-1]
+            self.thresholds = binning.thresholds[1:-1]
+            self.bin_labels = binning.labels[1:-1]
+            # Second label may had been truncated; put back the missing part
+            split0 = binning.labels[0].split()
+            split1 = binning.labels[1].split()
+            self.bin_labels[0] = " ".join(split0[:-len(split1)] + split1)
             palette = ContinuousPaletteGenerator(*self.attr_color.colors)
             nbins = len(self.thresholds) + 1
             self.colors = [palette[i / (nbins - 1)] for i in range(nbins)]
@@ -872,12 +881,11 @@ class OWSOM(OWWidget):
         self.set_legend_pos()
 
     def _bin_names(self):
-        sval = self.attr_color.repr_val
         return \
-            [f"< {sval(self.thresholds[0])}"] \
-            + [f"{sval(x)} - {sval(y)}"
-               for x, y in zip(self.thresholds, self.thresholds[1:])] \
-            + [f"≥ {sval(self.thresholds[-1])}"]
+            [f"< {self.bin_labels[0]}"] \
+            + [f"{x} - {y}"
+               for x, y in zip(self.bin_labels, self.bin_labels[1:])] \
+            + [f"≥ {self.bin_labels[-1]}"]
 
     def set_legend_pos(self):
         if self.legend is None:

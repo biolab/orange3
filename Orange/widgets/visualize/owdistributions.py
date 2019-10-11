@@ -1,4 +1,4 @@
-from functools import partial
+from functools import partial, reduce
 from itertools import count, groupby, repeat
 from xml.sax.saxutils import escape
 
@@ -11,7 +11,8 @@ from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
-from Orange.preprocess.discretize import decimal_binnings, get_bins
+from Orange.preprocess.discretize import decimal_binnings, time_binnings, \
+    short_time_units
 from Orange.statistics import distribution, contingency
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.annotated_data import \
@@ -212,6 +213,25 @@ class AshCurve:
         return ash
 
 
+class ElidedAxisNoUnits(ElidedLabelsAxis):
+    def __init__(self, orientation, pen=None, linkView=None, parent=None,
+                 maxTickLength=-5, showValues=True):
+        self.show_unit = False
+        self.tick_dict = {}
+        super().__init__(orientation, pen, linkView, parent, maxTickLength,
+                         showValues)
+
+    def setShowUnit(self, show_unit):
+        self.show_unit = show_unit
+
+    def labelString(self):
+        if self.show_unit:
+            return super().labelString()
+
+        style = ';'.join(f"{k}: {v}" for k, v in self.labelStyle.items())
+        return f"<span style='{style}'>{self.labelText}</span>"
+
+
 class OWDistributions(OWWidget):
     name = "Distributions"
     description = "Display value distributions of a data feature in a graph."
@@ -274,7 +294,6 @@ class OWDistributions(OWWidget):
         self.bar_items = []
         self.curve_descriptions = None
         self.binnings = []
-        self.bin_widths = []
 
         self.last_click_idx = None
         self.drag_operation = self.DragNone
@@ -346,7 +365,7 @@ class OWDistributions(OWWidget):
         self.mainArea.layout().addWidget(self.plotview)
         self.ploti = pg.PlotItem(
             enableMenu=False, enableMouse=False,
-            axisItems={"bottom": ElidedLabelsAxis("bottom")})
+            axisItems={"bottom": ElidedAxisNoUnits("bottom")})
         self.plot = self.ploti.vb
         self.plot.setMouseEnabled(False, False)
         self.ploti.hideButtons()
@@ -438,11 +457,13 @@ class OWDistributions(OWWidget):
             self.Fitters[self.fitted_distribution][1] is AshCurve)
 
     def _set_bin_width_slider_label(self):
-        text = ""
         if self.number_of_bins < len(self.binnings):
-            width = self.bin_widths[self.number_of_bins]
-            if isinstance(width, (int, float)):
-                text = f"{width:g}"
+            text = reduce(
+                lambda s, rep: s.replace(*rep),
+                short_time_units.items(),
+                self.binnings[self.number_of_bins].width_label)
+        else:
+            text = ""
         self.bin_width_label.setText(text)
 
     def _on_show_probabilities_changed(self):
@@ -511,6 +532,7 @@ class OWDistributions(OWWidget):
         assert self.is_valid  # called only from replot, so assumes data is OK
         bottomaxis = self.ploti.getAxis("bottom")
         bottomaxis.setLabel(self.var and self.var.name)
+        bottomaxis.setShowUnit(not (self.var and self.var.is_time))
 
         leftaxis = self.ploti.getAxis("left")
         if self.show_probs and self.cvar:
@@ -577,9 +599,10 @@ class OWDistributions(OWWidget):
                     var.values[i], np.sum(freqs), total, gvalues, freqs))
 
     def _cont_plot(self):
-        self.ploti.getAxis("bottom").setTicks(None)
+        self._set_cont_ticks()
         data = self.valid_data
-        y, x = np.histogram(data, bins=self.binnings[self.number_of_bins])
+        y, x = np.histogram(
+            data, bins=self.binnings[self.number_of_bins].thresholds)
         total = len(data)
         colors = [QColor(0, 128, 255)]
         if self.fitted_distribution:
@@ -603,9 +626,10 @@ class OWDistributions(OWWidget):
                 [QColor(0, 0, 0)], (1,))
 
     def _cont_split_plot(self):
-        self.ploti.getAxis("bottom").setTicks(None)
+        self._set_cont_ticks()
         data = self.valid_data
-        _, bins = np.histogram(data, bins=self.binnings[self.number_of_bins])
+        _, bins = np.histogram(
+            data, bins=self.binnings[self.number_of_bins].thresholds)
         gvalues = self.cvar.values
         varcolors = [QColor(*col) for col in self.cvar.colors]
         if self.fitted_distribution:
@@ -641,6 +665,26 @@ class OWDistributions(OWWidget):
             self._plot_approximations(bins[0], bins[-1], fitters, varcolors,
                                       prior_sizes / len(data))
 
+    def _set_cont_ticks(self):
+        axis = self.ploti.getAxis("bottom")
+        if self.var and self.var.is_time:
+            binning = self.binnings[self.number_of_bins]
+            labels = np.array(binning.labels)
+            thresholds = np.array(binning.thresholds)
+            lengths = np.array([len(lab) for lab in labels])
+            slengths = set(lengths)
+            if len(slengths) == 1:
+                ticks = [list(zip(thresholds[::2], labels[::2])),
+                         list(zip(thresholds[1::2], labels[1::2]))]
+            else:
+                ticks = []
+                for length in sorted(slengths, reverse=True):
+                    idxs = lengths == length
+                    ticks.append(list(zip(thresholds[idxs], labels[idxs])))
+            axis.setTicks(ticks)
+        else:
+            axis.setTicks(None)
+
     def _fit_approximation(self, y):
         def join_pars(pairs):
             strv = self.var.str_val
@@ -661,7 +705,7 @@ class OWDistributions(OWWidget):
             return None, None
         _, dist, names, str_names = self.Fitters[self.fitted_distribution]
         fitted = dist.fit(y)
-        params = {name: val for name, val in zip(names, fitted)}
+        params = dict(zip(names, fitted))
         return partial(dist.pdf, **params), str_params()
 
     def _plot_approximations(self, x0, x1, fitters, colors, prior_probs):
@@ -743,19 +787,22 @@ class OWDistributions(OWWidget):
     # Bins
 
     def recompute_binnings(self):
-        self.binnings = []
-        self.bin_widths = []
-        max_bins = 0
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
             column = self.data.get_column_view(self.var)[0].astype(float)
             if np.any(np.isfinite(column)):
-                binnings = decimal_binnings(
-                    column, min_width=self.min_var_resolution(self.var),
-                    add_unique=10, min_unique=5, return_defs=True)[::-1]
-                self.binnings = [get_bins(bin) for bin in binnings]
-                self.bin_widths = [bin.width for bin in binnings]
+                if self.var.is_time:
+                    self.binnings = time_binnings(column, min_unique=5)
+                    self.bin_width_label.setFixedWidth(45)
+                else:
+                    self.binnings = decimal_binnings(
+                        column, min_width=self.min_var_resolution(self.var),
+                        add_unique=10, min_unique=5)
+                    self.bin_width_label.setFixedWidth(35)
                 max_bins = len(self.binnings) - 1
+        else:
+            self.binnings = []
+            max_bins = 0
 
         self.controls.number_of_bins.setMaximum(max_bins)
         self.number_of_bins = min(

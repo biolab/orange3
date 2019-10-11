@@ -1,5 +1,9 @@
+import calendar
 import re
-from collections import namedtuple
+import time
+from typing import NamedTuple, List, Union, Callable
+import datetime
+from itertools import count
 
 import numpy as np
 import scipy.sparse as sp
@@ -14,7 +18,8 @@ from .transformation import Transformation
 from . import _discretize
 
 __all__ = ["EqualFreq", "EqualWidth", "EntropyMDL", "DomainDiscretizer",
-           "decimal_binnings", "get_bins"]
+           "decimal_binnings", "time_binnings", "short_time_units",
+           "BinDefinition"]
 
 
 class Discretizer(Transformation):
@@ -174,14 +179,40 @@ class EqualWidth(Discretization):
         return [min + (i + 1) * dif for i in range(self.n - 1)]
 
 
-BinDefinition = namedtuple("BinDefinition", ("start", "nbins", "width"))
+class BinDefinition(NamedTuple):
+    thresholds: np.ndarray  # thresholds, including the top
+    labels: List[str]  # friendly-formatted thresholds
+    width: Union[float, None]  # widths, if uniform; otherwise None
+    width_label: str  # friendly-formatted width (e.g. '50' or '2 weeks')
+
+
+# NamedTupleMeta doesn't allow to define __new__ so we need a subclass
+# Name of the class has to be the same to match the namedtuple name
+# pylint: disable=function-redefined
+class BinDefinition(BinDefinition):
+    def __new__(cls, thresholds, labels="%g", width=None, width_label=""):
+        if isinstance(labels, str):
+            labels = [labels % x for x in thresholds]
+        elif isinstance(labels, Callable):
+            labels = [labels(x) for x in thresholds]
+        if not width_label and width is not None:
+            width_label = f"{width:g}"
+        return super().__new__(cls, thresholds, labels, width, width_label)
+
+    @property
+    def start(self) -> float:
+        return self.thresholds[0]
+
+    @property
+    def nbins(self) -> int:
+        return len(self.thresholds) - 1
 
 
 def decimal_binnings(
         data, *, min_width=0, min_bins=2, max_bins=50,
-        min_unique=5, add_unique=None,
-        factors=(20, 10, 5, 2, 1, 0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01),
-        return_defs=False):
+        min_unique=5, add_unique=0,
+        factors=(0.01, 0.02, 0.025, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20),
+        label_fmt="%g"):
     """
     Find a set of nice splits of data into bins
 
@@ -218,14 +249,16 @@ def decimal_binnings(
             the function returns a single binning that matches that values in
             the data
         add_unique (int):
-            similar to `min_unique` except that such bins are added to the list
+            similar to `min_unique` except that such bins are added to the list;
+            set to 0 to disable
         factors (list of float):
             The factors with which the scaling is multiplied. Default is
-            `(20, 10, 5, 2, 1, 0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01)`,
+            `(0.01, 0.02, 0.025, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20)`,
             so if scaling is 1000, considered bin widths are 20000, 10000,
             5000, 2000, 1000, 500, 250, 200, 100, 50, 25, 20 and 10.
-        return_defs (bool): If set to `True`, the function returns a list of
-            instances of `BinDefinition`, otherwise a list of bin boundaries.
+        label_fmt (str or Callable):
+            A format string (default: "%g") used for threshold labels,
+            or a function for formatting thresholds (e.g. var.str_val)
 
     Returns:
         bin_boundaries (list of np.ndarray): a list of bin boundaries,
@@ -245,29 +278,16 @@ def decimal_binnings(
 
             This is returned if `return_defs` is `False`.
     """
-    def unique_bins():
-        if len(unique) >= 2:
-            # make the last bin the same width as the one before
-            last_boundary = 2 * unique[-1] - unique[-2]
-        else:
-            last_boundary = unique[0] + 1
-        return BinDefinition(
-            unique[0], len(unique), np.hstack((unique, [last_boundary])))
+    bins = []
 
-    unique = np.unique(data)
-    unique = unique[np.isfinite(unique)]
-    if not unique.size:
-        raise ValueError("no valid (non-nan) data")
-    mn, mx = unique[0], unique[-1]
-    if mn == mx or len(unique) <= min_unique:
-        bins = unique_bins()
-        if not return_defs:
-            bins = get_bins(bins)
-        return [bins]
+    mn, mx, unique = _min_max_unique(data)
+    if len(unique) <= max(min_unique, add_unique):
+        bins.append(BinDefinition(_unique_thresholds(unique), label_fmt))
+        if len(unique) <= min_unique:
+            return bins
 
     diff = mx - mn
     f10 = 10 ** -np.floor(np.log10(diff))
-    bins = []
     max_bins = min(max_bins, len(unique))
     for f in factors:
         width = f / f10
@@ -278,40 +298,174 @@ def decimal_binnings(
         nbins = np.round((mx_ - mn_) / width)
         if min_bins <= nbins <= max_bins \
                 and (not bins or bins[-1].nbins != nbins):
-            bins.append(BinDefinition(mn_, nbins, width))
-
-    if add_unique is not None and len(unique) <= add_unique:
-        if bins and bins[-1].nbins == len(unique):
-            del bins[-1]
-        bins.append(unique_bins())
-        if len(unique) < min_unique:
-            del bins[:-1]
-
-    if not return_defs:
-        bins = [get_bins(bin) for bin in bins]
-
+            bin_def = BinDefinition(mn_ + width * np.arange(nbins + 1),
+                                    label_fmt, width)
+            bins.append(bin_def)
     return bins
 
 
-def get_bins(bin_def: BinDefinition):
+def time_binnings(data, *, min_bins=2, max_bins=50, min_unique=5, add_unique=0):
     """
-    Return a `np.ndarray` corresponding to interval
+    Find a set of nice splits of time variable data into bins
+
+    The function considers bin widths of
+
+    - 1, 5, 10, 15, 30 seconds.
+    - 1, 5, 10, 15, 30 minutes,
+    - 1, 2, 3, 6, 12 hours,
+    - 1 day,
+    - 1, 2 weeks,
+    - 1, 2, 3, 6 months,
+    - 1, 2, 5, 10, 25, 50, 100 years,
+
+    and returns those that yield between `min_bins` and `max_bins` intervals.
+
     Args:
-        bin_def (BinDefinition):
-            definition of bins. a named tuple containing the beginning of the
-            first bin (`start`), number of bins (`nbins`) and their widths
-            (`width`). The last value can also be a `nd.array` with `nbins + 1`
-            elements, in which case the function returns this as a result.
+        data (np.ndarray):
+            vector of data points; values may repeat, and nans and infs are
+            filtered out.
+        min_bins (int): minimal number of bins
+        max_bins (int):
+            maximal number of bins; the number of bins will never exceed the
+            number of unique values
 
     Returns:
-        bin boundaries (np.ndarray):
-        bin boundaries including the top boundary of the last interval, hence
-        the list size equals `bin_def.nbins + 1`. This array matches the
-        `bin` argument of `numpy.histogram`.
+        bin_boundaries (list): a list of possible binning.
+            Each element of `bin_boundaries` is a tuple consisting of a label
+            describing the bin size (e.g. `2 weeks`) and a list of thresholds.
+            Thresholds are given as pairs
+            (number_of_seconds_since_epoch, label).
     """
-    if isinstance(bin_def.width, np.ndarray):
-        return bin_def.width
-    return bin_def.start + bin_def.width * np.arange(bin_def.nbins + 1)
+    mn, mx, unique = _min_max_unique(data)
+    mn, mx = time.gmtime(mn), time.gmtime(mx)
+    bins = []
+    if len(unique) <= max(min_unique, add_unique):
+        bins.append(_unique_time_bins(unique))
+    if len(unique) > min_unique:
+        bins += _time_binnings(mn, mx, min_bins + 1, max_bins + 1)
+    return bins
+
+
+def _time_binnings(mn, mx, min_pts, max_pts):
+    yfmt = "%y " if mn.tm_year >= 1950 else "%Y "
+    bins = []
+    for place, step, fmt, unit in (
+            [(5, x, "%H:%M:%S", "second") for x in (1, 5, 10, 15, 30)] +
+            [(4, x, "%b %d %H:%M", "minute") for x in (1, 5, 10, 15, 30)] +
+            [(3, x, yfmt + "%b %d %H:%M", "hour") for x in (1, 2, 3, 6, 12)] +
+            [(2, 1, yfmt + "%b %d", "day")] +
+            [(2, x, yfmt + "%b %d", "week") for x in (7, 14)] +
+            [(1, x, yfmt + "%b", "month") for x in (1, 2, 3, 6)] +
+            [(0, x, yfmt.strip(), "year") for x in (1, 2, 5, 10, 25, 50, 100)]):
+        times = _time_range(mn, mx, place, step, min_pts, max_pts)
+        if not times:
+            continue
+        times = [time.struct_time(t + (0, 0, 0)) for t in times]
+        thresholds = [calendar.timegm(t) for t in times]
+        labels = _simplified_labels([time.strftime(fmt, t) for t in times])
+        if place == 2 and step >= 7:
+            unit_label = f"{step // 7} week{'s' * (step > 7)}"
+        else:
+            unit_label = f"{step} {unit}{'s' * (step > 1)}"
+        new_bins = BinDefinition(thresholds, labels, None, unit_label)
+        if not bins or new_bins.nbins != bins[-1].nbins:
+            bins.append(new_bins)
+    return bins
+
+
+# datetime + deltatime is not very useful here because deltatime is
+# given a number of days, not years or months, so it doesn't allow
+# for specifying a step of 1 month
+def _time_range(start, end, place, step, min_pts, max_pts,
+                _zeros=(0, 1, 1, 0, 0, 0)):
+    if place == 2 and step % 7 == 0:
+        startd = datetime.date(*start[:3])
+        startd -= datetime.timedelta(days=-startd.weekday())
+        start = [startd.year, startd.month, startd.day, 0, 0, 0]
+    else:
+        start = list(
+            start[:place]
+            + ((start[place] - _zeros[place]) // step * step + _zeros[place], )
+            + _zeros[place + 1:])
+    end = list(end[:place + 1] + _zeros[place + 1:])
+    s = [tuple(start)]
+    for _ in range(max_pts - 1):
+        start[place] += step
+        if place >= 3:  # hours, minutes, seconds
+            for pos, maxval in enumerate((60, 60, 24), start=1):
+                if start[-pos] >= maxval:
+                    start[-pos - 1] += 1
+                    start[-pos] %= maxval
+        if place >= 2:
+            md = _month_days(*start[:2])
+            if start[2] > md:
+                start[1] += 1
+                start[2] %= md
+        if start[1] > 12:
+            start[0] += 1
+            start[1] %= 12
+        s.append(tuple(start))
+        if start > end:
+            return s if len(s) >= min_pts else None
+    return None
+
+
+def _month_days(year, month,
+                _md=(None, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)):
+    return _md[month] + (
+        month == 2 and (year % 400 == 0 or year % 4 == 0 and year % 100 != 0))
+
+
+def _simplified_labels(labels):
+    to_remove = "42"
+    while True:
+        firsts = {f for f, *_ in (lab.split() for lab in labels)}
+        if len(firsts) > 1:
+            break
+        to_remove = firsts.pop()
+        flen = len(to_remove) + 1
+        labels = [lab[flen:] for lab in labels]
+    for i in range(len(labels) - 1, 0, -1):
+        for k, c, d in zip(count(), labels[i].split(), labels[i - 1].split()):
+            if c != d:
+                labels[i] = " ".join(labels[i].split()[k:])
+                break
+    # If the last thing removed were month names and the labels continues with
+    # hours, keep month name in the first label; "08 12:29" looks awkward.
+    if not to_remove[0].isdigit() and ":" in labels[0]:
+        labels[0] = f"{to_remove} {labels[0]}"
+    return labels
+
+
+def _unique_time_bins(unique):
+    times = [time.gmtime(x) for x in unique]
+    fmt = f'{"%y " if times[0][0] >= 1950 else "%Y "} %b %d'
+    fmt += " %H:%M" * (len({t[2:] for t in times}) > 1)
+    fmt += ":%S" * bool(np.all(unique % 60 == 0))
+    return BinDefinition(_unique_thresholds(unique),
+                         [time.strftime(fmt, x) for x in times])
+
+
+def _unique_thresholds(unique):
+    if len(unique) >= 2:
+        # make the last bin the same width as the one before
+        last_boundary = 2 * unique[-1] - unique[-2]
+    else:
+        last_boundary = unique[0] + 1
+    return np.hstack((unique, [last_boundary]))
+
+
+def _min_max_unique(data):
+    unique = np.unique(data)
+    unique = unique[np.isfinite(unique)]
+    if not unique.size:
+        raise ValueError("no valid (non-nan) data")
+    return unique[0], unique[-1], unique
+
+
+short_time_units = dict(seconds="sec", minutes="min", hours="hrs",
+                        weeks="wks", months="mon", years="yrs",
+                        second="sec", minute="min", month="mon")
 
 
 # noinspection PyPep8Naming
