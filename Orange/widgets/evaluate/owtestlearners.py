@@ -501,10 +501,10 @@ class OWTestLearners(OWWidget):
             results = slot.results
             if results is not None and results.success:
                 train = QStandardItem("{:.3f}".format(results.value.train_time))
-                train.setTextAlignment(Qt.AlignRight)
+                train.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 train.setData(key, Qt.UserRole)
                 test = QStandardItem("{:.3f}".format(results.value.test_time))
-                test.setTextAlignment(Qt.AlignRight)
+                test.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 test.setData(key, Qt.UserRole)
                 row = [head, train, test]
             else:
@@ -541,7 +541,7 @@ class OWTestLearners(OWWidget):
             if stats is not None:
                 for stat, scorer in zip(stats, self.scorers):
                     item = QStandardItem()
-                    item.setTextAlignment(Qt.AlignRight)
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     if stat.success:
                         item.setData(float(stat.value[0]), Qt.DisplayRole)
                     else:
