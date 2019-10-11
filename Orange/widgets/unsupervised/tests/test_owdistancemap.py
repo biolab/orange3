@@ -37,8 +37,8 @@ class TestOWDistanceMap(WidgetTest, WidgetOutputsTestMixin):
         settings = self.widget.settingsHandler.pack_data(self.widget)
 
         w = self.create_widget(OWDistanceMap, stored_settings=settings)
-        self.send_signal(self.signal_name, self.signal_data)
-        self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 10)
+        self.send_signal(self.signal_name, self.signal_data, widget=w)
+        self.assertEqual(len(self.get_output(w.Outputs.selected_data, widget=w)), 10)
 
 
 if __name__ == "__main__":
