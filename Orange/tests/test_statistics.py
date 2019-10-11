@@ -11,7 +11,8 @@ from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
 from Orange.data.util import assure_array_dense
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar, nanmode, nan_to_num, FDR, isnan, any_nan
+    unique, var, nanstd, nanvar, nanmode, nan_to_num, FDR, isnan, any_nan, \
+    all_nan
 from sklearn.utils import check_random_state
 
 
@@ -727,6 +728,51 @@ class TestAnyNans(unittest.TestCase):
     def test_axis_1_with_nans(self, array):
         expected = np.array([1, 1, 1, 0], dtype=bool)
         result = any_nan(array(self.x_with_nans), axis=1)
+        np.testing.assert_equal(result, expected)
+
+
+class TestAllNans(unittest.TestCase):
+    def setUp(self) -> None:
+        # pylint: disable=bad-whitespace
+        self.x_with_nans = np.array([
+            [0.,     1.,     0.,     np.nan, 3.,     5.],
+            [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+            [0.,     0.,     0.,     np.nan, 7.,     6.],
+            [0.,     0.,     0.,     np.nan, 7.,     np.nan],
+        ])
+        self.x_no_nans = np.arange(12).reshape((3, 4))
+        self.x_only_nans = (np.ones(12) * np.nan).reshape((3, 4))
+
+    @dense_sparse
+    def test_axis_none_without_nans(self, array):
+        self.assertFalse(all_nan(array(self.x_no_nans)))
+
+    @dense_sparse
+    def test_axis_none_with_nans(self, array):
+        self.assertTrue(all_nan(array(self.x_only_nans)))
+
+    @dense_sparse
+    def test_axis_0_without_nans(self, array):
+        expected = np.array([0, 0, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_no_nans), axis=0)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_0_with_nans(self, array):
+        expected = np.array([0, 0, 0, 1, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_with_nans), axis=0)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_1_without_nans(self, array):
+        expected = np.array([0, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_no_nans), axis=1)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_1_with_nans(self, array):
+        expected = np.array([0, 1, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_with_nans), axis=1)
         np.testing.assert_equal(result, expected)
 
 

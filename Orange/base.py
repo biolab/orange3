@@ -2,7 +2,6 @@ import inspect
 import itertools
 from collections import Iterable
 import re
-import threading
 
 import numpy as np
 import scipy
@@ -13,6 +12,7 @@ from Orange.data.table import DomainTransformationError
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute, Normalize
+from Orange.statistics.util import all_nan
 from Orange.util import Reprable
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel",
@@ -320,9 +320,9 @@ class Model(Reprable):
 
             if self.original_domain.attributes != data.domain.attributes \
                     and data.X.size \
-                    and not np.isnan(data.X).all():
+                    and not all_nan(data.X):
                 new_data = data.transform(self.original_domain)
-                if np.isnan(new_data.X).all():
+                if all_nan(new_data.X):
                     raise DomainTransformationError(
                         "domain transformation produced no defined values")
                 return new_data.transform(self.domain)
