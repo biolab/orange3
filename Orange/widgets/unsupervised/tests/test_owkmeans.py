@@ -228,10 +228,10 @@ class TestOWKMeans(WidgetTest):
         in_attrs = heart_disease.domain.attributes
         out = self.get_output(widget.Outputs.centroids)
         out_attrs = out.domain.attributes
-        out_ids = {id(attr) for attr in out_attrs}
+        out_names = {attr.name for attr in out_attrs}
         for attr in in_attrs:
             self.assertEqual(
-                id(attr) in out_ids, attr.is_continuous,
+                attr.name in out_names, attr.is_continuous,
                 f"at attribute '{attr.name}'"
             )
         self.assertEqual(
@@ -315,11 +315,21 @@ class TestOWKMeans(WidgetTest):
         widget = self.widget
         widget.k_from, widget.k_to = 2, 6
         widget.optimize_k = True
+        widget.normalize = False
         self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
         self.commit_and_wait()
         widget.update_results()
-        # for housing dataset best selection is 3 clusters, so row no. 1
+        # for housing dataset without normalization,
+        # the best selection is 3 clusters, so row no. 1
         self.assertEqual(widget.selected_row(), 1)
+
+        widget.normalize = True
+        self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
+        self.commit_and_wait()
+        widget.update_results()
+        # for housing dataset with normalization,
+        # the best selection is 2 clusters, so row no. 0
+        self.assertEqual(widget.selected_row(), 0)
 
         widget.clusterings = {k: "error" for k in range(2, 7)}
         widget.update_results()

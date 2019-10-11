@@ -12,6 +12,7 @@ from Orange.clustering import KMeans
 from Orange.clustering.kmeans import KMeansModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.data.util import get_unique_names, array_equal
+from Orange.preprocess import Normalize
 from Orange.preprocess.impute import ReplaceUnknowns
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -144,6 +145,7 @@ class OWKMeans(widget.OWWidget):
     smart_init = Setting(0)  # KMeans++
     selection = Setting(None, schema_only=True)  # type: Optional[int]
     auto_commit = Setting(True)
+    normalize = Setting(True)
 
     settings_version = 2
 
@@ -195,6 +197,10 @@ class OWKMeans(widget.OWWidget):
             controlWidth=60, alignment=Qt.AlignRight,
             callback=self.update_to)
         gui.rubber(ftobox)
+
+        box = gui.vBox(self.controlArea, "Preprocessing")
+        gui.checkBox(box, self, "normalize", "Normalize columns",
+                     callback=self.invalidate)
 
         box = gui.vBox(self.controlArea, "Initialization")
         gui.comboBox(
@@ -334,7 +340,7 @@ class OWKMeans(widget.OWWidget):
         """Execute clustering in separate threads for all given ks."""
         futures = [self.__executor.submit(
             self._compute_clustering,
-            data=self.data,
+            data=Normalize()(self.data) if self.normalize else self.data,
             k=k,
             init=self.INIT_METHODS[self.smart_init][1],
             n_init=self.n_init,
@@ -348,7 +354,7 @@ class OWKMeans(widget.OWWidget):
         watcher.doneAll.connect(self.__commit_finished)
 
         self.__task = Task(futures, watcher)
-        self.progressBarInit(processEvents=False)
+        self.progressBarInit()
         self.setBlocking(True)
 
     def cancel(self):
@@ -467,6 +473,8 @@ class OWKMeans(widget.OWWidget):
         self.send_data()
 
     def preproces(self, data):
+        if self.normalize:
+            data = Normalize()(data)
         for preprocessor in KMeans.preprocessors:  # use same preprocessors than
             data = preprocessor(data)
         return data
