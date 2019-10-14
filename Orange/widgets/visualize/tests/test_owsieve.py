@@ -15,6 +15,7 @@ from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owsieve import OWSieveDiagram
 from Orange.widgets.visualize.owsieve import ChiSqStats
 from Orange.widgets.visualize.owsieve import Discretize
+from Orange.widgets.widget import AttributeList
 
 
 class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
@@ -164,6 +165,17 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(call_args), 2)
         self.assertEqual(call_args[0].name, data.domain[2].name)
         self.assertEqual(call_args[1].name, data.domain[1].name)
+
+    def test_input_features(self):
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.iris.domain.attributes))
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
+        self.send_signal(self.widget.Inputs.features, None)
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.assertTrue(self.widget.vizrank.isEnabled())
 
 
 if __name__ == "__main__":
