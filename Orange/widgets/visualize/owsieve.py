@@ -254,6 +254,7 @@ class OWSieveDiagram(OWWidget):
         """
         self.warning()
         self.attr_box.setEnabled(True)
+        self.vizrank.setEnabled(True)
         if not self.input_features:  # None or empty
             return
         features = [f for f in self.input_features if f in self.domain_model]
@@ -264,6 +265,7 @@ class OWSieveDiagram(OWWidget):
         old_attrs = self.attr_x, self.attr_y
         self.attr_x, self.attr_y = [f for f in (features * 2)[:2]]
         self.attr_box.setEnabled(False)
+        self.vizrank.setEnabled(False)
         if (self.attr_x, self.attr_y) != old_attrs:
             self.selection = set()
             self.update_graph()
