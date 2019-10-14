@@ -318,18 +318,31 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.features, None)
 
     def test_features_and_data(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.data)
         x, y = self.widget.graph.scatterplot_item.getData()
-        np.testing.assert_array_equal(x, data.X[:, 0])
-        np.testing.assert_array_equal(y, data.X[:, 1])
+        np.testing.assert_array_equal(x, self.data.X[:, 0])
+        np.testing.assert_array_equal(y, self.data.X[:, 1])
         self.send_signal(self.widget.Inputs.features,
-                         AttributeList(data.domain[2:]))
-        self.assertIs(self.widget.attr_x, data.domain[2])
-        self.assertIs(self.widget.attr_y, data.domain[3])
+                         AttributeList(self.data.domain[2:]))
+        self.assertIs(self.widget.attr_x, self.data.domain[2])
+        self.assertIs(self.widget.attr_y, self.data.domain[3])
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
         x, y = self.widget.graph.scatterplot_item.getData()
-        np.testing.assert_array_equal(x, data.X[:, 2])
-        np.testing.assert_array_equal(y, data.X[:, 3])
+        np.testing.assert_array_equal(x, self.data.X[:, 2])
+        np.testing.assert_array_equal(y, self.data.X[:, 3])
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertIs(self.widget.attr_x, self.data.domain[2])
+        self.assertIs(self.widget.attr_y, self.data.domain[3])
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
+
+        self.send_signal(self.widget.Inputs.features, None)
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.assertTrue(self.widget.vizrank.isEnabled())
 
     def test_output_features(self):
         data = Table("iris")
