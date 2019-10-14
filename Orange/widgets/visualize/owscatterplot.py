@@ -519,5 +519,6 @@ class OWScatterPlot(OWDataProjectionWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("iris")
-    WidgetPreview(OWScatterPlot).run(set_data=data, set_subset_data=data[:30])
+    table = Table("iris")
+    WidgetPreview(OWScatterPlot).run(set_data=table,
+                                     set_subset_data=table[:30])
