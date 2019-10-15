@@ -2,7 +2,7 @@ import sys
 import math
 
 from PyQt5.QtCore import Qt, QRectF, QEvent, QCoreApplication, QObject, QPointF
-from PyQt5.QtGui import QBrush, QPalette
+from PyQt5.QtGui import QBrush, QPalette, QTransform
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QWidget, QVBoxLayout, QSizePolicy,
     QScrollBar, QGraphicsDropShadowEffect
@@ -202,9 +202,17 @@ class StickyGraphicsView(QGraphicsView):
         """
         return self.__footerView
 
+    def setTransform(self, matrix: QTransform, combine: bool = False) -> None:
+        self.__headerView.setTransform(matrix, combine)
+        self.__footerView.setTransform(matrix, combine)
+        super().setTransform(matrix, combine)
+        self.__updateFooter()
+        self.__updateHeader()
+
     def __updateView(self, view: QGraphicsView, rect: QRectF) -> None:
         view.setSceneRect(rect)
-        view.setFixedHeight(int(math.ceil(rect.height())))
+        viewrect = view.mapFromScene(rect).boundingRect()
+        view.setFixedHeight(int(math.ceil(viewrect.height())))
         container = view.parent()
         if rect.isEmpty():
             container.setVisible(False)
@@ -241,7 +249,9 @@ class StickyGraphicsView(QGraphicsView):
 
 
 def main(args):  # pragma: no cover
-    from PyQt5.QtWidgets import QApplication
+    # pylint: disable=import-outside-toplevel,protected-access
+    from PyQt5.QtWidgets import QApplication, QAction
+    from PyQt5.QtGui import QKeySequence
     app = QApplication(args)
     view = StickyGraphicsView()
     scene = QGraphicsScene(view)
@@ -257,6 +267,38 @@ def main(args):  # pragma: no cover
     view.setHeaderSceneRect(QRectF(0, 0, 300, 20))
     view.setFooterSceneRect(QRectF(0, 130, 300, 20))
     view.show()
+    zoomin = QAction("Zoom in", view, shortcut=QKeySequence.ZoomIn)
+    zoomout = QAction("Zoom out", view, shortcut=QKeySequence.ZoomOut)
+    zoomreset = QAction(
+        "Reset", view, shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0)
+    )
+    view._zoom = 100
+
+    def set_zoom(zoom):
+        if view._zoom != zoom:
+            view._zoom = zoom
+            view.setTransform(
+                QTransform.fromScale(*(view._zoom / 100,) * 2)
+            )
+            zoomout.setEnabled(zoom >= 20)
+            zoomin.setEnabled(zoom <= 300)
+
+    @zoomin.triggered.connect
+    def _():
+        set_zoom(view._zoom + 10)
+
+    @zoomout.triggered.connect
+    def _():
+        set_zoom(view._zoom - 10)
+
+    @zoomreset.triggered.connect
+    def _():
+        set_zoom(100)
+
+    view.addActions([
+        zoomin, zoomout, zoomreset
+    ])
+
     return app.exec()
 
 
