@@ -541,7 +541,7 @@ class RandomFeatureSelectEditor(BaseEditor):
         fixedrb = QRadioButton("Fixed", checked=True)
         group.addButton(fixedrb, RandomFeatureSelectEditor.Fixed)
         kspin = QSpinBox(
-            minimum=1, maximum= 10000000, value=self.__k,
+            minimum=1, maximum=10000000, value=self.__k,
             enabled=self.__strategy == RandomFeatureSelectEditor.Fixed
         )
         kspin.valueChanged[int].connect(self.setK)
