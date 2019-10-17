@@ -9,6 +9,13 @@ from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import ToSql, BackendError
 
 
+def parse_ex(ex: Exception) -> str:
+    try:
+        return ex.args[0][1].decode().splitlines()[-1]
+    except:  # pylint: disable=bare-except
+        return str(ex)
+
+
 class PymssqlBackend(Backend):
     display_name = "SQL Server"
 
@@ -23,7 +30,7 @@ class PymssqlBackend(Backend):
         try:
             self.connection = pymssql.connect(login_timeout=5, **connection_params)
         except pymssql.Error as ex:
-            raise BackendError(str(ex)) from ex
+            raise BackendError(parse_ex(ex)) from ex
         except ValueError:
             # ValueError is raised when 'server' contains "\\"
             raise BackendError("Incorrect format of connection details")
@@ -76,7 +83,7 @@ class PymssqlBackend(Backend):
                 cur.execute(query, *params)
                 yield cur
         except pymssql.Error as ex:
-            raise BackendError(str(ex)) from ex
+            raise BackendError(parse_ex(ex)) from ex
 
     def create_variable(self, field_name, field_metadata, type_hints, inspect_table=None):
         if field_name in type_hints:
@@ -144,4 +151,4 @@ class PymssqlBackend(Backend):
                 if "SHOWPLAN permission denied" in str(ex):
                     warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
                     return None
-                raise BackendError(str(ex)) from ex
+                raise BackendError(parse_ex(ex)) from ex
