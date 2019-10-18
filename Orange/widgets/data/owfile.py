@@ -206,7 +206,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_model.wrap(self.recent_urls)
         url_combo.setLineEdit(LineEditSelectOnFocus())
         url_combo.setModel(url_model)
-        url_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        url_combo.setSizePolicy(Policy.Ignored, Policy.Fixed)
         url_combo.setEditable(True)
         url_combo.setInsertPolicy(url_combo.InsertAtTop)
         url_edit = url_combo.lineEdit()
