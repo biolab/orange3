@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 from unittest import TestCase
+import unittest
 import pickle
 
 import numpy as np
@@ -14,7 +15,8 @@ from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
-                             Jaccard, _preprocess, MahalanobisDistance)
+                             Jaccard, _preprocess, MahalanobisDistance, 
+                             Bhattacharyya)
 from Orange.distance.distance import _spearmanr2, _corrcoef2
 from Orange.misc import DistMatrix
 from Orange.tests import named_file, test_filename
@@ -91,20 +93,20 @@ class TestDistMatrix(TestCase):
             self.assertEqual(m.axis, 1)
 
         with named_file(
-            """3 axis=1 symmetric
-                0.12	3.45	6.78
-                9.01	2.34	5.67
-                8.90""") as name:
+                """3 axis=1 symmetric
+                    0.12	3.45	6.78
+                    9.01	2.34	5.67
+                    8.90""") as name:
             m = DistMatrix.from_file(name)
         np.testing.assert_almost_equal(m, np.array([[0.12, 9.01, 8.90],
                                                     [9.01, 2.34, 0],
                                                     [8.90, 0, 0]]))
 
         with named_file(
-            """3 row_labels
-                starič	0.12	3.45	6.78
-                aleš	9.01	2.34	5.67
-                anže	8.90""", encoding="utf-8""") as name:
+                """3 row_labels
+                    starič	0.12	3.45	6.78
+                    aleš	9.01	2.34	5.67
+                    anže	8.90""", encoding="utf-8""") as name:
             m = DistMatrix.from_file(name)
             np.testing.assert_almost_equal(m, np.array([[0.12, 9.01, 8.90],
                                                         [9.01, 2.34, 0],
@@ -150,10 +152,10 @@ class TestDistMatrix(TestCase):
 
     def test_save(self):
         with named_file(
-            """3 axis=1 row_labels
-                danny	0.12	3.45	6.78
-                eve 	9.01	2.34	5.67
-                frank	8.90""") as name:
+                """3 axis=1 row_labels
+                    danny	0.12	3.45	6.78
+                    eve 	9.01	2.34	5.67
+                    frank	8.90""") as name:
             m = DistMatrix.from_file(name)
             m.save(name)
             m = DistMatrix.from_file(name)
@@ -167,11 +169,11 @@ class TestDistMatrix(TestCase):
             self.assertEqual(m.axis, 1)
 
         with named_file(
-            """3 axis=0 asymmetric col_labels row_labels
-                         ann	bert	chad
-                danny	0.12	3.45	6.78
-                  eve	9.01	2.34	5.67
-                frank	8.90	1.23	4.56""") as name:
+                """3 axis=0 asymmetric col_labels row_labels
+                             ann	bert	chad
+                    danny	0.12	3.45	6.78
+                      eve	9.01	2.34	5.67
+                    frank	8.90	1.23	4.56""") as name:
             m = DistMatrix.from_file(name)
             m.save(name)
             m = DistMatrix.from_file(name)
@@ -943,6 +945,31 @@ class TestMahalanobis(TestCase):
         mah(xt[0], xt[1])
 
 
+class TestBhattacharyya(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dist = Bhattacharyya
+
+    def test_dense_array(self):
+        #Also checks normalization
+        data = Table('iris')
+        true_out = np.array([[0, 4.48049499e-04, 2.07117086e-05],
+                             [4.48049499e-04, 0, 3.65052724e-04],
+                             [2.07117086e-05, 3.65052724e-04, 0]])
+        np.testing.assert_array_almost_equal(self.dist(data.X[:3]), true_out)
+
+    def test_sparse_array(self):
+        data = csr_matrix([[0.5, 0.5], [0, 0.5]])
+        self.assertAlmostEqual(self.dist(data[0], data[1]), 0.3465735902799726, delta=1e-5)
+    
+    def test_columns(self):
+        data = np.array([[0.5, 0.2], [0.5, 0.8]])
+        true_out = np.array([[0, 0.05268025782891318],
+                             [0.05268025782891318, 0]])
+        np.testing.assert_array_almost_equal(self.dist(data, axis=0), true_out)
+
+
 class TestDistances(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -982,3 +1009,6 @@ class TestDistances(TestCase):
         iris = Table('iris')
         inst = Instance(iris.domain, np.concatenate((iris[1].x, iris[1].y)))
         self.assertEqual(Euclidean(iris[1], inst), 0)
+
+if __name__ == '__main__':
+    unittest.main()
