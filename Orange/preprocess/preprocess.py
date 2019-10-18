@@ -18,7 +18,7 @@ from . import impute, discretize, transformation
 __all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
            "SklImpute", "Normalize", "Randomize", "Preprocess",
            "RemoveConstant", "RemoveNaNClasses", "RemoveNaNColumns",
-           "ProjectPCA", "ProjectCUR", "Scale", "SelectDense",
+           "ProjectPCA", "ProjectCUR", "Scale", "RemoveSparse",
            "AdaptiveNormalize"]
 
 
@@ -571,9 +571,9 @@ class PreprocessorList(Preprocess):
             data = pp(data)
         return data
 
-class SelectDense(Preprocess):
+class RemoveSparse(Preprocess):
     """
-    Select dense features. Denseness is determined according to
+    Remove sparse  features. Sparseness is determined according to
     user-defined treshold.
 
     Parameters
