@@ -970,8 +970,8 @@ class TestDistances(TestCase):
         new_table = _preprocess(table)
         np.testing.assert_equal(new_table.Y, table.Y)
         self.assertEqual([a.name for a in new_table.domain.attributes],
-                         [a.name for a in table.domain.attributes
-                          if a.is_continuous])
+                         [a.name for a in table.domain.attributes if
+                          a.is_continuous and not all(np.isnan(table[:, a].X))])
         self.assertEqual(new_table.domain.class_vars, table.domain.class_vars)
 
     def test_preprocess_impute(self):
