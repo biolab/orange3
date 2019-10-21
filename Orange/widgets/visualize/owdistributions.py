@@ -669,7 +669,7 @@ class OWDistributions(OWWidget):
         axis = self.ploti.getAxis("bottom")
         if self.var and self.var.is_time:
             binning = self.binnings[self.number_of_bins]
-            labels = np.array(binning.labels)
+            labels = np.array(binning.short_labels)
             thresholds = np.array(binning.thresholds)
             lengths = np.array([len(lab) for lab in labels])
             slengths = set(lengths)

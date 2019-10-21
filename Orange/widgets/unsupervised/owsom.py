@@ -839,11 +839,7 @@ class OWSOM(OWWidget):
             else:
                 binning = decimal_binnings(col, min_bins=4)[-1]
             self.thresholds = binning.thresholds[1:-1]
-            self.bin_labels = binning.labels[1:-1]
-            # Second label may had been truncated; put back the missing part
-            split0 = binning.labels[0].split()
-            split1 = binning.labels[1].split()
-            self.bin_labels[0] = " ".join(split0[:-len(split1)] + split1)
+            self.bin_labels = (binning.labels[1:-1], binning.short_labels[1:-1])
             palette = ContinuousPaletteGenerator(*self.attr_color.colors)
             nbins = len(self.thresholds) + 1
             self.colors = [palette[i / (nbins - 1)] for i in range(nbins)]
@@ -881,11 +877,11 @@ class OWSOM(OWWidget):
         self.set_legend_pos()
 
     def _bin_names(self):
+        labels, short_labels = self.bin_labels
         return \
-            [f"< {self.bin_labels[0]}"] \
-            + [f"{x} - {y}"
-               for x, y in zip(self.bin_labels, self.bin_labels[1:])] \
-            + [f"≥ {self.bin_labels[-1]}"]
+            [f"< {labels[0]}"] \
+            + [f"{x} - {y}" for x, y in zip(labels, short_labels[1:])] \
+            + [f"≥ {labels[-1]}"]
 
     def set_legend_pos(self):
         if self.legend is None:

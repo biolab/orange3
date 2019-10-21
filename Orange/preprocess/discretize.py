@@ -182,6 +182,7 @@ class EqualWidth(Discretization):
 class BinDefinition(NamedTuple):
     thresholds: np.ndarray  # thresholds, including the top
     labels: List[str]  # friendly-formatted thresholds
+    short_labels: List[str]  # shorter labels (e.g. simplified dates)
     width: Union[float, None]  # widths, if uniform; otherwise None
     width_label: str  # friendly-formatted width (e.g. '50' or '2 weeks')
 
@@ -190,14 +191,25 @@ class BinDefinition(NamedTuple):
 # Name of the class has to be the same to match the namedtuple name
 # pylint: disable=function-redefined
 class BinDefinition(BinDefinition):
-    def __new__(cls, thresholds, labels="%g", width=None, width_label=""):
-        if isinstance(labels, str):
-            labels = [labels % x for x in thresholds]
-        elif isinstance(labels, Callable):
-            labels = [labels(x) for x in thresholds]
+    def __new__(cls, thresholds, labels="%g",
+                short_labels=None, width=None, width_label=""):
+
+        def get_labels(fmt, default=None):
+            if fmt is None:
+                return default
+            if isinstance(fmt, str):
+                return [fmt % x for x in thresholds]
+            elif isinstance(fmt, Callable):
+                return [fmt(x) for x in thresholds]
+            else:
+                return fmt
+
+        labels = get_labels(labels)
+        short_labels = get_labels(short_labels, labels)
         if not width_label and width is not None:
             width_label = f"{width:g}"
-        return super().__new__(cls, thresholds, labels, width, width_label)
+        return super().__new__(
+            cls, thresholds, labels, short_labels, width, width_label)
 
     @property
     def start(self) -> float:
@@ -299,7 +311,7 @@ def decimal_binnings(
         if min_bins <= nbins <= max_bins \
                 and (not bins or bins[-1].nbins != nbins):
             bin_def = BinDefinition(mn_ + width * np.arange(nbins + 1),
-                                    label_fmt, width)
+                                    label_fmt, None, width)
             bins.append(bin_def)
     return bins
 
@@ -362,12 +374,14 @@ def _time_binnings(mn, mx, min_pts, max_pts):
             continue
         times = [time.struct_time(t + (0, 0, 0)) for t in times]
         thresholds = [calendar.timegm(t) for t in times]
-        labels = _simplified_labels([time.strftime(fmt, t) for t in times])
+        labels = [time.strftime(fmt, t) for t in times]
+        short_labels = _simplified_labels(labels)
         if place == 2 and step >= 7:
             unit_label = f"{step // 7} week{'s' * (step > 7)}"
         else:
             unit_label = f"{step} {unit}{'s' * (step > 1)}"
-        new_bins = BinDefinition(thresholds, labels, None, unit_label)
+        new_bins = BinDefinition(
+            thresholds, labels, short_labels, None, unit_label)
         if not bins or new_bins.nbins != bins[-1].nbins:
             bins.append(new_bins)
     return bins
@@ -417,6 +431,7 @@ def _month_days(year, month,
 
 
 def _simplified_labels(labels):
+    labels = labels[:]
     to_remove = "42"
     while True:
         firsts = {f for f, *_ in (lab.split() for lab in labels)}
@@ -424,6 +439,8 @@ def _simplified_labels(labels):
             break
         to_remove = firsts.pop()
         flen = len(to_remove) + 1
+        if any(len(lab) == flen for lab in labels):
+            break
         labels = [lab[flen:] for lab in labels]
     for i in range(len(labels) - 1, 0, -1):
         for k, c, d in zip(count(), labels[i].split(), labels[i - 1].split()):
@@ -442,8 +459,9 @@ def _unique_time_bins(unique):
     fmt = f'{"%y " if times[0][0] >= 1950 else "%Y "} %b %d'
     fmt += " %H:%M" * (len({t[2:] for t in times}) > 1)
     fmt += ":%S" * bool(np.all(unique % 60 == 0))
-    return BinDefinition(_unique_thresholds(unique),
-                         [time.strftime(fmt, x) for x in times])
+    labels = [time.strftime(fmt, x) for x in times]
+    short_labels = _simplified_labels(labels)
+    return BinDefinition(_unique_thresholds(unique), labels, short_labels)
 
 
 def _unique_thresholds(unique):
