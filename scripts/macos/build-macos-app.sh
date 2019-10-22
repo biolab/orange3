@@ -97,7 +97,7 @@ ln -fs ../Frameworks/Python.framework/Versions/${PYVER}/bin/python${PYVER} \
     "${APPDIR}"/Contents/MacOS/python
 
 "${APPDIR}"/Contents/MacOS/python -m ensurepip
-"${APPDIR}"/Contents/MacOS/python -m pip install pip~=9.0 wheel
+"${APPDIR}"/Contents/MacOS/python -m pip install pip~=19.0 wheel
 
 cat <<'EOF' > "${APPDIR}"/Contents/MacOS/Orange
 #!/bin/bash
@@ -131,7 +131,7 @@ chmod +x "${APPDIR}"/Contents/MacOS/pip
 
 PYTHON="${APPDIR}"/Contents/MacOS/python
 
-"${PYTHON}" -m pip install "${PIP_REQ_ARGS[@]}"
+"${PYTHON}" -m pip install --no-warn-script-location "${PIP_REQ_ARGS[@]}"
 
 VERSION=$("${PYTHON}" -m pip show orange3 | grep -E '^Version:' |
           cut -d " " -f 2)
