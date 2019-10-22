@@ -6,7 +6,11 @@ usage() {
 Fetch, extract and layout a macOS relocatable Python framework at FRAMEWORKPATH
 
 Options:
-    --version VERSION     Python version (default 3.5.3)
+    --version VERSION     Python version (default ${VERSION})
+    --macos MACOSVER      Minimum supported macOS version (as of 3.6.5 and
+                          3.7.0 the python.org provides binaries for 10.6
+                          and 10.9 macOS versions; default ${MACOSVER})
+    -v --verbose          Increase verbosity level
 
 Note:
     Python >= 3.6 comes with a bundled openssl library build that is
@@ -28,8 +32,8 @@ Example
 }
 
 
-
-VERSION=3.5.3
+VERSION=3.6.5
+MACOSVER=10.6
 VERBOSE_LEVEL=0
 
 
@@ -44,11 +48,13 @@ verbose() {
 python-framework-fetch-pkg() {
     local cachedir=${1:?}
     local version=${2:?}
-    local filename=python-${version}-macosx10.6.pkg
-    local url="https://www.python.org/ftp/python/${version}/${filename}"
+    local macosver=${3:-10.6}
+    local versiondir=${version%%[abrpc]*}  # strip alpha, beta, rc component
+    local filename=python-${version}-macosx${macosver}.pkg
+    local url="https://www.python.org/ftp/python/${versiondir}/${filename}"
     mkdir -p "${cachedir}"
     if [[ -f "${cachedir}/${filename}" ]]; then
-        verbose 1 "python-${version}-macosx10.6.pkg is present in cache"
+        verbose 1 "python-${version}-macosx{macosver}.pkg is present in cache"
         return 0
     fi
     local tmpfile=$(mktemp "${cachedir}/${filename}"-XXXX)
@@ -242,6 +248,12 @@ while [[ "${1:0:1}" == "-" ]]; do
         --version=*)
             VERSION=${1##*=}
             shift 1;;
+        --macos)
+            MACOSVER=${2:?"--macos: missing argument"}
+            shift 2;;
+        --macos=*)
+            MACOSVER=${1##*=}
+            shift 1;;
         -v|--verbose)
             VERBOSE_LEVEL=$(( $VERBOSE_LEVEL + 1 ))
             shift 1;;
@@ -252,10 +264,10 @@ while [[ "${1:0:1}" == "-" ]]; do
     esac
 done
 
-python-framework-fetch-pkg ~/.cache/pkgs/ ${VERSION}
+python-framework-fetch-pkg ~/.cache/pkgs/ ${VERSION} ${MACOSVER}
 python-framework-extract-pkg \
     "${1:?"FRAMEWORKPATH argument is missing"}" \
-    ~/.cache/pkgs/python-${VERSION}-macosx10.6.pkg
+    ~/.cache/pkgs/python-${VERSION}-macosx${MACOSVER}.pkg
 
 python-framework-relocate "${1:?}"/Python.framework
 
