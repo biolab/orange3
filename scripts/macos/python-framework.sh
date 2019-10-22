@@ -10,6 +10,9 @@ Options:
     --macos MACOSVER      Minimum supported macOS version (as of 3.6.5 and
                           3.7.0 the python.org provides binaries for 10.6
                           and 10.9 macOS versions; default ${MACOSVER})
+    --install-certifi     If present then certifi pypi package will be
+                          installed and its cert store linked in
+                          \${PREFIX}/etc/openssl
     -v --verbose          Increase verbosity level
 
 Note:
@@ -19,8 +22,8 @@ Note:
 
     This script will patch python's stdlib ssl.py to add a
     \${PREFIX}/etc/openssl/cert.pem (where \${PREFIX} is the runtime prefix)
-    certificate store to the default verification chain. However it does not
-    actually supply the file.
+    certificate store to the default verification chain. However it will only
+    supply the file if the --install-certifi parameter is passed
 
 Example
 -------
@@ -35,6 +38,7 @@ Example
 VERSION=3.6.5
 MACOSVER=10.6
 VERBOSE_LEVEL=0
+INSTALL_CERTIFI=
 
 
 verbose() {
@@ -240,6 +244,20 @@ patch-ssl() {
 EOF
 }
 
+
+install-certifi() {
+    local prefix=${1:?}
+    "${prefix}"/bin/python?.? -B -m ensurepip
+    "${prefix}"/bin/python?.? -B -m pip --isolated install certifi
+    (
+        mkdir -p "${prefix}"/etc/openssl
+        cd "${prefix}"/etc/openssl
+        ln -shf ../../lib/python?.?/site-packages/certifi/cacert.pem ./cert.pem
+    )
+    test -r "${prefix}"/etc/openssl/cert.pem
+}
+
+
 while [[ "${1:0:1}" == "-" ]]; do
     case "${1}" in
         --version)
@@ -257,9 +275,13 @@ while [[ "${1:0:1}" == "-" ]]; do
         -v|--verbose)
             VERBOSE_LEVEL=$(( $VERBOSE_LEVEL + 1 ))
             shift 1;;
+        --install-certifi)
+            INSTALL_CERTIFI=1
+            shift 1;;
         --help|-h)
             usage; exit 0;;
         -*)
+            echo "Unrecognized argument ${1}" >&2
             usage >&2; exit 1;;
     esac
 done
@@ -277,3 +299,8 @@ python-framework-relocate "${1:?}"/Python.framework
     shopt -s failglob
     ln -shf ?.? ./Current  # assuming single version framework
 )
+
+if [[ ${INSTALL_CERTIFI} ]]; then
+    verbose 1 "Installing and linking certifi pypi package"
+    install-certifi "${1:?}"/Python.framework/Versions/Current
+fi
