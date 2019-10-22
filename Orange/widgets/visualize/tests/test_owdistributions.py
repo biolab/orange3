@@ -193,8 +193,10 @@ class TestOWDistributions(WidgetTest):
         widget.apply = Mock()
 
         self._set_var(2)
-        self.assertFalse(binnings[0].shape == widget.binnings[0].shape
-                         and np.allclose(binnings[0], widget.binnings[0]))
+        self.assertFalse(
+            binnings[0].thresholds.shape == widget.binnings[0].thresholds.shape
+            and np.allclose(binnings[0].threshold, widget.binnings[0].threshold)
+        )
         self.assertFalse(valid_data.shape == widget.valid_data.shape
                          and np.allclose(valid_data, widget.valid_data))
         self.assertEqual(widget.selection, set())
