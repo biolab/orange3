@@ -65,6 +65,14 @@ class TestOWSOM(WidgetTest):
         self.assertFalse(widget.Warning.ignoring_disc_variables.is_shown())
         self.assertEqual(widget.cont_x.shape, (150, 4))
 
+    def test_single_attribute(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertFalse(widget.Warning.single_attribute.is_shown())
+        iris = self.iris[:, 0]
+        self.send_signal(widget.Inputs.data, iris)
+        self.assertTrue(widget.Warning.single_attribute.is_shown())
+
     def test_missing_all_data(self):
         widget = self.widget
 

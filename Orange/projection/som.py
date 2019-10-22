@@ -50,7 +50,7 @@ class SOM:
                 f(self.weights, x,
                   sigma / decay, learning_rate / decay)
 
-        if self.pca_init and not sp.issparse(x):
+        if self.pca_init and not sp.issparse(x) and x.shape[1] > 1:
             self.init_weights_pca(x)
         else:
             self.init_weights_random(x)

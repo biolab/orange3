@@ -211,6 +211,7 @@ class OWSOM(OWWidget):
             Msg("Some data instances have undefined value of '{}'.")
         missing_values = \
             Msg("{} data instance{} with undefined value(s) {} not shown.")
+        single_attribute = Msg("Data contains a single numeric column.")
 
     class Error(OWWidget.Error):
         no_numeric_variables = Msg("Data contains no numeric columns.")
@@ -299,6 +300,8 @@ class OWSOM(OWWidget):
         def prepare_data():
             if len(cont_attrs) < len(attrs):
                 self.Warning.ignoring_disc_variables()
+            if len(cont_attrs) == 1:
+                self.Warning.single_attribute()
             x = Table.from_table(Domain(cont_attrs), data).X
             if sp.issparse(x):
                 self.data = data
