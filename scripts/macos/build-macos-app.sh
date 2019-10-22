@@ -86,6 +86,8 @@ cp -a "${DIR}"/skeleton.app/Contents/{Resources,Info.plist.in} \
 # Layout a 'relocatable' python framework in the app directory
 "${DIR}"/python-framework.sh \
     --version "${PYTHON_VERSION}" \
+    --macos 10.9 \
+    --install-certifi \
     "${APPDIR}"/Contents/Frameworks
 
 ln -fs ../Frameworks/Python.framework/Versions/${PYVER}/Resources/Python.app/Contents/MacOS/Python \
@@ -96,22 +98,6 @@ ln -fs ../Frameworks/Python.framework/Versions/${PYVER}/bin/python${PYVER} \
 
 "${APPDIR}"/Contents/MacOS/python -m ensurepip
 "${APPDIR}"/Contents/MacOS/python -m pip install pip~=9.0 wheel
-
-# Python 3.6 on macOS no longer links the obsolete system libssl.
-# Instead it builds/ships a it's own which expects a cert.pem in hardcoded
-# /Library/Python.framework/3.6/etc/openssl/ path (but does no actually ship
-# the file in the framework installer). Instead a user is prompted during
-# .pkg install to run a script that pip install's certifi and links its
-# cacert.pem to the etc/openssl dir. We do the same but must also patch
-# ssl.py to load the cert store from a python prefix relative path (this is
-# done by python-framework.sh script). Another option would be to export system
-# certificates at runtime using the 'security' command line tool.
-"${APPDIR}"/Contents/MacOS/python -m pip install certifi
-# link the certifi supplied cert store to ${prefix}/etc/openssl/cert.pem
-ln -fs ../../lib/python${PYVER}/site-packages/certifi/cacert.pem \
-    "${APPDIR}"/Contents/Frameworks/Python.framework/Versions/${PYVER}/etc/openssl/cert.pem
-# sanity check
-test -r "${APPDIR}"/Contents/Frameworks/Python.framework/Versions/${PYVER}/etc/openssl/cert.pem
 
 cat <<'EOF' > "${APPDIR}"/Contents/MacOS/Orange
 #!/bin/bash
