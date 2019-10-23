@@ -125,6 +125,8 @@ class Discrete(np.ndarray):
             if isinstance(index[1], str):
                 index = (index[0], self.col_variable.to_val(index[1]))
         result = super().__getitem__(index)
+        if isinstance(index, int) or len(index) == 1:
+            result.unknowns = self.unknowns[index]
         if result.strides:
             result.col_variable = self.col_variable
             result.row_variable = self.row_variable
