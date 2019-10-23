@@ -4,12 +4,11 @@ from Orange.util import Reprable
 from Orange.preprocess.transformation import \
     Identity, Indicator, Indicator1, Normalizer
 from Orange.preprocess.preprocess import Continuize
-from Orange.preprocess.util import _RefuseDataInConstructor
 
 __all__ = ["DomainContinuizer"]
 
 
-class DomainContinuizer(_RefuseDataInConstructor, Reprable):
+class DomainContinuizer(Reprable):
     def __init__(self, zero_based=True,
                  multinomial_treatment=Continuize.Indicators,
                  transform_class=False):

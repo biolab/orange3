@@ -46,19 +46,6 @@ class TestPreprocess(unittest.TestCase):
         MockPreprocessor.__init__.assert_called_with()
         self.assertEqual(MockPreprocessor.__call__.call_count, 0)
 
-    def test_refuse_data_in_constructor(self):
-        # We force deprecations as exceptions as part of CI
-        is_CI = os.environ.get('CI') or os.environ.get('ORANGE_DEPRECATIONS_ERROR')
-        if is_CI:
-            self.assertTrue(os.environ.get('ORANGE_DEPRECATIONS_ERROR'))
-        expected = self.assertRaises if is_CI else self.assertWarns
-        with expected(OrangeDeprecationWarning):
-            try:
-                Preprocess(Table('iris'))
-            except NotImplementedError:
-                # Expected from default Preprocess.__call__
-                pass
-
 
 class TestRemoveConstant(unittest.TestCase):
     def test_remove_columns(self):
