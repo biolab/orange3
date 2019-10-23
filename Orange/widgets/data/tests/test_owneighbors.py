@@ -409,13 +409,15 @@ class TestOWNeighbors(WidgetTest):
         domain = Domain([ContinuousVariable("a"), ContinuousVariable("b")],
                         metas=[ContinuousVariable("c")])
         data = Table(
-            domain, np.random.rand(2, len(domain.attributes)),
-            metas=np.random.rand(2, len(domain.metas)))
+            domain, np.random.rand(15, len(domain.attributes)),
+            metas=np.random.rand(15, len(domain.metas)))
 
         # same domain with same metas no error
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, data[:1])
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # same domain with different metas no error
         domain_ref = Domain(domain.attributes,
@@ -426,6 +428,8 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # same domain with different order - no error
         domain_ref = Domain(domain.attributes[::-1])
@@ -434,6 +438,8 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # same domain with different number of metas no error
         domain_ref = Domain(
@@ -445,6 +451,8 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # different domain with same metas - error shown
         domain_ref = Domain(domain.attributes + (ContinuousVariable("e"),),
@@ -455,6 +463,31 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertTrue(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertIsNone(output)
+
+    def test_different_domains_same_names(self):
+        """
+        Here we create two domains with same names of attributes - the case
+        with image-analytics (two embeddings). Widget must not show the
+        error in this case.
+        """
+        w = self.widget
+        domain1 = Domain([ContinuousVariable("a"), ContinuousVariable("b")],
+                         metas=[ContinuousVariable("c")])
+        domain2 = Domain([ContinuousVariable("a"), ContinuousVariable("b")],
+                         metas=[ContinuousVariable("d")])
+        data = Table(
+            domain1, np.random.rand(15, len(domain1.attributes)),
+            metas=np.random.rand(15, len(domain1.metas)))
+        ref = Table(
+            domain2, np.random.rand(2, len(domain2.attributes)),
+            metas=np.random.rand(2, len(domain2.metas)))
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, ref)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
 
 if __name__ == "__main__":
