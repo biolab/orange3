@@ -17,6 +17,8 @@ import pyqtgraph as pg
 
 import Orange
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.evaluate.contexthandlers import \
+    EvaluationResultsContextHandler
 from Orange.widgets.evaluate.utils import \
     check_results_adequacy, results_for_preview
 from Orange.widgets.utils import colorpalette, colorbrewer
@@ -303,8 +305,9 @@ class OWROCAnalysis(widget.OWWidget):
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
 
-    target_index = settings.Setting(0)
-    selected_classifiers = []
+    settingsHandler = EvaluationResultsContextHandler()
+    target_index = settings.ContextSetting(0)
+    selected_classifiers = settings.ContextSetting([])
 
     display_perf_line = settings.Setting(True)
     display_def_threshold = settings.Setting(True)
@@ -423,10 +426,13 @@ class OWROCAnalysis(widget.OWWidget):
     @Inputs.evaluation_results
     def set_results(self, results):
         """Set the input evaluation results."""
+        self.closeContext()
         self.clear()
         self.results = check_results_adequacy(results, self.Error)
         if self.results is not None:
             self._initialize(self.results)
+            self.openContext(self.results.domain.class_var,
+                             self.classifier_names)
             self._setup_plot()
         else:
             self.warning()
