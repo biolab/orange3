@@ -1,3 +1,5 @@
+import numpy as np
+
 from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
 from Orange.util import Reprable
@@ -57,7 +59,7 @@ class Normalizer(Reprable):
         )
 
     def normalize_by_span(self, dist, var):
-        dma, dmi = dist.max(), dist.min()
+        dma, dmi = (dist.max(), dist.min()) if dist.shape[1] else (np.nan, np.nan)
         diff = dma - dmi
         if diff < 1e-15:
             diff = 1
