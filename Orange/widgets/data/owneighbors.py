@@ -82,7 +82,7 @@ class OWNeighbors(OWWidget):
 
         self.apply_button = gui.auto_apply(self.controlArea, self, commit=self.apply)
 
-    def _set_input_summary(self, name):
+    def _set_input_summary(self):
         n_data, n_refs = 0, 0
         if self.data is not None and self.reference is not None:
             n_data = len(self.data)
@@ -97,7 +97,7 @@ class OWNeighbors(OWWidget):
 
         inst = f"{n_data} | {n_refs} "
         if n_data > 0 and n_refs > 0:
-             details = f"{n_data} data instances on input; " \
+            details = f"{n_data} data instances on input; " \
                     f"{n_refs} reference instances on input "
         elif n_data > 0 and n_refs == 0:
             details = f"{n_data} data instances on input; " \
@@ -123,12 +123,12 @@ class OWNeighbors(OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.data = data
-        self._set_input_summary(data and "data")
+        self._set_input_summary()
 
     @Inputs.reference
     def set_ref(self, refs):
         self.reference = refs
-        self._set_input_summary(refs and "reference")
+        self._set_input_summary()
 
     def handleNewSignals(self):
         self.compute_distances()
