@@ -5,7 +5,7 @@
 # Required definitions need to be passed to the makensis call
 #  - BASEDIR base location of all required files, ... (see below)
 #  - PYARCH python architecture identifier (win32 or amd64)
-#  - PY{MAJOR,MINOR,MICRO} Python version of the included installer
+#  - PY{MAJOR,MINOR,MICRO} Python version to be installed in the new env
 #  - APPNAME Application (short) name
 #  - VER{MAJOR,MINOR,MICRO} Application version
 #  - PYINSTALLER basename of the Miniconda python installer
@@ -362,7 +362,7 @@ Function DirectoryLeave
         ${Else}
             ${LogWrite} "$InstDir is not empty, aborting"
             MessageBox MB_OK '"$InstDir" exists and is not empty.$\r$\n \
-                              Please choose annother destination folder.'
+                              Please choose another destination folder.'
             Abort '"$InstDir" exists an is not empty'
         ${EndIf}
     ${EndIf}
@@ -384,7 +384,7 @@ FunctionEnd
 # Section Miniconda
 # -----------------
 # A Miniconda Python distributions
-Section "Miniconda ${MINICONDA_VERSION} (Python ${PYTHON_VERSION} ${BITS}-bit)" \
+Section "Miniconda ${MINICONDA_VERSION}" \
         SectionMiniconda
     ${GetAnyAnacondaInstall} $BasePythonPrefix $PythonInstallMode
     ${If} $BasePythonPrefix != ""
@@ -407,10 +407,7 @@ Section "Miniconda ${MINICONDA_VERSION} (Python ${PYTHON_VERSION} ${BITS}-bit)" 
         ${If} $0 != 0
             Abort "Miniconda installation failed (error value: $0)"
         ${EndIf}
-
-        ${GetAnacondaInstall} ${PYMAJOR}${PYMINOR} ${BITS} \
-                          $BasePythonPrefix $PythonInstallMode
-
+        ${GetAnyAnacondaInstall} $BasePythonPrefix $PythonInstallMode
         ${IfNot} ${FileExists} "$BasePythonPrefix\python.exe"
             Abort "No python.exe found in $BasePythonPrefix$\r$\n \
                    Cannot continue."
