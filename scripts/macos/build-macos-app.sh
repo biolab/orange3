@@ -8,7 +8,7 @@ Create (build) an macOS application bundle
 
 Options:
     --python-version VERSION
-        Python version to install in the application bundle (default: 3.6.1)
+        Python version to install in the application bundle (default: 3.7.5)
 
     --pip-arg  ARG
         Pip install arguments to populate the python environemnt in the
@@ -41,7 +41,7 @@ Examples
 DIR=$(dirname "$0")
 
 # Python version in the bundled framework
-PYTHON_VERSION=3.6.1
+PYTHON_VERSION=3.7.5
 
 # Pip arguments used to populate the python environment in the application
 # bundle
