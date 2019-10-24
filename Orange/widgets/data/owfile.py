@@ -1,5 +1,6 @@
 import os
 import logging
+from itertools import chain
 from warnings import catch_warnings
 from urllib.parse import urlparse
 from typing import List
@@ -123,6 +124,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         file_too_big = widget.Msg("The file is too large to load automatically."
                                   " Press Reload to load.")
         load_warning = widget.Msg("Read warning:\n{}")
+        performance_warning = widget.Msg(
+            "Categorical variables with >100 values may decrease performance.")
 
     class Error(widget.OWWidget.Error):
         file_not_found = widget.Msg("File not found.")
@@ -468,7 +471,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.domain_editor.reset_domain()
         self.apply_domain_edit()
 
+    def _inspect_discrete_variables(self, domain):
+        for var in chain(domain.variables, domain.metas):
+            if var.is_discrete and len(var.values) > 100:
+                self.Warning.performance_warning()
+
     def apply_domain_edit(self):
+        self.Warning.performance_warning.clear()
         if self.data is None:
             table = None
         else:
@@ -481,6 +490,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 table.name = self.data.name
                 table.ids = np.array(self.data.ids)
                 table.attributes = getattr(self.data, 'attributes', {})
+                self._inspect_discrete_variables(domain)
 
         self.Outputs.data.send(table)
         self.apply_button.setEnabled(False)

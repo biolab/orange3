@@ -26,6 +26,8 @@ MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~", None}
 
 DISCRETE_MAX_VALUES = 3  # == 2 + nan
 MAX_NUM_OF_DECIMALS = 5
+# the variable with more than 100 different values should not be StringVariable
+DISCRETE_MAX_ALLOWED_VALUES = 100
 
 
 def make_variable(cls, compute_value, *args):
@@ -63,7 +65,8 @@ def is_discrete_values(values):
     unique = set()
     for i in values:
         unique.add(i)
-        if len(unique) > max_values:
+        if (len(unique) > max_values or
+                len(unique) > DISCRETE_MAX_ALLOWED_VALUES):
             return False
 
     # Strip NaN from unique
