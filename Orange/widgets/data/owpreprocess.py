@@ -7,11 +7,11 @@ from AnyQt.QtWidgets import (
     QWidget, QButtonGroup, QGroupBox, QRadioButton, QSlider,
     QDoubleSpinBox, QComboBox, QSpinBox, QListView, QLabel,
     QScrollArea, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QSizePolicy, QApplication, QCheckBox
+    QSizePolicy, QApplication, QCheckBox, QLineEdit
 )
 
 from AnyQt.QtGui import (
-    QIcon, QStandardItemModel, QStandardItem
+    QIcon, QStandardItemModel, QStandardItem, QIntValidator
 )
 
 from AnyQt.QtCore import (
@@ -540,14 +540,14 @@ class RandomFeatureSelectEditor(BaseEditor):
         form = QFormLayout()
         fixedrb = QRadioButton("Fixed", checked=True)
         group.addButton(fixedrb, RandomFeatureSelectEditor.Fixed)
-        kspin = QSpinBox(
-            minimum=1, maximum=10000000, value=self.__k,
-            enabled=self.__strategy == RandomFeatureSelectEditor.Fixed
-        )
-        kspin.valueChanged[int].connect(self.setK)
-        kspin.editingFinished.connect(self.edited)
-        self.__spins[RandomFeatureSelectEditor.Fixed] = kspin
-        form.addRow(fixedrb, kspin)
+
+        kledit = QLineEdit()
+        kledit.setText("10")
+        kledit.setValidator(QIntValidator(self))
+        kledit.textChanged.connect(self.setK)
+        kledit.editingFinished.connect(self.edited)
+        self.__spins[RandomFeatureSelectEditor.Fixed] = kledit
+        form.addRow(fixedrb, kledit)
 
         percrb = QRadioButton("Percentage")
         group.addButton(percrb, RandomFeatureSelectEditor.Percentage)
@@ -578,7 +578,7 @@ class RandomFeatureSelectEditor(BaseEditor):
         if self.__k != k:
             self.__k = k
             spin = self.__spins[RandomFeatureSelectEditor.Fixed]
-            spin.setValue(k)
+            spin.setText(k)
             if self.__strategy == RandomFeatureSelectEditor.Fixed:
                 self.changed.emit()
 
@@ -617,7 +617,7 @@ class RandomFeatureSelectEditor(BaseEditor):
         k = params.get("k", 10)
         p = params.get("p", 75.0)
         if strategy == RandomFeatureSelectEditor.Fixed:
-            return preprocess.fss.SelectRandomFeatures(k=k)
+            return preprocess.fss.SelectRandomFeatures(k=int(k))
         elif strategy == RandomFeatureSelectEditor.Percentage:
             return preprocess.fss.SelectRandomFeatures(k=p/100)
         else:
@@ -963,7 +963,7 @@ class OWPreprocess(widget.OWWidget):
     priority = 2105
     keywords = ["process"]
 
-    settings_version = 2
+    settings_version = 3
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -1248,6 +1248,11 @@ class OWPreprocess(widget.OWWidget):
                     }
                     params["method"] = \
                         migratable.get((center, scale), Scale.NormalizeBySD)
+        if version < 3:
+            for action, params in settings["storedsettings"]["preprocessors"]:
+                if action == "orange.preprocess.randomfss":
+                    if "k" in params:
+                        params["k"] = str(params.get("k"))
 
     def onDeleteWidget(self):
         self.data = None
