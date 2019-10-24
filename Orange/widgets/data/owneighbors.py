@@ -64,12 +64,6 @@ class OWNeighbors(OWWidget):
         self.reference = None
         self.distances = None
 
-        box = gui.vBox(self.controlArea, "Info")
-        self.data_info_label = gui.widgetLabel(box, "")
-        self.reference_info_label = gui.widgetLabel(box, "")
-        self._set_label_text("data")
-        self._set_label_text("reference")
-
         box = gui.vBox(self.controlArea, box=True)
         gui.comboBox(
             box, self, "distance_index", orientation=Qt.Horizontal,
@@ -88,24 +82,53 @@ class OWNeighbors(OWWidget):
 
         self.apply_button = gui.auto_apply(self.controlArea, self, commit=self.apply)
 
-    def _set_label_text(self, name):
-        data = getattr(self, name)
-        label = getattr(self, f"{name}_info_label")
-        if data is None:
-            label.setText(f"No {name} instances")
+    def _set_input_summary(self, name):
+        n_data, n_refs = 0, 0
+        if self.data is not None and self.reference is not None:
+            n_data = len(self.data)
+            n_refs = len(self.reference)
+        elif self.data is not None:
+            n_data = len(self.data)
+        elif self.reference is not None:
+            n_refs = len(self.reference)
         else:
-            pl = "s" if data else ""
-            label.setText(f"{len(data)} {name} instance{pl} on input.")
+            self.info.set_input_summary(self.info.NoInput)
+            return
+
+        inst = f"{n_data} | {n_refs} "
+        if n_data > 0 and n_refs > 0:
+             details = f"{n_data} data instances on input; " \
+                    f"{n_refs} reference instances on input "
+        elif n_data > 0 and n_refs == 0:
+            details = f"{n_data} data instances on input; " \
+                      f"No reference instances on input "
+        elif n_data == 0 and n_refs > 0:
+            details = f"No data instances on input; " \
+                      f"{n_refs} reference instances on input "
+
+        self.info.set_input_summary(inst, details)
+
+    def _set_output_summary(self):
+        if self.data is None:
+            self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
+            return
+
+        indices = self._compute_indices()
+        if np.any(indices):
+            neighbors = self._data_with_similarity(indices)
+            self.Outputs.data.send(neighbors)
+            self.info.set_output_summary(str(len(neighbors)))
 
     @Inputs.data
     def set_data(self, data):
         self.data = data
-        self._set_label_text("data")
+        self._set_input_summary(data and "data")
 
     @Inputs.reference
     def set_ref(self, refs):
         self.reference = refs
-        self._set_label_text("reference")
+        self._set_input_summary(refs and "reference")
 
     def handleNewSignals(self):
         self.compute_distances()
@@ -146,6 +169,7 @@ class OWNeighbors(OWWidget):
         else:
             neighbors = self._data_with_similarity(indices)
         self.Outputs.data.send(neighbors)
+        self._set_output_summary()
 
     def _compute_indices(self):
         self.Warning.all_data_as_reference.clear()
