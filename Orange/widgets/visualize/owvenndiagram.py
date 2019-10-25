@@ -7,9 +7,10 @@ Venn Diagram Widget
 import math
 import unicodedata
 from collections import namedtuple, defaultdict, OrderedDict, Counter
-from itertools import count
+from itertools import count, compress
 from functools import reduce
 from xml.sax.saxutils import escape
+from copy import deepcopy
 
 import numpy
 
@@ -23,7 +24,9 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
 from AnyQt.QtCore import pyqtSignal as Signal
 
-import Orange.data
+from Orange.data import (
+    Table, Domain, StringVariable, DiscreteVariable,
+    ContinuousVariable)
 from Orange.statistics import util
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
@@ -47,11 +50,11 @@ class OWVennDiagram(widget.OWWidget):
     keywords = []
 
     class Inputs:
-        data = Input("Data", Orange.data.Table, multiple=True)
+        data = Input("Data", Table, multiple=True)
 
     class Outputs:
-        selected_data = Output("Selected Data", Orange.data.Table, default=True)
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     class Error(widget.OWWidget.Error):
         domain_mismatch = Msg("Input data domains do not match.")
@@ -60,15 +63,7 @@ class OWVennDiagram(widget.OWWidget):
     selection: list
 
     # Selected disjoint subset indices
-<<<<<<< HEAD
     selection = settings.Setting([], schema_only=True)
-    #: Stored input set hints
-    #: {(index, inputname, attributes): (selectedattrname, itemsettitle)}
-    #: The 'selectedattrname' can be None
-    inputhints = settings.Setting({})
-=======
-    selection = settings.Setting([])
->>>>>>> Implement venn over columns, simplify over rows.
     #: Use identifier columns for instance matching
     useidentifiers = settings.Setting(True)
     #: Output unique items (one output row for every unique instance `key`)
@@ -133,8 +128,8 @@ class OWVennDiagram(widget.OWWidget):
         box.setFlat(True)
         model = itemmodels.VariableListModel(parent=self)
         self.cb = cb = gui.OrangeComboBox(
-                minimumContentsLength=12,
-                sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
+            minimumContentsLength=12,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
             )
         cb.setModel(model)
         cb.activated[int].connect(self._on_inputAttrActivated)
@@ -145,9 +140,10 @@ class OWVennDiagram(widget.OWWidget):
         gui.rubber(self.controlArea)
 
 
-        box = gui.vBox(self.controlArea, "Output")
+        self.output_duplicates_box = box = gui.vBox(self.controlArea, "Output")
+        self.output_duplicates_box.setEnabled(not self.usecols)
         gui.checkBox(box, self, "output_duplicates", "Output duplicates",
-                     callback=lambda: self.commit())
+                     callback=self.commit)
         gui.auto_send(box, self, "autocommit", box=False)
 
         # Main area view
@@ -180,7 +176,6 @@ class OWVennDiagram(widget.OWWidget):
         if key in self.data:
             if data is None:
                 # Remove the input
-                index = list(self.data.keys()).index(key)
                 # Clear possible warnings.
                 self.warning()
                 del self.data[key]
@@ -219,10 +214,11 @@ class OWVennDiagram(widget.OWWidget):
             if not samedomain:
                 self.vennwidget.clear()
                 self.Error.domain_mismatch()
+                self.itemsets = OrderedDict()
                 return False
             self.samedomain = samedomain
             has_identifiers = all(source_attributes(input.table.domain)
-                                for input in self.data.values())
+                                  for input in self.data.values())
             self.useidentifiersButton.setEnabled(
                 has_identifiers)
             self.inputsBox.setEnabled(has_identifiers)
@@ -231,6 +227,7 @@ class OWVennDiagram(widget.OWWidget):
             if not self.data_equality():
                 self.vennwidget.clear()
                 self.Error.instances_mismatch()
+                self.itemsets = OrderedDict()
                 return False
             return True
 
@@ -238,6 +235,7 @@ class OWVennDiagram(widget.OWWidget):
         self._inputUpdate = False
         self.vennwidget.clear()
         if not self.settings_compatible():
+            self.invalidateOutput()
             return
 
         self._createItemsets()
@@ -246,6 +244,7 @@ class OWVennDiagram(widget.OWWidget):
         # If not, call unconditional_commit from here
         if not self.autocommit:
             self.unconditional_commit()
+
         if self.data:
             self.infolabel.setText(f"{len(self.data)} datasets on input.\n")
         else:
@@ -279,6 +278,7 @@ class OWVennDiagram(widget.OWWidget):
         return atrs
 
     def _setInterAttributes(self):
+        #finds intersection of string attributes for identifiers checkbox
         box = self.inputsBox.layout().itemAt(0).widget()
         combo = box.combo_box
         model = combo.model()
@@ -293,7 +293,7 @@ class OWVennDiagram(widget.OWWidget):
 
     def _itemsForInput(self, key):
         """
-        Calculates input for venn diagram, according to users settings.
+        Calculates input for venn diagram, according to user's settings.
         """
         useidentifiers = self.useidentifiers or not self.samedomain
 
@@ -307,6 +307,7 @@ class OWVennDiagram(widget.OWWidget):
             else:
                 return []
         def items_by_eq(key, input):
+
             return list(map(ComparableInstance, input.table))
 
         input = self.data[key]
@@ -327,9 +328,6 @@ class OWVennDiagram(widget.OWWidget):
                 item = item._replace(name=name, title=name)
             self.itemsets[key] = item
 
-    def _itemsFromDomain(self, table):
-        return table.domain.attributes + table.domain.metas + table.domain.class_vars
-        
     def _createItemsets(self):
         """
         Create itemsets over rows or columns (domains) of input tables.
@@ -339,7 +337,7 @@ class OWVennDiagram(widget.OWWidget):
 
         for key, input in self.data.items():
             if self.usecols:
-                items = self._itemsFromDomain(input.table)
+                items = [el.name for el in input.table.domain.attributes]
             else:
                 items = self._itemsForInput(key)
             name = input.name
@@ -432,19 +430,19 @@ class OWVennDiagram(widget.OWWidget):
 
     def _on_selectionChanged(self):
         if not self.settings_compatible():
-            return 
+            self.invalidateOutput()
+            return
         if self._updating:
             return
 
         areas = self.vennwidget.vennareas()
-        indices = [i for i, area in enumerate(areas)
-                   if area.isSelected()]
-
-        self.selection = indices
-
+        self.selection = [i for i, area in enumerate(areas) if area.isSelected()]
         self.invalidateOutput()
 
     def _on_useidentifiersChanged(self):
+        if not self.settings_compatible():
+            self.invalidateOutput()
+            return
         self.inputsBox.setEnabled(self.useidentifiers == 1)
         # Invalidate all itemsets
         self._updateItemsets()
@@ -454,28 +452,15 @@ class OWVennDiagram(widget.OWWidget):
 
     def _on_elements_changed(self):
         self.identifiersBox.setEnabled(not self.usecols)
+        self.output_duplicates_box.setEnabled(not self.usecols)
         if not self.settings_compatible():
+            self.invalidateOutput()
             return
         self._createItemsets()
         self._createDiagram()
         self._updateInfo()
 
     def _on_inputAttrActivated(self, attr_index):
-        combo = self.sender()
-        # Find the input index to which the combo box belongs
-        # (they are reordered when removing inputs).
-        index = None
-        inputs = list(self.data.items())
-        for i in range(len(inputs)):
-            _, c = self._controlAtIndex(i)
-            if c is combo:
-                index = i
-                break
-
-        assert index is not None
-
-        key, _ = inputs[index]
-
         self._updateItemsets()
         self._createDiagram()
 
@@ -487,39 +472,116 @@ class OWVennDiagram(widget.OWWidget):
     def invalidateOutput(self):
         self.commit()
 
+    def arrays_equal(self, a, b, type_):
+        """
+        checks if arrays have nans in same places and if not-nan elements
+        are equal
+        """
+        if a is None and b is None:
+            return True
+        if a is None or b is None:
+            return False
+        if type_ is not StringVariable:
+            if not numpy.all(numpy.argwhere(numpy.isnan(a)) == numpy.argwhere(numpy.isnan(b))):
+                return False
+            if not numpy.any(a[numpy.logical_not(numpy.isnan(a))] == b[numpy.logical_not(numpy.isnan(b))]):
+                return False
+            return True
+        else:
+            if not(a == b).all():
+                return False
+            return True
+
+    def extract_new_table(self, var_dict):
+        domain = defaultdict(lambda: [])
+        values = defaultdict(lambda: [])
+        atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
+        for atr_type, vars_dict in var_dict.items():
+            for var_name, var_data in vars_dict.items():
+                if var_data[0]:
+                    #columns are different, copy all, rename them
+                    for var, table_key in var_data[1]:
+                        domain[atr_type].append(var.make('{}_{}{}'.format(var_name, self.data[table_key].table.name, table_key[0])))
+                        values[atr_type].append(getattr(self.data[table_key].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
+                else:
+                    domain[atr_type].append(deepcopy(var_data[1][0][0]))
+                    values[atr_type].append(getattr(self.data[var_data[1][0][1]].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
+        X, metas, class_vars = None, None, None
+        if values['attributes']:
+            X = numpy.hstack(values['attributes'])
+        if values['metas']:
+            metas = numpy.hstack(values['metas'])
+        if values['class_vars']:
+            class_vars = numpy.hstack(values['class_vars'])
+        table = Table.from_numpy(Domain(**domain), X, class_vars, metas)
+        return table
+
     def create_from_columns(self, columns):
         """
         If venn diagram is over columns, columns are selected from first dataset that has them.
-        Annotated data retains all columns from all datasets and adds an attribute 
+        Annotated data retains all columns from all datasets and adds an attribute to features,
+        indicating wether it was selected. Columns are duplicated only if values differ (even
+        if only in order of values), origin table name is added to column name.
         """
-        selected = []
-        annotated = []
-        for column in columns:
-            name = column.name
-            for value in self.data.values():
-                table = value.table
-                if column in table.domain:
-                    selected.append(table[:, name])
-                    break
+        selected = None
+        atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
 
-        for value in self.data.values():
-            table = value.table
-            for atr in table.domain:
-                t = table[:, atr.name]
-                t.domain[0].attributes['selected'] = atr in columns
-                annotated.append(t)
+        def merge_vars(new_atrs, atr):
+            """
+            Atrs - list of variables we wish to merge
+            new_atrs - dictionary where key is old name, val
+                is [is_different, [table_keys]])
+            atr_type and table_key is known due to closure
+            """
+            if atr.name in new_atrs.keys():
+                if not new_atrs[atr.name][0]:
+                    for var, key in new_atrs[atr.name][1]:
+                        if not self.arrays_equal(
+                                getattr(self.data[table_key].table[:, atr.name], atr_vals[atr_type]),
+                                getattr(self.data[key].table[:, atr.name], atr_vals[atr_type]),
+                                type(var)):
+                            new_atrs[atr.name][0] = True
+                            break
+                new_atrs[atr.name][1].append((atr, table_key))
+            else:
+                new_atrs[atr.name] = [False, [(atr, table_key)]]
+            return new_atrs
 
-        if selected:
-            selected = Orange.data.Table.concatenate(selected, axis=1)
-        else:
-            selected = None
-        if annotated:
-            annotated = Orange.data.Table.concatenate(annotated, axis=1)
-        else:
-            annotated = None
+
+        annotated = None
+        atr_types = ['attributes', 'metas', 'class_vars']
+        if columns:
+            sel_dict = {atr_type:{} for atr_type in atr_types}
+            for table_key in self.data.keys():
+                table = self.data[table_key].table
+                if all(col in {atr.name for atr in table.domain.attributes} for col in columns):
+                    atrs = list(compress(table.domain.attributes, [col.name in columns for col in table.domain.attributes]))
+                    data_ = [atrs, getattr(table.domain, 'metas'), getattr(table.domain, 'class_vars')]
+                    for atr_type, data in zip(atr_types, data_):
+                        sel_dict[atr_type] = reduce(merge_vars, data, sel_dict[atr_type])
+            selected = self.extract_new_table(sel_dict)
+
+        var_dict = {}
+        for atr_type in atr_types:
+            container = {}
+            for table_key in self.data.keys():
+                atrs = getattr(self.data[table_key].table.domain, atr_type)
+                container = reduce(merge_vars, atrs, container)
+            var_dict[atr_type] = container
+        annotated = self.extract_new_table(var_dict)
+        for atr in annotated.domain.attributes:
+            atr.attributes['Selected'] = atr in selected.domain.attributes
+
         return selected, annotated
-            
+
+
     def commit(self):
+
+        if not self.itemsets:
+            self.Outputs.selected_data.send(None)
+            self.Outputs.annotated_data.send(None)
+            return
+
         selected_subsets = []
         annotated_data = None
         annotated_data_subsets = []
@@ -530,7 +592,7 @@ class OWVennDiagram(widget.OWWidget):
         )
 
         if self.usecols:
-            selected_data, annotated_data = self.create_from_columns(selected_items)
+            selected_data, annotated_data = self.create_from_columns(list(selected_items))
             self.Outputs.selected_data.send(selected_data)
             self.Outputs.annotated_data.send(annotated_data)
             return
@@ -541,8 +603,8 @@ class OWVennDiagram(widget.OWWidget):
             else:
                 return str(val) in selected_items
 
-        source_var = Orange.data.StringVariable("source")
-        item_id_var = Orange.data.StringVariable("item_id")
+        source_var = StringVariable("source")
+        item_id_var = StringVariable("item_id")
 
         names = [itemset.title.strip() for itemset in self.itemsets.values()]
         names = uniquify(names)
@@ -717,7 +779,7 @@ def table_concat(tables):
 
         variables_seen.update(table.domain.metas)
 
-    domain = Orange.data.Domain(attributes, class_vars, metas)
+    domain = Domain(attributes, class_vars, metas)
 
     tables = [tab.transform(domain) for tab in tables]
     return tables[0].concatenate(tables, axis=0)
@@ -735,7 +797,7 @@ def copy_descriptor(descriptor, newname=None):
         newname = descriptor.name
 
     if descriptor.is_discrete:
-        newf = Orange.data.DiscreteVariable(
+        newf = DiscreteVariable(
             newname,
             values=descriptor.values,
             ordered=descriptor.ordered,
@@ -743,7 +805,7 @@ def copy_descriptor(descriptor, newname=None):
         newf.attributes = dict(descriptor.attributes)
 
     elif descriptor.is_continuous:
-        newf = Orange.data.ContinuousVariable(newname)
+        newf = ContinuousVariable(newname)
         newf.number_of_decimals = descriptor.number_of_decimals
         newf.attributes = dict(descriptor.attributes)
 
@@ -829,7 +891,7 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
         elif meta not in groupvarlist:
             newmetas.append(meta)
 
-    domain = Orange.data.Domain(newfeatures, newclass_vars, newmetas)
+    domain = Domain(newfeatures, newclass_vars, newmetas)
     prototype_indices = [inst_by_id[inst_id][0] for inst_id in ids]
     newtable = table[prototype_indices].transform(domain)
     in_expanded = set(f for efd in expanded_features.values() for f in efd.values())
@@ -1625,7 +1687,7 @@ def append_column(data, where, variable, column):
         M = numpy.hstack((M, column))
     else:
         raise ValueError
-    domain = Orange.data.Domain(attr, class_vars, metas)
+    domain = Domain(attr, class_vars, metas)
     new_data = data.transform(domain)
     new_data[:, variable] = column
     return new_data
@@ -1637,12 +1699,12 @@ def drop_columns(data, columns):
     def filter_vars(vars):
         return tuple(var for var in vars if var not in columns)
 
-    domain = Orange.data.Domain(
+    domain = Domain(
         filter_vars(data.domain.attributes),
         filter_vars(data.domain.class_vars),
         filter_vars(data.domain.metas)
     )
-    return Orange.data.Table.from_table(domain, data)
+    return Table.from_table(domain, data)
 
 
 def group_table_indices(table, key_var):
@@ -1661,11 +1723,11 @@ def group_table_indices(table, key_var):
 if __name__ == "__main__":  # pragma: no cover
     from Orange.evaluation import ShuffleSplit
 
-    data = Orange.data.Table("brown-selected")
+    data = Table("brown-selected")
     # data1 = Orange.data.Table("brown-selected")
     # datasets = [(data, 1), (data, 2)]
 
-    data = append_column(data, "M", Orange.data.StringVariable("Test"),
+    data = append_column(data, "M", StringVariable("Test"),
                          numpy.arange(len(data)).reshape(-1, 1) % 30)
     res = ShuffleSplit(data, [None], n_resamples=5,
                        test_size=0.7, stratified=False)
