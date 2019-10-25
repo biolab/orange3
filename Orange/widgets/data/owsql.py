@@ -1,6 +1,6 @@
 from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication
 from AnyQt.QtGui import QCursor
-from AnyQt.QtCore import Qt, QTimer
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.data.sql.backend import Backend
@@ -78,8 +78,6 @@ class OWSql(OWBaseSql):
         self.downloadcb = None
         super().__init__()
 
-        QTimer.singleShot(0, self.select_table)
-
     def _setup_gui(self):
         super()._setup_gui()
         self._add_backend_controls()
@@ -156,6 +154,7 @@ class OWSql(OWBaseSql):
             self.downloadcb.setEnabled(False)
         super().on_connection_success()
         self.refresh_tables()
+        self.select_table()
 
     def on_connection_error(self, err):
         super().on_connection_error(err)
