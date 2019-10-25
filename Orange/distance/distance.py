@@ -5,6 +5,7 @@ import numpy as np
 from scipy import stats
 from scipy import sparse as sp
 import sklearn.metrics as skl_metrics
+from sklearn.utils import check_array
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
 from sklearn.metrics import pairwise_distances
 
@@ -645,16 +646,31 @@ class PearsonRAbsolute(CorrelationDistance):
         return PearsonModel(True, self.axis, self.impute)
 
 def _prob_dist(a):
-    # Makes the vector sum to one, as to mimick probability distribution.
+    # Makes the vector sum to one, as to mimic probability distribution.
     return a / np.sum(a)
+
+def non_negative(a):
+    #Raise an exception for infinities, nans and negative values
+    try:
+        check_array(a, accept_sparse=True, accept_large_sparse=True, ensure_2d=False)
+    except:
+        raise ValueError("Bhattcharyya distance requires non-negative values")
+    if sp.issparse(a):
+        if a.min() < 0:
+            raise ValueError("Bhattcharyya distance requires non-negative values")
+        return
+    if min(a) < 0:
+        raise ValueError("Bhattcharyya distance requires non-negative values")
 
 def _bhattacharyya(a, b):
     # not a real metric, does not obey triangle inequality
+    non_negative(a)
+    non_negative(b)
     a = _prob_dist(a)
     b = _prob_dist(b)
     if sp.issparse(a):
-        return - np.log(np.sum(np.sqrt(a.multiply(b))))
-    return - np.log(np.sum(np.sqrt(a * b)))
+        return -np.log(np.sum(np.sqrt(a.multiply(b))))
+    return -np.log(np.sum(np.sqrt(a * b)))
 
 class Bhattacharyya(Distance):
     supports_discrete = False

@@ -962,12 +962,22 @@ class TestBhattacharyya(TestCase):
     def test_sparse_array(self):
         data = csr_matrix([[0.5, 0.5], [0, 0.5]])
         self.assertAlmostEqual(self.dist(data[0], data[1]), 0.3465735902799726, delta=1e-5)
-    
+
     def test_columns(self):
         data = np.array([[0.5, 0.2], [0.5, 0.8]])
         true_out = np.array([[0, 0.05268025782891318],
                              [0.05268025782891318, 0]])
         np.testing.assert_array_almost_equal(self.dist(data, axis=0), true_out)
+
+    def test_negative_input(self):
+        a = np.array([0, np.nan])
+        b = np.array([1, 1])
+        self.assertRaises(ValueError, self.dist, a, b)
+        a[1] = -1
+        self.assertRaises(ValueError, self.dist, a, b)
+        a = csr_matrix(a)
+        b = csr_matrix(b)
+        self.assertRaises(ValueError, self.dist, a, b)
 
 
 class TestDistances(TestCase):

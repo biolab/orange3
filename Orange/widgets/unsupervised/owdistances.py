@@ -1,6 +1,5 @@
 from AnyQt.QtCore import Qt
 from scipy.sparse import issparse
-from numpy import min as _min
 import bottleneck as bn
 
 import Orange.data
@@ -59,7 +58,6 @@ class OWDistances(OWWidget):
         dense_metric_sparse_data = Msg("{} requires dense data.")
         distances_memory_error = Msg("Not enough memory")
         distances_value_error = Msg("Problem in calculation:\n{}")
-        negative_value_error = Msg("Only non-negative values alowed for Bhattcharyya.")
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring categorical features")
@@ -160,9 +158,6 @@ class OWDistances(OWWidget):
                       _fix_discrete, _fix_missing, _fix_nonbinary):
             if not check():
                 return None
-        if (METRICS[self.metric_idx][0] == 'Bhattacharyya') and _min(data.X) < 0:
-            self.Error.negative_value_error()
-            return None
         try:
             if metric.supports_normalization and self.normalized_dist:
                 return metric(data, axis=1 - self.axis, impute=True,
