@@ -470,6 +470,33 @@ class TestOWMergeData(WidgetTest):
         np.testing.assert_equal(
             out.ids, np.hstack((self.dataA.ids[1:], self.dataA.ids[:1])))
 
+    def test_output_merge_by_ids_outer_single_class(self):
+        """Check output for merging option 'Concatenate tables, merge rows' by
+        Source position (index) when all extra rows are matched and there is
+        only a single class variable in the output"""
+        domainA = self.dataA.domain
+        values = domainA.class_var.values
+        domain = Domain(domainA.attributes,
+                        DiscreteVariable("clsA", values),
+                        domainA.metas)
+        result = Table(domain,
+                       np.array([[0, 0], [1, 1], [2, 0], [3, np.nan]]),
+                       np.array([[0], [1], [2], [np.nan]]),
+                       np.array([[0.0, "m1"], [1.0, "m2"], [np.nan, "m3"],
+                                 [0.0, ""]]).astype(object))
+        self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
+        self.widget.merging = 2
+        self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
+        # When Y is a single column, Table.Y returns a vector, not a 2d array,
+        # which cause an exception in outer_join's vstack for Y if extra data
+        # has no unmatched rows.
+        # This test also checks this condition.
+        self.send_signal(self.widget.Inputs.data, self.dataA[:, [0, "clsA", -1]])
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA[:3, [1, -2]])
+        out = self.get_output(self.widget.Outputs.data)
+        self.assertTablesEqual(out, result)
+        np.testing.assert_equal(out.ids, self.dataA.ids)
+
     def test_output_merge_by_index_left(self):
         """Check output for merging option 'Append columns from Extra Data' by
         Position (index)"""

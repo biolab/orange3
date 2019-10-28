@@ -579,7 +579,10 @@ class OWMergeData(widget.OWWidget):
                 domain.metas[:len(lt_dom.metas)] + xt_dom.metas)
             extras = self.extra_data[rightu].transform(right_domain)
             X = np.vstack((X, extras.X))
-            Y = np.vstack((Y, extras.Y))
+            extras_Y = extras.Y
+            if extras_Y.ndim == 1:
+                extras_Y = extras_Y.reshape(-1, 1)
+            Y = np.vstack((Y, extras_Y))
             metas = np.vstack((metas, extras.metas))
         table = Orange.data.Table.from_numpy(domain, X, Y, metas)
         table.name = getattr(self.data, 'name', '')
