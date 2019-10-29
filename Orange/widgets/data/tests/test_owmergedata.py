@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+# There are never too many tests, so:
+# pylint: disable=too-many-lines,too-many-public-methods
 from itertools import chain
 import unittest
 
@@ -447,10 +449,15 @@ class TestOWMergeData(WidgetTest):
     def test_output_merge_by_ids_outer(self):
         """Check output for merging option 'Concatenate tables, merge rows' by
         Source position (index)"""
-        domain = self.dataA.domain
+        domainA = self.dataA.domain
+        values = domainA.class_var.values
+        domain = Domain(domainA.attributes,
+                        (DiscreteVariable("clsA (1)", values),
+                         DiscreteVariable("clsA (2)", values)),
+                        domainA.metas)
         result = Table(domain,
                        np.array([[1, 1], [2, 0], [3, np.nan], [np.nan, 0]]),
-                       np.array([1, 2, np.nan, 0]),
+                       np.array([[1, 1], [2, 2], [np.nan, np.nan], [np.nan, 0]]),
                        np.array([[1.0, "m2"], [np.nan, "m3"],
                                  [0.0, ""], [np.nan, "m1"]]).astype(object))
         self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
@@ -462,6 +469,33 @@ class TestOWMergeData(WidgetTest):
         self.assertTablesEqual(out, result)
         np.testing.assert_equal(
             out.ids, np.hstack((self.dataA.ids[1:], self.dataA.ids[:1])))
+
+    def test_output_merge_by_ids_outer_single_class(self):
+        """Check output for merging option 'Concatenate tables, merge rows' by
+        Source position (index) when all extra rows are matched and there is
+        only a single class variable in the output"""
+        domainA = self.dataA.domain
+        values = domainA.class_var.values
+        domain = Domain(domainA.attributes,
+                        DiscreteVariable("clsA", values),
+                        domainA.metas)
+        result = Table(domain,
+                       np.array([[0, 0], [1, 1], [2, 0], [3, np.nan]]),
+                       np.array([[0], [1], [2], [np.nan]]),
+                       np.array([[0.0, "m1"], [1.0, "m2"], [np.nan, "m3"],
+                                 [0.0, ""]]).astype(object))
+        self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
+        self.widget.merging = 2
+        self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
+        # When Y is a single column, Table.Y returns a vector, not a 2d array,
+        # which cause an exception in outer_join's vstack for Y if extra data
+        # has no unmatched rows.
+        # This test also checks this condition.
+        self.send_signal(self.widget.Inputs.data, self.dataA[:, [0, "clsA", -1]])
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA[:3, [1, -2]])
+        out = self.get_output(self.widget.Outputs.data)
+        self.assertTablesEqual(out, result)
+        np.testing.assert_equal(out.ids, self.dataA.ids)
 
     def test_output_merge_by_index_left(self):
         """Check output for merging option 'Append columns from Extra Data' by
@@ -605,7 +639,7 @@ class TestOWMergeData(WidgetTest):
         np.testing.assert_equal(
             out.X,
             np.array([[0, 6], [1, 4], [2, 7], [np.nan, 5]]))
-        self.assertEqual(" ".join(out.metas.flatten()), "a b c d")
+        self.assertEqual(" ".join(out.metas.flatten()), "a a b b c c  d")
 
     def test_output_merge_by_class_left(self):
         """Check output for merging option 'Append columns from Extra Data' by
@@ -952,6 +986,51 @@ class TestOWMergeData(WidgetTest):
         merged_data = self.get_output(self.widget.Outputs.data)
         self.assertListEqual([m.name for m in merged_data.domain.metas],
                              ["Feature (1)", "Feature (2)"])
+
+    def test_keep_non_duplicate_variables(self):
+        domain = Domain([ContinuousVariable("A"), ContinuousVariable("B")])
+        data = Table(domain, np.array([[0., 0], [0, 1]]))
+        extra_data = Table(domain, np.array([[0., 1], [0, 1]]))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.extra_data, extra_data)
+        merged_data = self.get_output(self.widget.Outputs.data)
+        self.assertListEqual([m.name for m in merged_data.domain.variables],
+                             ["A", "B (1)", "B (2)"])
+
+    def test_keep_non_duplicate_variables_missing_rows(self):
+        c = DiscreteVariable("C", values=["a", "b", "c"])
+        domain = Domain([ContinuousVariable("A"), ContinuousVariable("B"), c])
+        data = Table(domain, np.array([[0., 0, 0], [1, 1, 1]]))
+        extra_data = Table(domain, np.array([[0., 1, 1], [0, 1, 2]]))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.extra_data, extra_data)
+        self.widget.attr_boxes.set_state([(c, c)])
+
+        # Only one row is matched; A has different values and it's duplicated,
+        # and B has the same values, so we get only one copy
+        self.widget.merging = self.widget.InnerJoin
+        self.widget.unconditional_commit()
+        merged_data = self.get_output(self.widget.Outputs.data)
+        self.assertListEqual([m.name for m in merged_data.domain.variables],
+                             ["A (1)", "B", "C", "A (2)"])
+
+        # Table has additional rows; keep all columns
+        self.widget.merging = self.widget.OuterJoin
+        self.widget.unconditional_commit()
+        merged_data = self.get_output(self.widget.Outputs.data)
+        self.assertListEqual(
+            [m.name for m in merged_data.domain.variables],
+            ["A (1)", "B (1)", "C (1)", "A (2)", "B (2)", "C (2)"])
+
+        # First row is unmatched, data for B(2) is missing, but attribute
+        # shouldn't be added
+        extra_data = Table(domain, np.array([[1., 1, 1], [0, 1, 2]]))
+        self.send_signal(self.widget.Inputs.extra_data, extra_data)
+        self.widget.merging = self.widget.LeftJoin
+        self.widget.unconditional_commit()
+        merged_data = self.get_output(self.widget.Outputs.data)
+        self.assertListEqual([m.name for m in merged_data.domain.variables],
+                             ["A", "B", "C"])
 
 
 if __name__ == "__main__":
