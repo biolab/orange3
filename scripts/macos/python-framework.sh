@@ -80,10 +80,22 @@ python-framework-fetch-pkg() {
 python-framework-extract-pkg() {
     local targetdir=${1:?}
     local pkgpath=${2:?}
+    local pkgfilename
+    pkgfilename=$(basename "${pkgpath}")
     mkdir -p "${targetdir}"/Python.framework
     verbose 1 "Extracting framework at ${targetdir}/Python.framework"
-    tar -O -xf "${pkgpath}" Python_Framework.pkg/Payload | \
-        tar -x -C "${targetdir}"/Python.framework
+    (
+        tmpdir=$(mktemp -d -t python-framework-extract-pkg)
+        cleanup-on-exit() {
+            if [ -d "${tmpdir:?}" ] ; then
+              rm -rf "${tmpdir:?}"
+            fi
+        }
+        trap cleanup-on-exit EXIT
+        pkgutil --expand "${pkgpath}" "${tmpdir:?}/${pkgfilename}" || exit 1
+        tar -C "${targetdir}"/Python.framework \
+            -xf "${tmpdir}/${pkgfilename}/Python_Framework.pkg/Payload" || exit 1
+    )
 }
 
 
