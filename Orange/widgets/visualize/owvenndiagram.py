@@ -59,6 +59,7 @@ class OWVennDiagram(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         domain_mismatch = Msg("Input data domains do not match.")
         instances_mismatch = Msg("Data sets do not contain the same instances.")
+        too_much_inputs = Msg("venn diagram accepts at most five datasets.")
 
     selection: list
 
@@ -93,7 +94,7 @@ class OWVennDiagram(widget.OWWidget):
         self.infolabel = gui.widgetLabel(box, "No data on input.\n")
 
         self.elementsBox = gui.radioButtonsInBox(
-            self.controlArea, self, 'usecols', [], 
+            self.controlArea, self, 'usecols', [],
             box="Elements", callback=self._on_elements_changed
         )
 
@@ -169,10 +170,9 @@ class OWVennDiagram(widget.OWWidget):
     @Inputs.data
     @check_sql_input
     def setData(self, data, key=None):
-        self.error()
+        self.Error.too_much_inputs.clear()
         if not self._inputUpdate:
             self._inputUpdate = True
-        
         if key in self.data:
             if data is None:
                 # Remove the input
@@ -187,7 +187,7 @@ class OWVennDiagram(widget.OWWidget):
             # TODO: Allow setting more them 5 inputs and let the user
             # select the 5 to display.
             if len(self.data) == 5:
-                self.error("Venn diagram accepts at most five datasets.")
+                self.Error.too_much_inputs()
                 return
             # Add a new input
             self.data[key] = _InputData(key, data.name, data)
@@ -253,7 +253,7 @@ class OWVennDiagram(widget.OWWidget):
         self._updateInfo()
         super().handleNewSignals()
 
-    def itemsetAttr(self, key):
+    def itemsetAttr(self):
         model = self.cb.model()
         attr_index = self.cb.currentIndex()
         if attr_index >= 0:
@@ -267,15 +267,10 @@ class OWVennDiagram(widget.OWWidget):
         return group_box, combo
 
     def intersectionStringAttrs(self):
-        atrs = None
-        for data_ in self.data.values():
-            if atrs == None:
-                atrs = set(string_attributes(data_.table.domain))
-            else:
-                atrs = atrs.intersection(set(string_attributes(data_.table.domain)))
-        if atrs is not None:
-            return list(atrs)
-        return atrs
+        sets = [set(string_attributes(data_.table.domain)) for data_ in self.data.values()]
+        if sets:
+            return reduce(set.intersection, sets)
+        return set()
 
     def _setInterAttributes(self):
         #finds intersection of string attributes for identifiers checkbox
@@ -283,7 +278,7 @@ class OWVennDiagram(widget.OWWidget):
         combo = box.combo_box
         model = combo.model()
         atrs = self.intersectionStringAttrs()
-        if (atrs is None) or (len(atrs) == 0):
+        if not atrs:
             self.useidentifiers = False
             model[:] = []
             box.setEnabled(False)
@@ -297,24 +292,24 @@ class OWVennDiagram(widget.OWWidget):
         """
         useidentifiers = self.useidentifiers or not self.samedomain
 
-        def items_by_key(key, input):
+        def items_by_key(table):
             model = self.cb.model()
             attr_index = self.cb.currentIndex()
             if attr_index >= 0:
                 attr = model[attr_index]
-                return [str(inst[attr]) for inst in input.table
+                return [str(inst[attr]) for inst in table
                         if not numpy.isnan(inst[attr])]
             else:
                 return []
-        def items_by_eq(key, input):
 
-            return list(map(ComparableInstance, input.table))
+        def items_by_eq(table):
+            return list(map(ComparableInstance, table))
 
-        input = self.data[key]
+        table = self.data[key].table
         if useidentifiers:
-            items = items_by_key(key, input)
+            items = items_by_key(table)
         else:
-            items = items_by_eq(key, input)
+            items = items_by_eq(table)
         return items
 
     def _updateItemsets(self):
@@ -335,12 +330,12 @@ class OWVennDiagram(widget.OWWidget):
         olditemsets = dict(self.itemsets)
         self.itemsets.clear()
 
-        for key, input in self.data.items():
+        for key, input_ in self.data.items():
             if self.usecols:
-                items = [el.name for el in input.table.domain.attributes]
+                items = [el.name for el in input_.table.domain.attributes]
             else:
                 items = self._itemsForInput(key)
-            name = input.name
+            name = input_.name
             if key in olditemsets and olditemsets[key].name == name:
                 # Reuse the title (which might have been changed by the user)
                 title = olditemsets[key].title
@@ -412,7 +407,7 @@ class OWVennDiagram(widget.OWWidget):
         # Clear all warnings
         self.warning()
 
-        if not len(self.data):
+        if not self.data:
             self.infolabel.setText("No data on input\n")
         else:
             self.infolabel.setText(f"{len(self.data)} datasets on input\n")
@@ -472,25 +467,6 @@ class OWVennDiagram(widget.OWWidget):
     def invalidateOutput(self):
         self.commit()
 
-    def arrays_equal(self, a, b, type_):
-        """
-        checks if arrays have nans in same places and if not-nan elements
-        are equal
-        """
-        if a is None and b is None:
-            return True
-        if a is None or b is None:
-            return False
-        if type_ is not StringVariable:
-            if not numpy.all(numpy.argwhere(numpy.isnan(a)) == numpy.argwhere(numpy.isnan(b))):
-                return False
-            if not numpy.any(a[numpy.logical_not(numpy.isnan(a))] == b[numpy.logical_not(numpy.isnan(b))]):
-                return False
-            return True
-        else:
-            if not(a == b).all():
-                return False
-            return True
 
     def extract_new_table(self, var_dict):
         domain = defaultdict(lambda: [])
@@ -501,7 +477,7 @@ class OWVennDiagram(widget.OWWidget):
                 if var_data[0]:
                     #columns are different, copy all, rename them
                     for var, table_key in var_data[1]:
-                        domain[atr_type].append(var.make('{}_{}{}'.format(var_name, self.data[table_key].table.name, table_key[0])))
+                        domain[atr_type].append(var.make('{}-{}{}'.format(var_name, self.data[table_key].table.name, table_key[0])))
                         values[atr_type].append(getattr(self.data[table_key].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
                 else:
                     domain[atr_type].append(deepcopy(var_data[1][0][0]))
@@ -518,10 +494,8 @@ class OWVennDiagram(widget.OWWidget):
 
     def create_from_columns(self, columns):
         """
-        If venn diagram is over columns, columns are selected from first dataset that has them.
-        Annotated data retains all columns from all datasets and adds an attribute to features,
-        indicating wether it was selected. Columns are duplicated only if values differ (even
-        if only in order of values), origin table name is added to column name.
+        Columns are duplicated only if values differ (even
+        if only in order of values), origin table name and input slot is added to column name.
         """
         selected = None
         atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
@@ -536,9 +510,11 @@ class OWVennDiagram(widget.OWWidget):
             if atr.name in new_atrs.keys():
                 if not new_atrs[atr.name][0]:
                     for var, key in new_atrs[atr.name][1]:
-                        if not self.arrays_equal(
-                                getattr(self.data[table_key].table[:, atr.name], atr_vals[atr_type]),
-                                getattr(self.data[key].table[:, atr.name], atr_vals[atr_type]),
+                        if not arrays_equal(
+                                getattr(self.data[table_key].table[:, atr.name],
+                                        atr_vals[atr_type]),
+                                getattr(self.data[key].table[:, atr.name],
+                                        atr_vals[atr_type]),
                                 type(var)):
                             new_atrs[atr.name][0] = True
                             break
@@ -569,8 +545,9 @@ class OWVennDiagram(widget.OWWidget):
                 container = reduce(merge_vars, atrs, container)
             var_dict[atr_type] = container
         annotated = self.extract_new_table(var_dict)
+
         for atr in annotated.domain.attributes:
-            atr.attributes['Selected'] = atr in selected.domain.attributes
+            atr.attributes['Selected'] = selected and atr in selected.domain.attributes
 
         return selected, annotated
 
@@ -609,13 +586,13 @@ class OWVennDiagram(widget.OWWidget):
         names = [itemset.title.strip() for itemset in self.itemsets.values()]
         names = uniquify(names)
 
-        for i, (key, input) in enumerate(self.data.items()):
+        for i, input in enumerate(self.data.values()):
             # cell vars are in functions that are only used in the loop
             # pylint: disable=cell-var-from-loop
             if not len(input.table):
                 continue
             if self.useidentifiers:
-                attr = self.itemsetAttr(key)
+                attr = self.itemsetAttr()
                 if attr is not None:
                     mask = list(map(match, (inst[attr] for inst in input.table)))
                 else:
@@ -655,7 +632,7 @@ class OWVennDiagram(widget.OWWidget):
             annotated_data_subsets.append(annotated_subset)
             annotated_data_masks.append(mask)
 
-            if len(subset) == 0:
+            if not subset:
                 continue
 
             # add columns with source table id and set id
@@ -1719,6 +1696,25 @@ def group_table_indices(table, key_var):
         groups[str(inst[key_var])].append(i)
     return groups
 
+def arrays_equal(a, b, type_):
+    """
+    checks if arrays have nans in same places and if not-nan elements
+    are equal
+    """
+    if a is None and b is None:
+        return True
+    if a is None or b is None:
+        return False
+    if type_ is not StringVariable:
+        if not numpy.all(numpy.isnan(a) == numpy.isnan(b)):
+            return False
+        if not numpy.any(a[numpy.logical_not(numpy.isnan(a))] == b[numpy.logical_not(numpy.isnan(b))]):
+            return False
+        return True
+    else:
+        if not(a == b).all():
+            return False
+        return True
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.evaluation import ShuffleSplit
