@@ -310,7 +310,6 @@ class OWTestLearners(OWWidget):
         learner : Optional[Orange.base.Learner]
         key : Any
         """
-        self.cancel()
         if key in self.learners and learner is None:
             # Removed
             self._invalidate([key])
@@ -392,7 +391,6 @@ class OWTestLearners(OWWidget):
         ----------
         data : Optional[Orange.data.Table]
         """
-        self.cancel()
         self.Information.test_data_sampled.clear()
         self.Error.test_data_empty.clear()
         if data is not None and not data:
@@ -448,13 +446,11 @@ class OWTestLearners(OWWidget):
         """
         Set the input preprocessor to apply on the training data.
         """
-        self.cancel()
         self.preprocessor = preproc
         self._invalidate()
 
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
-        self.cancel()
         self._update_class_selection()
         self.score_table.update_header(self.scorers)
         self.update_stats_model()
@@ -591,6 +587,7 @@ class OWTestLearners(OWWidget):
         self.update_stats_model()
 
     def _invalidate(self, which=None):
+        self.cancel()
         self.fold_feature_selected = \
             self.resampling == OWTestLearners.FeatureFold
         # Invalidate learner results for `which` input keys
