@@ -313,12 +313,12 @@ class OWLouvainClustering(widget.OWWidget):
 
     def __set_state_ready(self):
         self.progressBarFinished()
-        self.setBlocking(False)
+        self.setInvalidated(False)
         self.setStatusMessage("")
 
     def __set_state_busy(self):
         self.progressBarInit()
-        self.setBlocking(True)
+        self.setInvalidated(True)
 
     def __start_task(self, task, state):
         # type: (Callable[[], Any], TaskState) -> None
@@ -407,10 +407,11 @@ class OWLouvainClustering(widget.OWWidget):
         self.controls.pca_components.setEnabled(self.apply_pca)
 
         if prev_data and self.data and array_equal(prev_data.X, self.data.X):
-            if self.auto_commit:
+            if self.auto_commit and not self.isInvalidated():
                 self._send_data()
             return
 
+        self.cancel()
         # Clear the outputs
         self.Outputs.annotated_data.send(None)
         if Graph is not None:
