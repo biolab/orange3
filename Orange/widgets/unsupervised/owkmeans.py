@@ -322,7 +322,7 @@ class OWKMeans(widget.OWWidget):
         assert self.data is not None
 
         self.__task = None
-        self.setBlocking(False)
+        self.setInvalidated(False)
         self.progressBarFinished()
 
         if self.optimize_k:
@@ -355,7 +355,7 @@ class OWKMeans(widget.OWWidget):
 
         self.__task = Task(futures, watcher)
         self.progressBarInit()
-        self.setBlocking(True)
+        self.setInvalidated(True)
 
     def cancel(self):
         if self.__task is not None:
@@ -368,7 +368,7 @@ class OWKMeans(widget.OWWidget):
             task.watcher.doneAll.disconnect(self.__commit_finished)
 
             self.progressBarFinished()
-            self.setBlocking(False)
+            self.setInvalidated(False)
 
     def run_optimization(self):
         if not self.enough_data_instances(self.k_from):
