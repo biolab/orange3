@@ -16,6 +16,33 @@ _userhome = os.path.expanduser(f"~{os.sep}")
 
 
 class OWSaveBase(widget.OWWidget, openclass=True):
+    """
+    Base class for Save widgets
+
+    A derived class must provide, at minimum:
+
+    - class `Inputs` and the corresponding handler that:
+
+      - saves the input to an attribute `data`, and
+      - calls `self.on_new_input`.
+
+    - a class attribute `filters` with a list of filters or a dictionary whose
+      keys are filters
+    - method `do_save` that saves `self.data` into `self.filename`.
+
+    Alternatively, instead of defining `do_save` a derived class can make
+    `filters` a dictionary whose keys are classes that define a method `write`
+    (like e.g. `TabReader`). Method `do_save` defined in the base class calls
+    the writer corresponding to the currently chosen filter.
+
+    A minimum example of derived class is
+    `Orange.widgets.model.owsavemodel.OWSaveModel`.
+    A more advanced widget that overrides a lot of base class behaviour is
+    `Orange.widgets.data.owsave.OWSave`.
+    """
+
+    class Information(widget.OWWidget.Information):
+        empty_input = widget.Msg("Empty input; nothing was saved.")
 
     class Error(widget.OWWidget.Error):
         no_file_name = widget.Msg("File name is not set.")
@@ -30,6 +57,17 @@ class OWSaveBase(widget.OWWidget, openclass=True):
     auto_save = Setting(False)
 
     def __init__(self, start_row=0):
+        """
+        Set up the gui.
+
+        The gui consists of a checkbox for auto save and two buttons put on a
+        grid layout. Derived widgets that want to place controls above the auto
+        save widget can set the `start_row` argument to the first free row,
+        and this constructor will start filling the grid there.
+
+        Args:
+            start_row (int): the row at which to start filling the gui
+        """
         super().__init__()
         self.data = None
         # This cannot be done outside because `filters` is defined by subclass
@@ -55,29 +93,38 @@ class OWSaveBase(widget.OWWidget, openclass=True):
 
     @property
     def writer(self):
+        """
+        Return the active writer
+
+        The base class uses this property only in `do_save` to find the writer
+        corresponding to the filter. Derived classes (e.g. OWSave) may also use
+        it elsewhere.
+        """
         return self.filters[self.filter]
 
     def on_new_input(self):
+        """
+        This method must be called from input signal handler.
+
+        - It clears errors, warnings and information and calls
+          `self.update_messages` to set the as needed.
+        - It also calls `update_status` the can be overriden in derived
+          methods to set the status (e.g. the number of input rows)
+        - Calls `self.save_file` if `self.auto_save` is enabled and
+          `self.filename` is provided.
+        """
         self.Error.clear()
-        self.update_status()
+        self.Warning.clear()
+        self.Information.clear()
         self.update_messages()
+        self.update_status()
         if self.auto_save and self.filename:
             self.save_file()
 
-    def save_file(self):
-        if not self.filename:
-            self.save_file_as()
-            return
-
-        self.Error.general_error.clear()
-        if self.data is None or not self.filename:
-            return
-        try:
-            self.writer.write(self.filename, self.data)
-        except IOError as err_value:
-            self.Error.general_error(str(err_value))
-
     def save_file_as(self):
+        """
+        Ask the user for the filename and try saving the file
+        """
         filename, selected_filter = self.get_save_filename()
         if not filename:
             return
@@ -86,15 +133,70 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         self.last_dir = os.path.split(self.filename)[0]
         self.bt_save.setText(f"Save as {os.path.split(filename)[1]}")
         self.update_messages()
-        self.save_file()
+        self._try_save()
+
+    def save_file(self):
+        """
+        If file name is provided, try saving, else call save_file_as
+        """
+        if not self.filename:
+            self.save_file_as()
+        else:
+            self._try_save()
+
+    def _try_save(self):
+        """
+        Private method that calls do_save within try-except that catches and
+        shows IOError. Do nothing if not data or no file name.
+        """
+        self.Error.general_error.clear()
+        if self.data is None or not self.filename:
+            return
+        try:
+            self.do_save()
+        except IOError as err_value:
+            self.Error.general_error(str(err_value))
+
+    def do_save(self):
+        """
+        Do the savingg.
+
+        Default implementation calls the write method of the writer
+        corresponding to the current filter. This requires that class attribute
+        filters is a dictionary whose keys are classes.
+
+        Derived classes may simplify this by providing a list of filters and
+        override do_save. This is particularly handy if the widget supports only
+        a single format.
+        """
+        # This method is separated out because it will usually be overriden
+        self.writer.write(self.filename, self.data)
 
     def update_messages(self):
+        """
+        Update errors, warnings and information.
+
+        Default method sets no_file_name if auto_save is enabled but file name
+        is not provided; and empty_input if file name is given but there is no
+        data.
+
+        Derived classes that define further messages will typically set them in
+        this method.
+        """
         self.Error.no_file_name(shown=not self.filename and self.auto_save)
+        self.Information.empty_input(shown=self.filename and self.data is None)
 
     def update_status(self):
-        pass
+        """
+        Update the input/output indicator. Default method does nothing.
+        """
 
     def initial_start_dir(self):
+        """
+        Provide initial start directory
+
+        Return either the current file's path, the last directory or home.
+        """
         if self.filename and os.path.exists(os.path.split(self.filename)[0]):
             return self.filename
         else:
@@ -102,6 +204,9 @@ class OWSaveBase(widget.OWWidget, openclass=True):
 
     @staticmethod
     def suggested_name():
+        """
+        Suggest the name for the output file or return an empty string.
+        """
         return ""
 
     @classmethod
@@ -256,22 +361,10 @@ class OWSave(OWSaveBase):
         self.data = data
         self.on_new_input()
 
-    def save_file(self):
-        if not self.filename:
-            self.save_file_as()
+    def do_save(self):
+        if self.data.is_sparse() and not self.writer.SUPPORT_SPARSE_DATA:
             return
-
-        self.Error.general_error.clear()
-        if self.data is None \
-                or not self.filename \
-                or (self.data.is_sparse()
-                        and not self.writer.SUPPORT_SPARSE_DATA):
-            return
-        try:
-            self.writer.write(
-                self.filename, self.data, self.add_type_annotations)
-        except IOError as err_value:
-            self.Error.general_error(str(err_value))
+        self.writer.write(self.filename, self.data, self.add_type_annotations)
 
     def update_messages(self):
         super().update_messages()

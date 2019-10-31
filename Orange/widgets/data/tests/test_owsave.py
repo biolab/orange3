@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch, Mock
 import os
 import sys
+import collections
 
 import scipy.sparse as sp
 from AnyQt.QtWidgets import QFileDialog
@@ -17,43 +18,61 @@ from Orange.widgets.data.owsave import OWSave, OWSaveBase
 # Yay, MS Windows!
 # This is not the proper general way to do it, but it's simplest and sufficient
 # Short name is suitable for the function's purpose
+from Orange.widgets.utils import getmembers
+from orangewidget.utils.signals import Input
+
+
 def _w(s):  # pylint: disable=invalid-name
     return s.replace("/", os.sep)
 
 
-class OWSaveBaseTest(WidgetTest):
+class SaveWidgetsTestBaseMixin:
+    def test_input_handler(self):
+        widget = self.widget
+        if not widget:
+            return
+        widget.on_new_input = Mock()
+
+        inputs = getmembers(widget.Inputs, Input)
+        self.assertGreaterEqual(len(inputs), 1, msg="Widget defines no inputs")
+        if len(inputs) > 1:
+            self.skipTest(
+                "widget has multiple inputs; input handler can't be tested")
+            return
+
+        handler = getattr(widget, inputs[0][1].handler)
+        data = Mock()
+        handler(data)
+        self.assertIs(widget.data, data)
+        widget.on_new_input.assert_called()
+
+    def test_filters(self):
+        self.assertGreaterEqual(len(self.widget.filters), 1,
+                                msg="Widget defines no filters")
+        if type(self.widget).do_save is OWSaveBase.do_save:
+            self.assertIsInstance(self.widget.filters, collections.abc.Mapping)
+
+
+# Proper tests of OWSaveBase would require too much mocking, so we test most
+# OWSaveBase's methods within the test for OWSave widget.
+# The test for pure OWSaveBase just check a few methods that do not require
+# extensive mocking
+
+class TestOWSaveBaseWithWriters(WidgetTest):
+    # Tests for OWSaveBase methods that require filters to be dictionaries
+    # with with writers as keys in `filters`.
     def setUp(self):
-        with open_widget_classes():
-            class OWSaveMockWriter(OWSave):
-                writer = Mock()
-                writer.EXTENSIONS = [".csv"]
-                writer.SUPPORT_COMPRESSED = True
-                writer.SUPPORT_SPARSE_DATA = False
-                writer.OPTIONAL_TYPE_ANNOTATIONS = False
+        class OWSaveMockWriter(OWSaveBase):
+            name = "Mock save"
+            writer = Mock()
+            writer.EXTENSIONS = [".csv"]
+            writer.SUPPORT_COMPRESSED = True
+            writer.SUPPORT_SPARSE_DATA = False
+            writer.OPTIONAL_TYPE_ANNOTATIONS = False
+            writers = [writer]
+            filters = {"csv (*.csv)": writer}
 
         self.widget = self.create_widget(OWSaveMockWriter)  # type: OWSave
-        self.iris = Table("iris")
-
-
-class TestOWSaveBase(WidgetTest):
-    # Directly testing the base class would require too much mocking, so we
-    # test the OWSave widget instead. (This tests also already existed before
-    # the base class was factored out.)
-    # Here are just additional tests that do not require a lot of mocking
-    def setUp(self):
-        with open_widget_classes():
-            class OWSaveMockWriter(OWSaveBase):
-                name = "Mock save"
-                writer = Mock()
-                writer.EXTENSIONS = [".csv"]
-                writer.SUPPORT_COMPRESSED = True
-                writer.SUPPORT_SPARSE_DATA = False
-                writer.OPTIONAL_TYPE_ANNOTATIONS = False
-                writers = [writer]
-                filters = {"csv (*.csv)": writer}
-
-        self.widget = self.create_widget(OWSaveMockWriter)  # type: OWSave
-        self.iris = Table("iris")
 
     def test_no_data_no_save(self):
         widget = self.widget
@@ -93,7 +112,62 @@ class TestOWSaveBase(WidgetTest):
         self.assertIs(widget.default_valid_filter(), widget.filter)
 
 
-class TestOWSave(OWSaveBaseTest):
+class TestOWSaveBase(WidgetTest):
+    # Tests for OWSaveBase methods with filters as list
+    def setUp(self):
+        class OWSaveMockWriter(OWSaveBase):
+            name = "Mock save"
+            filters = ["csv (*.csv)"]
+
+            do_save = Mock()
+
+        self.widget = self.create_widget(OWSaveMockWriter)  # type: OWSave
+
+    def test_no_data_no_save(self):
+        widget = self.widget
+
+        widget.save_file_as = Mock()
+
+        widget.filename = "foo.tab"
+        widget.save_file()
+        widget.do_save.assert_not_called()
+
+        widget.filename = ""
+        widget.data = Mock()
+        widget.save_file()
+        widget.do_save.assert_not_called()
+
+        widget.filename = "foo.tab"
+        widget.save_file()
+        widget.do_save.assert_called()
+
+    def test_base_methods(self):
+        """Default methods do not crash and do something sensible"""
+        widget = self.widget
+
+        widget.update_status()
+        self.assertEqual(widget.initial_start_dir(),
+                         os.path.expanduser(f"~{os.sep}"))
+        self.assertEqual(widget.suggested_name(), "")
+        self.assertIs(widget.valid_filters(), widget.filters)
+        self.assertIs(widget.default_valid_filter(), widget.filter)
+
+
+class OWSaveTestBase(WidgetTest, SaveWidgetsTestBaseMixin):
+    def setUp(self):
+        with open_widget_classes():
+            class OWSaveMockWriter(OWSave):
+                writer = Mock()
+                writer.EXTENSIONS = [".csv"]
+                writer.SUPPORT_COMPRESSED = True
+                writer.SUPPORT_SPARSE_DATA = False
+                writer.OPTIONAL_TYPE_ANNOTATIONS = False
+
+        self.widget = self.create_widget(OWSaveMockWriter)  # type: OWSave
+        self.iris = Table("iris")
+
+
+class TestOWSave(OWSaveTestBase):
     def test_dataset(self):
         widget = self.widget
         widget.auto_save = True
@@ -156,7 +230,8 @@ class TestOWSave(OWSaveBaseTest):
         widget.filter = filter1
 
         widget.update_messages = Mock()
-        widget.save_file = Mock()
+        widget.do_save = Mock()
+        widget.data = Mock()
 
         widget.get_save_filename = Mock(return_value=("", filter2))
         widget.save_file_as()
@@ -164,7 +239,7 @@ class TestOWSave(OWSaveBaseTest):
         self.assertEqual(widget.last_dir, _w("/usr/foo/"))
         self.assertEqual(widget.filter, filter1)
         widget.update_messages.assert_not_called()
-        widget.save_file.assert_not_called()
+        widget.do_save.assert_not_called()
 
         widget.get_save_filename = \
             Mock(return_value=(_w("/bar/bar.csv"), filter2))
@@ -174,7 +249,8 @@ class TestOWSave(OWSaveBaseTest):
         self.assertEqual(widget.filter, filter2)
         self.assertIn("bar.csv", widget.bt_save.text())
         widget.update_messages.assert_called()
-        widget.save_file.assert_called()
+        widget.do_save.assert_called()
+        widget.do_save.reset_mock()
 
         widget.get_save_filename = Mock(return_value=("", filter2))
         widget.save_file_as()
@@ -183,7 +259,7 @@ class TestOWSave(OWSaveBaseTest):
         self.assertEqual(widget.filter, filter2)
         self.assertIn("bar.csv", widget.bt_save.text())
         widget.update_messages.assert_called()
-        widget.save_file.assert_called()
+        widget.do_save.assert_not_called()
 
     def test_save_file_calls_save_as(self):
         widget = self.widget
@@ -449,7 +525,7 @@ class TestFunctionalOWSave(WidgetTest):
 
 
 @unittest.skipUnless(sys.platform == "linux", "Tests for dialog on Linux")
-class TestOWSaveLinuxDialog(OWSaveBaseTest):
+class TestOWSaveLinuxDialog(OWSaveTestBase):
     def test_get_save_filename_linux(self):
         widget = self.widget
         widget.initial_start_dir = lambda: "baz"
@@ -507,7 +583,7 @@ class TestOWSaveLinuxDialog(OWSaveBaseTest):
 
 @unittest.skipUnless(sys.platform in ("darwin", "win32"),
                      "Test for native dialog on Windows and macOS")
-class TestOWSaveDarwinDialog(OWSaveBaseTest):  # pragma: no cover
+class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
     if sys.platform == "darwin":
         @staticmethod
         def remove_star(filt):
