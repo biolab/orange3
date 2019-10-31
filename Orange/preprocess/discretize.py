@@ -10,7 +10,6 @@ import scipy.sparse as sp
 
 from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
-from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution, contingency, util as ut
 from Orange.statistics.basic_stats import BasicStats
 from Orange.util import Reprable
@@ -688,7 +687,7 @@ class EntropyMDL(Discretization):
             return []
 
 
-class DomainDiscretizer(_RefuseDataInConstructor, Reprable):
+class DomainDiscretizer(Reprable):
     """Discretizes all continuous features in the data.
 
     .. attribute:: method

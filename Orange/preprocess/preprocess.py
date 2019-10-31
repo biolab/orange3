@@ -10,7 +10,6 @@ from sklearn.impute import SimpleImputer
 
 import Orange.data
 from Orange.data.filter import HasClass
-from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution
 from Orange.util import Reprable, Enum, deprecated
 from . import impute, discretize, transformation
@@ -21,7 +20,7 @@ __all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
            "ProjectPCA", "ProjectCUR", "Scale", "AdaptiveNormalize"]
 
 
-class Preprocess(_RefuseDataInConstructor, Reprable):
+class Preprocess(Reprable):
     """
     A generic preprocessor base class.
 

@@ -9,7 +9,6 @@ from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.data.filter import HasClass
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess.preprocess import Discretize, SklImpute, RemoveNaNColumns
-from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import contingency, distribution
 from Orange.util import Reprable
 
@@ -24,7 +23,7 @@ __all__ = ["Chi2",
            "FCBF"]
 
 
-class Scorer(_RefuseDataInConstructor, Reprable):
+class Scorer(Reprable):
     feature_type = None
     class_type = None
     supports_sparse_data = None
