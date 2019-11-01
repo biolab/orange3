@@ -64,12 +64,6 @@ class OWNeighbors(OWWidget):
         self.reference = None
         self.distances = None
 
-        box = gui.vBox(self.controlArea, "Info")
-        self.data_info_label = gui.widgetLabel(box, "")
-        self.reference_info_label = gui.widgetLabel(box, "")
-        self._set_label_text("data")
-        self._set_label_text("reference")
-
         box = gui.vBox(self.controlArea, box=True)
         gui.comboBox(
             box, self, "distance_index", orientation=Qt.Horizontal,
@@ -87,29 +81,33 @@ class OWNeighbors(OWWidget):
             callback=lambda: self.apply())
 
         self.apply_button = gui.auto_apply(self.controlArea, self, commit=self.apply)
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
-    def _set_label_text(self, name):
-        data = getattr(self, name)
-        label = getattr(self, f"{name}_info_label")
-        if data is None:
-            label.setText(f"No {name} instances")
+    def _set_input_summary(self):
+        n_data = len(self.data) if self.data else 0
+        n_refs = len(self.reference) if self.reference else 0
+
+        if n_data or n_refs:
+            details = \
+                f"{n_data if n_data else 'No'} data instance(s) on input\n" \
+                f"{n_refs if n_refs else 'No'} reference instance(s) on input "
+            self.info.set_input_summary(f"{n_data} | {n_refs} ", details)
         else:
-            pl = "s" if data else ""
-            label.setText(f"{len(data)} {name} instance{pl} on input.")
+            self.info.set_input_summary(self.info.NoInput)
 
     @Inputs.data
     def set_data(self, data):
         self.data = data
-        self._set_label_text("data")
 
     @Inputs.reference
     def set_ref(self, refs):
         self.reference = refs
-        self._set_label_text("reference")
 
     def handleNewSignals(self):
         self.compute_distances()
         self.unconditional_apply()
+        self._set_input_summary()
 
     def recompute(self):
         self.compute_distances()
@@ -141,10 +139,13 @@ class OWNeighbors(OWWidget):
 
     def apply(self):
         indices = self._compute_indices()
+
         if indices is None:
             neighbors = None
+            self.info.set_output_summary(self.info.NoOutput)
         else:
             neighbors = self._data_with_similarity(indices)
+            self.info.set_output_summary(str(len(neighbors)))
         self.Outputs.data.send(neighbors)
 
     def _compute_indices(self):
