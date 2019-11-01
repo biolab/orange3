@@ -103,3 +103,12 @@ class TestOWDistances(WidgetTest):
     def test_migrates_normalized_dist(self):
         w = self.create_widget(OWDistances, stored_settings={"metric_idx": 0})
         self.assertFalse(w.normalized_dist)
+
+    def test_negative_values_bhattacharyya(self):
+        self.iris.X[0, 0] *= -1
+        for self.widget.metric_idx, (_, metric) in enumerate(METRICS):
+            if metric == distance.Bhattacharyya:
+                break
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Error.distances_value_error.is_shown())
+        self.iris.X[0, 0] *= -1
