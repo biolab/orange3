@@ -645,32 +645,30 @@ class PearsonRAbsolute(CorrelationDistance):
     def fit(self, _):
         return PearsonModel(True, self.axis, self.impute)
 
+
 def _prob_dist(a):
     # Makes the vector sum to one, as to mimic probability distribution.
     return a / np.sum(a)
 
-def non_negative(a):
-    #Raise an exception for infinities, nans and negative values
-    try:
-        check_array(a, accept_sparse=True, accept_large_sparse=True, ensure_2d=False)
-    except:
+
+def check_non_negative(a):
+    # Raise an exception for infinities, nans and negative values
+    check_array(a,
+                accept_sparse=True, accept_large_sparse=True, ensure_2d=False)
+    if a.min() < 0:
         raise ValueError("Bhattcharyya distance requires non-negative values")
-    if sp.issparse(a):
-        if a.min() < 0:
-            raise ValueError("Bhattcharyya distance requires non-negative values")
-        return
-    if min(a) < 0:
-        raise ValueError("Bhattcharyya distance requires non-negative values")
+
 
 def _bhattacharyya(a, b):
     # not a real metric, does not obey triangle inequality
-    non_negative(a)
-    non_negative(b)
+    check_non_negative(a)
+    check_non_negative(b)
     a = _prob_dist(a)
     b = _prob_dist(b)
     if sp.issparse(a):
         return -np.log(np.sum(np.sqrt(a.multiply(b))))
     return -np.log(np.sum(np.sqrt(a * b)))
+
 
 class Bhattacharyya(Distance):
     supports_discrete = False
