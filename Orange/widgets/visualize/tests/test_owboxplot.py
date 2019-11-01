@@ -43,12 +43,8 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(len(self.widget.attrs), 0)
         self.assertEqual(len(self.widget.group_vars), 1)
-        self.assertFalse(self.widget.group_view.isEnabled())
         self.assertTrue(self.widget.display_box.isHidden())
         self.assertFalse(self.widget.stretching_box.isHidden())
-
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertTrue(self.widget.group_view.isEnabled())
 
     def test_primitive_metas(self):
         new_domain = Domain(attributes=[], class_vars=[], metas=(
@@ -88,7 +84,6 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         data.X[:, 1] = np.nan
         data.domain.attributes[1].values = []
         self.send_signal("Data", data)
-        self.widget.controls.order_by_importance.setChecked(True)
         self._select_list_items(self.widget.controls.attribute)
         self._select_list_items(self.widget.controls.group_var)
 
@@ -100,7 +95,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
             m.setCurrentIndex(group_list.model().index(i), m.ClearAndSelect)
             self._select_list_items(self.widget.controls.attribute)
 
-    def test_apply_sorting(self):
+    def test_apply_sorting_group(self):
         controls = self.widget.controls
         group_list = controls.group_var
         order_check = controls.order_by_importance
@@ -115,10 +110,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         data = self.titanic
         self.send_signal("Data", data)
 
-        select_group(0)
-        self.assertFalse(order_check.isEnabled())
         select_group(2)  # First attribute
-        self.assertTrue(order_check.isEnabled())
 
         order_check.setChecked(False)
         self.assertEqual(tuple(attributes),
@@ -150,6 +142,50 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                           'fasting blood sugar > 120',
                           'diameter narrowing'])
 
+    def test_apply_sorting_vars(self):
+        controls = self.widget.controls
+        attr_list = self.widget.attrs
+        order_check = controls.order_grouping_by_importance
+        groups = self.widget.group_vars
+
+        def select_attr(i):
+            attr_selection = controls.attribute.selectionModel()
+            attr_selection.setCurrentIndex(
+                attr_list.index(i),
+                attr_selection.ClearAndSelect)
+
+        data = self.titanic
+        self.send_signal("Data", data)
+
+        select_attr(1)  # First attribute
+
+        order_check.setChecked(False)
+        self.assertEqual(
+            tuple(groups),
+            (None, ) + data.domain.class_vars + data.domain.attributes)
+        order_check.setChecked(True)
+        self.assertIsNone(groups[0])
+        self.assertEqual([x.name for x in groups[1:]],
+                         ['sex', 'survived', 'age', 'status'])
+        select_attr(0)  # Class
+        self.assertIsNone(groups[0])
+        self.assertEqual([x.name for x in groups[1:]],
+                         ['sex', 'status', 'age', 'survived'])
+
+        data = self.heart
+        self.send_signal("Data", data)
+        select_attr(0)  # Class
+        self.assertIsNone(groups[0])
+        self.assertEqual([x.name for x in groups[1:]],
+                         ['thal',
+                          'chest pain',
+                          'exerc ind ang',
+                          'slope peak exc ST',
+                          'gender',
+                          'rest ECG',
+                          'fasting blood sugar > 120',
+                          'diameter narrowing'])
+
     def test_box_order_when_missing_stats(self):
         self.widget.compare = 1
         # The widget can't do anything smart here, but shouldn't crash
@@ -170,7 +206,6 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         domain = Domain([], domain.class_var, metas)
         data = Table.from_table(domain, self.iris)
         self.send_signal(self.widget.Inputs.data, data)
-        self.widget.controls.order_by_importance.setChecked(True)
 
     def test_label_overlap(self):
         self.send_signal(self.widget.Inputs.data, self.heart)

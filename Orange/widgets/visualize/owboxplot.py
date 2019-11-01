@@ -21,7 +21,7 @@ from Orange.statistics.contingency import Discrete
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
+from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -154,6 +154,7 @@ class OWBoxPlot(widget.OWWidget):
 
     attribute = ContextSetting(None)
     order_by_importance = Setting(False)
+    order_grouping_by_importance = Setting(False)
     group_var = ContextSetting(None)
     show_annotations = Setting(True)
     compare = Setting(CompareMeans)
@@ -213,19 +214,20 @@ class OWBoxPlot(widget.OWWidget):
         # set the minimal height (see the penultimate paragraph of
         # http://doc.qt.io/qt-4.8/qabstractscrollarea.html#addScrollBarWidget)
         view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
-        gui.separator(view.box, 6, 6)
-        self.cb_order = gui.checkBox(
+        gui.checkBox(
             view.box, self, "order_by_importance",
-            "Order by relevance",
+            "Order by relevance to subgroups",
             tooltip="Order by 𝜒² or ANOVA over the subgroups",
-            callback=self.apply_sorting)
-        self.group_vars = DomainModel(
-            placeholder="None", separators=False,
-            valid_types=Orange.data.DiscreteVariable)
-        self.group_view = view = gui.listView(
+            callback=self.apply_attr_sorting)
+        self.group_vars = VariableListModel(placeholder="None")
+        view = gui.listView(
             self.controlArea, self, "group_var", box="Subgroups",
             model=self.group_vars, callback=self.grouping_changed)
-        view.setEnabled(False)
+        gui.checkBox(
+            view.box, self, "order_grouping_by_importance",
+            "Order by relevance to variable",
+            tooltip="Order by 𝜒² or ANOVA over the variable values",
+            callback=self.on_group_sorting_checkbox)
         view.setMinimumSize(QSize(30, 30))
         # See the comment above
         view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
@@ -258,7 +260,6 @@ class OWBoxPlot(widget.OWWidget):
         self.sort_cb = gui.checkBox(
             box, self, 'sort_freqs', "Sort by subgroup frequencies",
             callback=self.display_changed)
-        gui.rubber(box)
 
         gui.vBox(self.mainArea, addSpace=True)
         self.box_scene = QGraphicsScene()
@@ -290,11 +291,19 @@ class OWBoxPlot(widget.OWWidget):
 
         return super().eventFilter(obj, event)
 
-    def reset_attrs(self, domain):
+    def reset_attrs(self):
+        domain = self.dataset.domain
         self.attrs[:] = [
             var for var in chain(
                 domain.class_vars, domain.metas, domain.attributes)
             if var.is_primitive()]
+
+    def reset_groups(self):
+        domain = self.dataset.domain
+        self.group_vars[:] = [None] + [
+            var for var in chain(
+                domain.class_vars, domain.metas, domain.attributes)
+            if var.is_discrete]
 
     # noinspection PyTypeChecker
     @Inputs.data
@@ -309,19 +318,19 @@ class OWBoxPlot(widget.OWWidget):
         self.group_var = None
         self.attribute = None
         if dataset:
-            domain = dataset.domain
-            self.group_vars.set_domain(domain)
-            self.group_view.setEnabled(len(self.group_vars) > 1)
-            self.reset_attrs(domain)
-            self.select_default_variables(domain)
+            self.reset_attrs()
+            self.reset_groups()
+            self.select_default_variables()
             self.openContext(self.dataset)
             self.grouping_changed()
+            self.attr_changed()
         else:
             self.reset_all_data()
         self.commit()
 
-    def select_default_variables(self, domain):
+    def select_default_variables(self):
         # visualize first non-class variable, group by class (if present)
+        domain = self.dataset.domain
         if len(self.attrs) > len(domain.class_vars):
             self.attribute = self.attrs[len(domain.class_vars)]
         elif self.attrs:
@@ -332,8 +341,12 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.group_var = None  # Reset to trigger selection via callback
 
-    def apply_sorting(self):
+    def apply_attr_sorting(self):
         def compute_score(attr):
+            # This function and the one in apply_group_sorting are similar, but
+            # different in too many details, so they are kept as separate
+            # functions.
+            # If you discover a bug in this function, check the other one, too.
             if attr is group_var:
                 return 3
             if attr.is_continuous:
@@ -362,8 +375,57 @@ class OWBoxPlot(widget.OWWidget):
                     include_class=True, include_metas=True) else None
             self.attrs.sort(key=compute_score)
         else:
-            self.reset_attrs(domain)
-        self.attribute = attribute
+            self.reset_attrs()
+        self.attribute = attribute  # reset selection
+        self._ensure_selection_visible(self.controls.attribute)
+
+    def on_group_sorting_checkbox(self):
+        if self.order_grouping_by_importance:
+            self.apply_group_sorting()
+        else:
+            self.reset_groups()
+            self.group_var = self.group_var  # reset selection
+            self._ensure_selection_visible(self.controls.group_var)
+
+    def apply_group_sorting(self):
+        def compute_stat(group):
+            # This function and the one in apply_attr_sorting are similar, but
+            # different in too many details, so they are kept as separate
+            # functions.
+            # If you discover a bug in this function, check the other one, too.
+            if group is attr:
+                return 3
+            if group is None:
+                return -1
+            if attr.is_continuous:
+                group_col = data.get_column_view(group)[0].astype(float)
+                groups = (attr_col[group_col == i]
+                          for i in range(len(group.values)))
+                groups = (col[~np.isnan(col)] for col in groups)
+                groups = [group for group in groups if len(group)]
+                p = f_oneway(*groups)[1] if len(groups) > 1 else 2
+            else:
+                p = self._chi_square(group, attr)[1]
+            if math.isnan(p):
+                return 2
+            return p
+
+        data = self.dataset
+        if data is None or not self.order_grouping_by_importance:
+            return
+        attr = self.attribute
+        group_var = self.group_var
+        if attr.is_continuous:
+            attr_col = data.get_column_view(attr)[0].astype(float)
+        self.group_vars.sort(key=compute_stat)
+        self.group_var = group_var  # reset selection
+        self._ensure_selection_visible(self.controls.group_var)
+
+    @staticmethod
+    def _ensure_selection_visible(view):
+        selection = view.selectedIndexes()
+        if len(selection) == 1:
+            view.scrollTo(selection[0])
 
     def _chi_square(self, group_var, attr):
         # Chi-square with the given distribution into groups
@@ -380,16 +442,14 @@ class OWBoxPlot(widget.OWWidget):
     def reset_all_data(self):
         self.clear_scene()
         self.stat_test = ""
-        self.attrs.clear()
-        self.group_vars.set_domain(None)
-        self.group_view.setEnabled(False)
+        self.attrs[:] = []
+        self.group_vars[:] = [None]
         self.is_continuous = False
         self.update_display_box()
 
     def grouping_changed(self):
-        self.cb_order.setEnabled(self.group_var is not None)
-        self.apply_sorting()
-        self.attr_changed()
+        self.apply_attr_sorting()
+        self.update_graph()
 
     def select_box_items(self):
         temp_cond = self.conditions.copy()
@@ -399,6 +459,10 @@ class OWBoxPlot(widget.OWWidget):
                                 [c.conditions for c in temp_cond])
 
     def attr_changed(self):
+        self.apply_group_sorting()
+        self.update_graph()
+
+    def update_graph(self):
         self.compute_box_data()
         self.update_display_box()
         self.layout_changed()
