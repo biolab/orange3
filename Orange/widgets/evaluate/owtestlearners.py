@@ -280,8 +280,7 @@ class OWTestLearners(OWWidget):
         self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
             self.cbox, self, "class_selection", items=[],
-            sendSelectedValue=True, valueType=str,
-            callback=self._on_target_class_changed,
+            sendSelectedValue=True, callback=self._on_target_class_changed,
             contentsLength=8)
 
         self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")

@@ -272,7 +272,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     def _add_controls_axis(self):
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
-            valueType=str, contentsLength=14
+            contentsLength=14
         )
         self.attr_box = gui.vBox(self.controlArea, True)
         dmod = DomainModel
