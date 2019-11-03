@@ -424,9 +424,6 @@ class OWVennDiagram(widget.OWWidget):
                              .format(", ".join(no_idx[:-1]), no_idx[-1]))
 
     def _on_selectionChanged(self):
-        if not self.settings_compatible():
-            self.invalidateOutput()
-            return
         if self._updating:
             return
 
@@ -505,7 +502,6 @@ class OWVennDiagram(widget.OWWidget):
             Atrs - list of variables we wish to merge
             new_atrs - dictionary where key is old name, val
                 is [is_different, [table_keys]])
-            atr_type and table_key is known due to closure
             """
             if atr.name in new_atrs.keys():
                 if not new_atrs[atr.name][0]:
@@ -554,7 +550,7 @@ class OWVennDiagram(widget.OWWidget):
 
     def commit(self):
 
-        if not self.itemsets:
+        if not self.vennwidget.vennareas():
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
@@ -1673,8 +1669,8 @@ def append_column(data, where, variable, column):
 def drop_columns(data, columns):
     columns = set(data.domain[col] for col in columns)
 
-    def filter_vars(vars):
-        return tuple(var for var in vars if var not in columns)
+    def filter_vars(vars_):
+        return tuple(var for var in vars_ if var not in columns)
 
     domain = Domain(
         filter_vars(data.domain.attributes),
@@ -1708,9 +1704,7 @@ def arrays_equal(a, b, type_):
     if type_ is not StringVariable:
         if not numpy.all(numpy.isnan(a) == numpy.isnan(b)):
             return False
-        if not numpy.any(a[numpy.logical_not(numpy.isnan(a))] == b[numpy.logical_not(numpy.isnan(b))]):
-            return False
-        return True
+        return numpy.all(a[numpy.logical_not(numpy.isnan(a))] == b[numpy.logical_not(numpy.isnan(b))])
     else:
         if not(a == b).all():
             return False

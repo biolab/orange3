@@ -383,6 +383,9 @@ class TestVennUtilities(unittest.TestCase):
         a[1] = np.nan
         self.assertTrue(arrays_equal(a, b, ContinuousVariable))
         self.assertTrue(arrays_equal(a.astype(str), a.astype(str), StringVariable))
+        a[1] = 2
+        b[1] = 3
+        self.assertFalse(arrays_equal(a, b, ContinuousVariable))
 
 
 if __name__ == "__main__":
