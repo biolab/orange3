@@ -187,6 +187,11 @@ class TestFeatureSelectEditor(WidgetTest):
         self.assertIsInstance(p.method, score.InfoGain)
         self.assertEqual(p.k, 10)
 
+        widget.setParameters({"k": 9999})
+        p = widget.createinstance(widget.parameters())
+        self.assertIsInstance(p, fss.SelectBestFeatures)
+        self.assertEqual(p.k, 9999)
+
 
 class TestRandomFeatureSelectEditor(WidgetTest):
     def test_editor(self):
@@ -194,6 +199,12 @@ class TestRandomFeatureSelectEditor(WidgetTest):
         p = widget.createinstance(widget.parameters())
         self.assertIsInstance(p, fss.SelectRandomFeatures)
         self.assertEqual(p.k, 10)
+
+        widget.setParameters({"strategy": owpreprocess.RandomFeatureSelectEditor.Fixed,
+                              "k": 9999})
+        p = widget.createinstance(widget.parameters())
+        self.assertIsInstance(p, fss.SelectRandomFeatures)
+        self.assertEqual(p.k, 9999)
 
         widget.setParameters(
             {"strategy": owpreprocess.RandomFeatureSelectEditor.Percentage,
@@ -240,6 +251,11 @@ class TestCUREditor(WidgetTest):
         self.assertIsInstance(p, ProjectCUR)
         self.assertEqual(p.rank, 10)
         self.assertEqual(p.max_error, 1)
+
+        widget.setParameters({"rank": 9999})
+        p = widget.createinstance(widget.parameters())
+        self.assertIsInstance(p, ProjectCUR)
+        self.assertEqual(p.rank, 9999)
 
         widget.setParameters({"rank": 5, "max_error": 0.5})
         p = widget.createinstance(widget.parameters())
