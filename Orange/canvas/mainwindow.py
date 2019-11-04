@@ -1,6 +1,6 @@
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import (
-    QFormLayout, QCheckBox, QLineEdit, QWidget, QVBoxLayout,
+    QFormLayout, QCheckBox, QLineEdit, QWidget, QVBoxLayout, QLabel
 )
 from orangecanvas.application.settings import UserSettingsDialog
 from orangecanvas.document.usagestatistics import UsageStatistics
@@ -35,7 +35,7 @@ class OUserSettingsDialog(UserSettingsDialog):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         cb1 = QCheckBox(
-            self.tr(""),
+            self.tr("Share"),
             toolTip=self.tr(
                 "Share anonymous usage statistics to improve Orange")
         )
@@ -43,7 +43,13 @@ class OUserSettingsDialog(UserSettingsDialog):
         cb1.clicked.connect(UsageStatistics.set_enabled)
         layout.addWidget(cb1)
         box.setLayout(layout)
-        form.addRow(self.tr("Share Anonymous Statistics"), box)
+        form.addRow(self.tr("Anonymous Statistics"), box)
+        label = QLabel("<a "
+                       "href=\"https://orange.biolab.si/statistics-more-info\">"
+                       "More info..."
+                       "</a>")
+        label.setOpenExternalLinks(True)
+        form.addRow(self.tr(""), label)
 
         tab.setLayout(form)
 
