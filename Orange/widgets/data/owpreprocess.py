@@ -956,7 +956,7 @@ PREPROCESS_ACTIONS = [
     PreprocessAction(
         "Remove Sparse", "orange.preprocess.remove_sparse", "Feature Selection",
         Description("Remove Sparse Features",
-                    icon_path("SelectColumns.svg")),
+                    icon_path("PurgeDomain.svg")),
         RemoveSparseEditor
     ),
     PreprocessAction(
