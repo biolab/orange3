@@ -21,14 +21,14 @@ class OUserSettingsDialog(UserSettingsDialog):
         layout.addRow("Updates", cb)
         self.bind(cb, "checked", "startup/check-updates")
 
-        # Error Reporting Tab
+        # Reporting Tab
         tab = QWidget()
-        self.addTab(tab, self.tr("Error Reporting"),
-                    toolTip="Settings related to error reporting")
+        self.addTab(tab, self.tr("Reporting"),
+                    toolTip="Settings related to reporting")
 
         form = QFormLayout()
         line_edit_mid = QLineEdit()
-        self.bind(line_edit_mid, "text", "error-reporting/machine-id")
+        self.bind(line_edit_mid, "text", "reporting/machine-id")
         form.addRow("Machine ID:", line_edit_mid)
 
         box = QWidget()
@@ -39,7 +39,7 @@ class OUserSettingsDialog(UserSettingsDialog):
             toolTip=self.tr(
                 "Share anonymous usage statistics to improve Orange")
         )
-        self.bind(cb1, "checked", "error-reporting/send-statistics")
+        self.bind(cb1, "checked", "reporting/send-statistics")
         cb1.clicked.connect(UsageStatistics.set_enabled)
         layout.addWidget(cb1)
         box.setLayout(layout)

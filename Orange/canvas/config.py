@@ -34,11 +34,11 @@ spec = [
 
     ("startup/launch-count", int, 0, ""),
 
-    ("error-reporting/machine-id", str, str(uuid.uuid4()), ""),
+    ("reporting/machine-id", str, str(uuid.uuid4()), ""),
 
-    ("error-reporting/send-statistics", bool, False, ""),
+    ("reporting/send-statistics", bool, False, ""),
 
-    ("error-reporting/permission-requested", bool, False, ""),
+    ("reporting/permission-requested", bool, False, ""),
 
     ("notifications/check-notifications", bool, True, "Check for notifications"),
 

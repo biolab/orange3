@@ -66,13 +66,13 @@ def ua_string():
     settings = QSettings()
 
     is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
-    machine_id = settings.value("error-reporting/machine-id", "", str)
+    machine_id = settings.value("reporting/machine-id", "", str)
     return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}:{uuid}'.format(
         orange_version=current,
         py_version='.'.join(str(a) for a in sys.version_info[:3]),
         platform=sys.platform,
         conda='Anaconda' if is_anaconda else '',
-        uuid=machine_id if settings.value("error-reporting/send-statistics", False, bool) else ''
+        uuid=machine_id if settings.value("reporting/send-statistics", False, bool) else ''
     )
 
 
@@ -155,11 +155,11 @@ def open_link(url: QUrl):
         if url.host() == "enable-statistics":
             settings = QSettings()
 
-            settings.setValue("error-reporting/send-statistics", True)
+            settings.setValue("reporting/send-statistics", True)
             UsageStatistics.set_enabled(True)
 
-            if not settings.contains('error-reporting/machine-id'):
-                settings.setValue('error-reporting/machine-id', str(uuid.uuid4()))
+            if not settings.contains('reporting/machine-id'):
+                settings.setValue('reporting/machine-id', str(uuid.uuid4()))
         pass
     else:
         QDesktopServices.openUrl(url)
@@ -316,7 +316,7 @@ def send_usage_statistics():
         import json
         import requests
         settings = QSettings()
-        if not settings.value("error-reporting/send-statistics", False,
+        if not settings.value("reporting/send-statistics", False,
                               type=bool):
             log.info("Not sending usage statistics (preferences setting).")
             return
@@ -324,11 +324,11 @@ def send_usage_statistics():
             log.info("Not sending usage statistics (disabled).")
             return
 
-        if settings.contains('error-reporting/machine-id'):
-            machine_id = settings.value('error-reporting/machine-id')
+        if settings.contains('reporting/machine-id'):
+            machine_id = settings.value('reporting/machine-id')
         else:
             machine_id = str(uuid.uuid4())
-            settings.setValue('error-reporting/machine-id', machine_id)
+            settings.setValue('reporting/machine-id', machine_id)
 
         is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
 
@@ -515,7 +515,7 @@ def main(argv=None):
     settings = QSettings()
     settings.setValue('startup/launch-count', settings.value('startup/launch-count', 0, int) + 1)
 
-    if settings.value("error-reporting/send-statistics", False, type=bool) \
+    if settings.value("reporting/send-statistics", False, type=bool) \
             and is_release:
         UsageStatistics.set_enabled(True)
 
