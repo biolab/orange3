@@ -12,7 +12,6 @@ import bottleneck as bn
 import numpy as np
 from scipy import sparse as sp
 
-from Orange.util import OrangeDeprecationWarning
 import Orange.data  # import for io.py
 from Orange.data import (
     _contingency, _valuecount,
@@ -1429,7 +1428,6 @@ class Table(Sequence, Storage):
             row_data = self._Y[:, row_indi - n_atts]
 
         W = self.W if self.has_weights() else None
-        nan_inds = None
 
         col_desc = [self.domain[var] for var in col_vars]
         col_indi = [self.domain.index(var) for var in col_vars]
@@ -1442,22 +1440,11 @@ class Table(Sequence, Storage):
         if row_data.dtype.kind != "f": #meta attributes can be stored as type object
             row_data = row_data.astype(float)
 
-        unknown_rows = countnans(row_data)
-        if unknown_rows:
-            nan_inds = np.isnan(row_data)
-            row_data = row_data[~nan_inds]
-            if W:
-                W = W[~nan_inds]
-                unknown_rows = np.sum(W[nan_inds])
-
         contingencies = [None] * len(col_desc)
         for arr, f_cond, f_ind in (
                 (self.X, lambda i: 0 <= i < n_atts, lambda i: i),
                 (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
                 (self.metas, lambda i: i < 0, lambda i: -1 - i)):
-
-            if nan_inds is not None:
-                arr = arr[~nan_inds]
 
             arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
 
@@ -1468,12 +1455,13 @@ class Table(Sequence, Storage):
                     max_vals = max(len(v[2].values) for v in disc_vars)
                     disc_indi = {i for _, i, _ in disc_vars}
                     mask = [i in disc_indi for i in range(arr.shape[1])]
-                    conts, nans = contingency(arr, row_data, max_vals - 1,
-                                              n_rows - 1, W, mask)
+                    conts, nans_cols, nans_rows, nans = contingency(
+                        arr, row_data, max_vals - 1, n_rows - 1, W, mask)
                     for col_i, arr_i, var in disc_vars:
                         n_vals = len(var.values)
-                        contingencies[col_i] = (conts[arr_i][:, :n_vals],
-                                                nans[arr_i])
+                        contingencies[col_i] = (
+                            conts[arr_i][:, :n_vals], nans_cols[arr_i],
+                            nans_rows[arr_i], nans[arr_i])
                 else:
                     for col_i, arr_i, var in disc_vars:
                         contingencies[col_i] = contingency(
@@ -1482,10 +1470,9 @@ class Table(Sequence, Storage):
 
             cont_vars = [v for v in vars if v[2].is_continuous]
             if cont_vars:
-
-                classes = row_data.astype(dtype=np.intp)
+                W_ = None
                 if W is not None:
-                    W = W.astype(dtype=np.float64)
+                    W_ = W.astype(dtype=np.float64)
                 if sp.issparse(arr):
                     arr = sp.csc_matrix(arr)
 
@@ -1493,17 +1480,16 @@ class Table(Sequence, Storage):
                     if sp.issparse(arr):
                         col_data = arr.data[arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
                         rows = arr.indices[arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
-                        W_ = None if W is None else W[rows]
-                        classes_ = classes[rows]
+                        W_ = None if W_ is None else W_[rows]
+                        classes_ = row_data[rows]
                     else:
-                        col_data, W_, classes_ = arr[:, arr_i], W, classes
+                        col_data, W_, classes_ = arr[:, arr_i], W_, row_data
 
                     col_data = col_data.astype(dtype=np.float64)
-                    U, C, unknown = _contingency.contingency_floatarray(
+                    contingencies[col_i] = _contingency.contingency_floatarray(
                         col_data, classes_, n_rows, W_)
-                    contingencies[col_i] = ([U, C], unknown)
 
-        return contingencies, unknown_rows
+        return contingencies
 
     @classmethod
     def transpose(cls, table, feature_names_column="",

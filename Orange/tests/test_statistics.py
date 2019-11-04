@@ -69,23 +69,28 @@ class TestUtil(unittest.TestCase):
         ]
 
     def test_contingency(self):
-        x = np.array([0, 1, 0, 2, np.nan])
-        y = np.array([0, 0, 1, np.nan, 0])
-        cont_table, nans = contingency(x, y, 2, 2)
+        x = np.array([0, 1, 0, 2, np.nan, np.nan])
+        y = np.array([0, 0, 1, np.nan, 0, np.nan])
+        cont_table, col_nans, row_nans, nans = contingency(x, y, 2, 2)
         np.testing.assert_equal(cont_table, [[1, 1, 0],
                                              [1, 0, 0],
                                              [0, 0, 0]])
-        np.testing.assert_equal(nans, [1, 0, 0])
+        np.testing.assert_equal(col_nans, [1, 0, 0])
+        np.testing.assert_equal(row_nans, [0, 0, 1])
+        self.assertEqual(1, nans)
 
     def test_weighted_contingency(self):
-        x = np.array([0, 1, 0, 2, np.nan])
-        y = np.array([0, 0, 1, np.nan, 0])
-        w = np.array([1, 2, 2, 3, 4])
-        cont_table, nans = contingency(x, y, 2, 2, weights=w)
+        x = np.array([0, 1, 0, 2, np.nan, np.nan])
+        y = np.array([0, 0, 1, np.nan, 0, np.nan])
+        w = np.array([1, 2, 2, 3, 4, 2])
+        cont_table, col_nans, row_nans, nans = contingency(
+            x, y, 2, 2, weights=w)
         np.testing.assert_equal(cont_table, [[1, 2, 0],
                                              [2, 0, 0],
                                              [0, 0, 0]])
-        np.testing.assert_equal(nans, [1, 0, 0])
+        np.testing.assert_equal(col_nans, [4, 0, 0])
+        np.testing.assert_equal(row_nans, [0, 0, 3])
+        self.assertEqual(2, nans)
 
     def test_stats(self):
         X = np.arange(4).reshape(2, 2).astype(float)
