@@ -36,9 +36,7 @@ from orangewidget.gui import (
 # exposed for backcompat. Should not be imported from here, or not
 # imported at all
 from orangewidget.gui import (
-    SpinBoxWFocusOut, DoubleSpinBoxWFocusOut, LineEditWFocusOut,
-    LAMBDA_NAME, disable_opposite,
-    _addSpace  # was included in docs
+    SpinBoxWFocusOut, DoubleSpinBoxWFocusOut, LineEditWFocusOut, OrangeComboBox
 )  # pylint: disable=unused-import
 from Orange.widgets.utils.buttons import (
     VariableTextPushButton
