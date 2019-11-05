@@ -362,7 +362,7 @@ class UnivariateFeatureSelect(QWidget):
         fixedrb = QRadioButton("Fixed:", checked=True)
         group.addButton(fixedrb, UnivariateFeatureSelect.Fixed)
         kspin = QSpinBox(
-            minimum=1, value=self.__k,
+            minimum=1, maximum=1000000, value=self.__k,
             enabled=self.__strategy == UnivariateFeatureSelect.Fixed
         )
         kspin.valueChanged[int].connect(self.setK)
@@ -541,7 +541,7 @@ class RandomFeatureSelectEditor(BaseEditor):
         fixedrb = QRadioButton("Fixed", checked=True)
         group.addButton(fixedrb, RandomFeatureSelectEditor.Fixed)
         kspin = QSpinBox(
-            minimum=1, value=self.__k,
+            minimum=1, maximum=1000000, value=self.__k,
             enabled=self.__strategy == RandomFeatureSelectEditor.Fixed
         )
         kspin.valueChanged[int].connect(self.setK)
@@ -797,7 +797,7 @@ class CUR(BaseEditor):
         self.max_error = 1
 
         form = QFormLayout()
-        self.rspin = QSpinBox(minimum=2, value=self.rank)
+        self.rspin = QSpinBox(minimum=2, maximum=1000000, value=self.rank)
         self.rspin.valueChanged[int].connect(self.setR)
         self.rspin.editingFinished.connect(self.edited)
         self.espin = QDoubleSpinBox(
