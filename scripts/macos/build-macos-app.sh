@@ -13,9 +13,8 @@ Options:
     --pip-arg  ARG
         Pip install arguments to populate the python environemnt in the
         application bundle. Can be used multiple times.
-        If not supplied then by default the latest PyPi published Orange3 and
-        requirements as recorded in scripts/macos/requirements.txt are
-        installed.
+        If not supplied then by default the latest PyPi published Orange3 is
+        used.
 
     -h|--help
         Print this help
@@ -73,7 +72,7 @@ APPDIR=${1:?"Target APPDIR argument is missing"}
 PYVER=${PYTHON_VERSION%.*}  # Major.Minor
 
 if [[ ${#PIP_REQ_ARGS[@]} -eq 0 ]]; then
-    PIP_REQ_ARGS+=( Orange3 -r "${DIR}"/requirements.txt )
+    PIP_REQ_ARGS+=( Orange3 'PyQt5~=5.12.0' 'PyQtWebEngine~=5.12.0' )
 fi
 
 mkdir -p "${APPDIR}"/Contents/MacOS
