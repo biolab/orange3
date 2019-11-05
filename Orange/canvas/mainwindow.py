@@ -4,9 +4,9 @@ from AnyQt.QtWidgets import (
 )
 from orangecanvas.application.settings import UserSettingsDialog
 from orangecanvas.document.usagestatistics import UsageStatistics
-from orangewidget.workflow.mainwindow import OWCanvasMainWindow
-
 from orangecanvas.utils.overlay import NotificationOverlay
+
+from orangewidget.workflow.mainwindow import OWCanvasMainWindow
 
 
 class OUserSettingsDialog(UserSettingsDialog):
