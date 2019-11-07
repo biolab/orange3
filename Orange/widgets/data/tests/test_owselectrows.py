@@ -1,10 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,unsubscriptable-object
+from unittest.mock import Mock
+
+import numpy as np
+
 from AnyQt.QtCore import QLocale, Qt
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit, QComboBox
-
-import numpy as np
 
 from Orange.data import (
     Table, ContinuousVariable, StringVariable, DiscreteVariable)
@@ -229,6 +231,33 @@ class TestOWSelectRows(WidgetTest):
         self.assertIsNone(self.get_output("Unmatched Data"))
         self.assertEqual(len(self.get_output("Matching Data")), len_data)
         self.assertEqual(len(self.get_output("Data")), len_data)
+
+    def test_summary(self):
+        """Check if status bar displays correct input/output summary"""
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(str(len(data)),
+                                     f"~{len(data)} rows, "
+                                     f"{len(data.domain.variables)} variables")
+        output = self.get_output("Matching Data")
+        output_sum.assert_called_with(str(len(output)),
+                                      f"~{len(output)} rows, "
+                                      f"{len(output.domain.variables)} variables")
+        self.enterFilter(data.domain["iris"], "is", "Iris-setosa")
+        output = self.get_output("Matching Data")
+        output_sum.assert_called_with(str(len(output)),
+                                      f"~{len(output)} rows, "
+                                      f"{len(output.domain.variables)} variables")
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
     def test_annotated_data(self):
         iris = Table("iris")
