@@ -6,7 +6,14 @@ usage() {
 Fetch, extract and layout a macOS relocatable Python framework at FRAMEWORKPATH
 
 Options:
-    --version VERSION     Python version (default 3.5.3)
+    --version VERSION     Python version (default ${VERSION})
+    --macos MACOSVER      Minimum supported macOS version (as of 3.6.5 and
+                          3.7.0 the python.org provides binaries for 10.6
+                          and 10.9 macOS versions; default ${MACOSVER})
+    --install-certifi     If present then certifi pypi package will be
+                          installed and its cert store linked in
+                          \${PREFIX}/etc/openssl
+    -v --verbose          Increase verbosity level
 
 Note:
     Python >= 3.6 comes with a bundled openssl library build that is
@@ -15,8 +22,8 @@ Note:
 
     This script will patch python's stdlib ssl.py to add a
     \${PREFIX}/etc/openssl/cert.pem (where \${PREFIX} is the runtime prefix)
-    certificate store to the default verification chain. However it does not
-    actually supply the file.
+    certificate store to the default verification chain. However it will only
+    supply the file if the --install-certifi parameter is passed
 
 Example
 -------
@@ -28,9 +35,10 @@ Example
 }
 
 
-
-VERSION=3.5.3
+VERSION=3.7.5
+MACOSVER=10.9
 VERBOSE_LEVEL=0
+INSTALL_CERTIFI=
 
 
 verbose() {
@@ -44,11 +52,13 @@ verbose() {
 python-framework-fetch-pkg() {
     local cachedir=${1:?}
     local version=${2:?}
-    local filename=python-${version}-macosx10.6.pkg
-    local url="https://www.python.org/ftp/python/${version}/${filename}"
+    local macosver=${3:-10.6}
+    local versiondir=${version%%[abrpc]*}  # strip alpha, beta, rc component
+    local filename=python-${version}-macosx${macosver}.pkg
+    local url="https://www.python.org/ftp/python/${versiondir}/${filename}"
     mkdir -p "${cachedir}"
     if [[ -f "${cachedir}/${filename}" ]]; then
-        verbose 1 "python-${version}-macosx10.6.pkg is present in cache"
+        verbose 1 "python-${version}-macosx{macosver}.pkg is present in cache"
         return 0
     fi
     local tmpfile=$(mktemp "${cachedir}/${filename}"-XXXX)
@@ -70,10 +80,22 @@ python-framework-fetch-pkg() {
 python-framework-extract-pkg() {
     local targetdir=${1:?}
     local pkgpath=${2:?}
+    local pkgfilename
+    pkgfilename=$(basename "${pkgpath}")
     mkdir -p "${targetdir}"/Python.framework
     verbose 1 "Extracting framework at ${targetdir}/Python.framework"
-    tar -O -xf "${pkgpath}" Python_Framework.pkg/Payload | \
-        tar -x -C "${targetdir}"/Python.framework
+    (
+        tmpdir=$(mktemp -d -t python-framework-extract-pkg)
+        cleanup-on-exit() {
+            if [ -d "${tmpdir:?}" ] ; then
+              rm -rf "${tmpdir:?}"
+            fi
+        }
+        trap cleanup-on-exit EXIT
+        pkgutil --expand "${pkgpath}" "${tmpdir:?}/${pkgfilename}" || exit 1
+        tar -C "${targetdir}"/Python.framework \
+            -xf "${tmpdir}/${pkgfilename}/Python_Framework.pkg/Payload" || exit 1
+    )
 }
 
 
@@ -234,6 +256,20 @@ patch-ssl() {
 EOF
 }
 
+
+install-certifi() {
+    local prefix=${1:?}
+    "${prefix}"/bin/python?.? -B -m ensurepip
+    "${prefix}"/bin/python?.? -B -m pip --isolated install certifi
+    (
+        mkdir -p "${prefix}"/etc/openssl
+        cd "${prefix}"/etc/openssl
+        ln -shf ../../lib/python?.?/site-packages/certifi/cacert.pem ./cert.pem
+    )
+    test -r "${prefix}"/etc/openssl/cert.pem
+}
+
+
 while [[ "${1:0:1}" == "-" ]]; do
     case "${1}" in
         --version)
@@ -242,20 +278,30 @@ while [[ "${1:0:1}" == "-" ]]; do
         --version=*)
             VERSION=${1##*=}
             shift 1;;
+        --macos)
+            MACOSVER=${2:?"--macos: missing argument"}
+            shift 2;;
+        --macos=*)
+            MACOSVER=${1##*=}
+            shift 1;;
         -v|--verbose)
             VERBOSE_LEVEL=$(( $VERBOSE_LEVEL + 1 ))
+            shift 1;;
+        --install-certifi)
+            INSTALL_CERTIFI=1
             shift 1;;
         --help|-h)
             usage; exit 0;;
         -*)
+            echo "Unrecognized argument ${1}" >&2
             usage >&2; exit 1;;
     esac
 done
 
-python-framework-fetch-pkg ~/.cache/pkgs/ ${VERSION}
+python-framework-fetch-pkg ~/.cache/pkgs/ ${VERSION} ${MACOSVER}
 python-framework-extract-pkg \
     "${1:?"FRAMEWORKPATH argument is missing"}" \
-    ~/.cache/pkgs/python-${VERSION}-macosx10.6.pkg
+    ~/.cache/pkgs/python-${VERSION}-macosx${MACOSVER}.pkg
 
 python-framework-relocate "${1:?}"/Python.framework
 
@@ -265,3 +311,8 @@ python-framework-relocate "${1:?}"/Python.framework
     shopt -s failglob
     ln -shf ?.? ./Current  # assuming single version framework
 )
+
+if [[ ${INSTALL_CERTIFI} ]]; then
+    verbose 1 "Installing and linking certifi pypi package"
+    install-certifi "${1:?}"/Python.framework/Versions/Current
+fi
