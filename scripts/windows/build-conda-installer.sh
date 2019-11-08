@@ -45,7 +45,7 @@ DISTDIR=
 CACHEDIR=
 
 # Python version in the Miniconda installer.
-MINICONDA_VERSION=4.5.11
+MINICONDA_VERSION=4.7.12
 PYTHON_VERSION=3.7.0
 
 PLATTAG=win_amd64
