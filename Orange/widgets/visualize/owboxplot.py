@@ -16,6 +16,7 @@ from scipy.stats import f_oneway, chi2_contingency
 import Orange.data
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values
 from Orange.statistics import contingency, distribution
+from Orange.statistics.contingency import Discrete
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
@@ -434,7 +435,9 @@ class OWBoxPlot(widget.OWWidget):
                 self.label_txts_all = label_texts
             else:
                 self.label_txts_all = \
-                    [v for v, c in zip(self.group_var.values, self.conts)
+                    [v for v, c in zip(
+                        self.group_var.values + ["Missing values"],
+                        self.conts.array_with_unknowns)
                      if np.sum(c) > 0]
         else:
             self.dist = distribution.get_distribution(dataset, attr)
@@ -560,7 +563,8 @@ class OWBoxPlot(widget.OWWidget):
             if self.group_var:
                 self.labels = [
                     QGraphicsTextItem("{}".format(int(sum(cont))))
-                    for cont in self.conts if np.sum(cont) > 0]
+                    for cont in self.conts.array_with_unknowns
+                    if np.sum(cont) > 0]
             else:
                 self.labels = [
                     QGraphicsTextItem(str(int(sum(self.dist))))]
@@ -570,15 +574,18 @@ class OWBoxPlot(widget.OWWidget):
         self.draw_axis_disc()
         if self.group_var:
             self.boxes = \
-                [self.strudel(cont, i) for i, cont in enumerate(self.conts)
+                [self.strudel(cont, i)
+                 for i, cont in enumerate(self.conts.array_with_unknowns)
                  if np.sum(cont) > 0]
             self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
 
             if self.sort_freqs:
                 # pylint: disable=invalid-unary-operand-type
-                self.order = sorted(self.order, key=(-np.sum(self.conts, axis=1)).__getitem__)
+                self.order = sorted(
+                    self.order, key=(-np.sum(
+                        self.conts.array_with_unknowns, axis=1)).__getitem__)
         else:
-            self.boxes = [self.strudel(self.dist)]
+            self.boxes = [self.strudel(self.dist, self.dist.unknowns)]
 
         for row, box_index in enumerate(self.order):
             y = (-len(self.boxes) + row) * 40 + 10
@@ -626,7 +633,7 @@ class OWBoxPlot(widget.OWWidget):
         label = self.labels[row]
         b = label.boundingRect()
         if self.group_var:
-            right = self.scale_x * sum(self.conts[row])
+            right = self.scale_x * sum(self.conts.array_with_unknowns[row])
         else:
             right = self.scale_x * sum(self.dist)
         label.setPos(right + 10, y - b.height() / 2)
@@ -995,6 +1002,8 @@ class OWBoxPlot(widget.OWWidget):
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
             box.append(FilterGraphicsRectItem(cond, 0, -10, 1, 10))
         cum = 0
+        values = attr.values + ["Missing values"]
+        colors = np.vstack((attr.colors, [128, 128, 128]))
         for i, v in enumerate(dist):
             if v < 1e-6:
                 continue
@@ -1005,15 +1014,16 @@ class OWBoxPlot(widget.OWWidget):
             if group_val_index is not None:
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
             rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12)
-            rect.setBrush(QBrush(QColor(*attr.colors[i])))
+            rect.setBrush(QBrush(QColor(*colors[i])))
             rect.setPen(QPen(Qt.NoPen))
             if self.stretched:
-                tooltip = "{}: {:.2f}%".format(attr.values[i],
-                                               100 * dist[i] / sum(dist))
+                tooltip = "{}: {:.2f}%".format(
+                    values[i],
+                    100 * dist[i] / sum(dist))
             else:
-                tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
+                tooltip = "{}: {}".format(values[i], int(dist[i]))
             rect.setToolTip(tooltip)
-            text = QGraphicsTextItem(attr.values[i])
+            text = QGraphicsTextItem(values[i])
             box.append(rect)
             box.append(text)
             cum += v

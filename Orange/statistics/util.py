@@ -229,9 +229,8 @@ def contingency(X, y, max_X=None, max_y=None, weights=None, mask=None):
     array is 2d, the function returns a 3d array, with the first dimension
     corresponding to column index (variable in the input array).
 
-    The rows of contingency matrix correspond to values of variables, the
-    columns correspond to values in vector `y`.
-    (??? isn't it the other way around ???)
+    The column of contingency matrix correspond to values of variables, the
+    row correspond to values in vector `y`.
 
     Rows in the input array can be weighted (argument `weights`). A subset of
     columns can be selected by additional argument `mask`.
@@ -260,20 +259,26 @@ def contingency(X, y, max_X=None, max_y=None, weights=None, mask=None):
         for each column of X;
         ny number of uniques in y,
         nx number of uniques in column of X.
-    nans : array_like
+    nans_cols : array_like
         Number of nans in each column of X for each unique value of y.
+    nans_rows : array_like
+        Number of nans in y for each unique value in columns of X.
+    nans : array_like
+        Number of nans in column of X and y at the same time.
     """
     was_1d = False
     if X.ndim == 1:
         X = X[..., np.newaxis]
         was_1d = True
 
-    contingencies, nans = [], []
+    contingencies, nans_cols, nans_rows, nans = [], [], [], []
     ny = np.unique(y).size if max_y is None else max_y + 1
     for i in range(X.shape[1]):
         if mask is not None and not mask[i]:
             contingencies.append(np.zeros((ny, max_X + 1)))
-            nans.append(np.zeros(ny))
+            nans_cols.append(np.zeros(ny))
+            nans_rows.append(None)
+            nans.append(0)
             continue
         col = X[..., i]
         nx = np.unique(col[~np.isnan(col)]).size if max_X is None else max_X + 1
@@ -283,11 +288,22 @@ def contingency(X, y, max_X=None, max_y=None, weights=None, mask=None):
             bincount(y + ny * col,
                      minlength=ny * nx,
                      weights=weights)[0].reshape(nx, ny).T)
-        nans.append(
-            bincount(y[np.isnan(col)], minlength=ny)[0])
+
+        nan_col_mask = np.isnan(col)
+        nan_row_mask = np.isnan(y)
+        nan_mask = nan_col_mask & nan_row_mask
+        weights_ = np.ones(len(y)) if weights is None else weights
+
+        nans_cols.append(
+            bincount(y[nan_col_mask], weights=weights_[nan_col_mask],
+                     minlength=ny)[0])
+        nans_rows.append(
+            bincount(col[nan_row_mask], weights=weights_[nan_row_mask],
+                     minlength=nx)[0])
+        nans.append(np.sum(nan_mask * weights_))
     if was_1d:
-        return contingencies[0], nans[0]
-    return np.array(contingencies), np.array(nans)
+        return contingencies[0], nans_cols[0], nans_rows[0], nans[0]
+    return np.array(contingencies), np.array(nans_cols), nans_rows, nans
 
 
 def stats(X, weights=None, compute_variance=False):

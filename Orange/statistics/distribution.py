@@ -211,6 +211,11 @@ class Discrete(Distribution):
         if self.variable.ordered:
             return self.variable.values[-1]
 
+    def sum(self, *args, **kwargs):
+        res = super().sum(*args, **kwargs)
+        res.unknowns = self.unknowns
+        return res
+
 
 class Continuous(Distribution):
     def __new__(cls, dat, variable=None, unknowns=None):
