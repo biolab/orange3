@@ -72,7 +72,10 @@ class TestOWSql(WidgetTest):
         backend().list_tables.return_value = []
         mock_backends.available_backends.return_value = [backend]
 
-        widget = self.create_widget(OWSql)
+        settings = {"host": "host", "port": "port",
+                    "database": "DB", "schema": "",
+                    "username": "username", "password": "password"}
+        widget = self.create_widget(OWSql, stored_settings=settings)
 
         self.assertTrue(widget.Warning.missing_extension.is_shown())
         self.assertTrue(widget.download)
@@ -87,7 +90,10 @@ class TestOWSql(WidgetTest):
         backend().list_tables.return_value = []
         mock_backends.available_backends.return_value = [backend]
 
-        widget = self.create_widget(OWSql)
+        settings = {"host": "host", "port": "port",
+                    "database": "DB", "schema": "",
+                    "username": "username", "password": "password"}
+        widget = self.create_widget(OWSql, stored_settings=settings)
 
         self.assertTrue(widget.download)
         self.assertFalse(widget.downloadcb.isEnabled())
@@ -104,13 +110,9 @@ class TestOWSql(WidgetTest):
         mock_backends.available_backends.return_value = [backend]
         mock_sqltable().approx_len.return_value = 100
 
-        settings = {'__version__': 2,
-                    'host': '',
-                    'port': '',
-                    'guess_values': False,
-                    'download': False,
-                    'table': 'b'}
-
+        settings = {"host": "host", "port": "port", "database": "DB",
+                    "schema": "", "username": "username",
+                    "password": "password", "table": "b"}
         widget = self.create_widget(OWSql, stored_settings=settings)
         self.assertEqual(widget.tablecombo.currentText(), "b")
 

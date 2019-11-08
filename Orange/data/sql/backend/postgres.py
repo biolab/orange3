@@ -4,7 +4,7 @@ import warnings
 from contextlib import contextmanager
 from time import time
 
-from psycopg2 import Error  # pylint: disable=import-error
+from psycopg2 import Error, ProgrammingError  # pylint: disable=import-error
 from psycopg2.pool import ThreadedConnectionPool  # pylint: disable=import-error
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
@@ -81,7 +81,7 @@ class Psycopg2Backend(Backend):
             cur.execute(query, params)
             yield cur
             log.info("%.2f ms: %s", 1000 * (time() - t), utfquery)
-        except Error as ex:
+        except (Error, ProgrammingError) as ex:
             raise BackendError(str(ex)) from ex
         finally:
             connection.commit()
