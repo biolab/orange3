@@ -501,6 +501,12 @@ class TestOWSOM(WidgetTest):
         np.testing.assert_equal(widget.selection, m)
 
     @_patch_recompute_som
+    def test_on_selection_change_on_empty(self):
+        """Test clicks on empty scene, when no data"""
+        widget = self.widget
+        widget.on_selection_change([])
+
+    @_patch_recompute_som
     def test_output(self):
         widget = self.widget
         self.send_signal(self.widget.Inputs.data, self.iris)
