@@ -14,7 +14,7 @@ from Orange.widgets.unsupervised.owsom import OWSOM, SomView, SOM
 
 def _patch_recompute_som(meth):
     def winners_from_weights(cont_x, *_1, **_2):
-        n = len(cont_x)
+        n = cont_x.shape[0]
         w = np.zeros((n, 2), dtype=int)
         w[n // 5:] = [0, 1]
         w[n // 3:] = [1, 2]
@@ -116,6 +116,7 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.missing_values.is_shown())
 
+    @_patch_recompute_som
     def test_sparse_data(self):
         widget = self.widget
         self.iris.X = sp.csc_matrix(self.iris.X)
