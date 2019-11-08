@@ -291,6 +291,10 @@ class OWBoxPlot(widget.OWWidget):
 
         return super().eventFilter(obj, event)
 
+    @property
+    def show_stretched(self):
+        return self.stretched and self.group_var is not self.attribute
+
     def reset_attrs(self):
         domain = self.dataset.domain
         self.attrs[:] = [
@@ -448,6 +452,7 @@ class OWBoxPlot(widget.OWWidget):
         self.update_display_box()
 
     def grouping_changed(self):
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
         self.apply_attr_sorting()
         self.update_graph()
 
@@ -459,6 +464,7 @@ class OWBoxPlot(widget.OWWidget):
                                 [c.conditions for c in temp_cond])
 
     def attr_changed(self):
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
         self.apply_group_sorting()
         self.update_graph()
 
@@ -623,7 +629,7 @@ class OWBoxPlot(widget.OWWidget):
         self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts_all]
 
-        if not self.stretched:
+        if not self.show_stretched:
             if self.group_var:
                 self.labels = [
                     QGraphicsTextItem("{}".format(int(sum(cont))))
@@ -657,7 +663,7 @@ class OWBoxPlot(widget.OWWidget):
             bars, labels = box[::2], box[1::2]
 
             self.__draw_group_labels(y, box_index)
-            if not self.stretched:
+            if not self.show_stretched:
                 self.__draw_row_counts(y, box_index)
             if self.show_labels and self.attribute is not self.group_var:
                 self.__draw_bar_labels(y, bars, labels)
@@ -909,7 +915,7 @@ class OWBoxPlot(widget.OWWidget):
         Draw the horizontal axis and sets self.scale_x for discrete attributes
         """
         assert not self.is_continuous
-        if self.stretched:
+        if self.show_stretched:
             if not self.attr_labels:
                 return
             step = steps = 10
@@ -936,7 +942,7 @@ class OWBoxPlot(widget.OWWidget):
         self.label_width = lab_width
 
         right_offset = 0  # offset for the right label
-        if not self.stretched and self.labels:
+        if not self.show_stretched and self.labels:
             if self.group_var:
                 rows = list(zip(self.conts, self.labels))
             else:
@@ -959,7 +965,7 @@ class OWBoxPlot(widget.OWWidget):
             l.setZValue(100)
             t = self.box_scene.addSimpleText(str(val), self._axis_font)
             t.setPos(val * scale_x - t.boundingRect().width() / 2, 8)
-        if self.stretched:
+        if self.show_stretched:
             self.scale_x *= 100
 
     def label_group(self, stat, attr, mean_lab):
@@ -1071,7 +1077,7 @@ class OWBoxPlot(widget.OWWidget):
         for i, v in enumerate(dist):
             if v < 1e-6:
                 continue
-            if self.stretched:
+            if self.show_stretched:
                 v /= ss
             v *= self.scale_x
             cond = [FilterDiscrete(attr, [i])]
@@ -1080,7 +1086,7 @@ class OWBoxPlot(widget.OWWidget):
             rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12)
             rect.setBrush(QBrush(QColor(*colors[i])))
             rect.setPen(QPen(Qt.NoPen))
-            if self.stretched:
+            if self.show_stretched:
                 tooltip = "{}: {:.2f}%".format(
                     values[i],
                     100 * dist[i] / sum(dist))
