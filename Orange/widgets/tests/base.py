@@ -1,3 +1,4 @@
+# pylint: disable=protected-access,unused-import
 from contextlib import contextmanager
 import os
 import pickle
@@ -13,7 +14,6 @@ from AnyQt.QtWidgets import (
 )
 
 from orangewidget.tests.base import (
-    # pylint: disable=unused-import
     GuiTest, WidgetTest as WidgetTestBase, DummySignalManager, DEFAULT_TIMEOUT
 )
 from Orange.base import SklModel, Model
@@ -740,6 +740,24 @@ class ProjectionWidgetTestMixin:
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
         self.send_signal(self.widget.Inputs.data, table)
+
+    def test_in_out_summary(self, timeout=DEFAULT_TIMEOUT):
+        info = self.widget.info
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        ind = self._select_data()
+        self.assertEqual(info._StateInfo__input_summary.brief,
+                         str(len(self.data)))
+        self.assertEqual(info._StateInfo__output_summary.brief, str(len(ind)))
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
 
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):

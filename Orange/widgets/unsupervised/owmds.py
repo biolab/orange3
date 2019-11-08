@@ -426,6 +426,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def handleNewSignals(self):
         self._initialize()
+        self.input_changed.emit(self.data)
         if self._invalidated:
             self.graph.pause_drawing_pairs()
             self.__invalidate_embedding()

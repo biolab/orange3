@@ -2,7 +2,7 @@ from xml.sax.saxutils import escape
 
 import numpy as np
 
-from AnyQt.QtCore import QSize
+from AnyQt.QtCore import QSize, Signal
 from AnyQt.QtWidgets import QApplication
 
 from Orange.data import (
@@ -387,6 +387,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     embedding_variables_names = ("proj-x", "proj-y")
     left_side_scrolling = True
 
+    input_changed = Signal(object)
+    output_changed = Signal(object)
+
     def __init__(self):
         super().__init__()
         self.subset_data = None
@@ -394,12 +397,16 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.__pending_selection = self.selection
         self._invalidated = True
         self._domain_invalidated = True
+        self.input_changed.connect(self.set_input_summary)
+        self.output_changed.connect(self.set_output_summary)
         self.setup_gui()
 
     # GUI
     def setup_gui(self):
         self._add_graph()
         self._add_controls()
+        self.input_changed.emit(None)
+        self.output_changed.emit(None)
 
     def _add_graph(self):
         box = gui.vBox(self.mainArea, True, margin=0)
@@ -452,6 +459,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             == self.effective_data.domain.checksum())
         if self._invalidated:
             self.clear()
+            self.input_changed.emit(data)
         self.enable_controls()
 
     def check_data(self):
@@ -487,6 +495,14 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
                 self.Warning.subset_independent()
             elif self.subset_indices - ids:
                 self.Warning.subset_not_subset()
+
+    def set_input_summary(self, data):
+        summary = str(len(data)) if data else self.info.NoInput
+        self.info.set_input_summary(summary)
+
+    def set_output_summary(self, data):
+        summary = str(len(data)) if data else self.info.NoInput
+        self.info.set_output_summary(summary)
 
     def get_subset_mask(self):
         if not self.subset_indices:
@@ -552,8 +568,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         if graph.selection is not None:
             group_sel = np.zeros(len(data), dtype=int)
             group_sel[self.valid_data] = graph.selection
-        self.Outputs.selected_data.send(
-            self._get_selected_data(data, graph.get_selection(), group_sel))
+        selected = self._get_selected_data(
+            data, graph.get_selection(), group_sel)
+        self.output_changed.emit(selected)
+        self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(
             self._get_annotated_data(data, graph.get_selection(), group_sel,
                                      graph.selection))
