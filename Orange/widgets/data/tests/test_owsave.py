@@ -406,8 +406,8 @@ class TestOWSaveLinuxDialog(OWSaveTestBase):
         instance.selectedFiles.return_value = ["foo"]
         instance.selectedNameFilter.return_value = "bar"
         self.assertEqual(widget.get_save_filename(), ("foo", "bar"))
-        self.assertEqual(dlg.call_args[0][2], "baz")
-        self.assertEqual(dlg.call_args[0][3], "a;;b;;c")
+        self.assertEqual(dlg.call_args[0][3], "baz")
+        self.assertEqual(dlg.call_args[0][4], "a;;b;;c")
         instance.selectNameFilter.assert_called_with("b")
 
         instance.exec.return_value = QFileDialog.Rejected
@@ -416,7 +416,7 @@ class TestOWSaveLinuxDialog(OWSaveTestBase):
     @patch.object(OWSaveBase, "filters", OWSave.filters)
     def test_save_file_dialog_enforces_extension_linux(self):
         dialog = OWSave.SaveFileDialog(
-            None, "Save File", "foo.bar",
+            OWSave, None, "Save File", "foo.bar",
             "Bar files (*.tab);;Low files (*.csv)")
 
         dialog.selectNameFilter("Low files (*.csv)")
@@ -448,7 +448,7 @@ class TestOWSaveLinuxDialog(OWSaveTestBase):
         instance = dlg.return_value
         instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
         widget.get_save_filename()
-        self.assertEqual(dlg.call_args[0][3], "a (*.a);;b (*.b)")
+        self.assertEqual(dlg.call_args[0][4], "a (*.a);;b (*.b)")
         instance.selectNameFilter.assert_called_with("a (*.a)")
 
 

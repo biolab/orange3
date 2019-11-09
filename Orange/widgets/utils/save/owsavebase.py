@@ -283,8 +283,9 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         # be sure we know what happens.
         class SaveFileDialog(QFileDialog):
             # pylint: disable=protected-access
-            def __init__(self, *args, **kwargs):
+            def __init__(self, save_cls, *args, **kwargs):
                 super().__init__(*args, **kwargs)
+                self.save_cls = save_cls
                 self.suffix = ""
                 self.setAcceptMode(QFileDialog.AcceptSave)
                 self.setOption(QFileDialog.DontUseNativeDialog)
@@ -295,17 +296,20 @@ class OWSaveBase(widget.OWWidget, openclass=True):
                 self.updateDefaultExtension(selected_filter)
 
             def updateDefaultExtension(self, selected_filter):
-                self.suffix = OWSaveBase._extension_from_filter(selected_filter)
+                self.suffix = \
+                    self.save_cls._extension_from_filter(selected_filter)
                 files = self.selectedFiles()
                 if files and not os.path.isdir(files[0]):
                     self.selectFile(files[0])
 
             def selectFile(self, filename):
-                filename = OWSaveBase._replace_extension(filename, self.suffix)
+                filename = \
+                    self.save_cls._replace_extension(filename, self.suffix)
                 super().selectFile(filename)
 
         def get_save_filename(self):
             dlg = self.SaveFileDialog(
+                type(self),
                 None, "Save File", self.initial_start_dir(),
                 ";;".join(self.valid_filters()))
             dlg.selectNameFilter(self.default_valid_filter())
