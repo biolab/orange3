@@ -42,6 +42,7 @@ class TestOWSOM(WidgetTest):
 
     def tearDown(self):
         self.widget.onDeleteWidget()
+        super().tearDown()
 
     def test_requires_continuous(self):
         widget = self.widget
