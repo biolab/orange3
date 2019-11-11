@@ -23,3 +23,4 @@ include COPYING
 include LICENSE
 include setup.py
 include setup.cfg
+include pyproject.toml
