@@ -70,9 +70,8 @@ class OWDataSampler(OWWidget):
         self.indices = None
         self.sampled_instances = self.remaining_instances = None
 
-        box = gui.vBox(self.controlArea, "Information")
-        self.dataInfoLabel = gui.widgetLabel(box, 'No data on input.')
-        self.outputInfoLabel = gui.widgetLabel(box, ' ')
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoInput)
 
         self.sampling_box = gui.vBox(self.controlArea, "Sampling Type")
         sampling = gui.radioButtons(self.sampling_box, self, "sampling_type",
@@ -180,16 +179,14 @@ class OWDataSampler(OWWidget):
             self.cb_seed.setVisible(not sql)
             self.cb_stratify.setVisible(not sql)
             self.cb_sql_dl.setVisible(sql)
-            self.dataInfoLabel.setText(
-                '{}{} instances in input dataset.'.format(*(
-                    ('~', dataset.approx_len()) if sql else
-                    ('', len(dataset)))))
+            self.info.set_input_summary(str(len(dataset)))
+
             if not sql:
                 self._update_sample_max_size()
                 self.updateindices()
         else:
-            self.dataInfoLabel.setText('No data on input.')
-            self.outputInfoLabel.setText('')
+            self.info.set_input_summary(self.info.NoInput)
+            self.info.set_output_summary(self.info.NoInput)
             self.indices = None
             self.clear_messages()
         self.commit()
@@ -205,7 +202,6 @@ class OWDataSampler(OWWidget):
         if self.data is None:
             sample = other = None
             self.sampled_instances = self.remaining_instances = None
-            self.outputInfoLabel.setText("")
         elif isinstance(self.data, SqlTable):
             other = None
             if self.sampling_type == self.SqlProportion:
@@ -226,15 +222,10 @@ class OWDataSampler(OWWidget):
             if self.sampling_type in (
                     self.FixedProportion, self.FixedSize, self.Bootstrap):
                 remaining, sample = self.indices
-                self.outputInfoLabel.setText(
-                    'Outputting %d instance%s.' %
-                    (len(sample), "s" * (len(sample) != 1)))
             elif self.sampling_type == self.CrossValidation:
                 remaining, sample = self.indices[self.selectedFold - 1]
-                self.outputInfoLabel.setText(
-                    'Outputting fold %d, %d instance%s.' %
-                    (self.selectedFold, len(sample), "s" * (len(sample) != 1))
-                )
+            self.info.set_output_summary(str(len(sample)))
+
             sample = self.data[sample]
             other = self.data[remaining]
             self.sampled_instances = len(sample)
