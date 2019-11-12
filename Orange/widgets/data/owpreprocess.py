@@ -271,7 +271,7 @@ class RemoveSparseEditor(BaseEditor):
             self.changed.emit()
 
     def parameters(self):
-        return {'sparse_thresh':self.sparse_thresh}
+        return {'sparse_thresh': self.sparse_thresh}
 
     def setParameters(self, params):
         self.setThresh(params.get('sparse_thresh', 5))
@@ -280,7 +280,7 @@ class RemoveSparseEditor(BaseEditor):
     def createinstance(params):
         params = dict(params)
         threshold = params.pop('sparse_thresh', 5)
-        return RemoveSparse(threshold=threshold/100)
+        return RemoveSparse(threshold=threshold / 100)
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,

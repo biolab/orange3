@@ -589,9 +589,9 @@ class RemoveSparse(Preprocess):
         if sp.issparse(data.X):
             data_csc = sp.csc_matrix(data.X)
             h, w = data_csc.shape
-            sparsness = [data_csc[:, i].count_nonzero()/h for i in range(w)]
+            sparsness = [data_csc[:, i].count_nonzero() / h for i in range(w)]
         else:
-            sparsness = np.count_nonzero(data.X, axis=0)/ data.X.shape[0]
+            sparsness = np.count_nonzero(data.X, axis=0) / data.X.shape[0]
         att = [a for a, s in zip(data.domain.attributes, sparsness) if s >= self.threshold]
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
