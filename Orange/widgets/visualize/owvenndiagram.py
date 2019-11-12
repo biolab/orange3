@@ -48,6 +48,7 @@ class OWVennDiagram(widget.OWWidget):
     icon = "icons/VennDiagram.svg"
     priority = 280
     keywords = []
+    settings_version = 2
 
     class Inputs:
         data = Input("Data", Table, multiple=True)
@@ -59,7 +60,7 @@ class OWVennDiagram(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         domain_mismatch = Msg("Input data domains do not match.")
         instances_mismatch = Msg("Data sets do not contain the same instances.")
-        too_much_inputs = Msg("venn diagram accepts at most five datasets.")
+        too_many_outputs = Msg("venn diagram accepts at most five datasets.")
 
     selection: list
 
@@ -72,6 +73,7 @@ class OWVennDiagram(widget.OWWidget):
     output_duplicates = settings.Setting(False)
     autocommit = settings.Setting(True)
     usecols = settings.Setting(False)
+    selected_feature = None
 
     graph_name = "scene"
 
@@ -89,21 +91,15 @@ class OWVennDiagram(widget.OWWidget):
         # Extracted input item sets in the order they were 'connected'
         self.itemsets = OrderedDict()
 
+
         # GUI
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(box, "No data on input.\n")
 
         self.elementsBox = gui.radioButtonsInBox(
-            self.controlArea, self, 'usecols', [],
+            self.controlArea, self, 'usecols',
+            ["Rows (data instances)", "Columns (features)"],
             box="Elements", callback=self._on_elements_changed
-        )
-
-        self.useRowsButton = gui.appendRadioButton(
-            self.elementsBox, "Rows (data instances)"
-        )
-
-        self.useColumnsButton = gui.appendRadioButton(
-            self.elementsBox, "Columns (features)"
         )
 
         self.identifiersBox = gui.radioButtonsInBox(
@@ -118,22 +114,21 @@ class OWVennDiagram(widget.OWWidget):
             self.identifiersBox, "Use instance equality"
         )
         self.useidentifiersButton = rb = gui.appendRadioButton(
-            self.identifiersBox, "Use identifiers"
+            self.identifiersBox, "Match by Features"
         )
         self.inputsBox = gui.indentedBox(
             self.identifiersBox, sep=gui.checkButtonOffsetHint(rb)
         )
         self.inputsBox.setEnabled(bool(self.useidentifiers))
 
-        box = gui.vBox(self.inputsBox, 'feature', addSpace=False)
+        box = gui.vBox(self.inputsBox, ' ', addSpace=False)
         box.setFlat(True)
-        model = itemmodels.VariableListModel(parent=self)
-        self.cb = cb = gui.OrangeComboBox(
+        self.cb = cb = gui.comboBox(
+            box, self, "selected_feature",
             minimumContentsLength=12,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
+            model=itemmodels.VariableListModel(parent=self),
+            callback=self._on_inputAttrActivated
             )
-        cb.setModel(model)
-        cb.activated[int].connect(self._on_inputAttrActivated)
         box.setEnabled(False)
         # Store the combo in the box for later use.
         box.combo_box = cb
@@ -144,7 +139,7 @@ class OWVennDiagram(widget.OWWidget):
         self.output_duplicates_box = box = gui.vBox(self.controlArea, "Output")
         self.output_duplicates_box.setEnabled(not self.usecols)
         gui.checkBox(box, self, "output_duplicates", "Output duplicates",
-                     callback=self.commit)
+                     callback=lambda: self.commit())
         gui.auto_send(box, self, "autocommit", box=False)
 
         # Main area view
@@ -170,14 +165,14 @@ class OWVennDiagram(widget.OWWidget):
     @Inputs.data
     @check_sql_input
     def setData(self, data, key=None):
-        self.Error.too_much_inputs.clear()
+        self.Error.too_many_outputs.clear()
         if not self._inputUpdate:
             self._inputUpdate = True
         if key in self.data:
             if data is None:
                 # Remove the input
                 # Clear possible warnings.
-                self.warning()
+                self.Warning.clear()
                 del self.data[key]
             else:
                 # Update existing item
@@ -187,7 +182,7 @@ class OWVennDiagram(widget.OWWidget):
             # TODO: Allow setting more them 5 inputs and let the user
             # select the 5 to display.
             if len(self.data) == 5:
-                self.Error.too_much_inputs()
+                self.Error.too_many_outputs()
                 return
             # Add a new input
             self.data[key] = _InputData(key, data.name, data)
@@ -201,8 +196,15 @@ class OWVennDiagram(widget.OWWidget):
         for val in self.data.values():
             sets.append(set(val.table.ids))
         inter = reduce(set.intersection, sets)
-        if len(inter) == max(map(len, sets)):
-            return True
+        return len(inter) == max(map(len, sets))
+
+    def settings_incompatible(self):
+        self.vennwidget.clear()
+        if not self.usecols:
+            self.Error.domain_mismatch()
+        else:
+            self.Error.instances_mismatch()
+        self.itemsets = OrderedDict()
         return False
 
     def settings_compatible(self):
@@ -212,10 +214,7 @@ class OWVennDiagram(widget.OWWidget):
             domains = [input.table.domain for input in self.data.values()]
             samedomain = all((d1 == d2) for d1, d2 in pairwise(domains))
             if not samedomain:
-                self.vennwidget.clear()
-                self.Error.domain_mismatch()
-                self.itemsets = OrderedDict()
-                return False
+                return self.settings_incompatible()
             self.samedomain = samedomain
             has_identifiers = all(source_attributes(input.table.domain)
                                   for input in self.data.values())
@@ -225,10 +224,7 @@ class OWVennDiagram(widget.OWWidget):
             return True
         else:
             if not self.data_equality():
-                self.vennwidget.clear()
-                self.Error.instances_mismatch()
-                self.itemsets = OrderedDict()
-                return False
+                return self.settings_incompatible()
             return True
 
     def handleNewSignals(self):
@@ -494,6 +490,8 @@ class OWVennDiagram(widget.OWWidget):
         Columns are duplicated only if values differ (even
         if only in order of values), origin table name and input slot is added to column name.
         """
+        if not self.data.keys():
+            return None, None
         selected = None
         atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
 
@@ -543,7 +541,8 @@ class OWVennDiagram(widget.OWWidget):
         annotated = self.extract_new_table(var_dict)
 
         for atr in annotated.domain.attributes:
-            atr.attributes['Selected'] = selected and atr in selected.domain.attributes
+            #written in this form to allow for selected to be None
+            atr.attributes['Selected'] = not (not columns or not atr in selected.domain.attributes)
 
         return selected, annotated
 
@@ -1719,9 +1718,8 @@ if __name__ == "__main__":  # pragma: no cover
 
     data = append_column(data, "M", StringVariable("Test"),
                          numpy.arange(len(data)).reshape(-1, 1) % 30)
-    res = ShuffleSplit(data, [None], n_resamples=5,
-                       test_size=0.7, stratified=False)
-    indices = iter(res.indices)
+    res = ShuffleSplit(n_resamples=5, test_size=0.7, stratified=False)
+    indices = iter(res.get_indices(data))
     datasets = []
     for i in range(1, 6):
         sample, _ = next(indices)
@@ -1730,3 +1728,5 @@ if __name__ == "__main__":  # pragma: no cover
         datasets.append((data1, i))
 
     WidgetPreview(OWVennDiagram).run(setData=datasets)
+
+    indices = iter(res.indices)

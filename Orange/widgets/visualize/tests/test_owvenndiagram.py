@@ -178,6 +178,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(annotated), len(self.data))
         self.assertEqual(annotated.domain, self.data.domain)
         for atr in annotated.domain.attributes:
+            self.assertIsNotNone(atr.attributes[selected_atr_name])
             self.assertFalse(atr.attributes[selected_atr_name])
 
         # select data instances
@@ -271,17 +272,17 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(len(annotated), 100)
 
-    def test_too_much_inputs(self):
+    def test_too_many_outputs(self):
         self.send_signal(self.signal_name, self.data, 1)
         self.send_signal(self.signal_name, self.data, 2)
         self.send_signal(self.signal_name, self.data, 3)
         self.send_signal(self.signal_name, self.data, 4)
         self.send_signal(self.signal_name, self.data, 5)
         self.send_signal(self.signal_name, self.data, 6)
-        self.assertTrue(self.widget.Error.too_much_inputs.is_shown())
+        self.assertTrue(self.widget.Error.too_many_outputs.is_shown())
 
         self.send_signal(self.signal_name, None, 6)
-        self.assertFalse(self.widget.Error.too_much_inputs.is_shown())
+        self.assertFalse(self.widget.Error.too_many_outputs.is_shown())
 
 
 class GroupTableIndicesTest(unittest.TestCase):
