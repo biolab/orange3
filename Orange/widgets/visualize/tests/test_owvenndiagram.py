@@ -387,6 +387,7 @@ class TestVennUtilities(unittest.TestCase):
         a[1] = 2
         b[1] = 3
         self.assertFalse(arrays_equal(a, b, ContinuousVariable))
+        self.assertFalse(arrays_equal(a.astype(str), b.astype(str), StringVariable))
 
 
 if __name__ == "__main__":
