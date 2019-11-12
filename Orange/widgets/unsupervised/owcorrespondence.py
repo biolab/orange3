@@ -7,7 +7,7 @@ from AnyQt.QtGui import QBrush, QColor, QPainter
 from AnyQt.QtCore import QEvent, QItemSelectionModel, QItemSelection
 
 import pyqtgraph as pg
-import Orange.data
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.statistics import contingency
 
 from Orange.widgets import widget, gui, settings
@@ -15,7 +15,8 @@ from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
-from Orange.widgets.widget import Input
+from Orange.widgets.widget import Input, Output
+from Orange.widgets.settings import Setting
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -49,13 +50,17 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     keywords = []
 
     class Inputs:
-        data = Input("Data", Orange.data.Table)
+        data = Input("Data", Table)
+
+    class Outputs:
+        coordinates = Output("Coordinates", Table)
 
     Invalidate = QEvent.registerEventType()
 
     settingsHandler = settings.DomainContextHandler()
 
     selected_var_indices = settings.ContextSetting([])
+    auto_commit = Setting(True)
 
     graph_name = "plot.plotItem"
 
@@ -96,6 +101,8 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             gui.vBox(self.controlArea, "Contribution to Inertia"), "\n"
         )
 
+        gui.auto_send(self.controlArea, self, "auto_commit")
+
         gui.rubber(self.controlArea)
 
         self.plot = pg.PlotWidget(background="w")
@@ -127,6 +134,24 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                 self._restore_selection()
         self._update_CA()
 
+    def commit(self):
+        output_table = None
+        if self.ca is not None:
+            sel_vars = self.selected_vars()
+            if len(sel_vars) == 2:
+                rf = np.vstack((self.ca.row_factors, self.ca.col_factors))
+            else:
+                rf = self.ca.row_factors
+            vars_data = [(val.name, var) for val in sel_vars for var in val.values]
+            output_table = Table(
+                Domain([ContinuousVariable(f"Component {i + 1}")
+                        for i in range(rf.shape[1])],
+                       metas=[StringVariable("Variable"),
+                              StringVariable("Value")]),
+                rf, metas=vars_data
+            )
+        self.Outputs.coordinates.send(output_table)
+
     def clear(self):
         self.data = None
         self.ca = None
@@ -145,8 +170,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         restore(self.varview, self.selected_var_indices)
 
     def _p_axes(self):
-#         return (0, 1)
-        return (self.component_x, self.component_y)
+        return self.component_x, self.component_y
 
     def _var_changed(self):
         self.selected_var_indices = sorted(
@@ -182,6 +206,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         self._setup_plot()
         self._update_info()
+        self.commit()
 
     def update_XY(self):
         self.axis_x_cb.clear()
@@ -406,4 +431,4 @@ class CA(CA):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWCorrespondenceAnalysis).run(Orange.data.Table("smokers_ct"))
+    WidgetPreview(OWCorrespondenceAnalysis).run(Table("titanic"))
