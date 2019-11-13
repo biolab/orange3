@@ -423,6 +423,8 @@ class OWSOM(OWWidget):
         self.redraw_selection()
 
     def on_selection_change(self, selection, action=SomView.SelectionSet):
+        if self.data is None:  # clicks on empty canvas
+            return
         if self.selection is None:
             self.selection = np.zeros(self.grid_cells.T.shape, dtype=np.int16)
         if action == SomView.SelectionSet:
