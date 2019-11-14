@@ -17,7 +17,8 @@ from . import impute, discretize, transformation
 __all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
            "SklImpute", "Normalize", "Randomize", "Preprocess",
            "RemoveConstant", "RemoveNaNClasses", "RemoveNaNColumns",
-           "ProjectPCA", "ProjectCUR", "Scale", "AdaptiveNormalize"]
+           "ProjectPCA", "ProjectCUR", "Scale", "RemoveSparse",
+           "AdaptiveNormalize"]
 
 
 class Preprocess(Reprable):
@@ -101,11 +102,11 @@ class Discretize(Preprocess):
             else:
                 return var
 
-        def discretized(vars, do_discretize):
+        def discretized(vars_, do_discretize):
             if do_discretize:
-                vars = (transform(var) for var in vars)
-                vars = [var for var in vars if var is not None]
-            return vars
+                vars_ = (transform(var) for var in vars_)
+                vars_ = [var for var in vars_ if var is not None]
+            return vars_
 
         method = self.method or discretize.EqualFreq()
         domain = Orange.data.Domain(
@@ -421,7 +422,8 @@ class Randomize(Preprocess):
             new_data.metas = self.randomize(new_data.metas, r3)
         return new_data
 
-    def randomize(self, table, rand_state=None):
+    @staticmethod
+    def randomize(table, rand_state=None):
         rstate = np.random.RandomState(rand_state)
         if sp.issparse(table):
             table = table.tocsc()  # type: sp.spmatrix
@@ -567,6 +569,32 @@ class PreprocessorList(Preprocess):
         for pp in self.preprocessors:
             data = pp(data)
         return data
+
+class RemoveSparse(Preprocess):
+    """
+    Remove sparse  features. Sparseness is determined according to
+    user-defined treshold.
+
+    Parameters
+    ----------
+    threshold : float
+        Minimal proportion of non-zero entries of a feature
+    """
+
+    def __init__(self, threshold=0.05):
+        self.threshold = threshold
+
+    def __call__(self, data):
+        if sp.issparse(data.X):
+            data_csc = sp.csc_matrix(data.X)
+            h, w = data_csc.shape
+            sparsness = [data_csc[:, i].count_nonzero() / h for i in range(w)]
+        else:
+            sparsness = np.count_nonzero(data.X, axis=0) / data.X.shape[0]
+        att = [a for a, s in zip(data.domain.attributes, sparsness) if s >= self.threshold]
+        domain = Orange.data.Domain(att, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.transform(domain)
 
 
 class AdaptiveNormalize(Preprocess):

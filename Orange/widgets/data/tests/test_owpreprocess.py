@@ -4,7 +4,8 @@ import numpy as np
 
 from Orange.data import Table
 from Orange.preprocess import (
-    Randomize, Scale, Discretize, Continuize, Impute, ProjectPCA, ProjectCUR
+    Randomize, Scale, Discretize, Continuize, Impute, ProjectPCA, \
+         ProjectCUR, RemoveSparse
 )
 from Orange.preprocess import discretize, impute, fss, score
 from Orange.widgets.data import owpreprocess
@@ -36,6 +37,20 @@ class TestOWPreprocess(WidgetTest):
         np.testing.assert_array_equal(self.zoo.X, output.X)
         np.testing.assert_array_equal(self.zoo.metas, output.metas)
         self.assertFalse(np.array_equal(self.zoo.Y, output.Y))
+
+    def test_remove_sparse(self):
+        data = Table("iris")
+        idx = int(data.X.shape[0]/10)
+        data.X[:idx+1, 0] = np.zeros((idx+1,))
+        saved = {"preprocessors": [("orange.preprocess.remove_sparse", {'sparse_thresh':90})]}
+        model = self.widget.load(saved)
+
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        np.testing.assert_array_equal(output.X, data.X[:, 1:])
+        np.testing.assert_array_equal(output.Y, data.Y)
+        np.testing.assert_array_equal(output.metas, data.metas)
 
     def test_normalize(self):
         data = Table("iris")
@@ -262,3 +277,18 @@ class TestCUREditor(WidgetTest):
         self.assertIsInstance(p, ProjectCUR)
         self.assertEqual(p.rank, 5)
         self.assertEqual(p.max_error, 0.5)
+
+class TestRemoveSparseEditor(WidgetTest):
+
+    def test_editor(self):
+        widget = owpreprocess.RemoveSparseEditor()
+        self.assertEqual(widget.parameters(), {"sparse_thresh": 5})
+
+        p = widget.createinstance(widget.parameters())
+        self.assertIsInstance(p, RemoveSparse)
+        self.assertEqual(p.threshold, 0.05)
+
+        widget.setParameters({"sparse_thresh": 90})
+        p = widget.createinstance(widget.parameters())
+        self.assertIsInstance(p, RemoveSparse)
+        self.assertEqual(p.threshold, 0.9)

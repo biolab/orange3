@@ -23,7 +23,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
-    ProjectCUR, Scale as _Scale, Randomize as _Randomize
+    ProjectCUR, Scale as _Scale, Randomize as _Randomize, RemoveSparse
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.overlay import OverlayWidget
@@ -250,6 +250,37 @@ class ContinuizeEditor(BaseEditor):
     def __repr__(self):
         return self.Continuizers[self.__treatment]
 
+class RemoveSparseEditor(BaseEditor):
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setLayout(QVBoxLayout())
+        self.sparse_thresh = 5
+        form = QFormLayout()
+        self.cspin = QSpinBox(minimum=1, maximum=100, value=self.sparse_thresh)
+        self.cspin.valueChanged[int].connect(self.setThresh)
+        self.cspin.editingFinished.connect(self.edited)
+
+        form.addRow("Min % of nonzero values:", self.cspin)
+        self.layout().addLayout(form)
+
+    def setThresh(self, thresh):
+        if self.sparse_thresh != thresh:
+            self.sparse_thresh = thresh
+            self.cspin.setValue(thresh)
+            self.changed.emit()
+
+    def parameters(self):
+        return {'sparse_thresh': self.sparse_thresh}
+
+    def setParameters(self, params):
+        self.setThresh(params.get('sparse_thresh', 5))
+
+    @staticmethod
+    def createinstance(params):
+        params = dict(params)
+        threshold = params.pop('sparse_thresh', 5)
+        return RemoveSparse(threshold=threshold / 100)
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
@@ -921,6 +952,12 @@ PREPROCESS_ACTIONS = [
         Description("Randomize",
                     icon_path("Random.svg")),
         Randomize
+    ),
+    PreprocessAction(
+        "Remove Sparse", "orange.preprocess.remove_sparse", "Feature Selection",
+        Description("Remove Sparse Features",
+                    icon_path("PurgeDomain.svg")),
+        RemoveSparseEditor
     ),
     PreprocessAction(
         "PCA", "orange.preprocess.pca", "PCA",
