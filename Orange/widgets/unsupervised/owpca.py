@@ -16,6 +16,7 @@ from Orange.widgets.widget import Input, Output
 
 # Maximum number of PCA components that we can set in the widget
 MAX_COMPONENTS = 100
+LINE_NAMES = ["variance covered by a component", "cumulative variance covered"]
 
 
 class OWPCA(widget.OWWidget):
@@ -194,7 +195,7 @@ class OWPCA(widget.OWWidget):
 
         self.plot.update(
             numpy.arange(1, p+1), [explained_ratio[:p], explained[:p]],
-            [Qt.red, Qt.darkYellow], cutpoint_x=cutpos)
+            [Qt.red, Qt.darkYellow], cutpoint_x=cutpos, names=LINE_NAMES)
 
         self._update_axis()
 
