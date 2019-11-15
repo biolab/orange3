@@ -37,7 +37,30 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.widget import OWWidget
 
 
-WidgetTest = WidgetTestBase
+class WidgetTest(WidgetTestBase):
+    def assert_table_equal(self, table1, table2):
+        if table1 is None or table2 is None:
+            self.assertIs(table1, table2)
+            return
+        self.assert_domain_equal(table1.domain, table2.domain)
+        np.testing.assert_array_equal(table1.X, table2.X)
+        np.testing.assert_array_equal(table1.Y, table2.Y)
+        np.testing.assert_array_equal(table1.metas, table2.metas)
+
+    def assert_domain_equal(self, domain1, domain2):
+        """
+        Test domains for equality.
+
+        Unlike in domain1 == domain2 uses `Variable.__eq__`, which in case of
+        DiscreteVariable ignores `values`, this method also checks that both
+        domain have equal `values`.
+        """
+        for var1, var2 in zip(domain1.variables + domain1.metas,
+                              domain2.variables + domain2.metas):
+            self.assertEqual(type(var1), type(var2))
+            self.assertEqual(var1.name, var2.name)
+            if var1.is_discrete:
+                self.assertEqual(var1.values, var2.values)
 
 
 class TestWidgetTest(WidgetTest):
