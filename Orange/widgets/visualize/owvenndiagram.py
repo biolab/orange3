@@ -145,7 +145,6 @@ class OWVennDiagram(widget.OWWidget):
     @check_sql_input
     def setData(self, data, key=None):
         self.Error.too_many_inputs.clear()
-        self.closeContext()
         if not self._inputUpdate:
             self._inputUpdate = True
         if key in self.data:
@@ -167,10 +166,6 @@ class OWVennDiagram(widget.OWWidget):
             # Add a new input
             self.data[key] = _InputData(key, data.name, data)
         self._setInterAttributes()
-        self.selected_feature = None
-        if self.data:
-            some_data = next(iter(self.data.values()))
-            self.openContext(some_data.table.domain)
 
     def data_equality(self):
         """ Checks if all input datasets have same ids. """
