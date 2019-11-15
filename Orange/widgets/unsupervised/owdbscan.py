@@ -109,7 +109,7 @@ class OWDBSCAN(widget.OWWidget):
         self.plot = SliderGraph(
             x_axis_label="Data items sorted by score",
             y_axis_label="Distance to the k-th nearest neighbour",
-            background="w", callback=self._on_cut_changed
+            callback=self._on_cut_changed
         )
 
         self.mainArea.layout().addWidget(self.plot)

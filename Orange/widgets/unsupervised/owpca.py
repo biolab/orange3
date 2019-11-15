@@ -16,6 +16,7 @@ from Orange.widgets.widget import Input, Output
 
 # Maximum number of PCA components that we can set in the widget
 MAX_COMPONENTS = 100
+LINE_NAMES = ["component variance", "cumulative variance"]
 
 
 class OWPCA(widget.OWWidget):
@@ -83,13 +84,13 @@ class OWPCA(widget.OWWidget):
         self.variance_spin.setSuffix("%")
 
         form.addRow("Components:", self.components_spin)
-        form.addRow("Variance covered:", self.variance_spin)
+        form.addRow("Explained variance:", self.variance_spin)
 
         # Options
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.normalize_box = gui.checkBox(
             self.options_box, self, "normalize",
-            "Normalize data", callback=self._update_normalize
+            "Normalize variables", callback=self._update_normalize
         )
 
         self.maxp_spin = gui.spin(
@@ -194,7 +195,7 @@ class OWPCA(widget.OWWidget):
 
         self.plot.update(
             numpy.arange(1, p+1), [explained_ratio[:p], explained[:p]],
-            [Qt.red, Qt.darkYellow], cutpoint_x=cutpos)
+            [Qt.red, Qt.darkYellow], cutpoint_x=cutpos, names=LINE_NAMES)
 
         self._update_axis()
 
