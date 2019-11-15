@@ -126,6 +126,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
 
     def test_multiple_input(self):
         """Over rows"""
+        self.widget.rowwise = True
         self.send_signal(self.signal_name, self.data[:100], 1)
         self.send_signal(self.signal_name, self.data[50:], 2)
 
@@ -164,7 +165,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_multiple_input_over_cols(self):
-        self.widget.usecols = True
+        self.widget.rowwise = False
         selected_atr_name = 'Selected'
         input2 = self.data.transform(Domain([self.data.domain.attributes[0]],
                                             self.data.domain.class_vars,
@@ -234,7 +235,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
             commit.assert_called()
 
     def test_input_compatibility(self):
-        self.widget.usecols = False
+        self.widget.rowwise = True
         self.send_signal(self.signal_name, self.data, 1)
         self.send_signal(self.signal_name,
                          self.data.transform(Domain([self.data.domain.attributes[0]],
@@ -243,7 +244,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Error.domain_mismatch.is_shown())
         self.assertFalse(self.widget.Error.instances_mismatch.is_shown())
 
-        self.widget.usecols = True
+        self.widget.rowwise = False
         self.send_signal(self.signal_name, self.data[:100, :], 2)
         self.assertTrue(self.widget.Error.instances_mismatch.is_shown())
         self.assertFalse(self.widget.Error.domain_mismatch.is_shown())
@@ -257,32 +258,33 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_rows_identifiers(self):
-        self.widget.usecols = False
-        self.widget.useidentifiers = True
+        self.widget.rowwise = True
         data = Table('zoo')
         self.send_signal(self.signal_name, data, (1, 'Data', None))
+        self.widget.selected_feature = 'name'
         self.send_signal(self.signal_name, data[:5], (2, 'Data', None))
 
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         self.widget.vennwidget.vennareas()[3].setSelected(True)
         selected = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(selected), 5)
-        self.assertEqual(selected.domain, data.domain)
+        self.assertEqual(selected.domain.attributes, data.domain.attributes)
+        self.assertEqual(selected.domain.class_vars, data.domain.class_vars)
 
         annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(len(annotated), 100)
 
-    def test_too_many_outputs(self):
+    def test_too_many_inputs(self):
         self.send_signal(self.signal_name, self.data, 1)
         self.send_signal(self.signal_name, self.data, 2)
         self.send_signal(self.signal_name, self.data, 3)
         self.send_signal(self.signal_name, self.data, 4)
         self.send_signal(self.signal_name, self.data, 5)
         self.send_signal(self.signal_name, self.data, 6)
-        self.assertTrue(self.widget.Error.too_many_outputs.is_shown())
+        self.assertTrue(self.widget.Error.too_many_inputs.is_shown())
 
         self.send_signal(self.signal_name, None, 6)
-        self.assertFalse(self.widget.Error.too_many_outputs.is_shown())
+        self.assertFalse(self.widget.Error.too_many_inputs.is_shown())
 
 
 class GroupTableIndicesTest(unittest.TestCase):

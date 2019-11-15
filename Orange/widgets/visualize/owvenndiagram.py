@@ -71,7 +71,7 @@ class OWVennDiagram(widget.OWWidget):
     #: or preserve all duplicates in the output.
     output_duplicates = settings.Setting(False)
     autocommit = settings.Setting(True)
-    rowwise = settings.Setting(False)
+    rowwise = settings.Setting(True)
     selected_feature = settings.ContextSetting(None)
 
     want_control_area = False
@@ -495,10 +495,9 @@ class OWVennDiagram(widget.OWWidget):
             if not len(input.table):
                 continue
             if self.selected_feature is not None:
-                if self.selected_feature is not None:
-                    mask = list(map(match, (inst[self.selected_feature] for inst in input.table)))
-                else:
-                    mask = [False] * len(input.table)
+                mask = list(map(match,
+                                (inst[self.selected_feature]
+                                 for inst in input.table)))
 
                 def instance_key(inst):
                     return str(inst[self.selected_feature])
