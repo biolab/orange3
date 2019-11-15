@@ -1,12 +1,12 @@
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import (
-    QFormLayout, QCheckBox, QLineEdit, QWidget, QVBoxLayout,
+    QFormLayout, QCheckBox, QLineEdit, QWidget, QVBoxLayout, QLabel
 )
 from orangecanvas.application.settings import UserSettingsDialog
 from orangecanvas.document.usagestatistics import UsageStatistics
-from orangewidget.workflow.mainwindow import OWCanvasMainWindow
-
 from orangecanvas.utils.overlay import NotificationOverlay
+
+from orangewidget.workflow.mainwindow import OWCanvasMainWindow
 
 
 class OUserSettingsDialog(UserSettingsDialog):
@@ -21,29 +21,35 @@ class OUserSettingsDialog(UserSettingsDialog):
         layout.addRow("Updates", cb)
         self.bind(cb, "checked", "startup/check-updates")
 
-        # Error Reporting Tab
+        # Reporting Tab
         tab = QWidget()
-        self.addTab(tab, self.tr("Error Reporting"),
-                    toolTip="Settings related to error reporting")
+        self.addTab(tab, self.tr("Reporting"),
+                    toolTip="Settings related to reporting")
 
         form = QFormLayout()
         line_edit_mid = QLineEdit()
-        self.bind(line_edit_mid, "text", "error-reporting/machine-id")
+        self.bind(line_edit_mid, "text", "reporting/machine-id")
         form.addRow("Machine ID:", line_edit_mid)
 
         box = QWidget()
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         cb1 = QCheckBox(
-            self.tr(""),
+            self.tr("Share"),
             toolTip=self.tr(
                 "Share anonymous usage statistics to improve Orange")
         )
-        self.bind(cb1, "checked", "error-reporting/send-statistics")
+        self.bind(cb1, "checked", "reporting/send-statistics")
         cb1.clicked.connect(UsageStatistics.set_enabled)
         layout.addWidget(cb1)
         box.setLayout(layout)
-        form.addRow(self.tr("Share Anonymous Statistics"), box)
+        form.addRow(self.tr("Anonymous Statistics"), box)
+        label = QLabel("<a "
+                       "href=\"https://orange.biolab.si/statistics-more-info\">"
+                       "More info..."
+                       "</a>")
+        label.setOpenExternalLinks(True)
+        form.addRow(self.tr(""), label)
 
         tab.setLayout(form)
 
