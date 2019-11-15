@@ -160,7 +160,6 @@ def open_link(url: QUrl):
 
             if not settings.contains('reporting/machine-id'):
                 settings.setValue('reporting/machine-id', str(uuid.uuid4()))
-        pass
     else:
         QDesktopServices.openUrl(url)
 
