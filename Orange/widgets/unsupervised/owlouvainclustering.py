@@ -431,10 +431,8 @@ class OWLouvainClustering(widget.OWWidget):
         # Can't have more PCA components than the number of attributes
         n_attrs = len(data.domain.attributes)
         self.pca_components_slider.setMaximum(min(_MAX_PCA_COMPONENTS, n_attrs))
-        self.pca_components_slider.setValue(min(_DEFAULT_PCA_COMPONENTS, n_attrs))
         # Can't have more k neighbors than there are data points
         self.k_neighbors_spin.setMaximum(min(_MAX_K_NEIGBOURS, len(data) - 1))
-        self.k_neighbors_spin.setValue(min(_DEFAULT_K_NEIGHBORS, len(data) - 1))
 
         self.info_label.setText("Clustering not yet run.")
 
