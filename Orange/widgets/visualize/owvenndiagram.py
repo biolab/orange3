@@ -64,6 +64,7 @@ class OWVennDiagram(widget.OWWidget):
 
     selection: list
 
+    settingsHandler = settings.DomainContextHandler()
     # Selected disjoint subset indices
     selection = settings.Setting([], schema_only=True)
     #: Output unique items (one output row for every unique instance `key`)
@@ -71,7 +72,7 @@ class OWVennDiagram(widget.OWWidget):
     output_duplicates = settings.Setting(False)
     autocommit = settings.Setting(True)
     rowwise = settings.Setting(False)
-    selected_feature = None
+    selected_feature = settings.ContextSetting(None)
 
     want_control_area = False
     graph_name = "scene"
@@ -144,6 +145,7 @@ class OWVennDiagram(widget.OWWidget):
     @check_sql_input
     def setData(self, data, key=None):
         self.Error.too_many_inputs.clear()
+        self.closeContext()
         if not self._inputUpdate:
             self._inputUpdate = True
         if key in self.data:
@@ -165,6 +167,10 @@ class OWVennDiagram(widget.OWWidget):
             # Add a new input
             self.data[key] = _InputData(key, data.name, data)
         self._setInterAttributes()
+        self.selected_feature = None
+        if self.data:
+            some_data = next(iter(self.data.values()))
+            self.openContext(some_data.table.domain)
 
     def data_equality(self):
         """ Checks if all input datasets have same ids. """
