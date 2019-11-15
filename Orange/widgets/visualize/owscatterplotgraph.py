@@ -15,7 +15,8 @@ from AnyQt.QtWidgets import (
 )
 
 import pyqtgraph as pg
-import pyqtgraph.graphicsItems.ScatterPlotItem
+import pyqtgraph.functions as fn
+from pyqtgraph.graphicsItems.ScatterPlotItem import Symbols, drawSymbol
 from pyqtgraph.graphicsItems.LegendItem import (
     LegendItem as PgLegendItem, ItemSample
 )
@@ -60,8 +61,10 @@ class PaletteItemSample(ItemSample):
                 for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cuts, cuts[1:])]
+        font = self.font()
+        font.setPixelSize(11)
         for label in self.labels:
-            label.prepare()
+            label.prepare(font=font)
         self.text_width = max(label.size().width() for label in self.labels)
 
     def boundingRect(self):
@@ -69,6 +72,7 @@ class PaletteItemSample(ItemSample):
 
     def paint(self, p, *args):
         p.setRenderHint(p.Antialiasing)
+        p.translate(5, 5)
         scale = self.scale
         font = p.font()
         font.setPixelSize(11)
@@ -80,6 +84,20 @@ class PaletteItemSample(ItemSample):
             p.drawRect(0, i * 15, 15, 15)
             p.setPen(QPen(Qt.black))
             p.drawStaticText(20, i * 15 + 1, label)
+
+
+class SymbolItemSample(ItemSample):
+    """Adjust position for symbols"""
+    def __init__(self, pen, brush, size, symbol):
+        super().__init__(None)
+        self.__pen = fn.mkPen(pen)
+        self.__brush = fn.mkBrush(brush)
+        self.__size = size
+        self.__symbol = symbol
+
+    def paint(self, p, *args):
+        p.translate(8, 12)
+        drawSymbol(p, self.__symbol, self.__size, self.__pen, self.__brush)
 
 
 class LegendItem(PgLegendItem):
@@ -244,18 +262,17 @@ def _define_symbols():
     Add symbol ? to ScatterPlotItemSymbols,
     reflect the triangle to point upwards
     """
-    symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
     path = QPainterPath()
     path.addEllipse(QRectF(-0.35, -0.35, 0.7, 0.7))
     path.moveTo(-0.5, 0.5)
     path.lineTo(0.5, -0.5)
     path.moveTo(-0.5, -0.5)
     path.lineTo(0.5, 0.5)
-    symbols["?"] = path
+    Symbols["?"] = path
 
     tr = QTransform()
     tr.rotate(180)
-    symbols['t'] = tr.map(symbols['t'])
+    Symbols['t'] = tr.map(Symbols['t'])
 
 
 _define_symbols()
@@ -1234,7 +1251,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         color.setAlpha(self.alpha_value)
         for label, symbol in zip(labels, self.CurveSymbols):
             self.shape_legend.addItem(
-                ScatterPlotItem(pen=color, brush=color, size=10, symbol=symbol),
+                SymbolItemSample(pen=color, brush=color, size=10, symbol=symbol),
                 escape(label))
 
     def _update_continuous_color_legend(self, label_formatter):
@@ -1271,7 +1288,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             color.setAlpha(255 if self.subset_is_shown else self.alpha_value)
             brush = QBrush(color)
             legend.addItem(
-                ScatterPlotItem(pen=pen, brush=brush, size=10, symbol=symbol),
+                SymbolItemSample(pen=pen, brush=brush, size=10, symbol=symbol),
                 escape(label))
 
     def zoom_button_clicked(self):
