@@ -99,7 +99,7 @@ class OWVennDiagram(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.view)
         self.vennwidget = VennDiagram()
-        self.vennwidget.resize(400, 400)
+        self._resize()
         self.vennwidget.itemTextEdited.connect(self._on_itemTextEdited)
         self.scene.selectionChanged.connect(self._on_selectionChanged)
 
@@ -124,6 +124,21 @@ class OWVennDiagram(widget.OWWidget):
                      callback=lambda: self.commit())
         gui.auto_send(box, self, "autocommit", box=False)
         self._queue = []
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._resize()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._resize()
+
+    def _resize(self):
+        # vennwidget draws so that the diagram fits into its geometry,
+        # while labels take further 120 pixels, hence -120 in below formula
+        size = max(200, min(self.view.width(), self.view.height()) - 120)
+        self.vennwidget.resize(size, size)
+        self.scene.setSceneRect(self.scene.itemsBoundingRect())
 
     @Inputs.data
     @check_sql_input
