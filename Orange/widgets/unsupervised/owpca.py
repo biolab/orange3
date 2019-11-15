@@ -16,7 +16,7 @@ from Orange.widgets.widget import Input, Output
 
 # Maximum number of PCA components that we can set in the widget
 MAX_COMPONENTS = 100
-LINE_NAMES = ["variance covered by a component", "cumulative variance covered"]
+LINE_NAMES = ["component variance", "cumulative variance"]
 
 
 class OWPCA(widget.OWWidget):
@@ -84,13 +84,13 @@ class OWPCA(widget.OWWidget):
         self.variance_spin.setSuffix("%")
 
         form.addRow("Components:", self.components_spin)
-        form.addRow("Variance covered:", self.variance_spin)
+        form.addRow("Explained variance:", self.variance_spin)
 
         # Options
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.normalize_box = gui.checkBox(
             self.options_box, self, "normalize",
-            "Normalize data", callback=self._update_normalize
+            "Normalize variables", callback=self._update_normalize
         )
 
         self.maxp_spin = gui.spin(
