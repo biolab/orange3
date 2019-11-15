@@ -15,10 +15,7 @@ matrix:
 environment:
   global:
     PIP_DISABLE_PIP_VERSION_CHECK: 1
-    # disable threaded builds on Python 3.5+ when using numpy's distutils
-    # (https://github.com/numpy/numpy/issues/7607)
-    BUILD_GLOBAL_OPTIONS: build -j1
-    BUILD_ENV: wheel==0.29.0 pip~=19.0 numpy==1.13.* -r requirements-doc.txt
+    BUILD_ENV: wheel==0.29.0 pip~=19.0
     # SIP 4.19.4+ with PyQt5==5.9.1+ segfault our tests (GH-2756)
     TEST_ENV: sip==4.19.6 PyQt5==5.9.2 numpy>=1.16.0 scipy~=1.0.0 scikit-learn pandas==0.21.1 pymssql
     ORANGE_TEST_DB_URI: 'mssql://sa:Password12!@localhost:1433'
@@ -51,7 +48,7 @@ build_script:
   - python setup.py clean --all
   # get the package version
   - for /f %%f in ('python setup.py --version') do ( set "VERSION=%%f" )
-  - python setup.py %BUILD_GLOBAL_OPTIONS% bdist_wheel
+  - python -m pip wheel --no-deps -w dist ./
 
 test_script:
   - python -m venv --clear build\.test
