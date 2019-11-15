@@ -283,6 +283,22 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
             self.send_signal(self.widget.Inputs.data, self.zoo)
             apply.assert_called()
 
+    def test_stretching(self):
+        self.send_signal(self.widget.Inputs.data, self.heart)
+        enabled = self.widget.controls.stretched.isEnabled
+
+        self.__select_variable("chest pain")
+        self.__select_group("gender")
+        self.assertTrue(enabled())
+
+        self.__select_variable("gender")
+        self.__select_group("gender")
+        self.assertFalse(enabled())
+
+        self.__select_variable("gender")
+        self.__select_group("chest pain")
+        self.assertTrue(enabled())
+
 
 class TestUtils(unittest.TestCase):
     def test(self):
