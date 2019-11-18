@@ -15,7 +15,7 @@ from Orange.widgets.evaluate import owrocanalysis
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.widgets.evaluate.tests.base import EvaluateTest
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import mouseMove
+from Orange.widgets.tests.utils import mouseMove, simulate
 from Orange.tests import test_filename
 
 
@@ -218,3 +218,15 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
             mouseMove(view.viewport(), pos)
             (_, text), _ = show_text.call_args
             self.assertEqual(text, "")
+
+    def test_target_prior(self):
+        w = self.widget
+        self.send_signal(w.Inputs.evaluation_results, self.res)
+        # hard selected
+        self.assertEqual(np.round(4/12 * 100), w.target_prior)
+
+        simulate.combobox_activate_item(w.controls.target_index, "none")
+        self.assertEqual(np.round(3/12 * 100), w.target_prior)
+
+        simulate.combobox_activate_item(w.controls.target_index, "soft")
+        self.assertEqual(np.round(5/12 * 100), w.target_prior)
