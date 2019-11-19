@@ -160,7 +160,6 @@ def open_link(url: QUrl):
 
             if not settings.contains('reporting/machine-id'):
                 settings.setValue('reporting/machine-id', str(uuid.uuid4()))
-        pass
     else:
         QDesktopServices.openUrl(url)
 
@@ -332,8 +331,7 @@ def send_usage_statistics():
 
         is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
 
-        usage = UsageStatistics()
-        data = usage.load()
+        data = UsageStatistics.load()
         for d in data:
             d["Orange Version"] = d.pop("Application Version", "")
             d["Anaconda"] = is_anaconda
@@ -342,11 +340,11 @@ def send_usage_statistics():
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
                 log.warning("Error communicating with server while attempting to send "
-                            "usage statistics.")
+                            "usage statistics. Status code " + str(r.status_code))
                 return
             # success - wipe statistics file
             log.info("Usage statistics sent.")
-            with open(usage.filename(), 'w', encoding="utf-8") as f:
+            with open(UsageStatistics.filename(), 'w', encoding="utf-8") as f:
                 json.dump([], f)
         except (ConnectionError, requests.exceptions.RequestException):
             log.warning("Connection error while attempting to send usage statistics.")
