@@ -501,7 +501,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.info.set_input_summary(summary)
 
     def set_output_summary(self, data):
-        summary = str(len(data)) if data else self.info.NoInput
+        summary = str(len(data)) if data else self.info.NoOutput
         self.info.set_output_summary(summary)
 
     def get_subset_mask(self):
