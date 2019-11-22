@@ -73,7 +73,7 @@ class TestOWKMeans(WidgetTest):
         self.assertFalse(self.widget.mainArea.isHidden())
         self.widget.apply_button.button.click()
 
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertEqual(self.widget.table_view.model().rowCount() > 0, True)
 
     def test_changing_k_changes_radio(self):
@@ -284,13 +284,13 @@ class TestOWKMeans(WidgetTest):
 
         self.KMeansFail.fail_on = set(range(3, 9))
         widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertTrue(widget.Error.failed.is_shown())
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
         self.KMeansFail.fail_on = set()
         widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertFalse(widget.Error.failed.is_shown())
         self.assertEqual(widget.selected_row(), 0)
         self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
@@ -307,7 +307,7 @@ class TestOWKMeans(WidgetTest):
 
         self.KMeansFail.fail_on = set()
         self.widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertFalse(self.widget.Error.failed.is_shown())
         self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
@@ -429,7 +429,7 @@ class TestOWKMeans(WidgetTest):
         # Now, invalidate by changing max_iter
         widget.max_iterations = widget.max_iterations + 1
         widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
 
         self.assertEqual(widget.clusterings, {})
 
@@ -513,7 +513,7 @@ class TestOWKMeans(WidgetTest):
         self.widget.send_data = Mock()
         self.widget.optimize_k = True
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.widget.table_view.selectRow(2)
         self.assertEqual(self.widget.selected_row(), 2)
         self.assertEqual(self.widget.send_data.call_count, 3)
@@ -522,7 +522,7 @@ class TestOWKMeans(WidgetTest):
         w = self.create_widget(OWKMeans, stored_settings=settings)
         w.send_data = Mock()
         self.send_signal(w.Inputs.data, self.data, widget=w)
-        self.wait_until_stop_blocking(widget=w)
+        self.wait_until_finished(widget=w)
         self.assertEqual(w.send_data.call_count, 2)
         self.assertEqual(self.widget.selected_row(), w.selected_row())
 

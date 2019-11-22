@@ -287,6 +287,7 @@ class OWImpute(OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
+        self.cancel()
         self.closeContext()
         self.varmodel[:] = []
         self._variable_imputation_state = {}  # type: VariableState
@@ -304,6 +305,7 @@ class OWImpute(OWWidget):
 
     @Inputs.learner
     def set_learner(self, learner):
+        self.cancel()
         self.learner = learner or self.default_learner
         imputer = self.create_imputer(Method.Model)
         button = self.default_button_group.button(Method.Model)
@@ -380,8 +382,8 @@ class OWImpute(OWWidget):
         w.doneAll.connect(self.__commit_finish)
         w.progressChanged.connect(self.__progress_changed)
         self.__task = Task(futures, w)
-        self.progressBarInit(processEvents=False)
-        self.setBlocking(True)
+        self.progressBarInit()
+        self.setInvalidated(True)
 
     @Slot()
     def __commit_finish(self):
@@ -430,7 +432,7 @@ class OWImpute(OWWidget):
                 return None
 
         self.__task = None
-        self.setBlocking(False)
+        self.setInvalidated(False)
         self.progressBarFinished()
 
         attributes = []
@@ -458,18 +460,22 @@ class OWImpute(OWWidget):
         self.progressBarSet(100. * n / d)
 
     def cancel(self):
+        self.__cancel(wait=False)
+
+    def __cancel(self, wait=False):
         if self.__task is not None:
             task, self.__task = self.__task, None
             task.cancel()
             task.watcher.doneAll.disconnect(self.__commit_finish)
             task.watcher.progressChanged.disconnect(self.__progress_changed)
-            concurrent.futures.wait(task.futures)
-            task.watcher.flush()
+            if wait:
+                concurrent.futures.wait(task.futures)
+                task.watcher.flush()
             self.progressBarFinished()
-            self.setBlocking(False)
+            self.setInvalidated(False)
 
     def onDeleteWidget(self):
-        self.cancel()
+        self.__cancel(wait=True)
         super().onDeleteWidget()
 
     def send_report(self):
