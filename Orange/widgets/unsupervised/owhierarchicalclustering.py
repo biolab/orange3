@@ -894,16 +894,23 @@ class OWHierarchicalClustering(widget.OWWidget):
         model[:] = self.basic_annotations
 
         box = gui.widgetBox(self.controlArea, "Annotations")
-        self.label_cb = combobox.ComboBoxSearch(
+        self.label_cb = cb = combobox.ComboBoxSearch(
             minimumContentsLength=14,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
+        cb.setModel(model)
+        cb.setCurrentIndex(cb.findData(self.annotation, Qt.EditRole))
+
+        def on_annotation_activated():
+            self.annotation = cb.currentData(Qt.EditRole)
+            self._update_labels()
+        cb.activated.connect(on_annotation_activated)
+
+        def on_annotation_changed(value):
+            cb.setCurrentIndex(cb.findData(value, Qt.EditRole))
+        self.connect_control("annotation", on_annotation_changed)
+
         box.layout().addWidget(self.label_cb)
-        self.label_cb.activated[int].connect(
-            lambda idx: setattr(self, "annotation", model[idx])
-        )
-        self.label_cb.activated.connect(self._update_labels)
-        self.label_cb.setModel(model)
 
         box = gui.radioButtons(
             self.controlArea, self, "pruning", box="Pruning",
@@ -1101,7 +1108,6 @@ class OWHierarchicalClustering(widget.OWWidget):
             else:
                 self.annotation = "Enumeration"
             self.openContext(items.domain)
-            self.label_cb.setCurrentIndex(model.indexOf(self.annotation))
         else:
             name_option = bool(
                 items is not None and (
