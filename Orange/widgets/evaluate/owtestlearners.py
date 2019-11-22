@@ -881,6 +881,7 @@ class OWTestLearners(OWWidget):
             task.progress_changed.disconnect(self.setProgressValue)
             task.watcher.finished.disconnect(self.__task_complete)
             self.progressBarFinished()
+            self.setStatusMessage("")
 
     def onDeleteWidget(self):
         self.cancel()
