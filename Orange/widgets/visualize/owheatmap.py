@@ -24,12 +24,12 @@ from AnyQt.QtCore import (
 )
 import pyqtgraph as pg
 
-from Orange.data import Domain, Table, DiscreteVariable, StringVariable, \
-    TimeVariable
+from Orange.data import Domain, Table
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical, kmeans
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -417,7 +417,7 @@ class OWHeatMap(widget.OWWidget):
     # Display legend
     legend = settings.Setting(True)
     # Annotations
-    annotation_index = settings.ContextSetting(0)
+    annotation_var = settings.ContextSetting(None)
     # Stored color palette settings
     color_settings = settings.Setting(None)
     user_palettes = settings.Setting([])
@@ -552,9 +552,10 @@ class OWHeatMap(widget.OWWidget):
 
         annotbox = gui.vBox(box, "Row Annotations", addSpace=False)
         annotbox.setFlat(True)
-        self.annotations_cb = gui.comboBox(
-            annotbox, self, "annotation_index", contentsLength=12,
-            items=self.annotation_vars, callback=self.update_annotations)
+        self.annotation_model = DomainModel(placeholder="(None)")
+        gui.comboBox(
+            annotbox, self, "annotation_var", contentsLength=12,
+            model=self.annotation_model, callback=self.update_annotations)
 
         posbox = gui.vBox(box, "Column Labels Position", addSpace=False)
         posbox.setFlat(True)
@@ -623,9 +624,8 @@ class OWHeatMap(widget.OWWidget):
         self.effective_data = None
         self.kmeans_model = None
         self.merge_indices = None
-        self.annotations_cb.clear()
-        self.annotations_cb.addItem('(None)')
-        self.annotation_vars = ['(None)']
+        self.annotation_model.set_domain(None)
+        self.annotation_var = None
         self.clear_scene()
         self.selected_rows = []
         self.__columns_cache.clear()
@@ -703,19 +703,9 @@ class OWHeatMap(widget.OWWidget):
         self.input_data = input_data
 
         if data is not None:
-            variables = self.data.domain.class_vars + self.data.domain.metas
-            variables = [var for var in variables
-                         if isinstance(var, (DiscreteVariable,
-                                             StringVariable,
-                                             TimeVariable))]
-            self.annotation_vars.extend(variables)
-
-            for var in variables:
-                self.annotations_cb.addItem(*gui.attributeItem(var))
-
-            self.openContext(self.data)
-            if self.annotation_index >= len(self.annotation_vars):
-                self.annotation_index = 0
+            self.annotation_model.set_domain(self.input_data.domain)
+            self.annotation_var = None
+            self.openContext(self.input_data)
 
         self.update_heatmaps()
         if data is not None and self.__pending_selection is not None:
@@ -1410,13 +1400,7 @@ class OWHeatMap(widget.OWWidget):
 
     def update_annotations(self):
         if self.input_data is not None:
-            if self.annotation_vars:
-                var = self.annotation_vars[self.annotation_index]
-                if var == '(None)':
-                    var = None
-            else:
-                var = None
-
+            var = self.annotation_var
             show = var is not None
             if show:
                 annot_col, _ = self.input_data.get_column_view(var)
@@ -1538,8 +1522,7 @@ class OWHeatMap(widget.OWWidget):
             ("Columns:", "Clustering" if self.col_clustering else "No sorting"),
             ("Rows:", "Clustering" if self.row_clustering else "No sorting"),
             ("Row annotation",
-             self.annotation_index > 0 and
-             self.annotation_vars[self.annotation_index])
+             self.annotation_var is not None and self.annotation_var.name)
         ))
         self.report_plot()
 
