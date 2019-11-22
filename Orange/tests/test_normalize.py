@@ -142,3 +142,18 @@ class TestNormalizer(unittest.TestCase):
                     [0., '2003-07-23', 'a', 'b', -1., '?', 0., 'b', '?', 'b', 0],
                     [0., '1967-03-12', 'a', 'b', 1., 'b', -1.225, 'c', '?', 'c', 1]]
         self.compare_tables(data_norm, solution)
+
+    def test_retain_vars_attributes(self):
+        data = Table("iris")
+        attributes = {"foo": "foo", "baz": 1}
+        data.domain.attributes[0].attributes = attributes
+        self.assertDictEqual(
+            Normalize(norm_type=Normalize.NormalizeBySD)(
+                data).domain.attributes[0].attributes, attributes)
+        self.assertDictEqual(
+            Normalize(norm_type=Normalize.NormalizeBySpan)(
+                data).domain.attributes[0].attributes, attributes)
+
+
+if __name__ == "__main__":
+    unittest.main()
