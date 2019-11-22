@@ -359,9 +359,7 @@ class Histogram(QGraphicsWidget):
 
             bins = np.arange(self.n_bins)[:, np.newaxis]
             edges = self.edges if self.attribute.is_discrete else self.edges[1:-1]
-            # Need to digitize on `right` here so the samples will be assigned
-            # to the correct bin for coloring
-            bin_indices = ut.digitize(self.x, bins=edges, right=True)
+            bin_indices = ut.digitize(self.x, bins=edges)
             mask = bin_indices == bins
 
             colors = []
