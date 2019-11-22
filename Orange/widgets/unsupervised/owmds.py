@@ -145,6 +145,7 @@ class OWMDSGraph(OWScatterPlotBase):
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
             pen=pg.mkPen(0.8, width=2, cosmetic=True),
             connect="pairs", antialias=True)
+        self.pairs_curve.setZValue(-1)
         self.plot_widget.addItem(self.pairs_curve)
 
 
