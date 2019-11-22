@@ -118,9 +118,12 @@ def color_palette_table(colors,
     return np.c_[r, g, b]
 
 
-def levels_with_thresholds(low, high, threshold_low, threshold_high):
+def levels_with_thresholds(low, high, threshold_low, threshold_high, center_palette):
     lt = low + (high - low) * threshold_low
     ht = low + (high - low) * threshold_high
+    if center_palette:
+        ht = max(abs(lt), abs(ht))
+        lt = -max(abs(lt), abs(ht))
     return lt, ht
 
 
@@ -317,6 +320,8 @@ class OWHeatMap(widget.OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
+    settings_version = 2
+
     settingsHandler = settings.DomainContextHandler()
 
     NoPosition, PositionTop, PositionBottom = 0, 1, 2
@@ -327,6 +332,7 @@ class OWHeatMap(widget.OWWidget):
     gamma = settings.Setting(0)
     threshold_low = settings.Setting(0.0)
     threshold_high = settings.Setting(1.0)
+    center_palette = settings.Setting(False)
 
     merge_kmeans = settings.Setting(False)
     merge_kmeans_k = settings.Setting(50)
@@ -446,6 +452,9 @@ class OWHeatMap(widget.OWWidget):
         form.addRow("Gamma:", gammaslider)
 
         colorbox.layout().addLayout(form)
+
+        gui.checkBox(colorbox, self, 'center_palette', 'Center colors at 0',
+                     callback=self.update_color_schema)
 
         mergebox = gui.vBox(self.controlArea, "Merge",)
         gui.checkBox(mergebox, self, "merge_kmeans", "Merge by k-means",
@@ -982,7 +991,7 @@ class OWHeatMap(widget.OWWidget):
 
                 hw.set_levels(parts.levels)
                 hw.set_thresholds(self.threshold_low, self.threshold_high)
-                hw.set_color_table(palette)
+                hw.set_color_table(palette, self.center_palette)
                 hw.set_show_averages(self.averages)
                 hw.set_heatmap_data(X_part)
 
@@ -1057,7 +1066,7 @@ class OWHeatMap(widget.OWWidget):
             parts.levels[0], parts.levels[1], self.threshold_low, self.threshold_high,
             parent=widget)
 
-        legend.set_color_table(palette)
+        legend.set_color_table(palette, self.center_palette)
         legend.setMinimumSize(QSizeF(100, 20))
         legend.setVisible(self.legend)
 
@@ -1318,11 +1327,11 @@ class OWHeatMap(widget.OWWidget):
         palette = self.color_palette()
         for heatmap in self.heatmap_widgets():
             heatmap.set_thresholds(self.threshold_low, self.threshold_high)
-            heatmap.set_color_table(palette)
+            heatmap.set_color_table(palette, self.center_palette)
 
         for legend in self.legend_widgets():
             legend.set_thresholds(self.threshold_low, self.threshold_high)
-            legend.set_color_table(palette)
+            legend.set_color_table(palette, self.center_palette)
 
     def update_sorting_examples(self):
         self.update_heatmaps()
@@ -1601,6 +1610,7 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
 
         self.__levels = None
         self.__threshold_low, self.__threshold_high = 0., 1.
+        self.__center_palette = False
         self.__colortable = None
         self.__data = data
 
@@ -1677,8 +1687,9 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
             self.layout().invalidate()
             self.update()
 
-    def set_color_table(self, table):
+    def set_color_table(self, table, center):
         self.__colortable = table
+        self.__center_palette = center
         self._update_pixmap()
         self.update()
 
@@ -1699,7 +1710,8 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
                 lut = None
 
             ll, lh = self.__levels
-            ll, lh = levels_with_thresholds(ll, lh, self.__threshold_low, self.__threshold_high)
+            ll, lh = levels_with_thresholds(ll, lh, self.__threshold_low, self.__threshold_high,
+                                            self.__center_palette)
 
             argb, _ = pg.makeARGB(
                 self.__data, lut=lut, levels=(ll, lh))
@@ -2058,6 +2070,7 @@ class GradientLegendWidget(QGraphicsWidget):
         self.high = high
         self.threshold_low = threshold_low
         self.threshold_high = threshold_high
+        self.center_palette = False
         self.color_table = None
 
         layout = QGraphicsLinearLayout(Qt.Vertical)
@@ -2084,8 +2097,9 @@ class GradientLegendWidget(QGraphicsWidget):
         layout.addItem(self.__pixitem)
         self.__update()
 
-    def set_color_table(self, color_table):
+    def set_color_table(self, color_table, center):
         self.color_table = color_table
+        self.center_palette = center
         self.__update()
 
     def set_thresholds(self, threshold_low, threshold_high):
@@ -2097,7 +2111,8 @@ class GradientLegendWidget(QGraphicsWidget):
         data = np.linspace(self.low, self.high, num=1000)
         data = data.reshape((1, -1))
         ll, lh = levels_with_thresholds(self.low, self.high,
-                                        self.threshold_low, self.threshold_high)
+                                        self.threshold_low, self.threshold_high,
+                                        self.center_palette)
         argb, _ = pg.makeARGB(data, lut=self.color_table,
                               levels=(ll, lh))
         qimg = pg.makeQImage(argb, transpose=False)
