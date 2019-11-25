@@ -379,17 +379,20 @@ class OWROCAnalysis(widget.OWWidget):
         gui.indentedBox(box, orientation=grid)
 
         sp = gui.spin(box, self, "fp_cost", 1, 1000, 10,
+                      alignment=Qt.AlignRight,
                       callback=self._on_display_perf_line_changed)
         grid.addWidget(QLabel("FP Cost:"), 0, 0)
         grid.addWidget(sp, 0, 1)
 
         sp = gui.spin(box, self, "fn_cost", 1, 1000, 10,
+                      alignment=Qt.AlignRight,
                       callback=self._on_display_perf_line_changed)
         grid.addWidget(QLabel("FN Cost:"))
         grid.addWidget(sp, 1, 1)
         self.target_prior_sp = gui.spin(box, self, "target_prior", 1, 99,
-                                        callback=self._on_target_prior_chaned)
-        self.target_prior_sp.setSuffix("%")
+                                        alignment=Qt.AlignRight,
+                                        callback=self._on_target_prior_changed)
+        self.target_prior_sp.setSuffix(" %")
         self.target_prior_sp.addAction(QAction("Auto", sp))
         grid.addWidget(QLabel("Prior target class probability:"))
         grid.addWidget(self.target_prior_sp, 2, 1)
@@ -702,7 +705,7 @@ class OWROCAnalysis(widget.OWWidget):
         if self.results is not None:
             self._setup_plot()
 
-    def _on_target_prior_chaned(self):
+    def _on_target_prior_changed(self):
         self.target_prior_sp.setStyleSheet("color: black;")
         self._on_display_perf_line_changed()
 
