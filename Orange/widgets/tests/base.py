@@ -563,9 +563,10 @@ class ProjectionWidgetTestMixin:
         properly set/updated"""
         self.send_signal(self.widget.Inputs.data, self.data)
 
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
 
         self.assertIsNotNone(self.widget.graph.scatterplot_item)
 
@@ -657,11 +658,10 @@ class ProjectionWidgetTestMixin:
 
     def test_subset_data_color(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.widget.Inputs.data, self.data)
-
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
-
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
         self.send_signal(self.widget.Inputs.data_subset, self.data[:10])
         subset = [brush.color().name() == "#46befa" for brush in
                   self.widget.graph.scatterplot_item.data['brush'][:10]]
@@ -723,18 +723,20 @@ class ProjectionWidgetTestMixin:
 
     def test_saved_selection(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.widget.Inputs.data, self.data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
 
         self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
         settings = self.widget.settingsHandler.pack_data(self.widget)
         w = self.create_widget(self.widget.__class__, stored_settings=settings)
 
         self.send_signal(self.widget.Inputs.data, self.data, widget=w)
-        if w.isBlocking():
-            spy = QSignalSpy(w.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(w, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
 
         self.assertEqual(np.sum(w.graph.selection), 15)
         np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
@@ -770,9 +772,10 @@ class ProjectionWidgetTestMixin:
         self.assertEqual(info._StateInfo__output_summary.brief, "")
 
         self.send_signal(self.widget.Inputs.data, self.data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
         ind = self._select_data()
         self.assertEqual(info._StateInfo__input_summary.brief,
                          str(len(self.data)))
