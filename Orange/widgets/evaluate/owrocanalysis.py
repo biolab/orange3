@@ -7,7 +7,7 @@ import operator
 from functools import reduce, wraps
 from collections import namedtuple, deque, OrderedDict
 
-import numpy
+import numpy as np
 import sklearn.metrics as skl_metrics
 
 from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction, QToolTip
@@ -109,7 +109,7 @@ def roc_data_from_results(results, clf_index, target):
     if curves:
         fpr, tpr, std = roc_curve_vertical_average(curves)
 
-        thresh = numpy.zeros_like(fpr) * numpy.nan
+        thresh = np.zeros_like(fpr) * np.nan
         hull = roc_curve_convex_hull((fpr, tpr, thresh))
         v_avg = ROCAveragedVert(
             ROCPoints(fpr, tpr, thresh),
@@ -119,15 +119,15 @@ def roc_data_from_results(results, clf_index, target):
     else:
         # return an invalid vertical averaged ROC
         v_avg = ROCAveragedVert(
-            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
-            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
-            numpy.array([])
+            ROCPoints(np.array([]), np.array([]), np.array([])),
+            ROCPoints(np.array([]), np.array([]), np.array([])),
+            np.array([])
         )
 
     if curves:
-        all_thresh = numpy.hstack([t for _, _, t in curves])
-        all_thresh = numpy.clip(all_thresh, 0.0 - 1e-10, 1.0 + 1e-10)
-        all_thresh = numpy.unique(all_thresh)[::-1]
+        all_thresh = np.hstack([t for _, _, t in curves])
+        all_thresh = np.clip(all_thresh, 0.0 - 1e-10, 1.0 + 1e-10)
+        all_thresh = np.unique(all_thresh)[::-1]
         thresh = all_thresh[::max(all_thresh.size // 10, 1)]
 
         (fpr, fpr_std), (tpr, tpr_std) = \
@@ -144,10 +144,10 @@ def roc_data_from_results(results, clf_index, target):
     else:
         # return an invalid threshold averaged ROC
         t_avg = ROCAveragedThresh(
-            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
-            ROCPoints(numpy.array([]), numpy.array([]), numpy.array([])),
-            numpy.array([]),
-            numpy.array([])
+            ROCPoints(np.array([]), np.array([]), np.array([])),
+            ROCPoints(np.array([]), np.array([]), np.array([])),
+            np.array([]),
+            np.array([])
         )
     return ROCData(merged_curve, fold_curves, v_avg, t_avg)
 
@@ -179,8 +179,8 @@ def plot_curve(curve, pen=None, shadow_pen=None, symbol="+",
         "Extend ROCPoints to include coordinate origin if not already present"
         if points.tpr.size and (points.tpr[0] > 0 or points.fpr[0] > 0):
             points = ROCPoints(
-                numpy.r_[0, points.fpr], numpy.r_[0, points.tpr],
-                numpy.r_[points.thresholds[0] + 1, points.thresholds]
+                np.r_[0, points.fpr], np.r_[0, points.tpr],
+                np.r_[points.thresholds[0] + 1, points.thresholds]
             )
         return points
 
@@ -314,7 +314,7 @@ class OWROCAnalysis(widget.OWWidget):
 
     fp_cost = settings.Setting(500)
     fn_cost = settings.Setting(500)
-    target_prior = settings.Setting(50.0)
+    target_prior = settings.Setting(50.0, schema_only=True)
 
     #: ROC Averaging Types
     Merge, Vertical, Threshold, NoAveraging = 0, 1, 2, 3
@@ -379,20 +379,23 @@ class OWROCAnalysis(widget.OWWidget):
         gui.indentedBox(box, orientation=grid)
 
         sp = gui.spin(box, self, "fp_cost", 1, 1000, 10,
+                      alignment=Qt.AlignRight,
                       callback=self._on_display_perf_line_changed)
         grid.addWidget(QLabel("FP Cost:"), 0, 0)
         grid.addWidget(sp, 0, 1)
 
         sp = gui.spin(box, self, "fn_cost", 1, 1000, 10,
+                      alignment=Qt.AlignRight,
                       callback=self._on_display_perf_line_changed)
         grid.addWidget(QLabel("FN Cost:"))
         grid.addWidget(sp, 1, 1)
-        sp = gui.spin(box, self, "target_prior", 1, 99,
-                      callback=self._on_display_perf_line_changed)
-        sp.setSuffix("%")
-        sp.addAction(QAction("Auto", sp))
+        self.target_prior_sp = gui.spin(box, self, "target_prior", 1, 99,
+                                        alignment=Qt.AlignRight,
+                                        callback=self._on_target_prior_changed)
+        self.target_prior_sp.setSuffix(" %")
+        self.target_prior_sp.addAction(QAction("Auto", sp))
         grid.addWidget(QLabel("Prior target class probability:"))
-        grid.addWidget(sp, 2, 1)
+        grid.addWidget(self.target_prior_sp, 2, 1)
 
         self.plotview = pg.GraphicsView(background="w")
         self.plotview.setFrameStyle(QFrame.StyledPanel)
@@ -472,6 +475,23 @@ class OWROCAnalysis(widget.OWWidget):
 
         class_var = results.data.domain.class_var
         self.target_cb.addItems(class_var.values)
+        self._set_target_prior()
+
+    def _set_target_prior(self):
+        """
+        This function sets the initial target class probability prior value
+        based on the input data.
+        """
+        if self.results.data:
+            # here we can use target_index directly since values in the
+            # dropdown are sorted in same order than values in the table
+            target_values_cnt = np.count_nonzero(
+                self.results.data.Y == self.target_index)
+            count_all = np.count_nonzero(~np.isnan(self.results.data.Y))
+            self.target_prior = np.round(target_values_cnt / count_all * 100)
+
+            # set the spin text to gray color when set automatically
+            self.target_prior_sp.setStyleSheet("color: gray;")
 
     def curve_data(self, target, clf_idx):
         """Return `ROCData' for the given target and classifier."""
@@ -533,7 +553,7 @@ class OWROCAnalysis(widget.OWWidget):
 
                 if self.display_def_threshold and curve.is_valid:
                     points = curve.points
-                    ind = numpy.argmin(numpy.abs(points.thresholds - 0.5))
+                    ind = np.argmin(np.abs(points.thresholds - 0.5))
                     item = pg.TextItem(
                         text="{:.3f}".format(points.thresholds[ind]),
                     )
@@ -641,11 +661,11 @@ class OWROCAnalysis(widget.OWWidget):
                 if self._tooltip_cache:
                     cache_pt, cache_thresh, cache_clf, cache_ave = self._tooltip_cache
                     curr_thresh, curr_clf = [], []
-                    if numpy.linalg.norm(mouse_pt - cache_pt) < 10e-6 \
+                    if np.linalg.norm(mouse_pt - cache_pt) < 10e-6 \
                             and cache_ave == self.roc_averaging:
-                        mask = numpy.equal(cache_clf, clf_idx)
-                        curr_thresh = numpy.compress(mask, cache_thresh).tolist()
-                        curr_clf = numpy.compress(mask, cache_clf).tolist()
+                        mask = np.equal(cache_clf, clf_idx)
+                        curr_thresh = np.compress(mask, cache_thresh).tolist()
+                        curr_clf = np.compress(mask, cache_clf).tolist()
                     else:
                         QToolTip.showText(QCursor.pos(), "")
                         self._tooltip_cache = None
@@ -657,13 +677,13 @@ class OWROCAnalysis(widget.OWWidget):
                         continue
 
                 curve_pts = curve.curve.points
-                roc_points = numpy.column_stack((curve_pts.fpr, curve_pts.tpr))
-                diff = numpy.subtract(roc_points, mouse_pt)
+                roc_points = np.column_stack((curve_pts.fpr, curve_pts.tpr))
+                diff = np.subtract(roc_points, mouse_pt)
                 # Find closest point on curve and save the corresponding threshold
-                idx_closest = numpy.argmin(numpy.linalg.norm(diff, axis=1))
+                idx_closest = np.argmin(np.linalg.norm(diff, axis=1))
 
                 thresh = curve_pts.thresholds[idx_closest]
-                if not numpy.isnan(thresh):
+                if not np.isnan(thresh):
                     valid_thresh.append(thresh)
                     valid_clf.append(clf_idx)
                     pt = [curve_pts.fpr[idx_closest], curve_pts.tpr[idx_closest]]
@@ -677,12 +697,17 @@ class OWROCAnalysis(widget.OWWidget):
 
     def _on_target_changed(self):
         self.plot.clear()
+        self._set_target_prior()
         self._setup_plot()
 
     def _on_classifiers_changed(self):
         self.plot.clear()
         if self.results is not None:
             self._setup_plot()
+
+    def _on_target_prior_changed(self):
+        self.target_prior_sp.setStyleSheet("color: black;")
+        self._on_display_perf_line_changed()
 
     def _on_display_perf_line_changed(self):
         if self.roc_averaging == OWROCAnalysis.Merge:
@@ -711,8 +736,8 @@ class OWROCAnalysis(widget.OWWidget):
             hull = self._rocch
             if hull.is_valid:
                 ind = roc_iso_performance_line(m, hull)
-                angle = numpy.arctan2(m, 1)  # in radians
-                self._perf_line.setAngle(angle * 180 / numpy.pi)
+                angle = np.arctan2(m, 1)  # in radians
+                self._perf_line.setAngle(angle * 180 / np.pi)
                 self._perf_line.setPos((hull.fpr[ind[0]], hull.tpr[ind[0]]))
             else:
                 self._perf_line.setVisible(False)
@@ -741,15 +766,15 @@ def interp(x, xp, fp, left=None, right=None):
     Like numpy.interp except for handling of running sequences of
     same values in `xp`.
     """
-    x = numpy.asanyarray(x)
-    xp = numpy.asanyarray(xp)
-    fp = numpy.asanyarray(fp)
+    x = np.asanyarray(x)
+    xp = np.asanyarray(xp)
+    fp = np.asanyarray(fp)
 
     if xp.shape != fp.shape:
         raise ValueError("xp and fp must have the same shape")
 
-    ind = numpy.searchsorted(xp, x, side="right")
-    fx = numpy.zeros(len(x))
+    ind = np.searchsorted(xp, x, side="right")
+    fx = np.zeros(len(x))
 
     under = ind == 0
     over = ind == len(xp)
@@ -773,12 +798,12 @@ def interp(x, xp, fp, left=None, right=None):
 
 def roc_curve_for_fold(res, fold, clf_idx, target):
     fold_actual = res.actual[fold]
-    P = numpy.sum(fold_actual == target)
+    P = np.sum(fold_actual == target)
     N = fold_actual.size - P
 
     if P == 0 or N == 0:
         # Undefined TP and FP rate
-        return numpy.array([]), numpy.array([]), numpy.array([])
+        return np.array([]), np.array([]), np.array([])
 
     fold_probs = res.probabilities[clf_idx][fold][:, target]
     return skl_metrics.roc_curve(
@@ -789,12 +814,12 @@ def roc_curve_for_fold(res, fold, clf_idx, target):
 def roc_curve_vertical_average(curves, samples=10):
     if not curves:
         raise ValueError("No curves")
-    fpr_sample = numpy.linspace(0.0, 1.0, samples)
+    fpr_sample = np.linspace(0.0, 1.0, samples)
     tpr_samples = []
     for fpr, tpr, _ in curves:
         tpr_samples.append(interp(fpr_sample, fpr, tpr, left=0, right=1))
 
-    tpr_samples = numpy.array(tpr_samples)
+    tpr_samples = np.array(tpr_samples)
     return fpr_sample, tpr_samples.mean(axis=0), tpr_samples.std(axis=0)
 
 
@@ -803,14 +828,14 @@ def roc_curve_threshold_average(curves, thresh_samples):
         raise ValueError("No curves")
     fpr_samples, tpr_samples = [], []
     for fpr, tpr, thresh in curves:
-        ind = numpy.searchsorted(thresh[::-1], thresh_samples, side="left")
+        ind = np.searchsorted(thresh[::-1], thresh_samples, side="left")
         ind = ind[::-1]
-        ind = numpy.clip(ind, 0, len(thresh) - 1)
+        ind = np.clip(ind, 0, len(thresh) - 1)
         fpr_samples.append(fpr[ind])
         tpr_samples.append(tpr[ind])
 
-    fpr_samples = numpy.array(fpr_samples)
-    tpr_samples = numpy.array(tpr_samples)
+    fpr_samples = np.array(fpr_samples)
+    tpr_samples = np.array(tpr_samples)
 
     return ((fpr_samples.mean(axis=0), fpr_samples.std(axis=0)),
             (tpr_samples.mean(axis=0), fpr_samples.std(axis=0)))
@@ -825,8 +850,8 @@ def roc_curve_thresh_avg_interp(curves, thresh_samples):
         fpr_samples.append(fpr)
         tpr_samples.append(tpr)
 
-    fpr_samples = numpy.array(fpr_samples)
-    tpr_samples = numpy.array(tpr_samples)
+    fpr_samples = np.array(fpr_samples)
+    tpr_samples = np.array(tpr_samples)
 
     return ((fpr_samples.mean(axis=0), fpr_samples.std(axis=0)),
             (tpr_samples.mean(axis=0), fpr_samples.std(axis=0)))
@@ -842,7 +867,7 @@ def roc_curve_convex_hull(curve):
         if x1 != x2:
             return  (y2 - y1) / (x2 - x1)
         else:
-            return numpy.inf
+            return np.inf
 
     fpr, _, _ = curve
 
@@ -866,9 +891,9 @@ def roc_curve_convex_hull(curve):
                 else:
                     hull.pop()
 
-    fpr = numpy.array([p.fpr for p in hull])
-    tpr = numpy.array([p.tpr for p in hull])
-    thres = numpy.array([p.threshold for p in hull])
+    fpr = np.array([p.fpr for p in hull])
+    tpr = np.array([p.tpr for p in hull])
+    thres = np.array([p.threshold for p in hull])
     return (fpr, tpr, thres)
 
 
@@ -877,9 +902,9 @@ def convex_hull(curves):
         x1, y1, *_ = p1
         x2, y2, *_ = p2
         if x1 != x2:
-            return  (y2 - y1) / (x2 - x1)
+            return (y2 - y1) / (x2 - x1)
         else:
-            return numpy.inf
+            return np.inf
 
     curves = [list(map(RocPoint._make, zip(*curve))) for curve in curves]
 
@@ -887,10 +912,10 @@ def convex_hull(curves):
     merged_points = sorted(merged_points)
 
     if not merged_points:
-        return ROCPoints(numpy.array([]), numpy.array([]), numpy.array([]))
+        return ROCPoints(np.array([]), np.array([]), np.array([]))
 
     if len(merged_points) <= 2:
-        return ROCPoints._make(map(numpy.array, zip(*merged_points)))
+        return ROCPoints._make(map(np.array, zip(*merged_points)))
 
     points = iter(merged_points)
 
@@ -910,7 +935,7 @@ def convex_hull(curves):
                 else:
                     hull.pop()
 
-    return ROCPoints._make(map(numpy.array, zip(*hull)))
+    return ROCPoints._make(map(np.array, zip(*hull)))
 
 
 def roc_iso_performance_line(slope, hull, tol=1e-5):
@@ -927,9 +952,9 @@ def roc_iso_performance_line(slope, hull, tol=1e-5):
     # m * x - 1y + 1 = 0
     a, b, c = slope, -1, 1
     dist = distance_to_line(a, b, c, fpr, tpr)
-    mindist = numpy.min(dist)
+    mindist = np.min(dist)
 
-    return numpy.flatnonzero((dist - mindist) <= tol)
+    return np.flatnonzero((dist - mindist) <= tol)
 
 
 def distance_to_line(a, b, c, x0, y0):
@@ -937,13 +962,13 @@ def distance_to_line(a, b, c, x0, y0):
     Return the distance to a line ax + by + c = 0
     """
     assert a != 0 or b != 0
-    return numpy.abs(a * x0 + b * y0 + c) / numpy.sqrt(a ** 2 + b ** 2)
+    return np.abs(a * x0 + b * y0 + c) / np.sqrt(a ** 2 + b ** 2)
 
 
 def roc_iso_performance_slope(fp_cost, fn_cost, p):
     assert 0 <= p <= 1
     if fn_cost * p == 0:
-        return numpy.inf
+        return np.inf
     else:
         return (fp_cost * (1. - p)) / (fn_cost * p)
 
