@@ -455,6 +455,7 @@ class OWDataTable(OWWidget):
         """Set the input dataset."""
         self.closeContext()
         if data is not None:
+            datasetname = getattr(data, "name", "Data")
             if tid in self._inputs:
                 # update existing input slot
                 slot = self._inputs[tid]
@@ -462,6 +463,8 @@ class OWDataTable(OWWidget):
                 # reset the (header) view state.
                 view.setModel(None)
                 view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+                assert self.tabs.indexOf(view) != -1
+                self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
             else:
                 view = QTableView()
                 view.setSortingEnabled(True)
@@ -484,9 +487,10 @@ class OWDataTable(OWWidget):
                         view.model().sort(index, order)
 
                 header.sortIndicatorChanged.connect(sort_reset)
+                self.tabs.addTab(view, datasetname)
 
             view.dataset = data
-            self.tabs.addTab(view, getattr(data, "name", "Data"))
+            self.tabs.setCurrentWidget(view)
 
             self._setup_table_view(view, data)
             slot = TableSlot(tid, data, table_summary(data), view)
