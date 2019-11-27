@@ -889,6 +889,13 @@ class TimeVariable(ContinuousVariable):
              r'\d{2}\d{2}\d{2}\.\d+|'
              r'\d{1,4}(-?\d{2,3})?'
              r')$')
+
+    class InvalidDateTimeFormatError(ValueError):
+        def __init__(self, date_string):
+            super().__init__(
+                "Invalid datetime format '{}'. "
+                "Only ISO 8601 supported.".format(date_string))
+
     _matches_iso_format = re.compile(REGEX).match
 
     # UTC offset and associated timezone. If parsed datetime values provide an
@@ -954,8 +961,6 @@ class TimeVariable(ContinuousVariable):
             return Unknown
         datestr = datestr.strip().rstrip('Z')
 
-        ERROR = ValueError("Invalid datetime format '{}'. "
-                           "Only ISO 8601 supported.".format(datestr))
         if not self._matches_iso_format(datestr):
             try:
                 # If it is a number, assume it is a unix timestamp
@@ -963,7 +968,7 @@ class TimeVariable(ContinuousVariable):
                 self.have_date = self.have_time = 1
                 return value
             except ValueError:
-                raise ERROR
+                raise self.InvalidDateTimeFormatError(datestr)
 
         for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
             try:
@@ -984,7 +989,7 @@ class TimeVariable(ContinuousVariable):
                                     self.UNIX_EPOCH.day)
                 break
         else:
-            raise ERROR
+            raise self.InvalidDateTimeFormatError(datestr)
 
         # Remember UTC offset. If not all parsed values share the same offset,
         # remember none of it.
@@ -1009,6 +1014,16 @@ class TimeVariable(ContinuousVariable):
             return dt.timestamp()
         except OverflowError:
             return -(self.UNIX_EPOCH - dt).total_seconds()
+
+    def parse_exact_iso(self, datestr):
+        """
+        This function is a meta function to `parse` function. It checks
+        whether the date is of the iso format - it does not accept float-like
+        date.
+        """
+        if not self._matches_iso_format(datestr):
+            raise self.InvalidDateTimeFormatError(datestr)
+        return self.parse(datestr)
 
     def to_val(self, s):
         """

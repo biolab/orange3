@@ -145,30 +145,39 @@ def guess_data_type(orig_values, namask=None):
     """
     valuemap, values = None, orig_values
     is_discrete = is_discrete_values(orig_values)
+    orig_values = np.asarray(orig_values, dtype=str)
+    if namask is None:
+        namask = isnastr(orig_values)
     if is_discrete:
         valuemap = sorted(is_discrete)
         coltype = DiscreteVariable
     else:
         # try to parse as float
-        orig_values = np.asarray(orig_values)
-        if namask is None:
-            namask = isnastr(orig_values)
         values = np.empty_like(orig_values, dtype=float)
         values[namask] = np.nan
         try:
             np.copyto(values, orig_values, where=~namask, casting="unsafe")
         except ValueError:
-            tvar = TimeVariable('_')
-            try:
-                values[~namask] = [tvar.parse(i) for i in orig_values[~namask]]
-            except ValueError:
-                coltype = StringVariable
-                # return original_values
-                values = orig_values
-            else:
-                coltype = TimeVariable
+            values = orig_values
+            coltype = StringVariable
         else:
             coltype = ContinuousVariable
+
+    if coltype is not ContinuousVariable:
+        # when not continuous variable it can still be time variable even it
+        # was before recognized as a discrete
+        tvar = TimeVariable('_')
+        # introducing new variable prevent overwriting orig_values and values
+        temp_values = np.empty_like(orig_values, dtype=float)
+        try:
+            temp_values[~namask] = [
+                tvar.parse_exact_iso(i) for i in orig_values[~namask]]
+        except ValueError:
+            pass
+        else:
+            valuemap = None
+            coltype = TimeVariable
+            values = temp_values
     return valuemap, values, coltype
 
 
