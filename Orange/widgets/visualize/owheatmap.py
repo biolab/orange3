@@ -11,7 +11,7 @@ from AnyQt.QtWidgets import (
     QSizePolicy, QGraphicsScene, QGraphicsView, QGraphicsRectItem,
     QGraphicsWidget, QGraphicsSimpleTextItem, QGraphicsPixmapItem,
     QGraphicsGridLayout, QGraphicsLinearLayout, QGraphicsLayoutItem,
-    QFormLayout, QApplication
+    QFormLayout, QApplication, QComboBox
 )
 from AnyQt.QtGui import (
     QFontMetrics, QPen, QPixmap, QColor, QLinearGradient, QPainter,
@@ -24,12 +24,14 @@ from AnyQt.QtCore import (
 )
 import pyqtgraph as pg
 
+from orangewidget.utils.combobox import ComboBox
+
 from Orange.data import Domain, Table
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical, kmeans
-from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -384,9 +386,23 @@ _default_palette_index = \
     [name for name, _, in _color_palettes].index("Blue-Yellow")
 
 
+def cbselect(cb: QComboBox, value, role: Qt.ItemDataRole = Qt.EditRole) -> None:
+    """
+    Find and select the `value` in the `cb` QComboBox.
+
+    Parameters
+    ----------
+    cb: QComboBox
+    value: Any
+    role: Qt.ItemDataRole
+        The data role in the combo box model to match value against
+    """
+    cb.setCurrentIndex(cb.findData(value, role))
+
+
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
-    description = "Plot a heat map for a pair of attributes."
+    description = "Plot a data matrix heatmap."
     icon = "icons/Heatmap.svg"
     priority = 260
     keywords = []
@@ -418,6 +434,8 @@ class OWHeatMap(widget.OWWidget):
     legend = settings.Setting(True)
     # Annotations
     annotation_var = settings.ContextSetting(None)
+    split_by_var = settings.ContextSetting(None)
+
     # Stored color palette settings
     color_settings = settings.Setting(None)
     user_palettes = settings.Setting([])
@@ -542,6 +560,33 @@ class OWHeatMap(widget.OWWidget):
             cluster_box, self, "row_clustering", "Rows",
             callback=self.update_clustering_examples)
 
+        box = gui.vBox(self.controlArea, "Split By")
+
+        self.row_split_model = DomainModel(
+            placeholder="(None)",
+            valid_types=(Orange.data.DiscreteVariable,),
+            parent=self,
+        )
+        self.row_split_cb = cb = ComboBox(
+            enabled=not self.merge_kmeans,
+            sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLengthWithIcon,
+            minimumContentsLength=14,
+            toolTip="Split the heatmap vertically by a categorical column"
+        )
+        self.row_split_cb.setModel(self.row_split_model)
+        self.connect_control(
+            "split_by_var", lambda value, cb=cb: cbselect(cb, value)
+        )
+        self.connect_control(
+            "merge_kmeans", self.row_split_cb.setDisabled
+        )
+        self.split_by_var = None
+
+        self.row_split_cb.activated.connect(
+            self.__on_split_rows_activated
+        )
+        box.layout().addWidget(self.row_split_cb)
+
         box = gui.vBox(self.controlArea, 'Annotation && Legends')
 
         gui.checkBox(box, self, 'legend', 'Show legend',
@@ -626,6 +671,8 @@ class OWHeatMap(widget.OWWidget):
         self.merge_indices = None
         self.annotation_model.set_domain(None)
         self.annotation_var = None
+        self.row_split_model.set_domain(None)
+        self.split_by_var = None
         self.clear_scene()
         self.selected_rows = []
         self.__columns_cache.clear()
@@ -705,7 +752,14 @@ class OWHeatMap(widget.OWWidget):
         if data is not None:
             self.annotation_model.set_domain(self.input_data.domain)
             self.annotation_var = None
+            self.row_split_model.set_domain(data.domain)
+            if data.domain.has_discrete_class:
+                self.split_by_var = data.domain.class_var
+            else:
+                self.split_by_var = None
             self.openContext(self.input_data)
+            if self.split_by_var not in self.row_split_model:
+                self.split_by_var = None
 
         self.update_heatmaps()
         if data is not None and self.__pending_selection is not None:
@@ -714,6 +768,14 @@ class OWHeatMap(widget.OWWidget):
             self.__pending_selection = None
 
         self.unconditional_commit()
+
+    def __on_split_rows_activated(self):
+        self.set_split_variable(self.row_split_cb.currentData(Qt.EditRole))
+
+    def set_split_variable(self, var):
+        if var != self.split_by_var:
+            self.split_by_var = var
+            self.update_heatmaps()
 
     def update_heatmaps(self):
         if self.data is not None:
@@ -727,7 +789,9 @@ class OWHeatMap(widget.OWWidget):
             elif self.merge_kmeans and len(self.data) < 3:
                 self.Error.not_enough_instances_k_means()
             else:
-                self.construct_heatmaps(self.data)
+                self.heatmapparts = self.construct_heatmaps(
+                    self.data, self.split_by_var
+                )
                 self.construct_heatmaps_scene(
                     self.heatmapparts, self.effective_data)
                 self.selected_rows = []
@@ -841,19 +905,7 @@ class OWHeatMap(widget.OWWidget):
                       for col in parts.columns]
         return parts._replace(columns=col_groups, rows=parts.rows)
 
-    def construct_heatmaps(self, data, split_label=None):
-        if split_label is not None:
-            groups = split_domain(data.domain, split_label)
-            assert len(groups) > 0
-        else:
-            groups = [("", data.domain)]
-
-        if data.domain.has_discrete_class:
-            group_var = data.domain.class_var
-        else:
-            group_var = None
-
-        group_label = split_label
+    def construct_heatmaps(self, data, group_var=None, group_label=None) -> 'Parts':
         if self.merge_kmeans:
             if self.kmeans_model is None:
                 effective_data = self.input_data.transform(
@@ -914,8 +966,7 @@ class OWHeatMap(widget.OWWidget):
         # Cache the updated parts
         self.__rows_cache[rows_cache_key] = parts
         self.__columns_cache[group_label] = parts
-
-        self.heatmapparts = parts
+        return parts
 
     def construct_heatmaps_scene(self, parts, data):
         def select_row(item):
@@ -1521,8 +1572,10 @@ class OWHeatMap(widget.OWWidget):
         self.report_items((
             ("Columns:", "Clustering" if self.col_clustering else "No sorting"),
             ("Rows:", "Clustering" if self.row_clustering else "No sorting"),
+            ("Split:",
+             self.split_by_var is not None and self.split_by_var.name),
             ("Row annotation",
-             self.annotation_var is not None and self.annotation_var.name)
+             self.annotation_var is not None and self.annotation_var.name),
         ))
         self.report_plot()
 
