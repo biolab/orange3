@@ -321,6 +321,13 @@ a
             self.widget.load_data()
         self.assertTrue(self.widget.Error.missing_reader.is_shown())
 
+    def test_domain_edit_no_changes(self):
+        self.open_dataset("iris")
+        data = self.get_output(self.widget.Outputs.data)
+        # When no changes have been made in the domain editor,
+        # output data should be the same object (and not recreated)
+        self.assertTrue(data is self.widget.data)
+
     def test_domain_edit_on_sparse_data(self):
         iris = Table("iris").to_sparse()
 
