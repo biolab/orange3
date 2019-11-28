@@ -1,8 +1,10 @@
+import enum
 import math
 import itertools
 
 from collections import namedtuple
-from types import SimpleNamespace as namespace
+
+from typing import Iterable, Mapping, Any, Optional, Union, TypeVar, Type
 
 import numpy as np
 import scipy.sparse as sp
@@ -31,7 +33,7 @@ from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical, kmeans
-from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -306,6 +308,63 @@ def cbselect(cb: QComboBox, value, role: Qt.ItemDataRole = Qt.EditRole) -> None:
     cb.setCurrentIndex(cb.findData(value, role))
 
 
+class Clustering(enum.IntEnum):
+    #: No clustering
+    None_ = 0
+    #: Hierarchical clustering
+    Clustering = 1
+    #: Hierarchical clustering with optimal leaf ordering
+    OrderedClustering = 2
+
+
+ClusteringRole = Qt.UserRole + 13
+#: Item data for clustering method selection models
+ClusteringModelData = [
+    {
+        Qt.DisplayRole: "None",
+        Qt.ToolTipRole: "No clustering",
+        ClusteringRole: Clustering.None_,
+    }, {
+        Qt.DisplayRole: "Clustering",
+        Qt.ToolTipRole: "Apply hierarchical clustering",
+        ClusteringRole: Clustering.Clustering,
+    }, {
+        Qt.DisplayRole: "Clustering (opt. ordering)",
+        Qt.ToolTipRole: "Apply hierarchical clustering with optimal leaf "
+                        "ordering.",
+        ClusteringRole: Clustering.OrderedClustering,
+    }
+]
+
+
+def create_list_model(
+        items: Iterable[Mapping[Qt.ItemDataRole, Any]],
+        parent: Optional[QObject] = None,
+) -> QStandardItemModel:
+    """Create list model from an item date iterable."""
+    model = QStandardItemModel(parent)
+    for item in items:
+        sitem = QStandardItem()
+        for role, value in item.items():
+            sitem.setData(value, role)
+        model.appendRow([sitem])
+    return model
+
+
+E = TypeVar("E", bound=enum.Enum)  # pylint: disable=invalid-name
+
+
+def enum_get(etype: Type[E], name: str, default: E) -> E:
+    """
+    Return an Enum member by `name`. If no such member exists in `etype`
+    return `default`.
+    """
+    try:
+        return etype[name]
+    except LookupError:
+        return default
+
+
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Plot a data matrix heatmap."
@@ -320,14 +379,16 @@ class OWHeatMap(widget.OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
-    settings_version = 2
+    settings_version = 3
 
     settingsHandler = settings.DomainContextHandler()
 
     NoPosition, PositionTop, PositionBottom = 0, 1, 2
 
+    # Disable clustering for inputs bigger than this
+    MaxClustering = 25000
     # Disable cluster leaf ordering for inputs bigger than this
-    _MaxOrderedClustering = 2000
+    MaxOrderedClustering = 1000
 
     gamma = settings.Setting(0)
     threshold_low = settings.Setting(0.0)
@@ -343,14 +404,15 @@ class OWHeatMap(widget.OWWidget):
     legend = settings.Setting(True)
     # Annotations
     annotation_var = settings.ContextSetting(None)
+    # Discrete variable used to split that data/heatmaps (vertically)
     split_by_var = settings.ContextSetting(None)
-
     # Stored color palette settings
     color_settings = settings.Setting(None)
     user_palettes = settings.Setting([])
 
-    col_clustering = settings.Setting(False)
-    row_clustering = settings.Setting(False)
+    # Selected row/column clustering method (name)
+    col_clustering_method: str = settings.Setting(Clustering.None_.name)
+    row_clustering_method: str = settings.Setting(Clustering.None_.name)
 
     palette_index = settings.Setting(_default_palette_index)
     column_label_pos = settings.Setting(PositionTop)
@@ -383,6 +445,17 @@ class OWHeatMap(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.__pending_selection = self.selected_rows
+
+        # A kingdom for a save_state/restore_state
+        self.col_clustering = enum_get(
+            Clustering, self.col_clustering_method, Clustering.None_)
+        self.row_clustering = enum_get(
+            Clustering, self.row_clustering_method, Clustering.None_)
+
+        @self.settingsAboutToBePacked.connect
+        def _():
+            self.col_clustering_method = self.col_clustering.name
+            self.row_clustering_method = self.row_clustering.name
 
         # set default settings
         self.space_x = 10
@@ -458,20 +531,44 @@ class OWHeatMap(widget.OWWidget):
 
         mergebox = gui.vBox(self.controlArea, "Merge",)
         gui.checkBox(mergebox, self, "merge_kmeans", "Merge by k-means",
-                     callback=self.update_sorting_examples)
+                     callback=self.__update_row_clustering)
         ibox = gui.indentedBox(mergebox)
         gui.spin(ibox, self, "merge_kmeans_k", minv=5, maxv=500,
                  label="Clusters:", keyboardTracking=False,
                  callbackOnReturn=True, callback=self.update_merge)
 
-        cluster_box = gui.vBox(self.controlArea, "Cluster")
-        self.col_check = gui.checkBox(
-            cluster_box, self, "col_clustering", "Columns",
-            callback=self.update_clustering_examples)
-        self.row_check = gui.checkBox(
-            cluster_box, self, "row_clustering", "Rows",
-            callback=self.update_clustering_examples)
+        cluster_box = gui.vBox(self.controlArea, "Clustering")
+        # Row clustering
+        self.row_cluster_cb = cb = ComboBox(maximumContentsLength=14)
+        cb.setModel(create_list_model(ClusteringModelData, self))
+        cbselect(cb, self.row_clustering, ClusteringRole)
+        self.connect_control(
+            "row_clustering",
+            lambda value, cb=cb: cbselect(cb, value, ClusteringRole)
+        )
+        @cb.activated.connect
+        def _(idx, cb=cb):
+            self.set_row_clustering(cb.itemData(idx, ClusteringRole))
 
+        # Column clustering
+        self.col_cluster_cb = cb = ComboBox(maximumContentsLength=14)
+        cb.setModel(create_list_model(ClusteringModelData, self))
+        cbselect(cb, self.col_clustering, ClusteringRole)
+        self.connect_control(
+            "col_clustering",
+            lambda value, cb=cb: cbselect(cb, value, ClusteringRole)
+        )
+        @cb.activated.connect
+        def _(idx, cb=cb):
+            self.set_col_clustering(cb.itemData(idx, ClusteringRole))
+
+        form = QFormLayout(
+            labelAlignment=Qt.AlignLeft, formAlignment=Qt.AlignLeft,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
+        )
+        form.addRow("Rows:", self.row_cluster_cb)
+        form.addRow("Columns:", self.col_cluster_cb)
+        cluster_box.layout().addLayout(form)
         box = gui.vBox(self.controlArea, "Split By")
 
         self.row_split_model = DomainModel(
@@ -563,6 +660,20 @@ class OWHeatMap(widget.OWWidget):
 
         self.selection_rects = []
         self.selected_rows = []
+
+    def set_row_clustering(self, method: Clustering) -> None:
+        assert isinstance(method, Clustering)
+        if self.row_clustering != method:
+            self.row_clustering = method
+            cbselect(self.row_cluster_cb, method, ClusteringRole)
+            self.__update_row_clustering()
+
+    def set_col_clustering(self, method: Clustering) -> None:
+        assert isinstance(method, Clustering)
+        if self.col_clustering != method:
+            self.col_clustering = method
+            cbselect(self.col_cluster_cb, method, ClusteringRole)
+            self.__update_column_clustering()
 
     def sizeHint(self):
         return QSize(800, 400)
@@ -693,9 +804,11 @@ class OWHeatMap(widget.OWWidget):
         if self.data is not None:
             self.clear_scene()
             self.clear_messages()
-            if self.col_clustering and len(self.data.domain.attributes) < 2:
+            if self.col_clustering != Clustering.None_ and \
+                    len(self.data.domain.attributes) < 2:
                 self.Error.not_enough_features()
-            elif (self.col_clustering or self.row_clustering) and \
+            elif (self.col_clustering != Clustering.None_ or
+                  self.row_clustering != Clustering.None_) and \
                     len(self.data) < 2:
                 self.Error.not_enough_instances()
             elif self.merge_kmeans and len(self.data) < 3:
@@ -743,7 +856,7 @@ class OWHeatMap(widget.OWWidget):
         minv, maxv = np.nanmin(data.X), np.nanmax(data.X)
         return Parts(row_groups, col_groups, span=(minv, maxv))
 
-    def cluster_rows(self, data, parts):
+    def cluster_rows(self, data: Table, parts: Parts, ordered=False) -> Parts:
         row_groups = []
         for row in parts.rows:
             if row.cluster is not None:
@@ -756,26 +869,27 @@ class OWHeatMap(widget.OWWidget):
                 cluster_ord = None
 
             if row.can_cluster:
-                need_dist = cluster is None or cluster_ord is None
+                matrix = None
+                need_dist = cluster is None or (ordered and cluster_ord is None)
                 if need_dist:
                     subset = data[row.indices]
-                    subset = Orange.distance._preprocess(subset)
                     matrix = Orange.distance.Euclidean(subset)
 
                 if cluster is None:
-                    cluster = hierarchical.dist_matrix_clustering(matrix)
-
-                if cluster_ord is None:
-                    with self.progressBar():
-                        cluster_ord = hierarchical.optimal_leaf_ordering(
-                            cluster, matrix,
-                            progress_callback=self.progressBarSet)
-
+                    assert len(matrix) < self.MaxClustering
+                    cluster = hierarchical.dist_matrix_clustering(
+                        matrix, linkage=hierarchical.WARD
+                    )
+                if ordered and cluster_ord is None:
+                    assert len(matrix) < self.MaxOrderedClustering
+                    cluster_ord = hierarchical.optimal_leaf_ordering(
+                        cluster, matrix,
+                    )
             row_groups.append(row._replace(cluster=cluster, cluster_ordered=cluster_ord))
 
         return parts._replace(rows=row_groups)
 
-    def cluster_columns(self, data, parts):
+    def cluster_columns(self, data, parts, ordered=False):
         assert len(parts.columns) == 1, "columns split is no longer supported"
         assert all(var.is_continuous for var in data.domain.attributes)
 
@@ -788,8 +902,9 @@ class OWHeatMap(widget.OWWidget):
             cluster_ord = col0.cluster_ord
         else:
             cluster_ord = None
-        need_dist = cluster is None or cluster_ord is None
+        need_dist = cluster is None or (ordered and cluster_ord is None)
 
+        matrix = None
         if need_dist:
             data = Orange.distance._preprocess(data)
             matrix = Orange.distance.PearsonR(data, axis=0)
@@ -797,11 +912,14 @@ class OWHeatMap(widget.OWWidget):
             matrix = np.nan_to_num(matrix)
 
         if cluster is None:
-            cluster = hierarchical.dist_matrix_clustering(matrix)
-        if cluster_ord is None:
-            with self.progressBar():
-                cluster_ord = hierarchical.optimal_leaf_ordering(
-                    cluster, matrix, progress_callback=self.progressBarSet)
+            assert matrix is not None
+            assert len(matrix) < self.MaxClustering
+            cluster = hierarchical.dist_matrix_clustering(
+                matrix, linkage=hierarchical.WARD
+            )
+        if ordered and cluster_ord is None:
+            assert len(matrix) < self.MaxOrderedClustering
+            cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
 
         col_groups = [col._replace(cluster=cluster, cluster_ordered=cluster_ord)
                       for col in parts.columns]
@@ -852,33 +970,39 @@ class OWHeatMap(widget.OWWidget):
         if rows_cache_key in self.__rows_cache:
             parts = parts._replace(rows=self.__rows_cache[rows_cache_key].rows)
 
-        if self.row_clustering:
-            assert len(effective_data) <= OWHeatMap._MaxOrderedClustering
-            parts = self.cluster_rows(effective_data, parts)
-
-        if self.col_clustering:
-            assert len(effective_data.domain.attributes) <= \
-                   OWHeatMap._MaxOrderedClustering
-            parts = self.cluster_columns(effective_data, parts)
+        if self.row_clustering != Clustering.None_:
+            parts = self.cluster_rows(
+                effective_data, parts,
+                ordered=self.row_clustering == Clustering.OrderedClustering
+            )
+        if self.col_clustering != Clustering.None_:
+            parts = self.cluster_columns(
+                effective_data, parts,
+                ordered=self.col_clustering == Clustering.OrderedClustering
+            )
 
         # Cache the updated parts
         self.__rows_cache[rows_cache_key] = parts
         return parts
 
-    def construct_heatmaps_scene(self, parts, data):
-        def select_row(item):
-            return namespace(
-                title=item.title, indices=item.indices,
-                cluster=item.cluster_ord if self.row_clustering else None)
+    def construct_heatmaps_scene(self, parts: Parts, data: Table) -> None:
+        _T = TypeVar("_T", bound=Union[RowPart, ColumnPart])
 
-        def select_col(item):
-            return namespace(
-                title=item.title, indices=item.indices, domain=item.domain,
-                cluster=item.cluster_ord if self.col_clustering else None)
+        def select_cluster(clustering: Clustering, item: _T) -> _T:
+            if clustering == Clustering.None_:
+                return item._replace(cluster=None, cluster_ordered=None)
+            elif clustering == Clustering.Clustering:
+                return item._replace(cluster=item.cluster, cluster_ordered=None)
+            elif clustering == Clustering.OrderedClustering:
+                return item._replace(cluster=item.cluster_ordered, cluster_ordered=None)
+            else:  # pragma: no cover
+                raise TypeError()
 
-        rows = [select_row(rowitem) for rowitem in parts.rows]
-        cols = [select_col(colitem) for colitem in parts.columns]
-        parts = namespace(columns=cols, rows=rows, levels=parts.levels)
+        rows = [select_cluster(self.row_clustering, rowitem)
+                for rowitem in parts.rows]
+        cols = [select_cluster(self.col_clustering, colitem)
+                for colitem in parts.columns]
+        parts = Parts(columns=cols, rows=rows, span=parts.levels)
 
         self.setup_scene(parts, data)
 
@@ -1239,32 +1363,52 @@ class OWHeatMap(widget.OWWidget):
         else:
             N = M = 0
 
-        rco_enabled = N <= OWHeatMap._MaxOrderedClustering
-        cco_enabled = M <= OWHeatMap._MaxOrderedClustering
+        rc_enabled = N <= self.MaxClustering
+        rco_enabled = N <= self.MaxOrderedClustering
+        cc_enabled = M <= self.MaxClustering
+        cco_enabled = M <= self.MaxOrderedClustering
+        row_clust, col_clust = self.row_clustering, self.col_clustering
 
         row_clust_msg = ""
         col_clust_msg = ""
 
-        if not rco_enabled and self.row_clustering:
-            self.row_clustering = False
-            row_clust_msg = "Row clustering was disabled due to the " \
+        if not rco_enabled and row_clust == Clustering.OrderedClustering:
+            row_clust = Clustering.Clustering
+            row_clust_msg = "Row cluster ordering was disabled due to the " \
+                            "input matrix being to big"
+        if not rc_enabled and row_clust == Clustering.Clustering:
+            row_clust = Clustering.None_
+            row_clust_msg = "Row clustering was was disabled due to the " \
                             "input matrix being to big"
 
-        if not cco_enabled and self.col_clustering:
-            self.col_clustering = False
-            col_clust_msg = "Column clustering was disabled due to " \
+        if not cco_enabled and col_clust == Clustering.OrderedClustering:
+            col_clust = Clustering.Clustering
+            col_clust_msg = "Column cluster ordering was disabled due to " \
                             "the input matrix being to big"
+        if not cc_enabled and col_clust == Clustering.Clustering:
+            col_clust = Clustering.None_
+            col_clust_msg = "Column clustering was disabled due to the " \
+                            "input matrix being to big"
 
-        self.Information.row_clust.clear()
-        self.Information.col_clust.clear()
-        if row_clust_msg:
-            self.Information.row_clust(row_clust_msg)
-        if col_clust_msg:
-            self.Information.col_clust(col_clust_msg)
+        self.col_clustering = col_clust
+        self.row_clustering = row_clust
 
-        # Disable/enable the checkboxes for the clustering methods
-        self.row_check.setEnabled(rco_enabled)
-        self.col_check.setEnabled(cco_enabled)
+        self.Information.row_clust(row_clust_msg, shown=bool(row_clust_msg))
+        self.Information.col_clust(col_clust_msg, shown=bool(col_clust_msg))
+
+        # Disable/enable the combobox items for the clustering methods
+        def setenabled(cb: QComboBox, clu: bool, clu_op: bool):
+            model = cb.model()
+            assert isinstance(model, QStandardItemModel)
+            idx = cb.findData(Clustering.OrderedClustering, ClusteringRole)
+            assert idx != -1
+            model.item(idx).setEnabled(clu_op)
+            idx = cb.findData(Clustering.Clustering, ClusteringRole)
+            assert idx != -1
+            model.item(idx).setEnabled(clu)
+
+        setenabled(self.row_cluster_cb, rc_enabled, rco_enabled)
+        setenabled(self.col_cluster_cb, cc_enabled, cco_enabled)
 
     def heatmap_widgets(self):
         """Iterate over heatmap widgets.
@@ -1333,11 +1477,11 @@ class OWHeatMap(widget.OWWidget):
             legend.set_thresholds(self.threshold_low, self.threshold_high)
             legend.set_color_table(palette, self.center_palette)
 
-    def update_sorting_examples(self):
+    def __update_column_clustering(self):
         self.update_heatmaps()
         self.commit()
 
-    def update_clustering_examples(self):
+    def __update_row_clustering(self):
         self.update_heatmaps()
         self.commit()
 
@@ -1475,6 +1619,17 @@ class OWHeatMap(widget.OWWidget):
              self.annotation_var is not None and self.annotation_var.name),
         ))
         self.report_plot()
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version is not None and version < 3:
+            def st2cl(state: bool) -> Clustering:
+                return Clustering.OrderedClustering if state else \
+                       Clustering.None_
+            rc = settings.pop("row_clustering", False)
+            cc = settings.pop("col_clustering", False)
+            settings["row_clustering_method"] = st2cl(rc).name
+            settings["col_clustering_method"] = st2cl(cc).name
 
 
 class GraphicsWidget(QGraphicsWidget):
