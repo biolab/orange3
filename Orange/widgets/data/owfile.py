@@ -484,6 +484,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
             if not (domain.variables or domain.metas):
                 table = None
+            elif domain is self.data.domain:
+                table = self.data
             else:
                 X, y, m = cols
                 table = Table.from_numpy(domain, X, y, m, self.data.W)
