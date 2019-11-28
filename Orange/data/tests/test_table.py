@@ -8,6 +8,18 @@ from Orange.data import (
     FilterDiscrete, FilterStringList, FilterRegex)
 
 
+class TestEmptyTable(unittest.TestCase):
+    def test_empty_table(self):
+        t = Table()
+        self.assertEqual(t.domain.attributes, ())
+        self.assertEqual(t.X.shape, (0, 0))
+        self.assertEqual(t.Y.shape, (0, 0))
+        self.assertEqual(t.W.shape, (0, 0))
+        self.assertEqual(t.metas.shape, (0, 0))
+        self.assertEqual(t.ids.shape, (0, ))
+        self.assertEqual(t.attributes, {})
+
+
 class TestTableFilters(unittest.TestCase):
     def setUp(self):
         self.domain = Domain(

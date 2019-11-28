@@ -10,6 +10,7 @@ from threading import Lock, RLock
 
 import bottleneck as bn
 import numpy as np
+from Orange.misc.collections import frozendict
 from scipy import sparse as sp
 from scipy.sparse import issparse
 
@@ -173,6 +174,13 @@ class Columns:
 class Table(Sequence, Storage):
     __file__ = None
     name = "untitled"
+
+    domain = Domain([])
+    X = _Y = metas = W = np.zeros((0, 0))
+    X.setflags(write=False)
+    ids = np.zeros(0)
+    ids.setflags(write=False)
+    attributes = frozendict()
 
     @property
     def columns(self):
