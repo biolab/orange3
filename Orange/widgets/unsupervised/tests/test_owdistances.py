@@ -31,7 +31,7 @@ class TestDistanceRunner(unittest.TestCase):
         state.is_interruption_requested = Mock(return_value=False)
         for name, metric in METRICS:
             data = self.iris
-            if not metric.supports_missing:
+            if not metric.supports_missing or name == "Bhattacharyya":
                 data = distance.impute(data)
             elif name == "Jaccard":
                 data = self.zoo
