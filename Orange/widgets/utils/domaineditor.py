@@ -299,9 +299,7 @@ class DomainEditor(QTableView):
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
             elif tpe == type(orig_var):
-                # change the name so that all_vars will get the correct name
-                orig_var.name = name
-                var = orig_var
+                var = orig_var.copy(name=name)
             elif tpe == DiscreteVariable:
                 values = list(str(i) for i in unique(col_data) if not self._is_missing(i))
                 round_numbers = numbers_are_round(orig_var, col_data)

@@ -141,6 +141,52 @@ class TestOWFile(WidgetTest):
         data = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(data.domain["iris"], StringVariable)
 
+    def test_variable_name_change(self):
+        """
+        Test whether the name of the variable is changed correctly by
+        the domaineditor.
+        """
+        self.open_dataset("iris")
+
+        # just rename
+        idx = self.widget.domain_editor.model().createIndex(4, 0)
+        self.widget.domain_editor.model().setData(idx, "a", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("a", data.domain)
+
+        # rename and change to text
+        idx = self.widget.domain_editor.model().createIndex(4, 0)
+        self.widget.domain_editor.model().setData(idx, "b", Qt.EditRole)
+        idx = self.widget.domain_editor.model().createIndex(4, 1)
+        self.widget.domain_editor.model().setData(idx, "text", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("b", data.domain)
+        self.assertIsInstance(data.domain["b"], StringVariable)
+
+        # rename and change to discrete
+        idx = self.widget.domain_editor.model().createIndex(4, 0)
+        self.widget.domain_editor.model().setData(idx, "c", Qt.EditRole)
+        idx = self.widget.domain_editor.model().createIndex(4, 1)
+        self.widget.domain_editor.model().setData(
+            idx, "categorical", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("c", data.domain)
+        self.assertIsInstance(data.domain["c"], DiscreteVariable)
+
+        # rename and change to continuous
+        self.open_dataset("zoo")
+        idx = self.widget.domain_editor.model().createIndex(0, 0)
+        self.widget.domain_editor.model().setData(idx, "c", Qt.EditRole)
+        idx = self.widget.domain_editor.model().createIndex(0, 1)
+        self.widget.domain_editor.model().setData(idx, "numeric", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("c", data.domain)
+        self.assertIsInstance(data.domain["c"], ContinuousVariable)
+
     def open_dataset(self, name):
         filename = FileFormat.locate(name, dataset_dirs)
         self.widget.add_path(filename)
