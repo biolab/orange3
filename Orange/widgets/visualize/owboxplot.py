@@ -16,7 +16,6 @@ from scipy.stats import f_oneway, chi2_contingency
 import Orange.data
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values
 from Orange.statistics import contingency, distribution
-from Orange.statistics.contingency import Discrete
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
@@ -647,7 +646,6 @@ class OWBoxPlot(widget.OWWidget):
                 [self.strudel(cont, i)
                  for i, cont in enumerate(self.conts.array_with_unknowns)
                  if np.sum(cont) > 0]
-            self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
 
             if self.sort_freqs:
                 # pylint: disable=invalid-unary-operand-type
@@ -655,7 +653,7 @@ class OWBoxPlot(widget.OWWidget):
                     self.order, key=(-np.sum(
                         self.conts.array_with_unknowns, axis=1)).__getitem__)
         else:
-            self.boxes = [self.strudel(self.dist, self.dist.unknowns)]
+            self.boxes = [self.strudel(self.dist.array_with_unknowns)]
 
         for row, box_index in enumerate(self.order):
             y = (-len(self.boxes) + row) * 40 + 10
@@ -921,9 +919,10 @@ class OWBoxPlot(widget.OWWidget):
             step = steps = 10
         else:
             if self.group_var:
-                max_box = max(float(np.sum(dist)) for dist in self.conts)
+                max_box = max(float(np.sum(dist))
+                              for dist in self.conts.array_with_unknowns)
             else:
-                max_box = float(np.sum(self.dist))
+                max_box = float(np.sum(self.dist.array_with_unknowns))
             if max_box == 0:
                 self.scale_x = 1
                 return
@@ -944,7 +943,7 @@ class OWBoxPlot(widget.OWWidget):
         right_offset = 0  # offset for the right label
         if not self.show_stretched and self.labels:
             if self.group_var:
-                rows = list(zip(self.conts, self.labels))
+                rows = list(zip(self.conts.array_with_unknowns, self.labels))
             else:
                 rows = [(self.dist, self.labels[0])]
             # available space left of the 'group labels'
