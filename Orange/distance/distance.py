@@ -1,3 +1,4 @@
+from typing import Callable
 import warnings
 from unittest.mock import patch
 
@@ -14,6 +15,65 @@ from Orange.statistics import util
 
 from .base import (Distance, DistanceModel, FittedDistance, FittedDistanceModel,
                    SklDistance, _orange_to_numpy)
+
+
+def _safe_sparse_dot(a: np.ndarray, b: np.ndarray,
+                     dense_output: bool = False, step: int = 100,
+                     callback: Callable = None) -> np.ndarray:
+    if sp.issparse(a) or sp.issparse(b):
+        return safe_sparse_dot(a, b, dense_output)
+    else:
+        return _interruptible_dot(a, b, step, callback)
+
+
+def _interruptible_dot(a: np.ndarray, b: np.ndarray, step: int = 100,
+                       callback: Callable = None) -> np.ndarray:
+    if callback is None:
+        callback = lambda x: x
+
+    if not isinstance(a, np.ndarray):
+        a = np.array(a)
+    if not isinstance(b, np.ndarray):
+        b = np.array(b)
+    if a.ndim < 2 or b.ndim < 2:
+        return np.dot(a, b)
+
+    c = np.zeros((a.shape[0], b.shape[1]), dtype=float)
+    n_cols = b.shape[1]
+    for col in range(0, n_cols, step):
+        callback(col * 100 / n_cols)
+        c[:, col: col + step] = np.dot(a, b[:, col: col + step])
+    return c
+
+
+def _interruptible_sqrt(a: np.ndarray, step: int = 100,
+                        callback: Callable = None) -> np.ndarray:
+    if callback is None:
+        callback = lambda x: x
+
+    if not isinstance(a, np.ndarray):
+        a = np.array(a)
+    if a.ndim < 2:
+        return np.sqrt(a)
+    new_a = np.zeros(a.shape, dtype=float)
+    n_rows = len(a)
+    for row in range(0, n_rows, step):
+        callback(row * 100 / n_rows)
+        new_a[row: row + step, :] = np.sqrt(a[row: row + step, :])
+    return new_a
+
+
+class StepwiseCallbacks:
+    def __init__(self, callback, weights):
+        self.step_counter = -1
+        self.callback = callback
+        self.weights = weights
+
+    def next(self):
+        self.step_counter += 1
+        base = sum(self.weights[:self.step_counter])
+        step = self.weights[self.step_counter] / sum(self.weights)
+        return lambda i: self.callback and self.callback(base + i * step)
 
 
 class EuclideanRowsModel(FittedDistanceModel):
@@ -48,6 +108,8 @@ class EuclideanRowsModel(FittedDistanceModel):
         - calls a function in Cython that adds the contributions of discrete
           columns
         """
+        callbacks = StepwiseCallbacks(self.callback, [20, 10, 50, 5, 15])
+
         if self.continuous.any():
             data1, data2 = self.continuous_columns(
                 x1, x2, self.means, np.sqrt(2 * self.vars))
@@ -58,7 +120,8 @@ class EuclideanRowsModel(FittedDistanceModel):
                 yy = row_norms(data2, squared=True)[np.newaxis, :]
             else:
                 yy = xx.T
-            distances = safe_sparse_dot(data1, data2.T, dense_output=True)
+            distances = _safe_sparse_dot(data1, data2.T, dense_output=True,
+                                         callback=callbacks.next())
             distances *= -2
             distances += xx
             distances += yy
@@ -70,7 +133,7 @@ class EuclideanRowsModel(FittedDistanceModel):
                 else _distance.fix_euclidean_rows
             fixer(distances, data1, data2,
                   self.means, self.vars, self.dist_missing2_cont,
-                  x2 is not None)
+                  x2 is not None, callbacks.next())
         else:
             distances = np.zeros((x1.shape[0],
                                   (x2 if x2 is not None else x1).shape[0]))
@@ -79,11 +142,11 @@ class EuclideanRowsModel(FittedDistanceModel):
             data1, data2 = self.discrete_columns(x1, x2)
             _distance.euclidean_rows_discrete(
                 distances, data1, data2, self.dist_missing_disc,
-                self.dist_missing2_disc, x2 is not None)
+                self.dist_missing2_disc, x2 is not None, callbacks.next())
 
         if x2 is None:
-            _distance.lower_to_symmetric(distances)
-        return np.sqrt(distances)
+            _distance.lower_to_symmetric(distances, callbacks.next())
+        return _interruptible_sqrt(distances, callback=callbacks.next())
 
 
 class EuclideanColumnsModel(FittedDistanceModel):
@@ -109,13 +172,15 @@ class EuclideanColumnsModel(FittedDistanceModel):
         - calls a function in Cython that adds the contributions of discrete
           columns
         """
+        callbacks = StepwiseCallbacks(self.callback, [40, 30, 30])
+
         if self.normalize:
             x1 = x1 - self.means
             x1 /= np.sqrt(2 * self.vars)
-
         # adapted from sklearn.metric.euclidean_distances
         xx = row_norms(x1.T, squared=True)[:, np.newaxis]
-        distances = safe_sparse_dot(x1.T, x1, dense_output=True)
+        distances = _safe_sparse_dot(x1.T, x1, dense_output=True,
+                                     callback=callbacks.next())
         distances *= -2
         distances += xx
         distances += xx.T
@@ -125,8 +190,8 @@ class EuclideanColumnsModel(FittedDistanceModel):
 
         fixer = _distance.fix_euclidean_cols_normalized if self.normalize \
             else _distance.fix_euclidean_cols
-        fixer(distances, x1, self.means, self.vars)
-        return np.sqrt(distances)
+        fixer(distances, x1, self.means, self.vars, callbacks.next())
+        return _interruptible_sqrt(distances, callback=callbacks.next())
 
 
 class Euclidean(FittedDistance):
@@ -239,10 +304,10 @@ class ManhattanRowsModel(FittedDistanceModel):
             # For discrete attributes, Euclidean is same as Manhattan
             _distance.euclidean_rows_discrete(
                 distances, data1, data2, self.dist_missing_disc,
-                self.dist_missing2_disc, x2 is not None)
+                self.dist_missing2_disc, x2 is not None, lambda x: x)
 
         if x2 is None:
-            _distance.lower_to_symmetric(distances)
+            _distance.lower_to_symmetric(distances, lambda x: x)
         return distances
 
 
