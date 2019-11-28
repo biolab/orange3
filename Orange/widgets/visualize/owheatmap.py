@@ -1,7 +1,7 @@
 import math
 import itertools
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from types import SimpleNamespace as namespace
 
 import numpy as np
@@ -43,106 +43,9 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
 
-def split_domain(domain, split_label):
-    """Split the domain based on values of `split_label` value.
-    """
-    groups = defaultdict(list)
-    for attr in domain.attributes:
-        groups[attr.attributes.get(split_label)].append(attr)
-
-    attr_values = [attr.attributes.get(split_label)
-                   for attr in domain.attributes]
-
-    domains = []
-    for value, attrs in groups.items():
-        group_domain = Domain(attrs, domain.class_vars, domain.metas)
-
-        domains.append((value, group_domain))
-
-    if domains:
-        assert all(len(dom) == len(domains[0][1]) for _, dom in domains)
-
-    return sorted(domains, key=lambda t: attr_values.index(t[0]))
-
-
-def vstack_by_subdomain(data, sub_domains):
-    domain = sub_domains[0]
-    newtable = Table(domain)
-
-    for sub_dom in sub_domains:
-        sub_data = data.transform(sub_dom)
-        # TODO: improve O(N ** 2)
-        newtable.extend(sub_data)
-
-    return newtable
-
-
-def select_by_class(data, class_):
-    indices = select_by_class_indices(data, class_)
-    return data[indices]
-
-
-def select_by_class_indices(data, class_):
-    col, _ = data.get_column_view(data.domain.class_var)
-    return col == class_
-
-
-def group_by_unordered(iterable, key):
-    groups = defaultdict(list)
-    for item in iterable:
-        groups[key(item)].append(item)
-    return groups.items()
-
-
-def barycenter(a, axis=0):
-    assert 0 <= axis < 2
-    a = np.asarray(a)
-    N = a.shape[axis]
-    tileshape = [1 if i != axis else a.shape[i] for i in range(a.ndim)]
-    xshape = list(a.shape)
-    xshape[axis] = 1
-    X = np.tile(np.reshape(np.arange(N), tileshape), xshape)
-    amin = np.nanmin(a, axis=axis, keepdims=True)
-    weights = a - amin
-    weights[np.isnan(weights)] = 0
-    wsum = np.sum(weights, axis=axis)
-    mask = wsum <= np.finfo(float).eps
-    if axis == 1:
-        weights[mask, :] = 1
-    else:
-        weights[:, mask] = 1
-
-    return np.average(X, weights=weights, axis=axis)
-
-
 def kmeans_compress(X, k=50):
     km = kmeans.KMeans(n_clusters=k, n_init=5, random_state=42)
     return km.get_model(X)
-
-
-def candidate_split_labels(data):
-    """
-    Return candidate labels on which we can split the data.
-    """
-    groups = defaultdict(list)
-    for attr in data.domain.attributes:
-        for item in attr.attributes.items():
-            groups[item].append(attr)
-
-    by_keys = defaultdict(list)
-    for (key, _), attrs in groups.items():
-        by_keys[key].append(attrs)
-
-    # Find the keys for which all values have the same number
-    # of attributes.
-    candidates = []
-    for key, groups in by_keys.items():
-        count = len(groups[0])
-        if all(len(attrs) == count for attrs in groups) and \
-                len(groups) > 1 and count > 1:
-            candidates.append(key)
-
-    return candidates
 
 
 def leaf_indices(tree):
@@ -805,7 +708,7 @@ class OWHeatMap(widget.OWWidget):
             self.update_heatmaps()
             self.commit()
 
-    def _make_parts(self, data, group_var=None, group_key=None):
+    def _make_parts(self, data, group_var=None):
         """
         Make initial `Parts` for data, split by group_var, group_key
         """
@@ -822,20 +725,11 @@ class OWHeatMap(widget.OWWidget):
                                   sortindices=None,
                                   cluster=None, cluster_ordered=None)]
 
-        if group_key is not None:
-            col_groups = split_domain(data.domain, group_key)
-            assert len(col_groups) > 0
-            col_indices = [np.array([data.domain.index(var) for var in group])
-                           for _, group in col_groups]
-            col_groups = [ColumnPart(title=name, domain=d, indices=ind,
-                                     cluster=None, cluster_ordered=None)
-                          for (name, d), ind in zip(col_groups, col_indices)]
-        else:
-            col_groups = [
-                ColumnPart(
-                    title=None, indices=slice(0, len(data.domain.attributes)),
-                    domain=data.domain, cluster=None, cluster_ordered=None)
-            ]
+        col_groups = [
+            ColumnPart(
+                title=None, indices=slice(0, len(data.domain.attributes)),
+                domain=data.domain, cluster=None, cluster_ordered=None)
+        ]
 
         minv, maxv = np.nanmin(data.X), np.nanmax(data.X)
         return Parts(row_groups, col_groups, span=(minv, maxv))
@@ -870,11 +764,10 @@ class OWHeatMap(widget.OWWidget):
 
             row_groups.append(row._replace(cluster=cluster, cluster_ordered=cluster_ord))
 
-        return parts._replace(columns=parts.columns, rows=row_groups)
+        return parts._replace(rows=row_groups)
 
     def cluster_columns(self, data, parts):
-        if len(parts.columns) > 1:
-            data = vstack_by_subdomain(data, [col.domain for col in parts.columns])
+        assert len(parts.columns) == 1, "columns split is no longer supported"
         assert all(var.is_continuous for var in data.domain.attributes)
 
         col0 = parts.columns[0]
@@ -903,9 +796,9 @@ class OWHeatMap(widget.OWWidget):
 
         col_groups = [col._replace(cluster=cluster, cluster_ordered=cluster_ord)
                       for col in parts.columns]
-        return parts._replace(columns=col_groups, rows=parts.rows)
+        return parts._replace(columns=col_groups)
 
-    def construct_heatmaps(self, data, group_var=None, group_label=None) -> 'Parts':
+    def construct_heatmaps(self, data, group_var=None) -> 'Parts':
         if self.merge_kmeans:
             if self.kmeans_model is None:
                 effective_data = self.input_data.transform(
@@ -942,17 +835,13 @@ class OWHeatMap(widget.OWWidget):
 
         self.__update_clustering_enable_state(effective_data)
 
-        parts = self._make_parts(effective_data, group_var, group_label)
+        parts = self._make_parts(effective_data, group_var)
         # Restore/update the row/columns items descriptions from cache if
         # available
         rows_cache_key = (group_var,
                           self.merge_kmeans_k if self.merge_kmeans else None)
         if rows_cache_key in self.__rows_cache:
             parts = parts._replace(rows=self.__rows_cache[rows_cache_key].rows)
-
-        if group_label in self.__columns_cache:
-            parts = parts._replace(
-                columns=self.__columns_cache[group_label].columns)
 
         if self.row_clustering:
             assert len(effective_data) <= OWHeatMap._MaxOrderedClustering
@@ -965,7 +854,6 @@ class OWHeatMap(widget.OWWidget):
 
         # Cache the updated parts
         self.__rows_cache[rows_cache_key] = parts
-        self.__columns_cache[group_label] = parts
         return parts
 
     def construct_heatmaps_scene(self, parts, data):
