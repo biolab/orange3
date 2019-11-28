@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
+from scipy.sparse import csr_matrix, csc_matrix
 
 from Orange.data import DiscreteVariable, Table, Domain
 from Orange.statistics import contingency
@@ -25,6 +26,7 @@ class TestDiscrete(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.zoo = data.Table("zoo")
+        cls.test9 = data.Table(test_filename("datasets/test9.tab"))
 
     def test_discrete(self):
         cont = contingency.Discrete(self.zoo, 0)
@@ -151,6 +153,16 @@ class TestDiscrete(unittest.TestCase):
             cont.row_unknowns,
             [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 0.,
              0., 0., 0., 0., 0., 0., 0.])
+        self.assertEqual(cont.unknowns, 1)
+
+        # this one was failing before since the issue in _contingecy.pyx
+        d.Y[:50] = np.zeros(50) * float("nan")
+        cont = contingency.Continuous(d, "sepal width")
+        np.testing.assert_almost_equal(cont.col_unknowns, [0, 0, 0])
+        np.testing.assert_almost_equal(
+            cont.row_unknowns,
+            [0., 0., 1., 0., 0., 0., 0., 0., 1., 5., 5., 5., 2., 9., 6., 2.,
+             3., 4., 2., 1., 1., 1., 1.])
         self.assertEqual(cont.unknowns, 1)
 
     def test_mixedtype_metas(self):
@@ -286,11 +298,34 @@ class TestDiscrete(unittest.TestCase):
         assert_dist_equal(cont[2], [1, 0, 0])
 
     def test_compute_contingency_metas(self):
-        d = data.Table(test_filename("datasets/test9.tab"))
-        var1, var2 = d.domain[-2], d.domain[-4]
-        cont = d._compute_contingency([var1], var2)[0][0]
+        var1, var2 = self.test9.domain[-2], self.test9.domain[-4]
+        cont = contingency.Discrete(self.test9, var1, var2)
         assert_dist_equal(cont, [[3, 0, 0], [0, 2, 0],
                                  [0, 0, 2], [0, 1, 0]])
+
+    def test_compute_contingency_row_attribute_sparse(self):
+        """
+        Testing with sparse row variable since currently we do not test the
+        situation when a row variable is sparse.
+        """
+        d = self.test9
+        # make X sparse
+        d.X = csr_matrix(d.X)
+        var1, var2 = d.domain[0], d.domain[1]
+        cont = contingency.Discrete(d, var1, var2)
+        assert_dist_equal(cont, [[1, 0], [1, 0], [1, 0], [1, 0],
+                                 [0, 1], [0, 1], [0, 1], [0, 1]])
+        cont = contingency.Discrete(d, var2, var1)
+        assert_dist_equal(cont, [[1, 1, 1, 1, 0, 0, 0, 0],
+                                 [0, 0, 0, 0, 1, 1, 1, 1]])
+
+        d.X = csc_matrix(d.X)
+        cont = contingency.Discrete(d, var1, var2)
+        assert_dist_equal(cont, [[1, 0], [1, 0], [1, 0], [1, 0],
+                                 [0, 1], [0, 1], [0, 1], [0, 1]])
+        cont = contingency.Discrete(d, var2, var1)
+        assert_dist_equal(cont, [[1, 1, 1, 1, 0, 0, 0, 0],
+                                 [0, 0, 0, 0, 1, 1, 1, 1]])
 
     def test_compute_contingency_invalid(self):
         rstate = np.random.RandomState(0xFFFF)

@@ -43,17 +43,16 @@ def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray
         i = ranks[i]
         v = col_data[i]
         tc = classes[i]
+        if v != last and not npy_isnan(v):
+            j += 1
+            V[j] = v
+            last = v
         if npy_isnan(v) and npy_isnan(tc):
             unknowns += W[i] if weights else 1.
         elif npy_isnan(tc):
             row_unknowns[j] += W[i] if weights else 1.
         elif npy_isnan(v):
             col_unknowns[int(tc)] += W[i] if weights else 1.
-        elif v != last:
-            j += 1
-            V[j] = v
-            last = v
-            C[int(tc),j] += W[i] if weights else 1.
         else:
             C[int(tc),j] += W[i] if weights else 1.
 
