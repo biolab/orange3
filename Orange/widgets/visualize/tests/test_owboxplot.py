@@ -6,7 +6,8 @@ from unittest.mock import patch
 import numpy as np
 from AnyQt.QtCore import QItemSelectionModel
 
-from Orange.data import Table, ContinuousVariable, StringVariable, Domain
+from Orange.data import Table, ContinuousVariable, StringVariable, Domain, \
+    DiscreteVariable
 from Orange.widgets.visualize.owboxplot import (
     OWBoxPlot, FilterGraphicsRectItem, _quantiles
 )
@@ -298,6 +299,26 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.__select_variable("gender")
         self.__select_group("chest pain")
         self.assertTrue(enabled())
+
+    def test_value_all_missing_for_group(self):
+        """
+        This is one of the extreme cases when we have a subgroup value
+        where all values in selected variable are missing. Box plot should
+        handle this.
+        """
+        data = Table(Domain([DiscreteVariable("a", values=["v1", "v2", "v3"]),
+                             DiscreteVariable("b", values=["v3", "v4"])]),
+                     [[0., 0.],
+                      [0., 1.],
+                      [1., np.nan],
+                      [1., np.nan],
+                      [2., 0.],
+                      [2., 0.]])
+        self.send_signal(self.widget.Inputs.data, data)
+
+        self.__select_variable("b")
+        self.__select_group("a")
+        self.assertTupleEqual(self.widget.conts.shape, (3, 2))
 
 
 class TestUtils(unittest.TestCase):

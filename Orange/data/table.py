@@ -11,6 +11,7 @@ from threading import Lock, RLock
 import bottleneck as bn
 import numpy as np
 from scipy import sparse as sp
+from scipy.sparse import issparse
 
 import Orange.data  # import for io.py
 from Orange.data import (
@@ -1437,6 +1438,11 @@ class Table(Sequence, Storage):
             raise ValueError("contingency can be computed only for discrete "
                              "and continuous values")
 
+        # when we select a column in sparse matrix it is still two dimensional
+        # and sparse - since it is just a column we can afford to transform
+        # it to dense and make it 1D
+        if issparse(row_data):
+            row_data = row_data.toarray().ravel()
         if row_data.dtype.kind != "f": #meta attributes can be stored as type object
             row_data = row_data.astype(float)
 
