@@ -38,7 +38,7 @@ ISRELEASED = False
 FULLVERSION = VERSION
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
-README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
+README_FILE = os.path.join(os.path.dirname(__file__), 'README.pypi')
 LONG_DESCRIPTION = open(README_FILE).read()
 LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown'
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
