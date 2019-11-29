@@ -1975,9 +1975,10 @@ class GraphicsSimpleTextList(QGraphicsWidget):
         self.clear()
         orientation = Qt.Horizontal if self.orientation == Qt.Vertical else Qt.Vertical
         for text in labels:
-            item = QGraphicsSimpleTextItem(text, self)
+            item = QGraphicsSimpleTextItem(self)
             item.setFont(self.font())
             item.setToolTip(text)
+            item.setText(text)
             item = GraphicsSimpleTextLayoutItem(item, orientation, parent=self)
             self.layout().addItem(item)
             self.layout().setAlignment(item, self.alignment)
