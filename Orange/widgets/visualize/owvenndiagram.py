@@ -116,11 +116,11 @@ class OWVennDiagram(widget.OWWidget):
             )
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
-        self.output_duplicates_box = box = gui.vBox(controls, "Output")
-        self.output_duplicates_box.setEnabled(bool(self.rowwise))
-        gui.checkBox(box, self, "output_duplicates", "Output duplicates",
+        self.outputs_box = box = gui.vBox(controls, "Output")
+        self.output_duplicates_cb = gui.checkBox(box, self, "output_duplicates", "Output duplicates",
                      callback=lambda: self.commit())
         gui.auto_send(box, self, "autocommit", box=False)
+        self.output_duplicates_cb.setEnabled(bool(self.rowwise))
         self._queue = []
 
     def resizeEvent(self, event):
@@ -327,7 +327,7 @@ class OWVennDiagram(widget.OWWidget):
         self.invalidateOutput()
 
     def _on_matching_changed(self):
-        self.output_duplicates_box.setEnabled(bool(self.rowwise))
+        self.output_duplicates_cb.setEnabled(bool(self.rowwise))
         if not self.settings_compatible():
             self.invalidateOutput()
             return
