@@ -96,10 +96,10 @@ class TestHasClassFilter(unittest.TestCase):
         domain = Domain([DiscreteVariable("x", values="01")],
                         [DiscreteVariable("y1", values="01"),
                          DiscreteVariable("y2", values="01")])
-        table = Table(domain, [[0, 1, np.nan],
-                               [1, np.nan, 0],
-                               [1, 0, 1],
-                               [1, np.nan, np.nan]])
+        table = Table.from_list(domain, [[0, 1, np.nan],
+                                         [1, np.nan, 0],
+                                         [1, 0, 1],
+                                         [1, np.nan, np.nan]])
         table = HasClass()(table)
         self.assertTrue(not np.isnan(table).any())
         self.assertEqual(table.domain, domain)

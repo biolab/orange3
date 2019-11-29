@@ -11,6 +11,7 @@ from threading import Lock, RLock
 import bottleneck as bn
 import numpy as np
 from Orange.misc.collections import frozendict
+from Orange.util import OrangeDeprecationWarning
 from scipy import sparse as sp
 from scipy.sparse import issparse
 
@@ -212,31 +213,41 @@ class Table(Sequence, Storage):
         self._Y = value
 
     def __new__(cls, *args, **kwargs):
-        if not args and not kwargs:
-            return super().__new__(cls)
-
-        if 'filename' in kwargs:
-            args = [kwargs.pop('filename')]
+        def warn_deprecated(method):
+            warnings.warn("Direct calls to Table's constructor are deprecated "
+                          "and will be removed. Replace this call with "
+                          f"Table.{method}", OrangeDeprecationWarning,
+                          stacklevel=3)
 
         if not args:
-            raise TypeError(
-                "Table takes at least 1 positional argument (0 given))")
+            if not kwargs:
+                return super().__new__(cls)
+            else:
+                raise TypeError("Table() must not be called directly")
 
         if isinstance(args[0], str):
+            if len(args) > 1:
+                raise TypeError("Table(name: str) expects just one argument")
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
             else:
-                return cls.from_file(args[0])
+                return cls.from_file(args[0], **kwargs)
+
         elif isinstance(args[0], Table):
-            return cls.from_table(args[0].domain, args[0])
+            if len(args) > 1:
+                raise TypeError("Table(table: Table) expects just one argument")
+            return cls.from_table(args[0].domain, args[0], **kwargs)
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
+                warn_deprecated("from_domain")
                 return cls.from_domain(domain, **kwargs)
             if isinstance(args[0], Table):
-                return cls.from_table(domain, *args)
+                warn_deprecated("from_table")
+                return cls.from_table(domain, *args, **kwargs)
             elif isinstance(args[0], list):
-                return cls.from_list(domain, *args)
+                warn_deprecated("from_list")
+                return cls.from_list(domain, *args, **kwargs)
         else:
             domain = None
 

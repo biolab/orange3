@@ -332,7 +332,7 @@ class TestCrossValidationFeature(TestSampling):
     def add_meta_fold(data, f):
         fat = DiscreteVariable(name="fold", values=[str(a) for a in range(f)])
         domain = Domain(data.domain.attributes, data.domain.class_var, metas=[fat])
-        ndata = Table(domain, data)
+        ndata = data.transform(domain)
         vals = np.tile(range(f), len(data)//f + 1)[:len(data)]
         vals = vals.reshape((-1, 1))
         ndata[:, fat] = vals

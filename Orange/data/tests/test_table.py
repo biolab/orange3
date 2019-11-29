@@ -6,9 +6,10 @@ from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable,
     Domain, Table, IsDefined, FilterContinuous, Values, FilterString,
     FilterDiscrete, FilterStringList, FilterRegex)
+from Orange.util import OrangeDeprecationWarning
 
 
-class TestEmptyTable(unittest.TestCase):
+class TestTableInit(unittest.TestCase):
     def test_empty_table(self):
         t = Table()
         self.assertEqual(t.domain.attributes, ())
@@ -18,6 +19,17 @@ class TestEmptyTable(unittest.TestCase):
         self.assertEqual(t.metas.shape, (0, 0))
         self.assertEqual(t.ids.shape, (0, ))
         self.assertEqual(t.attributes, {})
+
+    def test_warnings(self):
+        domain = Domain([ContinuousVariable("x")])
+        self.assertWarns(OrangeDeprecationWarning, Table, domain)
+        self.assertWarns(OrangeDeprecationWarning, Table, domain, Table())
+        self.assertWarns(OrangeDeprecationWarning, Table, domain, [[12]])
+
+    def test_invalid_call_with_kwargs(self):
+        self.assertRaises(TypeError, Table, Y=[])
+        self.assertRaises(TypeError, Table, "iris", 42)
+        self.assertRaises(TypeError, Table, Table(), 42)
 
 
 class TestTableFilters(unittest.TestCase):

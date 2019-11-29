@@ -15,7 +15,7 @@ from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
-                             Jaccard, _preprocess, MahalanobisDistance, 
+                             Jaccard, _preprocess, MahalanobisDistance,
                              Bhattacharyya)
 from Orange.distance.distance import _spearmanr2, _corrcoef2
 from Orange.misc import DistMatrix
@@ -990,8 +990,8 @@ class TestDistances(TestCase):
                          DiscreteVariable("d", values=['a', 'b'])],
                         [DiscreteVariable("cls", values=['e', 'f'])],
                         [StringVariable("m")])
-        table = Table(domain, [[1, 'a', 'e', 'm1'],
-                               [2, 'b', 'f', 'm2']])
+        table = Table.from_list(domain, [[1, 'a', 'e', 'm1'],
+                                         [2, 'b', 'f', 'm2']])
         new_table = _preprocess(table)
         np.testing.assert_equal(new_table.X, table.X[:, 0].reshape(2, 1))
         np.testing.assert_equal(new_table.Y, table.Y)

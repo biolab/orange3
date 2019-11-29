@@ -278,7 +278,7 @@ class TestOWRank(WidgetTest):
         Tests if widget crashes due to too high (Infinite) calculated values.
         GH-2168
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("c")],
                 [DiscreteVariable("d", values="01")]

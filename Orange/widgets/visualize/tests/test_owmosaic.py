@@ -197,7 +197,7 @@ class MosaicVizRankTests(WidgetTest):
         super().setUpClass()
         cls.iris = Table("iris.tab")
         dom = Domain(cls.iris.domain.attributes, [])
-        cls.iris_no_class = Table(dom, cls.iris)
+        cls.iris_no_class = cls.iris.transform(dom)
 
     def setUp(self):
         self.widget = self.create_widget(OWMosaicDisplay)

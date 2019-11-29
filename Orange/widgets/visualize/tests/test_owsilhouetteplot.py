@@ -146,7 +146,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         GH-2377
         """
         nan = np.NaN
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b"), ContinuousVariable("c")],
                 [DiscreteVariable("d", values=["y", "n"])]),

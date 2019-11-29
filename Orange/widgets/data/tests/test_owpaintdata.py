@@ -25,7 +25,8 @@ class TestOWPaintData(WidgetTest):
         """No crash on empty data"""
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
-        self.send_signal(self.widget.Inputs.data, Table(data.domain))
+        self.send_signal(self.widget.Inputs.data,
+                         Table.from_domain(data.domain))
 
     def test_nan_data(self):
         data = datasets.missing_data_2()
@@ -56,7 +57,7 @@ class TestOWPaintData(WidgetTest):
              ContinuousVariable("B")],
             DiscreteVariable("C", values=[chr(ord("a") + i) for i in range(20)])
         )
-        data = Table(domain, [[0.1, 0.2, "a"], [0.4, 0.7, "t"]])
+        data = Table.from_list(domain, [[0.1, 0.2, "a"], [0.4, 0.7, "t"]])
         self.send_signal(self.widget.Inputs.data, data)
 
     def test_sparse_data(self):

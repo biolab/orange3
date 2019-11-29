@@ -436,9 +436,9 @@ class TestDomainInit(unittest.TestCase):
         domain = Domain([DiscreteVariable("a", values="01"),
                          DiscreteVariable("b", values="01")],
                         DiscreteVariable("y", values="01"))
-        table = Table(domain, [[0, 1], [1, np.NaN]], [0, 1])
+        table = Table.from_list(domain, [[0, 1], [1, np.NaN]], [0, 1])
         pre1 = Continuize()(Impute()(table))
-        pre2 = Table(pre1.domain, table)
+        pre2 = table.transform(pre1.domain)
         np.testing.assert_almost_equal(pre1.X, pre2.X)
 
     def test_unpickling_recreates_known_domains(self):

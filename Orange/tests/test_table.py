@@ -591,7 +591,7 @@ class TableTestCase(unittest.TestCase):
             os.remove("test-save.tab.metadata")
 
         dom = data.Domain([data.ContinuousVariable("a")])
-        d = data.Table(dom, [[i] for i in range(3)])
+        d = data.Table.from_list(dom, [[i] for i in range(3)])
         d.save("test-save.tab")
         try:
             d2 = data.Table("test-save.tab")
@@ -603,7 +603,7 @@ class TableTestCase(unittest.TestCase):
             os.remove("test-save.tab")
 
         dom = data.Domain([data.ContinuousVariable("a")], None)
-        d = data.Table(dom, [[i] for i in range(3)])
+        d = data.Table.from_list(dom, [[i] for i in range(3)])
         d.save("test-save.tab")
         try:
             d2 = data.Table("test-save.tab")
@@ -733,7 +733,8 @@ class TableTestCase(unittest.TestCase):
 
     def test_filter_string_works_for_numeric_columns(self):
         var = StringVariable("s")
-        data = Table(Domain([], metas=[var]), [[x] for x in range(21)])
+        data = Table.from_list(Domain([], metas=[var]),
+                               [[x] for x in range(21)])
         # 1, 2, 3, ..., 18, 19, 20
 
         fs = filter.FilterString
@@ -1078,10 +1079,10 @@ class TableTestCase(unittest.TestCase):
                                    table.domain.class_vars,
                                    attributes_metas)
         table_metas = data.Table(domain_metas, table.X, table.Y, metas)
-        new_table = data.Table(data.Domain(table_metas.domain.metas,
-                                           table_metas.domain.metas,
-                                           table_metas.domain.metas),
-                               table_metas)
+        new_table = data.Table.from_table(data.Domain(table_metas.domain.metas,
+                                                      table_metas.domain.metas,
+                                                      table_metas.domain.metas),
+                                          table_metas)
         self.assertEqual(new_table.X.dtype, np.float64)
         self.assertEqual(new_table.Y.dtype, np.float64)
         self.assertEqual(new_table.metas.dtype, np.float64)
@@ -1213,8 +1214,7 @@ class CreateTableWithFilename(TableTests):
     @patch("Orange.data.table.Table.from_file")
     def test_calling_new_with_keyword_argument_filename_calls_read_data(
             self, read_data):
-        data.Table(filename=self.filename)
-
+        data.Table(self.filename)
         read_data.assert_called_with(self.filename)
 
 
@@ -1313,7 +1313,7 @@ class CreateTableWithDomain(TableTests):
     def test_calling_new_with_domain_calls_new_from_domain(
             self, new_from_domain):
         domain = self.mock_domain()
-        data.Table(domain)
+        data.Table.from_domain(domain)
 
         new_from_domain.assert_called_with(domain)
 
@@ -1339,10 +1339,10 @@ class CreateTableWithData(TableTests):
         domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
                               data.ContinuousVariable(name="b")],
                              data.DiscreteVariable(name="y", values="abc"))
-        table = data.Table(domain, [[0, 1, 2],
-                                    [1, 2, "?"],
-                                    ["m", 3, "a"],
-                                    ["?", "?", "c"]])
+        table = data.Table.from_list(domain, [[0, 1, 2],
+                                              [1, 2, "?"],
+                                              ["m", 3, "a"],
+                                              ["?", "?", "c"]])
         self.assertIs(table.domain, domain)
         np.testing.assert_almost_equal(
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
@@ -1352,10 +1352,10 @@ class CreateTableWithData(TableTests):
         domain = data.Domain([data.DiscreteVariable(name="a", values="mf"),
                               data.ContinuousVariable(name="b")],
                              data.DiscreteVariable(name="y", values="abc"))
-        table = data.Table(domain, [[0, 1, 2],
-                                    [1, 2, "?"],
-                                    ["m", 3, "a"],
-                                    ["?", "?", "c"]], [1, 2, 3, 4])
+        table = data.Table.from_list(domain, [[0, 1, 2],
+                                              [1, 2, "?"],
+                                              ["m", 3, "a"],
+                                              ["?", "?", "c"]], [1, 2, 3, 4])
         self.assertIs(table.domain, domain)
         np.testing.assert_almost_equal(
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
@@ -1370,10 +1370,10 @@ class CreateTableWithData(TableTests):
                               data.ContinuousVariable(name="b")],
                              data.DiscreteVariable(name="y", values="abc"),
                              metas=metas)
-        table = data.Table(domain, [[0, 1, 2, "X", 2, "bb"],
-                                    [1, 2, "?", "Y", 1, "aa"],
-                                    ["m", 3, "a", "Z", 3, "bb"],
-                                    ["?", "?", "c", "X", 1, "aa"]])
+        table = data.Table.from_list(domain, [[0, 1, 2, "X", 2, "bb"],
+                                              [1, 2, "?", "Y", 1, "aa"],
+                                              ["m", 3, "a", "Z", 3, "bb"],
+                                              ["?", "?", "c", "X", 1, "aa"]])
         self.assertIs(table.domain, domain)
         np.testing.assert_almost_equal(
             table.X, np.array([[0, 1], [1, 2], [0, 3], [np.nan, np.nan]]))
@@ -1387,7 +1387,7 @@ class CreateTableWithData(TableTests):
 
     def test_creates_a_table_from_list_of_instances(self):
         table = data.Table('iris')
-        new_table = data.Table(table.domain, [d for d in table])
+        new_table = data.Table.from_list(table.domain, [d for d in table])
         self.assertIs(table.domain, new_table.domain)
         np.testing.assert_almost_equal(table.X, new_table.X)
         np.testing.assert_almost_equal(table.Y, new_table.Y)
@@ -1397,7 +1397,7 @@ class CreateTableWithData(TableTests):
 
     def test_creates_a_table_from_list_of_instances_with_metas(self):
         table = data.Table('zoo')
-        new_table = data.Table(table.domain, [d for d in table])
+        new_table = data.Table.from_list(table.domain, [d for d in table])
         self.assertIs(table.domain, new_table.domain)
         np.testing.assert_almost_equal(table.X, new_table.X)
         np.testing.assert_almost_equal(table.Y, new_table.Y)
@@ -2085,7 +2085,7 @@ class TestTableStats(TableTests):
 
     def test_get_nan_frequency_empty_table(self):
         domain = self.create_domain(self.attributes, self.class_vars)
-        table = data.Table(domain)
+        table = data.Table.from_domain(domain)
         self.assertEqual(table.get_nan_frequency_attribute(), 0)
         self.assertEqual(table.get_nan_frequency_class(), 0)
 

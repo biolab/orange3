@@ -76,29 +76,29 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertIsNone(self.widget.data)
 
         # <2 rows
-        self.data = Table(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.not_enough_rows.is_shown())
 
         # no attributes
-        self.data = Table(self.empty_domain, [['STG1']] * 2)
+        self.data = Table.from_list(self.empty_domain, [['STG1']] * 2)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.no_attributes.is_shown())
 
         # constant data
-        self.data = Table(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.constant_data.is_shown())
 
         # correct input
-        self.data = Table(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
-                                        [5, 4, 3, 2, 1, 'STG1']])
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
+                                                  [5, 4, 3, 2, 1, 'STG1']])
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNotNone(self.widget.data)
@@ -107,10 +107,10 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.Error.constant_data.is_shown())
 
     def test_input(self):
-        self.data = Table(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
-                                        [2, 2, 2, 2, 2, 'STG1'],
-                                        [4, 4, 4, 4, 4, 'STG2'],
-                                        [5, 5, 5, 5, 5, 'STG2']])
+        self.data = Table.from_list(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
+                                                  [2, 2, 2, 2, 2, 'STG1'],
+                                                  [4, 4, 4, 4, 4, 'STG2'],
+                                                  [5, 5, 5, 5, 5, 'STG2']])
 
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()

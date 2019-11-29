@@ -114,7 +114,7 @@ class TestOWPredictions(WidgetTest):
         titanic = Table("titanic")
         majority_titanic = ConstantLearner()(titanic)
 
-        no_class = Table(Domain(titanic.domain.attributes, None), titanic)
+        no_class = titanic.transform(Domain(titanic.domain.attributes, None))
         self.send_signal(self.widget.Inputs.predictors, majority_titanic, 1)
         self.send_signal(self.widget.Inputs.data, no_class)
         out = self.get_output(self.widget.Outputs.predictions)

@@ -44,8 +44,8 @@ class FeatureScoringTest(unittest.TestCase):
                                        correct, decimal=5)
 
     def test_classless(self):
-        classless = Table(Domain(self.zoo.domain.attributes),
-                          self.zoo[:, 0:-1])
+        classless = Table.from_table(Domain(self.zoo.domain.attributes),
+                                     self.zoo[:, 0:-1])
         scorers = [Gini(), InfoGain(), GainRatio()]
         for scorer in scorers:
             with self.assertRaises(ValueError):

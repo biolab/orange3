@@ -82,7 +82,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         Instead of writing "coef" or sth similar it is written a second value name.
         GH-2116
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"),
                  ContinuousVariable("b")],

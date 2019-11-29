@@ -50,7 +50,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_primitive_metas(self):
         new_domain = Domain(attributes=[], class_vars=[], metas=(
             self.data.domain.attributes + self.data.domain.class_vars))
-        attrs_as_metas = Table(new_domain, self.data)
+        attrs_as_metas = self.data.transform(new_domain)
         self.send_signal(self.widget.Inputs.data, attrs_as_metas)
         self.assertTrue(self.widget.display_box.isEnabled())
 
@@ -306,14 +306,15 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         where all values in selected variable are missing. Box plot should
         handle this.
         """
-        data = Table(Domain([DiscreteVariable("a", values=["v1", "v2", "v3"]),
-                             DiscreteVariable("b", values=["v3", "v4"])]),
-                     [[0., 0.],
-                      [0., 1.],
-                      [1., np.nan],
-                      [1., np.nan],
-                      [2., 0.],
-                      [2., 0.]])
+        data = Table.from_list(
+            Domain([DiscreteVariable("a", values=["v1", "v2", "v3"]),
+                    DiscreteVariable("b", values=["v3", "v4"])]),
+            [[0., 0.],
+             [0., 1.],
+             [1., np.nan],
+             [1., np.nan],
+             [2., 0.],
+             [2., 0.]])
         self.send_signal(self.widget.Inputs.data, data)
 
         self.__select_variable("b")

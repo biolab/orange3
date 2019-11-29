@@ -888,7 +888,7 @@ class datasets:
         -------
         data : Orange.data.Table
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"),
                  ContinuousVariable("b"),

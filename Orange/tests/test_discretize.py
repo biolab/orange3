@@ -171,7 +171,7 @@ class TestDiscretizer(TestCase):
         table = data.Table('iris')
         table2 = Discretize()(table)
         ins = data.Instance(table2.domain, table[0])
-        table3 = data.Table(table2.domain, table[:10])
+        table3 = table[:10].transform(table2.domain)
         self.assertEqual(ins, table3[0])
 
     def test_remove_constant(self):

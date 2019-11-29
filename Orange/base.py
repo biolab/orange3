@@ -337,7 +337,7 @@ class Model(Reprable):
         # Convert 1d structures to 2d and remember doing it
         one_d = True
         if isinstance(data, Instance):
-            data = Table(data.domain, [data])
+            data = Table.from_list(data.domain, [data])
         elif isinstance(data, (list, tuple)) \
                 and not isinstance(data[0], (list, tuple)):
             data = [data]

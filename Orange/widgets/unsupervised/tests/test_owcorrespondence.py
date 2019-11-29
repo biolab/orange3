@@ -13,7 +13,8 @@ class TestOWCorrespondence(WidgetTest):
 
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
-        self.send_signal(self.widget.Inputs.data, Table(Table("iris").domain))
+        self.send_signal(self.widget.Inputs.data,
+                         Table.from_domain(Table("iris").domain))
         self.assertTrue(self.widget.Error.empty_data.is_shown())
         self.assertIsNone(self.widget.data)
 
@@ -24,7 +25,7 @@ class TestOWCorrespondence(WidgetTest):
         2) There is at least one NaN value in a column.
         GH-2066
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"),
                  DiscreteVariable("b", values=["t", "f"]),
@@ -45,7 +46,7 @@ class TestOWCorrespondence(WidgetTest):
         one value.
         GH-2149
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [DiscreteVariable("a", values=["0"])]
             ),
@@ -58,7 +59,7 @@ class TestOWCorrespondence(WidgetTest):
         Do not crash when there are no discrete (categorical) variable(s).
         GH-2723
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a")]
             ),
