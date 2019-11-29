@@ -859,7 +859,7 @@ class Table(Sequence, Storage):
             vstack(collect("metas")),
             merge1d(collect("W"))
         )
-        conc.ids = np.hstack(map(operator.attrgetter("ids"), tables))
+        conc.ids = np.hstack([t.ids for t in tables])
         names = [table.name for table in tables if table.name != "untitled"]
         if names:
             conc.name = names[0]
