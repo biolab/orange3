@@ -198,6 +198,17 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data, iris, widget=w)
         self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 21)
 
+    def test_set_split_var(self):
+        data = Table("brown-selected")
+        w = self.widget
+        self.send_signal(self.widget.Inputs.data, data, widget=w)
+        self.assertIs(w.split_by_var, data.domain.class_var)
+        self.assertEqual(len(w.heatmapparts.rows),
+                         len(data.domain.class_var.values))
+        w.set_split_variable(None)
+        self.assertIs(w.split_by_var, None)
+        self.assertEqual(len(w.heatmapparts.rows), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
