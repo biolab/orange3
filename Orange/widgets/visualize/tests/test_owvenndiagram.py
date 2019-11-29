@@ -241,21 +241,14 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
                          self.data.transform(Domain([self.data.domain.attributes[0]],
                                                     self.data.domain.class_vars,
                                                     self.data.domain.metas)), 2)
-        self.assertTrue(self.widget.Error.domain_mismatch.is_shown())
         self.assertFalse(self.widget.Error.instances_mismatch.is_shown())
 
         self.widget.rowwise = False
         self.send_signal(self.signal_name, self.data[:100, :], 2)
         self.assertTrue(self.widget.Error.instances_mismatch.is_shown())
-        self.assertFalse(self.widget.Error.domain_mismatch.is_shown())
 
         self.send_signal(self.signal_name, None, 2)
         self.assertFalse(self.widget.Error.instances_mismatch.is_shown())
-
-        self.send_signal(self.signal_name, Table('titanic'), 2)
-        self.assertTrue(self.widget.Error.instances_mismatch.is_shown())
-        self.assertFalse(self.widget.Error.domain_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_rows_identifiers(self):
         self.widget.rowwise = True
