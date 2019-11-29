@@ -1,7 +1,8 @@
 import unittest
 import numpy as np
 
-from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable
+from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, \
+    TimeVariable
 from Orange.data.io import guess_data_type
 
 
@@ -68,3 +69,27 @@ class TestTableFilters(unittest.TestCase):
         self.assertEqual(StringVariable, coltype)
         self.assertIsNone(valuemap)
         np.testing.assert_array_equal(in_values, values)
+
+    def test_guess_data_type_time(self):
+        in_values = ["2019-10-10", "2019-10-10", "2019-10-10", "2019-10-01"]
+        valuemap, _, coltype = guess_data_type(in_values)
+        self.assertEqual(TimeVariable, coltype)
+        self.assertIsNone(valuemap)
+
+        in_values = ["2019-10-10T12:08:51", "2019-10-10T12:08:51",
+                     "2019-10-10T12:08:51", "2019-10-01T12:08:51"]
+        valuemap, _, coltype = guess_data_type(in_values)
+        self.assertEqual(TimeVariable, coltype)
+        self.assertIsNone(valuemap)
+
+        in_values = ["2019-10-10 12:08:51", "2019-10-10 12:08:51",
+                     "2019-10-10 12:08:51", "2019-10-01 12:08:51"]
+        valuemap, _, coltype = guess_data_type(in_values)
+        self.assertEqual(TimeVariable, coltype)
+        self.assertIsNone(valuemap)
+
+        in_values = ["2019-10-10 12:08", "2019-10-10 12:08",
+                     "2019-10-10 12:08", "2019-10-01 12:08"]
+        valuemap, _, coltype = guess_data_type(in_values)
+        self.assertEqual(TimeVariable, coltype)
+        self.assertIsNone(valuemap)
