@@ -11,7 +11,8 @@ import Orange
 from Orange.data import StringVariable, ContinuousVariable, Variable
 from Orange.data.util import hstack, get_unique_names_duplicates
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -168,6 +169,71 @@ class DomainModelWithTooltips(DomainModel):
         return super().data(index, role)
 
 
+class MergeDataContextHandler(ContextHandler):
+    # `widget` is used as an argument in most methods
+    # pylint: disable=redefined-outer-name
+    # context handlers override methods using different signatures
+    # pylint: disable=arguments-differ
+
+    def new_context(self, variables1, variables2):
+        context = super().new_context()
+        context.variables1 = variables1
+        context.variables2 = variables2
+        return context
+
+    def open_context(self, widget, domain1, domain2):
+        if domain1 is not None and domain2 is not None:
+            super().open_context(widget,
+                                 self._encode_domain(domain1),
+                                 self._encode_domain(domain2))
+
+    @staticmethod
+    def encode_variables(variables):
+        return [(v.name, vartype(v)) if isinstance(v, Variable) else (v, -1)
+                for v in variables]
+
+    @staticmethod
+    def decode_pair(widget, pair):
+        left_domain = widget.data and widget.data.domain
+        right_domain = widget.extra_data and widget.extra_data.domain
+        return tuple(var[0] if var[1] == -1 else domain[var[0]]
+                     for domain, var in zip((left_domain, right_domain), pair))
+
+    def _encode_domain(self, domain):
+        if domain is None:
+            return {}
+        return dict(self.encode_variables(chain(domain.variables, domain.metas)))
+
+    def settings_from_widget(self, widget, *_args):
+        context = widget.current_context
+        if context is None:
+            return
+        context.values["attr_pairs"] = [self.encode_variables(row)
+                                        for row in widget.attr_pairs]
+
+    def settings_to_widget(self, widget, *_args):
+        context = widget.current_context
+        if context is None:
+            return
+        pairs = context.values.get("attr_pairs", [])
+        widget.attr_pairs = [self.decode_pair(widget, pair) for pair in pairs]
+
+    def match(self, context, variables1, variables2):
+        def matches(part, variables):
+            return all(isinstance(var, int)
+                       or variables.get(var[0], -1) == var[1]
+                       for var in part)
+
+        if (variables1, variables2) == (context.variables1, context.variables2):
+            return self.PERFECT_MATCH
+
+        left, right = zip(*context.values["attr_pairs"])
+        if matches(left, variables1) and matches(right, variables2):
+            return 0.5
+
+        return self.NO_MATCH
+
+
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
     description = "Merge datasets based on the values of selected features."
@@ -208,10 +274,11 @@ class OWMergeData(widget.OWWidget):
             "Confused about merging options?\nSee the tooltips!",
             "merging_types")]
 
-    attr_pairs = Setting(None, schema_only=True)
+    settingsHandler = MergeDataContextHandler()
+    attr_pairs = ContextSetting(None, schema_only=True)
     merging = Setting(LeftJoin)
     auto_apply = Setting(True)
-    settings_version = 1
+    settings_version = 2
 
     want_main_area = False
     resizing_enabled = False
@@ -268,6 +335,7 @@ class OWMergeData(widget.OWWidget):
         gui.auto_apply(self.controlArea, self, box=False)
         # connect after wrapping self.commit with gui.auto_commit!
         self.attr_boxes.vars_changed.connect(self.commit)
+        self.attr_boxes.vars_changed.connect(self.store_combo_state)
         self.settingsAboutToBePacked.connect(self.store_combo_state)
 
     def change_merging(self):
@@ -284,47 +352,32 @@ class OWMergeData(widget.OWWidget):
         def get_unique_str_metas_names(model_):
             return [m for m in model_ if isinstance(m, StringVariable)]
 
-        def best_match(model, extra_model):
-            attr, extra_attr, n_max_intersect = None, None, 0
-            str_metas = get_unique_str_metas_names(model)
-            extra_str_metas = get_unique_str_metas_names(extra_model)
-            for m_a, m_b in product(str_metas, extra_str_metas):
-                col = self.data[:, m_a].metas
-                extra_col = self.extra_data[:, m_b].metas
-                if col.size and extra_col.size \
-                        and isinstance(col[0][0], str) \
-                        and isinstance(extra_col[0][0], str):
-                    n_inter = len(np.intersect1d(col, extra_col))
-                    if n_inter > n_max_intersect:
-                        n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
-            return attr, extra_attr
-
-        if self.data and self.extra_data:
-            box = self.attr_boxes
-            state = box.current_state()
-            if len(state) == 1 \
-                    and not any(isinstance(v, Variable) for v in state[0]):
-                l_var, r_var = best_match(box.model_left, box.model_right)
-                if l_var is not None:
-                    self._try_set_combo(box.rows[0].left_combo, l_var)
-                    self._try_set_combo(box.rows[0].right_combo, r_var)
+        attr, extra_attr, n_max_intersect = INDEX, INDEX, 0
+        str_metas = get_unique_str_metas_names(self.model)
+        extra_str_metas = get_unique_str_metas_names(self.extra_model)
+        for m_a, m_b in product(str_metas, extra_str_metas):
+            col = self.data[:, m_a].metas
+            extra_col = self.extra_data[:, m_b].metas
+            if col.size and extra_col.size \
+                    and isinstance(col[0][0], str) \
+                    and isinstance(extra_col[0][0], str):
+                n_inter = len(np.intersect1d(col, extra_col))
+                if n_inter > n_max_intersect:
+                    n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
+        return attr, extra_attr
 
     @Inputs.data
     @check_sql_input
     def setData(self, data):
         self.data = data
-        prev_settings = self.attr_boxes.current_state()
         self.model.set_domain(data and data.domain)
-        self._restore_combo_current_items(0, prev_settings)
         self.infoBoxData.setText(self.dataInfoText(data))
 
     @Inputs.extra_data
     @check_sql_input
     def setExtraData(self, data):
         self.extra_data = data
-        prev_settings = self.attr_boxes.current_state()
         self.extra_model.set_domain(data and data.domain)
-        self._restore_combo_current_items(1, prev_settings)
         self.infoBoxExtraData.setText(self.dataInfoText(data))
 
     def _restore_combo_current_items(self, side, prev_settings):
@@ -333,40 +386,14 @@ class OWMergeData(widget.OWWidget):
                 [row.left_combo, row.right_combo][side], pair[side])
 
     def store_combo_state(self):
-        self.attr_pairs = (
-            self.data is not None,
-            self.extra_data is not None,
-            [[[INDEX, INSTANCEID].index(x) if isinstance(x, str) else x.name
-              for x in row]
-             for row in self.attr_boxes.current_state()])
+        self.attr_pairs = self.attr_boxes.current_state()
 
     def handleNewSignals(self):
-        if self.attr_pairs \
-                and self.attr_pairs[:2] == (self.data is not None,
-                                            self.extra_data is not None):
-            def unpack(x, data):
-                if isinstance(x, int):
-                    return [INDEX, INSTANCEID][x]
-                if data is not None and x in data.domain:
-                    return data.domain[x]
-                else:
-                    return INDEX
-
-            state = [
-                [unpack(row[0], self.data), unpack(row[1], self.extra_data)]
-                for row in self.attr_pairs[2]]
-            self.attr_boxes.set_state(state)
-            # This is schema-only setting, so it should be single-shot
-            # More complicated alternative: make it a context setting
-            self.attr_pairs = None
-        self._find_best_match()
-        box = self.attr_boxes
-
-        state = box.current_state()
-        for i in range(len(box.rows) - 1, 0, -1):
-            if state[i] in state[:i]:
-                box.remove_row(box.rows[i])
-
+        self.closeContext()
+        self.attr_pairs = [self._find_best_match()]
+        self.openContext(self.data and self.data.domain,
+                         self.extra_data and self.extra_data.domain)
+        self.attr_boxes.set_state(self.attr_pairs)
         self.unconditional_commit()
 
     @staticmethod
@@ -655,13 +682,15 @@ class OWMergeData(widget.OWWidget):
             operations = ("augment", "merge", "combine")
             oper = operations[settings["merging"]]
             settings["attr_pairs"] = (
-                True, True,
                 [(mig_value(settings[f"attr_{oper}_data"]),
                   mig_value(settings[f"attr_{oper}_extra"]))])
             for oper in operations:
                 del settings[f"attr_{oper}_data"]
                 del settings[f"attr_{oper}_extra"]
 
+        # migrating non-context settings to context settings would be a mess
+        if hasattr(settings, "attr_pairs"):
+            del settings["attr_pairs"]
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWMergeData).run(

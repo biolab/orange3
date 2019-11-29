@@ -288,47 +288,6 @@ class TestOWMergeData(WidgetTest):
             widget2.attr_boxes.current_state(),
             [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
 
-    def test_retrieve_settings_with_missing_var(self):
-        widget = self.widget
-        boxes = widget.attr_boxes
-        var0, var1 = self.dataA.domain.attributes[:2]
-
-        self.send_signal(self.widget.Inputs.data, self.dataA)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
-
-        boxes.set_state(
-            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
-
-        domain = self.dataA.domain
-
-        # The left combo in the last row must change to INDEX due to missing var
-        data2 = self.dataA.transform(
-            Domain(domain.attributes[1:], domain.class_var, domain.metas))
-        settings = widget.settingsHandler.pack_data(widget)
-        widget2 = self.create_widget(OWMergeData, stored_settings=settings)
-        widget2.attr_boxes.set_state([(INDEX, INDEX)])
-        self.send_signals(
-            [(widget2.Inputs.data, data2),
-             (widget2.Inputs.extra_data, data2)],
-            widget=widget2)
-        self.assertEqual(
-            widget2.attr_boxes.current_state(),
-            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (INDEX, var1)])
-
-        # The last row is changed to INDEX, INDEX and removed as duplicate
-        data2 = self.dataA.transform(
-            Domain(domain.attributes[2:], domain.class_var, domain.metas))
-        settings = widget.settingsHandler.pack_data(widget)
-        widget2 = self.create_widget(OWMergeData, stored_settings=settings)
-        widget2.attr_boxes.set_state([(INDEX, INDEX)])
-        self.send_signals(
-            [(widget2.Inputs.data, data2),
-             (widget2.Inputs.extra_data, data2)],
-            widget=widget2)
-        self.assertEqual(
-            widget2.attr_boxes.current_state(),
-            [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
-
     def test_migrate_settings(self):
         attr1, attr2, attr3, attr4, attr5 = [object() for _ in range(5)]
         orig_settings = dict(
@@ -338,72 +297,20 @@ class TestOWMergeData(WidgetTest):
 
         widget = self.create_widget(
             OWMergeData, stored_settings=dict(merging=0, **orig_settings))
-        self.assertEqual(widget.attr_pairs, (True, True, [(attr1, attr2)]))
+        self.assertEqual(widget.attr_pairs, ([(attr1, attr2)]))
 
         widget = self.create_widget(
             OWMergeData, stored_settings=dict(merging=1, **orig_settings))
-        self.assertEqual(widget.attr_pairs, (True, True, [(attr3, attr4)]))
+        self.assertEqual(widget.attr_pairs, ([(attr3, attr4)]))
 
         widget = self.create_widget(
             OWMergeData, stored_settings=dict(merging=2, **orig_settings))
-        self.assertEqual(widget.attr_pairs, (True, True, [(attr5, INDEX)]))
+        self.assertEqual(widget.attr_pairs, ([(attr5, INDEX)]))
 
         orig_settings["attr_combine_extra"] = "Source position (index)"
         widget = self.create_widget(
             OWMergeData, stored_settings=dict(merging=2, **orig_settings))
-        self.assertEqual(widget.attr_pairs, (True, True, [(attr5, INSTANCEID)]))
-
-    @unittest.skip("widget doesn't work this way, but could in the future")
-    def test_switch_domain(self):  # pragma: no cover
-        widget = self.widget
-        boxes = widget.attr_boxes
-        var0, var1 = self.dataA.domain.attributes[:2]
-
-        self.send_signal(self.widget.Inputs.data, self.dataA)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
-        boxes.set_state(
-            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
-
-        self.send_signal(self.widget.Inputs.data, self.dataB)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
-        self.assertEqual(
-            boxes.current_state(),
-            [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
-
-        self.send_signal(self.widget.Inputs.data, self.dataA)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
-        boxes.set_state([(var0, var1), (var1, var0)])
-
-        self.send_signal(self.widget.Inputs.data, self.dataB)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
-        self.assertEqual(boxes.current_state(), [(INDEX, INDEX)])
-
-        self.send_signal(self.widget.Inputs.data, self.dataA)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
-        boxes.set_state([(var1, var1), (var0, var0)])
-
-        domain2 = Domain(self.dataA.domain.attributes[:1],
-                         self.dataA.domain.class_var)
-        data2 = self.dataA.transform(domain2)
-        self.send_signal(self.widget.Inputs.data, data2)
-        self.send_signal(self.widget.Inputs.extra_data, data2)
-        self.assertEqual(boxes.current_state(), [(var0, var0)])
-
-    def test_domain_switch_cleanup(self):
-        widget = self.widget
-        boxes = widget.attr_boxes
-        var0, var1 = self.dataA.domain.attributes[:2]
-
-        self.send_signal(self.widget.Inputs.data, self.dataA)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
-        boxes.set_state(
-            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
-
-        self.send_signal(self.widget.Inputs.data, self.dataB)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
-        self.assertEqual(
-            boxes.current_state(),
-            [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
+        self.assertEqual(widget.attr_pairs, ([(attr5, INSTANCEID)]))
 
     def test_report(self):
         widget = self.widget
@@ -460,11 +367,12 @@ class TestOWMergeData(WidgetTest):
                        np.array([[1, 1], [2, 2], [np.nan, np.nan], [np.nan, 0]]),
                        np.array([[1.0, "m2"], [np.nan, "m3"],
                                  [0.0, ""], [np.nan, "m1"]]).astype(object))
-        self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
         self.widget.merging = 2
         self.widget.controls.merging.buttons[self.widget.OuterJoin].click()
         self.send_signal(self.widget.Inputs.data, self.dataA[1:, [0, "clsA", -1]])
         self.send_signal(self.widget.Inputs.extra_data, self.dataA[:3, [1, "clsA", -2]])
+        self.widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
+        self.widget.attr_boxes.emit_list()
         out = self.get_output(self.widget.Outputs.data)
         self.assertTablesEqual(out, result)
         np.testing.assert_equal(
@@ -786,7 +694,7 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(widget.Inputs.extra_data, zoo_images)
         for i in range(3):
             self.assertEqual(widget.attr_boxes.current_state(),
-                             [(zoo.domain[-1], zoo_images.domain[-1])],
+                             [(zoo.domain["name"], zoo_images.domain["name"])],
                              f"wrong attributes chosen for merge_type={i}")
 
     def test_sparse(self):
@@ -1005,6 +913,7 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.extra_data, extra_data)
         self.widget.attr_boxes.set_state([(c, c)])
+        self.widget.attr_boxes.emit_list()
 
         # Only one row is matched; A has different values and it's duplicated,
         # and B has the same values, so we get only one copy
