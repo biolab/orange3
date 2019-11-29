@@ -31,6 +31,59 @@ class TestTableInit(unittest.TestCase):
         self.assertRaises(TypeError, Table, "iris", 42)
         self.assertRaises(TypeError, Table, Table(), 42)
 
+    def test_from_numpy(self):
+        X = np.arange(20).reshape(5, 4)
+        Y = np.arange(5) % 2
+        metas = np.array(list("abcde")).reshape(5, 1)
+        W = np.arange(5) / 5
+        ids = np.arange(100, 105, dtype=np.int)
+        attributes = dict(a=5, b="foo")
+
+        dom = Domain([ContinuousVariable(x) for x in "abcd"],
+                     DiscreteVariable("e", values=["no", "yes"]),
+                     [StringVariable("s")])
+
+        for func in (Table.from_numpy, Table):
+            table = func(dom, X, Y, metas, W, attributes, ids)
+            np.testing.assert_equal(X, table.X)
+            np.testing.assert_equal(Y, table.Y)
+            np.testing.assert_equal(metas, table.metas)
+            np.testing.assert_equal(W, table.W)
+            self.assertEqual(attributes, table.attributes)
+            np.testing.assert_equal(ids, table.ids)
+
+            table = func(dom, X, Y, metas, W)
+            np.testing.assert_equal(X, table.X)
+            np.testing.assert_equal(Y, table.Y)
+            np.testing.assert_equal(metas, table.metas)
+            np.testing.assert_equal(W, table.W)
+            self.assertEqual(ids.shape, (5, ))
+
+            table = func(dom, X, Y, metas)
+            np.testing.assert_equal(X, table.X)
+            np.testing.assert_equal(Y, table.Y)
+            np.testing.assert_equal(metas, table.metas)
+            self.assertEqual(table.W.shape, (5, 0))
+            self.assertEqual(table.ids.shape, (5, ))
+
+            table = func(Domain(dom.attributes, dom.class_var), X, Y)
+            np.testing.assert_equal(X, table.X)
+            np.testing.assert_equal(Y, table.Y)
+            self.assertEqual(table.metas.shape, (5, 0))
+            self.assertEqual(table.W.shape, (5, 0))
+            self.assertEqual(table.ids.shape, (5, ))
+
+            table = func(Domain(dom.attributes), X)
+            np.testing.assert_equal(X, table.X)
+            self.assertEqual(table.Y.shape, (5, 0))
+            self.assertEqual(table.metas.shape, (5, 0))
+            self.assertEqual(table.W.shape, (5, 0))
+            self.assertEqual(table.ids.shape, (5, ))
+
+            self.assertRaises(ValueError, func, dom, X, Y, metas, W[:4])
+            self.assertRaises(ValueError, func, dom, X, Y, metas[:4])
+            self.assertRaises(ValueError, func, dom, X, Y[:4])
+
 
 class TestTableFilters(unittest.TestCase):
     def setUp(self):

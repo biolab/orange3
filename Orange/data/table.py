@@ -495,7 +495,8 @@ class Table(Sequence, Storage):
         return self
 
     @classmethod
-    def from_numpy(cls, domain, X, Y=None, metas=None, W=None):
+    def from_numpy(cls, domain, X, Y=None, metas=None, W=None,
+                   attributes=None, ids=None):
         """
         Construct a table from numpy arrays with the given domain. The number
         of variables in the domain must match the number of columns in the
@@ -515,7 +516,8 @@ class Table(Sequence, Storage):
         :return:
         """
         X, Y, W = _check_arrays(X, Y, W, dtype='float64')
-        metas, = _check_arrays(metas, dtype=object)
+        metas, = _check_arrays(metas, dtype=object, shape_1=X.shape[0])
+        ids, = _check_arrays(ids, dtype=int, shape_1=X.shape[0])
 
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)
@@ -561,8 +563,11 @@ class Table(Sequence, Storage):
         self.metas = metas
         self.W = W
         self.n_rows = self.X.shape[0]
-        cls._init_ids(self)
-        self.attributes = {}
+        if ids is None:
+            cls._init_ids(self)
+        else:
+            self.ids = ids
+        self.attributes = {} if attributes is None else attributes
         return self
 
     @classmethod
@@ -1664,7 +1669,7 @@ class Table(Sequence, Storage):
         return t
 
 
-def _check_arrays(*arrays, dtype=None):
+def _check_arrays(*arrays, dtype=None, shape_1=None):
     checked = []
     if not len(arrays):
         return checked
@@ -1675,7 +1680,8 @@ def _check_arrays(*arrays, dtype=None):
         else:
             return len(array) if array is not None else 0
 
-    shape_1 = ninstances(arrays[0])
+    if shape_1 is None:
+        shape_1 = ninstances(arrays[0])
 
     for array in arrays:
         if array is None:
