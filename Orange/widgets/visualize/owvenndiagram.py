@@ -58,7 +58,6 @@ class OWVennDiagram(widget.OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     class Error(widget.OWWidget.Error):
-        domain_mismatch = Msg("Input data domains do not match.")
         instances_mismatch = Msg("Data sets do not contain the same instances.")
         too_many_inputs = Msg("Venn diagram accepts at most five datasets.")
 
@@ -84,8 +83,6 @@ class OWVennDiagram(widget.OWWidget):
         self._updating = False
         # Input update is in progress
         self._inputUpdate = False
-        # All input tables have the same domain.
-        self.samedomain = True
         # Input datasets in the order they were 'connected'.
         self.data = OrderedDict()
         # Extracted input item sets in the order they were 'connected'
@@ -177,28 +174,15 @@ class OWVennDiagram(widget.OWWidget):
         inter = reduce(set.intersection, sets)
         return len(inter) == max(map(len, sets))
 
-    def settings_incompatible(self):
-        self.vennwidget.clear()
-        if self.rowwise:
-            self.Error.domain_mismatch()
-        else:
-            self.Error.instances_mismatch()
-        self.itemsets = OrderedDict()
-        return False
-
     def settings_compatible(self):
-        self.Error.domain_mismatch.clear()
         self.Error.instances_mismatch.clear()
-        if self.rowwise:
-            domains = [input.table.domain for input in self.data.values()]
-            self.samedomain = all((d1 == d2) for d1, d2 in pairwise(domains))
-            if not self.samedomain:
-                return self.settings_incompatible()
-            return True
-        else:
+        if not self.rowwise:
             if not self.data_equality():
-                return self.settings_incompatible()
-            return True
+                self.vennwidget.clear()
+                self.Error.instances_mismatch()
+                self.itemsets = OrderedDict()
+                return False
+        return True
 
     def handleNewSignals(self):
         self._inputUpdate = False
