@@ -767,9 +767,9 @@ def freevars(exp, env):
     elif etype == ast.Starred:
         # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
         return freevars(exp.value, env)
-    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes]:
+    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes, ast.NameConstant]:
         return []
-    elif etype == ast.NameConstant:
+    elif etype == ast.Constant:
         return []
     elif etype == ast.Attribute:
         return freevars(exp.value, env)
@@ -836,9 +836,9 @@ def validate_exp(exp):
     elif etype == ast.Starred:
         assert isinstance(exp.ctx, ast.Load)
         return validate_exp(exp.value)
-    elif etype in [ast.Num, ast.Str, ast.Bytes, ast.Ellipsis]:
+    elif etype in [ast.Num, ast.Str, ast.Bytes, ast.Ellipsis, ast.NameConstant]:
         return True
-    elif etype == ast.NameConstant:
+    elif etype == ast.Constant:
         return True
     elif etype == ast.Attribute:
         return True
@@ -947,6 +947,7 @@ def make_lambda(expression, args, env=None):
     # lambda *{args}* : EXPRESSION
     lambda_ = ast.Lambda(
         args=ast.arguments(
+            posonlyargs=[],
             args=[ast.arg(arg=arg, annotation=None) for arg in args],
             varargs=None,
             varargannotation=None,
@@ -961,6 +962,7 @@ def make_lambda(expression, args, env=None):
     # lambda **{env}** : lambda *{args}*: EXPRESSION
     outer = ast.Lambda(
         args=ast.arguments(
+            posonlyargs=[],
             args=[ast.arg(arg=name, annotation=None) for name in (env or {})],
             varargs=None,
             varargannotation=None,
