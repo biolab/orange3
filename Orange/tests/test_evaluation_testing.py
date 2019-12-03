@@ -116,46 +116,6 @@ class TestValidation(unittest.TestCase):
         self.assertRaises(ValueError, Validation, preprocessor=lambda x: x)
         self.assertRaises(ValueError, Validation, callback=lambda x: x)
 
-    @patch("Orange.evaluation.testing.Validation.__call__")
-    def test_warn_deprecations(self, _):
-        self.assertWarns(
-            DeprecationWarning,
-            Validation, self.data, [MajorityLearner()])
-
-        self.assertWarns(DeprecationWarning, Validation().fit)
-
-    @patch("Orange.evaluation.testing.Validation.__call__")
-    def test_obsolete_call_constructor(self, validation_call):
-
-        class MockValidation(Validation):
-            args = kwargs = None
-
-            def __init__(self, *args, **kwargs):
-                super().__init__()
-                MockValidation.args = args
-                MockValidation.kwargs = kwargs
-
-            def get_indices(self, data):
-                pass
-
-        data = self.data
-        learners = [MajorityLearner(), MajorityLearner()]
-        kwargs = dict(foo=42, store_data=43, store_models=44, callback=45, n_jobs=46)
-        self.assertWarns(
-            DeprecationWarning,
-            MockValidation, data, learners=learners,
-            **kwargs)
-        self.assertEqual(MockValidation.args, ())
-        kwargs.pop("n_jobs")  # do not pass n_jobs and callback from __new__ to __init__
-        kwargs.pop("callback")
-        self.assertEqual(MockValidation.kwargs, kwargs)
-
-        cargs, ckwargs = validation_call.call_args
-        self.assertEqual(len(cargs), 1)
-        self.assertIs(cargs[0], data)
-        self.assertIs(ckwargs["learners"], learners)
-        self.assertEqual(ckwargs["callback"], 45)
-
 
 class TestCrossValidation(TestSampling):
     @classmethod

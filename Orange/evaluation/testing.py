@@ -385,10 +385,6 @@ class Validation:
                                  "and train_data are omitted")
             return self
 
-        warn("calling Validation's constructor with data and learners "
-             "is deprecated;\nconstruct an instance and call it",
-             DeprecationWarning, stacklevel=2)
-
         # Explicitly call __init__ because Python won't
         self.__init__(store_data=store_data, store_models=store_models,
                       **kwargs)
@@ -403,11 +399,6 @@ class Validation:
     def __init__(self, *, store_data=False, store_models=False):
         self.store_data = store_data
         self.store_models = store_models
-
-    def fit(self, *args, **kwargs):
-        warn("Validation.fit is deprecated; use the call operator",
-             DeprecationWarning)
-        return self(*args, **kwargs)
 
     def __call__(self, data, learners, preprocessor=None, *, callback=None):
         """
