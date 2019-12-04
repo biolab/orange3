@@ -81,7 +81,7 @@ class OWContinuize(widget.OWWidget):
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
 
-        box = gui.vBox(self.controlArea, "Categorical Outcomes")
+        box = gui.vBox(self.controlArea, "Categorical Class")
         gui.radioButtonsInBox(
             box, self, "class_treatment",
             btnLabels=[t[0] for t in self.class_treats],
