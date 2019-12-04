@@ -89,7 +89,7 @@ class TestTabReader(unittest.TestCase):
     def test_read_nonutf8_encoding(self):
         with self.assertRaises(ValueError) as cm:
             data = Table(test_filename('datasets/binary-blob.tab'))
-        self.assertIn('NULL byte', cm.exception.args[0])
+        self.assertIn('NUL', cm.exception.args[0])
 
         with self.assertRaises(ValueError):
             with warnings.catch_warnings():
