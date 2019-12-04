@@ -200,6 +200,10 @@ class TestVariousDataSets(WidgetTest):
         self.send_signal(self.widget.Inputs.data, make_table(discrete))
         self.send_signal(self.widget.Inputs.data, None)
 
+    def test_does_not_crash_on_empty_domain(self):
+        empty_data = Table('iris').transform(Domain([]))
+        self.send_signal(self.widget.Inputs.data, empty_data)
+
     # No missing values
     @table_dense_sparse
     def test_on_data_with_no_missing_values(self, prepare_table):

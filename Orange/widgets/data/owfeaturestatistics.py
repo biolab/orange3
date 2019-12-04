@@ -827,7 +827,7 @@ class OWFeatureStatistics(widget.OWWidget):
     def __restore_sorting(self):
         """Restore the sort column and order from saved settings."""
         sort_column, sort_order = self.sorting
-        if self.data is not None and sort_column < self.model.columnCount():
+        if self.model.n_attributes and sort_column < self.model.columnCount():
             self.model.sort(sort_column, sort_order)
             self.table_view.horizontalHeader().setSortIndicator(sort_column, sort_order)
 
