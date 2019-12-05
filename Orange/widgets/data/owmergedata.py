@@ -202,7 +202,8 @@ class MergeDataContextHandler(ContextHandler):
     def _encode_domain(self, domain):
         if domain is None:
             return {}
-        return dict(self.encode_variables(chain(domain.variables, domain.metas)))
+        all_vars = chain(domain.variables, domain.metas)
+        return dict(self.encode_variables(all_vars))
 
     def settings_from_widget(self, widget, *_args):
         context = widget.current_context
@@ -315,10 +316,9 @@ class OWMergeData(widget.OWWidget):
         self.extra_model = DomainModelWithTooltips(content)
 
         box = gui.hBox(self.controlArea, box=None)
-        self.infoBoxData = gui.label(
-            box, self, self.dataInfoText(None), box="Data")
-        self.infoBoxExtraData = gui.label(
-            box, self, self.dataInfoText(None), box="Extra Data")
+        no_info = self.data_info(None)
+        self.info_box_data = gui.label(box, self, no_info, box="Data")
+        self.info_box_extra_data = gui.label(box, self, no_info, box="Extra Data")
 
         grp = gui.radioButtons(
             self.controlArea, self, "merging", box="Merging",
@@ -341,12 +341,30 @@ class OWMergeData(widget.OWWidget):
     def change_merging(self):
         self.commit()
 
-    @staticmethod
-    def _try_set_combo(combo, var):
-        if var in combo.model():
-            combo.setCurrentIndex(combo.model().indexOf(var))
-        else:
-            combo.setCurrentIndex(0)
+    @Inputs.data
+    @check_sql_input
+    def set_data(self, data):
+        self.data = data
+        self.model.set_domain(data and data.domain)
+        self.info_box_data.setText(self.data_info(data))
+
+    @Inputs.extra_data
+    @check_sql_input
+    def set_extra_data(self, data):
+        self.extra_data = data
+        self.extra_model.set_domain(data and data.domain)
+        self.info_box_extra_data.setText(self.data_info(data))
+
+    def store_combo_state(self):
+        self.attr_pairs = self.attr_boxes.current_state()
+
+    def handleNewSignals(self):
+        self.closeContext()
+        self.attr_pairs = [self._find_best_match()]
+        self.openContext(self.data and self.data.domain,
+                         self.extra_data and self.extra_data.domain)
+        self.attr_boxes.set_state(self.attr_pairs)
+        self.unconditional_commit()
 
     def _find_best_match(self):
         def get_unique_str_metas_names(model_):
@@ -366,38 +384,8 @@ class OWMergeData(widget.OWWidget):
                     n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
         return attr, extra_attr
 
-    @Inputs.data
-    @check_sql_input
-    def setData(self, data):
-        self.data = data
-        self.model.set_domain(data and data.domain)
-        self.infoBoxData.setText(self.dataInfoText(data))
-
-    @Inputs.extra_data
-    @check_sql_input
-    def setExtraData(self, data):
-        self.extra_data = data
-        self.extra_model.set_domain(data and data.domain)
-        self.infoBoxExtraData.setText(self.dataInfoText(data))
-
-    def _restore_combo_current_items(self, side, prev_settings):
-        for row, pair in zip(self.attr_boxes.rows, prev_settings):
-            self._try_set_combo(
-                [row.left_combo, row.right_combo][side], pair[side])
-
-    def store_combo_state(self):
-        self.attr_pairs = self.attr_boxes.current_state()
-
-    def handleNewSignals(self):
-        self.closeContext()
-        self.attr_pairs = [self._find_best_match()]
-        self.openContext(self.data and self.data.domain,
-                         self.extra_data and self.extra_data.domain)
-        self.attr_boxes.set_state(self.attr_pairs)
-        self.unconditional_commit()
-
     @staticmethod
-    def dataInfoText(data):
+    def data_info(data):
         if data is None:
             return "No data."
         else:
@@ -408,7 +396,7 @@ class OWMergeData(widget.OWWidget):
 
     def commit(self):
         self.clear_messages()
-        merged = None if not self.data or not self.extra_data else self.merge()
+        merged = self.merge() if self.data and self.extra_data else None
         self.Outputs.data.send(merged)
 
     def send_report(self):
@@ -691,6 +679,7 @@ class OWMergeData(widget.OWWidget):
         # migrating non-context settings to context settings would be a mess
         if hasattr(settings, "attr_pairs"):
             del settings["attr_pairs"]
+
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWMergeData).run(

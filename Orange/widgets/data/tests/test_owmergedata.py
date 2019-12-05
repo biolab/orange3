@@ -288,6 +288,35 @@ class TestOWMergeData(WidgetTest):
             widget2.attr_boxes.current_state(),
             [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
 
+    def test_match_settings(self):
+        widget = self.widget
+        boxes = widget.attr_boxes
+        domainA = self.dataA.domain
+        domainB = self.dataB.domain
+
+        self.send_signal(widget.Inputs.data, self.dataA)
+        self.send_signal(widget.Inputs.extra_data, self.dataA)
+        attr_pairs = [(INDEX, INDEX), (INSTANCEID, INSTANCEID),
+                      (domainA[0], domainA[1]), (domainA[1], domainA[0])]
+        boxes.set_state(attr_pairs)
+        boxes.emit_list()
+        self.assertEqual(widget.attr_pairs, attr_pairs)
+
+        self.send_signal(widget.Inputs.data, None)
+        self.assertEqual(widget.attr_pairs, [(INDEX, INDEX)])
+
+        self.send_signal(widget.Inputs.data, self.dataA)
+        self.assertEqual(widget.attr_pairs, attr_pairs)
+
+        self.send_signal(widget.Inputs.extra_data, self.dataB)
+        attr_pairs2 = [(domainA[0], domainB[0]), (domainA[1], domainB[1])]
+        boxes.set_state(attr_pairs2)
+        boxes.emit_list()
+        self.assertEqual(widget.attr_pairs, attr_pairs2)
+
+        self.send_signal(widget.Inputs.extra_data, self.dataA)
+        self.assertEqual(widget.attr_pairs, attr_pairs)
+
     def test_migrate_settings(self):
         attr1, attr2, attr3, attr4, attr5 = [object() for _ in range(5)]
         orig_settings = dict(
