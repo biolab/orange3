@@ -1,7 +1,7 @@
 Continuize
 ==========
 
-Turns discrete attributes into continuous dummy variables.
+Turns discrete variables (attributes) into numeric ("continuous") dummy variables.
 
 **Inputs**
 
@@ -9,25 +9,38 @@ Turns discrete attributes into continuous dummy variables.
 
 **Outputs**
 
-- Data: data set with continuized instances
+- Data: transformed data set
 
-The **Continuize** widget receives a data set in the input and outputs the same data set in which the discrete attributes (including binary attributes) are replaced with continuous ones.
+The **Continuize** widget receives a data set in the input and outputs the same data set in which the discrete variables (including binary variables) are replaced with continuous ones.
 
 ![](images/Continuize-stamped.png)
 
-1. [Continuization methods](https://en.wikipedia.org/wiki/Continuity_correction), which define the treatment of multivalued discrete attributes. Say that we have a discrete attribute status with the values low, middle and high, listed in that order. Options for their transformation are:
+1. Define the treatment of non-binary categorical variables.
 
-   - **First value as base**: the attribute will be transformed into two continuous attributes, status=middle with values 0 or 1 signifying whether the original attribute had value middle on a particular example, and similarly, status=high. Hence, a three-valued attribute is transformed into two continuous attributes, corresponding to all except the first value of the attribute.
-   - **Most frequent value as base**: similar to the above, except that the data is analyzed and the most frequent value is used as a base. So, if most examples have the value middle, the two newly constructed continuous attributes will be status=low and status=high.
-   - **One attribute per value**: this would construct three continuous attributes out of a three-valued discrete one.
-   - **Ignore multinominal attributes**: removes the multinominal attributes from the data.
-   - **Treat as ordinal**: converts the attribute into a continuous attribute with values 0, 1, and 2.
-   - **Divide by number of values**: same as above, except that the values are normalized into range 0-1. So, our case would give values 0, 0.5 and 1.
+    Examples in this section will assume that we have a discrete attribute status with the values low, middle and high, listed in that order. Options for their transformation are:
 
-2. Define the treatment of continuous attributes. You will usually prefer the *Leave them as they are* option. The alternative is *Normalize by span*, which will subtract the lowest value found in the data and divide by the span, so all values will fit into [0, 1]. Finally,*Normalize by standard deviation* subtracts the average and divides by the deviation.
-3. Define the treatment of class attributes. Besides leaving it as it is, there are also a couple of options available for multinominal attributes, except for those options which split the attribute into more than one attribute - this obviously cannot be supported since you cannot have more than one class attribute.
-4. With *value range*, you can define the values of new attributes. In the above text, we supposed the range *from 0 to 1*. You can change it to *from -1 to 1*.
+   - **First value as base**: a N-valued categorical variable will be transformed into N-1 numeric variables, each serving as an indicator for one of the original values except for the base value. The base value is the first value in the list. By default, the values are ordered alphabetically; their order can be changed in [Edit Domain](../data/editdomain).
+
+       In the above case, the three-valued variable *status* is transformed into two numeric variables, *status=middle* with values 0 or 1 indicating whether the original variable had value *middle* on a particular example, and similarly, *status=high*.
+
+   - **Most frequent value as base**: similar to the above, except that the most frequent value is used as a base. So, if the most frequent value in the above example is *middle*, then *middle* is considered as the base and the two newly constructed variables are *status=low* and *status=high*.
+
+   - **One attribute per value**: this option constructs one numeric variable per each value of the original variable. In the above case, we would get variables *status=low*, *status=middle* and *status=high*.
+
+   - **Ignore multinomial attributes**: removes non-binary categorical variables from the data.
+
+   - **Treat as ordinal**: converts the variable into a single numeric variable enumerating the original values. In the above case, the new variable would have the value of 0 for *low*, 1 for *middle* and 2 for *high*. Again note that the order of values can be set in  [Edit Domain](../data/editdomain).
+
+   - **Divide by number of values**: same as above, except that values are normalized into range 0-1. In our example, the values of the new variable would be 0, 0.5 and 1.
+
+2. Define the treatment of continuous attributes. Besised the option to *Leave them as they are*, we can *Normalize by span*, which will subtract the lowest value found in the data and divide by the span, so all values will fit into [0, 1]. Option *Normalize by standard deviation* subtracts the average and divides by the standard deviation.
+
+3. Define the treatment of class attributes (outcomes, targets). Besides leaving it as it is, the available options mirror those for multinomial attributes, except for those that would split the outcome into multiple outcome variables.
+
+4. This option defines the ranges of new variables. In the above text, we supposed the range *from 0 to 1*.
+
 5. Produce a report.
+
 6. If *Apply automatically* is ticked, changes are committed automatically. Otherwise, you have to press *Apply* after each change.
 
 Examples
