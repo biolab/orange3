@@ -189,14 +189,15 @@ class MergeDataContextHandler(ContextHandler):
 
     @staticmethod
     def encode_variables(variables):
-        return [(v.name, vartype(v)) if isinstance(v, Variable) else (v, -1)
+        return [(v.name, 100 + vartype(v))
+                if isinstance(v, Variable) else (v, 100)
                 for v in variables]
 
     @staticmethod
     def decode_pair(widget, pair):
         left_domain = widget.data and widget.data.domain
         right_domain = widget.extra_data and widget.extra_data.domain
-        return tuple(var[0] if var[1] == -1 else domain[var[0]]
+        return tuple(var[0] if var[1] == 100 else domain[var[0]]
                      for domain, var in zip((left_domain, right_domain), pair))
 
     def _encode_domain(self, domain):
@@ -221,8 +222,7 @@ class MergeDataContextHandler(ContextHandler):
 
     def match(self, context, variables1, variables2):
         def matches(part, variables):
-            return all(isinstance(var, int)
-                       or variables.get(var[0], -1) == var[1]
+            return all(var[1] == 100 or variables.get(var[0], -1) == var[1]
                        for var in part)
 
         if (variables1, variables2) == (context.variables1, context.variables2):
@@ -676,12 +676,21 @@ class OWMergeData(widget.OWWidget):
                 del settings[f"attr_{oper}_data"]
                 del settings[f"attr_{oper}_extra"]
 
-        # migrating non-context settings to context settings would be a mess
-        if hasattr(settings, "attr_pairs"):
-            del settings["attr_pairs"]
+        if not version or version < 2 and "attr_pairs" in settings:
+            attr_pairs = settings.pop("attr_pairs")
+            attr_pairs = [tuple((var, 100) if isinstance(var, str) else var
+                                for var in pair)
+                          for pair in attr_pairs]
+            context = ContextHandler().new_context()
+            context.variables1 = \
+                dict(var for var, _ in attr_pairs if var[1] > 100)
+            context.variables2 = \
+                dict(var for _, var in attr_pairs if var[1] > 100)
+            context.values["attr_pairs"] = attr_pairs
+            settings["context_settings"] = [context]
 
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWMergeData).run(
-        setData=Orange.data.Table("tests/data-gender-region"),
-        setExtraData=Orange.data.Table("tests/data-regions"))
+        set_data=Orange.data.Table("tests/data-gender-region"),
+        set_extra_data=Orange.data.Table("tests/data-regions"))

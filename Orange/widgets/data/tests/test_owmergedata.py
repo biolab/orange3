@@ -4,6 +4,7 @@
 # pylint: disable=too-many-lines,too-many-public-methods
 from itertools import chain
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
@@ -12,9 +13,11 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, DiscreteVariable, StringVariable, \
     ContinuousVariable
-from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX
+from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX, \
+    MergeDataContextHandler
 from Orange.widgets.tests.base import WidgetTest
 from Orange.tests import test_filename
+from orangewidget.settings import VERSION_KEY
 
 
 class TestOWMergeData(WidgetTest):
@@ -318,28 +321,43 @@ class TestOWMergeData(WidgetTest):
         self.assertEqual(widget.attr_pairs, attr_pairs)
 
     def test_migrate_settings(self):
-        attr1, attr2, attr3, attr4, attr5 = [object() for _ in range(5)]
-        orig_settings = dict(
-            attr_augment_data=attr1, attr_augment_extra=attr2,
-            attr_merge_data=attr3, attr_merge_extra=attr4,
-            attr_combine_data=attr5, attr_combine_extra='Position (index)')
+        def create_and_send(settings):
+            widget = self.create_widget(OWMergeData, stored_settings=settings)
+            for signal in (widget.Inputs.data, widget.Inputs.extra_data):
+                self.send_signal(signal, self.dataA)
+            return widget
 
-        widget = self.create_widget(
-            OWMergeData, stored_settings=dict(merging=0, **orig_settings))
+        domainA = self.dataA.domain
+        attr1, attr2, attr3 = domainA.variables
+        attr4, attr5 = domainA.metas
+
+        # Migration from version == None
+        orig_settings = dict(
+            attr_augment_data=(attr1.name, 101),
+            attr_augment_extra=(attr2.name, 101),
+            attr_merge_data=(attr3.name, 101),
+            attr_merge_extra=(attr4.name, 101),
+            attr_combine_data=(attr5.name, 103),
+            attr_combine_extra='Position (index)')
+
+        widget = create_and_send(dict(merging=0, **orig_settings))
         self.assertEqual(widget.attr_pairs, ([(attr1, attr2)]))
 
-        widget = self.create_widget(
-            OWMergeData, stored_settings=dict(merging=1, **orig_settings))
+        widget = create_and_send(dict(merging=1, **orig_settings))
         self.assertEqual(widget.attr_pairs, ([(attr3, attr4)]))
 
-        widget = self.create_widget(
-            OWMergeData, stored_settings=dict(merging=2, **orig_settings))
+        widget = create_and_send(dict(merging=2, **orig_settings))
         self.assertEqual(widget.attr_pairs, ([(attr5, INDEX)]))
 
         orig_settings["attr_combine_extra"] = "Source position (index)"
-        widget = self.create_widget(
-            OWMergeData, stored_settings=dict(merging=2, **orig_settings))
+        widget = create_and_send(dict(merging=2, **orig_settings))
         self.assertEqual(widget.attr_pairs, ([(attr5, INSTANCEID)]))
+
+        # Migration from version 1
+        settings = {"attr_pairs": [((attr1.name, 101), (attr2.name, 101))],
+                    VERSION_KEY: 1}
+        widget = create_and_send(settings)
+        self.assertEqual(widget.attr_pairs, ([(attr1, attr2)]))
 
     def test_report(self):
         widget = self.widget
@@ -969,6 +987,23 @@ class TestOWMergeData(WidgetTest):
         merged_data = self.get_output(self.widget.Outputs.data)
         self.assertListEqual([m.name for m in merged_data.domain.variables],
                              ["A", "B", "C"])
+
+
+class MergeDataContextHandlerTest(unittest.TestCase):
+    # These units are too small to test individually, so they are tested
+    # within their function in the widget.
+
+    # The following test only covers obscure cases that seem to appear only
+    # within the context of some tests and can't appear in real world.
+    def test_malformed_contexts(self):
+        widget = Mock()
+        handler = MergeDataContextHandler()
+        # pylint: disable=protected-access
+        self.assertEqual(handler._encode_domain(None), {})
+
+        widget.current_context = None
+        handler.settings_from_widget(widget)  # mustn't crash
+        handler.settings_to_widget(widget)  # mustn't crash
 
 
 if __name__ == "__main__":
