@@ -196,10 +196,8 @@ class OWSelectRows(widget.OWWidget):
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
 
-        box_data = gui.vBox(boxes, 'Data', addToLayout=False)
-        self.data_in_variables = gui.widgetLabel(box_data, " ")
-        self.data_out_rows = gui.widgetLabel(box_data, " ")
-        layout.addWidget(box_data, 0, 0)
+        self.update_input_summary(None)
+        self.update_output_summary(None)
 
         box_setting = gui.vBox(boxes, 'Purging', addToLayout=False)
         self.cb_pa = gui.checkBox(
@@ -209,14 +207,14 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        layout.addWidget(box_setting, 0, 1)
+        layout.addWidget(box_setting, 0, 0)
 
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
         layout.addWidget(self.buttonsArea, 1, 0)
 
         acbox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(acbox, 1, 1)
+        layout.addWidget(acbox, 1, 0)
 
         self.set_data(None)
         self.resize(600, 400)
@@ -449,6 +447,7 @@ class OWSelectRows(widget.OWWidget):
             len(data.domain.variables) + len(data.domain.metas) > 100)
         if not data:
             self.data_desc = None
+            self.update_input_summary(None)
             self.commit()
             return
         self.data_desc = report.describe_data_brief(data)
@@ -469,7 +468,7 @@ class OWSelectRows(widget.OWWidget):
         else:
             self.add_row()
 
-        self.update_info(data, self.data_in_variables, "In: ")
+        self.update_input_summary(data)
         self.unconditional_commit()
 
     def conditions_changed(self):
@@ -605,20 +604,33 @@ class OWSelectRows(widget.OWWidget):
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
 
-        self.update_info(matching_output, self.data_out_rows, "Out: ")
+        self.update_output_summary(matching_output)
 
-    def update_info(self, data, lab1, label):
+    def update_input_summary(self, data):
         def sp(s, capitalize=True):
             return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
 
-        if data is None:
-            lab1.setText("")
+        if data:
+            n = data.approx_len()
+            details = "~%s row%s, %s variable%s" % \
+                      (sp(n) + sp(len(data.domain.variables) + len(data.domain.metas)))
+            n = self.info.format_number(n)
+            self.info.set_input_summary(n, details)
         else:
-            lab1.setText(label + "~%s row%s, %s variable%s" %
-                         (sp(data.approx_len()) +
-                          sp(len(data.domain.variables) +
-                             len(data.domain.metas)))
-                        )
+            self.info.set_input_summary(self.info.NoInput)
+
+    def update_output_summary(self, data):
+        def sp(s, capitalize=True):
+            return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
+
+        if data:
+            n = data.approx_len()
+            details = "~%s row%s, %s variable%s" % \
+                      (sp(n) + sp(len(data.domain.variables) + len(data.domain.metas)))
+            n = self.info.format_number(n)
+            self.info.set_output_summary(n, details)
+        else:
+            self.info.set_output_summary(self.info.NoInput)
 
     def send_report(self):
         if not self.data:
