@@ -357,7 +357,7 @@ class TestKMeansCorrelationHeuristic(unittest.TestCase):
 
     def test_get_clusters_of_attributes(self):
         clusters = self.heuristic.get_clusters_of_attributes()
-        self.assertListEqual([[0], [1, 2, 3, 4, 5, 6, 7], [8]],
+        self.assertListEqual([[1, 2, 3, 4, 5, 6, 7], [8], [0]],
                              [c.instances for c in clusters])
 
     def test_get_states(self):
