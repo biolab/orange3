@@ -35,7 +35,7 @@ class TestClusteringEvaluation(unittest.TestCase):
                                                         KMeans(n_clusters=5)])
         expected = [0.68081362, 0.55259194, 0.48851755]
         np.testing.assert_almost_equal(Silhouette(cr), expected, decimal=2)
-        expected = [0.51936073, 0.74837231, 0.59178896]
+        expected = [0.65383807, 0.75511917, 0.68721092]
         np.testing.assert_almost_equal(AdjustedMutualInfoScore(cr),
                                        expected, decimal=2)
         self.assertIsNone(cr.models)
