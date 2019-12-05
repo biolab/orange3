@@ -21,8 +21,8 @@ class TestPolynomialLearner(unittest.TestCase):
         polynomial2 = PolynomialLearner(linear, degree=2)
         polynomial3 = PolynomialLearner(linear, degree=3)
 
-        res = TestOnTrainingData(data,
-                                 [linear, polynomial2, polynomial3])
+        tt = TestOnTrainingData()
+        res = tt(data, [linear, polynomial2, polynomial3])
         rmse = RMSE(res)
 
         self.assertGreater(rmse[0], rmse[1])

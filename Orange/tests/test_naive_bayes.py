@@ -32,12 +32,14 @@ class TestNaiveBayesLearner(unittest.TestCase):
         self.model = self.learner(self.data)
 
     def test_NaiveBayes(self):
-        results = CrossValidation(self.table, [self.learner], k=10)
+        cv = CrossValidation(k=10)
+        results = cv(self.table, [self.learner])
         ca = CA(results)
         self.assertGreater(ca, 0.7)
         self.assertLess(ca, 0.9)
 
-        results = CrossValidation(Table("iris"), [self.learner], k=10)
+        cv = CrossValidation(k=10)
+        results = cv(Table("iris"), [self.learner])
         ca = CA(results)
         self.assertGreater(ca, 0.7)
 
@@ -56,7 +58,8 @@ class TestNaiveBayesLearner(unittest.TestCase):
     def test_allnan_cv(self):
         # GH 2740
         data = Table(test_filename('datasets/lenses.tab'))
-        results = CrossValidation(data, [self.learner])
+        cv = CrossValidation()
+        results = cv(data, [self.learner])
         self.assertFalse(any(results.failed))
 
     def test_prediction_routing(self):

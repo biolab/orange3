@@ -25,7 +25,8 @@ class TestSGDRegressionLearner(unittest.TestCase):
         y = X.dot(np.random.rand(ncols))
         data = Table(X, y)
         sgd = SGDRegressionLearner()
-        res = CrossValidation(data, [sgd], k=3)
+        cv = CrossValidation(k=3)
+        res = cv(data, [sgd])
         self.assertLess(RMSE(res)[0], 0.1)
 
     def test_coefficients(self):
@@ -46,7 +47,8 @@ class TestSGDClassificationLearner(unittest.TestCase):
 
     def test_SGDClassification(self):
         sgd = SGDClassificationLearner()
-        res = CrossValidation(self.iris, [sgd], k=3)
+        cv = CrossValidation(k=3)
+        res = cv(self.iris, [sgd])
         self.assertGreater(AUC(res)[0], 0.8)
 
     def test_coefficients(self):

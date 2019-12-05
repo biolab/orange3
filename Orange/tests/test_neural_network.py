@@ -26,24 +26,27 @@ class TestNNLearner(unittest.TestCase):
         super().setUp()
 
     def test_NN_classification(self):
-        results = CrossValidation(self.iris, [NNClassificationLearner()], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.iris, [NNClassificationLearner()])
         ca = CA(results)
         self.assertGreater(ca, 0.8)
         self.assertLess(ca, 0.99)
 
     def test_NN_regression(self):
         const = ConstantLearner()
-        results = CrossValidation(self.housing, [NNRegressionLearner(), const],
-                                  k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.housing, [NNRegressionLearner(), const])
         mse = MSE()
         res = mse(results)
         self.assertLess(res[0], 35)
         self.assertLess(res[0], res[1])
 
     def test_NN_model(self):
-        results = CrossValidation(self.iris, [self.learner], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.iris, [self.learner])
         self.assertGreater(CA(results), 0.90)
-        results = CrossValidation(self.housing, [self.learner], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.housing, [self.learner])
         mse = MSE()
         res = mse(results)
         self.assertLess(res[0], 35)

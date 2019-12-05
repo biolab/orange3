@@ -69,7 +69,8 @@ class StackedLearner(Learner):
         self.params = vars()
 
     def fit_storage(self, data):
-        res = CrossValidation(data, self.learners, k=self.k)
+        cv = CrossValidation(k=self.k)
+        res = cv(data, self.learners)
         if data.domain.class_var.is_discrete:
             X = np.hstack(res.probabilities)
             use_prob = True

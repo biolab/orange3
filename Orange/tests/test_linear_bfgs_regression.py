@@ -13,6 +13,7 @@ class TestLinearRegressionLearner(unittest.TestCase):
         table = Table('housing')
         learners = [LinearRegressionLearner(preprocessors=[]),
                     LinearRegressionLearner()]
-        results = CrossValidation(table, learners, k=3)
+        cv = CrossValidation(k=3)
+        results = cv(table, learners)
         rmse = RMSE(results)
         self.assertLess(rmse[0], rmse[1])
