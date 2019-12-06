@@ -596,7 +596,7 @@ class ComparableInstance:
     def __eq__(self, other):
         # XXX: comparing NaN with different payload
         return (isinstance(other, ComparableInstance)
-                and (self.domain == other.domain)
+                and self.domain.variables == other.domain.variables
                 and self.inst.x.data.tobytes() == other.inst.x.data.tobytes()
                 and self.inst.y.data.tobytes() == other.inst.y.data.tobytes())
 
