@@ -44,25 +44,38 @@ class SelectRowsContextHandler(DomainContextHandler):
         return varname in attrs or varname in metas
 
     def encode_setting(self, context, setting, value):
-        if setting.name == 'conditions':
-            CONTINUOUS = vartype(ContinuousVariable("x"))
-            for i, (attr, op, values) in enumerate(value):
-                if context.attributes.get(attr) == CONTINUOUS:
-                    if values and isinstance(values[0], str):
-                        values = [QLocale().toDouble(v)[0] for v in values]
-                        value[i] = (attr, op, values)
-        return super().encode_setting(context, setting, value)
+        if setting.name != 'conditions':
+            return super().encode_settings(context, setting, value)
+
+        encoded = []
+        CONTINUOUS = vartype(ContinuousVariable("x"))
+        for attr, op, values in value:
+            vtype = context.attributes.get(attr)
+            if vtype == CONTINUOUS and values and isinstance(values[0], str):
+                values = [QLocale().toDouble(v)[0] for v in values]
+            encoded.append((attr, vtype, op, values))
+        return encoded
 
     def decode_setting(self, setting, value, domain=None):
         value = super().decode_setting(setting, value, domain)
         if setting.name == 'conditions':
-            for i, (attr, op, values) in enumerate(value):
+            for i, (attr, _, op, values) in enumerate(value):
                 var = attr in domain and domain[attr]
                 if var and var.is_continuous and not isinstance(var, TimeVariable):
-                    value[i] = (attr, op,
-                                list([QLocale().toString(float(i), 'f')
-                                      for i in values]))
+                    values = [QLocale().toString(float(i), 'f') for i in values]
+                value[i] = (attr, op, values)
         return value
+
+    def match(self, context, domain, attrs, metas):
+        if (attrs, metas) == (context.attributes, context.metas):
+            return self.PERFECT_MATCH
+
+        conditions = context.values["conditions"]
+        all_vars = attrs
+        all_vars.update(metas)
+        if all(all_vars.get(name) == tpe for name, tpe, *_ in conditions):
+            return 0.5
+        return self.NO_MATCH
 
 
 class FilterDiscreteType(enum.Enum):
@@ -104,6 +117,8 @@ class OWSelectRows(widget.OWWidget):
     purge_attributes = Setting(False, schema_only=True)
     purge_classes = Setting(False, schema_only=True)
     auto_commit = Setting(True)
+
+    settings_version = 2
 
     Operators = {
         ContinuousVariable: [
@@ -691,6 +706,12 @@ class OWSelectRows(widget.OWWidget):
                   "{} instances".format(match_inst) if match_inst else "None"),
                  ("Non-matching data",
                   nonmatch_inst > 0 and "{} instances".format(nonmatch_inst))))
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if not version:
+            # Just remove; can't migrate because variables types are unknown
+            context.values["conditions"] = []
 
 
 class CheckBoxPopup(QWidget):

@@ -7,7 +7,7 @@ from AnyQt.QtWidgets import QLineEdit, QComboBox
 import numpy as np
 
 from Orange.data import (
-    Table, ContinuousVariable, StringVariable, DiscreteVariable)
+    Table, ContinuousVariable, StringVariable, DiscreteVariable, Domain)
 from Orange.widgets.data.owselectrows import (
     OWSelectRows, FilterDiscreteType, SelectRowsContextHandler)
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -16,6 +16,7 @@ from Orange.data.filter import FilterContinuous, FilterString
 from Orange.widgets.tests.utils import simulate, override_locale
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.tests import test_filename
+from orangewidget.settings import VERSION_KEY
 
 CFValues = {
     FilterContinuous.Equal: ["5.4"],
@@ -132,14 +133,14 @@ class TestOWSelectRows(WidgetTest):
         context = self.widget.current_context
         self.send_signal(self.widget.Inputs.data, None)
         saved_condition = context.values["conditions"][0]
-        self.assertEqual(saved_condition[2][0], 5.2)
+        self.assertEqual(saved_condition[3][0], 5.2)
 
     @override_locale(QLocale.C)
     def test_restores_continuous_filter_in_c_locale(self):
         iris = Table("iris")[:5]
         # Settings with string value
         self.widget = self.widget_with_context(
-            iris.domain, [["sepal length", 2, ("5.2",)]])
+            iris.domain, [["sepal length", 102, 2, ("5.2",)]])
         self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
@@ -147,7 +148,7 @@ class TestOWSelectRows(WidgetTest):
 
         # Settings with float value
         self.widget = self.widget_with_context(
-            iris.domain, [["sepal length", 2, (5.2,)]])
+            iris.domain, [["sepal length", 102, 2, (5.2,)]])
         self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
@@ -158,7 +159,7 @@ class TestOWSelectRows(WidgetTest):
         iris = Table("iris")[:5]
         # Settings with string value
         self.widget = self.widget_with_context(
-            iris.domain, [["sepal length", 2, ("5.2",)]])
+            iris.domain, [["sepal length", 102, 2, ("5.2",)]])
         self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
@@ -166,7 +167,7 @@ class TestOWSelectRows(WidgetTest):
 
         # Settings with float value
         self.widget = self.widget_with_context(
-            iris.domain, [["sepal length", 2, (5.2,)]])
+            iris.domain, [["sepal length", 102, 2, (5.2,)]])
         self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
@@ -242,10 +243,37 @@ class TestOWSelectRows(WidgetTest):
         np.testing.assert_equal(annotations[:50], True)
         np.testing.assert_equal(annotations[50:], False)
 
+    def test_change_var_type(self):
+        iris = Table("iris")
+        domain = iris.domain
+
+        self.send_signal(self.widget.Inputs.data, iris)
+        self.widget.remove_all_button.click()
+        self.enterFilter(domain[0], "is below", "5.2")
+
+        var0vals = list({str(x) for x in iris.X[:, 0]})
+        new_domain = Domain(
+            (DiscreteVariable(domain[0].name, values=var0vals), )
+            + domain.attributes[1:],
+            domain.class_var)
+        new_iris = iris.transform(new_domain)
+        self.send_signal(self.widget.Inputs.data, new_iris)
+
+    def test_migration_to_version_1(self):
+        iris = Table("iris")
+
+        ch = SelectRowsContextHandler()
+        context = ch.new_context(iris.domain, *ch.encode_domain(iris.domain))
+        context.values = dict(conditions=[["petal length", 2, (5.2,)]])
+        settings = dict(context_settings=[context])
+        widget = self.create_widget(OWSelectRows, settings)
+        self.assertEqual(widget.conditions, [])
+
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()
         context = ch.new_context(domain, *ch.encode_domain(domain))
-        context.values = dict(conditions=conditions)
+        context.values = {"conditions": conditions,
+                          VERSION_KEY: OWSelectRows.settings_version}
         settings = dict(context_settings=[context])
 
         return self.create_widget(OWSelectRows, settings)
