@@ -299,14 +299,14 @@ class OWBoxPlot(widget.OWWidget):
         self.attrs[:] = [
             var for var in chain(
                 domain.class_vars, domain.metas, domain.attributes)
-            if var.is_primitive()]
+            if var.is_primitive() and not var.attributes.get("hidden", False)]
 
     def reset_groups(self):
         domain = self.dataset.domain
         self.group_vars[:] = [None] + [
             var for var in chain(
                 domain.class_vars, domain.metas, domain.attributes)
-            if var.is_discrete]
+            if var.is_discrete and not var.attributes.get("hidden", False)]
 
     # noinspection PyTypeChecker
     @Inputs.data

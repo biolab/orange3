@@ -47,6 +47,15 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.display_box.isHidden())
         self.assertFalse(self.widget.stretching_box.isHidden())
 
+    def test_dont_show_hidden_attrs(self):
+        """Check widget's data"""
+        iris = Table("iris")
+        iris.domain["iris"].attributes["hidden"] = True
+        iris.domain["petal length"].attributes["hidden"] = True
+        self.send_signal(self.widget.Inputs.data, iris)
+        self.assertEqual(len(self.widget.attrs), 3)
+        self.assertEqual(len(self.widget.group_vars), 1)
+
     def test_primitive_metas(self):
         new_domain = Domain(attributes=[], class_vars=[], metas=(
             self.data.domain.attributes + self.data.domain.class_vars))
