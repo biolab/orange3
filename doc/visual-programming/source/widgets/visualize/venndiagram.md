@@ -10,19 +10,18 @@ Plots a [Venn diagram](http://en.wikipedia.org/wiki/Venn_diagram) for two or mor
 **Outputs**
 
 - Selected Data: instances selected from the plot
+- Data: entire data with a column indicating whether an instance was selected or not
 
-The **Venn Diagram** widget displays logical relations between datasets. This projection shows two or more datasets represented by circles of different colors. The intersections are subsets that belong to more than one dataset. To further analyze or visualize the subset, click on the intersection.
+The **Venn Diagram** widget displays logical relations between datasets by showing the number of common data instances (rows) or the number of shared features (columns). Selecting a part of the visualization outputs the corresponding instances or features.
 
 ![](images/venn-workflow.png)
 
-![](images/venn-identifiers-stamped.png)
+![](images/VennDiagram-stamped.png)
 
-1. Information on the input data.
-2. Select the identifiers by which to compare the data.
-3. Tick *Output duplicates* if you wish to remove duplicates.
-4. If *Auto commit* is on, changes are automatically communicated to other widgets. Alternatively, click *Commit*.
-5. *Save Image* saves the created image to your computer in a .svg or .png format.
-6. Produce a report.
+1. Select whether to count common features or instances.
+2. Select whether to include duplicates or to output only unique rows (applicable only when matching by instances). If *Auto commit* is on, changes are automatically communicated to other widgets.
+
+Rows can be matched by their identity, e.g. rows from different data sets match if they came from the same row in a file. Instead of using identities, we can choose a string variable to match the rows by. A warning is shown if data sets have no common string variable.
 
 Examples
 --------
