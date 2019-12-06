@@ -31,7 +31,7 @@ class TestLinearRegressionLearner(unittest.TestCase):
 
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
-        t = Table(x1, y1)
+        t = Table.from_numpy(None, x1, y1)
         learn = LinearRegressionLearner()
         clf = learn(t)
         z = clf(x2)
@@ -81,7 +81,7 @@ class TestLinearRegressionLearner(unittest.TestCase):
                 np.testing.assert_array_almost_equal(score, scores[:, i])
 
     def test_coefficients(self):
-        data = Table([[11], [12], [13]], [0, 1, 2])
+        data = Table.from_numpy(None, [[11], [12], [13]], [0, 1, 2])
         model = LinearRegressionLearner()(data)
         self.assertAlmostEqual(float(model.intercept), -11)
         self.assertEqual(len(model.coefficients), 1)

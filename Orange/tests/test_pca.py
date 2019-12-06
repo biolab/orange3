@@ -252,7 +252,7 @@ class TestPCA(unittest.TestCase):
 
     def test_max_components(self):
         d = np.random.RandomState(0).rand(20, 20)
-        data = Table(d)
+        data = Table.from_numpy(None, d)
         pca = PCA()(data)
         self.assertEqual(len(pca.explained_variance_ratio_), 20)
         pca = PCA(n_components=10)(data)

@@ -277,7 +277,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         for row in range(1, 6):
             for col in range(1, 6):
                 values.extend((row, col, row * col))
-        table = Table(np.array(values).reshape((-1, 3)))
+        table = Table.from_numpy(None, np.array(values).reshape((-1, 3)))
         return self.create_sql_table(table)
 
     IRIS_VARIABLE = DiscreteVariable(

@@ -39,7 +39,7 @@ class MultiClassTest(unittest.TestCase):
 
         # multiple class variables
         y = np.random.randint(0, 2, (nrows, 2))
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyLearner()
         # TODO: Errors raised from various data checks should be made consistent
         with self.assertRaises((ValueError, TypeError)):
@@ -47,7 +47,7 @@ class MultiClassTest(unittest.TestCase):
 
         # single class variable
         y = np.random.randint(0, 2, (nrows, 1))
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyLearner()
         clf = learn(t)
         z = clf(x)
@@ -58,7 +58,7 @@ class MultiClassTest(unittest.TestCase):
         ncols = 10
         x = np.random.randint(1, 4, (nrows, ncols))
         y = np.random.randint(0, 2, (nrows, 2))
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyMulticlassLearner()
         clf = learn(t)
         z = clf(x)
@@ -117,7 +117,7 @@ class ModelTest(unittest.TestCase):
 
         # single class variable
         y = np.random.randint(1, 4, (nrows, 1)) // 2    # majority = 1
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyLearner()
         clf = learn(t)
         clf.ret = Model.Probs

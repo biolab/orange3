@@ -14,7 +14,8 @@ from Orange.clustering.kmeans import KMeans, KMeansModel
 class TestClusteringResults(unittest.TestCase):
     @staticmethod
     def test_init():
-        data = Orange.data.Table(np.arange(100).reshape((100, 1)))
+        data = Orange.data.Table.from_numpy(
+            None, np.arange(100).reshape((100, 1)))
         res = ClusteringResults(data=data, nmethods=2, nrows=100)
         res.actual[:50] = 0
         res.actual[50:] = 1

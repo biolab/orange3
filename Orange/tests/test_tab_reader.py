@@ -22,7 +22,7 @@ def read_tab_file(filename):
 class TestTabReader(unittest.TestCase):
 
     def setUp(self):
-        self.data = Table([[1, 2, 3]])
+        self.data = Table.from_numpy(None, [[1, 2, 3]])
 
     def test_read_easy(self):
         simplefile = """\

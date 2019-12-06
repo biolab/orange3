@@ -53,7 +53,7 @@ class TestOWPCA(WidgetTest):
 
     def test_limit_components(self):
         X = np.random.RandomState(0).rand(101, 101)
-        data = Table(X)
+        data = Table.from_numpy(None, X)
         self.widget.ncomponents = 100
         self.send_signal(self.widget.Inputs.data, data)
         tran = self.get_output(self.widget.Outputs.transformed_data)

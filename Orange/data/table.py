@@ -249,6 +249,10 @@ class Table(Sequence, Storage):
                 warn_deprecated("from_list")
                 return cls.from_list(domain, *args, **kwargs)
         else:
+            warnings.warn("Omitting domain in a call to Table(X, Y, metas), is "
+                          "deprecated and will be removed. "
+                          "Call Table.from_numpy(None, X, Y, metas) instead.",
+                          OrangeDeprecationWarning, stacklevel=2)
             domain = None
 
         return cls.from_numpy(domain, *args, **kwargs)

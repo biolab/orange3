@@ -205,7 +205,8 @@ class TestEuclidean(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.sparse = Table.from_numpy(
+            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Euclidean
 
     def test_euclidean_distance_one_example(self):
@@ -290,7 +291,8 @@ class TestManhattan(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.sparse = Table.from_numpy(
+            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Manhattan
 
     def test_manhattan_distance_one_example(self):
@@ -378,7 +380,8 @@ class TestCosine(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.sparse = Table.from_numpy(
+            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Cosine
 
     def test_cosine_distance_one_example(self):

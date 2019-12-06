@@ -25,6 +25,7 @@ class TestTableInit(unittest.TestCase):
         self.assertWarns(OrangeDeprecationWarning, Table, domain)
         self.assertWarns(OrangeDeprecationWarning, Table, domain, Table())
         self.assertWarns(OrangeDeprecationWarning, Table, domain, [[12]])
+        self.assertWarns(OrangeDeprecationWarning, Table, np.zeros((5, 5)))
 
     def test_invalid_call_with_kwargs(self):
         self.assertRaises(TypeError, Table, Y=[])

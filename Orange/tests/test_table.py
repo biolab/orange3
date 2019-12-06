@@ -433,7 +433,8 @@ class TableTestCase(unittest.TestCase):
         return True
 
     def test_copy(self):
-        t = data.Table(np.zeros((5, 3)), np.arange(5), np.zeros((5, 3)))
+        t = data.Table.from_numpy(
+            None, np.zeros((5, 3)), np.arange(5), np.zeros((5, 3)))
 
         copy = t.copy()
         self.assertTrue(np.all(t.X == copy.X))
@@ -1114,7 +1115,7 @@ class TableTestCase(unittest.TestCase):
                       [0, np.nan, np.nan, 1],
                       [0, 0, np.inf, 0]])
         with self.assertWarns(Warning):
-            tab = data.Table(a)
+            tab = data.Table.from_numpy(None, a)
         self.assertEqual(tab.get_nan_frequency_attribute(), 3/12)
 
 
@@ -1321,17 +1322,17 @@ class CreateTableWithDomain(TableTests):
 class CreateTableWithData(TableTests):
     def test_creates_a_table_with_given_X(self):
         # from numpy
-        table = data.Table(np.array(self.data))
+        table = data.Table.from_numpy(None, np.array(self.data))
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
 
         # from list
-        table = data.Table(list(self.data))
+        table = data.Table.from_numpy(None, list(self.data))
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
 
         # from tuple
-        table = data.Table(tuple(self.data))
+        table = data.Table.from_numpy(None, tuple(self.data))
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
 
@@ -1414,14 +1415,15 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.X, self.data)
 
     def test_creates_a_table_with_given_X_and_Y(self):
-        table = data.Table(self.data, self.class_data)
+        table = data.Table.from_numpy(None, self.data, self.class_data)
 
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
         np.testing.assert_almost_equal(table.Y, self.class_data)
 
     def test_creates_a_table_with_given_X_Y_and_metas(self):
-        table = data.Table(self.data, self.class_data, self.meta_data)
+        table = data.Table.from_numpy(
+            None, self.data, self.class_data, self.meta_data)
 
         self.assertIsInstance(table.domain, data.Domain)
         np.testing.assert_almost_equal(table.X, self.data)
@@ -1430,7 +1432,7 @@ class CreateTableWithData(TableTests):
 
     def test_creates_a_discrete_class_if_Y_has_few_distinct_values(self):
         Y = np.array([float(np.random.randint(0, 2)) for i in self.data])
-        table = data.Table(self.data, Y, self.meta_data)
+        table = data.Table.from_numpy(None, self.data, Y, self.meta_data)
 
         np.testing.assert_almost_equal(table.Y, Y)
         self.assertIsInstance(table.domain.class_vars[0],
@@ -2118,7 +2120,7 @@ class TestRowInstance(unittest.TestCase):
     def test_sparse_assignment(self):
         X = np.eye(4)
         Y = X[2]
-        table = data.Table(X, Y)
+        table = data.Table.from_numpy(None, X, Y)
         row = table[1]
         self.assertFalse(sp.issparse(row.sparse_x))
         self.assertEqual(row[0], 0)

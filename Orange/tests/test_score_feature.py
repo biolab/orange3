@@ -94,7 +94,7 @@ class FeatureScoringTest(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)
         y = (-3*X[:, 1] + X[:, 3]) / 2
-        data = Table(X, y)
+        data = Table.from_numpy(None, X, y)
         scorer = UnivariateLinearRegression()
         sc = [scorer(data, a) for a in range(ncols)]
         self.assertTrue(np.argmax(sc) == 1)
