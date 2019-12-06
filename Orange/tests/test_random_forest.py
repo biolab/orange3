@@ -18,7 +18,8 @@ class RandomForestTest(unittest.TestCase):
 
     def test_RandomForest(self):
         forest = RandomForestLearner()
-        results = CrossValidation(self.iris, [forest], k=10)
+        cv = CrossValidation(k=10)
+        results = cv(self.iris, [forest])
         ca = CA(results)
         self.assertGreater(ca, 0.9)
         self.assertLess(ca, 0.99)
@@ -44,7 +45,8 @@ class RandomForestTest(unittest.TestCase):
 
     def test_RandomForestRegression(self):
         forest = RandomForestRegressionLearner()
-        results = CrossValidation(self.housing, [forest], k=10)
+        cv = CrossValidation(k=10)
+        results = cv(self.housing, [forest])
         _ = RMSE(results)
 
     def test_predict_single_instance_reg(self):

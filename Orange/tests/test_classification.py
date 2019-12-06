@@ -238,7 +238,8 @@ class SklTest(unittest.TestCase):
         table = Table("titanic")
         lr = LogisticRegressionLearner()
         assert isinstance(lr, Orange.classification.SklLearner)
-        res = CrossValidation(table, [lr], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(table, [lr])
         self.assertGreater(Orange.evaluation.AUC(res)[0], 0.7)
         self.assertLess(Orange.evaluation.AUC(res)[0], 0.9)
 
@@ -246,7 +247,8 @@ class SklTest(unittest.TestCase):
         data = Orange.data.Table("iris")
         data.X[:, (1, 3)] = np.NaN
         lr = LogisticRegressionLearner()
-        res = CrossValidation(data, [lr], k=2, store_models=True)
+        cv = CrossValidation(k=2, store_models=True)
+        res = cv(data, [lr])
         self.assertEqual(len(res.models[0][0].domain.attributes), 2)
         self.assertGreater(Orange.evaluation.CA(res)[0], 0.8)
 

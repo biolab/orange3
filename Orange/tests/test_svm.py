@@ -23,20 +23,23 @@ class TestSVMLearner(unittest.TestCase):
 
     def test_SVM(self):
         learn = SVMLearner()
-        res = CrossValidation(self.data, [learn], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(self.data, [learn])
         self.assertGreater(CA(res)[0], 0.9)
 
     def test_LinearSVM(self):
         # This warning is irrelevant here
         warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
         learn = LinearSVMLearner()
-        res = CrossValidation(self.data, [learn], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(self.data, [learn])
         self.assertGreater(CA(res)[0], 0.8)
         self.assertLess(CA(res)[0], 0.9)
 
     def test_NuSVM(self):
         learn = NuSVMLearner(nu=0.01)
-        res = CrossValidation(self.data, [learn], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(self.data, [learn])
         self.assertGreater(CA(res)[0], 0.9)
 
     def test_SVR(self):
@@ -45,7 +48,8 @@ class TestSVMLearner(unittest.TestCase):
         y = X.dot(np.random.rand(ncols))
         data = Table(X, y)
         learn = SVRLearner(kernel='rbf', gamma=0.1)
-        res = CrossValidation(data, [learn], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(data, [learn])
         self.assertLess(RMSE(res)[0], 0.15)
 
     def test_LinearSVR(self):
@@ -54,7 +58,8 @@ class TestSVMLearner(unittest.TestCase):
         y = X.dot(np.random.rand(ncols))
         data = Table(X, y)
         learn = SVRLearner()
-        res = CrossValidation(data, [learn], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(data, [learn])
         self.assertLess(RMSE(res)[0], 0.15)
 
     def test_NuSVR(self):
@@ -63,7 +68,8 @@ class TestSVMLearner(unittest.TestCase):
         y = X.dot(np.random.rand(ncols))
         data = Table(X, y)
         learn = NuSVRLearner(kernel='rbf', gamma=0.1)
-        res = CrossValidation(data, [learn], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(data, [learn])
         self.assertLess(RMSE(res)[0], 0.1)
 
     def test_OneClassSVM(self):

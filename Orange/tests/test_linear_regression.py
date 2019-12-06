@@ -44,7 +44,8 @@ class TestLinearRegressionLearner(unittest.TestCase):
         elasticCV = ElasticNetCVLearner()
         mean = MeanLearner()
         learners = [ridge, lasso, elastic, elasticCV, mean]
-        res = CrossValidation(self.housing, learners, k=2)
+        cv = CrossValidation(k=2)
+        res = cv(self.housing, learners)
         rmse = RMSE(res)
         for i in range(len(learners) - 1):
             self.assertLess(rmse[i], rmse[-1])

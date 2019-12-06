@@ -18,7 +18,8 @@ class TestKNNLearner(unittest.TestCase):
         cls.housing = Table('housing')
 
     def test_KNN(self):
-        results = CrossValidation(self.iris, [KNNLearner()], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.iris, [KNNLearner()])
         ca = CA(results)
         self.assertGreater(ca, 0.8)
         self.assertLess(ca, 0.99)
@@ -54,13 +55,15 @@ class TestKNNLearner(unittest.TestCase):
 
     def test_KNN_mahalanobis(self):
         learners = [KNNLearner(metric="mahalanobis")]
-        results = CrossValidation(self.iris, learners, k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.iris, learners)
         ca = CA(results)
         self.assertGreater(ca, 0.8)
 
     def test_KNN_regression(self):
         learners = [KNNRegressionLearner(),
                     KNNRegressionLearner(metric="mahalanobis")]
-        results = CrossValidation(self.housing, learners, k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.housing, learners)
         mse = MSE(results)
         self.assertLess(mse[1], mse[0])

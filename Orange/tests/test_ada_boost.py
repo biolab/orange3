@@ -21,7 +21,8 @@ class TestSklAdaBoostLearner(unittest.TestCase):
 
     def test_adaboost(self):
         learn = SklAdaBoostClassificationLearner()
-        results = CrossValidation(self.iris, [learn], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.iris, [learn])
         ca = CA(results)
         self.assertGreater(ca, 0.9)
         self.assertLess(ca, 0.99)
@@ -34,7 +35,8 @@ class TestSklAdaBoostLearner(unittest.TestCase):
             base_estimator=stump_estimator, n_estimators=5)
         tree = SklAdaBoostClassificationLearner(
             base_estimator=tree_estimator, n_estimators=5)
-        results = CrossValidation(self.iris, [stump, tree], k=4)
+        cv = CrossValidation(k=4)
+        results = cv(self.iris, [stump, tree])
         ca = CA(results)
         self.assertLessEqual(ca[0], ca[1])
 
@@ -62,7 +64,8 @@ class TestSklAdaBoostLearner(unittest.TestCase):
 
     def test_adaboost_reg(self):
         learn = SklAdaBoostRegressionLearner()
-        results = CrossValidation(self.housing, [learn], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.housing, [learn])
         _ = RMSE(results)
 
     def test_adaboost_reg_base_estimator(self):
@@ -71,7 +74,8 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         tree_estimator = SklTreeRegressionLearner()
         stump = SklAdaBoostRegressionLearner(base_estimator=stump_estimator)
         tree = SklAdaBoostRegressionLearner(base_estimator=tree_estimator)
-        results = CrossValidation(self.housing, [stump, tree], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.housing, [stump, tree])
         rmse = RMSE(results)
         self.assertGreaterEqual(rmse[0], rmse[1])
 
