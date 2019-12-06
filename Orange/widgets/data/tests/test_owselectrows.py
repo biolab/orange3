@@ -175,6 +175,19 @@ class TestOWSelectRows(WidgetTest):
         values = self.widget.conditions[0][2]
         self.assertTrue(values[0].startswith("5,2"))
 
+    @override_locale(QLocale.C)
+    def test_partial_matches(self):
+        iris = Table("iris")
+        domain = iris.domain
+        self.widget = self.widget_with_context(
+            domain, [[domain[0].name, 2, ("5.2",)]])
+        iris2 = iris.transform(Domain(domain.attributes[:2], None))
+        self.send_signal(self.widget.Inputs.data, iris2)
+        condition = self.widget.conditions[0]
+        self.assertEqual(condition[0], "sepal length")
+        self.assertEqual(condition[1], 2)
+        self.assertTrue(condition[2][0].startswith("5.2"))
+
     def test_load_settings(self):
         iris = Table("iris")[:5]
         self.send_signal(self.widget.Inputs.data, iris)
@@ -261,7 +274,7 @@ class TestOWSelectRows(WidgetTest):
         new_iris = iris.transform(new_domain)
         self.send_signal(self.widget.Inputs.data, new_iris)
 
-    # Uncomment this on 2021/1/1
+    # Uncomment this on 2022/2/2
     #
     # def test_migration_to_version_1(self):
     #     iris = Table("iris")
@@ -284,10 +297,10 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(condition[1], 2)
         self.assertTrue(condition[2][0].startswith("5.2"))
 
-    def test_end_support_for_version_0(self):
-        if time.gmtime().tm_year == 2021:
+    def test_end_support_for_version_1(self):
+        if time.gmtime() >= (2022, 2, 2):
             self.fail("""
-Happy new year 2021!
+Happy 22/2/2!
 
 Now remove support for version==None settings in
 SelectRowsContextHandler.decode_setting and SelectRowsContextHandler.match,

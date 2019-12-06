@@ -59,7 +59,7 @@ class SelectRowsContextHandler(DomainContextHandler):
     def decode_setting(self, setting, value, domain=None):
         value = super().decode_setting(setting, value, domain)
         if setting.name == 'conditions':
-            # Use this after 2021/1/1:
+            # Use this after 2022/2/2:
             # for i, (attr, _, op, values) in enumerate(value):
             for i, condition in enumerate(value):
                 attr = condition[0]
@@ -78,7 +78,7 @@ class SelectRowsContextHandler(DomainContextHandler):
         conditions = context.values["conditions"]
         all_vars = attrs
         all_vars.update(metas)
-        # Use this after 2021/1/1:
+        # Use this after 2022/2/2:
         # if all(all_vars.get(name) == tpe for name, tpe, *_ in conditions):
         if all(all_vars.get(name) == tpe if len(rest) == 2 else name in all_vars
                for name, tpe, *rest in conditions):
@@ -715,7 +715,7 @@ class OWSelectRows(widget.OWWidget):
                  ("Non-matching data",
                   nonmatch_inst > 0 and "{} instances".format(nonmatch_inst))))
 
-    # Uncomment this on 2021/1/1
+    # Uncomment this on 2022/2/2
     #
     # @classmethod
     # def migrate_context(cls, context, version):
