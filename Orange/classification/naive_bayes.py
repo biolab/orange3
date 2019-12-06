@@ -61,7 +61,7 @@ class NaiveBayesModel(Model):
 
     def predict_storage(self, data):
         if isinstance(data, Instance):
-            data = Table(np.atleast_2d(data.x))
+            data = Table.from_numpy(None, np.atleast_2d(data.x))
         if type(data) is Table:  # pylint: disable=unidiomatic-typecheck
             return self.predict(data.X)
 

@@ -309,7 +309,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
                     and self.data is self.matrix_data:
                 names = [[attr.name] for attr in self.data.domain.attributes]
                 domain = Domain([], metas=[StringVariable("labels")])
-                self.data = Table(domain, names)
+                self.data = Table.from_list(domain, names)
         elif self.data.domain.attributes:
             preprocessed_data = MDS().preprocess(self.data)
             self.effective_matrix = Euclidean(preprocessed_data)

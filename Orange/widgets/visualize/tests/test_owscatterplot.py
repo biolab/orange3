@@ -92,13 +92,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         domain = self.data.domain
         d1 = Domain(domain.attributes[:2], domain.class_var,
                     [domain.attributes[2]])
-        t1 = Table(d1, self.data)
+        t1 = self.data.transform(d1)
         self.send_signal(self.widget.Inputs.data, t1)
         self.widget.graph.attr_size = domain.attributes[2]
 
         d2 = Domain(domain.attributes[:2], domain.class_var,
                     [domain.attributes[3]])
-        t2 = Table(d2, self.data)
+        t2 = self.data.transform(d2)
         self.send_signal(self.widget.Inputs.data, t2)
 
     def test_error_message(self):

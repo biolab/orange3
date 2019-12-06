@@ -115,7 +115,7 @@ class TestOWEditDomain(WidgetTest):
         a = ContinuousVariable("a")
         a.attributes["list"] = [1, 2, 3]
         d = Domain([a])
-        t = Table(d)
+        t = Table.from_domain(d)
 
         self.send_signal(self.widget.Inputs.data, t)
 
@@ -186,7 +186,7 @@ class TestOWEditDomain(WidgetTest):
 
     def test_change_ordered(self):
         """Test categorical ordered flag change"""
-        table = Table(Domain(
+        table = Table.from_domain(Domain(
             [DiscreteVariable("A", values=["a", "b"], ordered=True)]))
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)

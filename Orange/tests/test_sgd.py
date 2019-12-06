@@ -23,7 +23,7 @@ class TestSGDRegressionLearner(unittest.TestCase):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)
         y = X.dot(np.random.rand(ncols))
-        data = Table(X, y)
+        data = Table.from_numpy(None, X, y)
         sgd = SGDRegressionLearner()
         cv = CrossValidation(k=3)
         res = cv(data, [sgd])

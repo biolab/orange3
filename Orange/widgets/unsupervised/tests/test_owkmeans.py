@@ -402,7 +402,7 @@ class TestOWKMeans(WidgetTest):
 
         # Avoid randomness in the test
         random = np.random.RandomState(0)  # pylint: disable=no-member
-        table = Table(random.rand(110, 2))
+        table = Table.from_numpy(None, random.rand(110, 2))
         with patch(
                 "Orange.widgets.unsupervised.owkmeans.SILHOUETTE_MAX_SAMPLES",
                 100):

@@ -105,12 +105,12 @@ class TestSimpleTreeLearner(unittest.TestCase):
         domain = Domain([DiscreteVariable(name='d1', values='ef'),
                          ContinuousVariable(name='c1')],
                         DiscreteVariable(name='cls', values='abc'))
-        data = Table(domain, [['e', 1, 'a'],
-                              ['e', 1, 'b'],
-                              ['e', 2, 'b'],
-                              ['f', 2, "c"],
-                              ["e", 3, "a"],
-                              ['f', 3, "c"]])
+        data = Table.from_list(domain, [['e', 1, 'a'],
+                                        ['e', 1, 'b'],
+                                        ['e', 2, 'b'],
+                                        ['f', 2, "c"],
+                                        ["e", 3, "a"],
+                                        ['f', 3, "c"]])
         lrn = SimpleTreeCls(min_instances=1)
         clf = lrn(data)
         clf_str = clf.to_string()
@@ -130,12 +130,12 @@ class TestSimpleTreeLearner(unittest.TestCase):
         domain = Domain([DiscreteVariable(name='d1', values='ef'),
                          ContinuousVariable(name='c1')],
                         ContinuousVariable(name='cls'))
-        data = Table(domain, [['e', 1, 10],
-                              ['e', 1, 20],
-                              ['e', 2, 20],
-                              ['f', 2, 30],
-                              ["e", 3, 10],
-                              ['f', 3, 30]])
+        data = Table.from_list(domain, [['e', 1, 10],
+                                        ['e', 1, 20],
+                                        ['e', 2, 20],
+                                        ['f', 2, 30],
+                                        ["e", 3, 10],
+                                        ['f', 3, 30]])
         lrn = SimpleTreeReg(min_instances=1)
         reg = lrn(data)
         reg_str = reg.to_string()

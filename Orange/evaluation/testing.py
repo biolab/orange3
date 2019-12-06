@@ -591,7 +591,7 @@ class CrossValidationFeature(Validation):
         self.feature = feature
 
     def get_indices(self, data):
-        data = Table(Domain([self.feature], None), data)
+        data = data.transform(Domain([self.feature], None))
         values = data[:, self.feature].X
         indices = []
         for v in range(len(self.feature.values)):

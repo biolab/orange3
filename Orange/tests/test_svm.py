@@ -46,7 +46,7 @@ class TestSVMLearner(unittest.TestCase):
         nrows, ncols = 200, 5
         X = np.random.rand(nrows, ncols)
         y = X.dot(np.random.rand(ncols))
-        data = Table(X, y)
+        data = Table.from_numpy(None, X, y)
         learn = SVRLearner(kernel='rbf', gamma=0.1)
         cv = CrossValidation(k=2)
         res = cv(data, [learn])
@@ -56,7 +56,7 @@ class TestSVMLearner(unittest.TestCase):
         nrows, ncols = 200, 5
         X = np.random.rand(nrows, ncols)
         y = X.dot(np.random.rand(ncols))
-        data = Table(X, y)
+        data = Table.from_numpy(None, X, y)
         learn = SVRLearner()
         cv = CrossValidation(k=2)
         res = cv(data, [learn])
@@ -66,7 +66,7 @@ class TestSVMLearner(unittest.TestCase):
         nrows, ncols = 200, 5
         X = np.random.rand(nrows, ncols)
         y = X.dot(np.random.rand(ncols))
-        data = Table(X, y)
+        data = Table.from_numpy(None, X, y)
         learn = NuSVRLearner(kernel='rbf', gamma=0.1)
         cv = CrossValidation(k=2)
         res = cv(data, [learn])

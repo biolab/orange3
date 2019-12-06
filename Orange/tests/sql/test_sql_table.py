@@ -145,7 +145,7 @@ class TestSqlTable(unittest.TestCase, dbt):
                                      name='col2', values=['0', '1', '2'])))
             self.assertFalse(getattr(sql_table, member) is None)
         # has all necessary class members to create a standard Table
-        Table(sql_table.domain, sql_table)
+        Table.from_table(sql_table.domain, sql_table)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_query_all(self):
@@ -277,7 +277,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         for row in range(1, 6):
             for col in range(1, 6):
                 values.extend((row, col, row * col))
-        table = Table(np.array(values).reshape((-1, 3)))
+        table = Table.from_numpy(None, np.array(values).reshape((-1, 3)))
         return self.create_sql_table(table)
 
     IRIS_VARIABLE = DiscreteVariable(

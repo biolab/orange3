@@ -30,7 +30,7 @@ class TestOWColor(WidgetTest):
         a = ContinuousVariable("a")
         a.attributes["colors"] = "invalid"
         _ = a.colors
-        t = Table(Domain([a]))
+        t = Table.from_domain(Domain([a]))
 
         self.send_signal(self.widget.Inputs.data, t)
 

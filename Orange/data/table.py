@@ -10,6 +10,8 @@ from threading import Lock, RLock
 
 import bottleneck as bn
 import numpy as np
+from Orange.misc.collections import frozendict
+from Orange.util import OrangeDeprecationWarning
 from scipy import sparse as sp
 from scipy.sparse import issparse
 
@@ -174,6 +176,13 @@ class Table(Sequence, Storage):
     __file__ = None
     name = "untitled"
 
+    domain = Domain([])
+    X = _Y = metas = W = np.zeros((0, 0))
+    X.setflags(write=False)
+    ids = np.zeros(0)
+    ids.setflags(write=False)
+    attributes = frozendict()
+
     @property
     def columns(self):
         """
@@ -204,32 +213,46 @@ class Table(Sequence, Storage):
         self._Y = value
 
     def __new__(cls, *args, **kwargs):
-        if not args and not kwargs:
-            return super().__new__(cls)
-
-        if 'filename' in kwargs:
-            args = [kwargs.pop('filename')]
+        def warn_deprecated(method):
+            warnings.warn("Direct calls to Table's constructor are deprecated "
+                          "and will be removed. Replace this call with "
+                          f"Table.{method}", OrangeDeprecationWarning,
+                          stacklevel=3)
 
         if not args:
-            raise TypeError(
-                "Table takes at least 1 positional argument (0 given))")
+            if not kwargs:
+                return super().__new__(cls)
+            else:
+                raise TypeError("Table() must not be called directly")
 
         if isinstance(args[0], str):
+            if len(args) > 1:
+                raise TypeError("Table(name: str) expects just one argument")
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
             else:
-                return cls.from_file(args[0])
+                return cls.from_file(args[0], **kwargs)
+
         elif isinstance(args[0], Table):
-            return cls.from_table(args[0].domain, args[0])
+            if len(args) > 1:
+                raise TypeError("Table(table: Table) expects just one argument")
+            return cls.from_table(args[0].domain, args[0], **kwargs)
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
+                warn_deprecated("from_domain")
                 return cls.from_domain(domain, **kwargs)
             if isinstance(args[0], Table):
-                return cls.from_table(domain, *args)
+                warn_deprecated("from_table")
+                return cls.from_table(domain, *args, **kwargs)
             elif isinstance(args[0], list):
-                return cls.from_list(domain, *args)
+                warn_deprecated("from_list")
+                return cls.from_list(domain, *args, **kwargs)
         else:
+            warnings.warn("Omitting domain in a call to Table(X, Y, metas), is "
+                          "deprecated and will be removed. "
+                          "Call Table.from_numpy(None, X, Y, metas) instead.",
+                          OrangeDeprecationWarning, stacklevel=2)
             domain = None
 
         return cls.from_numpy(domain, *args, **kwargs)
@@ -476,7 +499,8 @@ class Table(Sequence, Storage):
         return self
 
     @classmethod
-    def from_numpy(cls, domain, X, Y=None, metas=None, W=None):
+    def from_numpy(cls, domain, X, Y=None, metas=None, W=None,
+                   attributes=None, ids=None):
         """
         Construct a table from numpy arrays with the given domain. The number
         of variables in the domain must match the number of columns in the
@@ -496,7 +520,8 @@ class Table(Sequence, Storage):
         :return:
         """
         X, Y, W = _check_arrays(X, Y, W, dtype='float64')
-        metas, = _check_arrays(metas, dtype=object)
+        metas, = _check_arrays(metas, dtype=object, shape_1=X.shape[0])
+        ids, = _check_arrays(ids, dtype=int, shape_1=X.shape[0])
 
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)
@@ -542,8 +567,11 @@ class Table(Sequence, Storage):
         self.metas = metas
         self.W = W
         self.n_rows = self.X.shape[0]
-        cls._init_ids(self)
-        self.attributes = {}
+        if ids is None:
+            cls._init_ids(self)
+        else:
+            self.ids = ids
+        self.attributes = {} if attributes is None else attributes
         return self
 
     @classmethod
@@ -1645,7 +1673,7 @@ class Table(Sequence, Storage):
         return t
 
 
-def _check_arrays(*arrays, dtype=None):
+def _check_arrays(*arrays, dtype=None, shape_1=None):
     checked = []
     if not len(arrays):
         return checked
@@ -1656,7 +1684,8 @@ def _check_arrays(*arrays, dtype=None):
         else:
             return len(array) if array is not None else 0
 
-    shape_1 = ninstances(arrays[0])
+    if shape_1 is None:
+        shape_1 = ninstances(arrays[0])
 
     for array in arrays:
         if array is None:

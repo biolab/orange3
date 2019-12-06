@@ -254,7 +254,7 @@ class TestCA(unittest.TestCase):
         x = np.random.randint(2, size=(100, 5))
         col = np.random.randint(5)
         y = x[:, col].copy().reshape(100, 1)
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         t = Discretize(
             method=discretize.EqualWidth(n=3))(t)
         nb = NaiveBayesLearner()

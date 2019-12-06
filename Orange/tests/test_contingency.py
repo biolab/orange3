@@ -170,7 +170,7 @@ class TestDiscrete(unittest.TestCase):
         zoo = Orange.data.Table("zoo")
         dom = Orange.data.Domain(zoo.domain.attributes, zoo.domain.class_var,
                                  zoo.domain.metas + zoo.domain.attributes[:2])
-        t = Orange.data.Table(dom, zoo)
+        t = zoo.transform(dom)
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
         assert_dist_equal(cont["1"], [38, 5])
         assert_dist_equal(cont, [[4, 54], [38, 5]])

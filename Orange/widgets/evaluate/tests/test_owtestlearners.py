@@ -148,7 +148,7 @@ class TestOWTestLearners(WidgetTest):
         is selected.
         GH-2351
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b")],
                 [DiscreteVariable("c", values=["y"])]),
@@ -309,7 +309,7 @@ class TestOWTestLearners(WidgetTest):
         return self._retrieve_scores()
 
     def test_scores_constant_all_same(self):
-        table = Table(
+        table = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("yyyy")]))
         )
@@ -319,7 +319,7 @@ class TestOWTestLearners(WidgetTest):
                               (None, 1, 1, 1, 1))
 
     def test_scores_log_reg_overfitted(self):
-        table = Table(
+        table = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("yyyn")]))
         )
@@ -330,11 +330,11 @@ class TestOWTestLearners(WidgetTest):
                               (1, 1, 1, 1, 1))
 
     def test_scores_log_reg_bad(self):
-        table_train = Table(
+        table_train = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("nnny")]))
         )
-        table_test = Table(
+        table_test = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("yyyn")]))
         )
@@ -345,10 +345,10 @@ class TestOWTestLearners(WidgetTest):
                               (0, 0, 0, 0, 0))
 
     def test_scores_log_reg_bad2(self):
-        table_train = Table(
+        table_train = Table.from_list(
             self.scores_domain,
             list(zip(*(self.scores_table_values + [list("nnyy")]))))
-        table_test = Table(
+        table_test = Table.from_list(
             self.scores_domain,
             list(zip(*(self.scores_table_values + [list("yynn")]))))
         self.assertTupleEqual(self._test_scores(
@@ -357,11 +357,11 @@ class TestOWTestLearners(WidgetTest):
                               (0, 0, 0, 0, 0))
 
     def test_scores_log_reg_advanced(self):
-        table_train = Table(
+        table_train = Table.from_list(
             self.scores_domain, list(zip(
                 [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yyynn"))
         )
-        table_test = Table(
+        table_test = Table.from_list(
             self.scores_domain, list(zip(
                 [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yynnn"))
         )

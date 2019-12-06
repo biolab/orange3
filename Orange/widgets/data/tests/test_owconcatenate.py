@@ -99,7 +99,7 @@ class TestOWConcatenate(WidgetTest):
             source = get_source()
             output = self.get_output(self.widget.Outputs.data)
             self.assertTrue(source in getattr(output.domain, place))
-            data = Table(Domain([source]), output)
+            data = output.transform(Domain([source]))
             np.testing.assert_equal(data[:len(self.iris)].X, 0)
             np.testing.assert_equal(data[len(self.iris):].X, 1)
 

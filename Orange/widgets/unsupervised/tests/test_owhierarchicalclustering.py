@@ -116,7 +116,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         Error is shown.
         GH-2380
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a")],
                 [DiscreteVariable("b", values=["y"])]),

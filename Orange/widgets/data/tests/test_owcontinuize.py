@@ -28,7 +28,8 @@ class TestOWContinuize(WidgetTest):
         np.testing.assert_equal(imp_data.Y, data.Y)
 
         widget.continuous_treatment = 1
-        self.send_signal(self.widget.Inputs.data, Table(data.domain))
+        self.send_signal(self.widget.Inputs.data,
+                         Table.from_domain(data.domain))
         widget.unconditional_commit()
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(imp_data), 0)

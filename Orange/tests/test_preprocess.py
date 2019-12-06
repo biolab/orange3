@@ -54,7 +54,7 @@ class TestRemoveConstant(unittest.TestCase):
         X[3, 1] = np.nan
         X[1, 1] = np.nan
         X[:, 4] = np.nan
-        data = Table(X)
+        data = Table.from_numpy(None, X)
         d = RemoveConstant()(data)
         self.assertEqual(len(d.domain.attributes), 2)
 
@@ -103,10 +103,10 @@ class TestRemoveNaNColumns(unittest.TestCase):
 class TestScaling(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.table = Table([[1, 2, 3],
-                           [2, 3, 4],
-                           [3, 4, 5],
-                           [4, 5, 6]])
+        cls.table = Table.from_numpy(None, [[1, 2, 3],
+                                            [2, 3, 4],
+                                            [3, 4, 5],
+                                            [4, 5, 6]])
 
     def test_scaling_mean_span(self):
         table = Scale(center=Scale.Mean, scale=Scale.Span)(self.table)

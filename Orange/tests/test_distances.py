@@ -15,7 +15,7 @@ from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
-                             Jaccard, _preprocess, MahalanobisDistance, 
+                             Jaccard, _preprocess, MahalanobisDistance,
                              Bhattacharyya)
 from Orange.distance.distance import _spearmanr2, _corrcoef2
 from Orange.misc import DistMatrix
@@ -205,7 +205,8 @@ class TestEuclidean(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.sparse = Table.from_numpy(
+            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Euclidean
 
     def test_euclidean_distance_one_example(self):
@@ -290,7 +291,8 @@ class TestManhattan(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.sparse = Table.from_numpy(
+            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Manhattan
 
     def test_manhattan_distance_one_example(self):
@@ -378,7 +380,8 @@ class TestCosine(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.sparse = Table(csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+        cls.sparse = Table.from_numpy(
+            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Cosine
 
     def test_cosine_distance_one_example(self):
@@ -990,8 +993,8 @@ class TestDistances(TestCase):
                          DiscreteVariable("d", values=['a', 'b'])],
                         [DiscreteVariable("cls", values=['e', 'f'])],
                         [StringVariable("m")])
-        table = Table(domain, [[1, 'a', 'e', 'm1'],
-                               [2, 'b', 'f', 'm2']])
+        table = Table.from_list(domain, [[1, 'a', 'e', 'm1'],
+                                         [2, 'b', 'f', 'm2']])
         new_table = _preprocess(table)
         np.testing.assert_equal(new_table.X, table.X[:, 0].reshape(2, 1))
         np.testing.assert_equal(new_table.Y, table.Y)

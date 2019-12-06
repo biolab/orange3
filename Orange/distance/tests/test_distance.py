@@ -16,13 +16,13 @@ class CommonTests:
         """distances return zero-dimensional matrices when no data"""
         n = len(self.data)
         np.testing.assert_almost_equal(
-            self.Distance(Table(self.domain)),
+            self.Distance(Table.from_domain(self.domain)),
             np.zeros((0, 0)))
         np.testing.assert_almost_equal(
-            self.Distance(self.data, Table(self.domain)),
+            self.Distance(self.data, Table.from_domain(self.domain)),
             np.zeros((n, 0)))
         np.testing.assert_almost_equal(
-            self.Distance(Table(self.domain), self.data),
+            self.Distance(Table.from_domain(self.domain), self.data),
             np.zeros((0, n)))
 
     def test_sparse(self):
@@ -421,17 +421,18 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
     def test_manhattan_no_data(self):
         np.testing.assert_almost_equal(
-            distance.Manhattan(Table(self.domain)),
+            distance.Manhattan(Table.from_domain(self.domain)),
             np.zeros((0, 0)))
         np.testing.assert_almost_equal(
-            distance.Manhattan(self.mixed_data, Table(self.domain)),
+            distance.Manhattan(self.mixed_data, Table.from_domain(self.domain)),
             np.zeros((3, 0)))
         np.testing.assert_almost_equal(
-            distance.Manhattan(Table(self.domain), self.mixed_data),
+            distance.Manhattan(Table.from_domain(self.domain), self.mixed_data),
             np.zeros((0, 3)))
         self.assertRaises(
             ValueError,
-            distance.Manhattan, Table(self.cont_domain), axis=0, normalize=True)
+            distance.Manhattan, Table.from_domain(self.cont_domain),
+            axis=0, normalize=True)
 
     def test_manhattan_disc(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -838,7 +839,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
 
     def setUp(self):
         self.domain = Domain([DiscreteVariable(c) for c in "abc"])
-        self.data = Table(
+        self.data = Table.from_list(
             self.domain,
             [[0, 1, 1],
              [1, 1, 1],
