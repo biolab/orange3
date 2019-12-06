@@ -220,6 +220,28 @@ class TestOWPCA(WidgetTest):
         invalidate.assert_not_called()
         self.assertEqual(widget.ncomponents, 0)
 
+    def test_output_data(self):
+        widget = self.widget
+        widget.ncomponents = 2
+        domain = Domain(self.iris.domain.attributes[:3],
+                        self.iris.domain.class_var,
+                        self.iris.domain.attributes[3:])
+        iris = self.iris.transform(domain)
+        self.send_signal(widget.Inputs.data, iris)
+        output = self.get_output(widget.Outputs.data)
+        outdom = output.domain
+        self.assertEqual(domain.attributes, outdom.attributes)
+        self.assertEqual(domain.class_var, outdom.class_var)
+        self.assertEqual(domain.metas, outdom.metas[:1])
+        self.assertEqual(len(outdom.metas), 3)
+        np.testing.assert_equal(iris.X, output.X)
+        np.testing.assert_equal(iris.Y, output.Y)
+        np.testing.assert_equal(iris.metas[:, 0], output.metas[:, 0])
+
+        trans = self.get_output(widget.Outputs.transformed_data)
+        self.assertEqual(trans.domain.attributes, outdom.metas[1:])
+        np.testing.assert_equal(trans.X, output.metas[:, 1:])
+
 
 if __name__ == "__main__":
     unittest.main()
