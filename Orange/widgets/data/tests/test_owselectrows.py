@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import time
+
 from AnyQt.QtCore import QLocale, Qt
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit, QComboBox
@@ -259,15 +261,43 @@ class TestOWSelectRows(WidgetTest):
         new_iris = iris.transform(new_domain)
         self.send_signal(self.widget.Inputs.data, new_iris)
 
-    def test_migration_to_version_1(self):
-        iris = Table("iris")
+    # Uncomment this on 2021/1/1
+    #
+    # def test_migration_to_version_1(self):
+    #     iris = Table("iris")
+    #
+    #     ch = SelectRowsContextHandler()
+    #     context = ch.new_context(iris.domain, *ch.encode_domain(iris.domain))
+    #     context.values = dict(conditions=[["petal length", 2, (5.2,)]])
+    #     settings = dict(context_settings=[context])
+    #     widget = self.create_widget(OWSelectRows, settings)
+    #     self.assertEqual(widget.conditions, [])
 
-        ch = SelectRowsContextHandler()
-        context = ch.new_context(iris.domain, *ch.encode_domain(iris.domain))
-        context.values = dict(conditions=[["petal length", 2, (5.2,)]])
-        settings = dict(context_settings=[context])
-        widget = self.create_widget(OWSelectRows, settings)
-        self.assertEqual(widget.conditions, [])
+    @override_locale(QLocale.C)
+    def test_support_old_settings(self):
+        iris = Table("iris")
+        self.widget = self.widget_with_context(
+            iris.domain, [["sepal length", 2, ("5.2",)]])
+        self.send_signal(self.widget.Inputs.data, iris)
+        condition = self.widget.conditions[0]
+        self.assertEqual(condition[0], "sepal length")
+        self.assertEqual(condition[1], 2)
+        self.assertTrue(condition[2][0].startswith("5.2"))
+
+    def test_end_support_for_version_0(self):
+        if time.gmtime().tm_year == 2021:
+            self.fail("""
+Happy new year 2021!
+
+Now remove support for version==None settings in
+SelectRowsContextHandler.decode_setting and SelectRowsContextHandler.match,
+and uncomment OWSelectRows.migrate.
+
+In tests, uncomment test_migration_to_version_1,
+and remove test_support_old_settings and this test.
+
+Basically, revert this commit.
+""")
 
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()

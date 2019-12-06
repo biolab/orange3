@@ -59,7 +59,12 @@ class SelectRowsContextHandler(DomainContextHandler):
     def decode_setting(self, setting, value, domain=None):
         value = super().decode_setting(setting, value, domain)
         if setting.name == 'conditions':
-            for i, (attr, _, op, values) in enumerate(value):
+            # Use this after 2021/1/1:
+            # for i, (attr, _, op, values) in enumerate(value):
+            for i, condition in enumerate(value):
+                attr = condition[0]
+                op, values = condition[-2:]
+
                 var = attr in domain and domain[attr]
                 if var and var.is_continuous and not isinstance(var, TimeVariable):
                     values = [QLocale().toString(float(i), 'f') for i in values]
@@ -73,7 +78,10 @@ class SelectRowsContextHandler(DomainContextHandler):
         conditions = context.values["conditions"]
         all_vars = attrs
         all_vars.update(metas)
-        if all(all_vars.get(name) == tpe for name, tpe, *_ in conditions):
+        # Use this after 2021/1/1:
+        # if all(all_vars.get(name) == tpe for name, tpe, *_ in conditions):
+        if all(all_vars.get(name) == tpe if len(rest) == 2 else name in all_vars
+               for name, tpe, *rest in conditions):
             return 0.5
         return self.NO_MATCH
 
@@ -707,11 +715,13 @@ class OWSelectRows(widget.OWWidget):
                  ("Non-matching data",
                   nonmatch_inst > 0 and "{} instances".format(nonmatch_inst))))
 
-    @classmethod
-    def migrate_context(cls, context, version):
-        if not version:
-            # Just remove; can't migrate because variables types are unknown
-            context.values["conditions"] = []
+    # Uncomment this on 2021/1/1
+    #
+    # @classmethod
+    # def migrate_context(cls, context, version):
+    #     if not version or version < 2:
+    #         # Just remove; can't migrate because variables types are unknown
+    #         context.values["conditions"] = []
 
 
 class CheckBoxPopup(QWidget):
