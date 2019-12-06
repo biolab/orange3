@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel)
+    QLabel, QHBoxLayout)
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
@@ -191,15 +191,13 @@ class OWSelectRows(widget.OWWidget):
             box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        boxes = gui.widgetBox(self.controlArea, orientation=QGridLayout())
+        boxes = gui.widgetBox(self.controlArea, orientation=QHBoxLayout())
         layout = boxes.layout()
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 1)
 
         self.update_input_summary(None)
         self.update_output_summary(None)
 
-        box_setting = gui.vBox(boxes, 'Purging', addToLayout=False)
+        box_setting = gui.vBox(boxes, addToLayout=False, box=True)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
@@ -207,14 +205,15 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        layout.addWidget(box_setting, 0, 0)
+        layout.addWidget(box_setting, 1)
 
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
-        layout.addWidget(self.buttonsArea, 1, 0)
+        layout.addWidget(self.buttonsArea)
 
         acbox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(acbox, 1, 0)
+        layout.addWidget(acbox, 1)
+        layout.setAlignment(acbox, Qt.AlignBottom)
 
         self.set_data(None)
         self.resize(600, 400)
