@@ -265,3 +265,18 @@ class TestOWLouvain(WidgetTest):
         self.assertFalse(w.normalize)
         self.assertEqual(4, w.k_neighbors)
         self.assertEqual(0.5, w.resolution)
+
+    def test_graph_output(self):
+        w = self.widget
+
+        # This test executes only if network add-on is installed
+        if not hasattr(w.Outputs, "graph"):
+            return
+
+        self.send_signal(w.Inputs.data, self.iris)
+        graph = self.get_output(w.Outputs.graph)
+        self.assertEqual(len(graph.nodes), len(self.iris))
+
+        self.send_signal(w.Inputs.data, None)
+        graph = self.get_output(w.Outputs.graph)
+        self.assertIsNone(graph)

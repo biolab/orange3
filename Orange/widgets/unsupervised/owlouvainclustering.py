@@ -7,6 +7,7 @@ from types import SimpleNamespace as namespace
 from typing import Optional, Callable, Tuple, Any
 
 import numpy as np
+import scipy.sparse as sp
 import networkx as nx
 
 from AnyQt.QtCore import (
@@ -30,9 +31,9 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
 
 try:
-    from orangecontrib.network.network import Graph
+    from orangecontrib.network.network import Network
 except ImportError:
-    Graph = None
+    Network = None
 
 
 _MAX_PCA_COMPONENTS = 50
@@ -57,13 +58,10 @@ class OWLouvainClustering(widget.OWWidget):
     class Inputs:
         data = Input("Data", Table, default=True)
 
-    if Graph is not None:
-        class Outputs:
-            annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
-            graph = Output("Network", Graph)
-    else:
-        class Outputs:
-            annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
+    class Outputs:
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
+        if Network is not None:
+            graph = Output("Network", Network)
 
     apply_pca = ContextSetting(True)
     pca_components = ContextSetting(_DEFAULT_PCA_COMPONENTS)
@@ -391,9 +389,12 @@ class OWLouvainClustering(widget.OWWidget):
         new_table.get_column_view(cluster_var)[0][:] = new_partition
         self.Outputs.annotated_data.send(new_table)
 
-        if Graph is not None:
-            graph = Graph(self.graph)
-            graph.set_items(new_table)
+        if Network is not None:
+            n_edges = self.graph.number_of_edges()
+            edges = sp.coo_matrix(
+                (np.ones(n_edges), np.array(self.graph.edges()).T),
+                shape=(n_edges, n_edges))
+            graph = Network(new_table, edges)
             self.Outputs.graph.send(graph)
 
     @Inputs.data
@@ -414,7 +415,7 @@ class OWLouvainClustering(widget.OWWidget):
         self.cancel()
         # Clear the outputs
         self.Outputs.annotated_data.send(None)
-        if Graph is not None:
+        if Network is not None:
             self.Outputs.graph.send(None)
 
         # Clear internal state
