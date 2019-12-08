@@ -122,6 +122,6 @@ def table_to_frame(tab):
     if domain.metas:
         metas = _columns_to_series(domain.metas, tab.metas)
     all_series = dict(x + y + metas)
-    original_column_order = [var.name for var in tab.domain.variables]
+    original_column_order = [var.name for var in tab.domain.variables + tab.domain.metas]
     unsorted_columns_df = pd.DataFrame(all_series)
     return unsorted_columns_df[original_column_order]
