@@ -413,7 +413,7 @@ class Cosine(FittedDistance):
         means = util.nanmean(x, axis=0)
         means = np.nan_to_num(means)
         return self.CosineModel(attributes, self.axis, self.impute,
-                                discrete, means)
+                                discrete, means, self.callback)
 
     fit_cols = fit_rows
 
@@ -424,8 +424,8 @@ class Cosine(FittedDistance):
     class CosineModel(FittedDistanceModel):
         """Model for computation of cosine distances across rows and columns.
         All non-zero discrete values are treated as 1."""
-        def __init__(self, attributes, axis, impute, discrete, means):
-            super().__init__(attributes, axis, impute)
+        def __init__(self, attributes, axis, impute, discrete, means, callback):
+            super().__init__(attributes, axis, impute, callback)
             self.discrete = discrete
             self.means = means
 
@@ -452,7 +452,7 @@ class Cosine(FittedDistance):
 
             data1 = prepare_data(x1)
             data2 = data1 if x2 is None else prepare_data(x2)
-            dist = safe_sparse_dot(data1, data2.T)
+            dist = _safe_sparse_dot(data1, data2.T, callback=self.callback)
             np.clip(dist, -1, 1, out=dist)
             if x2 is None:
                 diag = np.diag_indices_from(dist)
