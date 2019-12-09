@@ -211,22 +211,26 @@ def fix_euclidean_cols_normalized(
 
 def manhattan_rows_cont(np.ndarray[np.float64_t, ndim=2] x1,
                         np.ndarray[np.float64_t, ndim=2] x2,
-                        char two_tables):
+                        char two_tables,
+                        callback):
     cdef:
-        int n_rows1, n_rows2, n_cols, row1, row2, col
+        int n_rows1, n_rows2, n_cols, row1, row2, col, step
         double val1, val2, d
         np.ndarray[np.float64_t, ndim=2] distances
 
     n_rows1, n_cols = x1.shape[0], x1.shape[1]
     n_rows2 = x2.shape[0]
     distances = np.zeros((n_rows1, n_rows2), dtype=float)
-    with nogil:
-        for row1 in range(n_rows1):
-            for row2 in range(n_rows2 if two_tables else row1):
-                d = 0
-                for col in range(n_cols):
-                    d += fabs(x1[row1, col] - x2[row2, col])
-                distances[row1, row2] = d
+    step = max(n_rows1 // 100, 100)
+    for row_start in range(0, n_rows1, step):
+        callback(row_start * 100 / n_rows1)
+        for row1 in range(row_start, min(row_start + step, n_rows1)):
+            with nogil:
+                for row2 in range(n_rows2 if two_tables else row1):
+                    d = 0
+                    for col in range(n_cols):
+                        d += fabs(x1[row1, col] - x2[row2, col])
+                    distances[row1, row2] = d
     return distances
 
 def fix_manhattan_rows(np.ndarray[np.float64_t, ndim=2] distances,
@@ -235,101 +239,113 @@ def fix_manhattan_rows(np.ndarray[np.float64_t, ndim=2] distances,
                        np.ndarray[np.float64_t, ndim=1] medians,
                        np.ndarray[np.float64_t, ndim=1] mads,
                        np.ndarray[np.float64_t, ndim=1] dist_missing2_cont,
-                       char two_tables):
+                       char two_tables,
+                       callback):
     cdef:
-        int n_rows1, n_rows2, n_cols, row1, row2, col
+        int n_rows1, n_rows2, n_cols, row1, row2, col, step
         double val1, val2, d
 
     n_rows1, n_cols = x1.shape[0], x1.shape[1]
     n_rows2 = x2.shape[0] if two_tables else 0
-    with nogil:
-        for row1 in range(n_rows1):
-            for row2 in range(n_rows2 if two_tables else row1):
-                if npy_isnan(distances[row1, row2]):
-                    d = 0
-                    for col in range(n_cols):
-                        val1, val2 = x1[row1, col], x2[row2, col]
-                        if npy_isnan(val1):
-                            if npy_isnan(val2):
-                                d += dist_missing2_cont[col]
+    step = max(n_rows1 // 100, 100)
+    for row_start in range(0, n_rows1, step):
+        callback(row_start * 100 / n_rows1)
+        for row1 in range(row_start, min(row_start + step, n_rows1)):
+            with nogil:
+                for row2 in range(n_rows2 if two_tables else row1):
+                    if npy_isnan(distances[row1, row2]):
+                        d = 0
+                        for col in range(n_cols):
+                            val1, val2 = x1[row1, col], x2[row2, col]
+                            if npy_isnan(val1):
+                                if npy_isnan(val2):
+                                    d += dist_missing2_cont[col]
+                                else:
+                                    d += fabs(val2 - medians[col]) + mads[col]
+                            elif npy_isnan(val2):
+                                d += fabs(val1 - medians[col]) + mads[col]
                             else:
-                                d += fabs(val2 - medians[col]) + mads[col]
-                        elif npy_isnan(val2):
-                            d += fabs(val1 - medians[col]) + mads[col]
-                        else:
-                            d += fabs(val1 - val2)
-                    distances[row1, row2] = d
+                                d += fabs(val1 - val2)
+                        distances[row1, row2] = d
     return distances
 
 
 def fix_manhattan_rows_normalized(np.ndarray[np.float64_t, ndim=2] distances,
                                   np.ndarray[np.float64_t, ndim=2] x1,
                                   np.ndarray[np.float64_t, ndim=2] x2,
-                                  char two_tables):
+                                  char two_tables,
+                                  callback):
     cdef:
-        int n_rows1, n_rows2, n_cols, row1, row2, col
+        int n_rows1, n_rows2, n_cols, row1, row2, col, step
         double val1, val2, d
 
     n_rows1, n_cols = x1.shape[0], x1.shape[1]
     n_rows2 = x2.shape[0] if two_tables else 0
-    with nogil:
-        for row1 in range(n_rows1):
-            for row2 in range(n_rows2 if two_tables else row1):
-                if npy_isnan(distances[row1, row2]):
-                    d = 0
-                    for col in range(n_cols):
-                        val1, val2 = x1[row1, col], x2[row2, col]
-                        if npy_isnan(val1):
-                            if npy_isnan(val2):
-                                d += 1
+    step = max(n_rows1 // 100, 100)
+    for row_start in range(0, n_rows1, step):
+        callback(row_start * 100 / n_rows1)
+        for row1 in range(row_start, min(row_start + step, n_rows1)):
+            with nogil:
+                for row2 in range(n_rows2 if two_tables else row1):
+                    if npy_isnan(distances[row1, row2]):
+                        d = 0
+                        for col in range(n_cols):
+                            val1, val2 = x1[row1, col], x2[row2, col]
+                            if npy_isnan(val1):
+                                if npy_isnan(val2):
+                                    d += 1
+                                else:
+                                    d += fabs(val2) + 0.5
+                            elif npy_isnan(val2):
+                                d += fabs(val1) + 0.5
                             else:
-                                d += fabs(val2) + 0.5
-                        elif npy_isnan(val2):
-                            d += fabs(val1) + 0.5
-                        else:
-                            d += fabs(val1 - val2)
-                    distances[row1, row2] = d
+                                d += fabs(val1 - val2)
+                        distances[row1, row2] = d
     return distances
 
 
 def manhattan_cols(np.ndarray[np.float64_t, ndim=2] x,
                    np.ndarray[np.float64_t, ndim=1] medians,
                    np.ndarray[np.float64_t, ndim=1] mads,
-                   char normalize):
+                   char normalize,
+                   callback):
     cdef:
-        int n_rows, n_cols, col1, col2, row
+        int n_rows, n_cols, col1, col2, row, step
         double val1, val2, d
         double [:, :] distances
 
     n_rows, n_cols = x.shape[0], x.shape[1]
+    step = max(n_cols // 100, 100)
     distances = np.zeros((n_cols, n_cols), dtype=float)
-    with nogil:
-        for col1 in range(n_cols):
-            for col2 in range(col1):
-                d = 0
-                for row in range(n_rows):
-                    val1, val2 = x[row, col1], x[row, col2]
-                    if npy_isnan(val1):
-                        if npy_isnan(val2):
-                            if normalize:
-                                d += 1
+    for col_start in range(0, n_cols, step):
+        callback(col_start * 100 / n_cols)
+        for col1 in range(col_start, min(col_start + step, n_cols)):
+            with nogil:
+                for col2 in range(col1):
+                    d = 0
+                    for row in range(n_rows):
+                        val1, val2 = x[row, col1], x[row, col2]
+                        if npy_isnan(val1):
+                            if npy_isnan(val2):
+                                if normalize:
+                                    d += 1
+                                else:
+                                    d += mads[col1] + mads[col2] \
+                                        + fabs(medians[col1] - medians[col2])
                             else:
-                                d += mads[col1] + mads[col2] \
-                                    + fabs(medians[col1] - medians[col2])
+                                if normalize:
+                                    d += fabs(val2) + 0.5
+                                else:
+                                    d += fabs(val2 - medians[col1]) + mads[col1]
                         else:
-                            if normalize:
-                                d += fabs(val2) + 0.5
+                            if npy_isnan(val2):
+                                if normalize:
+                                    d += fabs(val1) + 0.5
+                                else:
+                                    d += fabs(val1 - medians[col2]) + mads[col2]
                             else:
-                                d += fabs(val2 - medians[col1]) + mads[col1]
-                    else:
-                        if npy_isnan(val2):
-                            if normalize:
-                                d += fabs(val1) + 0.5
-                            else:
-                                d += fabs(val1 - medians[col2]) + mads[col2]
-                        else:
-                            d += fabs(val1 - val2)
-                distances[col1, col2] = distances[col2, col1] = d
+                                d += fabs(val1 - val2)
+                    distances[col1, col2] = distances[col2, col1] = d
     return distances
 
 

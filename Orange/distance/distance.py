@@ -282,19 +282,21 @@ class ManhattanRowsModel(FittedDistanceModel):
         - adds the contributions of discrete columns using the same function as
           the Euclidean distance
         """
+        callbacks = StepwiseCallbacks(self.callback, [5, 5, 60, 30])
+
         if self.continuous.any():
             data1, data2 = self.continuous_columns(
                 x1, x2, self.medians, 2 * self.mads)
             distances = _distance.manhattan_rows_cont(
-                data1, data2, x2 is not None)
+                data1, data2, x2 is not None, callbacks.next())
             if self.normalize:
                 _distance.fix_manhattan_rows_normalized(
-                    distances, data1, data2, x2 is not None)
+                    distances, data1, data2, x2 is not None, callbacks.next())
             else:
                 _distance.fix_manhattan_rows(
                     distances, data1, data2,
                     self.medians, self.mads, self.dist_missing2_cont,
-                    x2 is not None)
+                    x2 is not None, callbacks.next())
         else:
             distances = np.zeros((x1.shape[0],
                                   (x2 if x2 is not None else x1).shape[0]))
@@ -304,10 +306,10 @@ class ManhattanRowsModel(FittedDistanceModel):
             # For discrete attributes, Euclidean is same as Manhattan
             _distance.euclidean_rows_discrete(
                 distances, data1, data2, self.dist_missing_disc,
-                self.dist_missing2_disc, x2 is not None, lambda x: x)
+                self.dist_missing2_disc, x2 is not None, callbacks.next())
 
         if x2 is None:
-            _distance.lower_to_symmetric(distances, lambda x: x)
+            _distance.lower_to_symmetric(distances, callbacks.next())
         return distances
 
 
@@ -331,7 +333,9 @@ class ManhattanColumnsModel(FittedDistanceModel):
             x1 = x1 - self.medians
             x1 /= 2
             x1 /= self.mads
-        return _distance.manhattan_cols(x1, self.medians, self.mads, self.normalize)
+        callback = self.callback or (lambda x: x)
+        return _distance.manhattan_cols(x1, self.medians, self.mads,
+                                        self.normalize, callback)
 
 
 class Manhattan(FittedDistance):
