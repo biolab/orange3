@@ -465,8 +465,8 @@ class JaccardModel(FittedDistanceModel):
     Model for computation of cosine distances across rows and columns.
     All non-zero values are treated as 1.
     """
-    def __init__(self, attributes, axis, impute, ps):
-        super().__init__(attributes, axis, impute)
+    def __init__(self, attributes, axis, impute, ps, callback):
+        super().__init__(attributes, axis, impute, callback)
         self.ps = ps
 
     def compute_distances(self, x1, x2):
@@ -489,25 +489,30 @@ class JaccardModel(FittedDistanceModel):
         # view is false positive, pylint: disable=no-member
         nonzeros1 = np.not_equal(x1, 0).view(np.int8)
         if self.axis == 1:
-            nans1 = _distance.any_nan_row(x1)
+            weights = [5, 45, 50] if x2 is None else [5, 5, 45, 45]
+            callbacks = StepwiseCallbacks(self.callback, weights)
+
+            nans1 = _distance.any_nan_row(x1, callbacks.next())
             if x2 is None:
                 nonzeros2, nans2 = nonzeros1, nans1
             else:
                 nonzeros2 = np.not_equal(x2, 0).view(np.int8)
-                nans2 = _distance.any_nan_row(x2)
+                nans2 = _distance.any_nan_row(x2, callbacks.next())
             return _distance.jaccard_rows(
                 nonzeros1, nonzeros2,
                 x1, x1 if x2 is None else x2,
                 nans1, nans2,
-                self.ps,
-                x2 is not None)
+                self.ps, x2 is not None,
+                callbacks.next(), callbacks.next()
+            )
         else:
-            nans1 = _distance.any_nan_row(x1.T)
+            callbacks = StepwiseCallbacks(self.callback, [10, 90])
+            nans1 = _distance.any_nan_row(x1.T, callbacks.next())
             return _distance.jaccard_cols(
-                nonzeros1, x1, nans1, self.ps)
+                nonzeros1, x1, nans1, self.ps, callbacks.next())
 
-    @staticmethod
-    def _compute_sparse(x1, x2=None):
+    def _compute_sparse(self, x1, x2=None):
+        callback = self.callback or (lambda x: x)
         symmetric = x2 is None
         if symmetric:
             x2 = x1
@@ -518,6 +523,7 @@ class JaccardModel(FittedDistanceModel):
         n, m = x1.shape[0], x2.shape[0]
         matrix = np.zeros((n, m))
         for i in range(n):
+            callback(i * 100 / n)
             xi_ind = set(x1[i].indices)
             for j in range(i if symmetric else m):
                 union = len(xi_ind.union(x2[j].indices))
@@ -547,7 +553,8 @@ class Jaccard(FittedDistance):
             ps = np.fromiter(
                 (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
                 dtype=np.double, count=len(n_vals))
-        return JaccardModel(attributes, self.axis, self.impute, ps)
+        return JaccardModel(attributes, self.axis, self.impute,
+                            ps, self.callback)
 
     fit_cols = fit_rows
 

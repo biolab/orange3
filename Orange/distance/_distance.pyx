@@ -363,19 +363,23 @@ def p_nonzero(np.ndarray[np.float64_t, ndim=1] x):
                 nonzeros += 1
     return float(nonzeros) / nonnans
 
-def any_nan_row(np.ndarray[np.float64_t, ndim=2] x):
+def any_nan_row(np.ndarray[np.float64_t, ndim=2] x,
+                callback):
     cdef:
-        int row, n_cols, n_rows
+        int row, n_cols, n_rows, step
         np.ndarray[np.int8_t, ndim=1] flags
 
     n_rows, n_cols = x.shape[0], x.shape[1]
     flags = np.zeros(x.shape[0], dtype=np.int8)
-    with nogil:
-        for row in range(n_rows):
-            for col in range(n_cols):
-                if npy_isnan(x[row, col]):
-                    flags[row] = 1
-                    break
+    step = max(n_cols // 100, 100)
+    for row_start in range(0, n_rows, step):
+        callback(row_start * 100 / n_rows)
+        for row in range(row_start, min(row_start + step, n_rows)):
+            with nogil:
+                for col in range(n_cols):
+                    if npy_isnan(x[row, col]):
+                        flags[row] = 1
+                        break
     return flags
 
 
@@ -386,9 +390,11 @@ def jaccard_rows(np.ndarray[np.int8_t, ndim=2] nonzeros1,
                  np.ndarray[np.int8_t, ndim=1] nans1,
                  np.ndarray[np.int8_t, ndim=1] nans2,
                  np.ndarray[np.float64_t, ndim=1] ps,
-                 char two_tables):
+                 char two_tables,
+                 callback,
+                 next_callback):
     cdef:
-        int n_rows1, n_rows2, n_cols, row1, row2, col
+        int n_rows1, n_rows2, n_cols, row1, row2, col, step
         np.float64_t val1, val2, intersection, union
         int ival1, ival2
         double [:, :] distances
@@ -396,71 +402,75 @@ def jaccard_rows(np.ndarray[np.int8_t, ndim=2] nonzeros1,
     n_rows1, n_cols = x1.shape[0], x2.shape[1]
     n_rows2 = x2.shape[0]
     distances = np.zeros((n_rows1, n_rows2), dtype=float)
-    with nogil:
-        for row1 in range(n_rows1):
-            if nans1[row1]:
-                for row2 in range(n_rows2 if two_tables else row1):
-                    union = intersection = 0
-                    for col in range(n_cols):
-                        val1, val2 = x1[row1, col], x2[row2, col]
-                        if npy_isnan(val1):
-                            if npy_isnan(val2):
-                                intersection += ps[col] ** 2
-                                union += 1 - (1 - ps[col]) ** 2
-                            elif val2 != 0:
-                                intersection += ps[col]
-                                union += 1
-                            else:
-                                union += ps[col]
-                        elif npy_isnan(val2):
-                            if val1 != 0:
-                                intersection += val1 * ps[col]
-                                union += 1
-                            else:
-                                union += ps[col]
-                        else:
-                            ival1 = nonzeros1[row1, col]
-                            ival2 = nonzeros2[row2, col]
-                            union += ival1 | ival2
-                            intersection += ival1 & ival2
-                    if union != 0:
-                        distances[row1, row2] = 1 - intersection / union
-            else:
-                for row2 in range(n_rows2 if two_tables else row1):
-                    union = intersection = 0
-                    # This case is slightly different since val1 can't be nan
-                    if nans2[row2]:
+    step = max(n_rows1 // 100, 100)
+    for row_start in range(0, n_rows1, step):
+        callback(row_start * 100 / n_rows1)
+        for row1 in range(row_start, min(row_start + step, n_rows1)):
+            with nogil:
+                if nans1[row1]:
+                    for row2 in range(n_rows2 if two_tables else row1):
+                        union = intersection = 0
                         for col in range(n_cols):
-                            val2 = x2[row2, col]
-                            if nonzeros1[row1, col] != 0:
-                                union += 1
+                            val1, val2 = x1[row1, col], x2[row2, col]
+                            if npy_isnan(val1):
                                 if npy_isnan(val2):
-                                    intersection += ps[col]
+                                    intersection += ps[col] ** 2
+                                    union += 1 - (1 - ps[col]) ** 2
                                 elif val2 != 0:
-                                    intersection += 1
+                                    intersection += ps[col]
+                                    union += 1
+                                else:
+                                    union += ps[col]
                             elif npy_isnan(val2):
-                                union += ps[col]
-                            elif val2 != 0:
-                                union += 1
-                    else:
-                        for col in range(n_cols):
-                            ival1 = nonzeros1[row1, col]
-                            ival2 = nonzeros2[row2, col]
-                            union += ival1 | ival2
-                            intersection += ival1 & ival2
-                    if union != 0:
-                        distances[row1, row2] = 1 - intersection / union
+                                if val1 != 0:
+                                    intersection += val1 * ps[col]
+                                    union += 1
+                                else:
+                                    union += ps[col]
+                            else:
+                                ival1 = nonzeros1[row1, col]
+                                ival2 = nonzeros2[row2, col]
+                                union += ival1 | ival2
+                                intersection += ival1 & ival2
+                        if union != 0:
+                            distances[row1, row2] = 1 - intersection / union
+                else:
+                    for row2 in range(n_rows2 if two_tables else row1):
+                        union = intersection = 0
+                        # This case is slightly different since val1 can't be nan
+                        if nans2[row2]:
+                            for col in range(n_cols):
+                                val2 = x2[row2, col]
+                                if nonzeros1[row1, col] != 0:
+                                    union += 1
+                                    if npy_isnan(val2):
+                                        intersection += ps[col]
+                                    elif val2 != 0:
+                                        intersection += 1
+                                elif npy_isnan(val2):
+                                    union += ps[col]
+                                elif val2 != 0:
+                                    union += 1
+                        else:
+                            for col in range(n_cols):
+                                ival1 = nonzeros1[row1, col]
+                                ival2 = nonzeros2[row2, col]
+                                union += ival1 | ival2
+                                intersection += ival1 & ival2
+                        if union != 0:
+                            distances[row1, row2] = 1 - intersection / union
     if not two_tables:
-        lower_to_symmetric(distances, lambda x: x)
+        lower_to_symmetric(distances, next_callback)
     return distances
 
 
 def jaccard_cols(np.ndarray[np.int8_t, ndim=2] nonzeros,
                  np.ndarray[np.float64_t, ndim=2] x,
                  np.ndarray[np.int8_t, ndim=1] nans,
-                 np.ndarray[np.float64_t, ndim=1] ps):
+                 np.ndarray[np.float64_t, ndim=1] ps,
+                 callback):
     cdef:
-        int n_rows, n_cols, col1, col2, row
+        int n_rows, n_cols, col1, col2, row, step
         double val1, val2, intersection, union
         np.int8_t ival1, ival2
         int in_both, in_any, in1_unk2, unk1_in2, unk1_unk2, unk1_not2, not1_unk2
@@ -468,77 +478,80 @@ def jaccard_cols(np.ndarray[np.int8_t, ndim=2] nonzeros,
 
     n_rows, n_cols = x.shape[0], x.shape[1]
     distances = np.zeros((n_cols, n_cols), dtype=float)
-    with nogil:
-        for col1 in range(n_cols):
-            if nans[col1]:
-                for col2 in range(col1):
-                    in_both = in_any = 0
-                    in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0
-                    for row in range(n_rows):
-                        val1, val2 = x[row, col1], x[row, col2]
-                        if npy_isnan(val1):
-                            if npy_isnan(val2):
-                                unk1_unk2 += 1
-                            elif val2 != 0:
-                                unk1_in2 += 1
-                            else:
-                                unk1_not2 += 1
-                        elif npy_isnan(val2):
-                            if val1 != 0:
-                                in1_unk2 += 1
-                            else:
-                                not1_unk2 += 1
-                        else:
-                            ival1 = nonzeros[row, col1]
-                            ival2 = nonzeros[row, col2]
-                            in_both += ival1 & ival2
-                            in_any += ival1 | ival2
-                    union = (in_any + unk1_in2 + in1_unk2
-                             + ps[col1] * unk1_not2
-                             + ps[col2] * not1_unk2
-                             + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)
-                    if union != 0:
-                        intersection = (in_both
-                                        + ps[col1] * unk1_in2 +
-                                        + ps[col2] * in1_unk2 +
-                                        + ps[col1] * ps[col2] * unk1_unk2)
-                        distances[col1, col2] = distances[col2, col1] = \
-                            1 - intersection / union
-            else:
-                for col2 in range(col1):
-                    if nans[col2]:
+    step = max(n_cols // 100, 100)
+    for col_start in range(0, n_cols, step):
+        callback(col_start * 100 / n_cols)
+        for col1 in range(col_start, min(col_start + step, n_cols)):
+            with nogil:
+                if nans[col1]:
+                    for col2 in range(col1):
                         in_both = in_any = 0
                         in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0
                         for row in range(n_rows):
-                            ival1 = nonzeros[row, col1]
-                            val2 = x[row, col2]
-                            if npy_isnan(val2):
-                                if ival1:
+                            val1, val2 = x[row, col1], x[row, col2]
+                            if npy_isnan(val1):
+                                if npy_isnan(val2):
+                                    unk1_unk2 += 1
+                                elif val2 != 0:
+                                    unk1_in2 += 1
+                                else:
+                                    unk1_not2 += 1
+                            elif npy_isnan(val2):
+                                if val1 != 0:
                                     in1_unk2 += 1
                                 else:
                                     not1_unk2 += 1
                             else:
+                                ival1 = nonzeros[row, col1]
                                 ival2 = nonzeros[row, col2]
                                 in_both += ival1 & ival2
                                 in_any += ival1 | ival2
-                        distances[col1, col2] = distances[col2, col1] = \
-                            1 - float(in_both
-                                      + ps[col1] * unk1_in2 +
-                                      + ps[col2] * in1_unk2 +
-                                      + ps[col1] * ps[col2] * unk1_unk2) / \
-                            (in_any + unk1_in2 + in1_unk2 +
-                             + ps[col1] * unk1_not2
-                             + ps[col2] * not1_unk2
-                             + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)
-                    else:
-                        in_both = in_any = 0
-                        for row in range(n_rows):
-                            ival1 = nonzeros[row, col1]
-                            ival2 = nonzeros[row, col2]
-                            in_both += ival1 & ival2
-                            in_any += ival1 | ival2
-                        if in_any != 0:
+                        union = (in_any + unk1_in2 + in1_unk2
+                                 + ps[col1] * unk1_not2
+                                 + ps[col2] * not1_unk2
+                                 + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)
+                        if union != 0:
+                            intersection = (in_both
+                                            + ps[col1] * unk1_in2 +
+                                            + ps[col2] * in1_unk2 +
+                                            + ps[col1] * ps[col2] * unk1_unk2)
                             distances[col1, col2] = distances[col2, col1] = \
-                                1 - float(in_both) / in_any
+                                1 - intersection / union
+                else:
+                    for col2 in range(col1):
+                        if nans[col2]:
+                            in_both = in_any = 0
+                            in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0
+                            for row in range(n_rows):
+                                ival1 = nonzeros[row, col1]
+                                val2 = x[row, col2]
+                                if npy_isnan(val2):
+                                    if ival1:
+                                        in1_unk2 += 1
+                                    else:
+                                        not1_unk2 += 1
+                                else:
+                                    ival2 = nonzeros[row, col2]
+                                    in_both += ival1 & ival2
+                                    in_any += ival1 | ival2
+                            distances[col1, col2] = distances[col2, col1] = \
+                                1 - float(in_both
+                                          + ps[col1] * unk1_in2 +
+                                          + ps[col2] * in1_unk2 +
+                                          + ps[col1] * ps[col2] * unk1_unk2) / \
+                                (in_any + unk1_in2 + in1_unk2 +
+                                 + ps[col1] * unk1_not2
+                                 + ps[col2] * not1_unk2
+                                 + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)
+                        else:
+                            in_both = in_any = 0
+                            for row in range(n_rows):
+                                ival1 = nonzeros[row, col1]
+                                ival2 = nonzeros[row, col2]
+                                in_both += ival1 & ival2
+                                in_any += ival1 | ival2
+                            if in_any != 0:
+                                distances[col1, col2] = distances[col2, col1] = \
+                                    1 - float(in_both) / in_any
 
     return distances
