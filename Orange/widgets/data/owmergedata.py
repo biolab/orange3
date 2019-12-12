@@ -197,7 +197,7 @@ class MergeDataContextHandler(ContextHandler):
     def decode_pair(widget, pair):
         left_domain = widget.data and widget.data.domain
         right_domain = widget.extra_data and widget.extra_data.domain
-        return tuple(var[0] if var[1] == 100 else domain[var[0]]
+        return tuple(var[0] if var[0] in (INDEX, INSTANCEID) else domain[var[0]]
                      for domain, var in zip((left_domain, right_domain), pair))
 
     def _encode_domain(self, domain):
@@ -222,8 +222,8 @@ class MergeDataContextHandler(ContextHandler):
 
     def match(self, context, variables1, variables2):
         def matches(part, variables):
-            return all(var[1] == 100 or variables.get(var[0], -1) == var[1]
-                       for var in part)
+            return all(var[1] == 100 and var[0] in variables
+                       or variables.get(var[0], -1) == var[1] for var in part)
 
         if (variables1, variables2) == (context.variables1, context.variables2):
             return self.PERFECT_MATCH
@@ -670,6 +670,7 @@ class OWMergeData(widget.OWWidget):
             operations = ("augment", "merge", "combine")
             oper = operations[settings["merging"]]
             settings["attr_pairs"] = (
+                True, True,
                 [(mig_value(settings[f"attr_{oper}_data"]),
                   mig_value(settings[f"attr_{oper}_extra"]))])
             for oper in operations:
@@ -677,16 +678,18 @@ class OWMergeData(widget.OWWidget):
                 del settings[f"attr_{oper}_extra"]
 
         if not version or version < 2 and "attr_pairs" in settings:
-            attr_pairs = settings.pop("attr_pairs")
-            attr_pairs = [tuple((var, 100) if isinstance(var, str) else var
-                                for var in pair)
-                          for pair in attr_pairs]
+            data_exists, extra_exists, attr_pairs = settings.pop("attr_pairs")
+            if not (data_exists and extra_exists):
+                settings["context_settings"] = []
+                return
+
+            mapper = {0: (INDEX, 100), 1: (INSTANCEID, 100)}
             context = ContextHandler().new_context()
-            context.variables1 = \
-                dict(var for var, _ in attr_pairs if var[1] > 100)
-            context.variables2 = \
-                dict(var for _, var in attr_pairs if var[1] > 100)
-            context.values["attr_pairs"] = attr_pairs
+            context.values["attr_pairs"] = [tuple(mapper.get(var, (var, 100))
+                                                  for var in pair)
+                                            for pair in attr_pairs]
+            context.variables1 = {}
+            context.variables2 = {}
             settings["context_settings"] = [context]
 
 
