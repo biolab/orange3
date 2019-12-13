@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines
+
 import unittest
 from unittest.mock import patch
 from math import sqrt
@@ -704,22 +706,28 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
                            [1, 3, 0]], dtype=float)
 
         model = distance.Cosine().fit(data)
-        assert_almost_equal(model.means, [2 / 3, 2 / 3, 1 / 3])
+        assert_almost_equal(model.means, [1 / 3, 2 / 3,
+                                          1 / 3, 1 / 3, 0, 1 / 3,
+                                          2 / 3, 1 / 3, 0])
 
         dist = model(data)
-        assert_almost_equal(dist, 1 - np.array([[1, 0, 1 / sqrt(2)],
-                                                [0, 1, 0.5],
-                                                [1 / sqrt(2), 0.5, 1]]))
+        assert_almost_equal(dist, 1 - np.array([[1, 0, 2 / 3],
+                                                [0, 1, 0],
+                                                [2 / 3, 0, 1]]))
 
-        data.X[1, 1] = np.nan
+        data.X[0, 0] = np.nan
         model = distance.Cosine().fit(data)
-        assert_almost_equal(model.means, [2 / 3, 1 / 2, 1 / 3])
+        assert_almost_equal(model.means, [1 / 2, 1 / 2,
+                                          1 / 3, 1 / 3, 0, 1 / 3,
+                                          2 / 3, 1 / 3, 0])
         dist = model(data)
+        d01 = 0.5 / sqrt(2.5) / sqrt(3)
+        d02 = 1.5 / sqrt(2.5) / sqrt(3)
         assert_almost_equal(
             dist,
-            1 - np.array([[1, 0, 1 / sqrt(2)],
-                          [0, 1, 0.5 / sqrt(1.25) / sqrt(2)],
-                          [1 / sqrt(2), 0.5 / sqrt(1.25) / sqrt(2), 1]]))
+            1 - np.array([[1, d01, d02],
+                          [d01, 1, 0],
+                          [d02, 0, 1]]))
 
         data.X = np.array([[1, 0, 0],
                            [0, np.nan, 1],
@@ -727,11 +735,19 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
                            [1, 3, 1]])
         model = distance.Cosine().fit(data)
         dist = model(data)
-        assert_almost_equal(model.means, [0.75, 0.5, 0.75])
-        assert_almost_equal(dist, [[0, 1, 0.333333333, 0.422649731],
-                                   [1, 0, 0.254644008, 0.225403331],
-                                   [0.333333333, 0.254644008, 0, 0.037749551],
-                                   [0.422649731, 0.225403331, 0.037749551, 0]])
+        assert_almost_equal(model.means, [0.25, 0.75,
+                                          0.5, 0, 0, 0.5,
+                                          0.25, 0.75, 0])
+        d01 = 0.5 / sqrt(3) / sqrt(2.5)
+        d02 = 1.5 / sqrt(3) / sqrt(2.5)
+        d03 = 1 / sqrt(3) / sqrt(3)
+        d12 = 1.5 / 2.5
+        d13 = 1.5 / sqrt(3) / sqrt(2.5)
+        d23 = 2.5 / sqrt(3) / sqrt(2.5)
+        assert_almost_equal(dist, 1 - np.array([[1, d01, d02, d03],
+                                                [d01, 1, d12, d13],
+                                                [d02, d12, 1, d23],
+                                                [d03, d13, d23, 1]]))
 
     def test_cosine_cont(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -772,13 +788,18 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
                            [1, 1, 1, 1, 3, 0]], dtype=float)
 
         model = distance.Cosine(axis=1).fit(data)
-        assert_almost_equal(model.means, [1/3, 3, 1, 2/3, 2/3, 1/3])
+        assert_almost_equal(model.means, [1 / 3,
+                                          3,
+                                          1,
+                                          1 / 3, 2 / 3,
+                                          1 / 3, 1 / 3, 0, 1 / 3,
+                                          2 / 3, 1 / 3, 0],)
         dist = model(data)
         assert_almost_equal(
             dist,
-            [[0, 0.316869949, 0.191709623],
-             [0.316869949, 0, 0.577422873],
-             [0.191709623, 0.577422873, 0]])
+            [[0., 0.3694717, 0.207882],
+             [0.3694717, 0., 0.6967608],
+             [0.207882, 0.6967608, 0.]])
 
     def test_two_tables(self):
         assert_almost_equal = np.testing.assert_almost_equal

@@ -392,28 +392,33 @@ class Manhattan(FittedDistance):
 
 class Cosine(FittedDistance):
     supports_sparse = True  # via fallback
-    supports_discrete = False
+    supports_discrete = True
     fallback = SklDistance('cosine')
 
     @staticmethod
-    def discrete_to_indicators(x, discrete):
-        """Change non-zero values of discrete attributes to 1."""
-        if discrete.any():
-            x = x.copy()
-            for col, disc in enumerate(discrete):
-                if disc:
-                    x[:, col].clip(0, 1, out=x[:, col])
-        return x
+    def discrete_to_indicators(x, n_vals):
+        """One-hot encoding of discrete attributes"""
+        # This function is assumed to copy the data. Don't shortcut over it.
+        parts = [x[:, n_vals == 0]]
+        for i, n_val in enumerate(n_vals):
+            if n_val == 0:
+                continue
+            col = x[:, i].copy()
+            nans = np.isnan(col)
+            col[nans] = 0
+            part = np.choose(col.astype(int)[:, np.newaxis], np.eye(n_val))
+            part[nans] = np.nan
+            parts.append(part)
+        return np.hstack(parts)
 
     def fit_rows(self, attributes, x, n_vals):
         """Return a model for cosine distances with stored means for imputation
         """
-        discrete = n_vals > 0
-        x = self.discrete_to_indicators(x, discrete)
+        x = self.discrete_to_indicators(x, n_vals)
         means = util.nanmean(x, axis=0)
         means = np.nan_to_num(means)
         return self.CosineModel(attributes, self.axis, self.impute,
-                                discrete, means, self.callback)
+                                n_vals, means, self.callback)
 
     fit_cols = fit_rows
 
@@ -424,9 +429,9 @@ class Cosine(FittedDistance):
     class CosineModel(FittedDistanceModel):
         """Model for computation of cosine distances across rows and columns.
         All non-zero discrete values are treated as 1."""
-        def __init__(self, attributes, axis, impute, discrete, means, callback):
+        def __init__(self, attributes, axis, impute, n_vals, means, callback):
             super().__init__(attributes, axis, impute, callback)
-            self.discrete = discrete
+            self.n_vals = n_vals
             self.means = means
 
         def compute_distances(self, x1, x2):
@@ -438,10 +443,8 @@ class Cosine(FittedDistance):
             """
 
             def prepare_data(x):
-                if self.discrete.any():
-                    data = Cosine.discrete_to_indicators(x, self.discrete)
-                else:
-                    data = x.copy()
+                # This also copies the data
+                data = Cosine.discrete_to_indicators(x, self.n_vals)
                 for col, mean in enumerate(self.means):
                     column = data[:, col]
                     column[np.isnan(column)] = mean
