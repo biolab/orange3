@@ -934,5 +934,51 @@ class HammingDistanceTest(FittedDistanceTest):
              [1, 2 / 3]])
 
 
+class TestHelperFunctions(unittest.TestCase):
+    # pylint: disable=protected-access, no-self-use
+    def test_interruptable_dot(self):
+        dot = distance.distance._interruptible_dot
+        k, m, n = 20, 30, 40
+        a = np.random.randint(10, size=(m, n))
+        b = np.random.randint(10, size=(n, k))
+
+        c = dot(a, b, step=10)
+        np.testing.assert_array_equal(c, np.dot(a, b))
+
+    def test_interruptable_dot_list(self):
+        dot = distance.distance._interruptible_dot
+        a = [[1, 2, 3], [1, 2, 3]]
+        b = [3, 2, 1]
+        c = dot(a, b, step=10)
+        np.testing.assert_array_equal(c, np.dot(a, b))
+
+    def test_interruptable_dot_scalar(self):
+        dot = distance.distance._interruptible_dot
+        a = 2
+        b = 3
+        c = dot(a, b, step=10)
+        np.testing.assert_array_equal(c, np.dot(a, b))
+
+    def test_interruptable_sqrt(self):
+        sqrt_ = distance.distance._interruptible_sqrt
+        n = 100
+        a = np.random.randint(10, size=(n, n))
+
+        new_a = sqrt_(a, step=10)
+        np.testing.assert_array_equal(new_a, np.sqrt(a))
+
+    def test_interruptable_sqrt_list(self):
+        sqrt_ = distance.distance._interruptible_sqrt
+        l = [1, 2, 3]
+        new_l = sqrt_(l, step=10)
+        np.testing.assert_array_equal(new_l, np.sqrt(l))
+
+    def test_interruptable_sqrt_scalar(self):
+        sqrt_ = distance.distance._interruptible_sqrt
+        i = 9
+        new_i = sqrt_(i, step=10)
+        np.testing.assert_array_equal(new_i, np.sqrt(i))
+
+
 if __name__ == "__main__":
     unittest.main()

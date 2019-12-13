@@ -5,7 +5,9 @@ import bottleneck as bn
 import Orange.data
 import Orange.misc
 from Orange import distance
-from Orange.widgets import gui, settings
+from Orange.widgets import gui
+from Orange.widgets.settings import Setting
+from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
@@ -26,7 +28,30 @@ METRICS = [
 ]
 
 
-class OWDistances(OWWidget):
+class InterruptException(Exception):
+    pass
+
+
+class DistanceRunner:
+    @staticmethod
+    def run(data: Orange.data.Table, metric: distance, normalized_dist: bool,
+            axis: int, state: TaskState) -> Orange.misc.DistMatrix:
+        if data is None:
+            return None
+
+        def callback(i: float) -> bool:
+            state.set_progress_value(i)
+            if state.is_interruption_requested():
+                raise InterruptException
+
+        state.set_status("Calculating...")
+        kwargs = {"axis": 1 - axis, "impute": True, "callback": callback}
+        if metric.supports_normalization and normalized_dist:
+            kwargs["normalize"] = True
+        return metric(data, **kwargs)
+
+
+class OWDistances(OWWidget, ConcurrentWidgetMixin):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
@@ -40,14 +65,14 @@ class OWDistances(OWWidget):
 
     settings_version = 2
 
-    axis = settings.Setting(0)        # type: int
-    metric_idx = settings.Setting(0)  # type: int
+    axis = Setting(0)        # type: int
+    metric_idx = Setting(0)  # type: int
 
     #: Use normalized distances if the metric supports it.
     #: The default is `True`, expect when restoring from old pre v2 settings
     #: (see `migrate_settings`).
-    normalized_dist = settings.Setting(True)  # type: bool
-    autocommit = settings.Setting(True)       # type: bool
+    normalized_dist = Setting(True)  # type: bool
+    autocommit = Setting(True)       # type: bool
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
@@ -65,13 +90,15 @@ class OWDistances(OWWidget):
         imputing_data = Msg("Missing values were imputed")
 
     def __init__(self):
-        super().__init__()
+        OWWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
 
         self.data = None
 
-        gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
-                         box="Distances between", callback=self._invalidate
-                        )
+        gui.radioButtons(
+            self.controlArea, self, "axis", ["Rows", "Columns"],
+            box="Distances between", callback=self._invalidate
+        )
         box = gui.widgetBox(self.controlArea, "Distance Metric")
         self.metrics_combo = gui.comboBox(
             box, self, "metric_idx",
@@ -93,6 +120,7 @@ class OWDistances(OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
+        self.cancel()
         self.data = data
         self.refresh_metrics()
         self.unconditional_commit()
@@ -106,8 +134,7 @@ class OWDistances(OWWidget):
     def commit(self):
         # pylint: disable=invalid-sequence-index
         metric = METRICS[self.metric_idx][1]
-        dist = self.compute_distances(metric, self.data)
-        self.Outputs.distances.send(dist)
+        self.compute_distances(metric, self.data)
 
     def compute_distances(self, metric, data):
         def _check_sparse():
@@ -152,22 +179,36 @@ class OWDistances(OWWidget):
             return True
 
         self.clear_messages()
-        if data is None:
-            return None
-        for check in (_check_sparse,
-                      _fix_discrete, _fix_missing, _fix_nonbinary):
-            if not check():
-                return None
-        try:
-            if metric.supports_normalization and self.normalized_dist:
-                return metric(data, axis=1 - self.axis, impute=True,
-                              normalize=True)
-            else:
-                return metric(data, axis=1 - self.axis, impute=True)
-        except ValueError as e:
-            self.Error.distances_value_error(e)
-        except MemoryError:
+        if data is not None:
+            for check in (_check_sparse, _fix_discrete,
+                          _fix_missing, _fix_nonbinary):
+                if not check():
+                    data = None
+                    break
+
+        self.start(DistanceRunner.run, data, metric,
+                   self.normalized_dist, self.axis)
+
+    def on_partial_result(self, _):
+        pass
+
+    def on_done(self, result: Orange.misc.DistMatrix):
+        assert isinstance(result, Orange.misc.DistMatrix) or result is None
+        self.Outputs.distances.send(result)
+
+    def on_exception(self, ex):
+        if isinstance(ex, ValueError):
+            self.Error.distances_value_error(ex)
+        elif isinstance(ex, MemoryError):
             self.Error.distances_memory_error()
+        elif isinstance(ex, InterruptException):
+            pass
+        else:
+            raise ex
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     def _invalidate(self):
         self.commit()
