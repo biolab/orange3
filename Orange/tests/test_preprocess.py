@@ -221,6 +221,8 @@ class TestRemoveSparse(unittest.TestCase):
         self.data.X[:, 0] = 7
         true_out = self.data[:, 0]
         true_out.X = true_out.X.reshape(-1, 1)
+        self.data.X = csr_matrix(self.data.X)
+        true_out.X = csr_matrix(true_out.X)
         out = RemoveSparse(False, False, 0.5)(self.data)
         np.testing.assert_array_equal(out, true_out)
 

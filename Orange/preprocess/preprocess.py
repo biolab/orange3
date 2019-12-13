@@ -605,7 +605,8 @@ class RemoveSparse(Preprocess):
                 sparsness = data.X.shape[0] - np.count_nonzero(data.X, axis=0)
         else: # filter by nans
             if sp.issparse(data.X):
-                sparsness = np.sum(np.isnan(data.X.data), axis=0)
+                data_csc = sp.csc_matrix(data.X)
+                sparsness = [np.sum(np.isnan(data.X[:, i].data)) for i in range(data_csc.shape[1])]
             else:
                 sparsness = np.sum(np.isnan(data.X), axis=0)
         att = [a for a, s in zip(data.domain.attributes, sparsness) if s <= tailored_threshold]
