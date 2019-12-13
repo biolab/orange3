@@ -95,7 +95,6 @@ class OWSilhouettePlot(widget.OWWidget):
         missing_cluster_assignment = Msg(
             "{} instance{s} omitted (missing cluster assignment)")
         nan_distances = Msg("{} instance{s} omitted (undefined distances)")
-        ignoring_categorical = Msg("Ignoring categorical features")
 
     def __init__(self):
         super().__init__()
@@ -276,7 +275,6 @@ class OWSilhouettePlot(widget.OWWidget):
             data = self.data
             if not metric.supports_discrete and any(
                     a.is_discrete for a in data.domain.attributes):
-                self.Warning.ignoring_categorical()
                 data = Orange.distance.remove_discrete_features(data)
             try:
                 self._matrix = np.asarray(metric(data))

@@ -97,20 +97,6 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(np.all(np.isnan(scores[::3])))
         self.assertTrue(np.all(np.isfinite(scores[valid])))
 
-    def test_ignore_categorical(self):
-        data = Table('heart_disease')
-        self.widget.distance_idx = 2
-        self.assertEqual(self.widget.Distances[self.widget.distance_idx][0],
-                         'Cosine')
-        self.assertFalse(self.widget.Warning.ignoring_categorical.is_shown())
-        self.send_signal(self.widget.Inputs.data, data)
-        self.assertTrue(self.widget.Warning.ignoring_categorical.is_shown())
-        output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(len(output.domain), len(data.domain))
-        self.widget.distance_idx = 0
-        self.widget._update()
-        self.assertFalse(self.widget.Warning.ignoring_categorical.is_shown())
-
     def test_meta_object_dtype(self):
         # gh-1875: Test on mixed string/discrete metas
         data = self.data[::5]
