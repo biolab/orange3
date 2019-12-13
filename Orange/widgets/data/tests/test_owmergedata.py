@@ -17,7 +17,6 @@ from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX, \
     MergeDataContextHandler
 from Orange.widgets.tests.base import WidgetTest
 from Orange.tests import test_filename
-from orangewidget.settings import VERSION_KEY
 
 
 class TestOWMergeData(WidgetTest):
@@ -333,11 +332,11 @@ class TestOWMergeData(WidgetTest):
 
         # Migration from version == None
         orig_settings = dict(
-            attr_augment_data=(attr1.name, 101),
-            attr_augment_extra=(attr2.name, 101),
-            attr_merge_data=(attr3.name, 101),
-            attr_merge_extra=(attr4.name, 101),
-            attr_combine_data=(attr5.name, 103),
+            attr_augment_data=attr1.name,
+            attr_augment_extra=attr2.name,
+            attr_merge_data=attr3.name,
+            attr_merge_extra=attr4.name,
+            attr_combine_data=attr5.name,
             attr_combine_extra='Position (index)')
 
         widget = create_and_send(dict(merging=0, **orig_settings))
@@ -347,17 +346,49 @@ class TestOWMergeData(WidgetTest):
         self.assertEqual(widget.attr_pairs, ([(attr3, attr4)]))
 
         widget = create_and_send(dict(merging=2, **orig_settings))
-        self.assertEqual(widget.attr_pairs, ([(attr5, INDEX)]))
+        self.assertEqual(widget.attr_pairs, ([(attr5, attr5)]))
 
         orig_settings["attr_combine_extra"] = "Source position (index)"
         widget = create_and_send(dict(merging=2, **orig_settings))
-        self.assertEqual(widget.attr_pairs, ([(attr5, INSTANCEID)]))
+        self.assertEqual(widget.attr_pairs, ([(attr5, attr5)]))
 
         # Migration from version 1
-        settings = {"attr_pairs": [((attr1.name, 101), (attr2.name, 101))],
-                    VERSION_KEY: 1}
-        widget = create_and_send(settings)
-        self.assertEqual(widget.attr_pairs, ([(attr1, attr2)]))
+        orig_settings = {"attr_pairs": (True, True, [[attr1.name, attr2.name],
+                                                     [attr3.name, attr4.name]]),
+                         "__version__": 1}
+        widget = create_and_send(orig_settings)
+        self.assertEqual(widget.attr_pairs, ([(attr1, attr2), (attr3, attr4)]))
+
+    def test_migrate_settings_attr_pairs_extra_none(self):
+        settings = {'attr_pairs': (True, False, [['sepal length', 0]])}
+        OWMergeData.migrate_settings(settings, 1)
+        self.assertListEqual(settings["context_settings"], [])
+
+    def test_migrate_settings_attr_pairs_data_none(self):
+        settings = {'attr_pairs': (False, True, [[0, "sepal length"]])}
+        OWMergeData.migrate_settings(settings, 1)
+        self.assertListEqual(settings["context_settings"], [])
+
+    def test_migrate_settings_attr_pairs_id_idx(self):
+        settings = {"attr_pairs": (True, True, [[0, 1]])}
+        OWMergeData.migrate_settings(settings, 1)
+        context = settings["context_settings"][0]
+        self.assertListEqual(context.values["attr_pairs"],
+                             [((INDEX, 100), (INSTANCEID, 100))])
+        self.assertDictEqual(context.variables1, {})
+        self.assertDictEqual(context.variables2, {})
+
+    def test_migrate_settings_attr_pairs_vars(self):
+        settings = {"attr_pairs": (True, True,
+                                   [["sepal length", "sepal width"],
+                                    ["petal length", "petal width"]])}
+        OWMergeData.migrate_settings(settings, 1)
+        context = settings["context_settings"][0]
+        self.assertListEqual(context.values["attr_pairs"],
+                             [(("sepal length", 100), ("sepal width", 100)),
+                              (("petal length", 100), ("petal width", 100))])
+        self.assertDictEqual(context.variables1, {})
+        self.assertDictEqual(context.variables2, {})
 
     def test_report(self):
         widget = self.widget
