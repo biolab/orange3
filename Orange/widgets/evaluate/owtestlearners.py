@@ -1,5 +1,6 @@
 # pylint doesn't understand the Settings magic
 # pylint: disable=invalid-sequence-index
+# pylint: disable=too-many-lines,too-many-instance-attributes
 import abc
 import enum
 import logging
@@ -9,14 +10,17 @@ from functools import partial, reduce
 
 from concurrent.futures import Future
 from collections import OrderedDict, namedtuple
+from itertools import count
 from typing import Any, Optional, List, Dict, Callable
 
 import numpy as np
+import baycomp
 
 from AnyQt import QtGui
-from AnyQt.QtGui import QStandardItem
 from AnyQt.QtCore import Qt, QSize, QThread
 from AnyQt.QtCore import pyqtSlot as Slot
+from AnyQt.QtGui import QStandardItem, QDoubleValidator
+from AnyQt.QtWidgets import QHeaderView, QTableWidget, QLabel
 
 from Orange.base import Learner
 import Orange.classification
@@ -35,7 +39,7 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.concurrent import ThreadExecutor, TaskState
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
-
+from orangewidget.utils.itemmodels import PyListModel
 
 log = logging.getLogger(__name__)
 
@@ -175,6 +179,10 @@ class OWTestLearners(OWWidget):
     fold_feature = settings.ContextSetting(None)
     fold_feature_selected = settings.ContextSetting(False)
 
+    use_rope = settings.Setting(False)
+    rope = settings.Setting(0.1)
+    comparison_criterion = settings.Setting(0)
+
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
@@ -275,12 +283,52 @@ class OWTestLearners(OWWidget):
             callback=self._on_target_class_changed,
             contentsLength=8)
 
+        self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")
+        gui.comboBox(
+            box, self, "comparison_criterion", model=PyListModel(),
+            callback=self.update_comparison_table)
+
+        hbox = gui.hBox(box)
+        gui.checkBox(hbox, self, "use_rope",
+                     "Negligible difference: ",
+                     callback=self.update_comparison_table)
+        gui.lineEdit(hbox, self, "rope", validator=QDoubleValidator(),
+                     controlWidth=70, callback=self.update_comparison_table,
+                     alignment=Qt.AlignRight)
+
         gui.rubber(self.controlArea)
         self.score_table = ScoreTable(self)
         self.score_table.shownScoresChanged.connect(self.update_stats_model)
+        view = self.score_table.view
+        view.setSizeAdjustPolicy(view.AdjustToContents)
 
         box = gui.vBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.score_table.view)
+
+        self.compbox = box = gui.vBox(self.mainArea, box="Model comparison")
+        table = self.comparison_table = QTableWidget(
+            wordWrap=False, editTriggers=QTableWidget.NoEditTriggers,
+            selectionMode=QTableWidget.NoSelection)
+        table.setSizeAdjustPolicy(table.AdjustToContents)
+        header = table.verticalHeader()
+        header.setSectionResizeMode(QHeaderView.Fixed)
+        header.setSectionsClickable(False)
+
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        avg_width = self.fontMetrics().averageCharWidth()
+        header.setMinimumSectionSize(8 * avg_width)
+        header.setMaximumSectionSize(15 * avg_width)
+        header.setTextElideMode(Qt.ElideRight)
+        header.setDefaultAlignment(Qt.AlignCenter)
+        header.setSectionsClickable(False)
+        header.setStretchLastSection(False)
+        box.layout().addWidget(table)
+        box.layout().addWidget(QLabel(
+            "<small>Table shows probabilities that the score for the model in "
+            "the row is higher than that of the model in the column. "
+            "Small numbers show the probability that the difference is "
+            "negligible.</small>", wordWrap=True))
 
     @staticmethod
     def sizeHint():
@@ -440,6 +488,8 @@ class OWTestLearners(OWWidget):
             self.scorers = []
             return
         self.scorers = usable_scorers(self.data.domain.class_var)
+        self.controls.comparison_criterion.model()[:] = \
+            [scorer.long_name or scorer.name for scorer in self.scorers]
 
     @Inputs.preprocessor
     def set_preprocessor(self, preproc):
@@ -453,6 +503,7 @@ class OWTestLearners(OWWidget):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
         self.score_table.update_header(self.scorers)
+        self._update_comparison_enabled()
         self.update_stats_model()
         if self.__needupdate:
             self.__update()
@@ -470,8 +521,15 @@ class OWTestLearners(OWWidget):
         self._param_changed()
 
     def _param_changed(self):
+        self.modcompbox.setEnabled(self.resampling == OWTestLearners.KFold)
+        self._update_comparison_enabled()
         self._invalidate()
         self.__update()
+
+    def _update_comparison_enabled(self):
+        self.comparison_table.setEnabled(
+            self.resampling == OWTestLearners.KFold
+            and len(self.learners) > 1)
 
     def update_stats_model(self):
         # Update the results_model with up to date scores.
@@ -562,6 +620,91 @@ class OWTestLearners(OWWidget):
         self.error("\n".join(errors), shown=bool(errors))
         self.Warning.scores_not_computed(shown=has_missing_scores)
 
+    def update_comparison_table(self):
+        self.comparison_table.clearContents()
+        if self.resampling != OWTestLearners.KFold:
+            return
+
+        slots = self._successful_slots()
+        scores = self._scores_by_folds(slots)
+        self._fill_table(slots, scores)
+
+    def _successful_slots(self):
+        model = self.score_table.model
+        proxy = self.score_table.sorted_model
+
+        keys = (model.data(proxy.mapToSource(proxy.index(row, 0)), Qt.UserRole)
+                for row in range(proxy.rowCount()))
+        slots = [slot for slot in (self.learners[key] for key in keys)
+                 if slot.results is not None and slot.results.success]
+        return slots
+
+    def _scores_by_folds(self, slots):
+        scorer = self.scorers[self.comparison_criterion]()
+        self.compbox.setTitle(f"Model comparison by {scorer.name}")
+        if scorer.is_binary:
+            if self.class_selection != self.TARGET_AVERAGE:
+                class_var = self.data.domain.class_var
+                target_index = class_var.values.index(self.class_selection)
+                kw = dict(target=target_index)
+            else:
+                kw = dict(average='weighted')
+        else:
+            kw = {}
+
+        def call_scorer(results):
+            def thunked():
+                return scorer.scores_by_folds(results.value, **kw).flatten()
+
+            return thunked
+
+        scores = [Try(call_scorer(slot.results)) for slot in slots]
+        scores = [score.value if score.success else None for score in scores]
+        # `None in scores doesn't work -- these are np.arrays)
+        if any(score is None for score in scores):
+            self.Warning.scores_not_computed()
+        return scores
+
+    def _fill_table(self, slots, scores):
+        table = self.comparison_table
+        table.setRowCount(len(slots))
+        table.setColumnCount(len(slots))
+
+        names = [learner_name(slot.learner) for slot in slots]
+        table.setVerticalHeaderLabels(names)
+        table.setHorizontalHeaderLabels(names)
+
+        for row, row_name, row_scores in zip(count(), names, scores):
+            for col, col_name, col_scores in zip(range(row), names, scores):
+                if row_scores is None or col_scores is None:
+                    continue
+                if self.use_rope and self.rope:
+                    p0, rope, p1 = baycomp.two_on_single(
+                        row_scores, col_scores, self.rope)
+                    self._set_cell(table, row, col,
+                                   f"{p0:.3f}<br/><small>{rope:.3f})</small>",
+                                   f"p({row_name} > {col_name}) = {p0:.3f}\n"
+                                   f"p({row_name} = {col_name}) = {rope:.3f}")
+                    self._set_cell(table, col, row,
+                                   f"{p1:.3f}<br/><small>{rope:.3f}</small>",
+                                   f"p({col_name} > {row_name}) = {p1:.3f}\n"
+                                   f"p({col_name} = {row_name}) = {rope:.3f}")
+                else:
+                    p0, p1 = baycomp.two_on_single(row_scores, col_scores)
+                    self._set_cell(table, row, col,
+                                   f"{p0:.3f}",
+                                   f"p({row_name} > {col_name}) = {p0:.3f}")
+                    self._set_cell(table, col, row,
+                                   f"{p1:.3f}",
+                                   f"p({col_name} > {row_name}) = {p1:.3f}")
+
+    @staticmethod
+    def _set_cell(table, row, col, label, tooltip):
+        item = QLabel(label)
+        item.setToolTip(tooltip)
+        item.setAlignment(Qt.AlignCenter)
+        table.setCellWidget(row, col, item)
+
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
         self.class_selection_combo.clear()
@@ -585,6 +728,7 @@ class OWTestLearners(OWWidget):
 
     def _on_target_class_changed(self):
         self.update_stats_model()
+        self.update_comparison_table()
 
     def _invalidate(self, which=None):
         self.cancel()
@@ -610,6 +754,8 @@ class OWTestLearners(OWWidget):
                     if item is not None:
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
+
+        self.comparison_table.clearContents()
 
         self.__needupdate = True
 
@@ -866,6 +1012,7 @@ class OWTestLearners(OWWidget):
 
         self.score_table.update_header(self.scorers)
         self.update_stats_model()
+        self.update_comparison_table()
 
         self.commit()
 
