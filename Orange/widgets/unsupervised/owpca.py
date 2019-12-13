@@ -31,6 +31,7 @@ class OWPCA(widget.OWWidget):
 
     class Outputs:
         transformed_data = Output("Transformed Data", Table, replaces=["Transformed data"])
+        data = Output("Data", Table, default=True)
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 
@@ -180,6 +181,7 @@ class OWPCA(widget.OWWidget):
 
     def clear_outputs(self):
         self.Outputs.transformed_data.send(None)
+        self.Outputs.data.send(None)
         self.Outputs.components.send(None)
         self.Outputs.pca.send(self._pca_projector)
 
@@ -286,7 +288,7 @@ class OWPCA(widget.OWWidget):
         axis.setTicks([[(i, str(i)) for i in range(1, p + 1, d)]])
 
     def commit(self):
-        transformed = components = None
+        transformed = data = components = None
         if self._pca is not None:
             if self._transformed is None:
                 # Compute the full transform (MAX_COMPONENTS components) once.
@@ -311,9 +313,18 @@ class OWPCA(widget.OWWidget):
                                metas=metas)
             components.name = 'components'
 
+            data_dom = Domain(
+                self.data.domain.attributes,
+                self.data.domain.class_vars,
+                self.data.domain.metas + domain.attributes)
+            data = Table.from_numpy(
+                data_dom, self.data.X, self.data.Y,
+                numpy.hstack((self.data.metas, transformed.X)))
+
         self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
         self.Outputs.components.send(components)
+        self.Outputs.data.send(data)
         self.Outputs.pca.send(self._pca_projector)
 
     def send_report(self):
