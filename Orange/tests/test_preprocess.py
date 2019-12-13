@@ -183,21 +183,49 @@ class TestRemoveSparse(unittest.TestCase):
     def setUp(self):
         domain = Domain([ContinuousVariable('a'), ContinuousVariable('b')])
         self.data = Table.from_numpy(domain, np.zeros((3, 2)))
-        self.data[1:, 1] = 7
 
-    def test_dense(self):
+    def test_0_dense(self):
+        self.data[1:, 1] = 7
         true_out = self.data[:, 1]
         true_out.X = true_out.X.reshape(-1, 1)
-        out = RemoveSparse(0.5)(self.data)
+        out = RemoveSparse(True, False, 0.5)(self.data)
         np.testing.assert_array_equal(out, true_out)
 
-    def test_sparse(self):
+        out = RemoveSparse(True, True, 2)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_0_sparse(self):
+        self.data[1:, 1] = 7
         true_out = self.data[:, 1]
         self.data.X = csr_matrix(self.data.X)
         true_out.X = csr_matrix(true_out.X)
-        out = RemoveSparse(0.5)(self.data).X
+        out = RemoveSparse(True, False, 0.5)(self.data).X
         np.testing.assert_array_equal(out, true_out)
 
+        out = RemoveSparse(True, True, 1)(self.data).X
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_nan_dense(self):
+        self.data[1:, 1] = np.nan
+        self.data.X[:, 0] = 7
+        true_out = self.data[:, 0]
+        true_out.X = true_out.X.reshape(-1, 1)
+        out = RemoveSparse(False, False, 0.5)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+        out = RemoveSparse(False, True, 1)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_nan_sparse(self):
+        self.data[1:, 1] = np.nan
+        self.data.X[:, 0] = 7
+        true_out = self.data[:, 0]
+        true_out.X = true_out.X.reshape(-1, 1)
+        out = RemoveSparse(False, False, 0.5)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+        out = RemoveSparse(False, True, 1)(self.data)
+        np.testing.assert_array_equal(out, true_out)
 
 if __name__ == '__main__':
     unittest.main()

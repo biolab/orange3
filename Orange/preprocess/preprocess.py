@@ -572,26 +572,43 @@ class PreprocessorList(Preprocess):
 
 class RemoveSparse(Preprocess):
     """
-    Remove sparse  features. Sparseness is determined according to
-    user-defined treshold.
+    Filter out the features with too many nan's or 0. Threshold is user defined.
 
     Parameters
     ----------
-    threshold : float
-        Minimal proportion of non-zero entries of a feature
+    filter_0: bool
+        filter out by zeros or nan's
+    fixed_threshold: bool
+        threshold is either a fixed number of elements or percentage
+    threshold: int
+        kept as is if fixed threshold or the percent is used to calculate
+        the appropriate number of elements
     """
 
-    def __init__(self, threshold=0.05):
+    def __init__(self, filter_0=True, fixed_threshold=False, threshold=5):
+        self.filter_0 = filter_0
+        self.fixed_threshold = fixed_threshold
         self.threshold = threshold
 
     def __call__(self, data):
-        if sp.issparse(data.X):
-            data_csc = sp.csc_matrix(data.X)
-            h, w = data_csc.shape
-            sparsness = [data_csc[:, i].count_nonzero() / h for i in range(w)]
+        if self.fixed_threshold:
+            tailored_threshold = self.threshold
         else:
-            sparsness = np.count_nonzero(data.X, axis=0) / data.X.shape[0]
-        att = [a for a, s in zip(data.domain.attributes, sparsness) if s >= self.threshold]
+            tailored_threshold = np.ceil(self.threshold/100 * data.X.shape[0])
+
+        if self.filter_0:
+            if sp.issparse(data.X):
+                data_csc = sp.csc_matrix(data.X)
+                h, w = data_csc.shape
+                sparsness = [(h - data_csc[:, i].count_nonzero()) for i in range(w)]
+            else:
+                sparsness = data.X.shape[0] - np.count_nonzero(data.X, axis=0)
+        else: # filter by nans
+            if sp.issparse(data.X):
+                sparsness = np.sum(np.isnan(data.X.data), axis=0)
+            else:
+                sparsness = np.sum(np.isnan(data.X), axis=0)
+        att = [a for a, s in zip(data.domain.attributes, sparsness) if s <= tailored_threshold]
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
         return data.transform(domain)
