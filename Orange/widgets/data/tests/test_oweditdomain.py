@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=all
+import pickle
 from itertools import product
 from unittest import TestCase
 
@@ -27,7 +28,9 @@ from Orange.widgets.data.oweditdomain import (
     AsString, AsCategorical, AsContinuous, AsTime,
     table_column_data, ReinterpretVariableEditor, CategoricalVector,
     VariableEditDelegate, TransformRole,
-    RealVector, TimeVector, StringVector)
+    RealVector, TimeVector, StringVector, make_dict_mapper, DictMissingConst,
+    LookupMappingTransform, as_float_or_nan, column_str_repr
+)
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.tests import test_filename, assert_array_nanequal
@@ -758,3 +761,81 @@ class TestReinterpretTransforms(TestCase):
         domain = table.domain
         v = apply_transform(domain.metas[0],table, [])
         self.assertIs(v, domain.metas[0])
+
+
+class TestUtils(TestCase):
+    def test_mapper(self):
+        mapper = make_dict_mapper({"a": 1, "b": 2})
+        r = mapper(["a", "a", "b"])
+        assert_array_equal(r, [1, 1, 2])
+        self.assertEqual(r.dtype, np.dtype("O"))
+        r = mapper(["a", "a", "b"], dtype=float)
+        assert_array_equal(r, [1, 1, 2])
+        self.assertEqual(r.dtype, np.dtype(float))
+        r = mapper(["a", "a", "b"], dtype=int)
+        self.assertEqual(r.dtype, np.dtype(int))
+
+        mapper = make_dict_mapper({"a": 1, "b": 2}, dtype=int)
+        r = mapper(["a", "a", "b"])
+        self.assertEqual(r.dtype, np.dtype(int))
+
+        r = np.full(3, -1, dtype=float)
+        r_ = mapper(["a", "a", "b"], out=r)
+        self.assertIs(r, r_)
+        assert_array_equal(r, [1, 1, 2])
+
+    def test_dict_missing(self):
+        d = DictMissingConst("<->", {1: 1, 2: 2})
+        self.assertEqual(d[1], 1)
+        self.assertEqual(d[-1], "<->")
+        # must be sufficiently different from defaultdict to warrant existence
+        self.assertEqual(d, {1: 1, 2: 2})
+
+    def test_as_float_or_nan(self):
+        a = np.array(["a", "1.1", ".2", "NaN"], object)
+        r = as_float_or_nan(a)
+        assert_array_equal(r, [np.nan, 1.1, .2, np.nan])
+
+        a = np.array([1, 2, 3], dtype=int)
+        r = as_float_or_nan(a)
+        assert_array_equal(r, [1., 2., 3.])
+
+        r = as_float_or_nan(r, dtype=np.float32)
+        assert_array_equal(r, [1., 2., 3.])
+        self.assertEqual(r.dtype, np.dtype(np.float32))
+
+    def test_column_str_repr(self):
+        v = StringVariable("S")
+        d = column_str_repr(v, np.array(["A", "", "B"]))
+        assert_array_equal(d, ["A", "?", "B"])
+        v = ContinuousVariable("C")
+        d = column_str_repr(v, np.array([0.1, np.nan, 1.0]))
+        assert_array_equal(d, ["0.1", "?", "1"])
+        v = DiscreteVariable("D", ("a", "b"))
+        d = column_str_repr(v, np.array([0., np.nan, 1.0]))
+        assert_array_equal(d, ["a", "?", "b"])
+        v = TimeVariable("T", have_date=False, have_time=True)
+        d = column_str_repr(v, np.array([0., np.nan, 1.0]))
+        assert_array_equal(d, ["00:00:00", "?", "00:00:01"])
+
+
+class TestLookupMappingTransform(TestCase):
+    def setUp(self) -> None:
+        self.lookup = LookupMappingTransform(
+            StringVariable("S"),
+            DictMissingConst(np.nan, {"": np.nan, "a": 0, "b": 1}),
+            dtype=float,
+        )
+
+    def test_transform(self):
+        r = self.lookup.transform(np.array(["", "a", "b", "c"]))
+        assert_array_equal(r, [np.nan, 0, 1, np.nan])
+
+    def test_pickle(self):
+        lookup = self.lookup
+        lookup_ = pickle.loads(pickle.dumps(lookup))
+        c = np.array(["", "a", "b", "c"])
+        r = lookup.transform(c)
+        assert_array_equal(r, [np.nan, 0, 1, np.nan])
+        r_ = lookup_.transform(c)
+        assert_array_equal(r_, [np.nan, 0, 1, np.nan])
