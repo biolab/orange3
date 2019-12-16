@@ -998,10 +998,8 @@ class BasketReader(FileFormat):
         return table
 
 
-class ExcelReader(FileFormat):
-    """Reader for excel files"""
-    EXTENSIONS = ('.xlsx',)
-    DESCRIPTION = 'Microsoft Excel spreadsheet'
+class _BaseExcelReader(FileFormat):
+    """Base class for reading excel files"""
     SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False
 
@@ -1064,6 +1062,18 @@ class ExcelReader(FileFormat):
             for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
                 sheet.write(i, j, fmt(v))
         workbook.close()
+
+
+class ExcelReader(_BaseExcelReader):
+    """Reader for .xlsx files"""
+    EXTENSIONS = ('.xlsx',)
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
+
+
+class XlsReader(_BaseExcelReader):
+    """Reader for .xls files"""
+    EXTENSIONS = ('.xls',)
+    DESCRIPTION = 'Microsoft Excel 97-2004 spreadsheet'
 
 
 class DotReader(FileFormat):
