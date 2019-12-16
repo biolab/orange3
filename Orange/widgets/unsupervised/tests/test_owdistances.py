@@ -157,12 +157,12 @@ class TestOWDistances(WidgetTest):
 
         mock = Mock(side_effect=ValueError)
         self.widget.compute_distances(mock, self.iris)
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertTrue(self.widget.Error.distances_value_error.is_shown())
 
         mock = Mock(side_effect=MemoryError)
         self.widget.compute_distances(mock, self.iris)
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertEqual(len(self.widget.Error.active), 1)
         self.assertTrue(self.widget.Error.distances_memory_error.is_shown())
 
@@ -176,7 +176,7 @@ class TestOWDistances(WidgetTest):
             if metric == distance.Bhattacharyya:
                 break
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertTrue(self.widget.Error.distances_value_error.is_shown())
         self.iris.X[0, 0] *= -1
 

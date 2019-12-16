@@ -229,6 +229,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
     # OWAnchorProjectionWidget
     def set_data(self, data):
         super().set_data(data)
+        self.graph.set_sample_size(None)
         if self._invalidated:
             self.init_projection()
 

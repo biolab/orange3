@@ -71,7 +71,7 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         output1 = self.get_output(self.widget.Outputs.components)
         self.widget.run_button.click()
         self.assertEqual(self.widget.run_button.text(), "Stop")
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertEqual(self.widget.run_button.text(), "Start")
         output2 = self.get_output(self.widget.Outputs.components)
         self.assertTrue((output1.X != output2.X).any())
@@ -163,3 +163,7 @@ class TestOWFreeVizRunner(unittest.TestCase):
         self.assertIsNot(self.projection.proj, result.projection.proj)
         self.assertTrue((self.projection.components_.T !=
                          result.projection.components_.T).any())
+
+
+if __name__ == "__main__":
+    unittest.main()
