@@ -1,5 +1,6 @@
 import unittest
 from unittest import mock
+from contextlib import ExitStack
 
 import os
 import io
@@ -11,6 +12,7 @@ from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QSettings
 
+from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.data import owcsvimport
 from Orange.widgets.data.owcsvimport import (
@@ -21,18 +23,20 @@ from Orange.widgets.utils.settings import QSettings_writeArray
 
 class TestOWCSVFileImport(WidgetTest):
     def setUp(self):
-        # patch `_local_settings` to avoid side effects
-        s = QSettings(os.devnull, QSettings.IniFormat)
-        self._patch = mock.patch.object(
-            owcsvimport.OWCSVFileImport, "_local_settings", lambda *a: s)
-        self._patch.__enter__()
+        self._stack = ExitStack().__enter__()
+        # patch `_local_settings` to avoid side effects, across tests
+        fname = self._stack.enter_context(named_file(""))
+        s = QSettings(fname, QSettings.IniFormat)
+        self._stack.enter_context(mock.patch.object(
+            owcsvimport.OWCSVFileImport, "_local_settings", lambda *a: s
+        ))
         self.widget = self.create_widget(owcsvimport.OWCSVFileImport)
 
     def tearDown(self):
         self.widgets.remove(self.widget)
         self.widget.onDeleteWidget()
         self.widget = None
-        self._patch.__exit__()
+        self._stack.close()
 
     def test_basic(self):
         w = self.widget
