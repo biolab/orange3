@@ -203,7 +203,7 @@ PACKAGE_DATA = {
                             "icons/paintdata/*.svg"],
     "Orange.widgets.data.tests": ["origin1/*.tab",
                                   "origin2/*.tab",
-                                  "*.txt"],
+                                  "*.txt", "*.tab"],
     "Orange.widgets.evaluate": ["icons/*.svg"],
     "Orange.widgets.model": ["icons/*.svg"],
     "Orange.widgets.visualize": ["icons/*.svg"],
