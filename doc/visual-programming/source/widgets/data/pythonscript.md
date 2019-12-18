@@ -42,7 +42,7 @@ Note: You should not modify the input objects in place.
 Examples
 --------
 
-Python Script widget is intended to extend functionalities for advanced users.
+Python Script widget is intended to extend functionalities for advanced users. Classes used in Orange are described in the [documentation](../../../../data-mining-library/source/reference). To find further information about orange Table class see [Table](../../../../data-mining-library/source/reference/data.table.rst), [Domain](../../../../data-mining-library/source/reference/data.domain.rst), and [Variable](../../../../data-mining-library/source/reference/data.variable.rst) documentation.
 
 One can, for example, do batch filtering by attributes. We used zoo.tab for the example and we filtered out all the attributes that have more than 5 discrete values. This in our case removed only 'leg' attribute, but imagine an example where one would have many such attributes.
 
