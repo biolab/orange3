@@ -21,3 +21,4 @@ requests
 openTSNE>=0.3.11
 pandas
 pyyaml
+openpyxl

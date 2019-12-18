@@ -35,6 +35,18 @@ def test_xlsx_xls(f):
     return wrapper
 
 
+class TestExcelReader(unittest.TestCase):
+    def test_read_round_floats(self):
+        table = read_file(get_xlsx_reader, "round_floats.xlsx")
+        domain = table.domain
+        self.assertIsNone(domain.class_var)
+        self.assertEqual(len(domain.metas), 0)
+        self.assertEqual(len(domain.attributes), 3)
+        self.assertIsInstance(domain[0], ContinuousVariable)
+        self.assertIsInstance(domain[1], ContinuousVariable)
+        self.assertListEqual(domain[2].values, ["1", "2"])
+
+
 class TestExcelHeader0(unittest.TestCase):
     @test_xlsx_xls
     def test_read(self, reader: Callable[[str], io.FileFormat]):
