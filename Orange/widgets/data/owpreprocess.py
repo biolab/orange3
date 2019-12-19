@@ -252,7 +252,7 @@ class ContinuizeEditor(BaseEditor):
 
 class RemoveSparseEditor(BaseEditor):
 
-    options = ["Nan's", "0's"]
+    options = ["missing", "zeros"]
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -263,7 +263,7 @@ class RemoveSparseEditor(BaseEditor):
         self.setLayout(QVBoxLayout())
 
         choose_filts = QGroupBox(title='Filter out features with too many:')
-        choose_filts.setLayout(QHBoxLayout())
+        choose_filts.setLayout(QVBoxLayout())
         self.filter_buttons = QButtonGroup(exclusive=True)
         self.filter_buttons.buttonClicked.connect(self.filterByClicked)
         for option, idx in zip(self.options, range(len(self.options))):
@@ -278,21 +278,21 @@ class RemoveSparseEditor(BaseEditor):
         self.settings_buttons = QButtonGroup(exclusive=True)
         self.settings_buttons.buttonClicked.connect(self.filterSettingsClicked)
 
-        btn_perc = QRadioButton(self, text='Max %: ', checked=not self.useFixedThreshold)
+        btn_perc = QRadioButton(self, text='Percentage', checked=not self.useFixedThreshold)
         self.settings_buttons.addButton(btn_perc, id=0)
         self.percSpin = QSpinBox(minimum=0, maximum=100, value=self.percThresh,
                                  enabled=not self.useFixedThreshold)
         self.percSpin.valueChanged[int].connect(self.setPercThresh)
         self.percSpin.editingFinished.connect(self.edited)
-        filter_settings.layout().addRow(btn_perc, self.percSpin)
 
-        btn_fix = QRadioButton(self, text='Max #: ', checked=self.useFixedThreshold)
+        btn_fix = QRadioButton(self, text='Fixed', checked=self.useFixedThreshold)
         self.settings_buttons.addButton(btn_fix, id=1)
         self.fixedSpin = QSpinBox(minimum=0, maximum=1000000, value=self.fixedThresh,
                                   enabled=self.useFixedThreshold)
         self.fixedSpin.valueChanged[int].connect(self.setFixedThresh)
         self.fixedSpin.editingFinished.connect(self.edited)
         filter_settings.layout().addRow(btn_fix, self.fixedSpin)
+        filter_settings.layout().addRow(btn_perc, self.percSpin)
 
         self.layout().addWidget(filter_settings)
 
