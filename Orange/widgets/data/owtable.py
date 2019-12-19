@@ -519,20 +519,17 @@ class OWDataTable(OWWidget):
             if current is not None:
                 # pylint: disable=protected-access
                 self.set_info(current._input_slot.summary)
-        else:
-            self.__pending_selected_rows = None
-            self.__pending_selected_cols = None
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
         self.openContext(data)
 
-        if self.__pending_selected_rows is not None:
+        if data and self.__pending_selected_rows is not None:
             self.selected_rows = self.__pending_selected_rows
             self.__pending_selected_rows = None
         else:
             self.selected_rows = []
 
-        if self.__pending_selected_cols is not None:
+        if data and self.__pending_selected_cols is not None:
             self.selected_cols = self.__pending_selected_cols
             self.__pending_selected_cols = None
         else:
