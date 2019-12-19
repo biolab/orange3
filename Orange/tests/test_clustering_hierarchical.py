@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from numpy.testing import assert_array_equal
 
 import unittest
 from itertools import chain, tee
@@ -142,6 +143,56 @@ class TestHierarchical(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             hierarchical.tree_from_linkage(link)
+
+    def test_linkage_from_tree(self):
+        T = hierarchical.Tree
+        C = hierarchical.ClusterData
+        S = hierarchical.SingletonData
+
+        def t(h: float, left: T, right: T):
+            return T(C((left.value.first, right.value.last), h), (left, right))
+
+        def leaf(r, index):
+            return T(S((r, r + 1), 0.0, index))
+
+        assert_array_equal(
+            hierarchical.linkage_from_tree(leaf(0, 0)),
+            numpy.empty((0, 4))
+        )
+        assert_array_equal(
+            hierarchical.linkage_from_tree(t(1.0, leaf(0, 0), leaf(1, 1))),
+            numpy.array([
+                [0, 1, 1.0, 0.0]
+            ])
+        )
+
+        tree = t(1.0, t(0.2, leaf(0, 0), leaf(1, 1)), leaf(2, 2))
+        Z = hierarchical.linkage_from_tree(tree)
+        assert_array_equal(
+            Z,
+            numpy.array([
+                [0, 1, 0.2, 0.0],
+                [3, 2, 1.0, 0.0]
+            ])
+        )
+        self.assertEqual(tree, hierarchical.tree_from_linkage(Z))
+
+        tree = t(
+            2.0,
+            left=t(0.5, leaf(0, 1), leaf(1, 2)),
+            right=t(1.0, leaf(2, 0), leaf(3, 3),)
+        )
+
+        Z = hierarchical.linkage_from_tree(tree)
+        assert_array_equal(
+            Z,
+            numpy.array([
+                [1, 2, 0.5, 0.0],
+                [0, 3, 1.0, 0.0],
+                [4, 5, 2.0, 0.0]
+            ])
+        )
+        self.assertEqual(tree, hierarchical.tree_from_linkage(Z))
 
 
 class TestTree(unittest.TestCase):

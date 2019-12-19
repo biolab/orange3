@@ -1,6 +1,8 @@
-from collections import namedtuple, deque
+import warnings
+
+from collections import namedtuple, deque, defaultdict
 from operator import attrgetter
-from itertools import chain, count
+from itertools import count
 from distutils.version import LooseVersion as _LooseVersion
 
 import heapq
@@ -12,6 +14,8 @@ import scipy.spatial.distance
 from Orange.distance import Euclidean, PearsonR
 
 __all__ = ['HierarchicalClustering']
+
+_undef = object()  # 'no value' sentinel
 
 SINGLE = "single"
 AVERAGE = "average"
@@ -274,6 +278,28 @@ def tree_from_linkage(linkage):
     return T[root]
 
 
+def linkage_from_tree(tree: Tree) -> numpy.ndarray:
+    leafs = [n for n in preorder(tree) if n.is_leaf]
+
+    Z = numpy.zeros((len(leafs) - 1, 4), float)
+    i = 0
+    node_to_i = defaultdict(count(len(leafs)).__next__)
+    for node in postorder(tree):
+        if node.is_leaf:
+            node_to_i[node] = node.value.index
+        else:
+            assert len(node.branches) == 2
+            assert node.left in node_to_i
+            assert node.right in node_to_i
+            Z[i] = [node_to_i[node.left], node_to_i[node.right],
+                    node.value.height, 0]
+            _ni = node_to_i[node]
+            assert _ni == Z.shape[0] + i + 1
+            i += 1
+    assert i == Z.shape[0]
+    return Z
+
+
 def postorder(tree, branches=attrgetter("branches")):
     stack = deque([tree])
     visited = set()
@@ -406,218 +432,30 @@ def top_clusters(tree, k):
     return [n for _, n in heap]
 
 
-def optimal_leaf_ordering(tree, distances, progress_callback=None):
+def optimal_leaf_ordering(
+        tree: Tree, distances: numpy.ndarray, progress_callback=_undef
+) -> Tree:
     """
     Order the leaves in the clustering tree.
-
-    (based on Ziv Bar-Joseph et al. Fast optimal leaf ordering for
-    hierarchical clustering)
 
     :param Tree tree:
         Binary hierarchical clustering tree.
     :param numpy.ndarray distances:
         A (N, N) numpy.ndarray of distances that were used to compute
         the clustering.
-    :param function progress_callback:
-        Function used to report on progress.
 
+    .. seealso:: scipy.cluster.hierarchy.optimal_leaf_ordering
     """
-    distances = numpy.asarray(distances)
-    M = numpy.zeros_like(distances)
-
-    # rearrange distances by order defined by tree's leaves
-    indices = numpy.array([leaf.value.index for leaf in leaves(tree)])
-    distances = distances[indices[numpy.newaxis, :],
-                          indices[:, numpy.newaxis]]
-    distances = numpy.ascontiguousarray(distances)
-
-    # This is the 'fast' early termination search described in the paper
-    # (it is slower in the pure python implementation)
-    def argmin_ordered_xpypZ(x, y, Z, sorter_x=None, sorter_y=None):
-        C = numpy.min(Z)
-        if sorter_x is None:
-            sorter_x = range(len(x))
-            ordered_x = x
-        else:
-            ordered_x = x[sorter_x]
-        if sorter_y is None:
-            sorter_y = range(len(y))
-            ordered_y = y
-        else:
-            ordered_y = y[sorter_y]
-
-        y0 = ordered_y[0]
-
-        best_val = numpy.inf
-        best_i, best_j = 0, 0
-
-        y0pC = y0 + C
-        for i, x in zip(sorter_x, ordered_x):
-            if x + y0pC >= best_val:
-                break
-            xpC = x + C
-            for j, y in zip(sorter_y, ordered_y):
-                if xpC + y >= best_val:
-                    break
-                val = x + y + Z[i, j]
-                if val < best_val:
-                    best_val, best_i, best_j = val, i, j
-        return best_i, best_j
-
-    def argmin_xpypZ(x, y, Z):
-        _, h = Z.shape
-        A = Z + numpy.reshape(x, (-1, 1))
-        A += numpy.reshape(y, (1, -1))
-        i = numpy.argmin(A)
-        return i // h, i % h
-
-    def optimal_ordering(tree, M, ordering):
-        if tree.is_leaf:
-            M[tree.value.first, tree.value.first] = 0.0
-        else:
-            left, right = tree.left, tree.right
-            if not left.is_leaf:
-                V_ll = range(*left.left.value.range)
-                V_lr = range(*left.right.value.range)
-                u_iter = chain(((u, V_lr) for u in V_ll),
-                               ((u, V_ll) for u in V_lr))
-            else:
-                V_lr = range(*left.value.range)
-                u_iter = ((u, V_lr) for u in V_lr)
-
-            u_iter = list(u_iter)
-            assert [u for u, _ in u_iter] == list(range(*left.value.range))
-
-            if not right.is_leaf:
-                V_rl = range(*right.left.value.range)
-                V_rr = range(*right.right.value.range)
-                w_iter = chain(((w, V_rr) for w in V_rl),
-                               ((w, V_rl) for w in V_rr))
-            else:
-                V_rr = range(*right.value.range)
-                w_iter = ((w, V_rr) for w in V_rr)
-
-            w_iter = list(w_iter)
-            assert [w for w, _ in w_iter] == list(range(*right.value.range))
-
-            for u, left_inner in u_iter:
-                left_inner_slice = slice(left_inner.start, left_inner.stop)
-                M_left_inner = M[u, left_inner_slice]
-#                 left_inner_sort = numpy.argsort(M_left_inner)
-                for w, right_inner in w_iter:
-                    right_inner_slice = slice(right_inner.start,
-                                              right_inner.stop)
-                    M_right_inner = M[w, right_inner_slice]
-#                     right_inner_sort = numpy.argsort(M_right_inner)
-#                     i, j = argmin_ordered_xpypZ(
-#                         M_left_inner, M_right_inner,
-#                         distances[left_inner_slice, right_inner_slice],
-#                         sorter_x=left_inner_sort, sorter_y=right_inner_sort,
-#                     )
-                    i, j = argmin_xpypZ(
-                        M_left_inner, M_right_inner,
-                        distances[left_inner_slice, right_inner_slice]
-                    )
-                    m, k = left_inner.start + i, right_inner.start + j
-                    score = M[u, m] + M[k, w] + distances[m, k]
-                    M[u, w] = M[w, u] = score
-                    ordering[u, w] = (m, k)
-
-        return M, ordering
-
-    subtrees = list(postorder(tree))
-    ordering_dtype = numpy.dtype(
-        [("m", numpy.uint32),
-         ("k", numpy.uint32)])
-
-    ordering = numpy.empty(distances.shape, dtype=ordering_dtype)
-
-    for i, subtree in enumerate(subtrees):
-        M, ordering = optimal_ordering(subtree, M, ordering)
-
-        if progress_callback:
-            progress_callback(100.0 * i / len(subtrees))
-
-    def min_uw(tree, u=None, w=None):
-        if tree.is_leaf:
-            return 0.0
-        else:
-            if u is None:
-                U = slice(*tree.left.value.range)
-            else:
-                U = slice(u, u + 1)
-            if w is None:
-                W = slice(*tree.right.value.range)
-            else:
-                W = slice(w, w + 1)
-
-            M_ = M[U, W]
-            _, w = M_.shape
-            i = numpy.argmin(M_.ravel())
-            i, j = i // w, i % w
-            return U.start + i, W.start + j
-
-    def optimal_swap(root, M):
-        opt_uw = {root: min_uw(root)}
-        # run down the tree applying u, w constraints from parents.
-        for tree in preorder(root):
-            if tree.is_leaf:
-                pass
-            else:
-                u, w = opt_uw[tree]
-                assert u in range(*tree.value.range)
-                assert w in range(*tree.value.range)
-                if u < w:
-                    m, k = ordering[u, w]
-
-                    opt_uw[tree.left] = (u, m)
-                    opt_uw[tree.right] = (k, w)
-                else:
-                    k, m = ordering[w, u]
-                    opt_uw[tree.right] = (u, m)
-
-                    opt_uw[tree.left] = (k, w)
-
-        def is_swapped(tree):
-            "Is `tree` swapped based on computed optimal ordering"
-            if tree.is_leaf:
-                return False
-            else:
-                u, w = opt_uw[tree]
-                return u > w
-
-        def swaped_branches(tree):
-            "Return branches from `tree` in optimal order"
-            if tree.is_leaf:
-                return ()
-            elif is_swapped(tree):
-                return tree.branches
-            else:
-                return tuple(reversed(tree.branches))
-
-        # Create a new tree structure with optimally swapped branches.
-        T = {}
-        counter = count(0)
-        for tree in postorder(root, branches=swaped_branches):
-            if tree.is_leaf:
-                # we need to 're-enumerate' the leaves
-                i = next(counter)
-                T[tree] = Tree(tree.value._replace(range=(i, i + 1)), ())
-            else:
-                left, right = T[tree.left], T[tree.right]
-
-                if left.value.first > right.value.first:
-                    right, left = left, right
-
-                assert left.value.first < right.value.last
-                assert left.value.last == right.value.first
-
-                T[tree] = Tree(tree.value._replace(range=(left.value.first,
-                                                          right.value.last)),
-                               (left, right))
-        return T[root]
-
-    return optimal_swap(tree, M)
+    if progress_callback is not _undef:
+        warnings.warn(
+            "'progress_callback' parameter is deprecated and ignored. "
+            "Passing it will raise an error in the future.",
+            FutureWarning, stacklevel=2
+        )
+    Z = linkage_from_tree(tree)
+    y = condensedform(numpy.asarray(distances))
+    Zopt = scipy.cluster.hierarchy.optimal_leaf_ordering(Z, y)
+    return tree_from_linkage(Zopt)
 
 
 class HierarchicalClustering:
