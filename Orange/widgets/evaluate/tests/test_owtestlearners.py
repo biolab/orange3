@@ -274,10 +274,11 @@ class TestOWTestLearners(WidgetTest):
         view = self.widget.score_table.view
         header = view.horizontalHeader()
         QTest.mouseClick(header.viewport(), Qt.LeftButton)
-
         # Ensure that the click on header caused an ascending sort
         # Ascending sort means that wrong model should be listed first
-        self.assertEqual(header.sortIndicatorOrder(), Qt.AscendingOrder)
+        if header.sortIndicatorOrder() != Qt.AscendingOrder:
+            QTest.mouseClick(header.viewport(), Qt.LeftButton)
+
         self.assertEqual(view.model().index(0, 0).data(), "VersicolorLearner")
 
         self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
