@@ -2,9 +2,10 @@ import enum
 import math
 import itertools
 
-from collections import namedtuple
-
-from typing import Iterable, Mapping, Any, Optional, Union, TypeVar, Type
+from typing import (
+    Iterable, Mapping, Any, Optional, Union, TypeVar, Type, NamedTuple,
+    Sequence, Tuple
+)
 
 import numpy as np
 import scipy.sparse as sp
@@ -13,7 +14,7 @@ from AnyQt.QtWidgets import (
     QSizePolicy, QGraphicsScene, QGraphicsView, QGraphicsRectItem,
     QGraphicsWidget, QGraphicsSimpleTextItem, QGraphicsPixmapItem,
     QGraphicsGridLayout, QGraphicsLinearLayout, QGraphicsLayoutItem,
-    QFormLayout, QApplication, QComboBox
+    QFormLayout, QApplication, QComboBox, QWIDGETSIZE_MAX
 )
 from AnyQt.QtGui import (
     QFontMetrics, QPen, QPixmap, QColor, QLinearGradient, QPainter,
@@ -193,17 +194,7 @@ def interp_exp(x, xp, fp, gamma=0.0, left=None, right=None,):
 # clustered but will share the same cluster)
 
 
-RowPart = namedtuple(
-    "RowPart",
-    ["title",
-     "indices",
-     "sortindices",
-     "cluster",
-     "cluster_ordered"]
-)
-
-
-class RowPart(RowPart):  # pylint: disable=function-redefined
+class RowPart(NamedTuple):
     """
     A row group
 
@@ -213,19 +204,13 @@ class RowPart(RowPart):  # pylint: disable=function-redefined
         Group title
     indices : (N, ) int ndarray | slice
         Indexes the input data to retrieve the row subset for the group.
-    sortindices : (N, ) int ndarray
-        Sort indices which sort data[self.indices] by 'barycentric' method
     cluster : hierarchical.Tree optional
     cluster_ordered : hierarchical.Tree optional
     """
-    def __new__(cls, title, indices, sortindices, cluster=None,
-                cluster_ordered=None):
-        if isinstance(indices, slice):
-            assert indices.start is not None and indices.stop is not None \
-                   and indices.start <= indices.stop \
-                   and (indices.step == 1 or indices.step is None)
-        return super().__new__(cls, title, indices, sortindices,
-                               cluster, cluster_ordered)
+    title: str
+    indices: Sequence[int]
+    cluster: Optional[hierarchical.Tree] = None
+    cluster_ordered: Optional[hierarchical.Tree] = None
 
     @property
     def can_cluster(self):
@@ -239,18 +224,7 @@ class RowPart(RowPart):  # pylint: disable=function-redefined
         return self.cluster_ordered
 
 
-ColumnPart = namedtuple(
-    "ColumnPart",
-    ["title",    #: str
-     "indices",  #: indices
-     "domain",   #: list of Variable
-     "cluster",  #: hierarchical.Tree option
-     "cluster_ordered",  #: hierarchical.Tree option
-    ]
-)
-
-
-class ColumnPart(ColumnPart):  # pylint: disable=function-redefined
+class ColumnPart(NamedTuple):
     """
     A column group
 
@@ -265,25 +239,23 @@ class ColumnPart(ColumnPart):  # pylint: disable=function-redefined
     cluster : hierarchical.Tree optional
     cluster_ordered : hierarchical.Tree optional
     """
-    def __new__(cls, title, indices, domain, cluster=None,
-                cluster_ordered=None):
-        return super().__new__(cls, title, indices, domain, cluster,
-                               cluster_ordered)
+    title: Optional[str]
+    indices: Sequence[int]
+    domain: Sequence[Orange.data.Variable]
+    cluster: Optional[hierarchical.Tree] = None
+    cluster_ordered: Optional[hierarchical.Tree] = None
 
     @property
     def cluster_ord(self):
         return self.cluster_ordered
 
 
-Parts = namedtuple(
-    "Parts",
-    ["rows",     #: A list of RowPart descriptors
-     "columns",  #: A list of ColumnPart descriptors
-     "span",     #: (min, max) global data range
-    ]
-)
+class Parts(NamedTuple):
+    rows: Sequence[RowPart]        #: A list of RowPart descriptors
+    columns: Sequence[ColumnPart]  #: A list of ColumnPart descriptors
+    span: Tuple[float, float]      #: (min, max) global data range
 
-Parts.levels = property(lambda self: self.span)
+    levels = property(lambda self: self.span)
 
 
 _color_palettes = (sorted(colorbrewer.colorSchemes["sequential"].items()) +
@@ -480,7 +452,6 @@ class OWHeatMap(widget.OWWidget):
         #: the indices which merge the input_data into the heatmap row i
         self.merge_indices = None
 
-        self.annotation_vars = ['(None)']
         self.__rows_cache = {}
         self.__columns_cache = {}
 
@@ -839,12 +810,11 @@ class OWHeatMap(widget.OWWidget):
             _col_data, _ = data.get_column_view(group_var)
             row_indices = [np.flatnonzero(_col_data == i)
                            for i in range(len(group_var.values))]
-            row_groups = [RowPart(title=name, indices=ind, sortindices=None,
+            row_groups = [RowPart(title=name, indices=ind,
                                   cluster=None, cluster_ordered=None)
                           for name, ind in zip(group_var.values, row_indices)]
         else:
             row_groups = [RowPart(title=None, indices=slice(0, len(data)),
-                                  sortindices=None,
                                   cluster=None, cluster_ordered=None)]
 
         col_groups = [
@@ -1644,8 +1614,6 @@ class GraphicsWidget(QGraphicsWidget):
         if event.type() == QEvent.LayoutRequest and self.layout() is not None:
             self.layoutDidActivate.emit()
         return rval
-
-QWIDGETSIZE_MAX = 16777215
 
 
 def scaled(size, constraint, mode=Qt.KeepAspectRatio):
