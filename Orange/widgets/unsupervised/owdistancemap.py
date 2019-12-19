@@ -287,7 +287,7 @@ class OWDistanceMap(widget.OWWidget):
     # Disable clustering for inputs bigger than this
     _MaxClustering = 25000
     # Disable cluster leaf ordering for inputs bigger than this
-    _MaxOrderedClustering = 1000
+    _MaxOrderedClustering = 2000
 
     def __init__(self):
         super().__init__()
