@@ -9,7 +9,7 @@ from sklearn.exceptions import ConvergenceWarning
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.preprocess import Continuize
-from Orange.widgets.visualize.owheatmap import OWHeatMap
+from Orange.widgets.visualize.owheatmap import OWHeatMap, Clustering
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 
 
@@ -56,7 +56,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.Error.active)
 
     def test_information_message(self):
-        self.widget.controls.row_clustering.setChecked(True)
+        self.widget.set_row_clustering(Clustering.OrderedClustering)
         continuizer = Continuize()
         cont_titanic = continuizer(self.titanic)
         self.send_signal(self.widget.Inputs.data, cont_titanic)
@@ -69,12 +69,12 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         # check output when "Sorting Column" setting changes
         self._select_data()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
-        self.widget.controls.col_clustering.setChecked(True)
+        self.widget.set_col_clustering(Clustering.OrderedClustering)
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         # check output when "Sorting Row" setting changes
         self._select_data()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
-        self.widget.controls.row_clustering.setChecked(True)
+        self.widget.set_row_clustering(Clustering.OrderedClustering)
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         # check output when "Merge by k-means" setting changes
         self._select_data()
@@ -95,21 +95,23 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                                 ConvergenceWarning)
 
         msg = self.widget.Error
+        clusterings = (Clustering.None_, Clustering.Clustering,
+                       Clustering.OrderedClustering)
         for kmeans_checked in (False, True):
             self.widget.controls.merge_kmeans.setChecked(kmeans_checked)
-            for col_checked in (False, True):
-                self.widget.controls.col_clustering.setChecked(col_checked)
+            for col_clust in clusterings:
+                self.widget.set_col_clustering(col_clust)
                 self.send_signal(self.widget.Inputs.data, None)
                 self.send_signal(self.widget.Inputs.data, self.data[:, 0])
-                if col_checked:
+                if col_clust != Clustering.None_:
                     self.assertTrue(msg.not_enough_features.is_shown())
-                for row_checked in (False, True):
-                    self.widget.controls.row_clustering.setChecked(row_checked)
+                for row_clust in clusterings:
+                    self.widget.set_row_clustering(row_clust)
                     self.send_signal(self.widget.Inputs.data, None)
                     self.send_signal(self.widget.Inputs.data, self.data[0:1])
-                    if row_checked:
+                    if row_clust != Clustering.None_:
                         self.assertTrue(msg.not_enough_instances.is_shown())
-                    elif kmeans_checked and row_checked:
+                    elif kmeans_checked and row_clust != Clustering.None_:
                         self.assertTrue(msg.not_enough_instances_k_means.is_shown())
             self.send_signal(self.widget.Inputs.data, None)
             self.assertFalse(msg.not_enough_features.is_shown())
@@ -181,7 +183,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                              [DiscreteVariable("c2", values=["a", "b"])]),
                       np.array([[1], [2], [3]]), np.array([[0], [0], [1]]))
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.row_check.setChecked(True)
+        self.widget.set_row_clustering(Clustering.Clustering)
 
     def test_unconditional_commit_on_new_signal(self):
         with patch.object(self.widget, 'unconditional_commit') as commit:
