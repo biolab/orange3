@@ -66,6 +66,15 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
             self.send_signal(self.widget.Inputs.data, self.data)
             commit.assert_called()
 
+    def test_pending_selection(self):
+        widget = self.create_widget(OWDataTable, stored_settings=dict(
+            selected_rows=[5, 6, 7, 8, 9],
+            selected_cols=list(range(len(self.data.domain)))))
+        self.send_signal(widget.Inputs.data, None, 1)
+        self.send_signal(widget.Inputs.data, self.data, 1)
+        output = self.get_output(widget.Outputs.selected_data)
+        self.assertEqual(5, len(output))
+
 
 if __name__ == "__main__":
     unittest.main()
