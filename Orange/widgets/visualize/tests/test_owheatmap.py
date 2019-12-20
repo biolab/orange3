@@ -239,6 +239,17 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
             colors = image_row_colors(image)
             np.testing.assert_almost_equal(colors, desired)
 
+    def test_migrate_settings_v3(self):
+        w = self.create_widget(
+            OWHeatMap, stored_settings={
+                "row_clustering": False,
+                "col_clustering": True,
+            }
+        )
+        self.assertEqual(w.row_clustering, Clustering.None_)
+        self.assertEqual(w.col_clustering, Clustering.OrderedClustering)
+
+
 
 if __name__ == "__main__":
     unittest.main()
