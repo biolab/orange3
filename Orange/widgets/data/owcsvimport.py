@@ -569,11 +569,12 @@ class OWCSVFileImport(widget.OWWidget):
             "button-layout: {:d};".format(QDialogButtonBox.MacLayout)
         )
         self.controlArea.layout().addWidget(button_box)
+        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
 
         self._restoreState()
-        if self.current_item() is not None:
-            self._invalidate()
-        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+        item = self.current_item()
+        if item is not None:
+            self.set_selected_file(item.path(), item.options())
 
     @Slot(int)
     def activate_recent(self, index):

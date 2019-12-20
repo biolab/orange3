@@ -1,33 +1,110 @@
-from numpy.testing import assert_array_equal
 import unittest
+from unittest import mock
+from contextlib import ExitStack
 
 import os
 import io
 import csv
+import json
 
 import numpy as np
+from numpy.testing import assert_array_equal
 
+from AnyQt.QtCore import QSettings
+
+from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
-
 from Orange.widgets.data import owcsvimport
 from Orange.widgets.data.owcsvimport import (
     pandas_to_table, ColumnType, RowSpec
 )
+from Orange.widgets.utils.settings import QSettings_writeArray
 
 
 class TestOWCSVFileImport(WidgetTest):
     def setUp(self):
+        self._stack = ExitStack().__enter__()
+        # patch `_local_settings` to avoid side effects, across tests
+        fname = self._stack.enter_context(named_file(""))
+        s = QSettings(fname, QSettings.IniFormat)
+        self._stack.enter_context(mock.patch.object(
+            owcsvimport.OWCSVFileImport, "_local_settings", lambda *a: s
+        ))
         self.widget = self.create_widget(owcsvimport.OWCSVFileImport)
 
     def tearDown(self):
         self.widgets.remove(self.widget)
         self.widget.onDeleteWidget()
         self.widget = None
+        self._stack.close()
 
     def test_basic(self):
         w = self.widget
         w.activate_recent(0)
         w.cancel()
+
+    data_regions_options = owcsvimport.Options(
+        encoding="ascii", dialect=csv.excel_tab(),
+        columntypes=[
+            (range(0, 1), ColumnType.Categorical),
+            (range(1, 2), ColumnType.Text),
+            (range(2, 3), ColumnType.Categorical),
+        ], rowspec=[
+            (range(0, 1), RowSpec.Header),
+            (range(1, 3), RowSpec.Skipped),
+        ],
+    )
+
+    def _check_data_regions(self, table):
+        self.assertEqual(len(table), 3)
+        self.assertEqual(len(table), 3)
+        self.assertTrue(table.domain["id"].is_discrete)
+        self.assertTrue(table.domain["continent"].is_discrete)
+        self.assertTrue(table.domain["state"].is_string)
+        assert_array_equal(table.X, [[0, 1], [1, 1], [2, 0]])
+        assert_array_equal(table.metas,
+                           np.array([["UK"], ["Russia"], ["Mexico"]], object))
+
+    def test_restore(self):
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-regions.tab")
+
+        w = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+            stored_settings={
+                "_session_items": [
+                    (path, self.data_regions_options.as_dict())
+                ]
+            }
+        )
+        item = w.current_item()
+        self.assertEqual(item.path(), path)
+        self.assertEqual(item.options(), self.data_regions_options)
+        out = self.get_output("Data", w)
+        self._check_data_regions(out)
+
+    def test_restore_from_local(self):
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-regions.tab")
+        s = owcsvimport.OWCSVFileImport._local_settings()
+        s.clear()
+        QSettings_writeArray(
+            s, "recent", [
+                {"path": path,
+                 "options": json.dumps(self.data_regions_options.as_dict())}]
+        )
+        w = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+        )
+        item = w.current_item()
+        self.assertEqual(item.path(), path)
+        self.assertEqual(item.options(), self.data_regions_options)
+        self.assertEqual(
+            w._session_items, [(path, self.data_regions_options.as_dict())],
+            "local settings item must be recorded in _session_items when "
+            "activated in __init__",
+        )
+        self._check_data_regions(self.get_output("Data", w))
 
 
 class TestImportDialog(GuiTest):
