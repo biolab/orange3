@@ -21,7 +21,7 @@ from orangewidget.gui import (
     miscellanea, setLayout, separator, rubber, widgetBox, hBox, vBox,
     indentedBox, widgetLabel, label, spin, doubleSpin, checkBox, lineEdit,
     button, toolButton, radioButtons, radioButtonsInBox, appendRadioButton,
-    hSlider, labeledSlider, valueSlider, auto_commit,
+    hSlider, labeledSlider, valueSlider, auto_commit, auto_send, auto_apply,
 
     # ItemDataRole's
     BarRatioRole, BarBrushRole, SortOrderRole, LinkRole,
@@ -68,7 +68,7 @@ __all__ = [
     "checkBox", "lineEdit", "button", "toolButton",
     "radioButtons", "radioButtonsInBox", "appendRadioButton",
     "hSlider", "labeledSlider", "valueSlider",
-    "auto_commit", "ProgressBar",
+    "auto_commit", "auto_send", "auto_apply", "ProgressBar",
     "VerticalLabel", "tabWidget", "createTabPage", "table", "tableItem",
     "VisibleHeaderSectionContextEventFilter", "checkButtonOffsetHint",
     "toolButtonSizeHint", "FloatSlider", "ControlGetter",  "VerticalScrollArea",
@@ -126,13 +126,13 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
 class __AttributeIconDict(dict):
     def __getitem__(self, key):
         if not self:
-            for tpe, char, col in ((vartype(ContinuousVariable()),
+            for tpe, char, col in ((vartype(ContinuousVariable("c")),
                                     "N", (202, 0, 32)),
-                                   (vartype(DiscreteVariable()),
+                                   (vartype(DiscreteVariable("d")),
                                     "C", (26, 150, 65)),
-                                   (vartype(StringVariable()),
+                                   (vartype(StringVariable("s")),
                                     "S", (0, 0, 0)),
-                                   (vartype(TimeVariable()),
+                                   (vartype(TimeVariable("t")),
                                     "T", (68, 170, 255)),
                                    (-1, "?", (128, 128, 128))):
                 self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))

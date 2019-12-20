@@ -560,12 +560,12 @@ class ConcurrentWidgetMixin(ConcurrentMixin):
     """
     def __set_state_ready(self):
         self.progressBarFinished()
-        self.setBlocking(False)
+        self.setInvalidated(False)
         self.setStatusMessage("")
 
     def __set_state_busy(self):
         self.progressBarInit()
-        self.setBlocking(True)
+        self.setInvalidated(True)
 
     def start(self, task: Callable, *args, **kwargs):
         self.__set_state_ready()

@@ -196,6 +196,38 @@ class CorrelationRank(VizRankDialogAttrPair):
         header = self.rank_table.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
+    def start(self, task, *args, **kwargs):
+        self.__set_state_ready()
+        super().start(task, *args, **kwargs)
+        self.__set_state_busy()
+
+    def cancel(self):
+        super().cancel()
+        self.__set_state_ready()
+
+    def _connect_signals(self, state):
+        super()._connect_signals(state)
+        state.progress_changed.connect(self.master.progressBarSet)
+        state.status_changed.connect(self.master.setStatusMessage)
+
+    def _disconnect_signals(self, state):
+        super()._disconnect_signals(state)
+        state.progress_changed.disconnect(self.master.progressBarSet)
+        state.status_changed.disconnect(self.master.setStatusMessage)
+
+    def _on_task_done(self, future):
+        super()._on_task_done(future)
+        self.__set_state_ready()
+
+    def __set_state_ready(self):
+        self.master.progressBarFinished()
+        self.master.setBlocking(False)
+        self.master.setStatusMessage("")
+
+    def __set_state_busy(self):
+        self.master.progressBarInit()
+        self.master.setBlocking(True)
+
 
 class OWCorrelations(OWWidget):
     name = "Correlations"
@@ -230,8 +262,8 @@ class OWCorrelations(OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.data = None
-        self.cont_data = None
+        self.data = None  # type: Table
+        self.cont_data = None  # type: Table
 
         # GUI
         box = gui.vBox(self.mainArea)
@@ -250,7 +282,6 @@ class OWCorrelations(OWWidget):
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
             None, self, None, self._vizrank_selection_changed)
-        self.vizrank.progressBar = self.progressBar
         self.vizrank.button.setEnabled(False)
         self.vizrank.threadStopped.connect(self._vizrank_stopped)
 
@@ -316,9 +347,9 @@ class OWCorrelations(OWWidget):
                 self.Warning.not_enough_inst()
             else:
                 domain = data.domain
-                cont_attrs = [a for a in domain.attributes if a.is_continuous]
-                cont_dom = Domain(cont_attrs, domain.class_vars, domain.metas)
-                cont_data = Table.from_table(cont_dom, data)
+                cont_vars = [a for a in domain.class_vars + domain.metas +
+                             domain.attributes if a.is_continuous]
+                cont_data = Table.from_table(Domain(cont_vars), data)
                 remover = Remove(Remove.RemoveConstant)
                 cont_data = remover(cont_data)
                 if remover.attr_results["removed"]:
@@ -334,7 +365,11 @@ class OWCorrelations(OWWidget):
 
     def set_feature_model(self):
         self.feature_model.set_domain(self.cont_data and self.cont_data.domain)
-        self.feature = None
+        data = self.data
+        if self.cont_data and data.domain.has_continuous_class:
+            self.feature = self.cont_data.domain[data.domain.class_var.name]
+        else:
+            self.feature = None
 
     def apply(self):
         self.vizrank.initialize()

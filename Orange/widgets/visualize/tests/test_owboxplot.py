@@ -6,7 +6,8 @@ from unittest.mock import patch
 import numpy as np
 from AnyQt.QtCore import QItemSelectionModel
 
-from Orange.data import Table, ContinuousVariable, StringVariable, Domain
+from Orange.data import Table, ContinuousVariable, StringVariable, Domain, \
+    DiscreteVariable
 from Orange.widgets.visualize.owboxplot import (
     OWBoxPlot, FilterGraphicsRectItem, _quantiles
 )
@@ -43,17 +44,22 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(len(self.widget.attrs), 0)
         self.assertEqual(len(self.widget.group_vars), 1)
-        self.assertFalse(self.widget.group_view.isEnabled())
         self.assertTrue(self.widget.display_box.isHidden())
         self.assertFalse(self.widget.stretching_box.isHidden())
 
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertTrue(self.widget.group_view.isEnabled())
+    def test_dont_show_hidden_attrs(self):
+        """Check widget's data"""
+        iris = Table("iris")
+        iris.domain["iris"].attributes["hidden"] = True
+        iris.domain["petal length"].attributes["hidden"] = True
+        self.send_signal(self.widget.Inputs.data, iris)
+        self.assertEqual(len(self.widget.attrs), 3)
+        self.assertEqual(len(self.widget.group_vars), 1)
 
     def test_primitive_metas(self):
         new_domain = Domain(attributes=[], class_vars=[], metas=(
             self.data.domain.attributes + self.data.domain.class_vars))
-        attrs_as_metas = Table(new_domain, self.data)
+        attrs_as_metas = self.data.transform(new_domain)
         self.send_signal(self.widget.Inputs.data, attrs_as_metas)
         self.assertTrue(self.widget.display_box.isEnabled())
 
@@ -88,7 +94,6 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         data.X[:, 1] = np.nan
         data.domain.attributes[1].values = []
         self.send_signal("Data", data)
-        self.widget.controls.order_by_importance.setChecked(True)
         self._select_list_items(self.widget.controls.attribute)
         self._select_list_items(self.widget.controls.group_var)
 
@@ -100,7 +105,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
             m.setCurrentIndex(group_list.model().index(i), m.ClearAndSelect)
             self._select_list_items(self.widget.controls.attribute)
 
-    def test_apply_sorting(self):
+    def test_apply_sorting_group(self):
         controls = self.widget.controls
         group_list = controls.group_var
         order_check = controls.order_by_importance
@@ -115,10 +120,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         data = self.titanic
         self.send_signal("Data", data)
 
-        select_group(0)
-        self.assertFalse(order_check.isEnabled())
         select_group(2)  # First attribute
-        self.assertTrue(order_check.isEnabled())
 
         order_check.setChecked(False)
         self.assertEqual(tuple(attributes),
@@ -135,11 +137,64 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         select_group(1)  # Class
         order_check.setChecked(True)
         self.assertEqual([x.name for x in attributes],
-                         ['thal', 'major vessels colored', 'chest pain',
-                          'ST by exercise', 'max HR', 'exerc ind ang',
-                          'slope peak exc ST', 'gender', 'age', 'rest SBP',
-                          'rest ECG', 'cholesterol',
-                          'fasting blood sugar > 120', 'diameter narrowing'])
+                         ['thal',
+                          'chest pain',
+                          'major vessels colored',
+                          'ST by exercise',
+                          'max HR',
+                          'exerc ind ang',
+                          'slope peak exc ST',
+                          'gender',
+                          'age',
+                          'rest ECG',
+                          'rest SBP',
+                          'cholesterol',
+                          'fasting blood sugar > 120',
+                          'diameter narrowing'])
+
+    def test_apply_sorting_vars(self):
+        controls = self.widget.controls
+        attr_list = self.widget.attrs
+        order_check = controls.order_grouping_by_importance
+        groups = self.widget.group_vars
+
+        def select_attr(i):
+            attr_selection = controls.attribute.selectionModel()
+            attr_selection.setCurrentIndex(
+                attr_list.index(i),
+                attr_selection.ClearAndSelect)
+
+        data = self.titanic
+        self.send_signal("Data", data)
+
+        select_attr(1)  # First attribute
+
+        order_check.setChecked(False)
+        self.assertEqual(
+            tuple(groups),
+            (None, ) + data.domain.class_vars + data.domain.attributes)
+        order_check.setChecked(True)
+        self.assertIsNone(groups[0])
+        self.assertEqual([x.name for x in groups[1:]],
+                         ['sex', 'survived', 'age', 'status'])
+        select_attr(0)  # Class
+        self.assertIsNone(groups[0])
+        self.assertEqual([x.name for x in groups[1:]],
+                         ['sex', 'status', 'age', 'survived'])
+
+        data = self.heart
+        self.send_signal("Data", data)
+        select_attr(0)  # Class
+        self.assertIsNone(groups[0])
+        self.assertEqual([x.name for x in groups[1:]],
+                         ['thal',
+                          'chest pain',
+                          'exerc ind ang',
+                          'slope peak exc ST',
+                          'gender',
+                          'rest ECG',
+                          'fasting blood sugar > 120',
+                          'diameter narrowing'])
 
     def test_box_order_when_missing_stats(self):
         self.widget.compare = 1
@@ -161,7 +216,6 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         domain = Domain([], domain.class_var, metas)
         data = Table.from_table(domain, self.iris)
         self.send_signal(self.widget.Inputs.data, data)
-        self.widget.controls.order_by_importance.setChecked(True)
 
     def test_label_overlap(self):
         self.send_signal(self.widget.Inputs.data, self.heart)
@@ -238,6 +292,43 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.zoo)
             apply.assert_called()
+
+    def test_stretching(self):
+        self.send_signal(self.widget.Inputs.data, self.heart)
+        enabled = self.widget.controls.stretched.isEnabled
+
+        self.__select_variable("chest pain")
+        self.__select_group("gender")
+        self.assertTrue(enabled())
+
+        self.__select_variable("gender")
+        self.__select_group("gender")
+        self.assertFalse(enabled())
+
+        self.__select_variable("gender")
+        self.__select_group("chest pain")
+        self.assertTrue(enabled())
+
+    def test_value_all_missing_for_group(self):
+        """
+        This is one of the extreme cases when we have a subgroup value
+        where all values in selected variable are missing. Box plot should
+        handle this.
+        """
+        data = Table.from_list(
+            Domain([DiscreteVariable("a", values=["v1", "v2", "v3"]),
+                    DiscreteVariable("b", values=["v3", "v4"])]),
+            [[0., 0.],
+             [0., 1.],
+             [1., np.nan],
+             [1., np.nan],
+             [2., 0.],
+             [2., 0.]])
+        self.send_signal(self.widget.Inputs.data, data)
+
+        self.__select_variable("b")
+        self.__select_group("a")
+        self.assertTupleEqual(self.widget.conts.shape, (3, 2))
 
 
 class TestUtils(unittest.TestCase):

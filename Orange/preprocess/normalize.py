@@ -1,4 +1,6 @@
-from Orange.data import ContinuousVariable, Domain
+import numpy as np
+
+from Orange.data import Domain
 from Orange.statistics import distribution
 from Orange.util import Reprable
 from .preprocess import Normalize
@@ -49,25 +51,15 @@ class Normalizer(Reprable):
             compute_val = Norm(var, avg, 1 / sd)
         else:
             compute_val = Norm(var, 0, 1 / sd)
-
-        return ContinuousVariable(
-            var.name,
-            compute_value=compute_val,
-            sparse=var.sparse,
-        )
+        return var.copy(compute_value=compute_val)
 
     def normalize_by_span(self, dist, var):
-        dma, dmi = dist.max(), dist.min()
+        dma, dmi = (dist.max(), dist.min()) if dist.shape[1] else (np.nan, np.nan)
         diff = dma - dmi
         if diff < 1e-15:
             diff = 1
         if self.zero_based:
-            return ContinuousVariable(
-                var.name,
-                compute_value=Norm(var, dmi, 1 / diff),
-                sparse=var.sparse)
+            compute_val = Norm(var, dmi, 1 / diff)
         else:
-            return ContinuousVariable(
-                var.name,
-                compute_value=Norm(var, (dma + dmi) / 2, 2 / diff),
-                sparse=var.sparse)
+            compute_val = Norm(var, (dma + dmi) / 2, 2 / diff)
+        return var.copy(compute_value=compute_val)

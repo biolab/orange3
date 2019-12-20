@@ -15,7 +15,8 @@ class TestSoftmaxRegressionLearner(unittest.TestCase):
 
     def test_SoftmaxRegression(self):
         learner = SoftmaxRegressionLearner()
-        results = CrossValidation(self.iris, [learner], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.iris, [learner])
         ca = CA(results)
         self.assertGreater(ca, 0.9)
         self.assertLess(ca, 1.0)
@@ -26,7 +27,8 @@ class TestSoftmaxRegressionLearner(unittest.TestCase):
         table.X[:, 3] = table.X[:, 3] * 0.001
         learners = [SoftmaxRegressionLearner(preprocessors=[]),
                     SoftmaxRegressionLearner()]
-        results = CrossValidation(table, learners, k=10)
+        cv = CrossValidation(k=10)
+        results = cv(table, learners)
         ca = CA(results)
 
         self.assertLess(ca[0], ca[1])

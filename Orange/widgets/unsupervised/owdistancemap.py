@@ -225,6 +225,16 @@ class DistanceMapItem(pg.ImageItem):
                  range(r.left(), r.right() + 1))
                 for r in selections]
 
+    def set_selections(self, ranges):
+        self.__clearSelections()
+        for y, x in ranges:
+            area = QRectF(x.start, y.start,
+                          x.stop - x.start - 1, y.stop - y.start - 1)
+            item = DistanceMapItem.SelectionRect(area, self)
+            item.setPen(QPen(Qt.red, 0))
+            self.__selections.append((item, area))
+        self.selectionChanged.emit()
+
     def hoverMoveEvent(self, event):
         super().hoverMoveEvent(event)
         i, j = self._cellAt(event.pos())
@@ -268,6 +278,7 @@ class OWDistanceMap(widget.OWWidget):
     color_high = settings.Setting(1.0)
 
     annotation_idx = settings.ContextSetting(0)
+    pending_selection = settings.Setting(None, schema_only=True)
 
     autocommit = settings.Setting(True)
 
@@ -338,8 +349,7 @@ class OWDistanceMap(widget.OWWidget):
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         self.controlArea.layout().addStretch()
 
-        gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send Selected")
+        gui.auto_send(self.controlArea, self, "autocommit")
 
         self.view = pg.GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)
@@ -392,6 +402,14 @@ class OWDistanceMap(widget.OWWidget):
         self.dendrogram = None
 
         self.grid_widget.scene().installEventFilter(self)
+
+        self.settingsAboutToBePacked.connect(self.pack_settings)
+
+    def pack_settings(self):
+        if self.matrix_item is not None:
+            self.pending_selection = self.matrix_item.selections()
+        else:
+            self.pending_selection = None
 
     @Inputs.distances
     def set_distances(self, matrix):
@@ -473,6 +491,9 @@ class OWDistanceMap(widget.OWWidget):
             self._update_ordering()
             self._setup_scene()
             self._update_labels()
+            if self.pending_selection is not None:
+                self.matrix_item.set_selections(self.pending_selection)
+                self.pending_selection = None
         self.unconditional_commit()
 
     def _clear_plot(self):

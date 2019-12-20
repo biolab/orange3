@@ -1,9 +1,7 @@
 import sys
 
 import numpy as np
-from scipy import spatial
 from AnyQt.QtWidgets import QApplication
-from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QColor
 from sklearn.metrics import pairwise_distances
 
@@ -103,8 +101,7 @@ class OWDBSCAN(widget.OWWidget):
                      items=list(zip(*self.METRICS))[0],
                      callback=self._metirc_changed)
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Apply",
-                        orientation=Qt.Horizontal)
+        gui.auto_apply(self.controlArea, self, "auto_commit")
         gui.rubber(self.controlArea)
 
         self.controlArea.layout().addStretch()
@@ -112,7 +109,7 @@ class OWDBSCAN(widget.OWWidget):
         self.plot = SliderGraph(
             x_axis_label="Data items sorted by score",
             y_axis_label="Distance to the k-th nearest neighbour",
-            background="w", callback=self._on_cut_changed
+            callback=self._on_cut_changed
         )
 
         self.mainArea.layout().addWidget(self.plot)

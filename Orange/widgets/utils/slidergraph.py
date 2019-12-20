@@ -24,8 +24,8 @@ class SliderGraph(PlotWidget):
         Plot background color
     """
 
-    def __init__(self, x_axis_label, y_axis_label, callback, background="w"):
-        super().__init__(background=background)
+    def __init__(self, x_axis_label, y_axis_label, callback):
+        super().__init__(background="w")
 
         axis = self.getAxis("bottom")
         axis.setLabel(x_axis_label)
@@ -49,7 +49,8 @@ class SliderGraph(PlotWidget):
         self.selection_limit = None
         self.data_increasing = None  # true if data mainly increasing
 
-    def update(self, x, y, colors, cutpoint_x=None, selection_limit=None):
+    def update(self, x, y, colors, cutpoint_x=None, selection_limit=None,
+               names=None):
         """
         Function replots a graph.
 
@@ -57,17 +58,25 @@ class SliderGraph(PlotWidget):
         ----------
         x : np.ndarray
             One-dimensional array with X coordinates of the points
-        y : list
+        y : array-like
             List of np.ndarrays that contains an array of Y values for each
             sequence.
-        colors : list
+        colors : array-like
             List of Qt colors (eg. Qt.red) for each sequence.
         cutpoint_x : int, optional
             A starting cutpoint - the location of the vertical line.
         selection_limit : tuple
             The tuple of two values that limit the range for selection.
+        names : array-like
+            The name of each sequence that shows in the legend, if None
+            legend is not shown.
+        legend_anchor : array-like
+            The anchor of the legend in the graph
         """
         self.clear_plot()
+        if names is None:
+            names = [None] * len(y)
+
         self.sequences = y
         self.x = x
         self.selection_limit = selection_limit
@@ -75,8 +84,16 @@ class SliderGraph(PlotWidget):
         self.data_increasing = [np.sum(d[1:] - d[:-1]) > 0 for d in y]
 
         # plot sequence
-        for s, c in zip(y, colors):
-            self.plot(x, s, pen=mkPen(QColor(c), width=2), antialias=True)
+        for s, c, n, inc in zip(y, colors, names, self.data_increasing):
+            c = QColor(c)
+            self.plot(x, s, pen=mkPen(c, width=2), antialias=True)
+
+            if n is not None:
+                label = TextItem(
+                    text=n, anchor=(0, 1), color=QColor(0, 0, 0, 128))
+                label.setPos(x[-1], s[-1])
+                self._set_anchor(label, len(x) - 1, inc)
+                self.addItem(label)
 
         self._plot_cutpoint(cutpoint_x)
         self.setRange(xRange=(x.min(), x.max()),

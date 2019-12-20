@@ -1,24 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generator: Adobe Illustrator 23.0.4, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<g id="zXDtGm_1_">
+	 viewBox="0 0 48 48" style="enable-background:new 0 0 48 48;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#FFFFFF;}
+	.st1{fill:none;stroke:#333333;stroke-width:3;stroke-miterlimit:10;}
+	.st2{fill:#B2B2B2;}
+</style>
+<g>
+	<polygon class="st0" points="22.7,10.6 14,5.6 5.3,10.6 5.3,20.7 14,25.7 22.7,20.7 	"/>
+	<polygon class="st0" points="41.9,10.8 33.2,5.8 24.5,10.8 24.5,20.9 33.2,25.9 41.9,20.9 	"/>
+	<polygon class="st0" points="32.9,26.9 24.2,21.9 15.5,26.9 15.5,37 24.2,42 32.9,37 	"/>
+	<polygon class="st1" points="24,10.8 14.8,5.5 5.7,10.8 5.7,21.4 14.8,26.6 24,21.4 	"/>
+	<polygon class="st1" points="42.3,10.8 33.2,5.5 24,10.8 24,21.4 33.2,26.6 42.3,21.4 	"/>
+	<polygon class="st1" points="33.2,26.6 24,21.4 14.8,26.6 14.8,37.2 24,42.5 33.2,37.2 	"/>
+	<circle class="st2" cx="24" cy="31.9" r="6.9"/>
+	<circle class="st2" cx="24" cy="31.9" r="6.9"/>
+	<circle class="st2" cx="33.2" cy="16.1" r="5"/>
 </g>
-<g id="Xawsld_1_">
-</g>
-<g id="layer1" transform="translate(-68.721 -58.594)">
-	<polygon fill="#FFFFFF" stroke="#000000" points="113.719,96.709 113.135,94.367 104.851,94.441 104.534,87.052 101.901,87.052 
-		101.577,94.469 81.051,94.65 82.71,87.056 80.369,87.056 77.675,96.713 80.599,96.713 80.6,96.709 101.48,96.709 101.311,100.573 
-		105.114,100.573 104.948,96.709 	"/>
-	<path id="path3861" fill="none" d="M111.086,87.052l3.684,13.495c0.002,0.013-0.016,0.025-0.031,0.025h-41.48
-		c-0.018,0-0.034-0.013-0.03-0.025l3.631-13.495H111.086z"/>
-	<path id="path4041" opacity="0.8" fill="none" stroke="#000000" stroke-width="1.5" enable-background="new    " d="
-		M111.086,87.052l3.684,13.495c0.002,0.013-0.016,0.025-0.031,0.025h-41.48c-0.018,0-0.034-0.013-0.03-0.025l3.631-13.495H111.086z"
-		/>
-</g>
-<path id="path4043" fill="#C0C2C4" stroke="#000000" stroke-width="1.5" d="M30.805,4.646c-5.086,0-9.192,4.111-9.192,9.181
-	c0,1.595,0.407,3.095,1.12,4.402l8.072,13.512l8.07-13.512c0.715-1.307,1.122-2.807,1.122-4.402
-	C39.997,8.757,35.892,4.646,30.805,4.646L30.805,4.646z M30.701,9.982c0.034-0.001,0.068,0,0.104,0c2.196,0,3.978,1.781,3.978,3.978
-	c0,2.197-1.781,3.979-3.978,3.979c-2.197,0-3.979-1.782-3.979-3.979C26.826,11.798,28.553,10.037,30.701,9.982L30.701,9.982z"/>
 </svg>

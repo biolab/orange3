@@ -13,9 +13,6 @@ from Orange.tests import test_filename
 
 
 class TestRegression(unittest.TestCase):
-    def setUp(self):
-        Variable._clear_all_caches()
-
     def all_learners(self):
         regression_modules = pkgutil.walk_packages(
             path=Orange.regression.__path__,

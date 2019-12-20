@@ -16,6 +16,8 @@ import pyqtgraph as pg
 
 import Orange
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.evaluate.contexthandlers import \
+    EvaluationResultsContextHandler
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.evaluate.owrocanalysis import convex_hull
@@ -64,8 +66,9 @@ class OWLiftCurve(widget.OWWidget):
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
 
-    target_index = settings.Setting(0)
-    selected_classifiers = settings.Setting([])
+    settingsHandler = EvaluationResultsContextHandler()
+    target_index = settings.ContextSetting(0)
+    selected_classifiers = settings.ContextSetting([])
 
     display_convex_hull = settings.Setting(False)
     display_cost_func = settings.Setting(True)
@@ -133,10 +136,13 @@ class OWLiftCurve(widget.OWWidget):
     @Inputs.evaluation_results
     def set_results(self, results):
         """Set the input evaluation results."""
+        self.closeContext()
         self.clear()
         self.results = check_results_adequacy(results, self.Error)
         if self.results is not None:
             self._initialize(results)
+            self.openContext(self.results.domain.class_var,
+                             self.classifier_names)
             self._setup_plot()
 
     def clear(self):

@@ -16,12 +16,11 @@ The **Neighbors** widget computes nearest neighbors for a given reference and fo
 
 ![](images/neighbours-stamped.png)
 
-1. Information on the input data.
-2. Distance measure for computing neighbors. Supported measures are: Euclidean, Manhattan, Mahalanobis, Cosine, Jaccard, Spearman, absolute Spearman, Pearson, absolute Pearson. 
-3. Number of neighbors on the output.
-4. If *Exclude rows (equal to) references* is ticked, data instances that are highly similar to the reference (distance < 1e-5), will be excluded.
-5. Click *Apply* to commit the changes. To communicate changes automatically tick *Apply Automatically*.
-6. Access widget help.
+1. Distance measure for computing neighbors. Supported measures are: Euclidean, Manhattan, Mahalanobis, Cosine, Jaccard, Spearman, absolute Spearman, Pearson, absolute Pearson. 
+2. Number of neighbors on the output.
+3. If *Exclude rows (equal to) references* is ticked, data instances that are highly similar to the reference (distance < 1e-5), will be excluded.
+4. Click *Apply* to commit the changes. To communicate changes automatically tick *Apply Automatically*.
+5. Status bar with access to widget help and information on the input and output data.
 
 Examples
 --------

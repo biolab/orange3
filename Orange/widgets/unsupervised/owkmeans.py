@@ -12,6 +12,7 @@ from Orange.clustering import KMeans
 from Orange.clustering.kmeans import KMeansModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.data.util import get_unique_names, array_equal
+from Orange.preprocess import Normalize
 from Orange.preprocess.impute import ReplaceUnknowns
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -142,7 +143,9 @@ class OWKMeans(widget.OWWidget):
     max_iterations = Setting(300)
     n_init = Setting(10)
     smart_init = Setting(0)  # KMeans++
+    selection = Setting(None, schema_only=True)  # type: Optional[int]
     auto_commit = Setting(True)
+    normalize = Setting(True)
 
     settings_version = 2
 
@@ -158,6 +161,7 @@ class OWKMeans(widget.OWWidget):
         super().__init__()
 
         self.data = None  # type: Optional[Table]
+        self.__pending_selection = self.selection  # type: Optional[int]
         self.clusterings = {}
 
         self.__executor = ThreadExecutor(parent=self)
@@ -194,6 +198,10 @@ class OWKMeans(widget.OWWidget):
             callback=self.update_to)
         gui.rubber(ftobox)
 
+        box = gui.vBox(self.controlArea, "Preprocessing")
+        gui.checkBox(box, self, "normalize", "Normalize columns",
+                     callback=self.invalidate)
+
         box = gui.vBox(self.controlArea, "Initialization")
         gui.comboBox(
             box, self, "smart_init", items=[m[0] for m in self.INIT_METHODS],
@@ -215,9 +223,8 @@ class OWKMeans(widget.OWWidget):
             sb, self, "max_iterations", controlWidth=60, valueType=int,
             validator=QIntValidator(), callback=self.invalidate)
 
-        self.apply_button = gui.auto_commit(
-            self.buttonsArea, self, "auto_commit", "Apply", box=None,
-            commit=self.commit)
+        self.apply_button = gui.auto_apply(self.buttonsArea, self, "auto_commit", box=None,
+                                           commit=self.commit)
         gui.rubber(self.controlArea)
 
         box = gui.vBox(self.mainArea, box="Silhouette Scores")
@@ -315,7 +322,7 @@ class OWKMeans(widget.OWWidget):
         assert self.data is not None
 
         self.__task = None
-        self.setBlocking(False)
+        self.setInvalidated(False)
         self.progressBarFinished()
 
         if self.optimize_k:
@@ -333,7 +340,7 @@ class OWKMeans(widget.OWWidget):
         """Execute clustering in separate threads for all given ks."""
         futures = [self.__executor.submit(
             self._compute_clustering,
-            data=self.data,
+            data=Normalize()(self.data) if self.normalize else self.data,
             k=k,
             init=self.INIT_METHODS[self.smart_init][1],
             n_init=self.n_init,
@@ -347,8 +354,8 @@ class OWKMeans(widget.OWWidget):
         watcher.doneAll.connect(self.__commit_finished)
 
         self.__task = Task(futures, watcher)
-        self.progressBarInit(processEvents=False)
-        self.setBlocking(True)
+        self.progressBarInit()
+        self.setInvalidated(True)
 
     def cancel(self):
         if self.__task is not None:
@@ -361,7 +368,7 @@ class OWKMeans(widget.OWWidget):
             task.watcher.doneAll.disconnect(self.__commit_finished)
 
             self.progressBarFinished()
-            self.setBlocking(False)
+            self.setInvalidated(False)
 
     def run_optimization(self):
         if not self.enough_data_instances(self.k_from):
@@ -437,16 +444,23 @@ class OWKMeans(widget.OWWidget):
 
     def update_results(self):
         scores = [mk if isinstance(mk, str) else silhouette_score(
-            self.data.X, mk.labels) for mk in (
+            self.preproces(self.data).X, mk.labels) for mk in (
                 self.clusterings[k] for k in range(self.k_from, self.k_to + 1))]
         best_row = max(
             range(len(scores)), default=0,
             key=lambda x: 0 if isinstance(scores[x], str) else scores[x]
         )
         self.table_model.set_scores(scores, self.k_from)
-        self.table_view.selectRow(best_row)
+        self.apply_selection(best_row)
         self.table_view.setFocus(Qt.OtherFocusReason)
         self.table_view.resizeRowsToContents()
+
+    def apply_selection(self, best_row):
+        pending = best_row
+        if self.__pending_selection is not None:
+            pending = self.__pending_selection
+            self.__pending_selection = None
+        self.table_view.selectRow(pending)
 
     def selected_row(self):
         indices = self.table_view.selectedIndexes()
@@ -455,9 +469,12 @@ class OWKMeans(widget.OWWidget):
         return indices[0].row()
 
     def select_row(self):
+        self.selection = self.selected_row()
         self.send_data()
 
     def preproces(self, data):
+        if self.normalize:
+            data = Normalize()(data)
         for preprocessor in KMeans.preprocessors:  # use same preprocessors than
             data = preprocessor(data)
         return data
@@ -536,6 +553,7 @@ class OWKMeans(widget.OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.data, old_data = data, self.data
+        self.selection = None
 
         # Do not needlessly recluster the data if X hasn't changed
         if old_data and self.data and array_equal(self.data.X, old_data.X):
@@ -570,4 +588,4 @@ class OWKMeans(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWKMeans).run(Table("iris.tab"))
+    WidgetPreview(OWKMeans).run(Table("heart_disease"))

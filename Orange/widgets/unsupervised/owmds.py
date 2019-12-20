@@ -145,6 +145,7 @@ class OWMDSGraph(OWScatterPlotBase):
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
             pen=pg.mkPen(0.8, width=2, cosmetic=True),
             connect="pairs", antialias=True)
+        self.pairs_curve.setZValue(-1)
         self.plot_widget.addItem(self.pairs_curve)
 
 
@@ -308,7 +309,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
                     and self.data is self.matrix_data:
                 names = [[attr.name] for attr in self.data.domain.attributes]
                 domain = Domain([], metas=[StringVariable("labels")])
-                self.data = Table(domain, names)
+                self.data = Table.from_list(domain, names)
         elif self.data.domain.attributes:
             preprocessed_data = MDS().preprocess(self.data)
             self.effective_matrix = Euclidean(preprocessed_data)
@@ -426,6 +427,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def handleNewSignals(self):
         self._initialize()
+        self.input_changed.emit(self.data)
         if self._invalidated:
             self.graph.pause_drawing_pairs()
             self.__invalidate_embedding()

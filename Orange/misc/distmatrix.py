@@ -1,7 +1,5 @@
 import numpy as np
 
-from Orange.data import Table, StringVariable, Domain
-from Orange.data.io import detect_encoding
 from Orange.util import deprecated
 
 
@@ -140,6 +138,10 @@ class DistMatrix(np.ndarray):
         Args:
             filename: file name
         """
+        # prevent circular imports
+        from Orange.data import Table, StringVariable, Domain
+        from Orange.data.io import detect_encoding
+
         with open(filename, encoding=detect_encoding(filename)) as fle:
             line = fle.readline()
             if not line:
@@ -212,6 +214,9 @@ class DistMatrix(np.ndarray):
 
     @staticmethod
     def _trivial_labels(items):
+        # prevent circular imports
+        from Orange.data import Table, StringVariable
+
         return items and \
                isinstance(items, Table) and \
                len(items.domain.metas) == 1 and \

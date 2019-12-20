@@ -90,6 +90,7 @@ Model
 
    widgets/model/constant
    widgets/model/cn2ruleinduction
+   widgets/model/calibratedlearner
    widgets/model/knn
    widgets/model/tree
    widgets/model/randomforest
@@ -103,6 +104,24 @@ Model
    widgets/model/stacking
    widgets/model/loadmodel
    widgets/model/savemodel
+
+
+Evaluate
+--------
+
+.. toctree::
+   :maxdepth: 1
+
+   widgets/evaluate/calibrationplot
+   widgets/evaluate/confusionmatrix
+   widgets/evaluate/liftcurve
+   widgets/evaluate/predictions
+   widgets/evaluate/rocanalysis
+   widgets/evaluate/testandscore
+
+
+.. toctree::
+   :maxdepth: 1
 
 
 Unsupervised
@@ -126,23 +145,5 @@ Unsupervised
    widgets/unsupervised/mds
    widgets/unsupervised/tsne
    widgets/unsupervised/manifoldlearning
-
-
-Evaluation
-----------
-
-.. toctree::
-   :maxdepth: 1
-
-   widgets/evaluation/calibrationplot
-   widgets/evaluation/confusionmatrix
-   widgets/evaluation/liftcurve
-   widgets/evaluation/predictions
-   widgets/evaluation/rocanalysis
-   widgets/evaluation/testandscore
-
-
-.. toctree::
-   :maxdepth: 1
-
+   widgets/unsupervised/selforganizingmap
 

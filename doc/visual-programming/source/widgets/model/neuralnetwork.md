@@ -43,6 +43,6 @@ The first example is a classification task on *iris* dataset. We compare the res
 
 ![](images/NN-Example-Test.png)
 
-The second example is a prediction task, still using the *iris* data. This workflow shows how to use the *Learner* output. We input the **Neural Network** prediction model into [Predictions](../evaluation/predictions.md) and observe the predicted values.
+The second example is a prediction task, still using the *iris* data. This workflow shows how to use the *Learner* output. We input the **Neural Network** prediction model into [Predictions](../evaluate/predictions.md) and observe the predicted values.
 
 ![](images/NN-Example-Predict.png)

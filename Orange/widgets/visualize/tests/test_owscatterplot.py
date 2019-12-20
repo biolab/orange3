@@ -92,13 +92,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         domain = self.data.domain
         d1 = Domain(domain.attributes[:2], domain.class_var,
                     [domain.attributes[2]])
-        t1 = Table(d1, self.data)
+        t1 = self.data.transform(d1)
         self.send_signal(self.widget.Inputs.data, t1)
         self.widget.graph.attr_size = domain.attributes[2]
 
         d2 = Domain(domain.attributes[:2], domain.class_var,
                     [domain.attributes[3]])
-        t2 = Table(d2, self.data)
+        t2 = self.data.transform(d2)
         self.send_signal(self.widget.Inputs.data, t2)
 
     def test_error_message(self):
@@ -318,18 +318,31 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.features, None)
 
     def test_features_and_data(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.data)
         x, y = self.widget.graph.scatterplot_item.getData()
-        np.testing.assert_array_equal(x, data.X[:, 0])
-        np.testing.assert_array_equal(y, data.X[:, 1])
+        np.testing.assert_array_equal(x, self.data.X[:, 0])
+        np.testing.assert_array_equal(y, self.data.X[:, 1])
         self.send_signal(self.widget.Inputs.features,
-                         AttributeList(data.domain[2:]))
-        self.assertIs(self.widget.attr_x, data.domain[2])
-        self.assertIs(self.widget.attr_y, data.domain[3])
+                         AttributeList(self.data.domain[2:]))
+        self.assertIs(self.widget.attr_x, self.data.domain[2])
+        self.assertIs(self.widget.attr_y, self.data.domain[3])
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
         x, y = self.widget.graph.scatterplot_item.getData()
-        np.testing.assert_array_equal(x, data.X[:, 2])
-        np.testing.assert_array_equal(y, data.X[:, 3])
+        np.testing.assert_array_equal(x, self.data.X[:, 2])
+        np.testing.assert_array_equal(y, self.data.X[:, 3])
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertIs(self.widget.attr_x, self.data.domain[2])
+        self.assertIs(self.widget.attr_y, self.data.domain[3])
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
+
+        self.send_signal(self.widget.Inputs.features, None)
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.assertTrue(self.widget.vizrank.isEnabled())
 
     def test_output_features(self):
         data = Table("iris")
@@ -396,6 +409,61 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         with patch("Orange.widgets.visualize.owscatterplot.ReliefF",
                    new=lambda *_1, **_2: lambda data: np.arange(len(data))):
             self.widget.vizrank.score_heuristic()
+
+    def test_vizrank_enabled(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertTrue(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "")
+        self.assertTrue(self.widget.vizrank.button.isEnabled())
+        self.widget.vizrank.button.click()
+
+    def test_vizrank_enabled_no_data(self):
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "No data on input")
+
+    def test_vizrank_enabled_sparse_data(self):
+        self.send_signal(self.widget.Inputs.data, self.data.to_sparse())
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "Data is sparse")
+
+    def test_vizrank_enabled_constant_data(self):
+        domain = Domain([ContinuousVariable("c1"),
+                         ContinuousVariable("c2"),
+                         ContinuousVariable("c3"),
+                         ContinuousVariable("c4")],
+                        DiscreteVariable("cls", values=["a", "b"]))
+        X = np.zeros((10, 4))
+        table = Table(domain, X, np.random.randint(2, size=10))
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertEqual(self.widget.vizrank_button.toolTip(), "")
+        self.assertTrue(self.widget.vizrank_button.isEnabled())
+        self.assertTrue(self.widget.vizrank.button.isEnabled())
+        self.widget.vizrank.button.click()
+
+    def test_vizrank_enabled_two_features(self):
+        self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(),
+                         "Not enough features for ranking")
+
+    def test_vizrank_enabled_no_color_var(self):
+        self.send_signal(self.widget.Inputs.data, self.data[:, :3])
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(),
+                         "Color variable is not selected")
+
+    def test_vizrank_enabled_color_var_nans(self):
+        domain = Domain([ContinuousVariable("c1"),
+                         ContinuousVariable("c2"),
+                         ContinuousVariable("c3"),
+                         ContinuousVariable("c4")],
+                        DiscreteVariable("cls", values=["a", "b"]))
+        table = Table(domain, np.random.random((10, 4)), np.full(10, np.nan))
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertFalse(self.widget.vizrank_button.isEnabled())
+        self.assertEqual(self.widget.vizrank_button.toolTip(),
+                         "Color variable has no values")
 
     def test_auto_send_selection(self):
         """

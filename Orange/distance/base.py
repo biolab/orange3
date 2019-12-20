@@ -116,6 +116,8 @@ class Distance:
         impute (bool):
             if `True` (default is `False`), nans in the computed distances
             are replaced with zeros, and infs with very large numbers.
+        callback (callable or None):
+            callback function
 
     Attributes:
         axis (int):
@@ -162,10 +164,12 @@ class Distance:
     axis = 1
     impute = False
 
-    def __new__(cls, e1=None, e2=None, axis=1, impute=False, **kwargs):
+    def __new__(cls, e1=None, e2=None, axis=1, impute=False,
+                callback=None, **kwargs):
         self = super().__new__(cls)
         self.axis = axis
         self.impute = impute
+        self.callback = callback
         # Ugly, but needed to allow allow setting subclass-specific parameters
         # (such as normalize) when `e1` is not `None` and the `__new__` in the
         # subclass is skipped
@@ -225,11 +229,14 @@ class DistanceModel:
         impute (bool):
             if `True` (default is `False`), nans in the computed distances
             are replaced with zeros, and infs with very large numbers
+        callback (callable or None):
+            callback function
 
     """
-    def __init__(self, axis, impute=False):
+    def __init__(self, axis, impute=False, callback=None):
         self._axis = axis
         self.impute = impute
+        self.callback = callback
 
     @property
     def axis(self):
@@ -291,9 +298,10 @@ class FittedDistanceModel(DistanceModel):
         continuous (np.ndarray): bool array indicating continuous attributes
         normalize (bool):
             if `True` (default is `False`) continuous columns are normalized
+        callback (callable or None): callback function
     """
-    def __init__(self, attributes, axis=1, impute=False):
-        super().__init__(axis, impute)
+    def __init__(self, attributes, axis=1, impute=False, callback=None):
+        super().__init__(axis, impute, callback)
         self.attributes = attributes
         self.discrete = None
         self.continuous = None
@@ -464,7 +472,8 @@ class FittedDistance(Distance):
             continuous, discrete,
             offsets[:curr_cont], scales[:curr_cont],
             dist_missing2_cont[:curr_cont],
-            dist_missing_disc, dist_missing2_disc)
+            dist_missing_disc, dist_missing2_disc,
+            self.callback)
 
     @staticmethod
     def get_discrete_stats(column, n_bins):

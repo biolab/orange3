@@ -1,6 +1,7 @@
 # pylint: disable=missing-docstring
 # pylint: disable=protected-access
 import unittest
+import warnings
 
 import numpy as np
 from AnyQt.QtCore import Qt
@@ -85,7 +86,7 @@ class TestOWTestLearners(WidgetTest):
         self.widget.resampling = OWTestLearners.TestOnTest
         # test data with the same class (otherwise the widget shows a different error)
         # and a non-nan X
-        iris_test = iris.transform(Domain([ContinuousVariable()],
+        iris_test = iris.transform(Domain([ContinuousVariable("x")],
                                           class_vars=iris.domain.class_vars))
         iris_test.X[:, 0] = 1
         self.send_signal(self.widget.Inputs.test_data, iris_test)
@@ -147,7 +148,7 @@ class TestOWTestLearners(WidgetTest):
         is selected.
         GH-2351
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b")],
                 [DiscreteVariable("c", values=["y"])]),
@@ -308,7 +309,7 @@ class TestOWTestLearners(WidgetTest):
         return self._retrieve_scores()
 
     def test_scores_constant_all_same(self):
-        table = Table(
+        table = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("yyyy")]))
         )
@@ -318,7 +319,7 @@ class TestOWTestLearners(WidgetTest):
                               (None, 1, 1, 1, 1))
 
     def test_scores_log_reg_overfitted(self):
-        table = Table(
+        table = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("yyyn")]))
         )
@@ -329,11 +330,11 @@ class TestOWTestLearners(WidgetTest):
                               (1, 1, 1, 1, 1))
 
     def test_scores_log_reg_bad(self):
-        table_train = Table(
+        table_train = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("nnny")]))
         )
-        table_test = Table(
+        table_test = Table.from_list(
             self.scores_domain,
             list(zip(*self.scores_table_values + [list("yyyn")]))
         )
@@ -344,10 +345,10 @@ class TestOWTestLearners(WidgetTest):
                               (0, 0, 0, 0, 0))
 
     def test_scores_log_reg_bad2(self):
-        table_train = Table(
+        table_train = Table.from_list(
             self.scores_domain,
             list(zip(*(self.scores_table_values + [list("nnyy")]))))
-        table_test = Table(
+        table_test = Table.from_list(
             self.scores_domain,
             list(zip(*(self.scores_table_values + [list("yynn")]))))
         self.assertTupleEqual(self._test_scores(
@@ -356,11 +357,11 @@ class TestOWTestLearners(WidgetTest):
                               (0, 0, 0, 0, 0))
 
     def test_scores_log_reg_advanced(self):
-        table_train = Table(
+        table_train = Table.from_list(
             self.scores_domain, list(zip(
                 [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yyynn"))
         )
-        table_test = Table(
+        table_test = Table.from_list(
             self.scores_domain, list(zip(
                 [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yynnn"))
         )
@@ -381,6 +382,14 @@ class TestOWTestLearners(WidgetTest):
                     Table("iris")[::15], None, LogisticRegressionLearner(),
                     OWTestLearners.KFold, 0),
                 (0.8, 0.5, 0.5, 0.5, 0.5))))
+
+    def test_no_pregressbar_warning(self):
+        data = Table("iris")[::15]
+
+        with warnings.catch_warnings(record=True) as w:
+            self.send_signal(self.widget.Inputs.train_data, data)
+            self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0)
+            assert not w
 
 
 class TestHelpers(unittest.TestCase):

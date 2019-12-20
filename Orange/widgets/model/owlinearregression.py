@@ -139,7 +139,7 @@ class OWLinearRegression(OWBaseLearner):
             coefs = [self.model.intercept] + list(self.model.coefficients)
             names = ["intercept"] + \
                     [attr.name for attr in self.model.domain.attributes]
-            coef_table = Table(domain, list(zip(coefs, names)))
+            coef_table = Table.from_list(domain, list(zip(coefs, names)))
             coef_table.name = "coefficients"
         self.Outputs.coefficients.send(coef_table)
 

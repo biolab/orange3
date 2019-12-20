@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import warnings
+from typing import List, Iterable
 
 from ast import literal_eval
 from collections import OrderedDict, Counter, defaultdict
@@ -26,6 +27,7 @@ from chardet.universaldetector import UniversalDetector
 
 import xlrd
 import xlsxwriter
+import openpyxl
 
 from Orange.data import (
     _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
@@ -145,30 +147,39 @@ def guess_data_type(orig_values, namask=None):
     """
     valuemap, values = None, orig_values
     is_discrete = is_discrete_values(orig_values)
+    orig_values = np.asarray(orig_values, dtype=str)
+    if namask is None:
+        namask = isnastr(orig_values)
     if is_discrete:
         valuemap = sorted(is_discrete)
         coltype = DiscreteVariable
     else:
         # try to parse as float
-        orig_values = np.asarray(orig_values)
-        if namask is None:
-            namask = isnastr(orig_values)
         values = np.empty_like(orig_values, dtype=float)
         values[namask] = np.nan
         try:
             np.copyto(values, orig_values, where=~namask, casting="unsafe")
         except ValueError:
-            tvar = TimeVariable('_')
-            try:
-                values[~namask] = [tvar.parse(i) for i in orig_values[~namask]]
-            except ValueError:
-                coltype = StringVariable
-                # return original_values
-                values = orig_values
-            else:
-                coltype = TimeVariable
+            values = orig_values
+            coltype = StringVariable
         else:
             coltype = ContinuousVariable
+
+    if coltype is not ContinuousVariable:
+        # when not continuous variable it can still be time variable even it
+        # was before recognized as a discrete
+        tvar = TimeVariable('_')
+        # introducing new variable prevent overwriting orig_values and values
+        temp_values = np.empty_like(orig_values, dtype=float)
+        try:
+            temp_values[~namask] = [
+                tvar.parse_exact_iso(i) for i in orig_values[~namask]]
+        except ValueError:
+            pass
+        else:
+            valuemap = None
+            coltype = TimeVariable
+            values = temp_values
     return valuemap, values, coltype
 
 
@@ -396,7 +407,7 @@ class FileFormat(metaclass=FileFormatMeta):
         self.sheet = None
 
     @property
-    def sheets(self):
+    def sheets(self) -> List:
         """FileFormats with a notion of sheets should override this property
         to return a list of sheet names in the file.
 
@@ -404,7 +415,7 @@ class FileFormat(metaclass=FileFormatMeta):
         -------
         a list of sheet names
         """
-        return ()
+        return []
 
     def select_sheet(self, sheet):
         """Select sheet to be read
@@ -989,10 +1000,8 @@ class BasketReader(FileFormat):
         return table
 
 
-class ExcelReader(FileFormat):
-    """Reader for excel files"""
-    EXTENSIONS = ('.xlsx',)
-    DESCRIPTION = 'Microsoft Excel spreadsheet'
+class _BaseExcelReader(FileFormat):
+    """Base class for reading excel files"""
     SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False
 
@@ -1000,33 +1009,12 @@ class ExcelReader(FileFormat):
         super().__init__(filename=filename)
         self._workbook = None
 
-    @property
-    def workbook(self):
-        if not self._workbook:
-            self._workbook = xlrd.open_workbook(self.filename, on_demand=True)
-        return self._workbook
-
-    @property
-    @lru_cache(1)
-    def sheets(self):
-        if self.workbook:
-            return self.workbook.sheet_names()
-        else:
-            return ()
+    def get_cells(self) -> Iterable:
+        raise NotImplementedError
 
     def read(self):
-        if self.sheet:
-            ss = self.workbook.sheet_by_name(self.sheet)
-        else:
-            ss = self.workbook.sheet_by_index(0)
         try:
-            first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
-            first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
-            row_len = ss.row_len(first_row)
-            cells = filter(any,
-                           [[str(ss.cell_value(row, col)) if col < ss.row_len(row) else ''
-                             for col in range(first_col, row_len)]
-                            for row in range(first_row, ss.nrows)])
+            cells = self.get_cells()
             table = self.data_table(cells)
             table.name = path.splitext(path.split(self.filename)[-1])[0]
             if self.sheet:
@@ -1055,6 +1043,74 @@ class ExcelReader(FileFormat):
             for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
                 sheet.write(i, j, fmt(v))
         workbook.close()
+
+
+class ExcelReader(_BaseExcelReader):
+    """Reader for .xlsx files"""
+    EXTENSIONS = ('.xlsx',)
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
+
+    @property
+    def workbook(self) -> openpyxl.Workbook:
+        if not self._workbook:
+            self._workbook = openpyxl.load_workbook(self.filename)
+        return self._workbook
+
+    @property
+    @lru_cache(1)
+    def sheets(self) -> List:
+        return self.workbook.sheetnames if self.workbook else []
+
+    def get_cells(self) -> Iterable:
+        def str_(x):
+            return str(x) if x is not None else ""
+
+        sheet = self._get_active_sheet()
+        cells = ([str_(sheet.cell(row, col).value)
+                  for col in range(sheet.min_column, sheet.max_column + 1)]
+                 for row in range(sheet.min_row, sheet.max_row + 1))
+        return filter(any, cells)
+
+    def _get_active_sheet(self) -> openpyxl.worksheet.worksheet.Worksheet:
+        if self.sheet:
+            return self.workbook[self.sheet]
+        else:
+            return self.workbook.active
+
+
+class XlsReader(_BaseExcelReader):
+    """Reader for .xls files"""
+    EXTENSIONS = ('.xls',)
+    DESCRIPTION = 'Microsoft Excel 97-2004 spreadsheet'
+
+    @property
+    def workbook(self) -> xlrd.Book:
+        if not self._workbook:
+            self._workbook = xlrd.open_workbook(self.filename, on_demand=True)
+        return self._workbook
+
+    @property
+    @lru_cache(1)
+    def sheets(self) -> List:
+        return self.workbook.sheet_names() if self.workbook else []
+
+    def get_cells(self) -> Iterable:
+        sheet = self._get_active_sheet()
+        first_row = next(i for i in range(sheet.nrows)
+                         if any(sheet.row_values(i)))
+        first_col = next(i for i in range(sheet.ncols)
+                         if sheet.cell_value(first_row, i))
+        row_len = sheet.row_len(first_row)
+        return filter(any, ([str(sheet.cell_value(row, col))
+                             if col < sheet.row_len(row) else ''
+                             for col in range(first_col, row_len)]
+                            for row in range(first_row, sheet.nrows)))
+
+    def _get_active_sheet(self) -> xlrd.sheet.Sheet:
+        if self.sheet:
+            return self.workbook.sheet_by_name(self.sheet)
+        else:
+            return self.workbook.sheet_by_index(0)
 
 
 class DotReader(FileFormat):

@@ -76,29 +76,29 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertIsNone(self.widget.data)
 
         # <2 rows
-        self.data = Table(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.not_enough_rows.is_shown())
 
         # no attributes
-        self.data = Table(self.empty_domain, [['STG1']] * 2)
+        self.data = Table.from_list(self.empty_domain, [['STG1']] * 2)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.no_attributes.is_shown())
 
         # constant data
-        self.data = Table(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.constant_data.is_shown())
 
         # correct input
-        self.data = Table(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
-                                        [5, 4, 3, 2, 1, 'STG1']])
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
+                                                  [5, 4, 3, 2, 1, 'STG1']])
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNotNone(self.widget.data)
@@ -107,10 +107,10 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.Error.constant_data.is_shown())
 
     def test_input(self):
-        self.data = Table(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
-                                        [2, 2, 2, 2, 2, 'STG1'],
-                                        [4, 4, 4, 4, 4, 'STG2'],
-                                        [5, 5, 5, 5, 5, 'STG2']])
+        self.data = Table.from_list(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
+                                                  [2, 2, 2, 2, 2, 'STG1'],
+                                                  [4, 4, 4, 4, 4, 'STG2'],
+                                                  [5, 5, 5, 5, 5, 'STG2']])
 
         self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
@@ -149,7 +149,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         with patch("Orange.preprocess.preprocess.Normalize", wraps=Normalize) as normalize:
             self.send_signal(self.widget.Inputs.data, self.data)
             self.assertTrue(self.widget.controls.normalize.isEnabled())
-            self.wait_until_stop_blocking()
+            self.wait_until_finished()
             normalize.assert_called_once()
 
         # Disable checkbox
@@ -158,7 +158,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         with patch("Orange.preprocess.preprocess.Normalize", wraps=Normalize) as normalize:
             self.send_signal(self.widget.Inputs.data, self.data)
             self.assertTrue(self.widget.controls.normalize.isEnabled())
-            self.wait_until_stop_blocking()
+            self.wait_until_finished()
             normalize.assert_not_called()
 
         # Normalization shouldn't work on sparse data
@@ -169,7 +169,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         with patch("Orange.preprocess.preprocess.Normalize", wraps=Normalize) as normalize:
             self.send_signal(self.widget.Inputs.data, sparse_data)
             self.assertFalse(self.widget.controls.normalize.isEnabled())
-            self.wait_until_stop_blocking()
+            self.wait_until_finished()
             normalize.assert_not_called()
 
     @patch("Orange.projection.manifold.TSNEModel.optimize")
@@ -192,7 +192,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.wait_until_stop_blocking()
         self.widget.controls.exaggeration.setValue(1)
         self.widget.run_button.clicked.emit()  # run with exaggeration 1
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         _check_exaggeration(optimize, 1)
 
         # Reset and clear state
@@ -205,13 +205,13 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.wait_until_stop_blocking()
         self.widget.controls.exaggeration.setValue(3)
         self.widget.run_button.clicked.emit()  # run with exaggeration 1
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         _check_exaggeration(optimize, 3)
 
     def test_plot_once(self):
         """Test if data is plotted only once but committed on every input change"""
         self.widget.setup_plot = Mock()
-        self.widget.commit = Mock()
+        self.widget.commit = self.widget.unconditional_commit = Mock()
 
         self.send_signal(self.widget.Inputs.data, self.data)
         # TODO: The base widget immediately calls `setup_plot` and `commit`
@@ -221,7 +221,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # when the result was available.
         self.widget.setup_plot.reset_mock()
         self.widget.commit.reset_mock()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
 
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
@@ -295,7 +295,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # set global structure "on" (after the embedding is computed)
         w.controls.multiscale.setChecked(False)
         self.send_signal(w.Inputs.data, self.data)
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertFalse(self.widget.Information.modified.is_shown())
         # All the embedding components should computed
         self.assertIsNotNone(w.pca_projection)

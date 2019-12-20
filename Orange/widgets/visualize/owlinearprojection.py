@@ -59,6 +59,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         gui.rubber(box)
         self.last_run_n_attrs = None
         self.attr_color = master.attr_color
+        self.attrs = []
 
     def initialize(self):
         super().initialize()
@@ -95,6 +96,8 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
 
     def state_count(self):
         n_all_attrs = len(self.attrs)
+        if not n_all_attrs:
+            return 0
         n_attrs = self.n_attrs
         return factorial(n_all_attrs) // (2 * factorial(n_all_attrs - n_attrs) * n_attrs)
 

@@ -709,7 +709,7 @@ class OWPivot(OWWidget):
                      callback=self.__val_feature_changed)
         self.__add_aggregation_controls()
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit", "&Apply")
+        gui.auto_apply(self.controlArea, self, "auto_commit")
 
     def __add_aggregation_controls(self):
         box = gui.vBox(self.controlArea, "Aggregations")

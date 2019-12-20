@@ -437,8 +437,7 @@ class OWDataTable(OWWidget):
             None, self, "Restore Original Order", callback=self.restore_order,
             tooltip="Show rows in the original order", autoDefault=False)
         self.buttonsArea.layout().insertWidget(0, reset)
-        gui.auto_commit(self.buttonsArea, self, "auto_commit",
-                        "Send Selected Rows", "Send Automatically")
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # GUI with tabs
         self.tabs = gui.tabWidget(self.mainArea)
@@ -456,6 +455,7 @@ class OWDataTable(OWWidget):
         """Set the input dataset."""
         self.closeContext()
         if data is not None:
+            datasetname = getattr(data, "name", "Data")
             if tid in self._inputs:
                 # update existing input slot
                 slot = self._inputs[tid]
@@ -463,6 +463,8 @@ class OWDataTable(OWWidget):
                 # reset the (header) view state.
                 view.setModel(None)
                 view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+                assert self.tabs.indexOf(view) != -1
+                self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
             else:
                 view = QTableView()
                 view.setSortingEnabled(True)
@@ -485,9 +487,10 @@ class OWDataTable(OWWidget):
                         view.model().sort(index, order)
 
                 header.sortIndicatorChanged.connect(sort_reset)
+                self.tabs.addTab(view, datasetname)
 
             view.dataset = data
-            self.tabs.addTab(view, getattr(data, "name", "Data"))
+            self.tabs.setCurrentWidget(view)
 
             self._setup_table_view(view, data)
             slot = TableSlot(tid, data, table_summary(data), view)
@@ -516,27 +519,24 @@ class OWDataTable(OWWidget):
             if current is not None:
                 # pylint: disable=protected-access
                 self.set_info(current._input_slot.summary)
-        else:
-            self.__pending_selected_rows = None
-            self.__pending_selected_cols = None
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
         self.openContext(data)
 
-        if self.__pending_selected_rows is not None:
+        if data and self.__pending_selected_rows is not None:
             self.selected_rows = self.__pending_selected_rows
             self.__pending_selected_rows = None
         else:
             self.selected_rows = []
 
-        if self.__pending_selected_cols is not None:
+        if data and self.__pending_selected_cols is not None:
             self.selected_cols = self.__pending_selected_cols
             self.__pending_selected_cols = None
         else:
             self.selected_cols = []
 
         self.set_selection()
-        self.commit()
+        self.unconditional_commit()
 
     def _setup_table_view(self, view, data):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)

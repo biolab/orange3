@@ -25,7 +25,7 @@ The logistic regression classification algorithm with LASSO (L1) or ridge (L2) r
 Example
 -------
 
-The widget is used just as any other widget for inducing a classifier. This is an example demonstrating prediction results with logistic regression on the *hayes-roth* dataset. We first load *hayes-roth_learn* in the [File](../data/file.md) widget and pass the data to **Logistic Regression**. Then we pass the trained model to [Predictions](../evaluation/predictions.md).
+The widget is used just as any other widget for inducing a classifier. This is an example demonstrating prediction results with logistic regression on the *hayes-roth* dataset. We first load *hayes-roth_learn* in the [File](../data/file.md) widget and pass the data to **Logistic Regression**. Then we pass the trained model to [Predictions](../evaluate/predictions.md).
 
 Now we want to predict class value on a new dataset. We load *hayes-roth_test* in the second **File** widget and connect it to **Predictions**. We can now observe class values predicted with **Logistic Regression** directly in **Predictions**.
 

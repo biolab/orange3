@@ -20,7 +20,8 @@ class TestLogisticRegressionLearner(unittest.TestCase):
 
     def test_LogisticRegression(self):
         learn = LogisticRegressionLearner()
-        results = CrossValidation(self.heart_disease, [learn], k=2)
+        cv = CrossValidation(k=2)
+        results = cv(self.heart_disease, [learn])
         ca = CA(results)
         self.assertGreater(ca, 0.8)
         self.assertLess(ca, 1.0)
@@ -40,7 +41,8 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         lr_norm = LogisticRegressionLearner(normalize=True)
 
         # check that normalization produces better results
-        results = CrossValidation(table, [lr_norm, lr], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(table, [lr_norm, lr])
         ca = CA(results)
         self.assertGreater(ca[0], ca[1])
 

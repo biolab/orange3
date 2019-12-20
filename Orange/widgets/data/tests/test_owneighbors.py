@@ -1,4 +1,4 @@
-# pylint: disable=missing-docstring,protected-access
+#pylint: disable=missing-docstring,protected-access,unsubscriptable-object
 import unittest
 from unittest.mock import Mock
 
@@ -122,21 +122,36 @@ class TestOWNeighbors(WidgetTest):
         widget.apply_button.button.click()
         self.assertIsNotNone(self.get_output("Neighbors"))
 
-    def test_labels(self):
-        """Check labels are updated when data is received"""
+    def test_input_summary(self):
+        """Check if status bar is updated when data is received"""
         widget = self.widget
+        input_sum = widget.info.set_input_summary = Mock()
         data = Table("iris")
+
+        input_sum.reset_mock()
+        self.send_signal(widget.Inputs.reference, data[:5])
+        input_sum.assert_called_with("0 | 5 ", "No data instance(s) on input\n"\
+                                               "5 reference instance(s) on input ")
+
+        input_sum.reset_mock()
         self.send_signal(widget.Inputs.data, data[:10])
-        self.assertIn("10", widget.data_info_label.text())
-        self.send_signal(widget.Inputs.reference, data[:12])
-        self.assertIn("12", widget.reference_info_label.text())
-        self.send_signal(widget.Inputs.reference, data[:15])
-        self.assertIn("15", widget.reference_info_label.text())
-        self.send_signal(widget.Inputs.data, None)
-        self.assertNotIn("10", widget.data_info_label.text())
-        self.assertIn("15", widget.reference_info_label.text())
-        self.send_signal(widget.Inputs.reference, None)
-        self.assertNotIn("15", widget.reference_info_label.text())
+        input_sum.assert_called_with("10 | 5 ", "10 data instance(s) on input\n"\
+                                                "5 reference instance(s) on input ")
+
+        input_sum.reset_mock()
+        self.send_signals([(widget.Inputs.data, None), (widget.Inputs.reference, None)])
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+
+        input_sum.reset_mock()
+        self.send_signal(widget.Inputs.data, data[:15])
+        input_sum.assert_called_with("15 | 0 ", "15 data instance(s) on input\n" \
+                                                "No reference instance(s) on input ")
+
+        input_sum.reset_mock()
+        self.send_signals([(widget.Inputs.data, data[:12]), (widget.Inputs.reference, data[-1:])])
+        input_sum.assert_called_with("12 | 1 ", "12 data instance(s) on input\n"\
+                                                "1 reference instance(s) on input ")
 
     def test_compute_distances_apply_called(self):
         """Check compute distances and apply are called when receiving signal"""
@@ -314,6 +329,7 @@ class TestOWNeighbors(WidgetTest):
 
     def test_apply(self):
         widget = self.widget
+        output_sum = widget.info.set_output_summary = Mock()
         widget.auto_apply = True
         data = Table("iris")
         indices = np.array([5, 10, 15, 100])
@@ -326,6 +342,7 @@ class TestOWNeighbors(WidgetTest):
         np.testing.assert_almost_equal(neigh.X, data.X[indices])
         np.testing.assert_almost_equal(
             neigh.metas.flatten(), widget.distances[indices])
+        output_sum.assert_called_with(str(len(neigh)))
 
     def test_all_equal_ref(self):
         widget = self.widget
@@ -409,13 +426,15 @@ class TestOWNeighbors(WidgetTest):
         domain = Domain([ContinuousVariable("a"), ContinuousVariable("b")],
                         metas=[ContinuousVariable("c")])
         data = Table(
-            domain, np.random.rand(2, len(domain.attributes)),
-            metas=np.random.rand(2, len(domain.metas)))
+            domain, np.random.rand(15, len(domain.attributes)),
+            metas=np.random.rand(15, len(domain.metas)))
 
         # same domain with same metas no error
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, data[:1])
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # same domain with different metas no error
         domain_ref = Domain(domain.attributes,
@@ -426,6 +445,8 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # same domain with different order - no error
         domain_ref = Domain(domain.attributes[::-1])
@@ -434,6 +455,8 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # same domain with different number of metas no error
         domain_ref = Domain(
@@ -445,6 +468,8 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
         # different domain with same metas - error shown
         domain_ref = Domain(domain.attributes + (ContinuousVariable("e"),),
@@ -455,6 +480,31 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertTrue(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertIsNone(output)
+
+    def test_different_domains_same_names(self):
+        """
+        Here we create two domains with same names of attributes - the case
+        with image-analytics (two embeddings). Widget must not show the
+        error in this case.
+        """
+        w = self.widget
+        domain1 = Domain([ContinuousVariable("a"), ContinuousVariable("b")],
+                         metas=[ContinuousVariable("c")])
+        domain2 = Domain([ContinuousVariable("a"), ContinuousVariable("b")],
+                         metas=[ContinuousVariable("d")])
+        data = Table(
+            domain1, np.random.rand(15, len(domain1.attributes)),
+            metas=np.random.rand(15, len(domain1.metas)))
+        ref = Table(
+            domain2, np.random.rand(2, len(domain2.attributes)),
+            metas=np.random.rand(2, len(domain2.metas)))
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, ref)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(10, len(output))
 
 
 if __name__ == "__main__":

@@ -32,6 +32,9 @@ def check_results_adequacy(results, error_group, check_nan=True):
     elif not results.data.domain.has_discrete_class:
         error_group.invalid_results(
             "Discrete outcome variable is required")
+    elif not results.actual.size:
+        error_group.invalid_results(
+            "Empty result on input. Nothing to display.")
     elif check_nan and (anynan(results.actual) or
                         anynan(results.predicted) or
                         (results.probabilities is not None and

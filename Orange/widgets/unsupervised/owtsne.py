@@ -513,7 +513,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def __ensure_task_same_for_pca(self, task: Task):
         assert self.data is not None
-        assert task.data is self.data
         assert task.normalize == self.normalize
         assert task.pca_components == self.pca_components
         assert isinstance(task.pca_projection, Table) and \

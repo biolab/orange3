@@ -5,11 +5,15 @@ from os import path, makedirs
 from AnyQt.QtGui import QImage, QPainter
 from AnyQt.QtWidgets import QGraphicsScene, QApplication, QWidget, QGraphicsView, QHBoxLayout
 from AnyQt.QtCore import QRectF, Qt, QTimer
+# QWebEngineWidgets must be imported before QCoreApplication is created.
+# It will fail with an import error if imported (first time) after.
+import AnyQt.QtWebEngineWidgets  # pylint: disable=unused-import
 
-from orangecanvas import config
 from orangecanvas.canvas.items import NodeItem
 from orangecanvas.help import HelpManager
-from orangecanvas.registry.qt import QtWidgetDiscovery, QtWidgetRegistry
+from orangecanvas.registry import WidgetRegistry
+
+from Orange.canvas.config import Config as OConfig
 
 
 class WidgetCatalog:
@@ -62,20 +66,13 @@ class WidgetCatalog:
 
     @staticmethod
     def __get_widget_registry():
-        widget_discovery = QtWidgetDiscovery()
-        widget_registry = QtWidgetRegistry()
-        widget_discovery.found_category.connect(
-            widget_registry.register_category
-        )
-        widget_discovery.found_widget.connect(
-            widget_registry.register_widget
-        )
-        widget_discovery.run(config.widgets_entry_points())
+        widget_registry = WidgetRegistry()
+        widget_discovery = OConfig.widget_discovery(widget_registry)
+        widget_discovery.run(OConfig.widgets_entry_points())
 
         # Fixup category.widgets list
         for cat, widgets in widget_registry._categories_dict.values():
             cat.widgets = widgets
-
         return widget_registry
 
     def __get_icon(self, widget, category=None):
@@ -124,18 +121,13 @@ class IconWidget(QWidget):
         self.scene.addItem(node)
 
     def render_as_png(self, filename):
-        png = self.__transparent_png()
-        painter = QPainter(png)
+        img = QImage(50, 50, QImage.Format_ARGB32)
+        img.fill(Qt.transparent)
+        painter = QPainter(img)
         painter.setRenderHint(QPainter.Antialiasing, 1)
         self.scene.render(painter, QRectF(0, 0, 50, 50), QRectF(-25, -25, 50, 50))
         painter.end()
-        png.save(filename)
-
-    def __transparent_png(self):
-        # PyQt is stupid and does not increment reference count on bg
-        w = h = 50
-        self.__bg = bg = b"\xff\xff\x00" * w * h * 4
-        return QImage(bg, w, h, QImage.Format_ARGB32)
+        img.save(filename)
 
 
 if __name__ == '__main__':

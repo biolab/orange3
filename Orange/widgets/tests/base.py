@@ -1,3 +1,4 @@
+# pylint: disable=protected-access,unused-import
 from contextlib import contextmanager
 import os
 import pickle
@@ -13,7 +14,6 @@ from AnyQt.QtWidgets import (
 )
 
 from orangewidget.tests.base import (
-    # pylint: disable=unused-import
     GuiTest, WidgetTest as WidgetTestBase, DummySignalManager, DEFAULT_TIMEOUT
 )
 from Orange.base import SklModel, Model
@@ -38,10 +38,29 @@ from Orange.widgets.widget import OWWidget
 
 
 class WidgetTest(WidgetTestBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        Variable._clear_all_caches()
+    def assert_table_equal(self, table1, table2):
+        if table1 is None or table2 is None:
+            self.assertIs(table1, table2)
+            return
+        self.assert_domain_equal(table1.domain, table2.domain)
+        np.testing.assert_array_equal(table1.X, table2.X)
+        np.testing.assert_array_equal(table1.Y, table2.Y)
+        np.testing.assert_array_equal(table1.metas, table2.metas)
+
+    def assert_domain_equal(self, domain1, domain2):
+        """
+        Test domains for equality.
+
+        Unlike in domain1 == domain2 uses `Variable.__eq__`, which in case of
+        DiscreteVariable ignores `values`, this method also checks that both
+        domain have equal `values`.
+        """
+        for var1, var2 in zip(domain1.variables + domain1.metas,
+                              domain2.variables + domain2.metas):
+            self.assertEqual(type(var1), type(var2))
+            self.assertEqual(var1.name, var2.name)
+            if var1.is_discrete:
+                self.assertEqual(var1.values, var2.values)
 
 
 class TestWidgetTest(WidgetTest):
@@ -438,7 +457,9 @@ class WidgetLearnerTestMixin:
                 new_value = [x for x in parameter.values
                              if x != parameter.get_value()][0]
                 parameter.set_value(new_value)
-                self.widget.apply.assert_called_once_with()
+                # wait for asynchronous calls
+                self.process_events(lambda: self.widget.apply.call_args is not None)
+                self.widget.apply.assert_called_once()
 
     @staticmethod
     def _should_check_parameter(parameter, data):
@@ -468,7 +489,6 @@ class WidgetOutputsTestMixin:
     """
 
     def init(self):
-        Variable._clear_all_caches()
         self.data = Table("iris")
         self.same_input_output_domain = True
 
@@ -526,7 +546,6 @@ class ProjectionWidgetTestMixin:
     """Class for projection widget testing"""
 
     def init(self):
-        Variable._clear_all_caches()
         self.data = Table("iris")
 
     def _select_data(self):
@@ -544,9 +563,10 @@ class ProjectionWidgetTestMixin:
         properly set/updated"""
         self.send_signal(self.widget.Inputs.data, self.data)
 
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
 
         self.assertIsNotNone(self.widget.graph.scatterplot_item)
 
@@ -620,7 +640,7 @@ class ProjectionWidgetTestMixin:
         """Test if data is plotted only once but committed on every input change"""
         table = Table("heart_disease")
         self.widget.setup_plot = Mock()
-        self.widget.commit = Mock()
+        self.widget.commit = self.widget.unconditional_commit = Mock()
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
@@ -638,11 +658,10 @@ class ProjectionWidgetTestMixin:
 
     def test_subset_data_color(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.widget.Inputs.data, self.data)
-
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
-
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
         self.send_signal(self.widget.Inputs.data_subset, self.data[:10])
         subset = [brush.color().name() == "#46befa" for brush in
                   self.widget.graph.scatterplot_item.data['brush'][:10]]
@@ -704,18 +723,20 @@ class ProjectionWidgetTestMixin:
 
     def test_saved_selection(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.widget.Inputs.data, self.data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
 
         self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
         settings = self.widget.settingsHandler.pack_data(self.widget)
         w = self.create_widget(self.widget.__class__, stored_settings=settings)
 
         self.send_signal(self.widget.Inputs.data, self.data, widget=w)
-        if w.isBlocking():
-            spy = QSignalSpy(w.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(w, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
 
         self.assertEqual(np.sum(w.graph.selection), 15)
         np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
@@ -744,6 +765,25 @@ class ProjectionWidgetTestMixin:
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
         self.send_signal(self.widget.Inputs.data, table)
+
+    def test_in_out_summary(self, timeout=DEFAULT_TIMEOUT):
+        info = self.widget.info
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertTrue(
+            self.signal_manager.wait_for_finished(self.widget, timeout),
+            f"Did not finish in the specified {timeout}ms timeout"
+        )
+        ind = self._select_data()
+        self.assertEqual(info._StateInfo__input_summary.brief,
+                         str(len(self.data)))
+        self.assertEqual(info._StateInfo__output_summary.brief, str(len(ind)))
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
 
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
@@ -851,7 +891,7 @@ class datasets:
         -------
         data : Orange.data.Table
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"),
                  ContinuousVariable("b"),

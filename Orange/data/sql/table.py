@@ -445,11 +445,12 @@ class SqlTable(Table):
                 data = list(cur.fetchall())
                 if column.is_continuous:
                     all_contingencies[i] = \
-                        (self._continuous_contingencies(data, row), [])
+                        (self._continuous_contingencies(data, row), [], [], 0)
                 else:
                     all_contingencies[i] =\
-                        (self._discrete_contingencies(data, row, column), [])
-        return all_contingencies, None
+                        (self._discrete_contingencies(data, row, column), [],
+                         [], 0)
+        return all_contingencies
 
     def _continuous_contingencies(self, data, row):
         values = np.zeros(len(data))

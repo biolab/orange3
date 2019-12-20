@@ -48,7 +48,7 @@ Notice how the widget outputs a dataset that includes only the best-scored attri
 Example: Feature Subset Selection for Machine Learning
 ------------------------------------------------------
 
-What follows is a bit more complicated example. In the workflow below, we first split the data into a training set and a test set. In the upper branch, the training data passes through the **Rank** widget to select the most informative attributes, while in the lower branch there is no feature selection. Both feature selected and original datasets are passed to their own [Test & Score](../evaluation/testandscore.md) widgets, which develop a *Naive Bayes* classifier and score it on a test set.
+What follows is a bit more complicated example. In the workflow below, we first split the data into a training set and a test set. In the upper branch, the training data passes through the **Rank** widget to select the most informative attributes, while in the lower branch there is no feature selection. Both feature selected and original datasets are passed to their own [Test & Score](../evaluate/testandscore.md) widgets, which develop a *Naive Bayes* classifier and score it on a test set.
 
 ![](images/Rank-and-Test.png)
 

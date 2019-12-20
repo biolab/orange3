@@ -7,7 +7,6 @@ import traceback
 import copy
 from functools import partial, reduce
 
-import concurrent.futures
 from concurrent.futures import Future
 from collections import OrderedDict, namedtuple
 from typing import Any, Optional, List, Dict, Callable
@@ -16,7 +15,7 @@ import numpy as np
 
 from AnyQt import QtGui
 from AnyQt.QtGui import QStandardItem
-from AnyQt.QtCore import Qt, QSize, QThread, QMetaObject, Q_ARG
+from AnyQt.QtCore import Qt, QSize, QThread
 from AnyQt.QtCore import pyqtSlot as Slot
 
 from Orange.base import Learner
@@ -34,8 +33,8 @@ from Orange.widgets.evaluate.utils import \
     usable_scorers, ScoreTable, learner_name, scorer_caller
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.concurrent import ThreadExecutor, TaskState
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
-from Orange.widgets.utils.concurrent import ThreadExecutor
 
 
 log = logging.getLogger(__name__)
@@ -225,7 +224,7 @@ class OWTestLearners(OWWidget):
         # Do we need to [re]test any learners, set by _invalidate and
         # cleared by __update
         self.__needupdate = False
-        self.__task = None  # type: Optional[Task]
+        self.__task = None  # type: Optional[TaskState]
         self.__executor = ThreadExecutor()
 
         sbox = gui.vBox(self.controlArea, "Sampling")
@@ -328,6 +327,7 @@ class OWTestLearners(OWWidget):
         ----------
         data : Optional[Orange.data.Table]
         """
+        self.cancel()
         self.Information.data_sampled.clear()
         self.Error.train_data_empty.clear()
         self.Error.class_required.clear()
@@ -501,10 +501,10 @@ class OWTestLearners(OWWidget):
             results = slot.results
             if results is not None and results.success:
                 train = QStandardItem("{:.3f}".format(results.value.train_time))
-                train.setTextAlignment(Qt.AlignRight)
+                train.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 train.setData(key, Qt.UserRole)
                 test = QStandardItem("{:.3f}".format(results.value.test_time))
-                test.setTextAlignment(Qt.AlignRight)
+                test.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                 test.setData(key, Qt.UserRole)
                 row = [head, train, test]
             else:
@@ -541,7 +541,7 @@ class OWTestLearners(OWWidget):
             if stats is not None:
                 for stat, scorer in zip(stats, self.scorers):
                     item = QStandardItem()
-                    item.setTextAlignment(Qt.AlignRight)
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
                     if stat.success:
                         item.setData(float(stat.value[0]), Qt.DisplayRole)
                     else:
@@ -587,6 +587,7 @@ class OWTestLearners(OWWidget):
         self.update_stats_model()
 
     def _invalidate(self, which=None):
+        self.cancel()
         self.fold_feature_selected = \
             self.resampling == OWTestLearners.FeatureFold
         # Invalidate learner results for `which` input keys
@@ -677,7 +678,7 @@ class OWTestLearners(OWWidget):
 
     @Slot(float)
     def setProgressValue(self, value):
-        self.progressBarSet(value, processEvents=False)
+        self.progressBarSet(value)
 
     def __update(self):
         self.__needupdate = False
@@ -802,58 +803,45 @@ class OWTestLearners(OWWidget):
         """
         assert self.__state != State.Running
         # Setup the task
-        task = Task()
+        task = TaskState()
 
         def progress_callback(finished):
-            if task.cancelled:
+            if task.is_interruption_requested():
                 raise UserInterrupt()
-            QMetaObject.invokeMethod(
-                self, "setProgressValue", Qt.QueuedConnection,
-                Q_ARG(float, 100 * finished)
-            )
-
-        def ondone(_):
-            QMetaObject.invokeMethod(
-                self, "__task_complete", Qt.QueuedConnection,
-                Q_ARG(object, task))
+            task.set_progress_value(100 * finished)
 
         testfunc = partial(testfunc, callback=progress_callback)
-        task.future = self.__executor.submit(testfunc)
-        task.future.add_done_callback(ondone)
+        task.start(self.__executor, testfunc)
 
-        self.progressBarInit(processEvents=None)
-        self.setBlocking(True)
+        task.progress_changed.connect(self.setProgressValue)
+        task.watcher.finished.connect(self.__task_complete)
+
+        self.Outputs.evaluations_results.invalidate()
+        self.Outputs.predictions.invalidate()
+        self.progressBarInit()
         self.setStatusMessage("Running")
 
         self.__state = State.Running
         self.__task = task
 
     @Slot(object)
-    def __task_complete(self, task):
+    def __task_complete(self, f: 'Future[Results]'):
         # handle a completed task
         assert self.thread() is QThread.currentThread()
-        if self.__task is not task:
-            assert task.cancelled
-            log.debug("Reaping cancelled task: %r", "<>")
-            return
-
-        self.setBlocking(False)
-        self.progressBarFinished(processEvents=None)
+        assert self.__task is not None and self.__task.future is f
+        self.progressBarFinished()
         self.setStatusMessage("")
-        result = task.future
-        assert result.done()
+        assert f.done()
         self.__task = None
+        self.__state = State.Done
         try:
-            results = result.result()    # type: Results
+            results = f.result()    # type: Results
             learners = results.learners  # type: List[Learner]
-        except Exception as er:
+        except Exception as er:  # pylint: disable=broad-except
             log.exception("testing error (in __task_complete):",
                           exc_info=True)
             self.error("\n".join(traceback.format_exception_only(type(er), er)))
-            self.__state = State.Done
             return
-
-        self.__state = State.Done
 
         learner_key = {slot.learner: key for key, slot in
                        self.learners.items()}
@@ -890,7 +878,10 @@ class OWTestLearners(OWWidget):
             self.__state = State.Cancelled
             task, self.__task = self.__task, None
             task.cancel()
-            assert task.future.done()
+            task.progress_changed.disconnect(self.setProgressValue)
+            task.watcher.finished.disconnect(self.__task_complete)
+            self.progressBarFinished()
+            self.setStatusMessage("")
 
     def onDeleteWidget(self):
         self.cancel()
@@ -972,33 +963,6 @@ def results_one_vs_rest(results, pos_index):
     res.data = None
     res.domain = domain
     return res
-
-
-class Task:
-    """
-    A simple task state.
-    """
-    #: A future holding the results. This field is set by the client.
-    future = ...        # type: Future
-    #: True if the task was cancelled
-    cancelled = False   # type: bool
-    #: A function to call. Filled by the client.
-    func = ...          # type: Callable[[Callable[[float], None]], Results]
-
-    def cancel(self):
-        """
-        Cancel the task.
-
-        Set the `cancelled` field to True and block until the future is done.
-        """
-        log.debug("cancel task")
-        self.cancelled = True
-        cancelled = self.future.cancel()
-        if cancelled:
-            log.debug("Task cancelled before starting")
-        else:
-            log.debug("Attempting cooperative cancellation for task")
-        concurrent.futures.wait([self.future])
 
 
 if __name__ == "__main__":  # pragma: no cover

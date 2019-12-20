@@ -34,10 +34,10 @@ The [AdaBoost](https://en.wikipedia.org/wiki/AdaBoost) (short for "Adaptive boos
 Examples
 --------
 
-For classification, we loaded the *iris* dataset. We used *AdaBoost*, [Tree](../model/tree.md) and [Logistic Regression](../model/logisticregression.md) and evaluated the models' performance in [Test & Score](../evaluation/testandscore.md).
+For classification, we loaded the *iris* dataset. We used *AdaBoost*, [Tree](../model/tree.md) and [Logistic Regression](../model/logisticregression.md) and evaluated the models' performance in [Test & Score](../evaluate/testandscore.md).
 
 ![](images/AdaBoost-classification.png)
 
-For regression, we loaded the *housing* dataset, sent the data instances to two different models (**AdaBoost** and [Tree](../model/tree.md)) and output them to the [Predictions](../evaluation/predictions.md) widget.
+For regression, we loaded the *housing* dataset, sent the data instances to two different models (**AdaBoost** and [Tree](../model/tree.md)) and output them to the [Predictions](../evaluate/predictions.md) widget.
 
 ![](images/AdaBoost-regression.png)

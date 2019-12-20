@@ -15,8 +15,8 @@ from Orange.widgets.data.owselectcolumns \
 from Orange.widgets.data.owrank import OWRank
 from Orange.widgets.widget import AttributeList
 
-Continuous = vartype(ContinuousVariable())
-Discrete = vartype(DiscreteVariable())
+Continuous = vartype(ContinuousVariable("c"))
+Discrete = vartype(DiscreteVariable("d"))
 
 
 class TestSelectAttributesDomainContextHandler(TestCase):
@@ -363,3 +363,26 @@ class TestOWSelectAttributes(WidgetTest):
         mime.setProperty("_items", variables)
         return QDragEnterEvent(QPoint(0, 0), Qt.MoveAction, mime,
                                Qt.NoButton, Qt.NoModifier)
+
+    def test_move_rows(self):
+        data = Table("iris")[:5]
+        w = self.widget
+        self.send_signal(w.Inputs.data, data)
+        view = w.used_attrs_view
+        model = view.model()
+        selmodel = view.selectionModel()
+        midx = model.index(1, 0)
+        selmodel.select(midx, selmodel.ClearAndSelect)
+
+        w.move_up(view)
+        d1 = self.get_output(w.Outputs.data, w)
+        self.assertEqual(
+            d1.domain.attributes,
+            data.domain.attributes[:2][::-1] + data.domain.attributes[2:]
+        )
+        w.move_down(view)
+        d1 = self.get_output(w.Outputs.data, w)
+        self.assertEqual(
+            d1.domain.attributes,
+            data.domain.attributes
+        )

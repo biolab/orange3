@@ -11,7 +11,7 @@ from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
 
 import scipy.special
-from scipy.stats import f_oneway, chisquare
+from scipy.stats import f_oneway, chi2_contingency
 
 import Orange.data
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values
@@ -20,7 +20,7 @@ from Orange.statistics import contingency, distribution
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
+from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -129,8 +129,8 @@ class OWBoxPlot(widget.OWWidget):
     when the user changes display settings or colors.
 
     For discrete attributes, the flow is a bit simpler: the elements are not
-    constructed in advance (by layout_changed). Instead, layout_changed and
-    display_changed call display_changed_disc that draws everything.
+    constructed in advance (by layout_changed). Instead, _display_changed_disc
+    draws everything.
     """
     name = "Box Plot"
     description = "Visualize the distribution of feature values in a box plot."
@@ -153,6 +153,7 @@ class OWBoxPlot(widget.OWWidget):
 
     attribute = ContextSetting(None)
     order_by_importance = Setting(False)
+    order_grouping_by_importance = Setting(False)
     group_var = ContextSetting(None)
     show_annotations = Setting(True)
     compare = Setting(CompareMeans)
@@ -212,19 +213,20 @@ class OWBoxPlot(widget.OWWidget):
         # set the minimal height (see the penultimate paragraph of
         # http://doc.qt.io/qt-4.8/qabstractscrollarea.html#addScrollBarWidget)
         view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
-        gui.separator(view.box, 6, 6)
-        self.cb_order = gui.checkBox(
+        gui.checkBox(
             view.box, self, "order_by_importance",
-            "Order by relevance",
+            "Order by relevance to subgroups",
             tooltip="Order by 𝜒² or ANOVA over the subgroups",
-            callback=self.apply_sorting)
-        self.group_vars = DomainModel(
-            placeholder="None", separators=False,
-            valid_types=Orange.data.DiscreteVariable)
-        self.group_view = view = gui.listView(
+            callback=self.apply_attr_sorting)
+        self.group_vars = VariableListModel(placeholder="None")
+        view = gui.listView(
             self.controlArea, self, "group_var", box="Subgroups",
             model=self.group_vars, callback=self.grouping_changed)
-        view.setEnabled(False)
+        gui.checkBox(
+            view.box, self, "order_grouping_by_importance",
+            "Order by relevance to variable",
+            tooltip="Order by 𝜒² or ANOVA over the variable values",
+            callback=self.on_group_sorting_checkbox)
         view.setMinimumSize(QSize(30, 30))
         # See the comment above
         view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
@@ -257,7 +259,6 @@ class OWBoxPlot(widget.OWWidget):
         self.sort_cb = gui.checkBox(
             box, self, 'sort_freqs', "Sort by subgroup frequencies",
             callback=self.display_changed)
-        gui.rubber(box)
 
         gui.vBox(self.mainArea, addSpace=True)
         self.box_scene = QGraphicsScene()
@@ -289,11 +290,23 @@ class OWBoxPlot(widget.OWWidget):
 
         return super().eventFilter(obj, event)
 
-    def reset_attrs(self, domain):
+    @property
+    def show_stretched(self):
+        return self.stretched and self.group_var is not self.attribute
+
+    def reset_attrs(self):
+        domain = self.dataset.domain
         self.attrs[:] = [
             var for var in chain(
                 domain.class_vars, domain.metas, domain.attributes)
-            if var.is_primitive()]
+            if var.is_primitive() and not var.attributes.get("hidden", False)]
+
+    def reset_groups(self):
+        domain = self.dataset.domain
+        self.group_vars[:] = [None] + [
+            var for var in chain(
+                domain.class_vars, domain.metas, domain.attributes)
+            if var.is_discrete and not var.attributes.get("hidden", False)]
 
     # noinspection PyTypeChecker
     @Inputs.data
@@ -308,19 +321,19 @@ class OWBoxPlot(widget.OWWidget):
         self.group_var = None
         self.attribute = None
         if dataset:
-            domain = dataset.domain
-            self.group_vars.set_domain(domain)
-            self.group_view.setEnabled(len(self.group_vars) > 1)
-            self.reset_attrs(domain)
-            self.select_default_variables(domain)
+            self.reset_attrs()
+            self.reset_groups()
+            self.select_default_variables()
             self.openContext(self.dataset)
             self.grouping_changed()
+            self.attr_changed()
         else:
             self.reset_all_data()
         self.commit()
 
-    def select_default_variables(self, domain):
+    def select_default_variables(self):
         # visualize first non-class variable, group by class (if present)
+        domain = self.dataset.domain
         if len(self.attrs) > len(domain.class_vars):
             self.attribute = self.attrs[len(domain.class_vars)]
         elif self.attrs:
@@ -331,8 +344,12 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.group_var = None  # Reset to trigger selection via callback
 
-    def apply_sorting(self):
+    def apply_attr_sorting(self):
         def compute_score(attr):
+            # This function and the one in apply_group_sorting are similar, but
+            # different in too many details, so they are kept as separate
+            # functions.
+            # If you discover a bug in this function, check the other one, too.
             if attr is group_var:
                 return 3
             if attr.is_continuous:
@@ -343,21 +360,7 @@ class OWBoxPlot(widget.OWWidget):
                 groups = [group for group in groups if len(group)]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
-                # Chi-square with the given distribution into groups
-                # (see degrees of freedom in computation of the p-value)
-                if not attr.values or not group_var.values:
-                    return 2
-                observed = np.array(
-                    contingency.get_contingency(data, group_var, attr))
-                observed = observed[observed.sum(axis=1) != 0, :]
-                observed = observed[:, observed.sum(axis=0) != 0]
-                if min(observed.shape) < 2:
-                    return 2
-                expected = \
-                    np.outer(observed.sum(axis=1), observed.sum(axis=0)) / \
-                    np.sum(observed)
-                p = chisquare(observed.ravel(), f_exp=expected.ravel(),
-                              ddof=n_groups - 1)[1]
+                p = self._chi_square(group_var, attr)[1]
             if math.isnan(p):
                 return 2
             return p
@@ -375,22 +378,82 @@ class OWBoxPlot(widget.OWWidget):
                     include_class=True, include_metas=True) else None
             self.attrs.sort(key=compute_score)
         else:
-            self.reset_attrs(domain)
-        self.attribute = attribute
+            self.reset_attrs()
+        self.attribute = attribute  # reset selection
+        self._ensure_selection_visible(self.controls.attribute)
+
+    def on_group_sorting_checkbox(self):
+        if self.order_grouping_by_importance:
+            self.apply_group_sorting()
+        else:
+            self.reset_groups()
+            self.group_var = self.group_var  # reset selection
+            self._ensure_selection_visible(self.controls.group_var)
+
+    def apply_group_sorting(self):
+        def compute_stat(group):
+            # This function and the one in apply_attr_sorting are similar, but
+            # different in too many details, so they are kept as separate
+            # functions.
+            # If you discover a bug in this function, check the other one, too.
+            if group is attr:
+                return 3
+            if group is None:
+                return -1
+            if attr.is_continuous:
+                group_col = data.get_column_view(group)[0].astype(float)
+                groups = (attr_col[group_col == i]
+                          for i in range(len(group.values)))
+                groups = (col[~np.isnan(col)] for col in groups)
+                groups = [group for group in groups if len(group)]
+                p = f_oneway(*groups)[1] if len(groups) > 1 else 2
+            else:
+                p = self._chi_square(group, attr)[1]
+            if math.isnan(p):
+                return 2
+            return p
+
+        data = self.dataset
+        if data is None or not self.order_grouping_by_importance:
+            return
+        attr = self.attribute
+        group_var = self.group_var
+        if attr.is_continuous:
+            attr_col = data.get_column_view(attr)[0].astype(float)
+        self.group_vars.sort(key=compute_stat)
+        self.group_var = group_var  # reset selection
+        self._ensure_selection_visible(self.controls.group_var)
+
+    @staticmethod
+    def _ensure_selection_visible(view):
+        selection = view.selectedIndexes()
+        if len(selection) == 1:
+            view.scrollTo(selection[0])
+
+    def _chi_square(self, group_var, attr):
+        # Chi-square with the given distribution into groups
+        if not attr.values or not group_var.values:
+            return 0, 2, 0
+        observed = np.array(
+            contingency.get_contingency(self.dataset, group_var, attr))
+        observed = observed[observed.sum(axis=1) != 0, :]
+        observed = observed[:, observed.sum(axis=0) != 0]
+        if min(observed.shape) < 2:
+            return 0, 2, 0
+        return chi2_contingency(observed)[:3]
 
     def reset_all_data(self):
         self.clear_scene()
         self.stat_test = ""
-        self.attrs.clear()
-        self.group_vars.set_domain(None)
-        self.group_view.setEnabled(False)
+        self.attrs[:] = []
+        self.group_vars[:] = [None]
         self.is_continuous = False
         self.update_display_box()
 
     def grouping_changed(self):
-        self.cb_order.setEnabled(self.group_var is not None)
-        self.apply_sorting()
-        self.attr_changed()
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
+        self.apply_attr_sorting()
+        self.update_graph()
 
     def select_box_items(self):
         temp_cond = self.conditions.copy()
@@ -400,6 +463,11 @@ class OWBoxPlot(widget.OWWidget):
                                 [c.conditions for c in temp_cond])
 
     def attr_changed(self):
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
+        self.apply_group_sorting()
+        self.update_graph()
+
+    def update_graph(self):
         self.compute_box_data()
         self.update_display_box()
         self.layout_changed()
@@ -436,7 +504,9 @@ class OWBoxPlot(widget.OWWidget):
                 self.label_txts_all = label_texts
             else:
                 self.label_txts_all = \
-                    [v for v, c in zip(self.group_var.values, self.conts)
+                    [v for v, c in zip(
+                        self.group_var.values + ["Missing values"],
+                        self.conts.array_with_unknowns)
                      if np.sum(c) > 0]
         else:
             self.dist = distribution.get_distribution(dataset, attr)
@@ -479,31 +549,32 @@ class OWBoxPlot(widget.OWWidget):
         if self.dataset is None or len(self.conts) == len(self.dist) == 0:
             return
 
-        if not self.is_continuous:
-            self.display_changed_disc()
-            return
+        if self.is_continuous:
+            self.mean_labels = [self.mean_label(stat, attr, lab)
+                                for stat, lab in zip(self.stats, self.label_txts)]
+            self.draw_axis()
+            self.boxes = [self.box_group(stat) for stat in self.stats]
+            self.labels = [self.label_group(stat, attr, mean_lab)
+                           for stat, mean_lab in zip(self.stats, self.mean_labels)]
+            self.attr_labels = [QGraphicsSimpleTextItem(lab)
+                                for lab in self.label_txts]
+            for it in chain(self.labels, self.attr_labels):
+                self.box_scene.addItem(it)
 
-        self.mean_labels = [self.mean_label(stat, attr, lab)
-                            for stat, lab in zip(self.stats, self.label_txts)]
-        self.draw_axis()
-        self.boxes = [self.box_group(stat) for stat in self.stats]
-        self.labels = [self.label_group(stat, attr, mean_lab)
-                       for stat, mean_lab in zip(self.stats, self.mean_labels)]
-        self.attr_labels = [QGraphicsSimpleTextItem(lab)
-                            for lab in self.label_txts]
-        for it in chain(self.labels, self.attr_labels):
-            self.box_scene.addItem(it)
         self.display_changed()
-        self.draw_stat()
 
     def display_changed(self):
-        if self.dataset is None:
+        if self.dataset is None or self.attribute is None:
             return
 
-        if not self.is_continuous:
-            self.display_changed_disc()
-            return
+        if self.is_continuous:
+            self._display_changed_cont()
+        else:
+            self._display_changed_disc()
+        self.draw_stat()
+        self.select_box_items()
 
+    def _display_changed_cont(self):
         self.order = list(range(len(self.stats)))
         criterion = self._sorting_criteria_attrs[self.compare]
         if criterion:
@@ -549,21 +620,20 @@ class OWBoxPlot(widget.OWWidget):
                    self.scene_width, len(self.stats) * heights + 90)
         self.box_scene.setSceneRect(r)
 
-        self.compute_tests()
-        self.show_posthoc()
-        self.select_box_items()
+        self._compute_tests_cont()
+        self._show_posthoc()
 
-    def display_changed_disc(self):
-        assert not self.is_continuous
+    def _display_changed_disc(self):
         self.clear_scene()
         self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts_all]
 
-        if not self.stretched:
+        if not self.show_stretched:
             if self.group_var:
                 self.labels = [
                     QGraphicsTextItem("{}".format(int(sum(cont))))
-                    for cont in self.conts if np.sum(cont) > 0]
+                    for cont in self.conts.array_with_unknowns
+                    if np.sum(cont) > 0]
             else:
                 self.labels = [
                     QGraphicsTextItem(str(int(sum(self.dist))))]
@@ -573,15 +643,17 @@ class OWBoxPlot(widget.OWWidget):
         self.draw_axis_disc()
         if self.group_var:
             self.boxes = \
-                [self.strudel(cont, i) for i, cont in enumerate(self.conts)
+                [self.strudel(cont, i)
+                 for i, cont in enumerate(self.conts.array_with_unknowns)
                  if np.sum(cont) > 0]
-            self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
 
             if self.sort_freqs:
                 # pylint: disable=invalid-unary-operand-type
-                self.order = sorted(self.order, key=(-np.sum(self.conts, axis=1)).__getitem__)
+                self.order = sorted(
+                    self.order, key=(-np.sum(
+                        self.conts.array_with_unknowns, axis=1)).__getitem__)
         else:
-            self.boxes = [self.strudel(self.dist)]
+            self.boxes = [self.strudel(self.dist.array_with_unknowns)]
 
         for row, box_index in enumerate(self.order):
             y = (-len(self.boxes) + row) * 40 + 10
@@ -589,7 +661,7 @@ class OWBoxPlot(widget.OWWidget):
             bars, labels = box[::2], box[1::2]
 
             self.__draw_group_labels(y, box_index)
-            if not self.stretched:
+            if not self.show_stretched:
                 self.__draw_row_counts(y, box_index)
             if self.show_labels and self.attribute is not self.group_var:
                 self.__draw_bar_labels(y, bars, labels)
@@ -598,8 +670,7 @@ class OWBoxPlot(widget.OWWidget):
         self.box_scene.setSceneRect(-self.label_width - 5,
                                     -30 - len(self.boxes) * 40,
                                     self.scene_width, len(self.boxes * 40) + 90)
-        self.stat_test = ""
-        self.select_box_items()
+        self._compute_tests_disc()
 
     def __draw_group_labels(self, y, row):
         """Draw group labels
@@ -630,7 +701,7 @@ class OWBoxPlot(widget.OWWidget):
         label = self.labels[row]
         b = label.boundingRect()
         if self.group_var:
-            right = self.scale_x * sum(self.conts[row])
+            right = self.scale_x * sum(self.conts.array_with_unknowns[row])
         else:
             right = self.scale_x * sum(self.dist)
         label.setPos(right + 10, y - b.height() / 2)
@@ -673,7 +744,7 @@ class OWBoxPlot(widget.OWWidget):
             self.box_scene.addItem(item)
 
     # noinspection PyPep8Naming
-    def compute_tests(self):
+    def _compute_tests_cont(self):
         # The t-test and ANOVA are implemented here since they efficiently use
         # the widget-specific data in self.stats.
         # The non-parametric tests can't do this, so we use statistics.tests
@@ -737,6 +808,16 @@ class OWBoxPlot(widget.OWWidget):
                 F, p = stat_ANOVA()
                 t = "" if np.isnan(F) else f"ANOVA: {F:.3f} (p={p:.3f}, N={n})"
         self.stat_test = t
+
+    def _compute_tests_disc(self):
+        if self.group_var is None or self.attribute is None:
+            self.stat_test = ""
+        else:
+            chi, p, dof = self._chi_square(self.group_var, self.attribute)
+            if np.isnan(p):
+                self.stat_test = ""
+            else:
+                self.stat_test = f"χ²: {chi:.2f} (p={p:.3f}, dof={dof})"
 
     def mean_label(self, stat, attr, val_name):
         label = QGraphicsItemGroup()
@@ -821,7 +902,8 @@ class OWBoxPlot(widget.OWWidget):
     def draw_stat(self):
         if self.stat_test:
             label = QGraphicsSimpleTextItem(self.stat_test)
-            label.setPos((self.scene_min_x + self.scene_max_x)/2 - label.boundingRect().width()/2,
+            brect = self.box_scene.sceneRect()
+            label.setPos(brect.center().x() - label.boundingRect().width()/2,
                          8 + self._axis_font.pixelSize()*2)
             label.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             self.box_scene.addItem(label)
@@ -831,15 +913,16 @@ class OWBoxPlot(widget.OWWidget):
         Draw the horizontal axis and sets self.scale_x for discrete attributes
         """
         assert not self.is_continuous
-        if self.stretched:
+        if self.show_stretched:
             if not self.attr_labels:
                 return
             step = steps = 10
         else:
             if self.group_var:
-                max_box = max(float(np.sum(dist)) for dist in self.conts)
+                max_box = max(float(np.sum(dist))
+                              for dist in self.conts.array_with_unknowns)
             else:
-                max_box = float(np.sum(self.dist))
+                max_box = float(np.sum(self.dist.array_with_unknowns))
             if max_box == 0:
                 self.scale_x = 1
                 return
@@ -858,9 +941,9 @@ class OWBoxPlot(widget.OWWidget):
         self.label_width = lab_width
 
         right_offset = 0  # offset for the right label
-        if not self.stretched and self.labels:
+        if not self.show_stretched and self.labels:
             if self.group_var:
-                rows = list(zip(self.conts, self.labels))
+                rows = list(zip(self.conts.array_with_unknowns, self.labels))
             else:
                 rows = [(self.dist, self.labels[0])]
             # available space left of the 'group labels'
@@ -881,7 +964,7 @@ class OWBoxPlot(widget.OWWidget):
             l.setZValue(100)
             t = self.box_scene.addSimpleText(str(val), self._axis_font)
             t.setPos(val * scale_x - t.boundingRect().width() / 2, 8)
-        if self.stretched:
+        if self.show_stretched:
             self.scale_x *= 100
 
     def label_group(self, stat, attr, mean_lab):
@@ -988,25 +1071,28 @@ class OWBoxPlot(widget.OWWidget):
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
             box.append(FilterGraphicsRectItem(cond, 0, -10, 1, 10))
         cum = 0
+        values = attr.values + ["Missing values"]
+        colors = np.vstack((attr.colors, [128, 128, 128]))
         for i, v in enumerate(dist):
             if v < 1e-6:
                 continue
-            if self.stretched:
+            if self.show_stretched:
                 v /= ss
             v *= self.scale_x
             cond = [FilterDiscrete(attr, [i])]
             if group_val_index is not None:
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
             rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12)
-            rect.setBrush(QBrush(QColor(*attr.colors[i])))
+            rect.setBrush(QBrush(QColor(*colors[i])))
             rect.setPen(QPen(Qt.NoPen))
-            if self.stretched:
-                tooltip = "{}: {:.2f}%".format(attr.values[i],
-                                               100 * dist[i] / sum(dist))
+            if self.show_stretched:
+                tooltip = "{}: {:.2f}%".format(
+                    values[i],
+                    100 * dist[i] / sum(dist))
             else:
-                tooltip = "{}: {}".format(attr.values[i], int(dist[i]))
+                tooltip = "{}: {}".format(values[i], int(dist[i]))
             rect.setToolTip(tooltip)
-            text = QGraphicsTextItem(attr.values[i])
+            text = QGraphicsTextItem(values[i])
             box.append(rect)
             box.append(text)
             cum += v
@@ -1024,7 +1110,7 @@ class OWBoxPlot(widget.OWWidget):
         self.Outputs.annotated_data.send(
             create_annotated_table(self.dataset, selection))
 
-    def show_posthoc(self):
+    def _show_posthoc(self):
         def line(y0, y1):
             it = self.box_scene.addLine(x, y0, x, y1, self._post_line_pen)
             it.setZValue(-100)

@@ -149,7 +149,7 @@ class TestTree:
                          ContinuousVariable("r3")],
                         self.class_var)
 
-        data = Table(domain)
+        data = Table.from_domain(domain)
         tree = clf(data)
         self.assertIsInstance(tree.root, Node)
         np.testing.assert_almost_equal(tree.predict(np.array([[0., 0., 0.]])),
@@ -231,7 +231,7 @@ class TestRegressor(TestTree, unittest.TestCase):
         new_domain = Domain([attr for attr in imports.domain.attributes
                              if attr.is_continuous or len(attr.values) <= 16],
                             imports.domain.class_var)
-        cls.data_mixed = Table(new_domain, imports)
+        cls.data_mixed = imports.transform(new_domain)
 
         cls.class_var = ContinuousVariable("y")
         cls.blind_prediction = 0
@@ -368,7 +368,7 @@ class TestTreeModel(unittest.TestCase):
         a = DiscreteVariable("d4", "ab")
         y = ContinuousVariable("ey")
         domain = Domain([a], y)
-        data = Table(domain)
+        data = Table.from_domain(domain)
         values = np.array([[42., 43], [44, 45]])
         root = DiscreteNode(a, 0, values[1])
         root.children = [Node(None, -1, values[0]), None]

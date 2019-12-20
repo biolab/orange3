@@ -234,22 +234,11 @@ def remove_constant(var, data):
 
 
 def remove_unused_values(var, data):
-    column_data = Table.from_table(
-        Domain([var]),
-        data
-    )
-    unique = nanunique(column_data.X).astype(int)
+    unique = nanunique(data.get_column_view(var)[0].astype(float)).astype(int)
     if len(unique) == len(var.values):
         return var
-
     used_values = [var.values[i] for i in unique]
-    translation_table = np.array([np.NaN] * len(var.values))
-    translation_table[unique] = range(len(used_values))
-
-    return DiscreteVariable("{}".format(var.name),
-                            values=used_values,
-                            compute_value=Lookup(var, translation_table),
-                            sparse=var.sparse)
+    return DiscreteVariable(var.name, values=used_values, sparse=var.sparse)
 
 
 def sort_var_values(var):

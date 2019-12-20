@@ -2,7 +2,7 @@ import operator
 import os
 import warnings
 import zlib
-from collections import MutableSequence, Iterable, Sequence, Sized
+from collections import Iterable, Sequence, Sized
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
@@ -10,22 +10,23 @@ from threading import Lock, RLock
 
 import bottleneck as bn
 import numpy as np
-from scipy import sparse as sp
-
+from Orange.misc.collections import frozendict
 from Orange.util import OrangeDeprecationWarning
+from scipy import sparse as sp
+from scipy.sparse import issparse
+
 import Orange.data  # import for io.py
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
-from Orange.data.util import SharedComputeValue, vstack, hstack, \
+from Orange.data.util import SharedComputeValue, \
     assure_array_dense, assure_array_sparse, \
     assure_column_dense, assure_column_sparse, get_unique_names_duplicates
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
     sparse_implicit_zero_weights
-from Orange.util import flatten
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
 
@@ -44,11 +45,6 @@ chaining of domain conversions also works with caching even with descendants
 of Table."""
 _conversion_cache = None
 _conversion_cache_lock = RLock()
-
-
-def pending_deprecation_resize(name):
-    warnings.warn(f"Method Table.{name} will be removed in Orange 3.24",
-                  OrangeDeprecationWarning)
 
 
 class DomainTransformationError(Exception):
@@ -176,9 +172,16 @@ class Columns:
 
 
 # noinspection PyPep8Naming
-class Table(MutableSequence, Storage):
+class Table(Sequence, Storage):
     __file__ = None
     name = "untitled"
+
+    domain = Domain([])
+    X = _Y = metas = W = np.zeros((0, 0))
+    X.setflags(write=False)
+    ids = np.zeros(0)
+    ids.setflags(write=False)
+    attributes = frozendict()
 
     @property
     def columns(self):
@@ -210,32 +213,46 @@ class Table(MutableSequence, Storage):
         self._Y = value
 
     def __new__(cls, *args, **kwargs):
-        if not args and not kwargs:
-            return super().__new__(cls)
-
-        if 'filename' in kwargs:
-            args = [kwargs.pop('filename')]
+        def warn_deprecated(method):
+            warnings.warn("Direct calls to Table's constructor are deprecated "
+                          "and will be removed. Replace this call with "
+                          f"Table.{method}", OrangeDeprecationWarning,
+                          stacklevel=3)
 
         if not args:
-            raise TypeError(
-                "Table takes at least 1 positional argument (0 given))")
+            if not kwargs:
+                return super().__new__(cls)
+            else:
+                raise TypeError("Table() must not be called directly")
 
         if isinstance(args[0], str):
+            if len(args) > 1:
+                raise TypeError("Table(name: str) expects just one argument")
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
             else:
-                return cls.from_file(args[0])
+                return cls.from_file(args[0], **kwargs)
+
         elif isinstance(args[0], Table):
-            return cls.from_table(args[0].domain, args[0])
+            if len(args) > 1:
+                raise TypeError("Table(table: Table) expects just one argument")
+            return cls.from_table(args[0].domain, args[0], **kwargs)
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
+                warn_deprecated("from_domain")
                 return cls.from_domain(domain, **kwargs)
             if isinstance(args[0], Table):
-                return cls.from_table(domain, *args)
+                warn_deprecated("from_table")
+                return cls.from_table(domain, *args, **kwargs)
             elif isinstance(args[0], list):
-                return cls.from_list(domain, *args)
+                warn_deprecated("from_list")
+                return cls.from_list(domain, *args, **kwargs)
         else:
+            warnings.warn("Omitting domain in a call to Table(X, Y, metas), is "
+                          "deprecated and will be removed. "
+                          "Call Table.from_numpy(None, X, Y, metas) instead.",
+                          OrangeDeprecationWarning, stacklevel=2)
             domain = None
 
         return cls.from_numpy(domain, *args, **kwargs)
@@ -372,7 +389,7 @@ class Table(MutableSequence, Storage):
                     cached = _conversion_cache.get((id(domain), id(source)))
                     if cached:
                         return cached
-                if domain == source.domain:
+                if domain is source.domain:
                     table = cls.from_table_rows(source, row_indices)
                     # assure resulting domain is the instance passed on input
                     table.domain = domain
@@ -482,7 +499,8 @@ class Table(MutableSequence, Storage):
         return self
 
     @classmethod
-    def from_numpy(cls, domain, X, Y=None, metas=None, W=None):
+    def from_numpy(cls, domain, X, Y=None, metas=None, W=None,
+                   attributes=None, ids=None):
         """
         Construct a table from numpy arrays with the given domain. The number
         of variables in the domain must match the number of columns in the
@@ -502,7 +520,8 @@ class Table(MutableSequence, Storage):
         :return:
         """
         X, Y, W = _check_arrays(X, Y, W, dtype='float64')
-        metas, = _check_arrays(metas, dtype=object)
+        metas, = _check_arrays(metas, dtype=object, shape_1=X.shape[0])
+        ids, = _check_arrays(ids, dtype=int, shape_1=X.shape[0])
 
         if Y is not None and Y.ndim == 1:
             Y = Y.reshape(Y.shape[0], 1)
@@ -548,8 +567,11 @@ class Table(MutableSequence, Storage):
         self.metas = metas
         self.W = W
         self.n_rows = self.X.shape[0]
-        cls._init_ids(self)
-        self.attributes = {}
+        if ids is None:
+            cls._init_ids(self)
+        else:
+            self.ids = ids
+        self.attributes = {} if attributes is None else attributes
         return self
 
     @classmethod
@@ -645,7 +667,7 @@ class Table(MutableSequence, Storage):
             data = cls(data)
         return data
 
-    # Helper function for __setitem__ and insert:
+    # Helper function for __setitem__:
     # Set the row of table data matrices
     # noinspection PyProtectedMember
     def _set_row(self, example, row):
@@ -685,39 +707,6 @@ class Table(MutableSequence, Storage):
                    for x in (self.X_density(), self.Y_density(),
                              self.metas_density()))
 
-    # A helper function for extend and insert
-    # Resize X, Y, metas and W.
-    def _resize_all(self, new_length):
-        old_length = self.X.shape[0]
-        if old_length == new_length:
-            return
-        if not self._check_all_dense():
-            raise ValueError("Tables with sparse data cannot be resized")
-        try:
-            self.X.resize(new_length, self.X.shape[1])
-            self._Y.resize(new_length, self._Y.shape[1])
-            self.metas.resize(new_length, self.metas.shape[1])
-            if self.W.ndim == 2:
-                self.W.resize((new_length, 0))
-            else:
-                self.W.resize(new_length)
-            self.ids.resize(new_length)
-        except Exception:
-            if self.X.shape[0] == new_length:
-                self.X.resize(old_length, self.X.shape[1])
-            if self._Y.shape[0] == new_length:
-                self._Y.resize(old_length, self._Y.shape[1])
-            if self.metas.shape[0] == new_length:
-                self.metas.resize(old_length, self.metas.shape[1])
-            if self.W.shape[0] == new_length:
-                if self.W.ndim == 2:
-                    self.W.resize((old_length, 0))
-                else:
-                    self.W.resize(old_length)
-            if self.ids.shape[0] == new_length:
-                self.ids.resize(old_length)
-            raise
-
     def __getitem__(self, key):
         if isinstance(key, Integral):
             return RowInstance(self, key)
@@ -733,14 +722,15 @@ class Table(MutableSequence, Storage):
                 col_idx = self.domain.index(col_idx)
                 var = self.domain[col_idx]
                 if 0 <= col_idx < len(self.domain.attributes):
-                    return Value(var, self.X[row_idx, col_idx])
+                    val = self.X[row_idx, col_idx]
                 elif col_idx >= len(self.domain.attributes):
-                    return Value(
-                        var,
-                        self._Y[row_idx,
-                                col_idx - len(self.domain.attributes)])
-                elif col_idx < 0:
-                    return Value(var, self.metas[row_idx, -1 - col_idx])
+                    val = self._Y[row_idx,
+                                  col_idx - len(self.domain.attributes)]
+                else:
+                    val = self.metas[row_idx, -1 - col_idx]
+                if isinstance(col_idx, DiscreteVariable) and var is not col_idx:
+                    val = col_idx.get_mapper_from(var)(val)
+                return Value(var, val)
             else:
                 row_idx = [row_idx]
 
@@ -792,6 +782,9 @@ class Table(MutableSequence, Storage):
                     raise ValueError("Invalid number of values")
             else:
                 col_idx, values = [col_idx], [value]
+            if isinstance(col_idx, DiscreteVariable) \
+                    and self.domain[col_idx] != col_idx:
+                values = self.domain[col_idx].get_mapper_from(col_idx)(values)
             for val, col_idx in zip(values, col_idx):
                 if not isinstance(val, Integral):
                     val = self.domain[col_idx].to_val(val)
@@ -841,18 +834,6 @@ class Table(MutableSequence, Storage):
             if len(meta_cols):
                 self.metas[row_idx, meta_cols] = value
 
-    def __delitem__(self, key):
-        pending_deprecation_resize("__delitem__(key)")
-        if not self._check_all_dense():
-            raise ValueError("Rows of sparse data cannot be deleted")
-        if key is ...:
-            key = range(len(self))
-        self.X = np.delete(self.X, key, axis=0)
-        self.Y = np.delete(self._Y, key, axis=0)
-        self.metas = np.delete(self.metas, key, axis=0)
-        self.W = np.delete(self.W, key, axis=0)
-        self.ids = np.delete(self.ids, key, axis=0)
-
     def __len__(self):
         return self.X.shape[0]
 
@@ -869,103 +850,9 @@ class Table(MutableSequence, Storage):
         s += "\n]"
         return s
 
-    def clear(self):
-        """
-        Remove all rows from the table.
-
-        This method is deprecated and will be removed in Orange 3.24.
-        """
-        pending_deprecation_resize("clear()")
-        if not self._check_all_dense():
-            raise ValueError("Tables with sparse data cannot be cleared")
-        del self[...]
-
-    def append(self, instance):
-        """
-        Append a data instance to the table.
-
-        This method is deprecated and will be removed in Orange 3.24.
-
-        :param instance: a data instance
-        :type instance: Orange.data.Instance or a sequence of values
-        """
-        pending_deprecation_resize("append(inst)")
-        self.insert(len(self), instance)
-
-    def insert(self, row, instance):
-        """
-        Insert a data instance into the table.
-
-        This method is deprecated and will be removed in Orange 3.24.
-
-        :param row: row index
-        :type row: int
-        :param instance: a data instance
-        :type instance: Orange.data.Instance or a sequence of values
-        """
-        pending_deprecation_resize("insert(i, inst)")
-        if row < 0:
-            row += len(self)
-        if row < 0 or row > len(self):
-            raise IndexError("Index out of range")
-        self.ensure_copy()  # ensure that numpy arrays are single-segment for resize
-        self._resize_all(len(self) + 1)
-        if row < len(self):
-            self.X[row + 1:] = self.X[row:-1]
-            self._Y[row + 1:] = self._Y[row:-1]
-            self.metas[row + 1:] = self.metas[row:-1]
-            self.W[row + 1:] = self.W[row:-1]
-            self.ids[row + 1:] = self.ids[row:-1]
-        try:
-            self._set_row(instance, row)
-            if self.W.shape[-1]:
-                self.W[row] = 1
-        except Exception:
-            self.X[row:-1] = self.X[row + 1:]
-            self._Y[row:-1] = self._Y[row + 1:]
-            self.metas[row:-1] = self.metas[row + 1:]
-            self.W[row:-1] = self.W[row + 1:]
-            self.ids[row:-1] = self.ids[row + 1:]
-            self._resize_all(len(self) - 1)
-            raise
-
-    def extend(self, instances):
-        """
-        Extend the table with the given instances. The instances can be given
-        as a table of the same or a different domain, or a sequence. In the
-        latter case, each instances can be given as
-        :obj:`~Orange.data.Instance` or a sequence of values (e.g. list,
-        tuple, numpy.array).
-
-        This method is deprecated and will be removed in Orange 3.24.
-
-        :param instances: additional instances
-        :type instances: Orange.data.Table or a sequence of instances
-        """
-        pending_deprecation_resize("extend(insts)")
-        if isinstance(instances, Table) and instances.domain == self.domain:
-            self.X = vstack((self.X, instances.X))
-            self._Y = vstack((self._Y, instances._Y))
-            self.metas = vstack((self.metas, instances.metas))
-            self.W = vstack((self.W, instances.W))
-            self.ids = hstack((self.ids, instances.ids))
-        else:
-            try:
-                old_length = len(self)
-                self._resize_all(old_length + len(instances))
-                for i, example in enumerate(instances):
-                    self[old_length + i] = example
-                    try:
-                        self.ids[old_length + i] = example.id
-                    except AttributeError:
-                        self.ids[old_length + i] = self.new_id()
-            except Exception:
-                self._resize_all(old_length)
-                raise
-
     @classmethod
-    def concatenate(cls, tables, axis=1):
-        """Return concatenation of `tables` by `axis`."""
+    def concatenate(cls, tables, axis=0):
+        """Concatenate tables into a new table"""
         def vstack(arrs):
             return [np, sp][any(sp.issparse(arr) for arr in arrs)].vstack(arrs)
 
@@ -983,54 +870,32 @@ class Table(MutableSequence, Storage):
         def collect(attr):
             return [getattr(arr, attr) for arr in tables]
 
+        if axis == 1:
+            raise ValueError("concatenate no longer supports axis 1")
         if not tables:
             raise ValueError('need at least one table to concatenate')
         if len(tables) == 1:
             return tables[0].copy()
-        CONCAT_ROWS, CONCAT_COLS = 0, 1
-        if axis == CONCAT_ROWS:
-            domain = tables[0].domain
-            if any(table.domain != domain for table in tables):
-                raise ValueError('concatenated tables must have the same domain')
+        domain = tables[0].domain
+        if any(table.domain != domain for table in tables):
+            raise ValueError('concatenated tables must have the same domain')
 
-            conc = cls.from_numpy(
-                domain,
-                vstack(collect("X")),
-                merge1d(collect("Y")),
-                vstack(collect("metas")),
-                merge1d(collect("W"))
-            )
-            conc.ids = np.hstack([table.ids for table in tables])
-            names = [table.name for table in tables if table.name != "untitled"]
-            if names:
-                conc.name = names[0]
-            # TODO: Add attributes = {} to __init__
-            conc.attributes = getattr(conc, "attributes", {})
-            for table in reversed(tables):
-                conc.attributes.update(table.attributes)
-            return conc
-        elif axis == CONCAT_COLS:
-            pending_deprecation_resize("concatenate with axis=1")
-            if reduce(operator.iand,
-                      (set(map(operator.attrgetter('name'),
-                               chain(t.domain.variables, t.domain.metas)))
-                       for t in tables)):
-                raise ValueError('Concatenating two domains with variables '
-                                 'with same name is undefined')
-            domain = Domain(flatten(t.domain.attributes for t in tables),
-                            flatten(t.domain.class_vars for t in tables),
-                            flatten(t.domain.metas for t in tables))
-
-            def ndmin(A):
-                return A if A.ndim > 1 else A.reshape(A.shape[0], 1)
-
-            table = Table.from_numpy(domain,
-                                     np.hstack(tuple(ndmin(t.X) for t in tables)),
-                                     np.hstack(tuple(ndmin(t.Y) for t in tables)),
-                                     np.hstack(tuple(ndmin(t.metas) for t in tables)),
-                                     np.hstack(tuple(ndmin(t.W) for t in tables)))
-            return table
-        raise ValueError('axis {} out of bounds [0, 2)'.format(axis))
+        conc = cls.from_numpy(
+            domain,
+            vstack(collect("X")),
+            merge1d(collect("Y")),
+            vstack(collect("metas")),
+            merge1d(collect("W"))
+        )
+        conc.ids = np.hstack([t.ids for t in tables])
+        names = [table.name for table in tables if table.name != "untitled"]
+        if names:
+            conc.name = names[0]
+        # TODO: Add attributes = {} to __init__
+        conc.attributes = getattr(conc, "attributes", {})
+        for table in reversed(tables):
+            conc.attributes.update(table.attributes)
+        return conc
 
     def is_view(self):
         """
@@ -1190,15 +1055,23 @@ class Table(MutableSequence, Storage):
             else:
                 return M, False
 
-        if not isinstance(index, Integral):
-            index = self.domain.index(index)
-        if index >= 0:
-            if index < self.X.shape[1]:
-                return rx(self.X[:, index])
-            else:
-                return rx(self._Y[:, index - self.X.shape[1]])
+        if isinstance(index, Integral):
+            col_index = index
         else:
-            return rx(self.metas[:, -1 - index])
+            col_index = self.domain.index(index)
+        if col_index >= 0:
+            if col_index < self.X.shape[1]:
+                col = rx(self.X[:, col_index])
+            else:
+                col = rx(self._Y[:, col_index - self.X.shape[1]])
+        else:
+            col = rx(self.metas[:, -1 - col_index])
+
+        if isinstance(index, DiscreteVariable) \
+                and index.values != self.domain[col_index].values:
+            col = index.get_mapper_from(self.domain[col_index])(col[0]), col[1]
+            col[0].flags.writeable = False
+        return col
 
     def _filter_is_defined(self, columns=None, negate=False):
         # structure of function is obvious; pylint: disable=too-many-branches
@@ -1584,7 +1457,6 @@ class Table(MutableSequence, Storage):
             row_data = self._Y[:, row_indi - n_atts]
 
         W = self.W if self.has_weights() else None
-        nan_inds = None
 
         col_desc = [self.domain[var] for var in col_vars]
         col_indi = [self.domain.index(var) for var in col_vars]
@@ -1594,25 +1466,19 @@ class Table(MutableSequence, Storage):
             raise ValueError("contingency can be computed only for discrete "
                              "and continuous values")
 
+        # when we select a column in sparse matrix it is still two dimensional
+        # and sparse - since it is just a column we can afford to transform
+        # it to dense and make it 1D
+        if issparse(row_data):
+            row_data = row_data.toarray().ravel()
         if row_data.dtype.kind != "f": #meta attributes can be stored as type object
             row_data = row_data.astype(float)
-
-        unknown_rows = countnans(row_data)
-        if unknown_rows:
-            nan_inds = np.isnan(row_data)
-            row_data = row_data[~nan_inds]
-            if W:
-                W = W[~nan_inds]
-                unknown_rows = np.sum(W[nan_inds])
 
         contingencies = [None] * len(col_desc)
         for arr, f_cond, f_ind in (
                 (self.X, lambda i: 0 <= i < n_atts, lambda i: i),
                 (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
                 (self.metas, lambda i: i < 0, lambda i: -1 - i)):
-
-            if nan_inds is not None:
-                arr = arr[~nan_inds]
 
             arr_indi = [e for e, ind in enumerate(col_indi) if f_cond(ind)]
 
@@ -1623,12 +1489,13 @@ class Table(MutableSequence, Storage):
                     max_vals = max(len(v[2].values) for v in disc_vars)
                     disc_indi = {i for _, i, _ in disc_vars}
                     mask = [i in disc_indi for i in range(arr.shape[1])]
-                    conts, nans = contingency(arr, row_data, max_vals - 1,
-                                              n_rows - 1, W, mask)
+                    conts, nans_cols, nans_rows, nans = contingency(
+                        arr, row_data, max_vals - 1, n_rows - 1, W, mask)
                     for col_i, arr_i, var in disc_vars:
                         n_vals = len(var.values)
-                        contingencies[col_i] = (conts[arr_i][:, :n_vals],
-                                                nans[arr_i])
+                        contingencies[col_i] = (
+                            conts[arr_i][:, :n_vals], nans_cols[arr_i],
+                            nans_rows[arr_i], nans[arr_i])
                 else:
                     for col_i, arr_i, var in disc_vars:
                         contingencies[col_i] = contingency(
@@ -1637,10 +1504,9 @@ class Table(MutableSequence, Storage):
 
             cont_vars = [v for v in vars if v[2].is_continuous]
             if cont_vars:
-
-                classes = row_data.astype(dtype=np.intp)
+                W_ = None
                 if W is not None:
-                    W = W.astype(dtype=np.float64)
+                    W_ = W.astype(dtype=np.float64)
                 if sp.issparse(arr):
                     arr = sp.csc_matrix(arr)
 
@@ -1648,17 +1514,16 @@ class Table(MutableSequence, Storage):
                     if sp.issparse(arr):
                         col_data = arr.data[arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
                         rows = arr.indices[arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
-                        W_ = None if W is None else W[rows]
-                        classes_ = classes[rows]
+                        W_ = None if W_ is None else W_[rows]
+                        classes_ = row_data[rows]
                     else:
-                        col_data, W_, classes_ = arr[:, arr_i], W, classes
+                        col_data, W_, classes_ = arr[:, arr_i], W_, row_data
 
                     col_data = col_data.astype(dtype=np.float64)
-                    U, C, unknown = _contingency.contingency_floatarray(
+                    contingencies[col_i] = _contingency.contingency_floatarray(
                         col_data, classes_, n_rows, W_)
-                    contingencies[col_i] = ([U, C], unknown)
 
-        return contingencies, unknown_rows
+        return contingencies
 
     @classmethod
     def transpose(cls, table, feature_names_column="",
@@ -1808,7 +1673,7 @@ class Table(MutableSequence, Storage):
         return t
 
 
-def _check_arrays(*arrays, dtype=None):
+def _check_arrays(*arrays, dtype=None, shape_1=None):
     checked = []
     if not len(arrays):
         return checked
@@ -1819,7 +1684,8 @@ def _check_arrays(*arrays, dtype=None):
         else:
             return len(array) if array is not None else 0
 
-    shape_1 = ninstances(arrays[0])
+    if shape_1 is None:
+        shape_1 = ninstances(arrays[0])
 
     for array in arrays:
         if array is None:

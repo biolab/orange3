@@ -28,7 +28,7 @@ class ClusteringModel:
             prediction = self.predict(data)
         elif isinstance(data, (Table, Instance)):
             if isinstance(data, Instance):
-                data = Table(data.domain, [data])
+                data = Table.from_list(data.domain, [data])
                 one_d = True
             if data.domain != self.domain:
                 if self.original_domain.attributes != data.domain.attributes \

@@ -198,7 +198,7 @@ class TestPCA(unittest.TestCase):
         iris = self.iris
         pca = PCA(n_components=2)(iris)
         pca_iris = pca(iris)
-        pca_iris2 = Table(pca_iris.domain, iris)
+        pca_iris2 = iris.transform(pca_iris.domain)
         np.testing.assert_almost_equal(pca_iris.X, pca_iris2.X)
         np.testing.assert_equal(pca_iris.Y, pca_iris2.Y)
 
@@ -210,7 +210,7 @@ class TestPCA(unittest.TestCase):
         iris = self.iris
         pca = PCA(n_components=2)(iris)
         pca_iris = pca(iris)
-        pca_iris2 = Table(pca_iris.domain, iris)
+        pca_iris2 = iris.transform(pca_iris.domain)
 
         pca_iris2 = pickle.loads(pickle.dumps(pca_iris))
         self.assertIsNone(pca_iris2.domain[0].compute_value.transformed)
@@ -252,7 +252,7 @@ class TestPCA(unittest.TestCase):
 
     def test_max_components(self):
         d = np.random.RandomState(0).rand(20, 20)
-        data = Table(d)
+        data = Table.from_numpy(None, d)
         pca = PCA()(data)
         self.assertEqual(len(pca.explained_variance_ratio_), 20)
         pca = PCA(n_components=10)(data)

@@ -31,27 +31,28 @@ from distutils.command import install_data, sdist, config, build
 
 NAME = 'Orange3'
 
-VERSION = '3.23.1'
+VERSION = '3.24.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
 FULLVERSION = VERSION
 
 DESCRIPTION = 'Orange, a component-based data mining framework.'
-README_FILE = os.path.join(os.path.dirname(__file__), 'README.md')
+README_FILE = os.path.join(os.path.dirname(__file__), 'README.pypi')
 LONG_DESCRIPTION = open(README_FILE).read()
+LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown'
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'http://orange.biolab.si/'
 LICENSE = 'GPLv3+'
 
-KEYWORDS = (
+KEYWORDS = [
     'data mining',
     'machine learning',
     'artificial intelligence',
-)
+]
 
-CLASSIFIERS = (
+CLASSIFIERS = [
     'Development Status :: 4 - Beta',
     'Environment :: X11 Applications :: Qt',
     'Environment :: Console',
@@ -67,7 +68,7 @@ CLASSIFIERS = (
     'Intended Audience :: Education',
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
-)
+]
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
 
@@ -202,13 +203,14 @@ PACKAGE_DATA = {
                             "icons/paintdata/*.svg"],
     "Orange.widgets.data.tests": ["origin1/*.tab",
                                   "origin2/*.tab",
-                                  "*.txt"],
+                                  "*.txt", "*.tab"],
     "Orange.widgets.evaluate": ["icons/*.svg"],
     "Orange.widgets.model": ["icons/*.svg"],
     "Orange.widgets.visualize": ["icons/*.svg"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
     "Orange.widgets.utils": ["_webview/*.js"],
     "Orange.tests": ["xlsx_files/*.xlsx", "datasets/*.tab",
+                     "xlsx_files/*.xls",
                      "datasets/*.basket", "datasets/*.csv",
                      "datasets/*.pkl", "datasets/*.pkl.gz"]
 }
@@ -454,6 +456,7 @@ def setup_package():
         version=FULLVERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
+        long_description_content_type=LONG_DESCRIPTION_CONTENT_TYPE,
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
         url=URL,

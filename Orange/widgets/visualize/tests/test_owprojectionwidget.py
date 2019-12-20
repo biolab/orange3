@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -213,6 +213,13 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, table)
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.setup_plot.assert_called_once()
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_commit') as commit:
+            self.widget.auto_commit = False
+            commit.reset_mock()
+            self.send_signal(self.widget.Inputs.data, self.data)
+            commit.assert_called()
 
 
 if __name__ == "__main__":

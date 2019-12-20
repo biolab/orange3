@@ -14,7 +14,8 @@ from Orange.clustering.kmeans import KMeans, KMeansModel
 class TestClusteringResults(unittest.TestCase):
     @staticmethod
     def test_init():
-        data = Orange.data.Table(np.arange(100).reshape((100, 1)))
+        data = Orange.data.Table.from_numpy(
+            None, np.arange(100).reshape((100, 1)))
         res = ClusteringResults(data=data, nmethods=2, nrows=100)
         res.actual[:50] = 0
         res.actual[50:] = 1
@@ -35,7 +36,7 @@ class TestClusteringEvaluation(unittest.TestCase):
                                                         KMeans(n_clusters=5)])
         expected = [0.68081362, 0.55259194, 0.48851755]
         np.testing.assert_almost_equal(Silhouette(cr), expected, decimal=2)
-        expected = [0.51936073, 0.74837231, 0.59178896]
+        expected = [0.65383807, 0.75511917, 0.68721092]
         np.testing.assert_almost_equal(AdjustedMutualInfoScore(cr),
                                        expected, decimal=2)
         self.assertIsNone(cr.models)

@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
-from unittest.mock import patch
+# pylint: disable=missing-docstring, protected-access
+import unittest
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -52,7 +53,7 @@ class TestOWPCA(WidgetTest):
 
     def test_limit_components(self):
         X = np.random.RandomState(0).rand(101, 101)
-        data = Table(X)
+        data = Table.from_numpy(None, X)
         self.widget.ncomponents = 100
         self.send_signal(self.widget.Inputs.data, data)
         tran = self.get_output(self.widget.Outputs.transformed_data)
@@ -203,3 +204,44 @@ class TestOWPCA(WidgetTest):
         self.widget.set_data(data)
         ndata = Table("iris.tab")
         self.assertEqual(data.domain[0], ndata.domain[0])
+
+    def test_on_cut_changed(self):
+        widget = self.widget
+        widget.ncomponents = 2
+        invalidate = widget._invalidate_selection = Mock()
+        widget._on_cut_changed(2)
+        invalidate.assert_not_called()
+        widget._on_cut_changed(3)
+        invalidate.assert_called()
+
+        widget.ncomponents = 0  # Take all components
+        invalidate.reset_mock()
+        widget._on_cut_changed(1)
+        invalidate.assert_not_called()
+        self.assertEqual(widget.ncomponents, 0)
+
+    def test_output_data(self):
+        widget = self.widget
+        widget.ncomponents = 2
+        domain = Domain(self.iris.domain.attributes[:3],
+                        self.iris.domain.class_var,
+                        self.iris.domain.attributes[3:])
+        iris = self.iris.transform(domain)
+        self.send_signal(widget.Inputs.data, iris)
+        output = self.get_output(widget.Outputs.data)
+        outdom = output.domain
+        self.assertEqual(domain.attributes, outdom.attributes)
+        self.assertEqual(domain.class_var, outdom.class_var)
+        self.assertEqual(domain.metas, outdom.metas[:1])
+        self.assertEqual(len(outdom.metas), 3)
+        np.testing.assert_equal(iris.X, output.X)
+        np.testing.assert_equal(iris.Y, output.Y)
+        np.testing.assert_equal(iris.metas[:, 0], output.metas[:, 0])
+
+        trans = self.get_output(widget.Outputs.transformed_data)
+        self.assertEqual(trans.domain.attributes, outdom.metas[1:])
+        np.testing.assert_equal(trans.X, output.metas[:, 1:])
+
+
+if __name__ == "__main__":
+    unittest.main()

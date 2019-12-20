@@ -51,7 +51,8 @@ class TestOWImpute(WidgetTest):
         np.testing.assert_equal(imp_data.X, data.X)
         np.testing.assert_equal(imp_data.Y, data.Y)
 
-        self.send_signal(self.widget.Inputs.data, Table(data.domain), wait=1000)
+        self.send_signal(self.widget.Inputs.data,
+                         Table.from_domain(data.domain), wait=1000)
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(imp_data), 0)
 

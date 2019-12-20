@@ -1100,7 +1100,7 @@ class OWNomogram(OWWidget):
     def _init_feature_marker_values(self):
         self.feature_marker_values = []
         cls_index = self.target_class_index
-        instances = Table(self.domain, self.instances) \
+        instances = self.instances.transform(self.domain) \
             if self.instances else None
         values = []
         for i, attr in enumerate(self.domain.attributes):

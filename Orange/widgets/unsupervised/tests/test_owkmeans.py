@@ -44,7 +44,7 @@ class TestOWKMeans(WidgetTest):
         self.widget = self.create_widget(
             OWKMeans, stored_settings={"auto_commit": False, "version": 2}
         )  # type: OWKMeans
-        self.iris = Table("iris")
+        self.data = Table("heart_disease")
 
     def tearDown(self):
         self.widget.onDeleteWidget()
@@ -60,7 +60,7 @@ class TestOWKMeans(WidgetTest):
     def test_optimization_report_display(self):
         """Check visibility of the table after selecting number of clusters"""
         self.widget.auto_commit = True
-        self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data, wait=5000)
         self.widget.optimize_k = True
         radio_buttons = self.widget.controls.optimize_k.findChildren(QRadioButton)
 
@@ -73,13 +73,13 @@ class TestOWKMeans(WidgetTest):
         self.assertFalse(self.widget.mainArea.isHidden())
         self.widget.apply_button.button.click()
 
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertEqual(self.widget.table_view.model().rowCount() > 0, True)
 
     def test_changing_k_changes_radio(self):
         widget = self.widget
         widget.auto_commit = True
-        self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data, wait=5000)
 
         widget.optimize_k = True
 
@@ -117,7 +117,7 @@ class TestOWKMeans(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, None, wait=5000)
         self.assertTrue(self.widget.mainArea.isHidden())
-        self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data, wait=5000)
         self.assertFalse(self.widget.mainArea.isHidden())
         self.send_signal(self.widget.Inputs.data, None, wait=5000)
         self.assertTrue(self.widget.mainArea.isHidden())
@@ -128,7 +128,7 @@ class TestOWKMeans(WidgetTest):
         widget = self.widget
         widget.auto_commit = False
 
-        self.send_signal(self.widget.Inputs.data, self.iris[:5])
+        self.send_signal(self.widget.Inputs.data, self.data[:5])
 
         widget.k = 10
         self.commit_and_wait()
@@ -158,7 +158,7 @@ class TestOWKMeans(WidgetTest):
         """Cache various clusterings for the dataset until data changes."""
         widget = self.widget
         widget.auto_commit = False
-        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.data, self.data)
 
         with patch.object(widget, "_compute_clustering",
                           wraps=widget._compute_clustering) as compute:
@@ -190,7 +190,7 @@ class TestOWKMeans(WidgetTest):
     def test_data_on_output(self):
         """Check if data is on output after create widget and run"""
         self.widget.auto_commit = True
-        self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data, wait=5000)
         self.widget.apply_button.button.click()
         self.assertNotEqual(self.widget.data, None)
         # Disconnect the data
@@ -202,19 +202,19 @@ class TestOWKMeans(WidgetTest):
         widget = self.widget
         widget.optimize_k = False
         widget.k = 4
-        self.send_signal(widget.Inputs.data, self.iris)
+        self.send_signal(widget.Inputs.data, self.data)
         self.commit_and_wait()
-        widget.clusterings[widget.k].labels = np.array([0] * 50 + [1] * 100).flatten()
+        widget.clusterings[widget.k].labels = np.array([0] * 100 + [1] * 203).flatten()
 
         widget.samples_scores = lambda x: np.arctan(
-            np.arange(150) / 150) / np.pi + 0.5
+            np.arange(303) / 303) / np.pi + 0.5
         widget.send_data()
         out = self.get_output(widget.Outputs.centroids)
         np.testing.assert_array_almost_equal(
-            np.array([[0, np.mean(np.arctan(np.arange(50) / 150)) / np.pi + 0.5],
-                      [1, np.mean(np.arctan(np.arange(50, 150) / 150)) / np.pi + 0.5],
+            np.array([[0, np.mean(np.arctan(np.arange(100) / 303)) / np.pi + 0.5],
+                      [1, np.mean(np.arctan(np.arange(100, 303) / 303)) / np.pi + 0.5],
                       [2, 0], [3, 0]]), out.metas.astype(float))
-        self.assertEqual(out.name, "iris centroids")
+        self.assertEqual(out.name, "heart_disease centroids")
 
     def test_centroids_domain_on_output(self):
         widget = self.widget
@@ -228,10 +228,10 @@ class TestOWKMeans(WidgetTest):
         in_attrs = heart_disease.domain.attributes
         out = self.get_output(widget.Outputs.centroids)
         out_attrs = out.domain.attributes
-        out_ids = {id(attr) for attr in out_attrs}
+        out_names = {attr.name for attr in out_attrs}
         for attr in in_attrs:
             self.assertEqual(
-                id(attr) in out_ids, attr.is_continuous,
+                attr.name in out_names, attr.is_continuous,
                 f"at attribute '{attr.name}'"
             )
         self.assertEqual(
@@ -261,12 +261,13 @@ class TestOWKMeans(WidgetTest):
 
         with patch.object(
                 model, "set_scores", wraps=model.set_scores) as set_scores:
-            self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
+            self.send_signal(self.widget.Inputs.data, self.data, wait=5000)
             scores, start_k = set_scores.call_args[0]
+            X = self.widget.preproces(self.data).X
             self.assertEqual(
                 scores,
                 [km if isinstance(km, str) else silhouette_score(
-                    self.iris.X, km(self.iris))
+                    X, km(self.data))
                  for km in (widget.clusterings[k] for k in range(3, 9))]
             )
             self.assertEqual(start_k, 3)
@@ -283,13 +284,13 @@ class TestOWKMeans(WidgetTest):
 
         self.KMeansFail.fail_on = set(range(3, 9))
         widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertTrue(widget.Error.failed.is_shown())
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
         self.KMeansFail.fail_on = set()
         widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertFalse(widget.Error.failed.is_shown())
         self.assertEqual(widget.selected_row(), 0)
         self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
@@ -300,13 +301,13 @@ class TestOWKMeans(WidgetTest):
         self.widget.auto_commit = True
         self.widget.optimize_k = False
         self.KMeansFail.fail_on = {3}
-        self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data, wait=5000)
         self.assertTrue(self.widget.Error.failed.is_shown())
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
         self.KMeansFail.fail_on = set()
         self.widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertFalse(self.widget.Error.failed.is_shown())
         self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
@@ -314,11 +315,21 @@ class TestOWKMeans(WidgetTest):
         widget = self.widget
         widget.k_from, widget.k_to = 2, 6
         widget.optimize_k = True
+        widget.normalize = False
         self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
         self.commit_and_wait()
         widget.update_results()
-        # for housing dataset best selection is 3 clusters, so row no. 1
+        # for housing dataset without normalization,
+        # the best selection is 3 clusters, so row no. 1
         self.assertEqual(widget.selected_row(), 1)
+
+        widget.normalize = True
+        self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
+        self.commit_and_wait()
+        widget.update_results()
+        # for housing dataset with normalization,
+        # the best selection is 2 clusters, so row no. 0
+        self.assertEqual(widget.selected_row(), 0)
 
         widget.clusterings = {k: "error" for k in range(2, 7)}
         widget.update_results()
@@ -360,7 +371,7 @@ class TestOWKMeans(WidgetTest):
         Widget should not crash when there is less rows than k_from.
         GH-2172
         """
-        table = self.iris[0:1, :]
+        table = self.data[0:1, :]
         self.widget.controls.k_from.setValue(2)
         self.widget.controls.k_to.setValue(9)
         self.send_signal(self.widget.Inputs.data, table)
@@ -372,7 +383,7 @@ class TestOWKMeans(WidgetTest):
         """
         k_from, k_to = 2, 9
         self.widget.controls.k_from.setValue(k_from)
-        self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data, wait=5000)
         check = lambda x: 2 if x - k_from + 1 < 2 else x - k_from + 1
         for i in range(k_from, k_to):
             self.widget.controls.k_to.setValue(i)
@@ -391,7 +402,7 @@ class TestOWKMeans(WidgetTest):
 
         # Avoid randomness in the test
         random = np.random.RandomState(0)  # pylint: disable=no-member
-        table = Table(random.rand(110, 2))
+        table = Table.from_numpy(None, random.rand(110, 2))
         with patch(
                 "Orange.widgets.unsupervised.owkmeans.SILHOUETTE_MAX_SAMPLES",
                 100):
@@ -413,12 +424,12 @@ class TestOWKMeans(WidgetTest):
         widget.auto_commit = False
 
         # Send the data without waiting
-        self.send_signal(widget.Inputs.data, self.iris)
+        self.send_signal(widget.Inputs.data, self.data)
         widget.unconditional_commit()
         # Now, invalidate by changing max_iter
         widget.max_iterations = widget.max_iterations + 1
         widget.invalidate()
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
 
         self.assertEqual(widget.clusterings, {})
 
@@ -458,7 +469,7 @@ class TestOWKMeans(WidgetTest):
 
     def test_correct_smart_init(self):
         # due to a bug where wrong init was passed to _compute_clustering
-        self.send_signal(self.widget.Inputs.data, self.iris[::10], wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data[::10], wait=5000)
         self.widget.smart_init = 0
         self.widget.clusterings = {}
         with patch.object(self.widget, "_compute_clustering",
@@ -474,7 +485,7 @@ class TestOWKMeans(WidgetTest):
 
     def test_always_same_cluster(self):
         """The same random state should always return the same clusters"""
-        self.send_signal(self.widget.Inputs.data, self.iris[::10], wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.data[::10], wait=5000)
 
         def cluster():
             self.widget.invalidate()  # reset caches
@@ -497,6 +508,23 @@ class TestOWKMeans(WidgetTest):
         self.widget.auto_commit = True
         self.send_signal(self.widget.Inputs.data, table)
         self.assertTrue(self.widget.Error.no_attributes.is_shown())
+
+    def test_saved_selection(self):
+        self.widget.send_data = Mock()
+        self.widget.optimize_k = True
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.wait_until_finished()
+        self.widget.table_view.selectRow(2)
+        self.assertEqual(self.widget.selected_row(), 2)
+        self.assertEqual(self.widget.send_data.call_count, 3)
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        w = self.create_widget(OWKMeans, stored_settings=settings)
+        w.send_data = Mock()
+        self.send_signal(w.Inputs.data, self.data, widget=w)
+        self.wait_until_finished(widget=w)
+        self.assertEqual(w.send_data.call_count, 2)
+        self.assertEqual(self.widget.selected_row(), w.selected_row())
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import numpy as np
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import table_dense_sparse
+from Orange.widgets.tests.utils import table_dense_sparse, simulate
 from Orange.widgets.unsupervised.owlouvainclustering import OWLouvainClustering
 from sklearn.utils import check_random_state
 
@@ -234,3 +234,49 @@ class TestOWLouvain(WidgetTest):
         dense_result = _compute_clustering(dense_data)
         sparse_result = _compute_clustering(sparse_data)
         np.testing.assert_equal(dense_result.metas, sparse_result.metas)
+
+    def test_settings_correctly_restored(self):
+        """
+        This test checks if contextsettings are correctly restored after
+        dataset changed.
+        """
+        w = self.widget
+
+        self.send_signal(w.Inputs.data, self.iris)
+        w.controls.apply_pca.setChecked(False)
+        w.controls.pca_components.setValue(2)
+        simulate.combobox_activate_item(w.controls.metric_idx, "Manhattan")
+        w.controls.normalize.setChecked(False)
+        w.controls.k_neighbors.setValue(4)
+        w.controls.resolution.setValue(0.5)
+
+        self.send_signal(w.Inputs.data, Table("zoo"))
+        w.controls.apply_pca.setChecked(True)
+        w.controls.pca_components.setValue(3)
+        simulate.combobox_activate_item(w.controls.metric_idx, "Euclidean")
+        w.controls.normalize.setChecked(True)
+        w.controls.k_neighbors.setValue(5)
+        w.controls.resolution.setValue(1)
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertFalse(w.apply_pca)
+        self.assertEqual(2, w.pca_components)
+        self.assertEqual(1, w.metric_idx)
+        self.assertFalse(w.normalize)
+        self.assertEqual(4, w.k_neighbors)
+        self.assertEqual(0.5, w.resolution)
+
+    def test_graph_output(self):
+        w = self.widget
+
+        # This test executes only if network add-on is installed
+        if not hasattr(w.Outputs, "graph"):
+            return
+
+        self.send_signal(w.Inputs.data, self.iris)
+        graph = self.get_output(w.Outputs.graph)
+        self.assertEqual(len(graph.nodes), len(self.iris))
+
+        self.send_signal(w.Inputs.data, None)
+        graph = self.get_output(w.Outputs.graph)
+        self.assertIsNone(graph)

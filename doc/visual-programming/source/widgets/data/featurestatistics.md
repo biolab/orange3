@@ -24,7 +24,7 @@ The Feature Statistics widget on the *heart-disease* data set. The feature *exer
 4. The name of the feature.
 5. A histogram of feature values. If the feature is numeric, we appropriately discretize the values into bins. If the feature is categorical, each value is assigned its own bar in the histogram.
 6. The central tendency of the feature values. For categorical features, this is the [mode](https://en.wikipedia.org/wiki/Mode_(statistics)). For numeric features, this is [mean](https://en.wikipedia.org/wiki/Mean) value.
-7. The dispersion of the feature values. For categorical features, this is the [entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) of the value distribution. For numeric features, this is the [index of dispersion](https://en.wikipedia.org/wiki/Index_of_dispersion).
+7. The dispersion of the feature values. For categorical features, this is the [entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) of the value distribution. For numeric features, this is the [coefficient of variation](https://en.wikipedia.org/wiki/Coefficient_of_variation).
 8. The minimum value. This is computed for numerical and ordinal categorical features.
 9. The maximum value. This is computed for numerical and ordinal categorical features.
 10. The number of missing values in the data.

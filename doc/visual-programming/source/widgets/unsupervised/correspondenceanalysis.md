@@ -7,6 +7,10 @@ Correspondence analysis for categorical multivariate data.
 
 - Data: input dataset
 
+**Outputs**
+
+- Coordinates: coordinates of all components
+
 [Correspondence Analysis](https://en.wikipedia.org/wiki/Correspondence_analysis) (CA) computes the CA linear transformation of the input data. While it is similar to PCA, CA computes linear transformation on discrete rather than on continuous data.
 
 ![](images/CorrespondenceAnalysis-stamped.png)

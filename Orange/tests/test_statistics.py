@@ -1,6 +1,6 @@
+# pylint: disable=no-self-use
 import unittest
 import warnings
-from distutils.version import LooseVersion
 from itertools import chain
 from functools import partial, wraps
 
@@ -8,10 +8,11 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
     SparseEfficiencyWarning
 
-import Orange
+from Orange.data.util import assure_array_dense
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar, nanmode, FDR
+    unique, var, nanstd, nanvar, nanmode, nan_to_num, FDR, isnan, any_nan, \
+    all_nan
 from sklearn.utils import check_random_state
 
 
@@ -68,23 +69,28 @@ class TestUtil(unittest.TestCase):
         ]
 
     def test_contingency(self):
-        x = np.array([0, 1, 0, 2, np.nan])
-        y = np.array([0, 0, 1, np.nan, 0])
-        cont_table, nans = contingency(x, y, 2, 2)
+        x = np.array([0, 1, 0, 2, np.nan, np.nan])
+        y = np.array([0, 0, 1, np.nan, 0, np.nan])
+        cont_table, col_nans, row_nans, nans = contingency(x, y, 2, 2)
         np.testing.assert_equal(cont_table, [[1, 1, 0],
                                              [1, 0, 0],
                                              [0, 0, 0]])
-        np.testing.assert_equal(nans, [1, 0, 0])
+        np.testing.assert_equal(col_nans, [1, 0, 0])
+        np.testing.assert_equal(row_nans, [0, 0, 1])
+        self.assertEqual(1, nans)
 
     def test_weighted_contingency(self):
-        x = np.array([0, 1, 0, 2, np.nan])
-        y = np.array([0, 0, 1, np.nan, 0])
-        w = np.array([1, 2, 2, 3, 4])
-        cont_table, nans = contingency(x, y, 2, 2, weights=w)
+        x = np.array([0, 1, 0, 2, np.nan, np.nan])
+        y = np.array([0, 0, 1, np.nan, 0, np.nan])
+        w = np.array([1, 2, 2, 3, 4, 2])
+        cont_table, col_nans, row_nans, nans = contingency(
+            x, y, 2, 2, weights=w)
         np.testing.assert_equal(cont_table, [[1, 2, 0],
                                              [2, 0, 0],
                                              [0, 0, 0]])
-        np.testing.assert_equal(nans, [1, 0, 0])
+        np.testing.assert_equal(col_nans, [4, 0, 0])
+        np.testing.assert_equal(row_nans, [0, 0, 3])
+        self.assertEqual(2, nans)
 
     def test_stats(self):
         X = np.arange(4).reshape(2, 2).astype(float)
@@ -306,17 +312,6 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_almost_equal(
             np.array([0.00033, 0.0004, 0.00005, 0.00038, 0.00025]),
             result, decimal=5)
-
-    def test_array_equal_deprecated(self):
-        """This test is to be included in the 3.22 release and will fail in
-        version 3.24. This serves as a reminder to remove the deprecated method
-        and this test."""
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.24"):
-            self.fail(
-                "`Orange.statistics.util.array_equal` was deprecated in "
-                "version 3.22, and there have been two minor versions in "
-                "between. Please remove the deprecated method from the module."
-            )
 
 
 class TestNanmean(unittest.TestCase):
@@ -650,6 +645,140 @@ class TestUnique(unittest.TestCase):
         expected = [2, 6, 2, 1, 2, 1, 1, 1]
 
         np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
+
+
+class TestNanToNum(unittest.TestCase):
+    @dense_sparse
+    def test_converts_invalid_values(self, array):
+        x = np.array([
+            [np.nan, 0, 2, np.inf],
+            [-np.inf, np.nan, 1e-18, 2],
+            [np.nan, np.nan, np.nan, np.nan],
+            [np.inf, np.inf, np.inf, np.inf],
+        ])
+        result = nan_to_num(array(x))
+        np.testing.assert_equal(assure_array_dense(result), np.nan_to_num(x))
+
+    @dense_sparse
+    def test_preserves_valid_values(self, array):
+        x = np.arange(12).reshape((3, 4))
+        result = nan_to_num(array(x))
+        np.testing.assert_equal(assure_array_dense(result), x)
+        np.testing.assert_equal(assure_array_dense(result), np.nan_to_num(x))
+
+
+class TestIsnan(unittest.TestCase):
+    def setUp(self) -> None:
+        # pylint: disable=bad-whitespace
+        self.x = np.array([
+            [0., 1.,     0., np.nan, 3.,     5.],
+            [0., 0., np.nan, np.nan, 5., np.nan],
+            [0., 0.,     0., np.nan, 7.,     6.],
+            [0., 0.,     0.,     5., 7.,     6.],
+        ])
+
+    @dense_sparse
+    def test_functionality(self, array):
+        expected = np.isnan(self.x)
+        result = isnan(array(self.x))
+        np.testing.assert_equal(assure_array_dense(result), expected)
+
+    @dense_sparse
+    def test_out(self, array):
+        x = array(self.x)
+        x_dtype = x.dtype
+        result = isnan(x, out=x)
+        self.assertIs(result, x)
+        self.assertEqual(x_dtype, result.dtype)
+
+
+class TestAnyNans(unittest.TestCase):
+    def setUp(self) -> None:
+        # pylint: disable=bad-whitespace
+        self.x_with_nans = np.array([
+            [0., 1.,     0., np.nan, 3.,     5.],
+            [0., 0., np.nan, np.nan, 5., np.nan],
+            [0., 0.,     0., np.nan, 7.,     6.],
+            [0., 0.,     0.,     5., 7.,     6.],
+        ])
+        self.x_no_nans = np.arange(12).reshape((3, 4))
+
+    @dense_sparse
+    def test_axis_none_without_nans(self, array):
+        self.assertFalse(any_nan(array(self.x_no_nans)))
+
+    @dense_sparse
+    def test_axis_none_with_nans(self, array):
+        self.assertTrue(any_nan(array(self.x_with_nans)))
+
+    @dense_sparse
+    def test_axis_0_without_nans(self, array):
+        expected = np.array([0, 0, 0, 0], dtype=bool)
+        result = any_nan(array(self.x_no_nans), axis=0)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_0_with_nans(self, array):
+        expected = np.array([0, 0, 1, 1, 0, 1], dtype=bool)
+        result = any_nan(array(self.x_with_nans), axis=0)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_1_without_nans(self, array):
+        expected = np.array([0, 0, 0], dtype=bool)
+        result = any_nan(array(self.x_no_nans), axis=1)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_1_with_nans(self, array):
+        expected = np.array([1, 1, 1, 0], dtype=bool)
+        result = any_nan(array(self.x_with_nans), axis=1)
+        np.testing.assert_equal(result, expected)
+
+
+class TestAllNans(unittest.TestCase):
+    def setUp(self) -> None:
+        # pylint: disable=bad-whitespace
+        self.x_with_nans = np.array([
+            [0.,     1.,     0.,     np.nan, 3.,     5.],
+            [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
+            [0.,     0.,     0.,     np.nan, 7.,     6.],
+            [0.,     0.,     0.,     np.nan, 7.,     np.nan],
+        ])
+        self.x_no_nans = np.arange(12).reshape((3, 4))
+        self.x_only_nans = (np.ones(12) * np.nan).reshape((3, 4))
+
+    @dense_sparse
+    def test_axis_none_without_nans(self, array):
+        self.assertFalse(all_nan(array(self.x_no_nans)))
+
+    @dense_sparse
+    def test_axis_none_with_nans(self, array):
+        self.assertTrue(all_nan(array(self.x_only_nans)))
+
+    @dense_sparse
+    def test_axis_0_without_nans(self, array):
+        expected = np.array([0, 0, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_no_nans), axis=0)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_0_with_nans(self, array):
+        expected = np.array([0, 0, 0, 1, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_with_nans), axis=0)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_1_without_nans(self, array):
+        expected = np.array([0, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_no_nans), axis=1)
+        np.testing.assert_equal(result, expected)
+
+    @dense_sparse
+    def test_axis_1_with_nans(self, array):
+        expected = np.array([0, 1, 0, 0], dtype=bool)
+        result = all_nan(array(self.x_with_nans), axis=1)
+        np.testing.assert_equal(result, expected)
 
 
 class TestNanModeFixedInScipy(unittest.TestCase):

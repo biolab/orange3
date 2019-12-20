@@ -26,7 +26,7 @@ Stack multiple models.
 Example
 -------
 
-We will use [Paint Data](../data/paintdata.md) to demonstrate how the widget is used. We painted a complex dataset with 4 class labels and sent it to [Test & Score](../evaluation/testandscore.md). We also provided three [kNN](../model/knn.md) learners, each with a different parameters (number of neighbors is 5, 10 or 15). Evaluation results are good, but can we do better?
+We will use [Paint Data](../data/paintdata.md) to demonstrate how the widget is used. We painted a complex dataset with 4 class labels and sent it to [Test & Score](../evaluate/testandscore.md). We also provided three [kNN](../model/knn.md) learners, each with a different parameters (number of neighbors is 5, 10 or 15). Evaluation results are good, but can we do better?
 
 Let's use **Stacking**. **Stacking** requires several learners on the input and an aggregation method. In our case, this is [Logistic Regression](../model/logisticregression.md). A constructed meta learner is then sent to **Test & Score**. Results have improved, even if only marginally. **Stacking** normally works well on complex data sets.
 

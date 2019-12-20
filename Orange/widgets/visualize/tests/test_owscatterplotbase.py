@@ -1105,6 +1105,10 @@ class TestOWScatterPlotBase(WidgetTest):
     def test_legend_combine(self):
         master = self.master
         graph = self.graph
+
+        master.get_shape_data = lambda: np.arange(10, dtype=float) % 3
+        master.get_color_data = lambda: 2 * np.arange(10, dtype=float) % 3
+
         graph.reset_graph()
 
         shape_legend = self.graph.shape_legend.setVisible = Mock()
@@ -1117,6 +1121,12 @@ class TestOWScatterPlotBase(WidgetTest):
         self.assertTrue(color_legend.call_args[0][0])
 
         master.get_color_labels = lambda: ["a", "b"]
+        graph.update_legends()
+        self.assertTrue(shape_legend.call_args[0][0])
+        self.assertTrue(color_legend.call_args[0][0])
+        self.assertEqual(len(graph.shape_legend.items), 2)
+
+        master.get_color_data = lambda: np.arange(10, dtype=float) % 3
         graph.update_legends()
         self.assertTrue(shape_legend.call_args[0][0])
         self.assertFalse(color_legend.call_args[0][0])

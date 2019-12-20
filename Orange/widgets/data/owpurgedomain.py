@@ -97,8 +97,7 @@ class OWPurgeDomain(widget.OWWidget):
                 gui.separator(box3, 2)
             gui.label(box3, self, "{}: %({})s".format(label, value))
 
-        gui.auto_commit(self.buttonsArea, self, "autoSend", "Apply",
-                        orientation=Qt.Horizontal)
+        gui.auto_send(self.buttonsArea, self, "autoSend")
         gui.rubber(self.controlArea)
 
     @Inputs.data

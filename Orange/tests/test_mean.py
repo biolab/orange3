@@ -19,7 +19,7 @@ class TestMeanLearner(unittest.TestCase):
         ncols = 10
         x = np.random.randint(1, 4, (nrows, ncols))
         y = np.random.randint(0, 5, (nrows, 1)) / 3.0
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         clf = self.learn(t)
 
         true_mean = np.average(y)
@@ -34,7 +34,7 @@ class TestMeanLearner(unittest.TestCase):
         y = np.random.randint(0, 5, (nrows, 1)) / 3.0
         heavy = 1
         w = ((y == heavy) * 123 + 1.0) / 124.0
-        t = Table(x, y, W=w)
+        t = Table.from_numpy(None, x, y, W=w)
         clf = self.learn(t)
 
         expected_mean = np.average(y, weights=w)

@@ -24,7 +24,7 @@ class Transformation(Reprable):
         """
         inst = isinstance(data, Instance)
         if inst:
-            data = Table(data.domain, [data])
+            data = Table.from_list(data.domain, [data])
         if self.variable.is_primitive():
             domain = Domain([self.variable])
             data = Table.from_table(domain, data)
@@ -135,7 +135,7 @@ class Lookup(Transformation):
         :param lookup_table: transformations for each value of `self.variable`
         :type lookup_table: np.array or list or tuple
         :param unknown: The value to be used as unknown value.
-        :type unknown: float or int 
+        :type unknown: float or int
         """
         super().__init__(variable)
         self.lookup_table = lookup_table

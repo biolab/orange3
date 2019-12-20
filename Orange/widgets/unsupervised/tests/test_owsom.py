@@ -14,7 +14,7 @@ from Orange.widgets.unsupervised.owsom import OWSOM, SomView, SOM
 
 def _patch_recompute_som(meth):
     def winners_from_weights(cont_x, *_1, **_2):
-        n = len(cont_x)
+        n = cont_x.shape[0]
         w = np.zeros((n, 2), dtype=int)
         w[n // 5:] = [0, 1]
         w[n // 3:] = [1, 2]
@@ -42,6 +42,7 @@ class TestOWSOM(WidgetTest):
 
     def tearDown(self):
         self.widget.onDeleteWidget()
+        super().tearDown()
 
     def test_requires_continuous(self):
         widget = self.widget
@@ -64,6 +65,14 @@ class TestOWSOM(WidgetTest):
         self.assertFalse(widget.Error.no_numeric_variables.is_shown())
         self.assertFalse(widget.Warning.ignoring_disc_variables.is_shown())
         self.assertEqual(widget.cont_x.shape, (150, 4))
+
+    def test_single_attribute(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertFalse(widget.Warning.single_attribute.is_shown())
+        iris = self.iris[:, 0]
+        self.send_signal(widget.Inputs.data, iris)
+        self.assertTrue(widget.Warning.single_attribute.is_shown())
 
     def test_missing_all_data(self):
         widget = self.widget
@@ -108,6 +117,7 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.missing_values.is_shown())
 
+    @_patch_recompute_som
     def test_sparse_data(self):
         widget = self.widget
         self.iris.X = sp.csc_matrix(self.iris.X)
@@ -490,6 +500,12 @@ class TestOWSOM(WidgetTest):
         m[0, 0] = 2
         widget.on_selection_change(selm((0, 0)), SomView.SelectionNewGroup)
         np.testing.assert_equal(widget.selection, m)
+
+    @_patch_recompute_som
+    def test_on_selection_change_on_empty(self):
+        """Test clicks on empty scene, when no data"""
+        widget = self.widget
+        widget.on_selection_change([])
 
     @_patch_recompute_som
     def test_output(self):

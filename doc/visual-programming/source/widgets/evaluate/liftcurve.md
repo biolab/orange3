@@ -25,7 +25,7 @@ classes are guessed correctly and then run straight along 1 on y-axis to
 Example
 -------
 
-At the moment, the only widget which gives the right type of the signal needed by the **Lift Curve** is [Test & Score](../evaluation/testandscore.md).
+At the moment, the only widget which gives the right type of the signal needed by the **Lift Curve** is [Test & Score](../evaluate/testandscore.md).
 
 In the example below, we try to see the prediction quality for the class 'survived' on the *Titanic* dataset. We compared three different classifiers in the Test Learners widget and sent them to Lift Curve to see their performance against a random model. We see the [Tree](../model/tree.md) classifier is the best out of the three, since it best aligns with *lift convex hull*. We also see that its performance is the best for the first 30% of the population (in order of descending probability), which we can set as the threshold for optimal classification.
 

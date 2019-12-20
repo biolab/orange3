@@ -128,7 +128,7 @@ class TestHierarchical(unittest.TestCase):
         self.assertEqual(score_ordered, 21.0)
 
     def test_table_clustering(self):
-        table = Orange.data.Table(numpy.eye(3))
+        table = Orange.data.Table.from_numpy(None, numpy.eye(3))
         tree = hierarchical.data_clustering(table, linkage="single")
         numpy.testing.assert_almost_equal(tree.value.height, numpy.sqrt(2))
 

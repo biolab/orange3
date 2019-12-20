@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from unittest.mock import patch
 from collections import defaultdict
 
 import numpy as np
@@ -17,7 +18,8 @@ from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
                                                     drop_columns,
                                                     OWVennDiagram,
                                                     group_table_indices,
-                                                    copy_descriptor)
+                                                    copy_descriptor,
+                                                    arrays_equal)
 from Orange.tests import test_filename
 
 
@@ -123,6 +125,8 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         return list(range(len(self.signal_data)))
 
     def test_multiple_input(self):
+        """Over rows"""
+        self.widget.rowwise = True
         self.send_signal(self.signal_name, self.data[:100], 1)
         self.send_signal(self.signal_name, self.data[50:], 2)
 
@@ -160,6 +164,49 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
+    def test_multiple_input_over_cols(self):
+        self.widget.rowwise = False
+        selected_atr_name = 'Selected'
+        input2 = self.data.transform(Domain([self.data.domain.attributes[0]],
+                                            self.data.domain.class_vars,
+                                            self.data.domain.metas))
+        self.send_signal(self.signal_name, self.data, (1, 'Data', None))
+        self.send_signal(self.signal_name, input2, (2, 'Data', None))
+
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertIsNone(selected)
+        self.assertEqual(len(annotated), len(self.data))
+        self.assertEqual(annotated.domain, self.data.domain)
+        for atr in annotated.domain.attributes:
+            self.assertIsNotNone(atr.attributes[selected_atr_name])
+            self.assertFalse(atr.attributes[selected_atr_name])
+
+        # select data instances
+        self.widget.vennwidget.vennareas()[3].setSelected(True)
+        np.testing.assert_array_equal(self.get_output(self.widget.Outputs.selected_data).X,
+                                      input2.X)
+        np.testing.assert_array_equal(self.get_output(self.widget.Outputs.selected_data).Y,
+                                      input2.Y)
+        np.testing.assert_array_equal(self.get_output(self.widget.Outputs.selected_data).metas,
+                                      input2.metas)
+
+        #domain matches but the values do not
+        input2.X = input2.X - 1
+        self.send_signal(self.signal_name, input2, (2, 'Data', None))
+        self.widget.vennwidget.vennareas()[3].setSelected(True)
+        self.assertEqual(self.get_output(self.widget.Outputs.selected_data).domain.attributes[0].name,
+                         'sepal length-iris1')
+        self.assertEqual(self.get_output(self.widget.Outputs.selected_data).domain.attributes[1].name,
+                         'sepal length-iris2')
+
+        out_domain = self.get_output(self.widget.Outputs.annotated_data).domain.attributes
+        self.assertTrue(out_domain[0].attributes[selected_atr_name])
+        self.assertTrue(out_domain[1].attributes[selected_atr_name])
+        self.assertFalse(out_domain[2].attributes[selected_atr_name])
+        self.assertFalse(out_domain[3].attributes[selected_atr_name])
+        self.assertFalse(out_domain[4].attributes[selected_atr_name])
+
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
         self.send_signal(self.signal_name, self.data[:0], 1)
@@ -179,6 +226,58 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, self.data[:100], 1)
         self.send_signal(self.signal_name, self.data[50:], 2)
         self.send_signal(self.signal_name, self.data[:0], 3)
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_commit') as commit:
+            self.widget.autocommit = False
+            commit.reset_mock()
+            self.send_signal(self.signal_name, self.data[:100], 1)
+            commit.assert_called()
+
+    def test_input_compatibility(self):
+        self.widget.rowwise = True
+        self.send_signal(self.signal_name, self.data, 1)
+        self.send_signal(self.signal_name,
+                         self.data.transform(Domain([self.data.domain.attributes[0]],
+                                                    self.data.domain.class_vars,
+                                                    self.data.domain.metas)), 2)
+        self.assertFalse(self.widget.Error.instances_mismatch.is_shown())
+
+        self.widget.rowwise = False
+        self.send_signal(self.signal_name, self.data[:100, :], 2)
+        self.assertTrue(self.widget.Error.instances_mismatch.is_shown())
+
+        self.send_signal(self.signal_name, None, 2)
+        self.assertFalse(self.widget.Error.instances_mismatch.is_shown())
+
+    def test_rows_identifiers(self):
+        self.widget.rowwise = True
+        data = Table('zoo')
+        self.send_signal(self.signal_name, data, (1, 'Data', None))
+        self.widget.selected_feature = 'name'
+        self.send_signal(self.signal_name, data[:5], (2, 'Data', None))
+
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+        self.widget.vennwidget.vennareas()[3].setSelected(True)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 5)
+        self.assertEqual(selected.domain.attributes, data.domain.attributes)
+        self.assertEqual(selected.domain.class_vars, data.domain.class_vars)
+
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(len(annotated), 100)
+
+    def test_too_many_inputs(self):
+        self.send_signal(self.signal_name, self.data, 1)
+        self.send_signal(self.signal_name, self.data, 2)
+        self.send_signal(self.signal_name, self.data, 3)
+        self.send_signal(self.signal_name, self.data, 4)
+        self.send_signal(self.signal_name, self.data, 5)
+        self.send_signal(self.signal_name, self.data, 6)
+        self.assertTrue(self.widget.Error.too_many_inputs.is_shown())
+
+        self.send_signal(self.signal_name, None, 6)
+        self.assertFalse(self.widget.Error.too_many_inputs.is_shown())
 
 
 class GroupTableIndicesTest(unittest.TestCase):
@@ -269,3 +368,22 @@ class TestVennUtilities(unittest.TestCase):
 
         copied = copy_descriptor(var, "cux")
         self.assertEqual(copied.name, "cux")
+
+    def test_array_equals(self):
+        a = np.array([1, 2], dtype=np.float64)
+        b = np.array([1, np.nan], dtype=np.float64)
+        self.assertTrue(arrays_equal(None, None, None))
+        self.assertFalse(arrays_equal(None, a, None))
+        self.assertFalse(arrays_equal(a, None, None))
+        self.assertFalse(arrays_equal(a, b, ContinuousVariable))
+        a[1] = np.nan
+        self.assertTrue(arrays_equal(a, b, ContinuousVariable))
+        self.assertTrue(arrays_equal(a.astype(str), a.astype(str), StringVariable))
+        a[1] = 2
+        b[1] = 3
+        self.assertFalse(arrays_equal(a, b, ContinuousVariable))
+        self.assertFalse(arrays_equal(a.astype(str), b.astype(str), StringVariable))
+
+
+if __name__ == "__main__":
+    unittest.main()

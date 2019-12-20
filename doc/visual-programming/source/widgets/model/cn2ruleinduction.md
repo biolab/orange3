@@ -46,7 +46,7 @@ For the example below, we have used *zoo* dataset and passed it to **CN2 Rule In
 
 ![](images/CN2-visualize.png)
 
-The second workflow tests evaluates **CN2 Rule Induction** and [Tree](../model/tree.md) in [Test & Score](../evaluation/testandscore.md).
+The second workflow tests evaluates **CN2 Rule Induction** and [Tree](../model/tree.md) in [Test & Score](../evaluate/testandscore.md).
 
 ![](images/CN2-classification.png)
 

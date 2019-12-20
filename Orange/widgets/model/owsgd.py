@@ -322,7 +322,7 @@ class OWSGD(OWBaseLearner):
                 cfs = list(self.model.intercept) + list(self.model.coefficients)
                 names = ["intercept"] + \
                         [attr.name for attr in self.model.domain.attributes]
-                coeffs = Table(domain, list(zip(cfs, names)))
+                coeffs = Table.from_list(domain, list(zip(cfs, names)))
                 coeffs.name = "coefficients"
         self.Outputs.coefficients.send(coeffs)
 

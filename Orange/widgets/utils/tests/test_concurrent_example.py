@@ -33,7 +33,7 @@ class TestOWConcurrentWidget(WidgetTest, ProjectionWidgetTestMixin,
     def test_button_with_data(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.assertEqual(self.widget.run_button.text(), "Stop")
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         self.assertEqual(self.widget.run_button.text(), "Start")
 
     def test_button_toggle(self):
@@ -44,7 +44,7 @@ class TestOWConcurrentWidget(WidgetTest, ProjectionWidgetTestMixin,
     def test_plot_once(self):
         table = Table("heart_disease")
         self.widget.setup_plot = Mock()
-        self.widget.commit = Mock()
+        self.widget.commit = self.widget.unconditional_commit = Mock()
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()

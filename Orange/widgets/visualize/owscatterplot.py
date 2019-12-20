@@ -43,7 +43,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
     def check_preconditions(self):
         self.Information.add_message(
-            "color_required", "Color variable must be selected")
+            "color_required", "Color variable is not selected")
         self.Information.color_required.clear()
         if not super().check_preconditions():
             return False
@@ -274,18 +274,18 @@ class OWScatterPlot(OWDataProjectionWidget):
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
             valueType=str, contentsLength=14
         )
-        box = gui.vBox(self.controlArea, True)
+        self.attr_box = gui.vBox(self.controlArea, True)
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=ContinuousVariable)
         self.cb_attr_x = gui.comboBox(
-            box, self, "attr_x", label="Axis x:",
+            self.attr_box, self, "attr_x", label="Axis x:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options)
         self.cb_attr_y = gui.comboBox(
-            box, self, "attr_y", label="Axis y:",
+            self.attr_box, self, "attr_y", label="Axis y:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options)
-        vizrank_box = gui.hBox(box)
+        vizrank_box = gui.hBox(self.attr_box)
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
             vizrank_box, self, "Find Informative Projections", self.set_attr)
 
@@ -301,19 +301,24 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     def _vizrank_color_change(self):
         self.vizrank.initialize()
-        is_enabled = self.data is not None and not self.data.is_sparse() and \
-            len(self.xy_model) > 2 and len(self.data[self.valid_data]) > 1 \
-            and np.all(np.nan_to_num(np.nanstd(self.data.X, 0)) != 0)
-        self.vizrank_button.setEnabled(
-            is_enabled and self.attr_color is not None and
-            not np.isnan(self.data.get_column_view(
-                self.attr_color)[0].astype(float)).all())
-        text = "Color variable has to be selected." \
-            if is_enabled and self.attr_color is None else ""
-        self.vizrank_button.setToolTip(text)
+        err_msg = ""
+        if self.data is None:
+            err_msg = "No data on input"
+        elif self.data.is_sparse():
+            err_msg = "Data is sparse"
+        elif len(self.xy_model) < 3:
+            err_msg = "Not enough features for ranking"
+        elif self.attr_color is None:
+            err_msg = "Color variable is not selected"
+        elif np.isnan(self.data.get_column_view(
+                self.attr_color)[0].astype(float)).all():
+            err_msg = "Color variable has no values"
+        self.vizrank_button.setEnabled(not err_msg)
+        self.vizrank_button.setToolTip(err_msg)
 
     def set_data(self, data):
         super().set_data(data)
+        self._vizrank_color_change()
 
         def findvar(name, iterable):
             """Find a Orange.data.Variable in `iterable` by name"""
@@ -433,17 +438,19 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
+        self.attr_box.setEnabled(True)
+        self.vizrank.setEnabled(True)
         if self.attribute_selection_list and self.data is not None and \
                 self.data.domain is not None and \
                 all(attr in self.data.domain for attr
                         in self.attribute_selection_list):
             self.attr_x, self.attr_y = self.attribute_selection_list[:2]
-            self.attribute_selection_list = None
+            self.attr_box.setEnabled(False)
+            self.vizrank.setEnabled(False)
         super().handleNewSignals()
         if self._domain_invalidated:
             self.graph.update_axes()
             self._domain_invalidated = False
-        self._vizrank_color_change()
 
     @Inputs.features
     def set_shown_attributes(self, attributes):
@@ -512,5 +519,6 @@ class OWScatterPlot(OWDataProjectionWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("iris")
-    WidgetPreview(OWScatterPlot).run(set_data=data, set_subset_data=data[:30])
+    table = Table("iris")
+    WidgetPreview(OWScatterPlot).run(set_data=table,
+                                     set_subset_data=table[:30])

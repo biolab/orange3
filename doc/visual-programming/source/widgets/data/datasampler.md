@@ -38,7 +38,7 @@ First, let's see how the **Data Sampler** works. We will use the *iris* data fro
 
 Now, we will use the **Data Sampler** to split the data into training and testing part. We are using the *iris* data, which we loaded with the [File](../data/file.md) widget. In **Data Sampler**, we split the data with *Fixed proportion of data*, keeping 70% of data instances in the sample.
 
-Then we connected two outputs to the [Test & Score](../evaluation/testandscore.md) widget, *Data Sample --> Data* and *Remaining Data --> Test Data*. Finally, we added [Logistic Regression](../model/logisticregression.md) as the learner. This runs logistic regression on the Data input and evaluates the results on the Test Data.
+Then we connected two outputs to the [Test & Score](../evaluate/testandscore.md) widget, *Data Sample --> Data* and *Remaining Data --> Test Data*. Finally, we added [Logistic Regression](../model/logisticregression.md) as the learner. This runs logistic regression on the Data input and evaluates the results on the Test Data.
 
 ![](images/DataSampler-Example2.png)
 

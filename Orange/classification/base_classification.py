@@ -18,43 +18,26 @@ class ModelClassification(Model):
 
 
 class SklModelClassification(SklModel, ModelClassification):
-    def __call__(self, data, ret=Model.Value):
-        prediction = super().__call__(data, ret=ret)
-
-        if ret == Model.Value:
+    def predict(self, X):
+        prediction = super().predict(X)
+        if not isinstance(prediction, tuple):
             return prediction
+        values, probs = prediction
 
-        if ret == Model.Probs:
-            probs = prediction
-        else:  # ret == Model.ValueProbs
-            value, probs = prediction
+        class_vars = self.domain.class_vars
+        max_values = max(len(cv.values) for cv in class_vars)
+        if max_values == probs.shape[-1]:
+            return values, probs
 
-        # Expand probability predictions for class values which are not present
-        if ret != self.Value:
-            n_class = len(self.domain.class_vars)
-            max_values = max(len(cv.values) for cv in self.domain.class_vars)
-            if max_values != probs.shape[-1]:
-                if not self.supports_multiclass:
-                    probs = probs[:, np.newaxis, :]
-                probs_ext = np.zeros((len(probs), n_class, max_values))
-                for c in range(n_class):
-                    i = 0
-                    class_values = len(self.domain.class_vars[c].values)
-                    for cv in range(class_values):
-                        if (i < len(
-                                self.used_vals[c]) and
-                                cv == self.used_vals[c][i]):
-                            probs_ext[:, c, cv] = probs[:, c, i]
-                            i += 1
-                if self.supports_multiclass:
-                    probs = probs_ext
-                else:
-                    probs = probs_ext[:, 0, :]
-
-        if ret == Model.Probs:
-            return probs
-        else:  # ret == Model.ValueProbs
-            return value, probs
+        if not self.supports_multiclass:
+            probs = probs[:, np.newaxis, :]
+        probs_ext = np.zeros((len(probs), len(class_vars), max_values))
+        for c, used_vals in enumerate(self.used_vals):
+            for i, cv in enumerate(used_vals):
+                probs_ext[:, c, cv] = probs[:, c, i]
+        if not self.supports_multiclass:
+            probs_ext = probs_ext[:, 0, :]
+        return values, probs_ext
 
 
 class SklLearnerClassification(SklLearner, LearnerClassification):

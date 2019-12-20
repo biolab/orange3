@@ -34,10 +34,10 @@ class FeatureConstructorTest(unittest.TestCase):
             [DiscreteDescriptor(name=name, expression=expression,
                                 values=values, ordered=False)]
         )
-        data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(desc, data),
-                            data.domain.class_vars,
-                            data.domain.metas), data)
+        data = data.transform(Domain(list(data.domain.attributes) +
+                                     construct_variables(desc, data),
+                                     data.domain.class_vars,
+                                     data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
         self.assertEqual(data.domain[name].values, list(values))
         for i in range(3):
@@ -52,10 +52,10 @@ class FeatureConstructorTest(unittest.TestCase):
             [DiscreteDescriptor(name=name, expression=expression,
                                 values=values, ordered=False)]
         )
-        data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(desc, data),
-                            data.domain.class_vars,
-                            data.domain.metas), data)
+        data = data.transform(Domain(list(data.domain.attributes) +
+                                     construct_variables(desc, data),
+                                     data.domain.class_vars,
+                                     data.domain.metas))
         newvar = data.domain[name]
         self.assertTrue(isinstance(newvar, DiscreteVariable))
         self.assertEqual(set(data.domain[name].values), set("ar"))
@@ -71,10 +71,10 @@ class FeatureConstructorTest(unittest.TestCase):
             [ContinuousDescriptor(name=name, expression=expression,
                                   number_of_decimals=2)]
         )
-        data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(featuremodel, data),
-                            data.domain.class_vars,
-                            data.domain.metas), data)
+        data = data.transform(Domain(list(data.domain.attributes) +
+                                     construct_variables(featuremodel, data),
+                                     data.domain.class_vars,
+                                     data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
         for i in range(3):
             self.assertEqual(data[i * 50, name],
@@ -87,10 +87,10 @@ class FeatureConstructorTest(unittest.TestCase):
         featuremodel = PyListModel(
             [DateTimeDescriptor(name=name, expression=expression)]
         )
-        data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(featuremodel, data),
-                            data.domain.class_vars,
-                            data.domain.metas), data)
+        data = data.transform(Domain(list(data.domain.attributes) +
+                                     construct_variables(featuremodel, data),
+                                     data.domain.class_vars,
+                                     data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], TimeVariable))
         for row in data:
             self.assertEqual("2019-07-{:02}".format(int(row["MEDV"] / 3)),
@@ -103,11 +103,10 @@ class FeatureConstructorTest(unittest.TestCase):
         desc = PyListModel(
             [StringDescriptor(name=name, expression=expression)]
         )
-        data = Table(Domain(data.domain.attributes,
-                            data.domain.class_vars,
-                            list(data.domain.metas) +
-                            construct_variables(desc, data)),
-                     data)
+        data = data.transform(Domain(data.domain.attributes,
+                                     data.domain.class_vars,
+                                     list(data.domain.metas) +
+                                     construct_variables(desc, data)))
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
             self.assertEqual(data[i * 50, name],
@@ -116,19 +115,18 @@ class FeatureConstructorTest(unittest.TestCase):
     @staticmethod
     def test_construct_numeric_names():
         data = Table("iris")
-        data.domain.attributes[0].name = "0.1"
-        data.domain.attributes[1].name = "1"
+        newdomain = Domain((ContinuousVariable("0.1"), ContinuousVariable("1"))
+                           + data.domain.attributes[2:], data.domain.class_var)
+        data = Table.from_numpy(newdomain, data.X, data.Y)
         desc = PyListModel(
             [ContinuousDescriptor(name="S",
                                   expression="_0_1 + _1",
                                   number_of_decimals=3)]
         )
         nv = construct_variables(desc, data)
-        ndata = Table(Domain(nv, None), data)
+        ndata = data.transform(Domain(nv))
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
-        # pylint: disable=protected-access
-        ContinuousVariable._clear_all_caches()
 
 
 class TestTools(unittest.TestCase):

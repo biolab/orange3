@@ -144,6 +144,46 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(call_args[0].name, data.domain[0].name)
         self.assertEqual(call_args[1].name, data.domain[2].name)
 
+    def test_selection_setting(self):
+        widget = self.widget
+        data = Table("iris.tab")
+        self.send_signal(widget.Inputs.data, data)
+
+        widget.select_area(
+            1,
+            QMouseEvent(QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
+                        Qt.LeftButton, Qt.KeyboardModifiers()))
+
+        # Changing the data must reset the selection
+        self.send_signal(widget.Inputs.data, Table("titanic"))
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        widget.select_area(
+            1,
+            QMouseEvent(QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
+                        Qt.LeftButton, Qt.KeyboardModifiers()))
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        # Setting data to None must reset the selection
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertFalse(bool(widget.selection))
+        self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+        w = self.create_widget(OWMosaicDisplay, stored_settings=settings)
+        self.assertFalse(bool(widget.selection))
+        self.send_signal(w.Inputs.data, data, widget=w)
+        self.assertEqual(w.selection, {1})
+        self.assertIsNotNone(self.get_output(w.Outputs.selected_data, widget=w))
+
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
@@ -157,7 +197,7 @@ class MosaicVizRankTests(WidgetTest):
         super().setUpClass()
         cls.iris = Table("iris.tab")
         dom = Domain(cls.iris.domain.attributes, [])
-        cls.iris_no_class = Table(dom, cls.iris)
+        cls.iris_no_class = cls.iris.transform(dom)
 
     def setUp(self):
         self.widget = self.create_widget(OWMosaicDisplay)

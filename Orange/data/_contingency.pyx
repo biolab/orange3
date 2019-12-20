@@ -1,4 +1,5 @@
 #cython: embedsignature=True
+#cython: language_level=3
 
 import numpy
 cimport numpy as np
@@ -8,13 +9,15 @@ cdef extern from "numpy/npy_math.h":
     bint npy_isnan(double x)
 
 @cython.wraparound(False)
-def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray[np.intp_t, ndim=1] classes, np.intp_t n_rows, np.ndarray[np.float64_t, ndim=1] W = None):
-    """ 
+def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray[np.float64_t, ndim=1] classes, np.intp_t n_rows, np.ndarray[np.float64_t, ndim=1] W = None):
+    """
     Given column values and class values, return
     - an array with the sorted list of values,
     - a 2D array with counts for the value (indexed by columns)
       and class value (indexed by rows),
-    - and an array with the number of missing values for each class.
+    - array with the number of missing values for each class.
+    - array with the number of missing class values for each column value.
+    - and the number of missing in class and column values at same time.
     """
     cdef np.ndarray[np.intp_t, ndim=1] ranks = col_data.argsort()
     cdef int N = 0
@@ -32,8 +35,10 @@ def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray
     cdef np.ndarray[np.float64_t, ndim=2] C = numpy.zeros((n_rows, N), dtype=numpy.float64)
     last = float("NaN")
     j = -1
-    cdef Py_ssize_t tc
-    cdef np.ndarray[np.float64_t, ndim=1] unknown = numpy.zeros(n_rows, dtype=numpy.float64)
+    cdef np.float64_t tc
+    cdef np.ndarray[np.float64_t, ndim=1] col_unknowns = numpy.zeros(n_rows, dtype=numpy.float64)
+    cdef np.ndarray[np.float64_t, ndim=1] row_unknowns = numpy.zeros(N, dtype=numpy.float64)
+    cdef np.float64_t unknowns = 0
     for i in range(ranks.shape[0]):
         i = ranks[i]
         v = col_data[i]
@@ -42,12 +47,15 @@ def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray
             j += 1
             V[j] = v
             last = v
-            C[tc,j] += W[i] if weights else 1.
+        if npy_isnan(v) and npy_isnan(tc):
+            unknowns += W[i] if weights else 1.
+        elif npy_isnan(tc):
+            row_unknowns[j] += W[i] if weights else 1.
         elif npy_isnan(v):
-            unknown[tc] += W[i] if weights else 1.
+            col_unknowns[int(tc)] += W[i] if weights else 1.
         else:
-            C[tc,j] += W[i] if weights else 1.
+            C[int(tc),j] += W[i] if weights else 1.
 
     assert j == N-1
 
-    return V,C,unknown
+    return (V,C),col_unknowns,row_unknowns,unknowns

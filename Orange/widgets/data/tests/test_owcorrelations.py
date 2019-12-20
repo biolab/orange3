@@ -28,6 +28,7 @@ class TestOWCorrelations(WidgetTest):
         cls.data_cont = Table("iris")
         cls.data_disc = Table("zoo")
         cls.data_mixed = Table("heart_disease")
+        cls.housing = Table("housing")
 
     def setUp(self):
         self.widget = self.create_widget(OWCorrelations)
@@ -86,7 +87,7 @@ class TestOWCorrelations(WidgetTest):
         self.assertFalse(self.widget.Warning.not_enough_inst.is_shown())
 
     def test_input_data_with_constant_features(self):
-        """Check correlation table for dataset with a constant columns"""
+        """Check correlation table for dataset with constant columns"""
         np.random.seed(0)
         # pylint: disable=no-member
         X = np.random.randint(3, size=(4, 3)).astype(float)
@@ -117,6 +118,20 @@ class TestOWCorrelations(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
+
+    def test_input_data_cont_target(self):
+        """Check correlation table for dataset with continuous class variable"""
+        data = self.housing[:5, 11:]
+        self.send_signal(self.widget.Inputs.data, data)
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 2)
+        self.assertEqual(self.widget.controls.feature.count(), 4)
+        self.assertEqual(self.widget.controls.feature.currentText(), "MEDV")
+
+        data = self.housing[:5, 13:]
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
 
     def test_output_data(self):
         """Check dataset on output"""
@@ -229,8 +244,9 @@ class TestOWCorrelations(WidgetTest):
                            if attr.is_continuous]
         self.assertEqual(len(feature_combo.model()), len(cont_attributes) + 1)
 
-        self.send_signal(self.widget.Inputs.data, Table("housing"))
-        self.assertEqual(len(feature_combo.model()), 14)
+        self.wait_until_stop_blocking()
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.assertEqual(len(feature_combo.model()), 15)
 
     def test_select_feature(self):
         """Test feature selection"""
@@ -281,6 +297,7 @@ class TestOWCorrelations(WidgetTest):
         """Test report """
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         self.widget.report_button.click()
+        self.wait_until_stop_blocking()
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
@@ -340,7 +357,7 @@ class TestKMeansCorrelationHeuristic(unittest.TestCase):
 
     def test_get_clusters_of_attributes(self):
         clusters = self.heuristic.get_clusters_of_attributes()
-        self.assertListEqual([[0], [1, 2, 3, 4, 5, 6, 7], [8]],
+        self.assertListEqual([[1, 2, 3, 4, 5, 6, 7], [8], [0]],
                              [c.instances for c in clusters])
 
     def test_get_states(self):

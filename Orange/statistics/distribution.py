@@ -130,6 +130,19 @@ class Discrete(Distribution):
         self.variable = variable
         return self
 
+    @property
+    def array_with_unknowns(self):
+        """
+        This property returns a distribution array with unknowns added
+        at the end
+
+        Returns
+        -------
+        np.array
+            Array with appended unknowns at the end of the row.
+        """
+        return np.append(np.array(self), self.unknowns)
+
     def __getitem__(self, index):
         if isinstance(index, str):
             index = self.variable.to_val(index)
@@ -210,6 +223,11 @@ class Discrete(Distribution):
     def max(self):
         if self.variable.ordered:
             return self.variable.values[-1]
+
+    def sum(self, *args, **kwargs):
+        res = super().sum(*args, **kwargs)
+        res.unknowns = self.unknowns
+        return res
 
 
 class Continuous(Distribution):

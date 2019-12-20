@@ -32,8 +32,9 @@ Distances work well with Orange add-ons, too. The distance matrix can be fed to 
    - [Pearson](https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient) (linear correlation between the values, remapped as a distance in a [0, 1] interval)
    - [Pearson absolute](https://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient) (linear correlation between the absolute values, remapped as a distance in a [0, 1] interval)
    - [Hamming](https://en.wikipedia.org/wiki/Hamming_distance) (the number of features at which the corresponding values are different)
+   - [Bhattacharyya distance](https://en.wikipedia.org/wiki/Bhattacharyya_distance) (Similarity between two probability distributions, not a real distance as it doesn't obey triangle inequality.)
 
-   Normalize the features. Normalization is always done column-wise.
+   Normalize the features. Normalization is always done column-wise. Values are zero centered and scaled.
    In case of missing values, the widget automatically imputes the average value of the row or the column.
    The widget works for both numeric and categorical data. In case of categorical data, the distance is 0 if the two values are the same ('green' and 'green') and 1 if they are not ('green' and 'blue').
 3. Tick *Apply Automatically* to automatically commit changes to other widgets. Alternatively, press '*Apply*'.

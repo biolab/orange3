@@ -4,7 +4,7 @@ from numbers import Real, Integral
 
 import numpy as np
 
-from Orange.data import Value, Unknown
+from Orange.data import Value, Unknown, DiscreteVariable
 
 __all__ = ["Instance"]
 
@@ -112,15 +112,18 @@ class Instance:
             self._metas[-1 - key] = value
 
     def __getitem__(self, key):
-        if not isinstance(key, Integral):
-            key = self._domain.index(key)
-        if 0 <= key < len(self._domain.attributes):
-            value = self._x[key]
-        elif key >= len(self._domain.attributes):
-            value = self._y[key - len(self.domain.attributes)]
+        idx = key if isinstance(key, Integral) else self._domain.index(key)
+        if 0 <= idx < len(self._domain.attributes):
+            value = self._x[idx]
+        elif idx >= len(self._domain.attributes):
+            value = self._y[idx - len(self.domain.attributes)]
         else:
-            value = self._metas[-1 - key]
-        return Value(self._domain[key], value)
+            value = self._metas[-1 - idx]
+        var = self._domain[idx]
+        if isinstance(key, DiscreteVariable) and var is not key:
+            value = key.get_mapper_from(var)(value)
+            var = key
+        return Value(var, value)
 
     #TODO Should we return an instance of `object` if we have a meta attribute
     #     that is not Discrete or Continuous? E.g. when we have strings, we'd

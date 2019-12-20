@@ -358,7 +358,7 @@ class OWTreeGraph(OWTreeViewer2D):
         else:
             modus = np.argmax(distr)
             tabs = distr[modus]
-            text = f"{self.domain.class_vars[0].values[int(modus)]}<br/>"
+            text = f"<b>{self.domain.class_vars[0].values[int(modus)]}</b><br/>"
         if tabs > 0.999:
             text += f"100%, {total}/{total}"
         else:
@@ -373,7 +373,7 @@ class OWTreeGraph(OWTreeViewer2D):
         node_inst = node.node_inst
         mean, var = self.tree_adapter.get_distribution(node_inst)[0]
         insts = self.tree_adapter.num_samples(node_inst)
-        text = f"{mean:.1f} ± {var:.1f}<br/>"
+        text = f"<b>{mean:.1f}</b> ± {var:.1f}<br/>"
         text += f"{insts} instances"
         text = self._update_node_info_attr_name(node, text)
         node.setHtml(

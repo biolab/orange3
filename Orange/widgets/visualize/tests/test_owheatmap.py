@@ -1,6 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import warnings
+import unittest
+from unittest.mock import patch
 
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
@@ -9,6 +11,14 @@ from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.preprocess import Continuize
 from Orange.widgets.visualize.owheatmap import OWHeatMap
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
+
+
+def image_row_colors(image):
+    colors = np.full((image.height(), 3), np.nan)
+    for r in range(image.height()):
+        c = image.pixelColor(0, r)
+        colors[r] = c.red(), c.green(), c.blue()
+    return colors
 
 
 class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
@@ -140,7 +150,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         """Test if empty clusters are not displayed and warning is shown"""
         data = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3])
 
-        table = Table.from_numpy(Domain([ContinuousVariable()]),
+        table = Table.from_numpy(Domain([ContinuousVariable("y")]),
                                  data.reshape((9, 1)))
         self.widget.controls.merge_kmeans.setChecked(True)
 
@@ -156,16 +166,13 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         # Before 201906 thresholds modified the palette and decreased
         # the number of colors used.
         data = np.arange(1000).reshape(-1, 1)
-        table = Table.from_numpy(Domain([ContinuousVariable()]), data)
+        table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.threshold_high = 0.05
         self.widget.update_color_schema()
         heatmap_widget = self.widget.heatmap_widget_grid[0][0]
         image = heatmap_widget.heatmap_item.pixmap().toImage()
-        colors = np.full((len(data), 3), np.nan)
-        for r in range(len(data)):
-            c = image.pixelColor(0, r)
-            colors[r] = c.red(), c.green(), c.blue()
+        colors = image_row_colors(image)
         unique_colors = len(np.unique(colors, axis=0))
         self.assertLessEqual(len(data)*self.widget.threshold_low, unique_colors)
 
@@ -175,3 +182,61 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                       np.array([[1], [2], [3]]), np.array([[0], [0], [1]]))
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.row_check.setChecked(True)
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_commit') as commit:
+            self.widget.auto_commit = False
+            commit.reset_mock()
+            self.send_signal(self.widget.Inputs.data, self.titanic)
+            commit.assert_called()
+
+    def test_saved_selection(self):
+        iris = Table("iris")
+
+        self.send_signal(self.widget.Inputs.data, iris)
+        selected_indices = list(range(10, 31))
+        self.widget.selection_manager.select_rows(selected_indices)
+        self.widget.on_selection_finished()
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        w = self.create_widget(OWHeatMap, stored_settings=settings)
+        self.send_signal(w.Inputs.data, iris, widget=w)
+        self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 21)
+
+    def test_set_split_var(self):
+        data = Table("brown-selected")
+        w = self.widget
+        self.send_signal(self.widget.Inputs.data, data, widget=w)
+        self.assertIs(w.split_by_var, data.domain.class_var)
+        self.assertEqual(len(w.heatmapparts.rows),
+                         len(data.domain.class_var.values))
+        w.set_split_variable(None)
+        self.assertIs(w.split_by_var, None)
+        self.assertEqual(len(w.heatmapparts.rows), 1)
+
+    def test_center_palette(self):
+        data = np.arange(2).reshape(-1, 1)
+        table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
+        self.send_signal(self.widget.Inputs.data, table)
+
+        cb_model = self.widget.color_cb.model()
+        ind = cb_model.indexFromItem(cb_model.findItems("Green-Black-Red")[0]).row()
+        self.widget.palette_index = ind
+
+        desired_uncentered = [[0, 255, 0],
+                              [255, 0, 0]]
+
+        desired_centered = [[0, 0, 0],
+                            [255, 0, 0]]
+
+        for center, desired in [(False, desired_uncentered), (True, desired_centered)]:
+            self.widget.center_palette = center
+            self.widget.update_color_schema()
+            heatmap_widget = self.widget.heatmap_widget_grid[0][0]
+            image = heatmap_widget.heatmap_item.pixmap().toImage()
+            colors = image_row_colors(image)
+            np.testing.assert_almost_equal(colors, desired)
+
+
+if __name__ == "__main__":
+    unittest.main()

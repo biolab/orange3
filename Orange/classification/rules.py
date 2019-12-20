@@ -562,8 +562,8 @@ class TopDownSearchStrategy(SearchStrategy):
 
     @staticmethod
     def discretize(X, Y, W, domain):
-        values, counts, _ = _contingency.contingency_floatarray(
-            X, Y.astype(dtype=np.intp), len(domain.class_var.values), W)
+        (values, counts), _, _, _ = _contingency.contingency_floatarray(
+            X, Y.astype(np.float64), len(domain.class_var.values), W)
         cut_ind = np.array(EntropyMDL._entropy_discretize_sorted(counts.T, True))
         return [values[smh] for smh in cut_ind]
 

@@ -5,7 +5,7 @@ from AnyQt.QtWidgets import QWidget, QGridLayout
 from AnyQt.QtWidgets import QListView
 from AnyQt.QtCore import (
     Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
-    QMimeData
+    QMimeData, QAbstractItemModel
 )
 
 from Orange.widgets import gui, widget
@@ -251,7 +251,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.down_meta_button = gui.button(bbox, self, "Down",
                                            callback=partial(self.move_down, self.meta_attrs_view))
 
-        autobox = gui.auto_commit(None, self, "auto_commit", "Send")
+        autobox = gui.auto_send(None, self, "auto_commit")
         layout.addWidget(autobox, 3, 0, 1, 3)
         reset = gui.button(None, self, "Reset", callback=self.reset, width=120)
         autobox.layout().insertWidget(0, reset)
@@ -411,12 +411,20 @@ class OWSelectAttributes(widget.OWWidget):
             rows = [model.mapToSource(r) for r in rows]
         return [r.row() for r in rows]
 
-    def move_rows(self, view, rows, offset):
-        model = view.model()
-        newrows = [min(max(0, row + offset), len(model) - 1) for row in rows]
+    def move_rows(self, view: QListView, offset: int, roles=(Qt.EditRole,)):
+        rows = [idx.row() for idx in view.selectionModel().selectedRows()]
+        model = view.model()  # type: QAbstractItemModel
+        rowcount = model.rowCount()
+        newrows = [min(max(0, row + offset), rowcount - 1) for row in rows]
+
+        def itemData(index):
+            return {role: model.data(index, role) for role in roles}
 
         for row, newrow in sorted(zip(rows, newrows), reverse=offset > 0):
-            model[row], model[newrow] = model[newrow], model[row]
+            d1 = itemData(model.index(row, 0))
+            d2 = itemData(model.index(newrow, 0))
+            model.setItemData(model.index(row, 0), d2)
+            model.setItemData(model.index(newrow, 0), d1)
 
         selection = QItemSelection()
         for nrow in newrows:
@@ -427,13 +435,11 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.commit()
 
-    def move_up(self, view):
-        selected = self.selected_rows(view)
-        self.move_rows(view, selected, -1)
+    def move_up(self, view: QListView):
+        self.move_rows(view, -1)
 
-    def move_down(self, view):
-        selected = self.selected_rows(view)
-        self.move_rows(view, selected, 1)
+    def move_down(self, view: QListView):
+        self.move_rows(view, 1)
 
     def move_selected(self, view):
         if self.selected_rows(view):

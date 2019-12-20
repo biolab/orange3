@@ -99,6 +99,9 @@ class OWConcurrentWidget(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.run_button.setText("Start")
         self.commit()
 
+    def on_exception(self, ex: Exception):
+        raise ex
+
     # OWDataProjectionWidget
     def set_data(self, data: Table):
         super().set_data(data)

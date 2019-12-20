@@ -10,8 +10,8 @@ from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import vartype
 
-Continuous = 100 + vartype(ContinuousVariable())
-Discrete = 100 + vartype(DiscreteVariable())
+Continuous = 100 + vartype(ContinuousVariable("x"))
+Discrete = 100 + vartype(DiscreteVariable("x"))
 
 
 class TestDomainContextHandler(TestCase):
@@ -217,7 +217,8 @@ class TestDomainContextHandler(TestCase):
         self.assertEqual(val, (var.name, 100 + vartype(var)))
 
         # Should not crash on anonymous variables
-        var.name = ""
+        with self.assertWarns(OrangeDeprecationWarning):
+            var = ContinuousVariable()
         val = self.handler.encode_setting(None, setting, var)
         self.assertEqual(val, (var.name, 100 + vartype(var)))
 

@@ -7,6 +7,7 @@ from types import SimpleNamespace as namespace
 from typing import Optional, Callable, Tuple, Any
 
 import numpy as np
+import scipy.sparse as sp
 import networkx as nx
 
 from AnyQt.QtCore import (
@@ -30,9 +31,9 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
 
 try:
-    from orangecontrib.network.network import Graph
+    from orangecontrib.network.network import Network
 except ImportError:
-    Graph = None
+    Network = None
 
 
 _MAX_PCA_COMPONENTS = 50
@@ -57,13 +58,10 @@ class OWLouvainClustering(widget.OWWidget):
     class Inputs:
         data = Input("Data", Table, default=True)
 
-    if Graph is not None:
-        class Outputs:
-            annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
-            graph = Output("Network", Graph)
-    else:
-        class Outputs:
-            annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
+    class Outputs:
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
+        if Network is not None:
+            graph = Output("Network", Network)
 
     apply_pca = ContextSetting(True)
     pca_components = ContextSetting(_DEFAULT_PCA_COMPONENTS)
@@ -139,10 +137,9 @@ class OWLouvainClustering(widget.OWWidget):
             "Smaller values tend to produce more clusters and larger values "
             "retrieve less clusters."
         )
-        self.apply_button = gui.auto_commit(
-            self.controlArea, self, "auto_commit", "Apply", box=None,
-            commit=lambda: self.commit(),
-            callback=lambda: self._on_auto_commit_changed(),
+        self.apply_button = gui.auto_apply(
+            self.controlArea, self, "auto_commit", box=None,
+            commit=lambda: self.commit(), callback=lambda: self._on_auto_commit_changed()
         )  # type: QWidget
 
     def _preprocess_data(self):
@@ -314,12 +311,12 @@ class OWLouvainClustering(widget.OWWidget):
 
     def __set_state_ready(self):
         self.progressBarFinished()
-        self.setBlocking(False)
+        self.setInvalidated(False)
         self.setStatusMessage("")
 
     def __set_state_busy(self):
         self.progressBarInit()
-        self.setBlocking(True)
+        self.setInvalidated(True)
 
     def __start_task(self, task, state):
         # type: (Callable[[], Any], TaskState) -> None
@@ -392,9 +389,12 @@ class OWLouvainClustering(widget.OWWidget):
         new_table.get_column_view(cluster_var)[0][:] = new_partition
         self.Outputs.annotated_data.send(new_table)
 
-        if Graph is not None:
-            graph = Graph(self.graph)
-            graph.set_items(new_table)
+        if Network is not None:
+            n_edges = self.graph.number_of_edges()
+            edges = sp.coo_matrix(
+                (np.ones(n_edges), np.array(self.graph.edges()).T),
+                shape=(n_edges, n_edges))
+            graph = Network(new_table, edges)
             self.Outputs.graph.send(graph)
 
     @Inputs.data
@@ -408,13 +408,14 @@ class OWLouvainClustering(widget.OWWidget):
         self.controls.pca_components.setEnabled(self.apply_pca)
 
         if prev_data and self.data and array_equal(prev_data.X, self.data.X):
-            if self.auto_commit:
+            if self.auto_commit and not self.isInvalidated():
                 self._send_data()
             return
 
+        self.cancel()
         # Clear the outputs
         self.Outputs.annotated_data.send(None)
-        if Graph is not None:
+        if Network is not None:
             self.Outputs.graph.send(None)
 
         # Clear internal state
@@ -432,10 +433,8 @@ class OWLouvainClustering(widget.OWWidget):
         # Can't have more PCA components than the number of attributes
         n_attrs = len(data.domain.attributes)
         self.pca_components_slider.setMaximum(min(_MAX_PCA_COMPONENTS, n_attrs))
-        self.pca_components_slider.setValue(min(_DEFAULT_PCA_COMPONENTS, n_attrs))
         # Can't have more k neighbors than there are data points
         self.k_neighbors_spin.setMaximum(min(_MAX_K_NEIGBOURS, len(data) - 1))
-        self.k_neighbors_spin.setValue(min(_DEFAULT_K_NEIGHBORS, len(data) - 1))
 
         self.info_label.setText("Clustering not yet run.")
 

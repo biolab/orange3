@@ -20,7 +20,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.widget import Input, Output, Msg
 
 
 class OWConcatenate(widget.OWWidget):
@@ -39,6 +39,9 @@ class OWConcatenate(widget.OWWidget):
 
     class Outputs:
         data = Output("Data", Orange.data.Table)
+
+    class Error(widget.OWWidget.Error):
+        bow_concatenation = Msg("Inputs must be of the same type.")
 
     merge_type: int
     append_source_column: bool
@@ -132,9 +135,7 @@ class OWConcatenate(widget.OWWidget):
         cb.disables.append(ibox)
         cb.makeConsistent()
 
-        box = gui.auto_commit(
-            self.controlArea, self, "auto_commit", "Apply", commit=self.apply,
-            orientation=Qt.Horizontal, checkbox_label="Apply automatically")
+        box = gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 
@@ -153,7 +154,22 @@ class OWConcatenate(widget.OWWidget):
 
     def handleNewSignals(self):
         self.mergebox.setDisabled(self.primary_data is not None)
-        self.unconditional_apply()
+        if self.incompatible_types():
+            self.Error.bow_concatenation()
+        else:
+            self.Error.bow_concatenation.clear()
+            self.unconditional_apply()
+
+    def incompatible_types(self):
+        types_ = set()
+        if self.primary_data is not None:
+            types_.add(type(self.primary_data))
+        for key in self.more_data:
+            types_.add(type(self.more_data[key]))
+        if len(types_) > 1:
+            return True
+
+        return False
 
     def apply(self):
         tables, domain, source_var = [], None, None
@@ -186,7 +202,7 @@ class OWConcatenate(widget.OWWidget):
 
         tables = [table.transform(domain) for table in tables]
         if tables:
-            data = type(tables[0]).concatenate(tables, axis=0)
+            data = type(tables[0]).concatenate(tables)
             if source_var:
                 source_ids = np.array(list(flatten(
                     [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
@@ -198,8 +214,12 @@ class OWConcatenate(widget.OWWidget):
         self.Outputs.data.send(data)
 
     def _merge_type_changed(self, ):
-        if self.primary_data is None and self.more_data:
-            self.apply()
+        if self.incompatible_types():
+            self.Error.bow_concatenation()
+        else:
+            self.Error.bow_concatenation.clear()
+            if self.primary_data is None and self.more_data:
+                self.apply()
 
     def _source_changed(self):
         self.apply()

@@ -39,7 +39,7 @@ class MultiClassTest(unittest.TestCase):
 
         # multiple class variables
         y = np.random.randint(0, 2, (nrows, 2))
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyLearner()
         # TODO: Errors raised from various data checks should be made consistent
         with self.assertRaises((ValueError, TypeError)):
@@ -47,7 +47,7 @@ class MultiClassTest(unittest.TestCase):
 
         # single class variable
         y = np.random.randint(0, 2, (nrows, 1))
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyLearner()
         clf = learn(t)
         z = clf(x)
@@ -58,7 +58,7 @@ class MultiClassTest(unittest.TestCase):
         ncols = 10
         x = np.random.randint(1, 4, (nrows, ncols))
         y = np.random.randint(0, 2, (nrows, 2))
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyMulticlassLearner()
         clf = learn(t)
         z = clf(x)
@@ -117,7 +117,7 @@ class ModelTest(unittest.TestCase):
 
         # single class variable
         y = np.random.randint(1, 4, (nrows, 1)) // 2    # majority = 1
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         learn = DummyLearner()
         clf = learn(t)
         clf.ret = Model.Probs
@@ -238,7 +238,8 @@ class SklTest(unittest.TestCase):
         table = Table("titanic")
         lr = LogisticRegressionLearner()
         assert isinstance(lr, Orange.classification.SklLearner)
-        res = CrossValidation(table, [lr], k=2)
+        cv = CrossValidation(k=2)
+        res = cv(table, [lr])
         self.assertGreater(Orange.evaluation.AUC(res)[0], 0.7)
         self.assertLess(Orange.evaluation.AUC(res)[0], 0.9)
 
@@ -246,7 +247,8 @@ class SklTest(unittest.TestCase):
         data = Orange.data.Table("iris")
         data.X[:, (1, 3)] = np.NaN
         lr = LogisticRegressionLearner()
-        res = CrossValidation(data, [lr], k=2, store_models=True)
+        cv = CrossValidation(k=2, store_models=True)
+        res = cv(data, [lr])
         self.assertEqual(len(res.models[0][0].domain.attributes), 2)
         self.assertGreater(Orange.evaluation.CA(res)[0], 0.8)
 
@@ -262,8 +264,10 @@ class ClassfierListInputTest(unittest.TestCase):
         strlist = [["crew", "adult", "male"],
                    ["crew", "adult", None]]
         for se in strlist: #individual examples
-            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
-        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+            assert(all(tree(se) ==
+                       tree(Orange.data.Table.from_list(table.domain, [se]))))
+        assert(all(tree(strlist) ==
+                   tree(Orange.data.Table.from_list(table.domain, strlist))))
 
     def test_continuous(self):
         table = Table("iris")
@@ -271,14 +275,13 @@ class ClassfierListInputTest(unittest.TestCase):
         strlist = [[2, 3, 4, 5],
                    [1, 2, 3, 5]]
         for se in strlist: #individual examples
-            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
-        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+            assert(all(tree(se) ==
+                       tree(Orange.data.Table.from_list(table.domain, [se]))))
+        assert(all(tree(strlist) ==
+                   tree(Orange.data.Table.from_list(table.domain, strlist))))
 
 
 class UnknownValuesInPrediction(unittest.TestCase):
-    def setUp(self):
-        Variable._clear_all_caches()
-
     def test_unknown(self):
         table = Table("iris")
         tree = LogisticRegressionLearner()(table)
@@ -304,7 +307,6 @@ class UnknownValuesInPrediction(unittest.TestCase):
 class LearnerAccessibility(unittest.TestCase):
 
     def setUp(self):
-        Variable._clear_all_caches()
         # Convergence warnings are irrelevant for these tests
         warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
 
@@ -333,7 +335,6 @@ class LearnerAccessibility(unittest.TestCase):
                           " namespace" % learner.__name__)
 
     def test_all_models_work_after_unpickling(self):
-        Variable._clear_all_caches()
         datasets = [Table('iris'), Table('titanic')]
         for learner in list(self.all_learners()):
             try:
@@ -352,7 +353,8 @@ class LearnerAccessibility(unittest.TestCase):
                 model2 = pickle.loads(s)
 
                 np.testing.assert_almost_equal(
-                    Table(model.domain, ds).X, Table(model2.domain, ds).X)
+                    Table.from_table(model.domain, ds).X,
+                    Table.from_table(model2.domain, ds).X)
                 np.testing.assert_almost_equal(
                     model(ds), model2(ds),
                     err_msg='%s does not return same values when unpickled %s'

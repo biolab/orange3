@@ -16,6 +16,7 @@ from Orange.widgets.widget import Input, Output
 
 # Maximum number of PCA components that we can set in the widget
 MAX_COMPONENTS = 100
+LINE_NAMES = ["component variance", "cumulative variance"]
 
 
 class OWPCA(widget.OWWidget):
@@ -30,6 +31,7 @@ class OWPCA(widget.OWWidget):
 
     class Outputs:
         transformed_data = Output("Transformed Data", Table, replaces=["Transformed data"])
+        data = Output("Data", Table, default=True)
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 
@@ -83,13 +85,13 @@ class OWPCA(widget.OWWidget):
         self.variance_spin.setSuffix("%")
 
         form.addRow("Components:", self.components_spin)
-        form.addRow("Variance covered:", self.variance_spin)
+        form.addRow("Explained variance:", self.variance_spin)
 
         # Options
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.normalize_box = gui.checkBox(
             self.options_box, self, "normalize",
-            "Normalize data", callback=self._update_normalize
+            "Normalize variables", callback=self._update_normalize
         )
 
         self.maxp_spin = gui.spin(
@@ -100,8 +102,7 @@ class OWPCA(widget.OWWidget):
 
         self.controlArea.layout().addStretch()
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Apply",
-                        checkbox_label="Apply automatically")
+        gui.auto_apply(self.controlArea, self, "auto_commit")
 
         self.plot = SliderGraph(
             "Principal Components", "Proportion of variance",
@@ -180,6 +181,7 @@ class OWPCA(widget.OWWidget):
 
     def clear_outputs(self):
         self.Outputs.transformed_data.send(None)
+        self.Outputs.data.send(None)
         self.Outputs.components.send(None)
         self.Outputs.pca.send(self._pca_projector)
 
@@ -195,23 +197,24 @@ class OWPCA(widget.OWWidget):
 
         self.plot.update(
             numpy.arange(1, p+1), [explained_ratio[:p], explained[:p]],
-            [Qt.red, Qt.darkYellow], cutpoint_x=cutpos)
+            [Qt.red, Qt.darkYellow], cutpoint_x=cutpos, names=LINE_NAMES)
 
         self._update_axis()
 
     def _on_cut_changed(self, components):
+        if components == self.ncomponents \
+                or self.ncomponents == 0 \
+                or self._pca is not None \
+                and components == len(self._variance_ratio):
+            return
 
-        if not (self.ncomponents == 0 and
-                components == len(self._variance_ratio)):
-            self.ncomponents = components
-
+        self.ncomponents = components
         if self._pca is not None:
             var = self._cumulative[components - 1]
             if numpy.isfinite(var):
                 self.variance_covered = int(var * 100)
 
-        if components != self._nselected_components():
-            self._invalidate_selection()
+        self._invalidate_selection()
 
     def _update_selection_component_spin(self):
         # cut changed by "ncomponents" spin.
@@ -250,7 +253,7 @@ class OWPCA(widget.OWWidget):
             self._invalidate_selection()
 
     def _init_projector(self):
-        self._pca_projector = PCA(n_components=MAX_COMPONENTS)
+        self._pca_projector = PCA(n_components=MAX_COMPONENTS, random_state=0)
         self._pca_projector.component = self.ncomponents
         self._pca_preprocessors = PCA.preprocessors
 
@@ -285,7 +288,7 @@ class OWPCA(widget.OWWidget):
         axis.setTicks([[(i, str(i)) for i in range(1, p + 1, d)]])
 
     def commit(self):
-        transformed = components = None
+        transformed = data = components = None
         if self._pca is not None:
             if self._transformed is None:
                 # Compute the full transform (MAX_COMPONENTS components) once.
@@ -310,9 +313,18 @@ class OWPCA(widget.OWWidget):
                                metas=metas)
             components.name = 'components'
 
+            data_dom = Domain(
+                self.data.domain.attributes,
+                self.data.domain.class_vars,
+                self.data.domain.metas + domain.attributes)
+            data = Table.from_numpy(
+                data_dom, self.data.X, self.data.Y,
+                numpy.hstack((self.data.metas, transformed.X)))
+
         self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
         self.Outputs.components.send(components)
+        self.Outputs.data.send(data)
         self.Outputs.pca.send(self._pca_projector)
 
     def send_report(self):

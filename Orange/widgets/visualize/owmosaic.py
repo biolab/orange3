@@ -290,7 +290,7 @@ class OWMosaicDisplay(OWWidget):
     variable3 = ContextSetting(None)
     variable4 = ContextSetting(None)
     variable_color = ContextSetting(None)
-    selection = ContextSetting(set())
+    selection = Setting(set(), schema_only=True)
 
     BAR_WIDTH = 5
     SPACING = 4
@@ -317,6 +317,8 @@ class OWMosaicDisplay(OWWidget):
         self.discrete_data = None
         self.subset_data = None
         self.subset_indices = None
+        self.__pending_selection = self.selection
+        self.selection = set()
 
         self.color_data = None
 
@@ -460,8 +462,14 @@ class OWMosaicDisplay(OWWidget):
             else:
                 indices = {e.id for e in transformed}
                 self.subset_indices = [ex.id in indices for ex in self.data]
+        if self.data is not None and self.__pending_selection is not None:
+            self.selection = self.__pending_selection
+            self.__pending_selection = None
+        else:
+            self.selection = set()
         self.set_color_data()
-        self.reset_graph()
+        self.update_graph()
+        self.send_selection()
 
     def clear_selection(self):
         self.selection = set()

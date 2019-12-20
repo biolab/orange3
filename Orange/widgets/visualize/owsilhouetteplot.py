@@ -76,6 +76,8 @@ class OWSilhouettePlot(widget.OWWidget):
     add_scores = settings.Setting(False)
     auto_commit = settings.Setting(True)
 
+    pending_selection = settings.Setting(None, schema_only=True)
+
     Distances = [("Euclidean", Orange.distance.Euclidean),
                  ("Manhattan", Orange.distance.Manhattan),
                  ("Cosine", Orange.distance.Cosine)]
@@ -153,9 +155,7 @@ class OWSilhouettePlot(widget.OWWidget):
         # Thunk the call to commit to call conditional commit
         gui.checkBox(box, self, "add_scores", "Add silhouette scores",
                      callback=lambda: self.commit())
-        gui.auto_commit(
-            box, self, "auto_commit", "Commit",
-            auto_label="Auto commit", box=False)
+        gui.auto_send(box, self, "auto_commit", box=False)
         # Ensure that the controlArea is not narrower than buttonsArea
         self.controlArea.layout().addWidget(self.buttonsArea)
 
@@ -165,9 +165,17 @@ class OWSilhouettePlot(widget.OWWidget):
         self.view.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.mainArea.layout().addWidget(self.view)
 
+        self.settingsAboutToBePacked.connect(self.pack_settings)
+
     def sizeHint(self):
         sh = self.controlArea.sizeHint()
         return sh.expandedTo(QSize(600, 720))
+
+    def pack_settings(self):
+        if self.data and self._silplot is not None:
+            self.pending_selection = list(self._silplot.selection())
+        else:
+            self.pending_selection = None
 
     @Inputs.data
     @check_sql_input
@@ -209,6 +217,12 @@ class OWSilhouettePlot(widget.OWWidget):
         if self.data is not None:
             self._update()
             self._replot()
+            if self.pending_selection is not None and self._silplot is not None:
+                # If selection contains indices that are too large, the data
+                # file must had been modified, so we ignore selection
+                if max(self.pending_selection) < len(self.data):
+                    self._silplot.setSelection(np.array(self.pending_selection))
+                self.pending_selection = None
 
         self.unconditional_commit()
 

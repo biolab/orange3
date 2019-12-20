@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+# pylint: disable=abstract-method
 import unittest
 from unittest.mock import patch
 
@@ -16,6 +17,10 @@ from Orange.widgets.tests.base import WidgetTest
 
 
 class TestOWConcatenate(WidgetTest):
+
+    class DummyTable(Table):
+
+        pass
 
     def setUp(self):
         self.widget = self.create_widget(OWConcatenate)
@@ -94,7 +99,7 @@ class TestOWConcatenate(WidgetTest):
             source = get_source()
             output = self.get_output(self.widget.Outputs.data)
             self.assertTrue(source in getattr(output.domain, place))
-            data = Table(Domain([source]), output)
+            data = output.transform(Domain([source]))
             np.testing.assert_equal(data[:len(self.iris)].X, 0)
             np.testing.assert_equal(data[len(self.iris):].X, 1)
 
@@ -116,6 +121,17 @@ class TestOWConcatenate(WidgetTest):
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.primary_data, self.iris)
             apply.assert_called()
+
+    def test_type_compatibility(self):
+        # result is on the Output for compatible types
+        self.send_signal(self.widget.Inputs.primary_data, self.iris)
+        self.send_signal(self.widget.Inputs.additional_data, self.iris)
+        self.assertIsNotNone(self.widget.Outputs.data)
+        self.assertFalse(self.widget.Error.bow_concatenation.is_shown())
+        # test incompatible type error
+        self.send_signal(self.widget.Inputs.primary_data, self.iris)
+        self.send_signal(self.widget.Inputs.additional_data, self.DummyTable())
+        self.assertTrue(self.widget.Error.bow_concatenation.is_shown())
 
 
 class TestTools(unittest.TestCase):
@@ -166,3 +182,7 @@ class TestTools(unittest.TestCase):
         self.assertSequenceEqual(res.attributes, domain1.attributes)
         self.assertSequenceEqual(res.class_vars, domain1.class_vars)
         self.assertSequenceEqual(res.metas, domain1.metas)
+
+
+if __name__ == "__main__":
+    unittest.main()

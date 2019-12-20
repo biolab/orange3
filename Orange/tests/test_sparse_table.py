@@ -8,7 +8,6 @@ from scipy.sparse import csr_matrix, SparseEfficiencyWarning
 from Orange import data
 from Orange.data import Table
 from Orange.tests import test_table as tabletests
-from Orange.tests.test_table import skip_deprecated_length
 
 
 class InterfaceTest(tabletests.InterfaceTest):
@@ -19,31 +18,6 @@ class InterfaceTest(tabletests.InterfaceTest):
             csr_matrix(self.table.X),
             csr_matrix(self.table.Y),
         )
-
-    @skip_deprecated_length
-    def test_append_rows(self):
-        with self.assertRaises(Exception):
-            super().test_append_rows()
-
-    @skip_deprecated_length
-    def test_insert_rows(self):
-        with self.assertRaises(Exception):
-            super().test_insert_rows()
-
-    @skip_deprecated_length
-    def test_insert_view(self):
-        with self.assertRaises(Exception):
-            super().test_insert_view()
-
-    @skip_deprecated_length
-    def test_delete_rows(self):
-        with self.assertRaises(ValueError):
-            super().test_delete_rows()
-
-    @skip_deprecated_length
-    def test_clear(self):
-        with self.assertRaises(ValueError):
-            super().test_clear()
 
     def test_row_assignment(self):
         # This warning will appear in actual code that assigns rows of

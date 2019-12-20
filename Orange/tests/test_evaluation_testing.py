@@ -21,7 +21,7 @@ def random_data(nrows, ncols):
     x = np.random.randint(0, 2, (nrows, ncols))
     col = np.random.randint(ncols)
     y = x[:nrows, col].reshape(nrows, 1)
-    table = Table(x, y)
+    table = Table.from_numpy(None, x, y)
     table = preprocess.Discretize(discretize.EqualWidth(n=3))(table)
     return table
 
@@ -253,7 +253,7 @@ class TestCrossValidation(TestSampling):
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[-4:] = np.ones((4, 3))
-        data = Table(x, y)
+        data = Table.from_numpy(None, x, y)
         cv = CrossValidation(k=3)
         res = cv(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
@@ -332,7 +332,7 @@ class TestCrossValidationFeature(TestSampling):
     def add_meta_fold(data, f):
         fat = DiscreteVariable(name="fold", values=[str(a) for a in range(f)])
         domain = Domain(data.domain.attributes, data.domain.class_var, metas=[fat])
-        ndata = Table(domain, data)
+        ndata = data.transform(domain)
         vals = np.tile(range(f), len(data)//f + 1)[:len(data)]
         vals = vals.reshape((-1, 1))
         ndata[:, fat] = vals
@@ -436,7 +436,7 @@ class TestLeaveOneOut(TestSampling):
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[49] = 1
-        data = Table(x, y)
+        data = Table.from_numpy(None, x, y)
         res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
@@ -445,7 +445,7 @@ class TestLeaveOneOut(TestSampling):
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
-        data = Table(x, y)
+        data = Table.from_numpy(None, x, y)
         res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0],
                                 1 - data.Y[res.row_indices].flatten())
@@ -512,7 +512,7 @@ class TestTestOnTrainingData(TestSampling):
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[49] = 1
-        data = Table(x, y)
+        data = Table.from_numpy(None, x, y)
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
@@ -521,7 +521,7 @@ class TestTestOnTrainingData(TestSampling):
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
-        data = Table(x, y)
+        data = Table.from_numpy(None, x, y)
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
 
@@ -600,7 +600,7 @@ class TestTestOnTestData(TestSampling):
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[49] = 1
-        data = Table(x, y)
+        data = Table.from_numpy(None, x, y)
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
@@ -610,7 +610,7 @@ class TestTestOnTestData(TestSampling):
 
         x[25:] = 1
         y = x[:, -1]
-        data = Table(x, y)
+        data = Table.from_numpy(None, x, y)
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
 

@@ -10,7 +10,7 @@ Reads attribute-value data from an input file.
 
 The **File** widget [reads the input data file](../../loading-your-data/index.md) (data table with data instances) and sends the dataset to its output channel. The history of most recently opened files is maintained in the widget. The widget also includes a directory with sample datasets that come pre-installed with Orange.
 
-The widget reads data from Excel (**.xlsx**), simple tab-delimited (**.txt**), comma-separated files (**.csv**) or URLs.
+The widget reads data from Excel (**.xlsx**), simple tab-delimited (**.txt**), comma-separated files (**.csv**) or URLs. For other formats see Other Formats section below.
 
 ![](images/File-stamped.png)
 
@@ -30,8 +30,7 @@ Most Orange workflows would probably start with the **File** widget. In the sche
 
 ![](images/File-Workflow.png)
 
-Loading your data
------------------
+### Loading your data
 
 - Orange can import any comma, .xlsx or tab-delimited data file or URL. Use the **File** widget and then, if needed, select class and meta attributes.
 - To specify the domain and the type of the attribute, attribute names can be preceded with a label followed by a hash. Use c for class and m for meta attribute, i to ignore a column, and C, D, S for continuous, discrete and string attribute types. Examples: C#mpg, mS#name, i#dummy.
@@ -40,3 +39,15 @@ Loading your data
 ![](images/spreadsheet-simple-head1.png)
 
 Read more on loading your data [here](../../loading-your-data/index.md).
+
+### Other Formats
+
+Supported formats and the widgets to load them:
+
+- distance matrix: [Distance File](../unsupervised/distancefile.md)
+- predictive model: [Load Model](../model/loadmodel.md)
+- network: Network File from Network add-on
+- images: Import Images from Image Analytics add-on
+- text/corpus: Corpus or Import Documents from Text add-on
+- single cell data: Load Data from Single Cell add-on
+- several spectroscopy files: Multifile from Spectroscopy add-on

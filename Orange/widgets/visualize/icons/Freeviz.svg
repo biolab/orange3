@@ -1,41 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 16.0.4, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generator: Adobe Illustrator 23.0.4, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<polygon fill="#B2B2B2" points="3.543,36.449 2.536,34.722 19.495,24.845 22.869,3.997 24.843,4.316 21.817,23.016 27.381,18.441 
-	28.65,19.988 21.839,25.588 30.408,35.38 28.902,36.695 20.198,26.749 "/>
+	 viewBox="0 0 48 48" style="enable-background:new 0 0 48 48;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:#B2B2B2;stroke-width:2;stroke-miterlimit:10;}
+	.st1{fill:#989898;}
+	.st2{fill:none;stroke:#333333;stroke-width:2;stroke-miterlimit:10;}
+	.st3{fill:#333333;}
+</style>
 <g>
-	<circle fill="#989898" cx="19.116" cy="8.002" r="2.999"/>
-</g>
-<g>
-	<circle fill="#989898" cx="10.116" cy="9.002" r="2.999"/>
-</g>
-<g>
-	<circle fill="#989898" cx="15.116" cy="14.002" r="2.999"/>
-</g>
-<g>
-	<circle fill="#666666" cx="28.116" cy="23.002" r="2.999"/>
-</g>
-<g>
-	<circle fill="#666666" cx="34.116" cy="19.002" r="2.999"/>
-</g>
-<g>
-	<circle fill="#666666" cx="37.116" cy="26.002" r="2.999"/>
-</g>
-<g>
-	<circle fill="#666666" cx="43.116" cy="19.002" r="2.999"/>
-</g>
-<g>
-	<circle fill="#333333" cx="16.116" cy="33" r="2.999"/>
-</g>
-<g>
-	<circle fill="#333333" cx="8.116" cy="32" r="2.999"/>
-</g>
-<g>
-	<circle fill="#333333" cx="9.116" cy="39.998" r="2.999"/>
-</g>
-<g>
-	<circle fill="#333333" cx="18.116" cy="40" r="2.999"/>
+	<g>
+		<g>
+			<line class="st0" x1="23.9" y1="5.4" x2="23.9" y2="24.9"/>
+			<line class="st0" x1="23.9" y1="24.9" x2="40.2" y2="34.9"/>
+			<path class="st0" d="M23.9,24.9"/>
+			<line class="st0" x1="23.9" y1="24.9" x2="7.5" y2="34.9"/>
+		</g>
+		<g>
+			<circle class="st1" cx="10" cy="15.9" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="16.1" cy="10.2" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="17.4" cy="19.9" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="9.8" cy="25" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="30.9" cy="22.5" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="37" cy="16.9" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="38.4" cy="26.6" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="30.2" cy="10.2" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="23.4" cy="31.9" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="17.1" cy="35.9" r="2.6"/>
+		</g>
+		<g>
+			<circle class="st1" cx="29.2" cy="36.4" r="2.6"/>
+		</g>
+	</g>
+	<g>
+		<g>
+			<g>
+				<line class="st2" x1="32" y1="4" x2="42.5" y2="10.4"/>
+				<g>
+					<polygon class="st3" points="40.2,12.5 46.1,12.6 43.3,7.4 					"/>
+				</g>
+			</g>
+		</g>
+		<g>
+			<g>
+				<line class="st2" x1="32.3" y1="42.4" x2="20.1" y2="42.4"/>
+				<g>
+					<polygon class="st3" points="20.9,39.5 15.8,42.4 20.9,45.4 					"/>
+				</g>
+			</g>
+		</g>
+		<g>
+			<g>
+				<line class="st2" x1="2.4" y1="11.2" x2="12.8" y2="4.8"/>
+				<g>
+					<polygon class="st3" points="13.6,7.8 16.5,2.6 10.5,2.7 					"/>
+				</g>
+			</g>
+		</g>
+	</g>
 </g>
 </svg>

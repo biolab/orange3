@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
-from unittest.mock import patch
+# pylint: disable=missing-docstring,unsubscriptable-object
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -73,6 +73,24 @@ class TestOWRandomize(WidgetTest):
         np.testing.assert_array_equal(output.X, output2.X)
         np.testing.assert_array_equal(output.Y, output2.Y)
         np.testing.assert_array_equal(output.metas, output2.metas)
+
+    def test_summary(self):
+        """"Check if status bar displays correct input/output summary"""
+        output_sum = self.widget.info.set_output_summary = Mock()
+        input_sum = self.widget.info.set_input_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, self.zoo)
+        input_sum.assert_called_with(str(len(self.zoo)))
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(str(len(output)))
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
     def test_unconditional_commit_on_new_signal(self):
         with patch.object(self.widget, 'unconditional_apply') as apply:

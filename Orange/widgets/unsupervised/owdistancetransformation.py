@@ -58,7 +58,7 @@ class OWDistanceTransformation(widget.OWWidget):
                          btnLabels=[x[0] for x in self.inversion_options],
                          callback=self._invalidate)
 
-        gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
+        gui.auto_apply(self.controlArea, self, "autocommit")
 
     @Inputs.distances
     def set_data(self, data):

@@ -8,8 +8,8 @@ from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.settings import ContextSetting, PerfectDomainContextHandler, Context, Setting
 from Orange.widgets.utils import vartype
 
-Continuous = vartype(ContinuousVariable())
-Discrete = vartype(DiscreteVariable())
+Continuous = vartype(ContinuousVariable("x"))
+Discrete = vartype(DiscreteVariable("x"))
 
 
 class TestPerfectDomainContextHandler(TestCase):

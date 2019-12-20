@@ -56,7 +56,7 @@ class OWLogisticRegression(OWBaseLearner):
         gui.widgetLabel(box2, "Weak").setStyleSheet("margin-top:6px")
         self.c_slider = gui.hSlider(
             box2, self, "C_index", minValue=0, maxValue=len(self.C_s) - 1,
-            callback=lambda: (self.set_c(), self.settings_changed()),
+            callback=self.set_c, callback_finished=self.settings_changed,
             createLabel=False)
         gui.widgetLabel(box2, "Strong").setStyleSheet("margin-top:6px")
         box2 = gui.hBox(box)

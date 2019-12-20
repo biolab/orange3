@@ -9,8 +9,6 @@ external_datasets = [
 
 
 def data_info(name, location):
-    print(location)
-    Orange.data.Variable._clear_all_caches()
     data = Orange.data.Table(location)
     domain = data.domain
     attr = data.domain.attributes

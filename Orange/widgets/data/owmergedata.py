@@ -9,9 +9,10 @@ from AnyQt.QtWidgets import QWidget, QLabel, QComboBox, QPushButton, \
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable, Variable
-from Orange.data.util import hstack
+from Orange.data.util import hstack, get_unique_names_duplicates
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -168,6 +169,72 @@ class DomainModelWithTooltips(DomainModel):
         return super().data(index, role)
 
 
+class MergeDataContextHandler(ContextHandler):
+    # `widget` is used as an argument in most methods
+    # pylint: disable=redefined-outer-name
+    # context handlers override methods using different signatures
+    # pylint: disable=arguments-differ
+
+    def new_context(self, variables1, variables2):
+        context = super().new_context()
+        context.variables1 = variables1
+        context.variables2 = variables2
+        return context
+
+    def open_context(self, widget, domain1, domain2):
+        if domain1 is not None and domain2 is not None:
+            super().open_context(widget,
+                                 self._encode_domain(domain1),
+                                 self._encode_domain(domain2))
+
+    @staticmethod
+    def encode_variables(variables):
+        return [(v.name, 100 + vartype(v))
+                if isinstance(v, Variable) else (v, 100)
+                for v in variables]
+
+    @staticmethod
+    def decode_pair(widget, pair):
+        left_domain = widget.data and widget.data.domain
+        right_domain = widget.extra_data and widget.extra_data.domain
+        return tuple(var[0] if var[0] in (INDEX, INSTANCEID) else domain[var[0]]
+                     for domain, var in zip((left_domain, right_domain), pair))
+
+    def _encode_domain(self, domain):
+        if domain is None:
+            return {}
+        all_vars = chain(domain.variables, domain.metas)
+        return dict(self.encode_variables(all_vars))
+
+    def settings_from_widget(self, widget, *_args):
+        context = widget.current_context
+        if context is None:
+            return
+        context.values["attr_pairs"] = [self.encode_variables(row)
+                                        for row in widget.attr_pairs]
+
+    def settings_to_widget(self, widget, *_args):
+        context = widget.current_context
+        if context is None:
+            return
+        pairs = context.values.get("attr_pairs", [])
+        widget.attr_pairs = [self.decode_pair(widget, pair) for pair in pairs]
+
+    def match(self, context, variables1, variables2):
+        def matches(part, variables):
+            return all(var[1] == 100 and var[0] in variables
+                       or variables.get(var[0], -1) == var[1] for var in part)
+
+        if (variables1, variables2) == (context.variables1, context.variables2):
+            return self.PERFECT_MATCH
+
+        left, right = zip(*context.values["attr_pairs"])
+        if matches(left, variables1) and matches(right, variables2):
+            return 0.5
+
+        return self.NO_MATCH
+
+
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
     description = "Merge datasets based on the values of selected features."
@@ -208,22 +275,24 @@ class OWMergeData(widget.OWWidget):
             "Confused about merging options?\nSee the tooltips!",
             "merging_types")]
 
-    attr_pairs = Setting(None, schema_only=True)
+    settingsHandler = MergeDataContextHandler()
+    attr_pairs = ContextSetting(None, schema_only=True)
     merging = Setting(LeftJoin)
     auto_apply = Setting(True)
-    settings_version = 1
+    settings_version = 2
 
     want_main_area = False
     resizing_enabled = False
 
     class Warning(widget.OWWidget.Warning):
-        duplicate_names = Msg("Duplicate variable names in output.")
+        renamed_vars = Msg("Some variables have been renamed "
+                           "to avoid duplicates.\n{}")
 
     class Error(widget.OWWidget.Error):
         matching_numeric_with_nonnum = Msg(
-            "Numeric and non-numeric columns ({} and {}) can't be matched.")
-        matching_index_with_sth = Msg("Row index cannot by matched with {}.")
-        matching_id_with_sth = Msg("Instance cannot by matched with {}.")
+            "Numeric and non-numeric columns ({} and {}) cannot be matched.")
+        matching_index_with_sth = Msg("Row index cannot be matched with {}.")
+        matching_id_with_sth = Msg("Instance cannot be matched with {}.")
         nonunique_left = Msg(
             "Some combinations of values on the left appear in multiple rows.\n"
             "For this type of merging, every possible combination of values "
@@ -247,10 +316,9 @@ class OWMergeData(widget.OWWidget):
         self.extra_model = DomainModelWithTooltips(content)
 
         box = gui.hBox(self.controlArea, box=None)
-        self.infoBoxData = gui.label(
-            box, self, self.dataInfoText(None), box="Data")
-        self.infoBoxExtraData = gui.label(
-            box, self, self.dataInfoText(None), box="Extra Data")
+        no_info = self.data_info(None)
+        self.info_box_data = gui.label(box, self, no_info, box="Data")
+        self.info_box_extra_data = gui.label(box, self, no_info, box="Extra Data")
 
         grp = gui.radioButtons(
             self.controlArea, self, "merging", box="Merging",
@@ -264,113 +332,60 @@ class OWMergeData(widget.OWWidget):
         box = gui.vBox(self.controlArea, box="Row matching")
         box.layout().addWidget(self.attr_boxes)
 
-        gui.auto_commit(self.controlArea, self, "auto_apply", "&Apply",
-                        box=False)
+        gui.auto_apply(self.controlArea, self, box=False)
         # connect after wrapping self.commit with gui.auto_commit!
         self.attr_boxes.vars_changed.connect(self.commit)
+        self.attr_boxes.vars_changed.connect(self.store_combo_state)
         self.settingsAboutToBePacked.connect(self.store_combo_state)
 
     def change_merging(self):
         self.commit()
 
-    @staticmethod
-    def _try_set_combo(combo, var):
-        if var in combo.model():
-            combo.setCurrentIndex(combo.model().indexOf(var))
-        else:
-            combo.setCurrentIndex(0)
+    @Inputs.data
+    @check_sql_input
+    def set_data(self, data):
+        self.data = data
+        self.model.set_domain(data and data.domain)
+        self.info_box_data.setText(self.data_info(data))
+
+    @Inputs.extra_data
+    @check_sql_input
+    def set_extra_data(self, data):
+        self.extra_data = data
+        self.extra_model.set_domain(data and data.domain)
+        self.info_box_extra_data.setText(self.data_info(data))
+
+    def store_combo_state(self):
+        self.attr_pairs = self.attr_boxes.current_state()
+
+    def handleNewSignals(self):
+        self.closeContext()
+        self.attr_pairs = [self._find_best_match()]
+        self.openContext(self.data and self.data.domain,
+                         self.extra_data and self.extra_data.domain)
+        self.attr_boxes.set_state(self.attr_pairs)
+        self.unconditional_commit()
 
     def _find_best_match(self):
         def get_unique_str_metas_names(model_):
             return [m for m in model_ if isinstance(m, StringVariable)]
 
-        def best_match(model, extra_model):
-            attr, extra_attr, n_max_intersect = None, None, 0
-            str_metas = get_unique_str_metas_names(model)
-            extra_str_metas = get_unique_str_metas_names(extra_model)
-            for m_a, m_b in product(str_metas, extra_str_metas):
-                col = self.data[:, m_a].metas
-                extra_col = self.extra_data[:, m_b].metas
-                if col.size and extra_col.size \
-                        and isinstance(col[0][0], str) \
-                        and isinstance(extra_col[0][0], str):
-                    n_inter = len(np.intersect1d(col, extra_col))
-                    if n_inter > n_max_intersect:
-                        n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
-            return attr, extra_attr
-
-        if self.data and self.extra_data:
-            box = self.attr_boxes
-            state = box.current_state()
-            if len(state) == 1 \
-                    and not any(isinstance(v, Variable) for v in state[0]):
-                l_var, r_var = best_match(box.model_left, box.model_right)
-                if l_var is not None:
-                    self._try_set_combo(box.rows[0].left_combo, l_var)
-                    self._try_set_combo(box.rows[0].right_combo, r_var)
-
-    @Inputs.data
-    @check_sql_input
-    def setData(self, data):
-        self.data = data
-        prev_settings = self.attr_boxes.current_state()
-        self.model.set_domain(data and data.domain)
-        self._restore_combo_current_items(0, prev_settings)
-        self.infoBoxData.setText(self.dataInfoText(data))
-
-    @Inputs.extra_data
-    @check_sql_input
-    def setExtraData(self, data):
-        self.extra_data = data
-        prev_settings = self.attr_boxes.current_state()
-        self.extra_model.set_domain(data and data.domain)
-        self._restore_combo_current_items(1, prev_settings)
-        self.infoBoxExtraData.setText(self.dataInfoText(data))
-
-    def _restore_combo_current_items(self, side, prev_settings):
-        for row, pair in zip(self.attr_boxes.rows, prev_settings):
-            self._try_set_combo(
-                [row.left_combo, row.right_combo][side], pair[side])
-
-    def store_combo_state(self):
-        self.attr_pairs = (
-            self.data is not None,
-            self.extra_data is not None,
-            [[[INDEX, INSTANCEID].index(x) if isinstance(x, str) else x.name
-              for x in row]
-             for row in self.attr_boxes.current_state()])
-
-    def handleNewSignals(self):
-        if self.attr_pairs \
-                and self.attr_pairs[:2] == (self.data is not None,
-                                            self.extra_data is not None):
-            def unpack(x, data):
-                if isinstance(x, int):
-                    return [INDEX, INSTANCEID][x]
-                if data is not None and x in data.domain:
-                    return data.domain[x]
-                else:
-                    return INDEX
-
-            state = [
-                [unpack(row[0], self.data), unpack(row[1], self.extra_data)]
-                for row in self.attr_pairs[2]]
-            self.attr_boxes.set_state(state)
-            # This is schema-only setting, so it should be single-shot
-            # More complicated alternative: make it a context setting
-            self.attr_pairs = None
-        self._find_best_match()
-        box = self.attr_boxes
-
-        state = box.current_state()
-        for i in range(len(box.rows) - 1, 0, -1):
-            if state[i] in state[:i]:
-                box.remove_row(box.rows[i])
-
-        self.unconditional_commit()
+        attr, extra_attr, n_max_intersect = INDEX, INDEX, 0
+        str_metas = get_unique_str_metas_names(self.model)
+        extra_str_metas = get_unique_str_metas_names(self.extra_model)
+        for m_a, m_b in product(str_metas, extra_str_metas):
+            col = self.data[:, m_a].metas
+            extra_col = self.extra_data[:, m_b].metas
+            if col.size and extra_col.size \
+                    and isinstance(col[0][0], str) \
+                    and isinstance(extra_col[0][0], str):
+                n_inter = len(np.intersect1d(col, extra_col))
+                if n_inter > n_max_intersect:
+                    n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
+        return attr, extra_attr
 
     @staticmethod
-    def dataInfoText(data):
+    def data_info(data):
         if data is None:
             return "No data."
         else:
@@ -380,19 +395,9 @@ class OWMergeData(widget.OWWidget):
                 f"{len(data.domain) + len(data.domain.metas)} variables"
 
     def commit(self):
-        self.Error.clear()
-        self.Warning.duplicate_names.clear()
-        if not self.data or not self.extra_data:
-            merged_data = None
-        else:
-            merged_data = self.merge()
-            if merged_data:
-                merged_domain = merged_data.domain
-                var_names = [var.name for var in chain(merged_domain.variables,
-                                                       merged_domain.metas)]
-                if len(set(var_names)) != len(var_names):
-                    self.Warning.duplicate_names()
-        self.Outputs.data.send(merged_data)
+        self.clear_messages()
+        merged = self.merge() if self.data and self.extra_data else None
+        self.Outputs.data.send(merged)
 
     def send_report(self):
         # pylint: disable=invalid-sequence-index
@@ -419,7 +424,8 @@ class OWMergeData(widget.OWWidget):
             return None
         method = self._merge_methods[self.merging]
         lefti, righti, rightu = method(self, left, left_mask, right, right_mask)
-        reduced_extra_data = self._compute_reduced_extra_data(right_vars)
+        reduced_extra_data = \
+            self._compute_reduced_extra_data(right_vars, lefti, righti, rightu)
         return self._join_table_by_indices(
             reduced_extra_data, lefti, righti, rightu)
 
@@ -456,18 +462,40 @@ class OWMergeData(widget.OWWidget):
                 ok = False
         return ok
 
-    def _compute_reduced_extra_data(self, extra_vars):
+    def _compute_reduced_extra_data(self,
+                                    right_match_vars, lefti, righti, rightu):
         """Prepare a table with extra columns that will appear in the merged
         table"""
         domain = self.data.domain
         extra_domain = self.extra_data.domain
-        all_vars = set(chain(domain.variables, domain.metas))
 
-        if self.merging != self.OuterJoin:
-            all_vars |= set(extra_vars)
-        extra_vars = chain(extra_domain.variables, extra_domain.metas)
-        return self.extra_data[:, [var for var in extra_vars
-                                   if var not in all_vars]]
+        def var_needed(var):
+            if rightu is not None and rightu.size:
+                return True
+            if var in right_match_vars and self.merging != self.OuterJoin:
+                return False
+            if var not in domain:
+                return True
+            both_defined = (lefti != -1) * (righti != -1)
+            left_col = \
+                self.data.get_column_view(var)[0][lefti[both_defined]]
+            right_col = \
+                self.extra_data.get_column_view(var)[0][righti[both_defined]]
+            if var.is_primitive():
+                left_col = left_col.astype(float)
+                right_col = right_col.astype(float)
+                mask_left = np.isfinite(left_col)
+                mask_right = np.isfinite(right_col)
+                return not (
+                    np.all(mask_left == mask_right)
+                    and np.all(left_col[mask_left] == right_col[mask_right]))
+            else:
+                return not np.all(left_col == right_col)
+
+        extra_vars = [
+            var for var in chain(extra_domain.variables, extra_domain.metas)
+            if var_needed(var)]
+        return self.extra_data[:, extra_vars]
 
     @staticmethod
     def _values(data, var, mask):
@@ -542,19 +570,34 @@ class OWMergeData(widget.OWWidget):
         of rows given in indices"""
         if not lefti.size:
             return None
-        domain = Orange.data.Domain(
-            *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
-              for x in ("attributes", "class_vars", "metas")))
-        X = self._join_array_by_indices(self.data.X, reduced_extra.X, lefti, righti)
+        lt_dom = self.data.domain
+        xt_dom = reduced_extra.domain
+        domain = self._domain_rename_duplicates(
+            lt_dom.attributes + xt_dom.attributes,
+            lt_dom.class_vars + xt_dom.class_vars,
+            lt_dom.metas + xt_dom.metas)
+        X = self._join_array_by_indices(
+            self.data.X, reduced_extra.X, lefti, righti)
         Y = self._join_array_by_indices(
             np.c_[self.data.Y], np.c_[reduced_extra.Y], lefti, righti)
         string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
         metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, lefti, righti, string_cols)
         if rightu is not None:
-            extras = self.extra_data[rightu].transform(domain)
+            # This domain is used for transforming the extra rows for outer join
+            # It must use the original - not renamed - variables from right, so
+            # values are copied,
+            # but new domain for the left, so renamed values are *not* copied
+            right_domain = Orange.data.Domain(
+                domain.attributes[:len(lt_dom.attributes)] + xt_dom.attributes,
+                domain.class_vars[:len(lt_dom.class_vars)] + xt_dom.class_vars,
+                domain.metas[:len(lt_dom.metas)] + xt_dom.metas)
+            extras = self.extra_data[rightu].transform(right_domain)
             X = np.vstack((X, extras.X))
-            Y = np.vstack((Y, extras.Y))
+            extras_Y = extras.Y
+            if extras_Y.ndim == 1:
+                extras_Y = extras_Y.reshape(-1, 1)
+            Y = np.vstack((Y, extras_Y))
             metas = np.vstack((metas, extras.metas))
         table = Orange.data.Table.from_numpy(domain, X, Y, metas)
         table.name = getattr(self.data, 'name', '')
@@ -566,6 +609,28 @@ class OWMergeData(widget.OWWidget):
             table.ids = self.data.ids[lefti]
 
         return table
+
+    def _domain_rename_duplicates(self, attributes, class_vars, metas):
+        """Check for duplicate variable names in domain. If any, rename
+        the variables, by replacing them with new ones (names are
+        appended a number). """
+        attrs, cvars, mets = [], [], []
+        n_attrs, n_cvars, n_metas = len(attributes), len(class_vars), len(metas)
+        lists = [attrs] * n_attrs + [cvars] * n_cvars + [mets] * n_metas
+
+        all_vars = attributes + class_vars + metas
+        proposed_names = [m.name for m in all_vars]
+        unique_names = get_unique_names_duplicates(proposed_names)
+        duplicates = set()
+        for p_name, u_name, var, c in zip(proposed_names, unique_names,
+                                          all_vars, lists):
+            if p_name != u_name:
+                duplicates.add(p_name)
+                var = var.copy(name=u_name)
+            c.append(var)
+        if duplicates:
+            self.Warning.renamed_vars(", ".join(duplicates))
+        return Orange.data.Domain(attrs, cvars, mets)
 
     @staticmethod
     def _join_array_by_indices(left, right, lefti, righti, string_cols=None):
@@ -612,8 +677,23 @@ class OWMergeData(widget.OWWidget):
                 del settings[f"attr_{oper}_data"]
                 del settings[f"attr_{oper}_extra"]
 
+        if not version or version < 2 and "attr_pairs" in settings:
+            data_exists, extra_exists, attr_pairs = settings.pop("attr_pairs")
+            if not (data_exists and extra_exists):
+                settings["context_settings"] = []
+                return
+
+            mapper = {0: (INDEX, 100), 1: (INSTANCEID, 100)}
+            context = ContextHandler().new_context()
+            context.values["attr_pairs"] = [tuple(mapper.get(var, (var, 100))
+                                                  for var in pair)
+                                            for pair in attr_pairs]
+            context.variables1 = {}
+            context.variables2 = {}
+            settings["context_settings"] = [context]
+
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWMergeData).run(
-        setData=Orange.data.Table("tests/data-gender-region"),
-        setExtraData=Orange.data.Table("tests/data-regions"))
+        set_data=Orange.data.Table("tests/data-gender-region"),
+        set_extra_data=Orange.data.Table("tests/data-regions"))

@@ -67,9 +67,10 @@ class OWRandomize(OWWidget):
             box, self, "random_seed", "Replicable shuffling",
             callback=self._shuffle_check_changed)
 
-        self.apply_button = gui.auto_commit(
-            self.controlArea, self, "auto_apply", "&Apply",
-            box=False, commit=self.apply)
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoInput)
+
+        self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
 
     @property
     def parts(self):
@@ -89,6 +90,8 @@ class OWRandomize(OWWidget):
     def set_data(self, data):
         self.data = data
         self.unconditional_apply()
+        text = str(len(data)) if data else self.info.NoInput
+        self.info.set_input_summary(text)
 
     def apply(self):
         data = None
@@ -102,6 +105,8 @@ class OWRandomize(OWWidget):
             data = self.data.copy()
             for i, instance in zip(indices, randomized):
                 data[i] = instance
+        text = str(len(data)) if data else self.info.NoInput
+        self.info.set_output_summary(text)
         self.Outputs.data.send(data)
 
     def send_report(self):

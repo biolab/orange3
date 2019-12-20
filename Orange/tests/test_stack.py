@@ -14,15 +14,15 @@ class TestStackedFitter(unittest.TestCase):
 
     def test_classification(self):
         sf = StackedFitter([TreeLearner(), KNNLearner()])
-        results = CrossValidation(self.iris, [sf], k=3)
+        cv = CrossValidation(k=3)
+        results = cv(self.iris, [sf])
         ca = CA(results)
         self.assertGreater(ca, 0.9)
 
     def test_regression(self):
         sf = StackedFitter([TreeLearner(), KNNLearner()])
-        results = CrossValidation(self.housing[:50],
-                                  [sf, TreeLearner(), KNNLearner()], k=3,
-                                  random_state=0)
+        cv = CrossValidation(k=3, random_state=0)
+        results = cv(self.housing[:50], [sf, TreeLearner(), KNNLearner()])
         mse = MSE()(results)
         self.assertLess(mse[0], mse[1])
         self.assertLess(mse[0], mse[2])

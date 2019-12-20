@@ -15,6 +15,7 @@ from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owsieve import OWSieveDiagram
 from Orange.widgets.visualize.owsieve import ChiSqStats
 from Orange.widgets.visualize.owsieve import Discretize
+from Orange.widgets.widget import AttributeList
 
 
 class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
@@ -61,17 +62,17 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         # Test for 2 attributes
         attr2 = self.titanic.domain[:2]
         domain2 = Domain(attr2)
-        data2 = Table(domain2, self.titanic)
+        data2 = self.titanic.transform(domain2)
         self.send_signal(self.widget.Inputs.data, data2)
         # Test for 1 attributes
         attr1 = self.titanic.domain[:1]
         domain1 = Domain(attr1)
-        data1 = Table(domain1, self.titanic)
+        data1 = self.titanic.transform(domain1)
         self.send_signal(self.widget.Inputs.data, data1)
         # Test for 0 attributes
         attr0 = self.titanic.domain[:0]
         domain0 = Domain(attr0)
-        data0 = Table(domain0, self.titanic)
+        data0 = self.titanic.transform(domain0)
         self.send_signal(self.widget.Inputs.data, data0)
 
     def _select_data(self):
@@ -105,7 +106,7 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         """
         a = DiscreteVariable("a", values=["y", "n"])
         b = DiscreteVariable("b", values=["y", "n", "o"])
-        table = Table(Domain([a, b]), list(zip("yynny", "ynyyn")))
+        table = Table.from_list(Domain([a, b]), list(zip("yynny", "ynyyn")))
         chi = ChiSqStats(table, 0, 1)
         self.assertFalse(isnan(chi.chisq))
 
@@ -115,7 +116,7 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         the same way as features or target. However still one variable should
         be target or feature.
         """
-        table = Table(
+        table = Table.from_list(
             Domain(
                 [],
                 [],
@@ -164,6 +165,17 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(call_args), 2)
         self.assertEqual(call_args[0].name, data.domain[2].name)
         self.assertEqual(call_args[1].name, data.domain[1].name)
+
+    def test_input_features(self):
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.iris.domain.attributes))
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
+        self.send_signal(self.widget.Inputs.features, None)
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.assertTrue(self.widget.vizrank.isEnabled())
 
 
 if __name__ == "__main__":

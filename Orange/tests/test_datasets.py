@@ -10,9 +10,6 @@ from Orange import datasets
 
 
 class TestDatasets(unittest.TestCase):
-    def tearDown(self):
-        Variable._clear_all_caches()
-
     def test_access(self):
         d1 = datasets.iris
         fname = datasets.iris['location']
@@ -39,8 +36,6 @@ class TestDatasets(unittest.TestCase):
 
     def test_datasets_info_features(self):
         for dataset, info in datasets.items():
-
-            Variable._clear_all_caches()
 
             if info['location'].startswith('http'): continue  # Tested elsewhere
 

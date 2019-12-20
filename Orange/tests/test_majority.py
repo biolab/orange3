@@ -21,7 +21,7 @@ class TestMajorityLearner(unittest.TestCase):
         ncols = 10
         x = np.random.randint(1, 4, (nrows, ncols))
         y = np.random.randint(1, 4, (nrows, 1)) // 2
-        t = Table(x, y)
+        t = Table.from_numpy(None, x, y)
         clf = self.learn(t)
 
         x2 = np.random.randint(1, 4, (nrows, ncols))
@@ -35,7 +35,7 @@ class TestMajorityLearner(unittest.TestCase):
         y = np.array(70*[0] + 30*[1]).reshape((nrows, 1))
         heavy_class = 1
         w = (y == heavy_class) * 2 + 1
-        t = Table(x, y, W=w)
+        t = Table.from_numpy(None, x, y, W=w)
         clf = self.learn(t)
 
         y2 = clf(x)

@@ -34,7 +34,7 @@ class OWLoadModel(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         load_error = Msg("An error occured while reading '{}'")
 
-    FILTER = owsavemodel.OWSaveModel.FILTER
+    FILTER = ";;".join(owsavemodel.OWSaveModel.filters)
 
     want_main_area = False
     resizing_enabled = False

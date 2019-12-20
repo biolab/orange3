@@ -204,6 +204,17 @@ class TestDiscreteDistribution(unittest.TestCase):
         self.assertEqual(self.num.min(), '1')
         self.assertEqual(self.num.max(), '3')
 
+    def test_array_with_unknowns(self):
+        d = data.Table("zoo")
+        d.Y[0] = np.nan
+        disc = distribution.Discrete(d, "type")
+        self.assertIsInstance(disc, np.ndarray)
+        self.assertEqual(disc.unknowns, 1)
+        true_freq = [4., 20., 13., 8., 10., 40., 5.]
+        assert_dist_equal(disc, true_freq)
+        np.testing.assert_array_equal(disc.array_with_unknowns,
+                                      np.append(true_freq, 1))
+
 
 class TestContinuousDistribution(unittest.TestCase):
     @classmethod

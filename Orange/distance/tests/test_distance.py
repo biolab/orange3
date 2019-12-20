@@ -16,13 +16,13 @@ class CommonTests:
         """distances return zero-dimensional matrices when no data"""
         n = len(self.data)
         np.testing.assert_almost_equal(
-            self.Distance(Table(self.domain)),
+            self.Distance(Table.from_domain(self.domain)),
             np.zeros((0, 0)))
         np.testing.assert_almost_equal(
-            self.Distance(self.data, Table(self.domain)),
+            self.Distance(self.data, Table.from_domain(self.domain)),
             np.zeros((n, 0)))
         np.testing.assert_almost_equal(
-            self.Distance(Table(self.domain), self.data),
+            self.Distance(Table.from_domain(self.domain), self.data),
             np.zeros((0, n)))
 
     def test_sparse(self):
@@ -45,14 +45,14 @@ class CommonFittedTests(CommonTests):
     """Tests applicable to all distances with fitting"""
     def test_mismatching_attributes(self):
         """distances can't be computed if fit from other attributes"""
-        def new_table():
-            return Table.from_list(Domain([ContinuousVariable("a")]), [[1]])
+        def new_table(name):
+            return Table.from_list(Domain([ContinuousVariable(name)]), [[1]])
 
-        table1 = new_table()
+        table1 = new_table("a")
         model = self.Distance().fit(table1)
-        self.assertRaises(ValueError, model, new_table())
-        self.assertRaises(ValueError, model, table1, new_table())
-        self.assertRaises(ValueError, model, new_table(), table1)
+        self.assertRaises(ValueError, model, new_table("b"))
+        self.assertRaises(ValueError, model, table1, new_table("c"))
+        self.assertRaises(ValueError, model, new_table("d"), table1)
 
 
 class CommonNormalizedTests(CommonFittedTests):
@@ -421,17 +421,18 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
     def test_manhattan_no_data(self):
         np.testing.assert_almost_equal(
-            distance.Manhattan(Table(self.domain)),
+            distance.Manhattan(Table.from_domain(self.domain)),
             np.zeros((0, 0)))
         np.testing.assert_almost_equal(
-            distance.Manhattan(self.mixed_data, Table(self.domain)),
+            distance.Manhattan(self.mixed_data, Table.from_domain(self.domain)),
             np.zeros((3, 0)))
         np.testing.assert_almost_equal(
-            distance.Manhattan(Table(self.domain), self.mixed_data),
+            distance.Manhattan(Table.from_domain(self.domain), self.mixed_data),
             np.zeros((0, 3)))
         self.assertRaises(
             ValueError,
-            distance.Manhattan, Table(self.cont_domain), axis=0, normalize=True)
+            distance.Manhattan, Table.from_domain(self.cont_domain),
+            axis=0, normalize=True)
 
     def test_manhattan_disc(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -838,7 +839,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
 
     def setUp(self):
         self.domain = Domain([DiscreteVariable(c) for c in "abc"])
-        self.data = Table(
+        self.data = Table.from_list(
             self.domain,
             [[0, 1, 1],
              [1, 1, 1],
@@ -931,6 +932,52 @@ class HammingDistanceTest(FittedDistanceTest):
             [[0, 2 / 3],
              [2 / 3, 0],
              [1, 2 / 3]])
+
+
+class TestHelperFunctions(unittest.TestCase):
+    # pylint: disable=protected-access, no-self-use
+    def test_interruptable_dot(self):
+        dot = distance.distance._interruptible_dot
+        k, m, n = 20, 30, 40
+        a = np.random.randint(10, size=(m, n))
+        b = np.random.randint(10, size=(n, k))
+
+        c = dot(a, b, step=10)
+        np.testing.assert_array_equal(c, np.dot(a, b))
+
+    def test_interruptable_dot_list(self):
+        dot = distance.distance._interruptible_dot
+        a = [[1, 2, 3], [1, 2, 3]]
+        b = [3, 2, 1]
+        c = dot(a, b, step=10)
+        np.testing.assert_array_equal(c, np.dot(a, b))
+
+    def test_interruptable_dot_scalar(self):
+        dot = distance.distance._interruptible_dot
+        a = 2
+        b = 3
+        c = dot(a, b, step=10)
+        np.testing.assert_array_equal(c, np.dot(a, b))
+
+    def test_interruptable_sqrt(self):
+        sqrt_ = distance.distance._interruptible_sqrt
+        n = 100
+        a = np.random.randint(10, size=(n, n))
+
+        new_a = sqrt_(a, step=10)
+        np.testing.assert_array_equal(new_a, np.sqrt(a))
+
+    def test_interruptable_sqrt_list(self):
+        sqrt_ = distance.distance._interruptible_sqrt
+        l = [1, 2, 3]
+        new_l = sqrt_(l, step=10)
+        np.testing.assert_array_equal(new_l, np.sqrt(l))
+
+    def test_interruptable_sqrt_scalar(self):
+        sqrt_ = distance.distance._interruptible_sqrt
+        i = 9
+        new_i = sqrt_(i, step=10)
+        np.testing.assert_array_equal(new_i, np.sqrt(i))
 
 
 if __name__ == "__main__":

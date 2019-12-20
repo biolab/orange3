@@ -1,3 +1,4 @@
+import unittest
 from unittest.mock import patch, Mock
 
 import requests
@@ -59,7 +60,7 @@ class TestOWDataSets(WidgetTest):
         # select the only dataset
         sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         w.view.selectionModel().select(w.view.model().index(0, 0), sel_type)
-        w.unconditional_commit()
+        w.commit()
         iris = self.get_output(w.Outputs.data, w)
         self.assertEqual(len(iris), 150)
 
@@ -73,3 +74,7 @@ class TestOWDataSets(WidgetTest):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
         self.wait_until_stop_blocking(w)
         self.assertEqual(w.view.model().rowCount(), 2)
+
+
+if __name__ == "__main__":
+    unittest.main()

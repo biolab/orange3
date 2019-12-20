@@ -2,6 +2,7 @@
 Orange Canvas main entry point
 
 """
+import uuid
 from collections import defaultdict
 from contextlib import closing
 
@@ -13,8 +14,8 @@ import gc
 import re
 import time
 import logging
-import signal
 from logging.handlers import RotatingFileHandler
+import signal
 import optparse
 import pickle
 import shlex
@@ -32,28 +33,26 @@ from AnyQt.QtCore import (
 import pyqtgraph
 
 import orangecanvas
-from Orange import canvas
-from orangecanvas.registry import qt
-from orangecanvas.registry import WidgetRegistry, set_global_registry
-from orangecanvas.registry import cache
+from orangecanvas import config as canvasconfig
+from orangecanvas.registry import qt, WidgetRegistry, set_global_registry, cache
 from orangecanvas.application.application import CanvasApplication
 from orangecanvas.application.outputview import TextStream, ExceptHook
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.gui.splashscreen import SplashScreen
 from orangecanvas.utils.overlay import Notification, NotificationServer
-from orangecanvas import config as canvasconfig
 from orangecanvas.main import (
     fix_win_pythonw_std_stream, fix_set_proxy_env, fix_macos_nswindow_tabbing,
     breeze_dark,
 )
 
 from orangewidget.workflow.errorreporting import handle_exception
-from Orange.util import literal_eval, requirementsSatisfied
 
+from Orange import canvas
+from Orange.util import literal_eval, requirementsSatisfied, resource_filename
+from Orange.version import version as current, release as is_release
 from Orange.canvas import config
 from Orange.canvas.mainwindow import MainWindow
-from Orange.util import resource_filename
-from Orange.version import version as current, release as is_release
+from Orange.widgets.settings import widget_settings_dir
 
 
 log = logging.getLogger(__name__)
@@ -64,13 +63,16 @@ statistics_server_url = os.getenv(
 
 
 def ua_string():
+    settings = QSettings()
+
     is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+    machine_id = settings.value("reporting/machine-id", "", str)
     return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}:{uuid}'.format(
         orange_version=current,
         py_version='.'.join(str(a) for a in sys.version_info[:3]),
         platform=sys.platform,
         conda='Anaconda' if is_anaconda else '',
-        uuid=QSettings().value("error-reporting/machine-id", "", str),
+        uuid=machine_id if settings.value("reporting/send-statistics", False, bool) else ''
     )
 
 
@@ -88,32 +90,6 @@ def make_stdout_handler(level, fmt=None):
     if fmt:
         handler.setFormatter(logging.Formatter(fmt))
     return handler
-
-
-def setup_notifications():
-    settings = QSettings()
-    # data collection permission
-    if not settings.value("error-reporting/permission-requested", False, type=bool) and \
-            not settings.value("error-reporting/send-statistics", False, bool):
-        notif = Notification(icon=QIcon(resource_filename("canvas/icons/statistics-request.png")),
-                             title="Anonymous Usage Statistics",
-                             text="Do you wish to opt-in to sharing "
-                                  "statistics about how you use Orange? "
-                                  "All data is anonymized and used "
-                                  "exclusively for understanding how users "
-                                  "interact with Orange.",
-                             accept_button_label="Allow",
-                             reject_button_label="No")
-
-        def handle_permission_response(role):
-            if role != notif.DismissRole:
-                settings.setValue("error-reporting/permission-requested", True)
-            if role == notif.AcceptRole:
-                UsageStatistics.set_enabled(True)
-                settings.setValue("error-reporting/send-statistics", True)
-
-        notif.clicked.connect(handle_permission_response)
-        canvas.notification_server_instance.registerNotification(notif)
 
 
 def check_for_updates():
@@ -176,7 +152,14 @@ def check_for_updates():
 def open_link(url: QUrl):
     if url.scheme() == "orange":
         # define custom actions within Orange here
-        pass
+        if url.host() == "enable-statistics":
+            settings = QSettings()
+
+            settings.setValue("reporting/send-statistics", True)
+            UsageStatistics.set_enabled(True)
+
+            if not settings.contains('reporting/machine-id'):
+                settings.setValue('reporting/machine-id', str(uuid.uuid4()))
     else:
         QDesktopServices.openUrl(url)
 
@@ -218,9 +201,13 @@ yaml.add_constructor(u'!Notification', YAMLNotification.yamlConstructor, Loader=
 
 
 def pull_notifications():
+    settings = QSettings()
+    check_notifs = settings.value("notifications/check-notifications", True, bool)
+    if not check_notifs:
+        return None
+
     Version = pkg_resources.parse_version
 
-    settings = QSettings()
     # create settings_dict for notif requirements purposes (read-only)
     spec = canvasconfig.spec + config.spec
     settings_dict = canvasconfig.Settings(defaults=spec, store=settings)
@@ -274,8 +261,8 @@ def pull_notifications():
 
         # check time validity
         today = date.today()
-        if (YAMLnotif.start and YAMLnotif.start >= today) or \
-                (YAMLnotif.end and YAMLnotif.end <= today):
+        if (YAMLnotif.start and YAMLnotif.start > today) or \
+                (YAMLnotif.end and YAMLnotif.end < today):
             return
 
         # check requirements
@@ -328,7 +315,7 @@ def send_usage_statistics():
         import json
         import requests
         settings = QSettings()
-        if not settings.value("error-reporting/send-statistics", False,
+        if not settings.value("reporting/send-statistics", False,
                               type=bool):
             log.info("Not sending usage statistics (preferences setting).")
             return
@@ -336,22 +323,28 @@ def send_usage_statistics():
             log.info("Not sending usage statistics (disabled).")
             return
 
+        if settings.contains('reporting/machine-id'):
+            machine_id = settings.value('reporting/machine-id')
+        else:
+            machine_id = str(uuid.uuid4())
+            settings.setValue('reporting/machine-id', machine_id)
+
         is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
 
-        usage = UsageStatistics()
-        data = usage.load()
+        data = UsageStatistics.load()
         for d in data:
             d["Orange Version"] = d.pop("Application Version", "")
             d["Anaconda"] = is_anaconda
+            d["UUID"] = machine_id
         try:
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
                 log.warning("Error communicating with server while attempting to send "
-                            "usage statistics.")
+                            "usage statistics. Status code " + str(r.status_code))
                 return
             # success - wipe statistics file
             log.info("Usage statistics sent.")
-            with open(usage.filename(), 'w', encoding="utf-8") as f:
+            with open(UsageStatistics.filename(), 'w', encoding="utf-8") as f:
                 json.dump([], f)
         except (ConnectionError, requests.exceptions.RequestException):
             log.warning("Connection error while attempting to send usage statistics.")
@@ -475,15 +468,12 @@ def main(argv=None):
     sql_level = min(levels[options.log_level], logging.INFO)
     make_sql_logger(sql_level)
 
-    clear_settings_flag = os.path.join(
-        config.widget_settings_dir(), "DELETE_ON_START")
+    clear_settings_flag = os.path.join(widget_settings_dir(), "DELETE_ON_START")
 
     if options.clear_widget_settings or \
             os.path.isfile(clear_settings_flag):
         log.info("Clearing widget settings")
-        shutil.rmtree(
-            config.widget_settings_dir(),
-            ignore_errors=True)
+        shutil.rmtree(widget_settings_dir(), ignore_errors=True)
 
     # Set http_proxy environment variables, after (potentially) clearing settings
     fix_set_proxy_env()
@@ -523,7 +513,7 @@ def main(argv=None):
     settings = QSettings()
     settings.setValue('startup/launch-count', settings.value('startup/launch-count', 0, int) + 1)
 
-    if settings.value("error-reporting/send-statistics", False, type=bool) \
+    if settings.value("reporting/send-statistics", False, type=bool) \
             and is_release:
         UsageStatistics.set_enabled(True)
 
@@ -577,9 +567,6 @@ def main(argv=None):
     notif_server = NotificationServer()
     canvas.notification_server_instance = notif_server
     canvas_window.set_notification_server(notif_server)
-
-    # initialize notifications
-    setup_notifications()
 
     if stylesheet_string is not None:
         canvas_window.setStyleSheet(stylesheet_string)
@@ -672,7 +659,7 @@ def main(argv=None):
         stdout.flushed.connect(sys.stdout.flush)
 
     stderr = TextStream()
-    error_writer = log_view.formated(color=Qt.red)
+    error_writer = log_view.formatted(color=Qt.red)
     stderr.stream.connect(error_writer.write)
     if sys.stderr:
         stderr.stream.connect(sys.stderr.write)

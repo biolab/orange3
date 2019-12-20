@@ -16,6 +16,6 @@ Load a model from an input file.
 Example
 -------
 
-When you want to use a custom-set model that you've saved before, open the **Load Model** widget and select the desired file with the *Browse* icon. This widget loads the existing model into [Predictions](../evaluation/predictions.md) widget. Datasets used with **Load Model** have to contain compatible attributes!
+When you want to use a custom-set model that you've saved before, open the **Load Model** widget and select the desired file with the *Browse* icon. This widget loads the existing model into [Predictions](../evaluate/predictions.md) widget. Datasets used with **Load Model** have to contain compatible attributes!
 
 ![](images/LoadModel-example.png)

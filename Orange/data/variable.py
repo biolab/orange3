@@ -1,5 +1,6 @@
-import collections
 import re
+import warnings
+from collections import Iterable
 
 from datetime import datetime, timedelta, timezone
 from numbers import Number, Real, Integral
@@ -7,9 +8,11 @@ from math import isnan, floor
 from pickle import PickleError
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import _variable
-from Orange.util import Registry, color_to_hex, hex_to_color, Reprable
+from Orange.util import Registry, hex_to_color, Reprable,\
+    OrangeDeprecationWarning
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
            "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
@@ -23,30 +26,16 @@ MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~", None}
 
 DISCRETE_MAX_VALUES = 3  # == 2 + nan
 MAX_NUM_OF_DECIMALS = 5
+# the variable with more than 100 different values should not be StringVariable
+DISCRETE_MAX_ALLOWED_VALUES = 100
 
 
 def make_variable(cls, compute_value, *args):
     if compute_value is not None:
         return cls(*args, compute_value=compute_value)
-    if issubclass(cls, DiscreteVariable):
-        values = args[1]
-
-        # backward compatibility - `base_value` argument was removed in the
-        # `make` function - with this fix it is removed if exist
-        # ars should have len = 3, if more remove last element
-        args = args[:3]
-
-        var = cls.make(*args)
-        # The `var.values` are in general a superset of `values` with different
-        # order. Only use it if it is a structural subtype of the requested
-        # descriptor so any indices/codes retain their proper interpretation on
-        # deserialization.
-        if var.values[:len(values)] == values:
-            return var
-        else:
-            return cls(*args)
     else:
-        return cls.make(*args)
+        # For compatibility with old pickles
+        return cls(*args)
 
 
 def is_discrete_values(values):
@@ -76,7 +65,8 @@ def is_discrete_values(values):
     unique = set()
     for i in values:
         unique.add(i)
-        if len(unique) > max_values:
+        if (len(unique) > max_values or
+                len(unique) > DISCRETE_MAX_ALLOWED_VALUES):
             return False
 
     # Strip NaN from unique
@@ -227,7 +217,8 @@ class Value(float):
 
     def __hash__(self):
         if self.variable.is_discrete:
-            # It is not possible to hash the id and the domain value to the same number as required by __eq__.
+            # It is not possible to hash the id and the domain value to the
+            # same number as required by __eq__.
             # hash(1) == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1)) == hash("green")
             # User should hash directly ids or domain values instead.
             raise TypeError("unhashable type - cannot hash values of discrete variables!")
@@ -255,11 +246,7 @@ class Value(float):
 
 
 class VariableMeta(Registry):
-    def __new__(cls, name, bases, attrs):
-        obj = super().__new__(cls, name, bases, attrs)
-        if not hasattr(obj, '_all_vars') or obj._all_vars is Variable._all_vars:
-            obj._all_vars = {}
-        return obj
+    pass
 
 
 class _predicatedescriptor(property):
@@ -320,12 +307,6 @@ class Variable(Reprable, metaclass=VariableMeta):
     .. attribute:: attributes
 
         A dictionary with user-defined attributes of the variable
-
-    .. attribute:: master
-
-        The variable that this variable is a copy of. If a copy is made from a
-        copy, the copy has a reference to the original master. If the variable
-        is not a copy, it is its own master.
     """
     Unknown = ValueUnknown
 
@@ -333,19 +314,28 @@ class Variable(Reprable, metaclass=VariableMeta):
         """
         Construct a variable descriptor.
         """
-        self.name = name
+        if not name:
+            warnings.warn("Variable must have a name", OrangeDeprecationWarning,
+                          stacklevel=3)
+        self._name = name
         self._compute_value = compute_value
         self.unknown_str = MISSING_VALUES
         self.source_variable = None
         self.sparse = sparse
         self.attributes = {}
-        self.master = self
-        if name and compute_value is None:
-            if isinstance(self._all_vars, collections.defaultdict):
-                self._all_vars[name].append(self)
-            else:
-                self._all_vars[name] = self
         self._colors = None
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def colors(self):  # unreachable; pragma: no cover
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        self._colors = value
 
     def make_proxy(self):
         """
@@ -354,47 +344,36 @@ class Variable(Reprable, metaclass=VariableMeta):
         :return: copy of self
         :rtype: Variable
         """
-        var = self.__class__()
+        var = self.__class__(self.name)
         var.__dict__.update(self.__dict__)
         var.attributes = dict(self.attributes)
-        var.master = self.master
         return var
 
     def __eq__(self, other):
-        """Two variables are equivalent if the originate from the same master"""
-        return hasattr(other, "master") and self.master is other.master
+        return type(self) is type(other) \
+               and self.name == other.name \
+               and self._compute_value == other._compute_value
 
     def __hash__(self):
-        if self.master is not self:
-            return hash(self.master)
-        else:
-            return super().__hash__()
+        return hash((self.name, type(self), self._compute_value))
 
     @classmethod
-    def make(cls, name):
+    def make(cls, name, *args, **kwargs):
         """
         Return an existing continuous variable with the given name, or
         construct and return a new one.
         """
-        if not name:
-            raise ValueError("Variables without names cannot be stored or made")
-        var = cls._all_vars.get(name) or cls(name)
-        return var.make_proxy()
+        return cls(name, *args, **kwargs)
 
     @classmethod
     def _clear_cache(cls):
-        """
-        Clear the list of variables for reuse by :obj:`make`.
-        """
-        cls._all_vars.clear()
+        warnings.warn(
+            "_clear_cache is no longer needed and thus deprecated")
 
     @staticmethod
     def _clear_all_caches():
-        """
-        Clears list of stored variables for all subclasses
-        """
-        for cls in Variable.registry.values():
-            cls._clear_cache()
+        warnings.warn(
+            "_clear_all_caches is no longer needed and thus deprecated")
 
     @classmethod
     def is_primitive(cls, var=None):
@@ -481,15 +460,12 @@ class Variable(Reprable, metaclass=VariableMeta):
             raise PickleError("Variables without names cannot be pickled")
 
         # Use make to unpickle variables.
-        # "master" attribute is removed from the dict since make will point
-        # it to the correct variable. If we did not remove it, the (pickled)
-        # value would replace the one set by make.
-        __dict__ = dict(self.__dict__)
-        __dict__.pop("master", None)
-        return make_variable, (self.__class__, self._compute_value, self.name), __dict__
+        return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
-    def copy(self, compute_value):
-        var = type(self)(self.name, compute_value=compute_value, sparse=self.sparse)
+    def copy(self, compute_value=None, *, name=None, **kwargs):
+        var = type(self)(name=name or self.name,
+                         compute_value=compute_value or self.compute_value,
+                         sparse=self.sparse, **kwargs)
         var.attributes = dict(self.attributes)
         return var
 
@@ -544,22 +520,20 @@ class ContinuousVariable(Variable):
     def format_str(self):
         return self._format_str
 
-    @property
-    def colors(self):
-        if self._colors is None:
-            try:
-                col1, col2, black = self.attributes["colors"]
-                self._colors = (hex_to_color(col1), hex_to_color(col2), black)
-            except (KeyError, ValueError):
-                # Stored colors were not available or invalid, use defaults
-                self._colors = ((0, 0, 255), (255, 255, 0), False)
-        return self._colors
+    @format_str.setter
+    def format_str(self, value):
+        self._format_str = value
 
-    @colors.setter
-    def colors(self, value):
-        col1, col2, black = self._colors = value
-        self.attributes["colors"] = \
-            [color_to_hex(col1), color_to_hex(col2), black]
+    @Variable.colors.getter
+    def colors(self):
+        if self._colors is not None:
+            return self._colors
+        try:
+            col1, col2, black = self.attributes["colors"]
+            return (hex_to_color(col1), hex_to_color(col2), black)
+        except (KeyError, ValueError):
+            # User-provided colors were not available or invalid
+            return ((0, 0, 255), (255, 255, 0), False)
 
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
@@ -596,9 +570,12 @@ class ContinuousVariable(Variable):
 
     str_val = repr_val
 
-    def copy(self, compute_value=None):
-        var = type(self)(self.name, self.number_of_decimals, compute_value, sparse=self.sparse)
-        var.attributes = dict(self.attributes)
+    def copy(self, compute_value=None, *, name=None, **kwargs):
+        var = super().copy(compute_value=compute_value, name=name,
+                           number_of_decimals=self.number_of_decimals,
+                           **kwargs)
+        var.adjust_decimals = self.adjust_decimals
+        var.format_str = self._format_str
         return var
 
 
@@ -622,7 +599,6 @@ class DiscreteVariable(Variable):
 
     TYPE_HEADERS = ('discrete', 'd', 'categorical')
 
-    _all_vars = collections.defaultdict(list)
     presorted_values = []
 
     def __init__(self, name="", values=(), ordered=False, compute_value=None,
@@ -634,29 +610,106 @@ class DiscreteVariable(Variable):
         super().__init__(name, compute_value, sparse=sparse)
         self.ordered = ordered
 
-    @property
+    def get_mapping_from(self, other):
+        return np.array(
+            [self.values.index(value) if value in self.values else np.nan
+             for value in other.values], dtype=float)
+
+    def get_mapper_from(self, other):
+        mapping = self.get_mapping_from(other)
+        if not mapping.size:
+            # Nans in data are temporarily replaced with 0, mapped and changed
+            # back to nans. This would fail is mapping[0] is out of range.
+            mapping = np.array([np.nan])
+
+        def mapper(value, col_idx=None):
+
+            # In-place mapping
+            if col_idx is not None:
+                if sp.issparse(value) and mapping[0] != 0:
+                    raise ValueError(
+                        "In-place mapping of sparse matrices must map 0 to 0")
+
+                # CSR requires mapping of non-contiguous area
+                if sp.isspmatrix_csr(value):
+                    col = value.indices == col_idx
+                    nans = np.isnan(value.data) * col
+                    value.data[nans] = 0
+                    value.data[col] = mapping[value.data[col].astype(int)]
+                    value.data[nans] = np.nan
+                    return
+
+                # Dense and CSC map a contiguous area
+                if isinstance(value, np.ndarray) and value.ndim == 2:
+                    col = value[:, col_idx]
+                elif sp.isspmatrix_csc(value):
+                    col = value.data[value.indptr[col_idx]
+                                     :value.indptr[col_idx + 1]]
+                else:
+                    raise ValueError(
+                        "In-place column mapping requires a 2d array or"
+                        "a csc or csr matrix.")
+
+                nans = np.isnan(col)
+                col[nans] = 0
+                col[:] = mapping[col.astype(int)]
+                col[nans] = np.nan
+                return
+
+            # Mapping into a copy
+            if isinstance(value, (int, float)):
+                return mapping[int(value)] if value == value else value
+            if isinstance(value, str):
+                return mapping[other.values.index(value)]
+            if isinstance(value, np.ndarray):
+                if not (value.ndim == 1
+                        or value.ndim != 2 and min(value.shape) != 1):
+                    raise ValueError(
+                        f"Column mapping can't map {value.ndim}-d objects")
+
+                if value.dtype == object:
+                    value = value.astype(float)  # this happens with metas
+                try:
+                    nans = np.isnan(value)
+                except TypeError:  # suppose it's already an integer type
+                    return mapping[value]
+                value = value.astype(int)
+                value[nans] = 0
+                value = mapping[value]
+                value[nans] = np.nan
+                return value
+            if sp.issparse(value):
+                if min(value.shape) != 1:
+                    raise ValueError("Column mapping can't map "
+                                     f"{value.ndim}-dimensional objects")
+                if mapping[0] != 0 and not np.isnan(mapping[0]):
+                    return mapper(np.array(value.todense()).flatten())
+                value = value.copy()
+                value.data = mapper(value.data)
+                return value
+            if isinstance(value, Iterable):
+                return type(value)(mapping[int(val)] if val == val else val
+                                   for val in value)
+            raise ValueError(
+                f"invalid type for value(s): {type(value).__name__}")
+
+        return mapper
+
+    @Variable.colors.getter
     def colors(self):
-        if self._colors is None:
+        if self._colors is not None:
+            colors = np.array(self._colors)
+        elif not self.values:
+            colors = np.zeros((0, 3))  # to match additional colors in vstacks
+        else:
             from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
-            self._colors = ColorPaletteGenerator.palette(self)
-            colors = self.attributes.get('colors')
-            if colors:
-                self._colors[:len(colors)] = [hex_to_color(color) for color in colors]
-            self._colors.flags.writeable = False
-        return self._colors
-
-    @colors.setter
-    def colors(self, value):
-        self._colors = value
-        self._colors.flags.writeable = False
-        self.attributes["colors"] = [color_to_hex(col) for col in value]
-
-    def set_color(self, i, color):
-        self.colors = self.colors
-        self._colors.flags.writeable = True
-        self._colors[i, :] = color
-        self._colors.flags.writeable = False
-        self.attributes["colors"][i] = color_to_hex(color)
+            default = tuple(ColorPaletteGenerator.palette(self))
+            colors = self.attributes.get('colors', ())
+            colors = tuple(hex_to_color(color) for color in colors) \
+                    + default[len(colors):]
+            colors = np.array(colors)
+        colors.flags.writeable = False
+        return colors
 
     def to_val(self, s):
         """
@@ -728,116 +781,14 @@ class DiscreteVariable(Variable):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
         __dict__ = dict(self.__dict__)
-        __dict__.pop("master")
         __dict__.pop("values")
         return make_variable, (self.__class__, self._compute_value, self.name,
                                self.values, self.ordered), \
             __dict__
 
-    @classmethod
-    def make(cls, name, values=(), ordered=False):
-        """
-        Return a variable with the given name and other properties. The method
-        first looks for a compatible existing variable: the existing
-        variable must have the same name and both variables must have either
-        ordered or unordered values. If values are ordered, the order must be
-        compatible: all common values must have the same order. If values are
-        unordered, the existing variable must have at least one common value
-        with the new one, except when any of the two lists of values is empty.
-
-        If a compatible variable is find, it is returned, with missing values
-        appended to the end of the list. If there is no explicit order, the
-        values are ordered using :obj:`ordered_values`. Otherwise, it
-        constructs and returns a new variable descriptor.
-
-        :param name: the name of the variable
-        :type name: str
-        :param values: symbolic values for the variable
-        :type values: list
-        :param ordered: tells whether the order of values is fixed
-        :type ordered: bool
-        :returns: an existing compatible variable or `None`
-        """
-        if not name:
-            raise ValueError("Variables without names cannot be stored or made")
-        var = cls._find_compatible(name, values, ordered)
-        if var:
-            return var.make_proxy()
-        if not ordered:
-            values = cls.ordered_values(values)
-        return cls(name, values, ordered)
-
-    @classmethod
-    def _find_compatible(cls, name, values=(), ordered=False):
-        """
-        Return a compatible existing value, or `None` if there is None.
-        See :obj:`make` for details; this function differs by returning `None`
-        instead of constructing a new descriptor. (Method :obj:`make` calls
-        this function.)
-
-        :param name: the name of the variable
-        :type name: str
-        :param values: symbolic values for the variable
-        :type values: list
-        :param ordered: tells whether the order of values is fixed
-        :type ordered: bool
-        :returns: an existing compatible variable or `None`
-        """
-        existing = cls._all_vars.get(name)
-        if existing is None:
-            return None
-        if not ordered:
-            values = cls.ordered_values(values)
-        for var in existing:
-            if var.ordered != ordered:
-                continue
-            if not values:
-                break  # we have the variable - any existing values are OK
-            if not set(var.values) & set(values):
-                continue  # empty intersection of values; not compatible
-            if ordered:
-                i = 0
-                for val in var.values:
-                    if values[i] == val:
-                        i += 1
-                        if i == len(values):
-                            break  # we have all the values
-                else:  # we have some remaining values: check them, add them
-                    if set(values[i:]) & set(var.values):
-                        continue  # next var in existing
-                    for val in values[i:]:
-                        var.add_value(val)
-                break  # we have the variable
-            else:  # not ordered
-                vv = set(var.values)
-                for val in values:
-                    if val not in vv:
-                        var.add_value(val)
-                break  # we have the variable
-        else:
-            return None
-        return var
-
-    @staticmethod
-    def ordered_values(values):
-        """
-        Return a sorted list of values. If there exists a prescribed order for
-        such set of values, it is returned. Otherwise, values are sorted
-        alphabetically.
-        """
-        for presorted in DiscreteVariable.presorted_values:
-            if values == set(presorted):
-                return presorted
-        try:
-            return sorted(values, key=float)
-        except ValueError:
-            return sorted(values)
-
-    def copy(self, compute_value=None):
-        var = DiscreteVariable(self.name, self.values, self.ordered,
-                               compute_value, sparse=self.sparse)
-        var.attributes = dict(self.attributes)
-        return var
+    def copy(self, compute_value=None, *, name=None, **_):
+        return super().copy(compute_value=compute_value, name=name,
+                            values=self.values, ordered=self.ordered)
 
 
 class StringVariable(Variable):
@@ -938,6 +889,13 @@ class TimeVariable(ContinuousVariable):
              r'\d{2}\d{2}\d{2}\.\d+|'
              r'\d{1,4}(-?\d{2,3})?'
              r')$')
+
+    class InvalidDateTimeFormatError(ValueError):
+        def __init__(self, date_string):
+            super().__init__(
+                "Invalid datetime format '{}'. "
+                "Only ISO 8601 supported.".format(date_string))
+
     _matches_iso_format = re.compile(REGEX).match
 
     # UTC offset and associated timezone. If parsed datetime values provide an
@@ -951,11 +909,9 @@ class TimeVariable(ContinuousVariable):
         self.have_date = have_date
         self.have_time = have_time
 
-    def copy(self, compute_value=None):
-        copy = super().copy(compute_value=compute_value)
-        copy.have_date = self.have_date
-        copy.have_time = self.have_time
-        return copy
+    def copy(self, compute_value=None, *, name=None, **_):
+        return super().copy(compute_value=compute_value, name=name,
+                            have_date=self.have_date, have_time=self.have_time)
 
     @staticmethod
     def _tzre_sub(s, _subtz=re.compile(r'([+-])(\d\d):(\d\d)$').sub):
@@ -1005,8 +961,6 @@ class TimeVariable(ContinuousVariable):
             return Unknown
         datestr = datestr.strip().rstrip('Z')
 
-        ERROR = ValueError("Invalid datetime format '{}'. "
-                           "Only ISO 8601 supported.".format(datestr))
         if not self._matches_iso_format(datestr):
             try:
                 # If it is a number, assume it is a unix timestamp
@@ -1014,7 +968,7 @@ class TimeVariable(ContinuousVariable):
                 self.have_date = self.have_time = 1
                 return value
             except ValueError:
-                raise ERROR
+                raise self.InvalidDateTimeFormatError(datestr)
 
         for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
             try:
@@ -1035,7 +989,7 @@ class TimeVariable(ContinuousVariable):
                                     self.UNIX_EPOCH.day)
                 break
         else:
-            raise ERROR
+            raise self.InvalidDateTimeFormatError(datestr)
 
         # Remember UTC offset. If not all parsed values share the same offset,
         # remember none of it.
@@ -1060,6 +1014,16 @@ class TimeVariable(ContinuousVariable):
             return dt.timestamp()
         except OverflowError:
             return -(self.UNIX_EPOCH - dt).total_seconds()
+
+    def parse_exact_iso(self, datestr):
+        """
+        This function is a meta function to `parse` function. It checks
+        whether the date is of the iso format - it does not accept float-like
+        date.
+        """
+        if not self._matches_iso_format(datestr):
+            raise self.InvalidDateTimeFormatError(datestr)
+        return self.parse(datestr)
 
     def to_val(self, s):
         """

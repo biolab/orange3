@@ -40,6 +40,6 @@ The diagonal dotted line represents the behavior of a random classifier. The ful
 Example
 -------
 
-At the moment, the only widget which gives the right type of signal needed by the **ROC Analysis** is [Test & Score](../evaluation/testandscore.md). Below, we compare two classifiers, namely [Tree](../model/tree.md) and [Naive Bayes](../model/naivebayes.md), in **Test\&Score** and then compare their performance in **ROC Analysis**, [Life Curve](../evaluation/liftcurve.md) and [Calibration Plot](../evaluation/calibrationplot.md).
+At the moment, the only widget which gives the right type of signal needed by the **ROC Analysis** is [Test & Score](../evaluate/testandscore.md). Below, we compare two classifiers, namely [Tree](../model/tree.md) and [Naive Bayes](../model/naivebayes.md), in **Test\&Score** and then compare their performance in **ROC Analysis**, [Life Curve](../evaluate/liftcurve.md) and [Calibration Plot](../evaluate/calibrationplot.md).
 
 ![](images/ROCAnalysis-example.png)

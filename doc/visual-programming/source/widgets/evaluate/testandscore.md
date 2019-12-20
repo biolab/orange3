@@ -13,7 +13,7 @@ Tests learning algorithms on data.
 
 - Evaluation Results: results of testing classification algorithms
 
-The widget tests learning algorithms. Different sampling schemes are available, including using separate test data. The widget does two things. First, it shows a table with different classifier performance measures, such as [classification accuracy](https://en.wikipedia.org/wiki/Accuracy_and_precision) and [area under the curve](https://en.wikipedia.org/wiki/Receiver_operating_characteristic#Area_under_the_curve). Second, it outputs evaluation results, which can be used by other widgets for analyzing the performance of classifiers, such as [ROC Analysis](../evaluation/rocanalysis.md) or [Confusion Matrix](../evaluation/confusionmatrix.md).
+The widget tests learning algorithms. Different sampling schemes are available, including using separate test data. The widget does two things. First, it shows a table with different classifier performance measures, such as [classification accuracy](https://en.wikipedia.org/wiki/Accuracy_and_precision) and [area under the curve](https://en.wikipedia.org/wiki/Receiver_operating_characteristic#Area_under_the_curve). Second, it outputs evaluation results, which can be used by other widgets for analyzing the performance of classifiers, such as [ROC Analysis](../evaluate/rocanalysis.md) or [Confusion Matrix](../evaluate/confusionmatrix.md).
 
 The *Learner* signal has an uncommon property: it can be connected to more than one widget to test multiple learners with the same procedures.
 
@@ -45,8 +45,8 @@ The *Learner* signal has an uncommon property: it can be connected to more than 
 Example
 -------
 
-In a typical use of the widget, we give it a dataset and a few learning algorithms and we observe their performance in the table inside the **Test & Score** widget and in the [ROC](../evaluation/rocanalysis.md). The data is often preprocessed before testing; in this case we did some manual feature selection ([Select Columns](../data/selectcolumns.md) widget) on *Titanic* dataset, where we want to know only the sex and status of the survived and omit the age.
+In a typical use of the widget, we give it a dataset and a few learning algorithms and we observe their performance in the table inside the **Test & Score** widget and in the [ROC](../evaluate/rocanalysis.md). The data is often preprocessed before testing; in this case we did some manual feature selection ([Select Columns](../data/selectcolumns.md) widget) on *Titanic* dataset, where we want to know only the sex and status of the survived and omit the age.
 
 ![](images/TestLearners-example-classification.png)
 
-Another example of using this widget is presented in the documentation for the [Confusion Matrix](../evaluation/confusionmatrix.md) widget.
+Another example of using this widget is presented in the documentation for the [Confusion Matrix](../evaluate/confusionmatrix.md) widget.

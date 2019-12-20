@@ -21,7 +21,7 @@ class TestEqualFreq(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        table = data.Table(X)
+        table = data.Table.from_numpy(None, X)
         disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
@@ -29,7 +29,7 @@ class TestEqualFreq(TestCase):
 
     def test_equifreq_100_to_4(self):
         X = np.arange(100).reshape((100, 1))
-        table = data.Table(X)
+        table = data.Table.from_numpy(None, X)
         disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
@@ -37,7 +37,7 @@ class TestEqualFreq(TestCase):
 
     def test_equifreq_with_k_instances(self):
         X = np.array([[1], [2], [3], [4]])
-        table = data.Table(X)
+        table = data.Table.from_numpy(None, X)
         disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
@@ -50,7 +50,7 @@ class TestEqualWidth(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        table = data.Table(X)
+        table = data.Table.from_numpy(None, X)
         disc = discretize.EqualWidth(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
@@ -59,7 +59,7 @@ class TestEqualWidth(TestCase):
     @table_dense_sparse
     def test_equalwidth_100_to_4(self, prepare_table):
         X = np.arange(101).reshape((101, 1))
-        table = prepare_table(data.Table(X))
+        table = prepare_table(data.Table.from_numpy(None, X))
         disc = discretize.EqualWidth(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
@@ -67,7 +67,7 @@ class TestEqualWidth(TestCase):
 
     def test_equalwidth_const_value(self):
         X = np.ones((100, 1))
-        table = data.Table(X)
+        table = data.Table.from_numpy(None, X)
         disc = discretize.EqualFreq(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
@@ -80,7 +80,7 @@ class TestEntropyMDL(TestCase):
         s = [0] * 50 + [1] * 50
         random.shuffle(s)
         X = np.array(s).reshape((100, 1))
-        table = data.Table(X, X)
+        table = data.Table.from_numpy(None, X, X)
         disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
@@ -89,7 +89,7 @@ class TestEntropyMDL(TestCase):
     def test_entropy_with_two_values_useless(self):
         X = np.array([0] * 50 + [1] * 50).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 50 + [0] * 25)
-        table = data.Table(X, Y)
+        table = data.Table.from_numpy(None, X, Y)
         disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
@@ -109,7 +109,7 @@ class TestEntropyMDL(TestCase):
         X = np.array([0] * 25 + [1] * 25 + [2] * 25 + [3] * 25
                     ).reshape((100, 1))
         Y = np.array([0] * 25 + [1] * 75)
-        table = data.Table(X, Y)
+        table = data.Table.from_numpy(None, X, Y)
         disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 2)
@@ -171,7 +171,7 @@ class TestDiscretizer(TestCase):
         table = data.Table('iris')
         table2 = Discretize()(table)
         ins = data.Instance(table2.domain, table[0])
-        table3 = data.Table(table2.domain, table[:10])
+        table3 = table[:10].transform(table2.domain)
         self.assertEqual(ins, table3[0])
 
     def test_remove_constant(self):
@@ -241,8 +241,8 @@ class TestDiscretizeTable(TestCase):
         X2 = np.arange(100).reshape((100, 1))
         X3 = np.ones((100, 1))
         X = np.hstack([X1, X2, X3])
-        cls.table_no_class = data.Table(X)
-        cls.table_class = data.Table(X, X1)
+        cls.table_no_class = data.Table.from_numpy(None, X)
+        cls.table_class = data.Table.from_numpy(None, X, X1)
 
     def test_discretize_exclude_constant(self):
         dom = discretize.DomainDiscretizer()(self.table_no_class)

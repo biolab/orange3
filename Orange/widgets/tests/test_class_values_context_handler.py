@@ -5,8 +5,8 @@ from Orange.data import ContinuousVariable
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler
 from Orange.widgets.utils import vartype
 
-Continuous = vartype(ContinuousVariable())
-Discrete = vartype(DiscreteVariable())
+Continuous = vartype(ContinuousVariable("x"))
+Discrete = vartype(DiscreteVariable("x"))
 
 
 class TestClassValuesContextHandler(TestCase):
