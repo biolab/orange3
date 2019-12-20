@@ -195,7 +195,7 @@ class TestTabReader(unittest.TestCase):
         file1 = io.StringIO("\n".join("xd dbac"))
         reader = TabReader(file1)
 
-        self.assertEqual(reader.sheets, ())
+        self.assertEqual(reader.sheets, [])
 
     def test_attributes_saving(self):
         tempdir = tempfile.mkdtemp()

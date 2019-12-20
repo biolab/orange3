@@ -1,7 +1,8 @@
 import os.path
 
 from Orange.data.table import Table
-from Orange.data.io import TabReader, CSVReader, PickleReader, ExcelReader
+from Orange.data.io import TabReader, CSVReader, PickleReader, ExcelReader, \
+    XlsReader
 from Orange.widgets import gui, widget
 from Orange.widgets.widget import Input
 from Orange.widgets.settings import Setting
@@ -21,7 +22,7 @@ class OWSave(OWSaveBase):
 
     settings_version = 2
 
-    writers = [TabReader, CSVReader, PickleReader, ExcelReader]
+    writers = [TabReader, CSVReader, PickleReader, ExcelReader, XlsReader]
     filters = {
         **{f"{w.DESCRIPTION} (*{w.EXTENSIONS[0]})": w
            for w in writers},
