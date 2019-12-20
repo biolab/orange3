@@ -474,7 +474,9 @@
     "doc": "visual-programming/source/widgets/model/tree.md",
     "icon": "../Orange/widgets/model/icons/Tree.svg",
     "background": "#FAC1D9",
-    "keywords": []
+    "keywords": [
+     "Classification Tree"
+    ]
    },
    {
     "text": "Random Forest",
