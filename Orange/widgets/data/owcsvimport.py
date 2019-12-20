@@ -1246,6 +1246,7 @@ def load_csv(path, opts, progress_callback=None):
             header=header, skiprows=skiprows,
             dtype=dtypes, parse_dates=parse_dates, prefix=prefix,
             na_values=na_values, keep_default_na=False,
+            float_precision="round_trip",
             **numbers_format_kwds
         )
         if columns_ignored:

@@ -7,46 +7,70 @@ A widget for manual editing of a domain's attributes.
 """
 import warnings
 from xml.sax.saxutils import escape
-from itertools import zip_longest
+from itertools import zip_longest, repeat, chain
 from contextlib import contextmanager
 from collections import namedtuple, Counter
-from functools import singledispatch
+from functools import singledispatch, partial
 
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
-    FrozenSet,
+    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable
 )
-
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QToolButton, QLineEdit, QAction, QActionGroup, QStackedWidget, QGroupBox,
+    QToolButton, QLineEdit, QAction, QActionGroup, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
-    QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QShortcut
+    QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QShortcut,
+    QStackedLayout
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
     Qt, QEvent, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex,
-    QRect
+    QRect,
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import numpy as np
+import pandas as pd
 
 import Orange.data
 
-from Orange.preprocess.transformation import Identity, Lookup
+from Orange.preprocess.transformation import Transformation, Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
+ndarray = np.ndarray  # pylint: disable=invalid-name
+MArray = np.ma.MaskedArray
+DType = Union[np.dtype, type]
 
-def unique(sequence):
+A = TypeVar("A")  # pylint: disable=invalid-name
+B = TypeVar("B")  # pylint: disable=invalid-name
+V = TypeVar("V", bound=Orange.data.Variable)  # pylint: disable=invalid-name
+H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
+
+
+def unique(sequence: Iterable[H]) -> Iterable[H]:
     """
     Return unique elements in `sequence`, preserving their (first seen) order.
     """
     # depending on Python >= 3.6 'ordered' dict implementation detail.
     return iter(dict.fromkeys(sequence))
+
+
+class _DataType:
+    def __eq__(self, other):
+        """Equal if `other` has the same type and all elements compare equal."""
+        if type(self) is not type(other):
+            return False
+        return super().__eq__(other)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return hash((type(self), super().__hash__()))
 
 
 #: An ordered sequence of key, value pairs (variable annotations)
@@ -56,7 +80,7 @@ AnnotationsType = Tuple[Tuple[str, str], ...]
 # Define abstract representation of the variable types edited
 
 class Categorical(
-    NamedTuple("Categorical", [
+    _DataType, NamedTuple("Categorical", [
         ("name", str),
         ("categories", Tuple[str, ...]),
         ("annotations", AnnotationsType),
@@ -68,7 +92,7 @@ class Ordered(Categorical):
 
 
 class Real(
-    NamedTuple("Real", [
+    _DataType, NamedTuple("Real", [
         ("name", str),
         # a precision (int, and a format specifier('f', 'g', or '')
         ("format", Tuple[int, str]),
@@ -77,14 +101,14 @@ class Real(
 
 
 class String(
-    NamedTuple("String", [
+    _DataType, NamedTuple("String", [
         ("name", str),
         ("annotations", AnnotationsType),
     ])): pass
 
 
 class Time(
-    NamedTuple("Time", [
+    _DataType, NamedTuple("Time", [
         ("name", str),
         ("annotations", AnnotationsType),
     ])): pass
@@ -96,7 +120,7 @@ VariableTypes = (Categorical, Real, Time, String)
 
 # Define variable transformations.
 
-class Rename(namedtuple("Rename", ["name"])):
+class Rename(_DataType, namedtuple("Rename", ["name"])):
     """
     Rename a variable.
 
@@ -122,7 +146,7 @@ class Rename(namedtuple("Rename", ["name"])):
 CategoriesMappingType = List[Tuple[Optional[str], Optional[str]]]
 
 
-class CategoriesMapping(namedtuple("CategoriesMapping", ["mapping"])):
+class CategoriesMapping(_DataType, namedtuple("CategoriesMapping", ["mapping"])):
     """
     Change categories of a categorical variable.
 
@@ -132,11 +156,11 @@ class CategoriesMapping(namedtuple("CategoriesMapping", ["mapping"])):
     """
     def __call__(self, var):
         # type: (Categorical) -> Categorical
-        cat = list(unique(cj for _, cj in self.mapping if cj is not None))
+        cat = tuple(unique(cj for _, cj in self.mapping if cj is not None))
         return var._replace(categories=cat)
 
 
-class Annotate(namedtuple("Annotate", ["annotations"])):
+class Annotate(_DataType, namedtuple("Annotate", ["annotations"])):
     """
     Replace variable annotations.
     """
@@ -144,7 +168,7 @@ class Annotate(namedtuple("Annotate", ["annotations"])):
         return var._replace(annotations=self.annotations)
 
 
-class ChangeOrdered(NamedTuple("ChangeOrdered", [("ordered", bool)])):
+class ChangeOrdered(_DataType, NamedTuple("ChangeOrdered", [("ordered", bool)])):
     """
     Change Categorical <-> Ordered
     """
@@ -152,6 +176,149 @@ class ChangeOrdered(NamedTuple("ChangeOrdered", [("ordered", bool)])):
 
 Transform = Union[Rename, CategoriesMapping, Annotate, ChangeOrdered]
 TransformTypes = (Rename, CategoriesMapping, Annotate, ChangeOrdered)
+
+CategoricalTransformTypes = (CategoriesMapping, ChangeOrdered)
+
+
+# Reinterpret vector transformations.
+class CategoricalVector(
+    _DataType, NamedTuple("CategoricalVector", [
+        ("vtype", Categorical),
+        ("data", Callable[[], MArray]),
+    ])): ...
+
+
+class RealVector(
+    _DataType, NamedTuple("RealVector", [
+        ("vtype", Real),
+        ("data", Callable[[], MArray]),
+    ])): ...
+
+
+class StringVector(
+    _DataType, NamedTuple("StringVector", [
+        ("vtype", String),
+        ("data", Callable[[], MArray]),
+    ])): ...
+
+
+class TimeVector(
+    _DataType, NamedTuple("TimeVector", [
+        ("vtype", Time),
+        ("data", Callable[[], MArray]),
+    ])): ...
+
+
+DataVector = Union[CategoricalVector, RealVector, StringVector, TimeVector]
+DataVectorTypes = (CategoricalVector, RealVector, StringVector, TimeVector)
+
+
+class AsString(_DataType, NamedTuple("AsString", [])):
+    """Reinterpret a data vector as a string."""
+    def __call__(self, vector: DataVector) -> StringVector:
+        var, _ = vector
+        if isinstance(var, String):
+            return vector
+        return StringVector(
+            String(var.name, var.annotations),
+            lambda: as_string(vector.data()),
+        )
+
+
+class AsContinuous(_DataType, NamedTuple("AsContinuous", [])):
+    """
+    Reinterpret as a continuous variable (values that do not parse as
+    float are NaN).
+    """
+    def __call__(self, vector: DataVector) -> RealVector:
+        var, _ = vector
+        if isinstance(var, Real):
+            return vector
+        elif isinstance(var, Categorical):
+            def data() -> MArray:
+                d = vector.data()
+                a = categorical_to_string_vector(d, var.values)
+                return MArray(as_float_or_nan(a, where=a.mask), mask=a.mask)
+            return RealVector(
+                Real(var.name, (6, 'g'), var.annotations), data
+            )
+        elif isinstance(var, Time):
+            return RealVector(
+                Real(var.name, (6, 'g'), var.annotations),
+                lambda: vector.data().astype(float)
+            )
+        elif isinstance(var, String):
+            def data():
+                s = vector.data()
+                return MArray(as_float_or_nan(s, where=s.mask), mask=s.mask)
+            return RealVector(
+                Real(var.name, (6, "g"), var.annotations), data
+            )
+        raise AssertionError
+
+
+class AsCategorical(_DataType, namedtuple("AsCategorical", [])):
+    """Reinterpret as a categorical variable"""
+    def __call__(self, vector: DataVector) -> CategoricalVector:
+        # this is the main complication in type transformation since we need
+        # the data and not just the variable description
+        var, _ = vector
+        if isinstance(var, Categorical):
+            return vector
+        if isinstance(var, Real):
+            data, values = categorical_from_vector(vector.data())
+            return CategoricalVector(
+                Categorical(var.name, values, var.annotations),
+                lambda: data
+            )
+        elif isinstance(var, Time):
+            data, values = categorical_from_vector(vector.data())
+            return CategoricalVector(
+                Categorical(var.name, values, var.annotations),
+                lambda: data
+            )
+        elif isinstance(var, String):
+            data, values = categorical_from_vector(vector.data())
+            return CategoricalVector(
+                Categorical(var.name, values, var.annotations),
+                lambda: data
+            )
+        raise AssertionError
+
+
+class AsTime(_DataType, namedtuple("AsTime", [])):
+    """Reinterpret as a datetime vector"""
+    def __call__(self, vector: DataVector) -> TimeVector:
+        var, _ = vector
+        if isinstance(var, Time):
+            return vector
+        elif isinstance(var, Real):
+            return TimeVector(
+                Time(var.name, var.annotations),
+                lambda: vector.data().astype("M8[us]")
+            )
+        elif isinstance(var, Categorical):
+            def data():
+                d = vector.data()
+                s = categorical_to_string_vector(d, var.values)
+                dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
+                return MArray(dt, mask=d.mask)
+            return TimeVector(
+                Time(var.name, var.annotations), data
+            )
+        elif isinstance(var, String):
+            def data():
+                s = vector.data()
+                dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
+                return MArray(dt, mask=s.mask)
+            return TimeVector(
+                Time(var.name, var.annotations), data
+            )
+        raise AssertionError
+
+
+ReinterpretTransform = Union[AsCategorical, AsContinuous, AsTime, AsString]
+ReinterpretTransformTypes = (AsCategorical, AsContinuous, AsTime, AsString)
 
 
 def deconstruct(obj):
@@ -194,6 +361,78 @@ def reconstruct(tname, args):
     return constructor(*args)
 
 
+def formatter_for_dtype(dtype: np.dtype) -> Callable[[Any], str]:
+    if dtype.metadata is None:
+        return str
+    else:
+        return dtype.metadata.get("__formatter", str)  # metadata abuse
+
+
+def masked_unique(data: MArray) -> Tuple[MArray, ndarray]:
+    if not np.any(data.mask):
+        return np.ma.unique(data, return_inverse=True)
+    elif data.dtype.kind == "O":
+        # np.ma.unique does not work for object arrays
+        # (no ma.minimum_fill_value for object arrays)
+        # maybe sorted(set(data.data[...]))
+        unq = np.unique(data.data[~data.mask])
+        mapper = make_dict_mapper(
+            DictMissingConst(len(unq), ((v, i) for i, v in enumerate(unq)))
+        )
+        index = mapper(data.data)
+        unq = np.array(unq.tolist() + [data.fill_value], dtype=data.dtype)
+        unq_mask = [False] * unq.size
+        unq_mask[-1] = True
+        unq = MArray(unq, mask=unq_mask)
+        return unq, index
+    else:
+        unq, index = np.ma.unique(data, return_inverse=True)
+        assert not np.any(unq.mask[:-1]), \
+            "masked value if present must be in last position"
+        return unq, index
+
+
+def categorical_from_vector(data: MArray) -> Tuple[MArray, Tuple[str, ...]]:
+    formatter = formatter_for_dtype(data.dtype)
+    unq, index = categorize_unique(data)
+    if formatter is not str:
+        # str(np.array([0], "M8[s]")[0]) is different then
+        # str(np.array([0], "M8[s]").astype(object)[0]) which is what
+        # as_string is doing
+        names = tuple(map(formatter, unq.astype(object)))
+    else:
+        names = tuple(as_string(unq))
+    data = MArray(
+        index, mask=data.mask,
+        dtype=np.dtype(int, metadata={
+            "__formater": lambda i: names[i] if 0 <= i < unq.size else "?"
+        })
+    )
+    return data, names
+
+
+def categorize_unique(data: MArray) -> Tuple[ndarray, MArray]:
+    unq, index = masked_unique(data)
+    if np.any(unq.mask):
+        unq = unq[:-1]
+        assert not np.any(unq.mask), "masked value if present must be last"
+    unq = unq.data
+    index[data.mask] = -1
+    index = MArray(index, mask=data.mask)
+    return unq, index
+
+
+def categorical_to_string_vector(data: MArray, values: Tuple[str, ...]) -> MArray:
+    lookup = np.asarray(values, object)
+    out = np.full(data.shape, "", dtype=object)
+    mask_ = ~data.mask
+    out[mask_] = lookup[data.data[mask_]]
+    return MArray(out, mask=data.mask, fill_value="")
+
+
+# Item models
+
+
 class DictItemsModel(QStandardItemModel):
     """A Qt Item Model class displaying the contents of a python
     dictionary.
@@ -230,6 +469,7 @@ class DictItemsModel(QStandardItemModel):
 
 
 class FixedSizeButton(QToolButton):
+
     def __init__(self, *args, defaultAction=None, **kwargs):
         super().__init__(*args, **kwargs)
         sh = self.sizePolicy()
@@ -554,7 +794,7 @@ class CountedStateModel(CountedListModel):
     """
     Count by EditRole (name) and EditStateRole (ItemEditState)
     """
-    # The purpouse is to count the items with target name only for
+    # The purpose is to count the items with target name only for
     # ItemEditState.NoRole, i.e. excluding added/dropped values.
     #
     def key(self, index):  # type: (QModelIndex) -> Tuple[Any, Any]
@@ -621,6 +861,7 @@ class DiscreteVariableEditor(VariableEditor):
         self.values_edit = QListView(
             editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed,
             selectionMode=QListView.ExtendedSelection,
+            uniformItemSizes=True,
         )
         self.values_edit.setItemDelegate(CategoriesEditDelegate(self))
         self.values_edit.setModel(self.values_model)
@@ -805,7 +1046,7 @@ class DiscreteVariableEditor(VariableEditor):
         model = self.values_model
         source = self.var.categories
 
-        res = []
+        res = []  # type: CategoriesMappingType
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
             category = midx.data(Qt.EditRole)
@@ -830,6 +1071,7 @@ class DiscreteVariableEditor(VariableEditor):
         if var is None:
             return var, tr
         mapping = self.__categories_mapping()
+        assert len(mapping) >= len(var.categories), f'{mapping}, {var}'
         if any(_1 != _2 or _2 != _3
                for (_1, _2), _3 in zip_longest(mapping, var.categories)):
             tr.append(CategoriesMapping(mapping))
@@ -1015,29 +1257,41 @@ class TimeVariableEditor(VariableEditor):
 
 
 def variable_icon(var):
-    # type: (Variable) -> QIcon
-    if isinstance(var, (Categorical, Ordered)):
+    # type: (Union[Variable, Type[Variable], ReinterpretTransform]) -> QIcon
+    if not isinstance(var, type):
+        var = type(var)
+
+    if issubclass(var, (Categorical, Ordered, AsCategorical)):
         return gui.attributeIconDict[1]
-    elif isinstance(var, Real):
+    elif issubclass(var, (Real, AsContinuous)):
         return gui.attributeIconDict[2]
-    elif isinstance(var, String):
+    elif issubclass(var, (String, AsString)):
         return gui.attributeIconDict[3]
-    elif isinstance(var, Time):
+    elif issubclass(var, (Time, AsTime)):
         return gui.attributeIconDict[4]
     else:
         return gui.attributeIconDict[-1]
 
 
-#: ItemDataRole storing the variable transform (`List[Transform]`)
+#: ItemDataRole storing the data vector transform
+#: (`List[Union[ReinterpretTransform, Transform]]`)
 TransformRole = Qt.UserRole + 42
 
 
 class VariableEditDelegate(QStyledItemDelegate):
+    ReinterpretNames = {
+        AsCategorical: "categorical", AsContinuous: "numeric",
+        AsString: "string", AsTime: "time"
+    }
+
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
         super().initStyleOption(option, index)
         item = index.data(Qt.EditRole)
         var = tr = None
+        if isinstance(item, DataVectorTypes):
+            var = item.vtype
+            option.icon = variable_icon(var)
         if isinstance(item, VariableTypes):
             var = item
             option.icon = variable_icon(item)
@@ -1045,12 +1299,15 @@ class VariableEditDelegate(QStyledItemDelegate):
             var = item
             option.icon = gui.attributeIconDict[var]
 
-        if not option.icon.isNull():
-            option.features |= QStyleOptionViewItem.HasDecoration
-
         transform = index.data(TransformRole)
         if not isinstance(transform, list):
             transform = []
+
+        if transform and isinstance(transform[0], ReinterpretTransformTypes):
+            option.icon = variable_icon(transform[0])
+
+        if not option.icon.isNull():
+            option.features |= QStyleOptionViewItem.HasDecoration
 
         if var is not None:
             text = var.name
@@ -1058,8 +1315,12 @@ class VariableEditDelegate(QStyledItemDelegate):
                 if isinstance(tr, Rename):
                     text = ("{} \N{RIGHTWARDS ARROW} {}"
                             .format(var.name, tr.name))
+            for tr in transform:
+                if isinstance(tr, ReinterpretTransformTypes):
+                    text += f" (reinterpreted as " \
+                            f"{self.ReinterpretNames[type(tr)]})"
             option.text = text
-        if tr:
+        if transform:
             # mark as changed (maybe also change color, add text, ...)
             option.font.setItalic(True)
 
@@ -1077,7 +1338,179 @@ class VariableListModel(itemmodels.PyListModel):
             item = self[row]
             if isinstance(item, VariableTypes):
                 return item.name
+            if isinstance(item, DataVectorTypes):
+                return item.vtype.name
         return super().data(index, role)
+
+
+class ReinterpretVariableEditor(VariableEditor):
+    """
+    A 'compound' variable editor capable of variable type reinterpretations.
+    """
+    _editors = {
+        Categorical: 0, Ordered: 0,
+        Real: 1,
+        String: 2,
+        Time: 3,
+        type(None): -1,
+    }
+
+    def __init__(self, parent=None, **kwargs):
+        # Explicitly skip VariableEditor's __init__, this is ugly but we have
+        # a completely different layout/logic as a compound editor (should
+        # really not subclass VariableEditor).
+        super(VariableEditor, self).__init__(parent, **kwargs)  # pylint: disable=bad-super-call
+        self.var = None  # type: Optional[Variable]
+        self.__transform = None  # type: Optional[ReinterpretTransform]
+        self.__data = None  # type: Optional[DataVector]
+        #: Stored transform state indexed by variable. Used to preserve state
+        #: between type switches.
+        self.__history = {}  # type: Dict[Variable, List[Transform]]
+
+        self.setLayout(QStackedLayout())
+
+        def decorate(editor: VariableEditor) -> VariableEditor:
+            """insert an type combo box into a `editor`'s layout."""
+            form = editor.layout().itemAt(0)
+            assert isinstance(form, QFormLayout)
+            typecb = QComboBox(objectName="type-combo")
+            typecb.addItem(variable_icon(Categorical), "Categorical", Categorical)
+            typecb.addItem(variable_icon(Real), "Numeric", Real)
+            typecb.addItem(variable_icon(String), "Text", String)
+            typecb.addItem(variable_icon(Time), "Time", Time)
+            typecb.activated[int].connect(self.__reinterpret_activated)
+            form.insertRow(1, "Type:", typecb)
+            # Insert the typecb after name edit in the focus chain
+            nameedit = editor.findChild(QLineEdit, )
+            if nameedit is not None:
+                QWidget.setTabOrder(nameedit, typecb)
+            return editor
+        # This is ugly. Create an editor for each type and insert a type
+        # selection combo box into its layout. Switch between widgets
+        # on type change.
+        dedit = decorate(DiscreteVariableEditor())
+        cedit = decorate(ContinuousVariableEditor())
+        tedit = decorate(TimeVariableEditor())
+        sedit = decorate(VariableEditor())
+
+        for ed in [dedit, cedit, tedit, sedit]:
+            ed.variable_changed.connect(self.variable_changed)
+
+        self.layout().addWidget(dedit)
+        self.layout().addWidget(cedit)
+        self.layout().addWidget(sedit)
+        self.layout().addWidget(tedit)
+
+    def set_data(self, data, transform=()):  # pylint: disable=arguments-differ
+        # type: (Optional[DataVector], Sequence[Transform]) -> None
+        """
+        Set the editor data.
+
+        Note
+        ----
+        This must be a `DataVector` as the vector's values are needed for type
+        reinterpretation/casts.
+
+        If the `transform` sequence contains ReinterpretTransform then it
+        must be in the first position.
+        """
+        type_transform = None  # type: Optional[ReinterpretTransform]
+        if transform:
+            _tr = transform[0]
+            if isinstance(_tr, ReinterpretTransformTypes):
+                type_transform = _tr
+                transform = transform[1:]
+            assert not any(isinstance(t, ReinterpretTransformTypes)
+                           for t in transform)
+        self.__transform = type_transform
+        self.__data = data
+        self.var = data.vtype if data is not None else None
+
+        if type_transform is not None and data is not None:
+            data = type_transform(data)
+        if data is not None:
+            var = data.vtype
+        else:
+            var = None
+        index = self._editors.get(type(var), -1)
+        self.layout().setCurrentIndex(index)
+        if index != -1:
+            w = self.layout().currentWidget()
+            assert isinstance(w, VariableEditor)
+            w.set_data(var, transform)
+            self.__history[var] = tuple(transform)
+            cb = w.findChild(QComboBox, "type-combo")
+            cb.setCurrentIndex(index)
+
+    def get_data(self):
+        # type: () -> Tuple[Variable, Sequence[Transform]]
+        editor = self.layout().currentWidget()  # type: VariableEditor
+        var, tr = editor.get_data()
+        if type(var) != type(self.var):  # pylint: disable=unidiomatic-typecheck
+            assert self.__transform is not None
+            var = self.var
+            tr = [self.__transform, *tr]
+        return var, tr
+
+    def __reinterpret_activated(self, index):
+        layout = self.layout()
+        assert isinstance(layout, QStackedLayout)
+        if index == layout.currentIndex():
+            return
+        current = layout.currentWidget()
+        assert isinstance(current, VariableEditor)
+        Specific = {
+            Categorical: CategoricalTransformTypes
+        }
+        _var, _tr = current.get_data()
+        if _var is not None:
+            self.__history[_var] = _tr
+
+        var = self.var
+        transform = self.__transform
+        # take/preserve the general transforms that apply to all types
+        specific = Specific.get(type(var), ())
+        _tr = [t for t in _tr if not isinstance(t, specific)]
+
+        layout.setCurrentIndex(index)
+        w = layout.currentWidget()
+        cb = w.findChild(QComboBox, "type-combo")
+        cb.setCurrentIndex(index)
+        cb.setFocus()
+        target = cb.itemData(index, Qt.UserRole)
+        assert issubclass(target, VariableTypes)
+        if not isinstance(var, target):
+            if target == Real:
+                transform = AsContinuous()
+            elif target == Categorical:
+                transform = AsCategorical()
+            elif target == Time:
+                transform = AsTime()
+            elif target == String:
+                transform = AsString()
+        else:
+            transform = None
+            var = self.var
+
+        self.__transform = transform
+        if transform is not None and self.__data is not None:
+            data = transform(self.__data)
+            var = data.vtype
+
+        if var in self.__history:
+            tr = self.__history[var]
+        else:
+            tr = []
+        # type specific transform
+        specific = Specific.get(type(var), ())
+        # merge tr and _tr
+        tr = _tr + [t for t in tr if isinstance(t, specific)]
+        with disconnected(
+                w.variable_changed, self.variable_changed,
+                Qt.UniqueConnection
+        ):
+            w.set_data(var, tr)
+        self.variable_changed.emit()
 
 
 class OWEditDomain(widget.OWWidget):
@@ -1110,6 +1543,7 @@ class OWEditDomain(widget.OWWidget):
         #: The current selected variable index
         self.selected_index = -1
         self._invalidated = False
+        self.typeindex = 0
 
         mainlayout = self.mainArea.layout()
         assert isinstance(mainlayout, QVBoxLayout)
@@ -1135,14 +1569,9 @@ class OWEditDomain(widget.OWWidget):
         box.setLayout(QVBoxLayout(margin=4))
         layout.addWidget(box)
 
-        self.editor_stack = QStackedWidget()
+        self._editor = ReinterpretVariableEditor()
 
-        self.editor_stack.addWidget(DiscreteVariableEditor())
-        self.editor_stack.addWidget(ContinuousVariableEditor())
-        self.editor_stack.addWidget(TimeVariableEditor())
-        self.editor_stack.addWidget(VariableEditor())
-
-        box.layout().addWidget(self.editor_stack)
+        box.layout().addWidget(self._editor)
 
         bbox = QDialogButtonBox()
         bbox.setStyleSheet(
@@ -1185,7 +1614,7 @@ class OWEditDomain(widget.OWWidget):
         self.data = data
 
         if self.data is not None:
-            self.set_domain(data.domain)
+            self.setup_model(data)
             self.openContext(self.data)
             self._restore()
 
@@ -1211,7 +1640,7 @@ class OWEditDomain(widget.OWWidget):
             tr = midx.data(TransformRole)
             if not tr:
                 return  # nothing to reset
-            editor = self.editor_stack.currentWidget()
+            editor = self._editor
             with disconnected(editor.variable_changed,
                               self._on_variable_changed):
                 model.setData(midx, [], TransformRole)
@@ -1237,10 +1666,26 @@ class OWEditDomain(widget.OWWidget):
         assert len(rows) <= 1
         return rows[0].row() if rows else -1
 
-    def set_domain(self, domain):
-        # type: (Orange.data.Domain) -> None
-        self.variables_model[:] = [abstract(v)
-                                   for v in domain.variables + domain.metas]
+    def setup_model(self, data: Orange.data.Table):
+        model = self.variables_model
+        vars_ = []
+        columns = []
+        for i, _, var, coldata in enumerate_columns(data):
+            var = abstract(var)
+            vars_.append(var)
+            if isinstance(var, Categorical):
+                data = CategoricalVector(var, coldata)
+            elif isinstance(var, Real):
+                data = RealVector(var, coldata)
+            elif isinstance(var, Time):
+                data = TimeVector(var, coldata)
+            elif isinstance(var, String):
+                data = StringVector(var, coldata)
+            columns.append(data)
+
+        model[:] = vars_
+        for i, d in enumerate(columns):
+            model.setData(model.index(i), d, Qt.EditRole)
 
     def _restore(self, ):
         """
@@ -1249,16 +1694,16 @@ class OWEditDomain(widget.OWWidget):
         model = self.variables_model
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
-            var = model.data(midx, Qt.EditRole)
-            tr = self._restore_transform(var)
+            coldesc = model.data(midx, Qt.EditRole)  # type: DataVector
+            tr = self._restore_transform(coldesc.vtype)
             if tr:
                 model.setData(midx, tr, TransformRole)
 
         # Restore the current variable selection
         i = -1
         if self._selected_item is not None:
-            for i, var in enumerate(model):
-                if var.name == self._selected_item:
+            for i, vec in enumerate(model):
+                if vec.vtype.name == self._selected_item:
                     break
         if i == -1 and model.rowCount():
             i = 0
@@ -1269,7 +1714,7 @@ class OWEditDomain(widget.OWWidget):
     def _on_selection_changed(self):
         self.selected_index = self.selected_var_index()
         if self.selected_index != -1:
-            self._selected_item = self.variables_model[self.selected_index].name
+            self._selected_item = self.variables_model[self.selected_index].vtype.name
         else:
             self._selected_item = None
         self.open_editor(self.selected_index)
@@ -1281,28 +1726,18 @@ class OWEditDomain(widget.OWWidget):
         if not 0 <= index < model.rowCount():
             return
         idx = model.index(index, 0)
-        var = model.data(idx, Qt.EditRole)
+        vector = model.data(idx, Qt.EditRole)
         tr = model.data(idx, TransformRole)
         if tr is None:
             tr = []
-
-        editors = {
-            Categorical: 0, Ordered: 0,
-            Real: 1,
-            Time: 2,
-            String: 3
-        }
-
-        editor_index = editors.get(type(var), 3)
-        editor = self.editor_stack.widget(editor_index)
-        self.editor_stack.setCurrentWidget(editor)
-        editor.set_data(var, tr)
+        editor = self._editor
+        editor.set_data(vector, tr)
         editor.variable_changed.connect(
             self._on_variable_changed, Qt.UniqueConnection
         )
 
     def clear_editor(self):
-        current = self.editor_stack.currentWidget()
+        current = self._editor
         try:
             current.variable_changed.disconnect(self._on_variable_changed)
         except TypeError:
@@ -1313,7 +1748,7 @@ class OWEditDomain(widget.OWWidget):
     def _on_variable_changed(self):
         """User edited the current variable in editor."""
         assert 0 <= self.selected_index <= len(self.variables_model)
-        editor = self.editor_stack.currentWidget()
+        editor = self._editor
         var, transform = editor.get_data()
         model = self.variables_model
         midx = model.index(self.selected_index, 0)
@@ -1365,7 +1800,7 @@ class OWEditDomain(widget.OWWidget):
         model = self.variables_model
 
         def state(i):
-            # type: (int) -> Tuple[Variable, List[Transform]]
+            # type: (int) -> Tuple[DataVector, List[Transform]]
             midx = self.variables_model.index(i, 0)
             return (model.data(midx, Qt.EditRole),
                     model.data(midx, TransformRole))
@@ -1377,11 +1812,11 @@ class OWEditDomain(widget.OWWidget):
 
         output_vars = []
         input_vars = data.domain.variables + data.domain.metas
-        assert all(v_.name == v.name
+        assert all(v_.vtype.name == v.name
                    for v, (v_, _) in zip(input_vars, state))
         for (_, tr), v in zip(state, input_vars):
             if tr:
-                var = apply_transform(v, tr)
+                var = apply_transform(v, data, tr)
             else:
                 var = v
             output_vars.append(var)
@@ -1394,11 +1829,16 @@ class OWEditDomain(widget.OWWidget):
         domain = data.domain
         nx = len(domain.attributes)
         ny = len(domain.class_vars)
-        domain = Orange.data.Domain(
-            output_vars[:nx], output_vars[nx: nx + ny], output_vars[nx + ny:]
-        )
+
+        Xs = output_vars[:nx]
+        Ys = output_vars[nx: nx + ny]
+        Ms = output_vars[nx + ny:]
+        # Move non primitive Xs, Ys to metas (if they were changed)
+        Ms += [v for v in Xs + Ys if not v.is_primitive()]
+        Xs = [v for v in Xs if v.is_primitive()]
+        Ys = [v for v in Ys if v.is_primitive()]
+        domain = Orange.data.Domain(Xs, Ys, Ms)
         new_data = data.transform(domain)
-        # print(new_data)
         self.Outputs.data.send(new_data)
 
     def sizeHint(self):
@@ -1414,9 +1854,9 @@ class OWEditDomain(widget.OWWidget):
                      for i in range(model.rowCount())
                      for midx in [model.index(i)])
             parts = []
-            for var, trs in state:
+            for vector, trs in state:
                 if trs:
-                    parts.append(report_transform(var, trs))
+                    parts.append(report_transform(vector.vtype, trs))
             if parts:
                 html = ("<ul>" +
                         "".join(map("<li>{}</li>".format, parts)) +
@@ -1472,6 +1912,59 @@ class OWEditDomain(widget.OWWidget):
             context.values["_domain_change_store"] = (dict(store), -2)
 
 
+def enumerate_columns(
+        table: Orange.data.Table
+) -> Iterable[Tuple[int, str, Orange.data.Variable, Callable[[], ndarray]]]:
+    domain = table.domain
+    for i, (var, role) in enumerate(
+            chain(zip(domain.attributes, repeat("x")),
+                  zip(domain.class_vars, repeat("y")),
+                  zip(domain.metas, repeat("m"))),
+    ):
+        if i >= len(domain.variables):
+            i = len(domain.variables) - i - 1
+        data = partial(table_column_data, table, i)
+        yield i, role, var, data
+
+
+def table_column_data(
+        table: Orange.data.Table,
+        var: Union[Orange.data.Variable, int],
+        dtype=None
+) -> MArray:
+    col, copy = table.get_column_view(var)
+    var = table.domain[var]  # type: Orange.data.Variable
+    if var.is_primitive() and not np.issubdtype(col.dtype, np.inexact):
+        col = col.astype(float)
+        copy = True
+
+    if dtype is None:
+        if isinstance(var, Orange.data.TimeVariable):
+            dtype = np.dtype("M8[us]")
+            col = col * 1e6
+        elif isinstance(var, Orange.data.ContinuousVariable):
+            dtype = np.dtype(float)
+        elif isinstance(var, Orange.data.DiscreteVariable):
+            _values = tuple(var.values)
+            _n_values = len(_values)
+            dtype = np.dtype(int, metadata={
+                "__formatter": lambda i: _values[i] if 0 <= i < _n_values else "?"
+            })
+        elif isinstance(var, Orange.data.StringVariable):
+            dtype = np.dtype(object)
+        else:
+            assert False
+    mask = orange_isna(var, col)
+
+    if dtype != col.dtype:
+        col = col.astype(dtype)
+        copy = True
+
+    if not copy:
+        col = col.copy()
+    return MArray(col, mask=mask)
+
+
 def report_transform(var, trs):
     # type: (Variable, List[Transform]) -> str
     """
@@ -1489,6 +1982,13 @@ def report_transform(var, trs):
     report : str
     """
     # pylint: disable=too-many-branches
+    ReinterpretTypeCode = {
+        AsCategorical:  "C", AsContinuous: "N", AsString: "S", AsTime: "T",
+    }
+
+    def type_char(value: ReinterpretTransform) -> str:
+        return ReinterpretTypeCode.get(type(value), "?")
+
     def strike(text):
         return "<s>{}</s>".format(escape(text))
 
@@ -1499,6 +1999,7 @@ def report_transform(var, trs):
         return "<span>{}</span>".format(escape(text))
     assert trs
     rename = annotate = catmap = ordered = None
+    reinterpret = None
 
     for tr in trs:
         if isinstance(tr, Rename):
@@ -1509,13 +2010,19 @@ def report_transform(var, trs):
             catmap = tr
         elif isinstance(tr, ChangeOrdered):
             ordered = tr
+        elif isinstance(tr, ReinterpretTransformTypes):
+            reinterpret = tr
 
-    if rename is not None:
+    if reinterpret is not None:
+        header = "{} → ({}) {}".format(
+            var.name, type_char(reinterpret),
+            rename.name if rename is not None else var.name
+        )
+    elif rename is not None:
         header = "{} → {}".format(var.name, rename.name)
     else:
         header = var.name
-    if ordered is not None and ordered.ordered != isinstance(var, Ordered):
-        assert isinstance(var, (Categorical, Ordered))
+    if ordered is not None:
         header += " (changed to {})".format(
             "ordered" if ordered.ordered else "unordered")
     values_section = None
@@ -1606,18 +2113,30 @@ def _parse_attributes(mapping):
     ]).attributes
 
 
-@singledispatch
-def apply_transform(var, trs):
-    # type: (Orange.data.Variable, List[Transform]) -> Orange.data.Variable
+def apply_transform(var, table, trs):
+    # type: (Orange.data.Variable, Orange.data.Table, List[Transform]) -> Orange.data.Variable
     """
     Apply a list of `Transform` instances on an `Orange.data.Variable`.
     """
-    raise NotImplementedError  # pragma: no cover
+    if trs and isinstance(trs[0], ReinterpretTransformTypes):
+        reinterpret, trs = trs[0], trs[1:]
+        coldata = table_column_data(table, var)
+        var = apply_reinterpret(var, reinterpret, coldata)
+    if trs:
+        return apply_transform_var(var, trs)
+    else:
+        return var
 
 
-@apply_transform.register(Orange.data.DiscreteVariable)
+@singledispatch
+def apply_transform_var(var, trs):
+    # type: (Orange.data.Variable, List[Transform]) -> Orange.data.Variable
+    raise NotImplementedError
+
+
+@apply_transform_var.register(Orange.data.DiscreteVariable)
 def apply_transform_discete(var, trs):
-    # type: (Orange.data.DiscreteVariable, ...) -> ...
+    # type: (Orange.data.DiscreteVariable, List[Transform]) -> Orange.data.Variable
     # pylint: disable=too-many-branches
     name, annotations = var.name, var.attributes
     mapping = None
@@ -1660,9 +2179,9 @@ def apply_transform_discete(var, trs):
     return variable
 
 
-@apply_transform.register(Orange.data.ContinuousVariable)
+@apply_transform_var.register(Orange.data.ContinuousVariable)
 def apply_transform_continuous(var, trs):
-    # type: (Orange.data.ContinuousVariable, ...) -> ...
+    # type: (Orange.data.ContinuousVariable, List[Transform]) -> Orange.data.Variable
     name, annotations = var.name, var.attributes
     for tr in trs:
         if isinstance(tr, Rename):
@@ -1670,16 +2189,15 @@ def apply_transform_continuous(var, trs):
         elif isinstance(tr, Annotate):
             annotations = _parse_attributes(tr.annotations)
     variable = Orange.data.ContinuousVariable(
-        name=name, number_of_decimals=var.number_of_decimals,
-        compute_value=Identity(var)
+        name=name, compute_value=Identity(var)
     )
     variable.attributes.update(annotations)
     return variable
 
 
-@apply_transform.register(Orange.data.TimeVariable)
+@apply_transform_var.register(Orange.data.TimeVariable)
 def apply_transform_time(var, trs):
-    # type: (Orange.data.TimeVariable, ...) -> ...
+    # type: (Orange.data.TimeVariable, List[Transform]) -> Orange.data.Variable
     name, annotations = var.name, var.attributes
     for tr in trs:
         if isinstance(tr, Rename):
@@ -1694,9 +2212,9 @@ def apply_transform_time(var, trs):
     return variable
 
 
-@apply_transform.register(Orange.data.StringVariable)
+@apply_transform_var.register(Orange.data.StringVariable)
 def apply_transform_string(var, trs):
-    # type: (Orange.data.StringVariable, ...) -> ...
+    # type: (Orange.data.StringVariable, List[Transform]) -> Orange.data.Variable
     name, annotations = var.name, var.attributes
     for tr in trs:
         if isinstance(tr, Rename):
@@ -1708,6 +2226,322 @@ def apply_transform_string(var, trs):
     )
     variable.attributes.update(annotations)
     return variable
+
+
+def ftry(
+        func: Callable[..., A],
+        error: Union[Type[BaseException], Tuple[Type[BaseException]]],
+        default: B
+) -> Callable[..., Union[A, B]]:
+    """
+    Wrap a `func` such that if `errors` occur `default` is returned instead."""
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except error:
+            return default
+    return wrapper
+
+
+class DictMissingConst(dict):
+    """
+    `dict` with a constant for `__missing__()` value.
+    """
+    __slots__ = ("__missing",)
+
+    def __init__(self, missing, *args, **kwargs):
+        self.__missing = missing
+        super().__init__(*args, **kwargs)
+
+    def __missing__(self, key):
+        return self.__missing
+
+
+def make_dict_mapper(
+        mapping: Mapping, dtype: Optional[DType] = None
+) -> Callable:
+    """
+    Wrap a `mapping` into a callable ufunc-like function with
+    `out`, `dtype`, `where`, ... parameters. If `dtype` is passed to
+    `make_dict_mapper` it is used as a the default return dtype,
+    otherwise the default dtype is `object`.
+    """
+    _vmapper = np.frompyfunc(mapping.__getitem__, 1, 1)
+
+    def mapper(arr, out=None, dtype=dtype, **kwargs):
+        arr = np.asanyarray(arr)
+        if out is None and dtype is not None and arr.shape != ():
+            out = np.empty_like(arr, dtype)
+        return _vmapper(arr, out, dtype=dtype, **kwargs)
+    return mapper
+
+
+def time_parse(values: Sequence[str], name="__"):
+    tvar = Orange.data.TimeVariable(name)
+    parse_time = ftry(tvar.parse, ValueError, np.nan)
+    values = [parse_time(v) for v in values]
+    return tvar, values
+
+
+as_string = np.frompyfunc(str, 1, 1)
+parse_float = ftry(float, ValueError, float("nan"))
+
+_parse_float = np.frompyfunc(parse_float, 1, 1)
+
+
+def as_float_or_nan(
+        arr: ndarray, out: Optional[ndarray] = None, where: Optional[ndarray] = True,
+        dtype=None, **kwargs
+) -> ndarray:
+    """
+    Convert elements of the input array using builtin `float`, fill elements
+    where conversion failed with NaN.
+    """
+    if out is None:
+        out = np.full(arr.shape, np.nan, np.float if dtype is None else dtype)
+    if np.issubdtype(arr.dtype, np.inexact) or \
+            np.issubdtype(arr.dtype, np.integer):
+        np.copyto(out, arr, casting="unsafe", where=where)
+        return out
+    return _parse_float(arr, out, where=where, **kwargs)
+
+
+def copy_attributes(dst: V, src: Orange.data.Variable) -> V:
+    # copy `attributes` and `sparse` members from src to dst
+    dst.attributes = dict(src.attributes)
+    dst.sparse = src.sparse
+    return dst
+
+
+# Building (and applying) concrete type transformations on Table columns
+
+@singledispatch
+def apply_reinterpret(var, tr, data):
+    # type: (Orange.data.Variable, ReinterpretTransform, MArray) -> Orange.data.Variable
+    """
+    Apply a re-interpret transform to an `Orange.data.Table`'s column
+    """
+    raise NotImplementedError
+
+
+@apply_reinterpret.register(Orange.data.DiscreteVariable)
+def apply_reinterpret_d(var, tr, data):
+    # type: (Orange.data.DiscreteVariable, ReinterpretTransform, ndarray) -> Orange.data.Variable
+    if isinstance(tr, AsCategorical):
+        return var
+    elif isinstance(tr, AsString):
+        f = Lookup(var, np.array(var.values, dtype=object), unknown="")
+        rvar = Orange.data.StringVariable(
+            name=var.name, compute_value=f
+        )
+    elif isinstance(tr, AsContinuous):
+        f = Lookup(var, np.array(list(map(parse_float, var.values))),
+                   unknown=np.nan)
+        rvar = Orange.data.ContinuousVariable(
+            name=var.name, compute_value=f, sparse=var.sparse
+        )
+    elif isinstance(tr, AsTime):
+        _tvar, values = time_parse(var.values)
+        f = Lookup(var, np.array(values), unknown=np.nan)
+        rvar = Orange.data.TimeVariable(
+            name=var.name, have_date=_tvar.have_date,
+            have_time=_tvar.have_time, compute_value=f,
+        )
+    else:
+        assert False
+    return copy_attributes(rvar, var)
+
+
+@apply_reinterpret.register(Orange.data.ContinuousVariable)
+def apply_reinterpret_c(var, tr, data: MArray):
+    if isinstance(tr, AsCategorical):
+        # This is ill defined and should not result in a 'compute_value'
+        # (post-hoc expunge from the domain once translated?)
+        values, index = categorize_unique(data)
+        coldata = index.astype(float)
+        coldata[index.mask] = np.nan
+        tr = LookupMappingTransform(
+            var, DictMissingConst(
+                np.nan, {v: i for i, v in enumerate(values)}
+            )
+        )
+        values = tuple(as_string(values))
+        rvar = Orange.data.DiscreteVariable(
+            name=var.name, values=values, compute_value=tr
+        )
+    elif isinstance(tr, AsContinuous):
+        return var
+    elif isinstance(tr, AsString):
+        tstr = ToStringTransform(var)
+        rvar = Orange.data.StringVariable(
+            name=var.name, compute_value=tstr
+        )
+    elif isinstance(tr, AsTime):
+        rvar = Orange.data.TimeVariable(
+            name=var.name, compute_value=Identity(var)
+        )
+    else:
+        assert False
+    return copy_attributes(rvar, var)
+
+
+@apply_reinterpret.register(Orange.data.StringVariable)
+def apply_reinterpret_s(var: Orange.data.StringVariable, tr, data: MArray):
+    if isinstance(tr, AsCategorical):
+        # This is ill defined and should not result in a 'compute_value'
+        # (post-hoc expunge from the domain once translated?)
+        _, values = categorical_from_vector(data)
+        mapping = DictMissingConst(
+            np.nan, {v: float(i) for i, v in enumerate(values)}
+        )
+        tr = LookupMappingTransform(var, mapping)
+        rvar = Orange.data.DiscreteVariable(
+            name=var.name, values=values, compute_value=tr
+        )
+    elif isinstance(tr, AsContinuous):
+        rvar = Orange.data.ContinuousVariable(
+            var.name, compute_value=ToContinuousTransform(var)
+        )
+    elif isinstance(tr, AsString):
+        return var
+    elif isinstance(tr, AsTime):
+        tvar, _ = time_parse(np.unique(data.data[~data.mask]))
+        rvar = Orange.data.TimeVariable(
+            name=var.name, have_date=tvar.have_date, have_time=tvar.have_time,
+            compute_value=ReparseTimeTransform(var)
+        )
+    else:
+        assert False
+    return copy_attributes(rvar, var)
+
+
+@apply_reinterpret.register(Orange.data.TimeVariable)
+def apply_reinterpret_t(var: Orange.data.TimeVariable, tr, data):
+    if isinstance(tr, AsCategorical):
+        values, _ = categorize_unique(data)
+        or_values = values.astype(float) / 1e6
+        mapping = DictMissingConst(
+            np.nan, {v: i for i, v in enumerate(or_values)}
+        )
+        tr = LookupMappingTransform(var, mapping)
+        values = tuple(as_string(values))
+        rvar = Orange.data.DiscreteVariable(
+            name=var.name, values=values, compute_value=tr
+        )
+    elif isinstance(tr, AsContinuous):
+        rvar = Orange.data.TimeVariable(
+            name=var.name, compute_value=Identity(var)
+        )
+    elif isinstance(tr, AsString):
+        rvar = Orange.data.StringVariable(
+            name=var.name, compute_value=ToStringTransform(var)
+        )
+    elif isinstance(tr, AsTime):
+        return var
+    else:
+        assert False
+    return copy_attributes(rvar, var)
+
+
+def orange_isna(variable: Orange.data.Variable, data: ndarray) -> ndarray:
+    """
+    Return a bool mask masking N/A elements in `data` for the `variable`.
+    """
+    if variable.is_primitive():
+        return np.isnan(data)
+    else:
+        return data == variable.Unknown
+
+
+class ToStringTransform(Transformation):
+    """
+    Transform a variable to string.
+    """
+    def transform(self, c):
+        if self.variable.is_string:
+            return c
+        elif self.variable.is_discrete or self.variable.is_time:
+            r = column_str_repr(self.variable, c)
+        elif self.variable.is_continuous:
+            r = as_string(c)
+        mask = orange_isna(self.variable, c)
+        return np.where(mask, "", r)
+
+
+class ToContinuousTransform(Transformation):
+    def transform(self, c):
+        if self.variable.is_time:
+            return c
+        elif self.variable.is_continuous:
+            return c
+        elif self.variable.is_discrete:
+            lookup = Lookup(
+                self.variable, as_float_or_nan(self.variable.values),
+                unknown=np.nan
+            )
+            return lookup.transform(c)
+        elif self.variable.is_string:
+            return as_float_or_nan(c)
+        else:
+            raise TypeError
+
+
+class ReparseTimeTransform(Transformation):
+    """
+    Re-parse the column's string repr as datetime.
+    """
+    def transform(self, c):
+        c = column_str_repr(self.variable, c)
+        c = pd.to_datetime(c, errors="coerce").values.astype("M8[us]")
+        mask = np.isnat(c)
+        orangecol = c.astype(float) / 1e6
+        orangecol[mask] = np.nan
+        return orangecol
+
+
+class LookupMappingTransform(Transformation):
+    """
+    Map values via a dictionary lookup.
+    """
+    def __init__(
+            self,
+            variable: Orange.data.Variable,
+            mapping: Mapping,
+            dtype: Optional[np.dtype] = None
+    ) -> None:
+        super().__init__(variable)
+        self.mapping = mapping
+        self.dtype = dtype
+        self._mapper = make_dict_mapper(mapping, dtype)
+
+    def transform(self, c):
+        return self._mapper(c)
+
+    def __reduce_ex__(self, protocol):
+        return type(self), (self.variable, self.mapping, self.dtype)
+
+
+@singledispatch
+def column_str_repr(var: Orange.data.Variable, coldata: ndarray) -> ndarray:
+    """Return a array of str representations of coldata for the `variable."""
+    _f = np.frompyfunc(var.repr_val, 1, 1)
+    return _f(coldata)
+
+
+@column_str_repr.register(Orange.data.DiscreteVariable)
+def column_str_repr_discrete(
+        var: Orange.data.DiscreteVariable, coldata: ndarray
+) -> ndarray:
+    values = np.array(var.values, dtype=object)
+    lookup = Lookup(var, values, "?")
+    return lookup.transform(coldata)
+
+
+@column_str_repr.register(Orange.data.StringVariable)
+def column_str_repr_string(
+        var: Orange.data.StringVariable, coldata: ndarray
+) -> ndarray:
+    return np.where(coldata == var.Unknown, "?", coldata)
 
 
 if __name__ == "__main__":  # pragma: no cover

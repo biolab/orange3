@@ -1,12 +1,18 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=all
+import pickle
+from itertools import product
 from unittest import TestCase
+
 import numpy as np
 from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt, QItemSelection
-from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit
+from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, QStyleOptionViewItem
 from AnyQt.QtTest import QTest, QSignalSpy
+
+from orangewidget.tests.utils import simulate
+from orangewidget.utils.itemmodels import PyListModel
 
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
@@ -18,11 +24,18 @@ from Orange.widgets.data.oweditdomain import (
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
     TimeVariableEditor, Categorical, Real, Time, String,
     Rename, Annotate, CategoriesMapping, ChangeOrdered, report_transform,
-    apply_transform, MultiplicityRole
+    apply_transform, apply_transform_var, apply_reinterpret, MultiplicityRole,
+    AsString, AsCategorical, AsContinuous, AsTime,
+    table_column_data, ReinterpretVariableEditor, CategoricalVector,
+    VariableEditDelegate, TransformRole,
+    RealVector, TimeVector, StringVector, make_dict_mapper, DictMissingConst,
+    LookupMappingTransform, as_float_or_nan, column_str_repr
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
-from Orange.tests import test_filename
+from Orange.tests import test_filename, assert_array_nanequal
+
+MArray = np.ma.MaskedArray
 
 
 class TestReport(TestCase):
@@ -70,6 +83,12 @@ class TestReport(TestCase):
         tr = ChangeOrdered(True)
         r = report_transform(var, [tr])
         self.assertIn("ordered", r)
+
+    def test_reinterpret(self):
+        var = String("T", ())
+        for tr in (AsContinuous(), AsCategorical(), AsTime()):
+            t = report_transform(var, [tr])
+            self.assertIn("→ (", t)
 
 
 class TestOWEditDomain(WidgetTest):
@@ -125,7 +144,7 @@ class TestOWEditDomain(WidgetTest):
         self.widget.domain_view.setCurrentIndex(idx)
 
         # change first attribute value
-        editor = self.widget.editor_stack.findChild(ContinuousVariableEditor)
+        editor = self.widget.findChild(ContinuousVariableEditor)
         assert isinstance(editor, ContinuousVariableEditor)
         idx = editor.labels_model.index(0, 1)
         editor.labels_model.setData(idx, "[1, 2, 4]", Qt.EditRole)
@@ -147,7 +166,7 @@ class TestOWEditDomain(WidgetTest):
 
         idx = self.widget.domain_view.model().index(0)
         self.widget.domain_view.setCurrentIndex(idx)
-        editor = self.widget.editor_stack.findChild(ContinuousVariableEditor)
+        editor = self.widget.findChild(ContinuousVariableEditor)
 
         def enter_text(widget, text):
             # type: (QLineEdit, str) -> None
@@ -177,7 +196,7 @@ class TestOWEditDomain(WidgetTest):
         view = self.widget.variables_view
         view.setCurrentIndex(view.model().index(4))
 
-        editor = self.widget.editor_stack.findChild(TimeVariableEditor)
+        editor = self.widget.findChild(TimeVariableEditor)
         editor.name_edit.setText("Date")
         editor.variable_changed.emit()
         self.widget.commit()
@@ -198,6 +217,28 @@ class TestOWEditDomain(WidgetTest):
         self.widget.commit()
         output = self.get_output(self.widget.Outputs.data)
         self.assertFalse(output.domain[0].ordered)
+
+    def test_restore(self):
+        iris = self.iris
+        viris = (
+            "Categorical",
+            ("iris", ("Iris-setosa", "Iris-versicolor", "Iris-virginica"), ())
+        )
+        w = self.widget
+
+        def restore(state):
+            w._domain_change_store = state
+            w._restore()
+
+        model = w.variables_model
+        self.send_signal(w.Inputs.data, iris, widget=w)
+        restore({viris: [("Rename", ("Z",))]})
+        tr = model.data(model.index(4), TransformRole)
+        self.assertEqual(tr, [Rename("Z")])
+
+        restore({viris: [("AsString", ()), ("Rename", ("Z",))]})
+        tr = model.data(model.index(4), TransformRole)
+        self.assertEqual(tr, [AsString(), Rename("Z")])
 
 
 class TestEditors(GuiTest):
@@ -381,11 +422,96 @@ class TestEditors(GuiTest):
         self.assertEqual(w.labels_model.get_dict(), {})
         self.assertEqual(w.get_data(), (None, []))
 
+    DataVectors = [
+        CategoricalVector(
+            Categorical("A", ("a", "aa"), ()), lambda:
+                MArray([0, 1, 2], mask=[False, False, True])
+        ),
+        RealVector(
+            Real("B", (6, "f"), ()), lambda:
+                MArray([0.1, 0.2, 0.3], mask=[True, False, True])
+        ),
+        TimeVector(
+            Time("T", ()), lambda:
+                MArray([0, 100, 200], dtype="M8[us]", mask=[True, False, True])
+        ),
+        StringVector(
+            String("S", ()), lambda:
+                MArray(["0", "1", "2"], dtype=object, mask=[True, False, True])
+        ),
+    ]
+    ReinterpretTransforms = {
+        Categorical: AsCategorical, Real: AsContinuous, Time: AsTime,
+        String: AsString
+    }
+
+    def test_reinterpret_editor(self):
+        w = ReinterpretVariableEditor()
+        self.assertEqual(w.get_data(), (None, []))
+        data = self.DataVectors[0]
+        w.set_data(data, )
+        self.assertEqual(w.get_data(), (data.vtype, []))
+        w.set_data(data, [Rename("Z")])
+        self.assertEqual(w.get_data(), (data.vtype, [Rename("Z")]))
+
+        for vec, tr in product(self.DataVectors, self.ReinterpretTransforms.values()):
+            w.set_data(vec, [tr()])
+            v, tr_ = w.get_data()
+            self.assertEqual(v, vec.vtype)
+            if not tr_:
+                self.assertEqual(tr, self.ReinterpretTransforms[type(v)])
+            else:
+                self.assertEqual(tr_, [tr()])
+
+    def test_reinterpret_editor_simulate(self):
+        w = ReinterpretVariableEditor()
+        tc = w.findChild(QComboBox, name="type-combo")
+
+        def cb():
+            var, tr = w.get_data()
+            type_ = tc.currentData()
+            if type_ is not type(var):
+                self.assertEqual(tr, [self.ReinterpretTransforms[type_](), Rename("Z")])
+            else:
+                self.assertEqual(tr, [Rename("Z")])
+
+        for vec in self.DataVectors:
+            w.set_data(vec, [Rename("Z")])
+            simulate.combobox_run_through_all(tc, callback=cb)
+
+
+class TestDelegates(GuiTest):
+    def test_delegate(self):
+        model = PyListModel([None])
+
+        def set_item(v: dict):
+            model.setItemData(model.index(0),  v)
+
+        def get_style_option() -> QStyleOptionViewItem:
+            opt = QStyleOptionViewItem()
+            delegate.initStyleOption(opt, model.index(0))
+            return opt
+
+        set_item({Qt.EditRole: Categorical("a", (), ())})
+        delegate = VariableEditDelegate()
+        opt = get_style_option()
+        self.assertEqual(opt.text, "a")
+        self.assertFalse(opt.font.italic())
+        set_item({TransformRole: [Rename("b")]})
+        opt = get_style_option()
+        self.assertEqual(opt.text, "a \N{RIGHTWARDS ARROW} b")
+        self.assertTrue(opt.font.italic())
+
+        set_item({TransformRole: [AsString()]})
+        opt = get_style_option()
+        self.assertIn("reinterpreted", opt.text)
+        self.assertTrue(opt.font.italic())
+
 
 class TestTransforms(TestCase):
     def _test_common(self, var):
         tr = [Rename(var.name + "_copy"), Annotate((("A", "1"),))]
-        XX = apply_transform(var, tr)
+        XX = apply_transform_var(var, tr)
         self.assertEqual(XX.name, var.name + "_copy")
         self.assertEqual(XX.attributes, {"A": 1})
         self.assertIsInstance(XX.compute_value, Identity)
@@ -409,13 +535,13 @@ class TestTransforms(TestCase):
 
     def test_discrete_rename(self):
         D = DiscreteVariable("D", values=("a", "b"))
-        DD = apply_transform(D, [CategoriesMapping((("a", "A"), ("b", "B")))])
+        DD = apply_transform_var(D, [CategoriesMapping((("a", "A"), ("b", "B")))])
         self.assertSequenceEqual(DD.values, ["A", "B"])
         self.assertIs(DD.compute_value.variable, D)
 
     def test_discrete_reorder(self):
         D = DiscreteVariable("D", values=("2", "3", "1", "0"))
-        DD = apply_transform(D, [CategoriesMapping((("0", "0"), ("1", "1"),
+        DD = apply_transform_var(D, [CategoriesMapping((("0", "0"), ("1", "1"),
                                                     ("2", "2"), ("3", "3")))])
         self.assertSequenceEqual(DD.values, ["0", "1", "2", "3"])
         self._assertLookupEquals(
@@ -424,7 +550,7 @@ class TestTransforms(TestCase):
 
     def test_ordered_change(self):
         D = DiscreteVariable("D", values=("a", "b"), ordered=True)
-        Do = apply_transform(D, [ChangeOrdered(False)])
+        Do = apply_transform_var(D, [ChangeOrdered(False)])
         self.assertFalse(Do.ordered)
 
     def test_discrete_add_drop(self):
@@ -437,7 +563,7 @@ class TestTransforms(TestCase):
             (None, "A"),
         )
         tr = [CategoriesMapping(mapping)]
-        DD = apply_transform(D, tr)
+        DD = apply_transform_var(D, tr)
         self.assertSequenceEqual(DD.values, ["1", "2", "A"])
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([1, np.nan, 0, np.nan]))
@@ -452,7 +578,7 @@ class TestTransforms(TestCase):
             ("3", "y"),
         )
         tr = [CategoriesMapping(mapping)]
-        DD = apply_transform(D, tr)
+        DD = apply_transform_var(D, tr)
         self.assertSequenceEqual(DD.values, ["x", "y"])
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([0, 1, 1, 0]))
@@ -463,3 +589,253 @@ class TestTransforms(TestCase):
         self.assertIsInstance(second, Lookup)
         self.assertIs(first.variable, second.variable)
         assert_array_equal(first.lookup_table, second.lookup_table)
+
+
+class TestReinterpretTransforms(TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        domain = Domain([
+            DiscreteVariable("A", values=["a", "b", "c"]),
+            DiscreteVariable("B", values=["0", "1", "2"]),
+            ContinuousVariable("C"),
+            TimeVariable("D", have_time=True),
+        ],
+        metas=[
+            StringVariable("S")
+        ])
+        cls.data = Table.from_list(
+            domain, [
+                [0, 2, 0.25, 180],
+                [1, 1, 1.25, 360],
+                [2, 0, 0.20, 720],
+                [1, 0, 0.00, 000],
+            ]
+        )
+        cls.data_str = Table.from_list(
+            Domain([], [], metas=[
+                StringVariable("S"),
+                StringVariable("T")
+            ]),
+            [["0.1", "2010"],
+             ["1.0", "2020"]]
+        )
+
+    def test_as_string(self):
+        table = self.data
+        domain = table.domain
+
+        tr = AsString()
+        dtr = []
+        for v in domain.variables:
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
+            dtr.append(vtr)
+        ttable = table.transform(Domain([], [], dtr))
+        assert_array_equal(
+            ttable.metas,
+            np.array([
+                ["a", "2", "0.25", "00:03:00"],
+                ["b", "1", "1.25", "00:06:00"],
+                ["c", "0", "0.2", "00:12:00"],
+                ["b", "0", "0.0", "00:00:00"],
+            ], dtype=object)
+        )
+
+    def test_as_discrete(self):
+        table = self.data
+        domain = table.domain
+
+        tr = AsCategorical()
+        dtr = []
+        for v in domain.variables:
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
+            dtr.append(vtr)
+        tdomain = Domain(dtr)
+        ttable = table.transform(tdomain)
+        assert_array_equal(
+            ttable.X,
+            np.array([
+                [0, 2, 2, 1],
+                [1, 1, 3, 2],
+                [2, 0, 1, 3],
+                [1, 0, 0, 0],
+            ], dtype=float)
+        )
+        self.assertEqual(tdomain["A"].values, ["a", "b", "c"])
+        self.assertEqual(tdomain["B"].values, ["0", "1", "2"])
+        self.assertEqual(tdomain["C"].values, ["0.0", "0.2", "0.25", "1.25"])
+        self.assertEqual(
+            tdomain["D"].values,
+            ["1970-01-01 00:00:00", "1970-01-01 00:03:00",
+             "1970-01-01 00:06:00", "1970-01-01 00:12:00"]
+        )
+
+    def test_as_continuous(self):
+        table = self.data
+        domain = table.domain
+
+        tr = AsContinuous()
+        dtr = []
+        for v in domain.variables:
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
+            dtr.append(vtr)
+        ttable = table.transform(Domain(dtr))
+        assert_array_equal(
+            ttable.X,
+            np.array([
+                [np.nan, 2, 0.25, 180],
+                [np.nan, 1, 1.25, 360],
+                [np.nan, 0, 0.20, 720],
+                [np.nan, 0, 0.00, 000],
+            ], dtype=float)
+        )
+
+    def test_as_time(self):
+        table = self.data
+        domain = table.domain
+
+        tr = AsTime()
+        dtr = []
+        for v in domain.variables:
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
+            dtr.append(vtr)
+
+        ttable = table.transform(Domain(dtr))
+        assert_array_equal(
+            ttable.X,
+            np.array([
+                [np.nan, np.nan, 0.25, 180],
+                [np.nan, np.nan, 1.25, 360],
+                [np.nan, np.nan, 0.20, 720],
+                [np.nan, np.nan, 0.00, 000],
+            ], dtype=float)
+        )
+
+    def test_reinterpret_string(self):
+        table = self.data_str
+        domain = table.domain
+        tvars = []
+        for v in domain.metas:
+            for tr in [AsContinuous(), AsCategorical(), AsTime(), AsString()]:
+                tr = apply_reinterpret(v, tr, table_column_data(table, v))
+                tvars.append(tr)
+        tdomain = Domain([], metas=tvars)
+        ttable = table.transform(tdomain)
+        assert_array_nanequal(
+            ttable.metas,
+            np.array([
+                [0.1, 0., np.nan, "0.1", 2010., 0., 1262304000., "2010"],
+                [1.0, 1., np.nan, "1.0", 2020., 1., 1577836800., "2020"],
+            ], dtype=object)
+        )
+
+    def test_compound_transform(self):
+        table = self.data_str
+        domain = table.domain
+        v1 = domain.metas[0]
+        v1.attributes["a"] = "a"
+        tv1 = apply_transform(v1, table, [AsContinuous(), Rename("Z1")])
+        tv2 = apply_transform(v1, table, [AsContinuous(), Rename("Z2"), Annotate((("a", "b"),))])
+
+        self.assertIsInstance(tv1, ContinuousVariable)
+        self.assertEqual(tv1.name, "Z1")
+        self.assertEqual(tv1.attributes, {"a": "a"})
+
+        self.assertIsInstance(tv2, ContinuousVariable)
+        self.assertEqual(tv2.name, "Z2")
+        self.assertEqual(tv2.attributes, {"a": "b"})
+
+        tdomain = Domain([], metas=[tv1, tv2])
+        ttable = table.transform(tdomain)
+
+        assert_array_nanequal(
+            ttable.metas,
+            np.array([
+                [0.1, 0.1],
+                [1.0, 1.0],
+            ], dtype=object)
+        )
+
+    def test_null_transform(self):
+        table = self.data_str
+        domain = table.domain
+        v = apply_transform(domain.metas[0],table, [])
+        self.assertIs(v, domain.metas[0])
+
+
+class TestUtils(TestCase):
+    def test_mapper(self):
+        mapper = make_dict_mapper({"a": 1, "b": 2})
+        r = mapper(["a", "a", "b"])
+        assert_array_equal(r, [1, 1, 2])
+        self.assertEqual(r.dtype, np.dtype("O"))
+        r = mapper(["a", "a", "b"], dtype=float)
+        assert_array_equal(r, [1, 1, 2])
+        self.assertEqual(r.dtype, np.dtype(float))
+        r = mapper(["a", "a", "b"], dtype=int)
+        self.assertEqual(r.dtype, np.dtype(int))
+
+        mapper = make_dict_mapper({"a": 1, "b": 2}, dtype=int)
+        r = mapper(["a", "a", "b"])
+        self.assertEqual(r.dtype, np.dtype(int))
+
+        r = np.full(3, -1, dtype=float)
+        r_ = mapper(["a", "a", "b"], out=r)
+        self.assertIs(r, r_)
+        assert_array_equal(r, [1, 1, 2])
+
+    def test_dict_missing(self):
+        d = DictMissingConst("<->", {1: 1, 2: 2})
+        self.assertEqual(d[1], 1)
+        self.assertEqual(d[-1], "<->")
+        # must be sufficiently different from defaultdict to warrant existence
+        self.assertEqual(d, {1: 1, 2: 2})
+
+    def test_as_float_or_nan(self):
+        a = np.array(["a", "1.1", ".2", "NaN"], object)
+        r = as_float_or_nan(a)
+        assert_array_equal(r, [np.nan, 1.1, .2, np.nan])
+
+        a = np.array([1, 2, 3], dtype=int)
+        r = as_float_or_nan(a)
+        assert_array_equal(r, [1., 2., 3.])
+
+        r = as_float_or_nan(r, dtype=np.float32)
+        assert_array_equal(r, [1., 2., 3.])
+        self.assertEqual(r.dtype, np.dtype(np.float32))
+
+    def test_column_str_repr(self):
+        v = StringVariable("S")
+        d = column_str_repr(v, np.array(["A", "", "B"]))
+        assert_array_equal(d, ["A", "?", "B"])
+        v = ContinuousVariable("C")
+        d = column_str_repr(v, np.array([0.1, np.nan, 1.0]))
+        assert_array_equal(d, ["0.1", "?", "1"])
+        v = DiscreteVariable("D", ("a", "b"))
+        d = column_str_repr(v, np.array([0., np.nan, 1.0]))
+        assert_array_equal(d, ["a", "?", "b"])
+        v = TimeVariable("T", have_date=False, have_time=True)
+        d = column_str_repr(v, np.array([0., np.nan, 1.0]))
+        assert_array_equal(d, ["00:00:00", "?", "00:00:01"])
+
+
+class TestLookupMappingTransform(TestCase):
+    def setUp(self) -> None:
+        self.lookup = LookupMappingTransform(
+            StringVariable("S"),
+            DictMissingConst(np.nan, {"": np.nan, "a": 0, "b": 1}),
+            dtype=float,
+        )
+
+    def test_transform(self):
+        r = self.lookup.transform(np.array(["", "a", "b", "c"]))
+        assert_array_equal(r, [np.nan, 0, 1, np.nan])
+
+    def test_pickle(self):
+        lookup = self.lookup
+        lookup_ = pickle.loads(pickle.dumps(lookup))
+        c = np.array(["", "a", "b", "c"])
+        r = lookup.transform(c)
+        assert_array_equal(r, [np.nan, 0, 1, np.nan])
+        r_ = lookup_.transform(c)
+        assert_array_equal(r_, [np.nan, 0, 1, np.nan])
