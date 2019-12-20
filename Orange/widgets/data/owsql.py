@@ -50,6 +50,7 @@ class OWSql(OWBaseSql):
 
     settings_version = 2
 
+    selected_backend = Setting(None)
     table = Setting(None)
     sql = Setting("")
     guess_values = Setting(True)
@@ -89,10 +90,18 @@ class OWSql(OWBaseSql):
         self.backendcombo = QComboBox(box)
         if self.backends:
             self.backendcombo.setModel(self.backends)
+            names = [backend.display_name for backend in self.backends]
+            if self.selected_backend and self.selected_backend in names:
+                self.backendcombo.setCurrentText(self.selected_backend)
         else:
             self.Error.no_backends()
             box.setEnabled(False)
+        self.backendcombo.currentTextChanged.connect(self.__backend_changed)
         box.layout().insertWidget(0, self.backendcombo)
+
+    def __backend_changed(self):
+        backend = self.get_backend()
+        self.selected_backend = backend.display_name if backend else None
 
     def _add_tables_controls(self):
         vbox = gui.vBox(self.controlArea, "Tables", addSpace=True)

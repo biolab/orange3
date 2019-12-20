@@ -6,7 +6,7 @@ from unittest import mock
 
 from Orange.data import Table
 from Orange.widgets.data.owsql import OWSql
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, simulate
 from Orange.tests.sql.base import DataBaseTest as dbt
 
 
@@ -115,6 +115,33 @@ class TestOWSql(WidgetTest):
                     "password": "password", "table": "b"}
         widget = self.create_widget(OWSql, stored_settings=settings)
         self.assertEqual(widget.tablecombo.currentText(), "b")
+
+    @mock.patch("Orange.data.sql.backend.base.Backend.available_backends")
+    def test_selected_backend(self, mocked_backends: mock.Mock):
+        b1, b2 = mock.Mock(), mock.Mock()
+        b1.display_name = "B1"
+        b2.display_name = "B2"
+        mocked_backends.return_value = [b1, b2]
+
+        widget = self.create_widget(OWSql)
+        self.assertEqual(widget.backendcombo.currentText(), "B1")
+
+        simulate.combobox_activate_index(widget.backendcombo, 1)
+        self.assertEqual(widget.backendcombo.currentText(), "B2")
+
+        settings = widget.settingsHandler.pack_data(widget)
+        widget = self.create_widget(OWSql, stored_settings=settings)
+        self.assertEqual(widget.backendcombo.currentText(), "B2")
+
+        settings = widget.settingsHandler.pack_data(widget)
+        settings["selected_backend"] = "B3"
+        widget = self.create_widget(OWSql, stored_settings=settings)
+        self.assertEqual(widget.backendcombo.currentText(), "B1")
+
+        mocked_backends.return_value = []
+        settings = widget.settingsHandler.pack_data(widget)
+        widget = self.create_widget(OWSql, stored_settings=settings)
+        self.assertEqual(widget.backendcombo.currentText(), "")
 
 
 if __name__ == "__main__":
