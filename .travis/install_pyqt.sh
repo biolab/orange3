@@ -1,7 +1,10 @@
 if [ ! "$PYQT4" ]; then
-    foldable pip install sip 'pyqt5!=5.10'  # 5.10 exhibits QTBUG-65235
+    foldable pip install sip 'pyqt5!=5.10,<5.14'  # 5.10 exhibits QTBUG-65235
+    # PyQt >= 5.12 distributes WebEngine separately
+    foldable pip install 'pyqtwebengine<5.14'
     return $?;
 fi
+
 
 PYQT=$TRAVIS_BUILD_DIR/pyqt
 
