@@ -464,8 +464,8 @@ class OWRank(OWWidget):
 
     def on_select(self):
         # Save indices of attributes in the original, unsorted domain
-        self.selected_rows = self.ranksModel.mapToSourceRows([
-            i.row() for i in self.ranksView.selectionModel().selectedRows(0)])
+        self.selected_rows = list(self.ranksModel.mapToSourceRows([
+            i.row() for i in self.ranksView.selectionModel().selectedRows(0)]))
         self.commit()
 
     def setSelectionMethod(self, method):
