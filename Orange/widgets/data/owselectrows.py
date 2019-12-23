@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel)
+    QLabel, QHBoxLayout)
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
@@ -214,17 +214,13 @@ class OWSelectRows(widget.OWWidget):
             box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        boxes = gui.widgetBox(self.controlArea, orientation=QGridLayout())
+        boxes = gui.widgetBox(self.controlArea, orientation=QHBoxLayout())
         layout = boxes.layout()
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 1)
 
-        box_data = gui.vBox(boxes, 'Data', addToLayout=False)
-        self.data_in_variables = gui.widgetLabel(box_data, " ")
-        self.data_out_rows = gui.widgetLabel(box_data, " ")
-        layout.addWidget(box_data, 0, 0)
+        self.update_input_summary(self.data, self.info.NoInput)
+        self.update_output_summary(self.data, self.info.NoOutput)
 
-        box_setting = gui.vBox(boxes, 'Purging', addToLayout=False)
+        box_setting = gui.vBox(boxes, addToLayout=False, box=True)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
@@ -232,14 +228,15 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        layout.addWidget(box_setting, 0, 1)
+        layout.addWidget(box_setting, 1)
 
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
-        layout.addWidget(self.buttonsArea, 1, 0)
+        layout.addWidget(self.buttonsArea)
 
         acbox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(acbox, 1, 1)
+        layout.addWidget(acbox, 1)
+        layout.setAlignment(acbox, Qt.AlignBottom)
 
         self.set_data(None)
         self.resize(600, 400)
@@ -472,6 +469,7 @@ class OWSelectRows(widget.OWWidget):
             len(data.domain.variables) + len(data.domain.metas) > 100)
         if not data:
             self.data_desc = None
+            self.update_input_summary(data, self.info.NoInput)
             self.commit()
             return
         self.data_desc = report.describe_data_brief(data)
@@ -492,7 +490,7 @@ class OWSelectRows(widget.OWWidget):
         else:
             self.add_row()
 
-        self.update_info(data, self.data_in_variables, "In: ")
+        self.update_input_summary(data, self.info.format_number(len(data)))
         self.unconditional_commit()
 
     def conditions_changed(self):
@@ -628,20 +626,29 @@ class OWSelectRows(widget.OWWidget):
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
 
-        self.update_info(matching_output, self.data_out_rows, "Out: ")
+        summary = self.info.NoOutput if matching_output is None else \
+            self.info.format_number(len(matching_output))
+        self.update_output_summary(matching_output, summary)
 
-    def update_info(self, data, lab1, label):
+    def update_input_summary(self, data, summary):
+        self.info.set_input_summary(summary, self._create_summary(data))
+
+    def update_output_summary(self, data, summary):
+        self.info.set_output_summary(summary, self._create_summary(data))
+
+    def _create_summary(self, data):
         def sp(s, capitalize=True):
             return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
 
-        if data is None:
-            lab1.setText("")
-        else:
-            lab1.setText(label + "~%s row%s, %s variable%s" %
-                         (sp(data.approx_len()) +
-                          sp(len(data.domain.variables) +
-                             len(data.domain.metas)))
-                        )
+        details = ""
+        if data:
+            n = data.approx_len()
+            details = \
+                f"{sp(n)[0]} instance{sp(n)[1]}, " \
+                f"{sp(len(data.domain.variables) + len(data.domain.metas))[0]}"\
+                f" feature" \
+                f"{sp(len(data.domain.variables) + len(data.domain.metas))[1]}"
+        return details
 
     def send_report(self):
         if not self.data:

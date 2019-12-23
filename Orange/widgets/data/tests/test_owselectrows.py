@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,unsubscriptable-object
+from unittest.mock import Mock
 import time
 
 from AnyQt.QtCore import QLocale, Qt
@@ -273,6 +274,30 @@ class TestOWSelectRows(WidgetTest):
             domain.class_var)
         new_iris = iris.transform(new_domain)
         self.send_signal(self.widget.Inputs.data, new_iris)
+
+    def test_summary(self):
+        """Check if status bar displays correct input/output summary"""
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(str(len(data)), f"{len(data)} instances, "
+                                     f"{len(data.domain.variables)} features")
+        output = self.get_output("Matching Data")
+        output_sum.assert_called_with(str(len(output)), f"{len(output)} instances, "
+                                      f"{len(output.domain.variables)} features")
+        self.enterFilter(data.domain["iris"], "is", "Iris-setosa")
+        output = self.get_output("Matching Data")
+        output_sum.assert_called_with(str(len(output)), f"{len(output)} instances, "
+                                      f"{len(output.domain.variables)} features")
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
     # Uncomment this on 2022/2/2
     #
