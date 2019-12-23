@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from Orange import distance
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.misc import DistMatrix
 from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS, \
     DistanceRunner
@@ -179,6 +179,54 @@ class TestOWDistances(WidgetTest):
         self.wait_until_finished()
         self.assertTrue(self.widget.Error.distances_value_error.is_shown())
         self.iris.X[0, 0] *= -1
+
+    def test_limit_mahalanobis(self):
+        def assert_error_shown():
+            self.assertTrue(
+                self.widget.Error.data_too_large_for_mahalanobis.is_shown())
+
+        def assert_no_error():
+            self.assertFalse(
+                self.widget.Error.data_too_large_for_mahalanobis.is_shown())
+
+        widget = self.widget
+        axis_buttons = widget.controls.axis.buttons
+
+        self.assertEqual(widget.metrics_combo.count(), len(METRICS))
+        for i, (_, metric) in enumerate(METRICS):
+            if metric == distance.Mahalanobis:
+                widget.metrics_combo.setCurrentIndex(i)
+                widget.metrics_combo.activated.emit(i)
+                break
+
+        X = np.random.random((1010, 4))
+        bigrows = Table.from_numpy(Domain(self.iris.domain.attributes), X)
+        bigcols = Table.from_numpy(
+            Domain([ContinuousVariable(f"{i}") for i in range(1010)]), X.T)
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        assert_no_error()
+
+        axis_buttons[0].click()
+        assert_no_error()
+        axis_buttons[1].click()
+        assert_no_error()
+
+        # by columns -- cannot handle too many rows
+        self.send_signal(self.widget.Inputs.data, bigrows)
+        assert_error_shown()
+        axis_buttons[0].click()
+        assert_no_error()
+        axis_buttons[1].click()
+        assert_error_shown()
+
+        self.send_signal(self.widget.Inputs.data, bigcols)
+        assert_no_error()
+        axis_buttons[0].click()
+        assert_error_shown()
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        assert_no_error()
 
 
 if __name__ == "__main__":

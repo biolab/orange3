@@ -16,7 +16,6 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output
 METRICS = [
     ("Euclidean", distance.Euclidean),
     ("Manhattan", distance.Manhattan),
-    ("Mahalanobis", distance.Mahalanobis),
     ("Cosine", distance.Cosine),
     ("Jaccard", distance.Jaccard),
     ("Spearman", distance.SpearmanR),
@@ -24,6 +23,7 @@ METRICS = [
     ("Pearson", distance.PearsonR),
     ("Absolute Pearson", distance.PearsonRAbsolute),
     ("Hamming", distance.Hamming),
+    ("Mahalanobis", distance.Mahalanobis),
     ('Bhattacharyya', distance.Bhattacharyya)
 ]
 
@@ -83,6 +83,8 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         dense_metric_sparse_data = Msg("{} requires dense data.")
         distances_memory_error = Msg("Not enough memory")
         distances_value_error = Msg("Problem in calculation:\n{}")
+        data_too_large_for_mahalanobis = Msg(
+            "Mahalanobis handles up to 1000 {}.")
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring categorical features")
@@ -178,10 +180,23 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                 data = distance.impute(data)
             return True
 
+        def _check_tractability():
+            if metric is distance.Mahalanobis:
+                if self.axis == 1:
+                    # when computing distances by columns, we want < 100 rows
+                    if len(data) > 1000:
+                        self.Error.data_too_large_for_mahalanobis("rows")
+                        return False
+                else:
+                    if len(data.domain.attributes) > 1000:
+                        self.Error.data_too_large_for_mahalanobis("columns")
+                        return False
+            return True
+
         self.clear_messages()
         if data is not None:
-            for check in (_check_sparse, _fix_discrete,
-                          _fix_missing, _fix_nonbinary):
+            for check in (_check_sparse, _check_tractability,
+                          _fix_discrete, _fix_missing, _fix_nonbinary):
                 if not check():
                     data = None
                     break
@@ -231,6 +246,13 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             # normalize_dist is set to False when restoring settings from
             # an older version to preserve old semantics.
             settings["normalized_dist"] = False
+        if version is None or version < 3:
+            # Mahalanobis was moved from idx = 2 to idx = 9
+            metric_idx = settings["metric_idx"]
+            if metric_idx == 2:
+                settings["metric_idx"] = 9
+            elif 2 < metric_idx <= 9:
+                settings["metric_idx"] -= 1
 
 
 if __name__ == "__main__":  # pragma: no cover
