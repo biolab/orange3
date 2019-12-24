@@ -1108,7 +1108,7 @@ class CSVImportWidget(QWidget):
         else:
             current = None
         cb = self.column_type_edit_cb
-        g = QActionGroup(menu, exclusive=True)
+        g = QActionGroup(menu)
         current_action = None
         # 'Copy' the column types model into a menu
         for i in range(cb.count()):
