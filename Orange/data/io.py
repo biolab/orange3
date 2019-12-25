@@ -1053,7 +1053,8 @@ class ExcelReader(_BaseExcelReader):
     @property
     def workbook(self) -> openpyxl.Workbook:
         if not self._workbook:
-            self._workbook = openpyxl.load_workbook(self.filename)
+            self._workbook = openpyxl.load_workbook(self.filename,
+                                                    data_only=True)
         return self._workbook
 
     @property
