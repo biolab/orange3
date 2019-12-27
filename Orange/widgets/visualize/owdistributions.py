@@ -65,7 +65,7 @@ class LegendItem(SPGLegendItem):
 
 class DistributionBarItem(pg.GraphicsObject):
     def __init__(self, x, width, padding, freqs, colors, stacked, expanded,
-                 tooltip):
+                 tooltip, hidden):
         super().__init__()
         self.x = x
         self.width = width
@@ -77,8 +77,10 @@ class DistributionBarItem(pg.GraphicsObject):
         self.__picture = None
         self.polygon = None
         self.hovered = False
+        self._tooltip = tooltip
+        self.hidden = False
+        self.setHidden(hidden)
         self.setAcceptHoverEvents(True)
-        self.setToolTip(tooltip)
 
     def hoverEnterEvent(self, event):
         super().hoverEnterEvent(event)
@@ -90,7 +92,15 @@ class DistributionBarItem(pg.GraphicsObject):
         self.hovered = False
         self.update()
 
+    def setHidden(self, hidden):
+        self.hidden = hidden
+        if not hidden:
+            self.setToolTip(self._tooltip)
+
     def paint(self, painter, _options, _widget):
+        if self.hidden:
+            return
+
         if self.expanded:
             tot = np.sum(self.freqs)
             if tot == 0:
@@ -264,6 +274,7 @@ class OWDistributions(OWWidget):
     number_of_bins = settings.ContextSetting(5, schema_only=True)
 
     fitted_distribution = settings.Setting(0)
+    hide_bars = settings.Setting(False)
     show_probs = settings.Setting(False)
     stacked_columns = settings.Setting(False)
     cumulative_distr = settings.Setting(False)
@@ -292,6 +303,7 @@ class OWDistributions(OWWidget):
         self.data = None
         self.valid_data = self.valid_group_data = None
         self.bar_items = []
+        self.curve_items = []
         self.curve_descriptions = None
         self.binnings = []
 
@@ -326,8 +338,9 @@ class OWDistributions(OWWidget):
             label="Smoothing", orientation=Qt.Horizontal,
             minValue=2, maxValue=20, callback=self.replot)
         gui.checkBox(
-            box, self, "cumulative_distr", "Show cumulative distribution",
-            callback=self.replot)
+            box, self, "hide_bars", "Hide bars", stateWhenDisabled=False,
+            callback=self._on_hide_bars_changed,
+            disabled=not self.fitted_distribution)
 
         box = gui.vBox(self.controlArea, "Columns")
         gui.comboBox(
@@ -341,6 +354,9 @@ class OWDistributions(OWWidget):
         gui.checkBox(
             box, self, "show_probs", "Show probabilities",
             callback=self._on_show_probabilities_changed)
+        gui.checkBox(
+            box, self, "cumulative_distr", "Show cumulative distribution",
+            callback=self.replot)
 
         gui.auto_apply(self.controlArea, self, commit=self.apply)
 
@@ -385,7 +401,7 @@ class OWDistributions(OWWidget):
 
     def _setup_legend(self):
         self._legend = LegendItem()
-        self._legend.setParentItem(self.plot)
+        self._legend.setParentItem(self.plot_pdf)
         self._legend.hide()
         self._legend.anchor((1, 0), (1, 0))
 
@@ -449,8 +465,15 @@ class OWDistributions(OWWidget):
         self.apply()
 
     def _on_fitted_dist_changed(self):
+        self.controls.hide_bars.setDisabled(not self.fitted_distribution)
         self._set_smoothing_visibility()
         self.replot()
+
+    def _on_hide_bars_changed(self):
+        for bar in self.bar_items:  # pylint: disable=blacklisted-name
+            bar.setHidden(self.hide_bars)
+        self._set_curve_brushes()
+        self.plot.update()
 
     def _set_smoothing_visibility(self):
         self.smoothing_box.setVisible(
@@ -525,6 +548,7 @@ class OWDistributions(OWWidget):
         self.plot_pdf.clear()
         self.plot_mark.clear()
         self.bar_items = []
+        self.curve_items = []
         self._legend.clear()
         self._legend.hide()
 
@@ -564,9 +588,10 @@ class OWDistributions(OWWidget):
         self.plot.autoRange()
 
     def _add_bar(self, x, width, padding, freqs, colors, stacked, expanded,
-                 tooltip):
+                 tooltip, hidden=False):
         item = DistributionBarItem(
-            x, width, padding, freqs, colors, stacked, expanded, tooltip)
+            x, width, padding, freqs, colors, stacked, expanded, tooltip,
+            hidden)
         self.plot.addItem(item)
         self.bar_items.append(item)
 
@@ -618,7 +643,8 @@ class OWDistributions(OWWidget):
                 f"{freq} ({100 * freq / total:.2f} %)</p>"
             self._add_bar(
                 x0, x1 - x0, 0, [tot_freq if self.cumulative_distr else freq],
-                colors, stacked=False, expanded=False, tooltip=tooltip)
+                colors, stacked=False, expanded=False, tooltip=tooltip,
+                hidden=self.hide_bars)
 
         if self.fitted_distribution:
             self._plot_approximations(
@@ -657,6 +683,7 @@ class OWDistributions(OWWidget):
             self._add_bar(
                 x0, x1 - x0, 0 if self.stacked_columns else 0.1, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
+                hidden=self.hide_bars,
                 tooltip=self._split_tooltip(
                     self.str_int(x0, x1, not i, i == lasti),
                     np.sum(plotfreqs), total, gvalues, plotfreqs))
@@ -734,12 +761,24 @@ class OWDistributions(OWWidget):
                 tot = (y_p + (tots - y) * (1 - prior_prob))
                 tot[tot == 0] = 1
                 y = y_p / tot
-            plot.addItem(pg.PlotCurveItem(
-                x=x, y=y,
+            curve = pg.PlotCurveItem(
+                x=x, y=y, fillLevel=0,
                 pen=pg.mkPen(width=5, color=color),
-                shadowPen=pg.mkPen(width=8, color=color.darker(120))))
+                shadowPen=pg.mkPen(width=8, color=color.darker(120)))
+            plot.addItem(curve)
+            self.curve_items.append(curve)
         if not show_probs:
             self.plot_pdf.autoRange()
+        self._set_curve_brushes()
+
+    def _set_curve_brushes(self):
+        for curve in self.curve_items:
+            if self.hide_bars:
+                color = curve.opts['pen'].color().lighter(160)
+                color.setAlpha(128)
+                curve.setBrush(pg.mkBrush(color))
+            else:
+                curve.setBrush(None)
 
     @staticmethod
     def _split_tooltip(valname, tot_group, total, gvalues, freqs):
