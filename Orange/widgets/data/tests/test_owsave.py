@@ -8,7 +8,7 @@ import scipy.sparse as sp
 from AnyQt.QtWidgets import QFileDialog
 
 from Orange.data import Table
-from Orange.data.io import TabReader, PickleReader, ExcelReader
+from Orange.data.io import TabReader, PickleReader, ExcelReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.data.owsave import OWSave, OWSaveBase
 from Orange.widgets.utils.save.tests.test_owsavebase import \
@@ -21,6 +21,15 @@ from Orange.widgets.tests.base import WidgetTest, open_widget_classes
 # Short name is suitable for the function's purpose
 def _w(s):  # pylint: disable=invalid-name
     return s.replace("/", os.sep)
+
+
+class MockFormat(FileFormat):
+    EXTENSIONS = ('.mock',)
+    DESCRIPTION = "Mock file format"
+
+    @staticmethod
+    def write_file(filename, data):
+        pass
 
 
 class OWSaveTestBase(WidgetTest, SaveWidgetsTestBaseMixin):
@@ -285,7 +294,12 @@ class TestOWSave(OWSaveTestBase):
         widget.data.X = sp.csr_matrix(widget.data.X)
         self.assertTrue(
             widget.get_filters()[widget.default_valid_filter()]
-                .SUPPORT_SPARSE_DATA)
+            .SUPPORT_SPARSE_DATA)
+
+    def test_add_on_writers(self):
+        # test adding file formats after registering the widget
+        self.assertIn(MockFormat, self.widget.valid_filters().values())
+        # this test doesn't call it - test_save_uncompressed does
 
     def test_send_report(self):
         widget = self.widget
@@ -387,12 +401,14 @@ class TestFunctionalOWSave(WidgetTest):
 
                 self.send_signal(widget.Inputs.data, self.iris)
                 widget.save_file_as()
-                self.assertEqual(len(Table(filename)), 150)
+                if hasattr(writer, "read"):
+                    self.assertEqual(len(Table(filename)), 150)
 
                 if writer.SUPPORT_SPARSE_DATA:
                     self.send_signal(widget.Inputs.data, spiris)
                     widget.save_file()
-                    self.assertEqual(len(Table(filename)), 150)
+                    if hasattr(writer, "read"):
+                        self.assertEqual(len(Table(filename)), 150)
 
 
 @unittest.skipUnless(sys.platform == "linux", "Tests for dialog on Linux")

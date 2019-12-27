@@ -1,8 +1,8 @@
 import os.path
 
 from Orange.data.table import Table
-from Orange.data.io import TabReader, CSVReader, PickleReader, ExcelReader, \
-    XlsReader
+from Orange.data.io import \
+    TabReader, CSVReader, PickleReader, ExcelReader, XlsReader, FileFormat
 from Orange.widgets import gui, widget
 from Orange.widgets.widget import Input
 from Orange.widgets.settings import Setting
@@ -22,14 +22,6 @@ class OWSave(OWSaveBase):
 
     settings_version = 2
 
-    writers = [TabReader, CSVReader, PickleReader, ExcelReader, XlsReader]
-    filters = {
-        **{f"{w.DESCRIPTION} (*{w.EXTENSIONS[0]})": w
-           for w in writers},
-        **{f"Compressed {w.DESCRIPTION} (*{w.EXTENSIONS[0]}.gz)": w
-           for w in writers if w.SUPPORT_COMPRESSED}
-    }
-
     class Inputs:
         data = Input("Data", Table)
 
@@ -37,6 +29,8 @@ class OWSave(OWSaveBase):
         unsupported_sparse = widget.Msg("Use Pickle format for sparse data.")
 
     add_type_annotations = Setting(True)
+
+    builtin_order = [TabReader, CSVReader, PickleReader, ExcelReader, XlsReader]
 
     def __init__(self):
         super().__init__(2)
@@ -52,6 +46,21 @@ class OWSave(OWSaveBase):
             0, 0, 1, 2)
         self.grid.setRowMinimumHeight(1, 8)
         self.adjustSize()
+
+    @classmethod
+    def get_filters(cls):
+        writers = [format for format in FileFormat.formats
+                   if getattr(format, 'write_file', None)
+                   and getattr(format, "EXTENSIONS", None)]
+        writers.sort(key=lambda writer: cls.builtin_order.index(writer)
+                     if writer in cls.builtin_order else 99)
+
+        return {
+            **{f"{w.DESCRIPTION} (*{w.EXTENSIONS[0]})": w
+               for w in writers},
+            **{f"Compressed {w.DESCRIPTION} (*{w.EXTENSIONS[0]}.gz)": w
+               for w in writers if w.SUPPORT_COMPRESSED}
+        }
 
     @Inputs.data
     def dataset(self, data):
@@ -137,7 +146,7 @@ class OWSave(OWSaveBase):
         valid = self.valid_filters()
         if self.data is None or not self.data.is_sparse() \
                 or (self.filter in valid
-                    and valid[self.filter].SUPPORT_SPARSE_DATA):
+                        and valid[self.filter].SUPPORT_SPARSE_DATA):
             return self.filter
         return next(iter(valid))
 
