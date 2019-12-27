@@ -23,8 +23,9 @@ class OWSaveBase(widget.OWWidget, openclass=True):
       - calls `self.on_new_input`.
 
     - a class attribute `filters` with a list of filters or a dictionary whose
-      keys are filters
-    - method `do_save` that saves `self.data` into `self.filename`.
+      keys are filters OR a class method `get_filters` that returns such a
+      list or dictionary
+    - method `do_save` that saves `self.data` into `self.filename`
 
     Alternatively, instead of defining `do_save` a derived class can make
     `filters` a dictionary whose keys are classes that define a method `write`
@@ -70,7 +71,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         self.data = None
         # This cannot be done outside because `filters` is defined by subclass
         if not self.filter:
-            self.filter = next(iter(self.filters))
+            self.filter = next(iter(self.get_filters()))
 
         self.grid = grid = QGridLayout()
         gui.widgetBox(self.controlArea, orientation=grid)
@@ -89,6 +90,10 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         self.adjustSize()
         self.update_messages()
 
+    @classmethod
+    def get_filters(cls):
+        return cls.filters
+
     @property
     def writer(self):
         """
@@ -98,7 +103,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         corresponding to the filter. Derived classes (e.g. OWSave) may also use
         it elsewhere.
         """
-        return self.filters[self.filter]
+        return self.get_filters()[self.filter]
 
     def on_new_input(self):
         """
@@ -160,8 +165,8 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         Do the saving.
 
         Default implementation calls the write method of the writer
-        corresponding to the current filter. This requires that class attribute
-        filters is a dictionary whose keys are classes.
+        corresponding to the current filter. This requires that get_filters()
+        returns is a dictionary whose keys are classes.
 
         Derived classes may simplify this by providing a list of filters and
         override do_save. This is particularly handy if the widget supports only
@@ -217,7 +222,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         function removes anything that can appear anywhere.
         """
         known_extensions = set()
-        for filt in cls.filters:
+        for filt in cls.get_filters():
             known_extensions |= set(cls._extension_from_filter(filt).split("."))
         if "" in known_extensions:
             known_extensions.remove("")
@@ -233,7 +238,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         return re.search(r".*\(\*?(\..*)\)$", selected_filter).group(1)
 
     def valid_filters(self):
-        return self.filters
+        return self.get_filters()
 
     def default_valid_filter(self):
         return self.filter

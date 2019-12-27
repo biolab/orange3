@@ -91,7 +91,7 @@ class TestOWSave(OWSaveTestBase):
     @patch("Orange.widgets.utils.save.owsavebase.QFileDialog.getSaveFileName")
     def test_save_file_sets_name(self, _filedialog):
         widget = self.widget
-        filters = iter(widget.filters)
+        filters = iter(widget.get_filters())
         filter1 = next(filters)
         filter2 = next(filters)
 
@@ -259,20 +259,20 @@ class TestOWSave(OWSaveTestBase):
         widget = self.widget
 
         widget.data = None
-        self.assertEqual(widget.filters, widget.valid_filters())
+        self.assertEqual(widget.get_filters(), widget.valid_filters())
 
         widget.data = self.iris
-        self.assertEqual(widget.filters, widget.valid_filters())
+        self.assertEqual(widget.get_filters(), widget.valid_filters())
 
         widget.data.X = sp.csr_matrix(widget.data.X)
         valid = widget.valid_filters()
-        self.assertNotEqual(widget.filters, {})
+        self.assertNotEqual(widget.get_filters(), {})
         # false positive, pylint: disable=no-member
         self.assertTrue(all(v.SUPPORT_SPARSE_DATA for v in valid.values()))
 
     def test_valid_default_filter(self):
         widget = self.widget
-        for widget.filter, writer in widget.filters.items():
+        for widget.filter, writer in widget.get_filters().items():
             if not writer.SUPPORT_SPARSE_DATA:
                 break
 
@@ -284,13 +284,14 @@ class TestOWSave(OWSaveTestBase):
 
         widget.data.X = sp.csr_matrix(widget.data.X)
         self.assertTrue(
-            widget.filters[widget.default_valid_filter()].SUPPORT_SPARSE_DATA)
+            widget.get_filters()[widget.default_valid_filter()]
+                .SUPPORT_SPARSE_DATA)
 
     def test_send_report(self):
         widget = self.widget
 
         widget.report_items = Mock()
-        for writer in widget.filters.values():
+        for writer in widget.get_filters().values():
             widget.writer = writer
             for widget.add_type_annotations in (False, True):
                 widget.filename = f"foo.{writer.EXTENSIONS[0]}"
@@ -355,14 +356,14 @@ class TestOWSave(OWSaveTestBase):
         settings = {**const_settings,
                     'compress': True, 'compression': 'lzma (.xz)'}
         OWSave.migrate_settings(settings)
-        self.assertTrue(settings["filter"] in OWSave.filters)
+        self.assertTrue(settings["filter"] in OWSave.get_filters())
 
         # Unsupported file format (is this possible?)
         settings = {**const_settings,
                     'compress': True, 'compression': 'lzma (.xz)',
                     'filetype': 'Bar file (.bar)'}
         OWSave.migrate_settings(settings)
-        self.assertTrue(settings["filter"] in OWSave.filters)
+        self.assertTrue(settings["filter"] in OWSave.get_filters())
 
 
 class TestFunctionalOWSave(WidgetTest):
@@ -377,7 +378,7 @@ class TestFunctionalOWSave(WidgetTest):
         spiris = Table("iris")
         spiris.X = sp.csr_matrix(spiris.X)
 
-        for selected_filter, writer in widget.filters.items():
+        for selected_filter, writer in widget.get_filters().items():
             widget.write = writer
             ext = writer.EXTENSIONS[0]
             with named_file("", suffix=ext) as filename:
@@ -399,7 +400,7 @@ class TestOWSaveLinuxDialog(OWSaveTestBase):
     def test_get_save_filename_linux(self):
         widget = self.widget
         widget.initial_start_dir = lambda: "baz"
-        widget.filters = dict.fromkeys("abc")
+        widget.get_filters = lambda: dict.fromkeys("abc")
         widget.filter = "b"
         dlg = widget.SaveFileDialog = Mock()  # pylint: disable=invalid-name
         instance = dlg.return_value
@@ -413,7 +414,7 @@ class TestOWSaveLinuxDialog(OWSaveTestBase):
         instance.exec.return_value = QFileDialog.Rejected
         self.assertEqual(widget.get_save_filename(), ("", ""))
 
-    @patch.object(OWSaveBase, "filters", OWSave.filters)
+    @patch.object(OWSaveBase, "filters", OWSave.get_filters())
     def test_save_file_dialog_enforces_extension_linux(self):
         dialog = OWSave.SaveFileDialog(
             OWSave, None, "Save File", "foo.bar",
@@ -468,7 +469,8 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
     def test_get_save_filename_darwin(self, dlg):
         widget = self.widget
         widget.initial_start_dir = lambda: "baz"
-        widget.filters = dict.fromkeys(("aa (*.a)", "bb (*.b)", "cc (*.c)"))
+        widget.get_filters = \
+            lambda: dict.fromkeys(("aa (*.a)", "bb (*.b)", "cc (*.c)"))
         widget.filter = "bb (*.b)"
         instance = dlg.return_value
         instance.exec.return_value = dlg.Accepted = QFileDialog.Accepted
@@ -489,10 +491,10 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
     def test_save_file_dialog_enforces_extension_darwin(self, dlg):
         widget = self.widget
         filter1 = ""  # prevent pylint warning 'undefined-loop-variable'
-        for filter1 in widget.filters:
+        for filter1 in widget.get_filters():
             if OWSaveBase._extension_from_filter(filter1) == ".tab":
                 break
-        for filter2 in widget.filters:
+        for filter2 in widget.get_filters():
             if OWSaveBase._extension_from_filter(filter2) == ".csv.gz":
                 break
 
@@ -536,7 +538,7 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
         widget = self.widget
         widget.initial_start_dir = lambda: "baz"
         filter1 = ""  # prevent pylint warning 'undefined-loop-variable'
-        for filter1 in widget.filters:
+        for filter1 in widget.get_filters():
             if OWSaveBase._extension_from_filter(filter1) == ".tab":
                 break
 
