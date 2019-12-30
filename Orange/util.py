@@ -2,6 +2,7 @@
 import logging
 import os
 import inspect
+import pkg_resources
 from enum import Enum as _Enum
 from functools import wraps, partial
 from operator import attrgetter
@@ -14,8 +15,6 @@ import warnings
 from unittest.mock import patch  # pylint: disable=unused-import
 
 # Backwards-compat
-import pkg_resources
-
 from Orange.data.util import scale  # pylint: disable=unused-import
 
 
