@@ -1,4 +1,5 @@
 from collections import namedtuple
+from functools import partial
 
 import numpy
 from AnyQt.QtWidgets import (
@@ -7,7 +8,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
-    QModelIndex, QAbstractTableModel, QSortFilterProxyModel)
+    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal)
 
 import Orange
 from Orange.evaluation import Results
@@ -77,15 +78,17 @@ class OWPredictions(OWWidget):
                     addSpace=False,
                     sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred))
         gui.rubber(self.controlArea)
-        gui.button(self.controlArea, self, "Restore Original Order",
-                   callback=self._reset_order,
-                   tooltip="Show rows in the original order")
+        self.reset_button = gui.button(
+            self.controlArea, self, "Restore Original Order",
+            callback=self._reset_order,
+            tooltip="Show rows in the original order")
 
         table_opts = dict(horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
                           horizontalScrollMode=QTableView.ScrollPerPixel,
                           selectionMode=QTableView.NoSelection,
                           focusPolicy=Qt.StrongFocus)
         self.dataview = TableView(
+            sortingEnabled=True,
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             **table_opts)
         self.predictionsview = TableView(
@@ -126,7 +129,7 @@ class OWPredictions(OWWidget):
             # force full reset of the view's HeaderView state
             self.dataview.setModel(None)
             model = TableModel(data, parent=None)
-            modelproxy = TableSortProxyModel()
+            modelproxy = SortProxyModel()
             modelproxy.setSourceModel(model)
             self.dataview.setModel(modelproxy)
 
@@ -333,39 +336,53 @@ class OWPredictions(OWWidget):
         # model.rowCount(...), `model.parent`, ... calls)
         hheader.setSectionsClickable(predmodel.rowCount() < 20000)
 
-        predmodel.layoutChanged.connect(self._update_data_sort_order)
-        self._update_data_sort_order()
+        self.dataview.horizontalHeader().sectionClicked.connect(
+            partial(
+                self._update_data_sort_order, self.dataview,
+                self.predictionsview))
+        self.predictionsview.horizontalHeader().sectionClicked.connect(
+            partial(
+                self._update_data_sort_order, self.predictionsview,
+                self.dataview))
+
         self.predictionsview.resizeColumnsToContents()
 
-    def _update_data_sort_order(self):
-        datamodel = self.dataview.model()  # data model proxy
-        predmodel = self.predictionsview.model()  # predictions model proxy
+    @staticmethod
+    def _update_data_sort_order(sort_source_view, sort_dest_view):
+        sort_dest = sort_dest_view.model()
+        sort_source = sort_source_view.model()
         sortindicatorshown = False
-        if datamodel is not None:
-            assert isinstance(datamodel, TableSortProxyModel)
-            n = datamodel.rowCount()
-            if predmodel is not None and predmodel.sortColumn() >= 0:
+        if sort_dest is not None:
+            assert isinstance(sort_dest, QSortFilterProxyModel)
+            n = sort_dest.rowCount()
+            if sort_source is not None and sort_source.sortColumn() >= 0:
                 sortind = numpy.argsort(
-                    [predmodel.mapToSource(predmodel.index(i, 0)).row()
+                    [sort_source.mapToSource(sort_source.index(i, 0)).row()
                      for i in range(n)])
                 sortind = numpy.array(sortind, numpy.int)
                 sortindicatorshown = True
             else:
                 sortind = None
 
-            datamodel.setSortIndices(sortind)
+            sort_source.setSortIndices(None)
+            sort_dest.setSortIndices(sortind)
 
-        self.predictionsview.horizontalHeader() \
-            .setSortIndicatorShown(sortindicatorshown)
+        sort_dest_view.horizontalHeader().setSortIndicatorShown(
+            False)
+        sort_source_view.horizontalHeader().setSortIndicatorShown(
+            sortindicatorshown)
 
     def _reset_order(self):
         datamodel = self.dataview.model()
         predmodel = self.predictionsview.model()
         if datamodel is not None:
+            datamodel.setSortIndices(None)
             datamodel.sort(-1)
         if predmodel is not None:
+            predmodel.setSortIndices(None)
             predmodel.sort(-1)
         self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
+        self.dataview.horizontalHeader().setSortIndicatorShown(False)
 
     def _update_prediction_delegate(self):
         selected = {self.class_values[i] for i in self.selected_classes}
@@ -649,7 +666,51 @@ class PredictionsItemDelegate(QStyledItemDelegate):
         painter.restore()
 
 
-class PredictionsSortProxyModel(QSortFilterProxyModel):
+class SortProxyModel(QSortFilterProxyModel):
+    """
+    QSortFilter model used in both TableView and PredictionsView
+    """
+    sort_demanded = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.__sortInd = None
+
+    def setSortIndices(self, indices):
+        if indices is not None:
+            indices = numpy.array(indices, dtype=numpy.int)
+            if indices.shape != (self.rowCount(),):
+                raise ValueError("indices.shape != (self.rowCount(),)")
+            indices.flags.writeable = False
+
+        self.__sortInd = indices
+
+        if self.__sortInd is not None:
+            if self.sortColumn() < 0:
+                self.sort(0)  # need some valid sort column
+            else:
+                self.invalidate()
+
+    def lessThan(self, left, right):
+        if self.__sortInd is None:
+            return super().lessThan(left, right)
+
+        assert not (left.parent().isValid() or right.parent().isValid()), \
+            "Not a table model"
+
+        rleft, rright = left.row(), right.row()
+        try:
+            ileft, iright = self.__sortInd[rleft], self.__sortInd[rright]
+        except IndexError:
+            return False
+        else:
+            return ileft < iright
+
+    def isSorted(self):
+        return self.__sortInd is not None
+
+
+class PredictionsSortProxyModel(SortProxyModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.__probInd = None
@@ -659,6 +720,9 @@ class PredictionsSortProxyModel(QSortFilterProxyModel):
         self.invalidate()
 
     def lessThan(self, left, right):
+        if self.isSorted():
+            return super().lessThan(left, right)
+
         role = self.sortRole()
         left_data = self.sourceModel().data(left, role)
         right_data = self.sourceModel().data(right, role)
@@ -754,46 +818,6 @@ class TableView(QTableView):
                 break
 
         return width + 1 if self.showGrid() else width
-
-
-class TableSortProxyModel(QSortFilterProxyModel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.__sortInd = None
-
-    def setSortIndices(self, indices):
-        if indices is not None:
-            indices = numpy.array(indices, dtype=numpy.int)
-            if indices.shape != (self.rowCount(),):
-                raise ValueError("indices.shape != (self.rowCount(),)")
-            indices.flags.writeable = False
-
-        self.__sortInd = indices
-
-        if self.sortColumn() < 0 and self.__sortInd is not None:
-            self.sort(0)  # need some valid sort column
-        elif self.__sortInd is None:
-            self.sort(-1)  # explicit sort reset
-        else:
-            self.invalidate()
-
-    def sortIndices(self):
-        return self.__sortInd
-
-    def lessThan(self, left, right):
-        if self.__sortInd is None:
-            return super().lessThan(left, right)
-
-        assert not (left.parent().isValid() or right.parent().isValid()), \
-            "Not a table model"
-
-        rleft, rright = left.row(), right.row()
-        try:
-            ileft, iright = self.__sortInd[rleft], self.__sortInd[rright]
-        except IndexError:
-            return False
-        else:
-            return ileft < iright
 
 
 def tool_tip(value):
