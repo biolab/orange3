@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import numpy as np
 
+from Orange.classification import LogisticRegressionLearner
 from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
@@ -174,6 +175,58 @@ class TestOWPredictions(WidgetTest):
 
         model2 = ConstantLearner()(titanic)
         self.send_signal(self.widget.Inputs.predictors, model2, 2)
+
+    def test_sort(self):
+        def get_items_order(model):
+            n = pred_model.rowCount()
+            return [
+                pred_model.mapToSource(model.index(i, 0)).row()
+                for i in range(n)
+            ]
+
+        w = self.widget
+
+        titanic = Table("titanic")
+        majority_titanic = LogisticRegressionLearner()(titanic)
+        self.send_signal(self.widget.Inputs.predictors, majority_titanic)
+        self.send_signal(self.widget.Inputs.data, titanic)
+
+        pred_model = w.predictionsview.model()
+        data_model = w.predictionsview.model()
+        n = pred_model.rowCount()
+
+        # no sort
+        pred_order = get_items_order(pred_model)
+        data_order = get_items_order(data_model)
+        self.assertListEqual(pred_order, list(range(n)))
+        self.assertListEqual(data_order, list(range(n)))
+
+        # sort by first column in prediction table
+        pred_model.sort(0)
+        w.predictionsview.horizontalHeader().sectionClicked.emit(0)
+        pred_order = get_items_order(pred_model)
+        data_order = get_items_order(data_model)
+        self.assertListEqual(pred_order, data_order)
+
+        # sort by second column in data table
+        data_model.sort(1)
+        w.dataview.horizontalHeader().sectionClicked.emit(0)
+        pred_order = get_items_order(pred_model)
+        data_order = get_items_order(data_model)
+        self.assertListEqual(pred_order, data_order)
+
+        # restore order
+        w.reset_button.click()
+        pred_order = get_items_order(pred_model)
+        data_order = get_items_order(data_model)
+        self.assertListEqual(pred_order, list(range(n)))
+        self.assertListEqual(data_order, list(range(n)))
+
+    def test_reset_no_data(self):
+        """
+        Check no error when resetting the view without model and data
+        """
+        self.widget.reset_button.click()
 
 
 if __name__ == "__main__":
