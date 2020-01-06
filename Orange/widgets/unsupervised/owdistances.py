@@ -63,7 +63,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     class Outputs:
         distances = Output("Distances", Orange.misc.DistMatrix, dynamic=False)
 
-    settings_version = 2
+    settings_version = 3
 
     axis = Setting(0)        # type: int
     metric_idx = Setting(0)  # type: int
