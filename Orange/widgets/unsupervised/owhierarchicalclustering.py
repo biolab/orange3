@@ -92,7 +92,7 @@ def path_toQtPath(geom):
         r.moveCenter(*points[0])
         p.addRect(r)
     elif len(points) == 0:
-        r = QRectF(0, 0, 1e-16, 1e-16)
+        r = QRectF(0, 0, 0, 0)
         r.moveCenter(QPointF(*anchor))
         p.addRect(r)
     return p
