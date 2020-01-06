@@ -580,7 +580,10 @@
     "doc": "visual-programming/source/widgets/evaluate/testandscore.md",
     "icon": "../Orange/widgets/evaluate/icons/TestLearners1.svg",
     "background": "#C3F3F3",
-    "keywords": []
+    "keywords": [
+     "Cross Validation",
+     "CV"
+    ]
    },
    {
     "text": "Predictions",
