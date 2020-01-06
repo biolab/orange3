@@ -6,8 +6,10 @@ import unittest
 
 import numpy as np
 
+import Orange.distance
 from Orange.data import (
     Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable)
+from Orange.misc import DistMatrix
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.visualize.owsilhouetteplot import OWSilhouettePlot
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -173,6 +175,47 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         w = self.create_widget(OWSilhouettePlot, stored_settings=settings)
         self.send_signal(w.Inputs.data, iris, widget=w)
         self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 20)
+
+    def test_distance_input(self):
+        widget = self.widget
+        data = Table("heart_disease")[::4]
+        matrix = Orange.distance.Euclidean(data)
+        self.send_signal(widget.Inputs.data, matrix, widget=widget)
+        self.assertIsNotNone(widget.distances)
+        self.assertIsNotNone(widget.data)
+        self.assertFalse(widget._distances_gui_box.isEnabled())
+
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        self.assertIsNone(widget.distances)
+        self.assertIsNotNone(widget.data)
+        self.assertTrue(widget._distances_gui_box.isEnabled())
+
+    def test_input_distance_no_data(self):
+        widget = self.widget
+        matrix = DistMatrix(
+            np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]),
+            row_items=None
+        )
+        self.send_signal(widget.Inputs.data, matrix, widget=widget)
+        self.assertTrue(widget.Error.input_validation_error.is_shown())
+        self.assertIsNone(widget.data)
+        self.assertIsNone(widget.distances)
+        self.send_signal(widget.Inputs.data, None, widget=widget)
+        self.assertFalse(widget.Error.input_validation_error.is_shown())
+
+    def test_no_group_var(self):
+        widget = self.widget
+        data = Table("iris")[::4]
+        data = data[:, data.domain.attributes]
+        matrix = Orange.distance.Euclidean(data)
+        self.send_signal(widget.Inputs.data, matrix, widget=widget)
+
+        self.assertTrue(widget.Error.input_validation_error.is_shown())
+        self.assertIsNone(widget.data)
+        self.assertIsNone(widget.distances)
+
+        self.send_signal(widget.Inputs.data, None, widget=widget)
+        self.assertFalse(widget.Error.input_validation_error.is_shown())
 
 
 if __name__ == "__main__":
