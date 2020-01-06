@@ -327,7 +327,7 @@ class OWHeatMap(widget.OWWidget):
     NoPosition, PositionTop, PositionBottom = 0, 1, 2
 
     # Disable cluster leaf ordering for inputs bigger than this
-    _MaxOrderedClustering = 1000
+    _MaxOrderedClustering = 2000
 
     gamma = settings.Setting(0)
     threshold_low = settings.Setting(0.0)
