@@ -1,4 +1,5 @@
 import warnings
+import unittest
 from unittest.mock import patch
 
 import numpy as np
@@ -381,7 +382,11 @@ class TestOWRank(WidgetTest):
         self.send_signal(w.Inputs.data, self.iris)
 
         # select first and second row
-        w.selected_rows = np.array([1, 2])
+        w.selected_rows = [1, 2]
         output = self.get_output(w.Outputs.reduced_data)
 
         self.assertEqual(len(output), len(self.iris))
+
+
+if __name__ == "__main__":
+    unittest.main()
