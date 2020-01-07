@@ -225,6 +225,18 @@ class Continuous:
                 "Fallback method for computation of contingencies is not implemented yet"
             )
 
+    @property
+    def array_with_unknowns(self):
+        """
+        This function returns the list of all items returned by __getitem__
+        with adding a row of row_unknowns together with values.
+        """
+        # pylint: disable=unnecessary-comprehension
+        other_rows = [x for x in self]
+        ind = self.row_unknowns > 0
+        unknown_rows = np.vstack((self.values[ind], self.row_unknowns[ind]))
+        return other_rows + [unknown_rows]
+
     def __eq__(self, other):
         return (
             np.array_equal(self.values, other.values) and

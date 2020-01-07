@@ -494,20 +494,21 @@ class OWBoxPlot(widget.OWWidget):
             self.dist = []
             self.conts = contingency.get_contingency(
                 dataset, attr, self.group_var)
+            group_var_labels = self.group_var.values + [
+                f"missing '{self.group_var.name}'"]
             if self.is_continuous:
                 stats, label_texts = [], []
-                for i, cont in enumerate(self.conts):
+                for i, cont in enumerate(self.conts.array_with_unknowns):
                     if np.sum(cont[1]):
                         stats.append(BoxData(cont, attr, i, self.group_var))
-                        label_texts.append(self.group_var.values[i])
+                        label_texts.append(group_var_labels[i])
                 self.stats = stats
                 self.label_txts_all = label_texts
             else:
-                self.label_txts_all = \
-                    [v for v, c in zip(
-                        self.group_var.values + ["Missing values"],
-                        self.conts.array_with_unknowns)
-                     if np.sum(c) > 0]
+                self.label_txts_all = [
+                    v for v, c in zip(
+                        group_var_labels, self.conts.array_with_unknowns)
+                    if np.sum(c) > 0]
         else:
             self.dist = distribution.get_distribution(dataset, attr)
             self.conts = []
@@ -1071,7 +1072,7 @@ class OWBoxPlot(widget.OWWidget):
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
             box.append(FilterGraphicsRectItem(cond, 0, -10, 1, 10))
         cum = 0
-        values = attr.values + ["Missing values"]
+        values = attr.values + [f"missing '{attr.name}'"]
         colors = np.vstack((attr.colors, [128, 128, 128]))
         for i, v in enumerate(dist):
             if v < 1e-6:
