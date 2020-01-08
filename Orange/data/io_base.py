@@ -2,7 +2,7 @@ import pickle
 import re
 import sys
 import warnings
-from typing import Iterable
+from typing import Iterable, Optional, Tuple, List, Generator, Callable, Any
 
 from ast import literal_eval
 from collections import OrderedDict, Counter
@@ -20,6 +20,7 @@ from Orange.data import Table, Domain, Variable, DiscreteVariable, \
     StringVariable, ContinuousVariable, TimeVariable
 from Orange.data.io_util import Compression, open_compressed, \
     isnastr, guess_data_type, sanitize_variable
+from Orange.data.variable import VariableMeta
 from Orange.util import Registry, flatten, namegen
 
 __all__ = ["FileFormatBase", "Flags"]
@@ -86,6 +87,310 @@ _RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format(
 ))
 
 
+class _ColumnProperties:
+    def __init__(self, valuemap=None, values=None, orig_values=None,
+                 coltype=None, coltype_kwargs={}):
+        self.valuemap = valuemap
+        self.values = values
+        self.orig_values = orig_values
+        self.coltype = coltype
+        self.coltype_kwargs = dict(coltype_kwargs)
+
+
+class _TableHeader:
+    """
+    Contains functions for table header construction (and its data).
+    """
+    HEADER1_FLAG_SEP = '#'
+
+    def __init__(self, headers: List):
+        """
+        Parameters
+        ----------
+        headers: List
+            Header rows, to be used for constructing domain.
+        """
+        names, types, flags = self.create_header_data(headers)
+        self.names = self.rename_variables(names)
+        self.types = types
+        self.flags = flags
+
+    @classmethod
+    def create_header_data(cls, headers: List) -> Tuple[List, List, List]:
+        """
+        Consider various header types (single-row, two-row, three-row, none).
+
+        Parameters
+        ----------
+        headers: List
+            Header rows, to be used for constructing domain.
+
+        Returns
+        -------
+        names: List
+            List of variable names.
+        types: List
+            List of variable types.
+        flags: List
+            List of meta info (i.e. class, meta, ignore, weights).
+        """
+        return {3: lambda x: x,
+                2: cls._header2,
+                1: cls._header1}.get(len(headers), cls._header0)(headers)
+
+    @classmethod
+    def _header2(cls, headers: List[List[str]]) -> Tuple[List, List, List]:
+        names, flags = headers
+        return names, cls._type_from_flag(flags), cls._flag_from_flag(flags)
+
+    @classmethod
+    def _header1(cls, headers: List[List[str]]) -> Tuple[List, List, List]:
+        """
+        First row format either:
+          1) delimited column names
+          2) -||- with type and flags prepended, separated by #,
+             e.g. d#sex,c#age,cC#IQ
+        """
+        flags, names = zip(*[i.split(cls.HEADER1_FLAG_SEP, 1)
+                             if cls.HEADER1_FLAG_SEP in i else ('', i)
+                             for i in headers[0]])
+        names = list(names)
+        return names, cls._type_from_flag(flags), cls._flag_from_flag(flags)
+
+    @classmethod
+    def _header0(cls, _) -> Tuple[List, List, List]:
+        # Use heuristics for everything
+        return [], [], []
+
+    @staticmethod
+    def _type_from_flag(flags: List[str]) -> List[str]:
+        return [''.join(filter(str.isupper, flag)).lower() for flag in flags]
+
+    @staticmethod
+    def _flag_from_flag(flags: List[str]) -> List[str]:
+        return [Flags.join(filter(str.islower, flag)) for flag in flags]
+
+    @staticmethod
+    def rename_variables(names: List[str]) -> List[str]:
+        """
+        Rename variables if necessary. Append index to the name, if the name
+        is duplicated.
+        Reusing across files still works if both files have same duplicates.
+
+        Parameters
+        ----------
+        names: List
+            Variable names.
+
+        Returns
+        -------
+        names: List
+            Variable names with appended index.
+        """
+        name_counts = Counter(names)
+        del name_counts[""]
+        if len(name_counts) != len(names) and name_counts:
+            uses = {name: 0 for name, count in name_counts.items() if
+                    count > 1}
+            for i, name in enumerate(names):
+                if name in uses:
+                    uses[name] += 1
+                    names[i] = f"{name}_{uses[name]}"
+        return names
+
+
+class _TableBuilder:
+    X_ARR, Y_ARR, M_ARR, W_ARR = range(4)
+    DATA_IND, DOMAIN_IND, TYPE_IND = range(3)
+
+    def __init__(self, data: np.ndarray, ncols: int,
+                 header: _TableHeader, offset: int):
+        self.data = data
+        self.ncols = ncols
+        self.header = header
+        self.offset = offset
+        self.namegen: Generator[str] = namegen('Feature ', 1)
+
+        self.cols_X: List[np.ndarray] = []
+        self.cols_Y: List[np.ndarray] = []
+        self.cols_M: List[np.ndarray] = []
+        self.cols_W: List[np.ndarray] = []
+        self.attrs: List[Variable] = []
+        self.clses: List[Variable] = []
+        self.metas: List[Variable] = []
+
+    def create_table(self) -> Table:
+        self.create_columns()
+        if not self.data.size:
+            return Table.from_domain(self.get_domain(), 0)
+        else:
+            return Table.from_numpy(self.get_domain(), *self.get_arrays())
+
+    def create_columns(self):
+        names = self.header.names
+        types = self.header.types
+
+        for col in range(self.ncols):
+            flag = Flags(Flags.split(self.header.flags[col]))
+            if flag.i:
+                continue
+
+            type_ = types and types[col].strip()
+            creator = self._get_column_creator(type_)
+            column = creator(self.data, col, values=type_, offset=self.offset)
+            self._take_column(names and names[col], column, flag)
+            self._reclaim_memory(self.data, col)
+
+    @classmethod
+    def _get_column_creator(cls, type_: str) -> Callable:
+        if type_ in StringVariable.TYPE_HEADERS:
+            return cls._string_column
+        elif type_ in ContinuousVariable.TYPE_HEADERS:
+            return cls._cont_column
+        elif type_ in TimeVariable.TYPE_HEADERS:
+            return cls._time_column
+        elif _RE_DISCRETE_LIST.match(type_):
+            return cls._disc_with_vals_column
+        elif type_ in DiscreteVariable.TYPE_HEADERS:
+            return cls._disc_no_vals_column
+        else:
+            return cls._unknown_column
+
+    @staticmethod
+    def _string_column(data: np.ndarray, col: int, **_) -> _ColumnProperties:
+        vals, _ = _TableBuilder._values_mask(data, col)
+        return _ColumnProperties(values=vals, coltype=StringVariable,
+                                 orig_values=vals)
+
+    @staticmethod
+    def _cont_column(data: np.ndarray, col: int,
+                     offset=0, **_) -> _ColumnProperties:
+        orig_vals, namask = _TableBuilder._values_mask(data, col)
+        values = np.empty(data.shape[0], dtype=float)
+        try:
+            np.copyto(values, orig_vals, casting="unsafe", where=~namask)
+            values[namask] = np.nan
+        except ValueError:
+            row = 0
+            for row, num in enumerate(orig_vals):
+                if not isnastr(num):
+                    try:
+                        float(num)
+                    except ValueError:
+                        break
+            raise ValueError(f'Non-continuous value in (1-based) '
+                             f'line {row + offset + 1}, column {col + 1}')
+        return _ColumnProperties(values=values, coltype=ContinuousVariable,
+                                 orig_values=orig_vals)
+
+    @staticmethod
+    def _time_column(data: np.ndarray, col: int, **_) -> _ColumnProperties:
+        vals, namask = _TableBuilder._values_mask(data, col)
+        return _ColumnProperties(values=np.where(namask, "", vals),
+                                 coltype=TimeVariable, orig_values=vals)
+
+    @staticmethod
+    def _disc_column(data: np.ndarray, col: int) -> \
+            Tuple[np.ndarray, VariableMeta]:
+        vals, namask = _TableBuilder._values_mask(data, col)
+        return np.where(namask, "", vals), DiscreteVariable
+
+    @staticmethod
+    def _disc_no_vals_column(data: np.ndarray, col: int, **_) -> \
+            _ColumnProperties:
+        vals, coltype = _TableBuilder._disc_column(data, col)
+        return _ColumnProperties(valuemap=sorted(set(vals) - {""}),
+                                 values=vals, coltype=coltype,
+                                 orig_values=vals)
+
+    @staticmethod
+    def _disc_with_vals_column(data: np.ndarray, col: int,
+                               values="", **_) -> _ColumnProperties:
+        vals, coltype = _TableBuilder._disc_column(data, col)
+        return _ColumnProperties(valuemap=Flags.split(values), values=vals,
+                                 coltype=coltype, orig_values=vals,
+                                 coltype_kwargs={"ordered": True})
+
+    @staticmethod
+    def _unknown_column(data: np.ndarray, col: int, **_) -> _ColumnProperties:
+        orig_vals, namask = _TableBuilder._values_mask(data, col)
+        valuemap, values, coltype = guess_data_type(orig_vals, namask)
+        return _ColumnProperties(valuemap=valuemap, values=values,
+                                 coltype=coltype, orig_values=orig_vals)
+
+    @staticmethod
+    def _values_mask(data: np.ndarray, col: int) -> \
+            Tuple[np.ndarray, np.ndarray]:
+        try:
+            values = data[:, col]
+        except IndexError:
+            values = np.array([], dtype=object)
+        return values, isnastr(values)
+
+    def _take_column(self, name: Optional[str], column: _ColumnProperties,
+                     flag: Flags):
+        cols, dom_vars = self._lists_from_flag(flag, column.coltype)
+        values = column.values
+        if dom_vars is not None:
+            if not name:
+                name = next(self.namegen)
+
+            values, var = sanitize_variable(
+                column.valuemap, values, column.orig_values,
+                column.coltype, column.coltype_kwargs, name=name)
+            var.attributes.update(flag.attributes)
+            dom_vars.append(var)
+
+        if isinstance(values, np.ndarray) and not values.flags.owndata:
+            values = values.copy()  # might view `data` (string columns)
+        cols.append(values)
+
+    def _lists_from_flag(self, flag: Flags, coltype: VariableMeta) -> \
+            Tuple[List, Optional[List]]:
+        if flag.m or coltype is StringVariable:
+            return self.cols_M, self.metas
+        elif flag.w:
+            return self.cols_W, None
+        elif flag.c:
+            return self.cols_Y, self.clses
+        else:
+            return self.cols_X, self.attrs
+
+    @staticmethod
+    def _reclaim_memory(data: np.ndarray, col: int):
+        # allow gc to reclaim memory used by string values
+        try:
+            data[:, col] = None
+        except IndexError:
+            pass
+
+    def get_domain(self) -> Domain:
+        return Domain(self.attrs, self.clses, self.metas)
+
+    def get_arrays(self) -> Tuple[np.ndarray, np.ndarray,
+                                  np.ndarray, np.ndarray]:
+        lists = ((self.cols_X, None),
+                 (self.cols_Y, None),
+                 (self.cols_M, object),
+                 (self.cols_W, float))
+        X, Y, M, W = [self._list_into_ndarray(lst, dt) for lst, dt in lists]
+        if X is None:
+            X = np.empty((self.data.shape[0], 0), dtype=np.float_)
+        return X, Y, M, W
+
+    @staticmethod
+    def _list_into_ndarray(lst: List, dtype=None) -> Optional[np.ndarray]:
+        if not lst:
+            return None
+
+        array = np.c_[tuple(lst)]
+        if dtype is not None:
+            array.astype(dtype)
+        else:
+            assert array.dtype == np.float_
+        return array
+
+
 class _FileReader:
     @classmethod
     def get_reader(cls, filename):
@@ -123,25 +428,57 @@ class _FileReader:
                         for k, v in (line.split(":", 1)
                                      for line in f.readlines()))
 
-    @staticmethod
-    def parse_headers(data):
-        """Return (header rows, rest of data) as discerned from `data`"""
+    @classmethod
+    def data_table(cls, data: Iterable[List[str]],
+                   headers: Optional[List] = None) -> Table:
+        """
+        Return Orange.data.Table given rows of `headers` (iterable of iterable)
+        and rows of `data` (iterable of iterable).
 
-        def is_number(item):
-            try:
-                float(item)
-            except ValueError:
-                return False
-            return True
+        Basically, the idea of subclasses is to produce those two iterables,
+        however they might.
 
-        # Second row items are type identifiers
-        def header_test2(items):
-            return all(map(_RE_TYPES.match, items))
+        If `headers` is not provided, the header rows are extracted from `data`,
+        assuming they precede it.
 
-        # Third row items are flags and column attributes (attr=value)
-        def header_test3(items):
-            return all(map(_RE_FLAGS.match, items))
+        Parameters
+        ----------
+        data: Iterable
+            File content.
+        headers: List (Optional)
+            Header rows, to be used for constructing domain.
 
+        Returns
+        -------
+        table: Table
+            Data as Orange.data.Table.
+        """
+        if not headers:
+            headers, data = cls.parse_headers(data)
+
+        header = _TableHeader(headers)
+        # adjusting data may change header properties
+        array, n_columns = cls.adjust_data_width(data, header)
+        builder = _TableBuilder(array, n_columns, header, len(headers))
+        return builder.create_table()
+
+    @classmethod
+    def parse_headers(cls, data: Iterable[List[str]]) -> Tuple[List, Iterable]:
+        """
+        Return (header rows, rest of data) as discerned from `data`.
+
+        Parameters
+        ----------
+        data: Iterable
+            File content.
+
+        Returns
+        -------
+        header_rows: List
+            Header rows, to be used for constructing domain.
+        data: Iterable
+            File content without header rows.
+        """
         data = iter(data)
         header_rows = []
 
@@ -156,7 +493,7 @@ class _FileReader:
         if lines:
             l1, l2, l3 = lines
             # Three-line header if line 2 & 3 match (1st line can be anything)
-            if header_test2(l2) and header_test3(l3):
+            if cls.__header_test2(l2) and cls.__header_test3(l3):
                 header_rows = [l1, l2, l3]
             else:
                 lines, data = [], chain((l1, l2, l3), data)
@@ -169,58 +506,55 @@ class _FileReader:
                 pass
             if lines:
                 # Header if none of the values in line 1 parses as a number
-                if not all(is_number(i) for i in lines[0]):
+                if not all(cls.__is_number(i) for i in lines[0]):
                     header_rows = [lines[0]]
                 else:
                     data = chain(lines, data)
 
         return header_rows, data
 
+    @staticmethod
+    def __is_number(item: str) -> bool:
+        try:
+            float(item)
+        except ValueError:
+            return False
+        return True
+
+    @staticmethod
+    def __header_test2(items: List) -> bool:
+        # Second row items are type identifiers
+        return all(map(_RE_TYPES.match, items))
+
+    @staticmethod
+    def __header_test3(items: List) -> bool:
+        # Third row items are flags and column attributes (attr=value)
+        return all(map(_RE_FLAGS.match, items))
+
     @classmethod
-    def data_table(cls, data, headers=None):
+    def adjust_data_width(cls, data: Iterable, header: _TableHeader) -> \
+            Tuple[np.ndarray, int]:
         """
-        Return Orange.data.Table given rows of `headers` (iterable of iterable)
-        and rows of `data` (iterable of iterable).
+        Determine maximum row length.
+        Return data as an array, with width dependent on header size.
+        Append `names`, `types` and `flags` if shorter than row length.
 
-        Basically, the idea of subclasses is to produce those two iterables,
-        however they might.
+        Parameters
+        ----------
+        data: Iterable
+            File content without header rows.
+        header: _TableHeader
+            Header lists converted into _TableHeader.
 
-        If `headers` is not provided, the header rows are extracted from
-        `data`, assuming they precede it.
+        Returns
+        -------
+        data: np.ndarray
+            File content without header rows.
+        rowlen: int
+            Number of columns in data.
         """
-        if not headers:
-            headers, data = cls.parse_headers(data)
 
-        # Consider various header types (single-row, two-row, three-row, none)
-        if len(headers) == 3:
-            names, types, flags = map(list, headers)
-        else:
-            if len(headers) == 1:
-                HEADER1_FLAG_SEP = '#'
-                # First row format either:
-                #   1) delimited column names
-                #   2) -||- with type and flags prepended, separated by #,
-                #      e.g. d#sex,c#age,cC#IQ
-                _flags, names = zip(*[i.split(HEADER1_FLAG_SEP, 1)
-                                      if HEADER1_FLAG_SEP in i else ('', i)
-                                      for i in headers[0]]
-                                    )
-                names = list(names)
-            elif len(headers) == 2:
-                names, _flags = map(list, headers)
-            else:
-                # Use heuristics for everything
-                names, _flags = [], []
-            types = [''.join(filter(str.isupper, flag)).lower() for flag in
-                     _flags]
-            flags = [Flags.join(filter(str.islower, flag)) for flag in _flags]
-
-        # Determine maximum row length
-        rowlen = max(map(len, (names, types, flags)))
-
-        strip = False
-
-        def _equal_length(lst):
+        def equal_len(lst):
             nonlocal strip
             if len(lst) > rowlen > 0:
                 lst = lst[:rowlen]
@@ -229,154 +563,26 @@ class _FileReader:
                 lst.extend([''] * (rowlen - len(lst)))
             return lst
 
+        rowlen = max(map(len, (header.names, header.types, header.flags)))
+        strip = False
+
         # Ensure all data is of equal width in a column-contiguous array
-        data = [_equal_length([s.strip() for s in row])
+        data = [equal_len([s.strip() for s in row])
                 for row in data if any(row)]
-        data = np.array(data, dtype=object, order='F')
+        array = np.array(data, dtype=object, order='F')
 
         if strip:
             warnings.warn("Columns with no headers were removed.")
 
         # Data may actually be longer than headers were
         try:
-            rowlen = data.shape[1]
+            rowlen = array.shape[1]
         except IndexError:
             pass
         else:
-            for lst in (names, types, flags):
-                _equal_length(lst)
-
-        NAMEGEN = namegen('Feature ', 1)
-        Xcols, attrs = [], []
-        Mcols, metas = [], []
-        Ycols, clses = [], []
-        Wcols = []
-
-        # Rename variables if necessary
-        # Reusing across files still works if both files have same duplicates
-        name_counts = Counter(names)
-        del name_counts[""]
-        if len(name_counts) != len(names) and name_counts:
-            uses = {name: 0 for name, count in name_counts.items() if
-                    count > 1}
-            for i, name in enumerate(names):
-                if name in uses:
-                    uses[name] += 1
-                    names[i] = "{}_{}".format(name, uses[name])
-
-        namask = np.empty(data.shape[0], dtype=bool)
-        # Iterate through the columns
-        for col in range(rowlen):
-            flag = Flags(Flags.split(flags[col]))
-            if flag.i:
-                continue
-
-            type_flag = types and types[col].strip()
-            try:
-                orig_values = data[:, col]
-            except IndexError:
-                orig_values = np.array([], dtype=object)
-
-            namask = isnastr(orig_values, out=namask)
-
-            coltype_kwargs = {}
-            valuemap = None
-            values = orig_values
-
-            if type_flag in StringVariable.TYPE_HEADERS:
-                coltype = StringVariable
-                values = orig_values
-            elif type_flag in ContinuousVariable.TYPE_HEADERS:
-                coltype = ContinuousVariable
-                values = np.empty(data.shape[0], dtype=float)
-                try:
-                    np.copyto(values, orig_values, casting="unsafe",
-                              where=~namask)
-                    values[namask] = np.nan
-                except ValueError:
-                    for row, num in enumerate(orig_values):
-                        if not isnastr(num):
-                            try:
-                                float(num)
-                            except ValueError:
-                                break
-                    raise ValueError(f"Non-continuous value in (1-based) "
-                                     f"line {row + len(headers) + 1}, "
-                                     f"column {col + 1}")
-
-            elif type_flag in TimeVariable.TYPE_HEADERS:
-                coltype = TimeVariable
-                values = np.where(namask, "", orig_values)
-            elif (type_flag in DiscreteVariable.TYPE_HEADERS or
-                  _RE_DISCRETE_LIST.match(type_flag)):
-                coltype = DiscreteVariable
-                orig_values = values = np.where(namask, "", orig_values)
-                if _RE_DISCRETE_LIST.match(type_flag):
-                    valuemap = Flags.split(type_flag)
-                    coltype_kwargs.update(ordered=True)
-                else:
-                    valuemap = sorted(set(orig_values) - {""})
-            else:
-                # No known type specified, use heuristics
-                valuemap, values, coltype = guess_data_type(orig_values,
-                                                            namask)
-
-            if flag.m or coltype is StringVariable:
-                append_to = (Mcols, metas)
-            elif flag.w:
-                append_to = (Wcols, None)
-            elif flag.c:
-                append_to = (Ycols, clses)
-            else:
-                append_to = (Xcols, attrs)
-
-            cols, domain_vars = append_to
-
-            if domain_vars is not None:
-                var_name = names and names[col]
-                if not var_name:
-                    var_name = next(NAMEGEN)
-
-                values, var = sanitize_variable(
-                    valuemap, values, orig_values, coltype, coltype_kwargs,
-                    name=var_name)
-            else:
-                var = None
-            if domain_vars is not None:
-                var.attributes.update(flag.attributes)
-                domain_vars.append(var)
-
-            if isinstance(values, np.ndarray) and not values.flags.owndata:
-                values = values.copy()  # might view `data` (string columns)
-            cols.append(values)
-
-            try:
-                # allow gc to reclaim memory used by string values
-                data[:, col] = None
-            except IndexError:
-                pass
-
-        domain = Domain(attrs, clses, metas)
-
-        if not data.size:
-            return Table.from_domain(domain, 0)
-
-        X = Y = M = W = None
-        if Xcols:
-            X = np.c_[tuple(Xcols)]
-            assert X.dtype == np.float_
-        else:
-            X = np.empty((data.shape[0], 0), dtype=np.float_)
-        if Ycols:
-            Y = np.c_[tuple(Ycols)]
-            assert Y.dtype == np.float_
-        if Mcols:
-            M = np.c_[tuple(Mcols)].astype(object)
-        if Wcols:
-            W = np.c_[tuple(Wcols)].astype(float)
-
-        table = Table.from_numpy(domain, X, Y, M, W)
-        return table
+            for lst in (header.names, header.types, header.flags):
+                equal_len(lst)
+        return array, rowlen
 
 
 class _FileWriter:
