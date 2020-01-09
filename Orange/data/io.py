@@ -137,7 +137,7 @@ def class_from_qualified_name(format_name):
     return getattr(m, elements[-1])
 
 
-class CSVReader(FileFormat):
+class CSVReader(FileFormat, io_base.DataTableMixin):
     """Reader for comma separated files"""
 
     EXTENSIONS = ('.csv',)
@@ -268,7 +268,7 @@ class BasketReader(FileFormat):
         return table
 
 
-class _BaseExcelReader(FileFormat):
+class _BaseExcelReader(FileFormat, io_base.DataTableMixin):
     """Base class for reading excel files"""
     SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False

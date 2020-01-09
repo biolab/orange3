@@ -391,43 +391,7 @@ class _TableBuilder:
         return array
 
 
-class _FileReader:
-    @classmethod
-    def get_reader(cls, filename):
-        """Return reader instance that can be used to read the file
-
-        Parameters
-        ----------
-        filename : str
-
-        Returns
-        -------
-        FileFormat
-        """
-        for ext, reader in cls.readers.items():
-            # Skip ambiguous, invalid compression-only extensions added on OSX
-            if ext in Compression.all:
-                continue
-            if fnmatch(path.basename(filename), '*' + ext):
-                return reader(filename)
-
-        raise IOError('No readers for file "{}"'.format(filename))
-
-    @classmethod
-    def set_table_metadata(cls, filename, table):
-        # pylint: disable=bare-except
-        if isinstance(filename, str) and path.exists(filename + '.metadata'):
-            try:
-                with open(filename + '.metadata', 'rb') as f:
-                    table.attributes = pickle.load(f)
-            # Unpickling throws different exceptions, not just UnpickleError
-            except:
-                with open(filename + '.metadata', encoding='utf-8') as f:
-                    table.attributes = OrderedDict(
-                        (k.strip(), v.strip())
-                        for k, v in (line.split(":", 1)
-                                     for line in f.readlines()))
-
+class DataTableMixin:
     @classmethod
     def data_table(cls, data: Iterable[List[str]],
                    headers: Optional[List] = None) -> Table:
@@ -583,6 +547,44 @@ class _FileReader:
             for lst in (header.names, header.types, header.flags):
                 equal_len(lst)
         return array, rowlen
+
+
+class _FileReader:
+    @classmethod
+    def get_reader(cls, filename):
+        """Return reader instance that can be used to read the file
+
+        Parameters
+        ----------
+        filename : str
+
+        Returns
+        -------
+        FileFormat
+        """
+        for ext, reader in cls.readers.items():
+            # Skip ambiguous, invalid compression-only extensions added on OSX
+            if ext in Compression.all:
+                continue
+            if fnmatch(path.basename(filename), '*' + ext):
+                return reader(filename)
+
+        raise IOError('No readers for file "{}"'.format(filename))
+
+    @classmethod
+    def set_table_metadata(cls, filename, table):
+        # pylint: disable=bare-except
+        if isinstance(filename, str) and path.exists(filename + '.metadata'):
+            try:
+                with open(filename + '.metadata', 'rb') as f:
+                    table.attributes = pickle.load(f)
+            # Unpickling throws different exceptions, not just UnpickleError
+            except:
+                with open(filename + '.metadata', encoding='utf-8') as f:
+                    table.attributes = OrderedDict(
+                        (k.strip(), v.strip())
+                        for k, v in (line.split(":", 1)
+                                     for line in f.readlines()))
 
 
 class _FileWriter:

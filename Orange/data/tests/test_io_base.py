@@ -6,7 +6,7 @@ import numpy as np
 
 from Orange.data import ContinuousVariable, TimeVariable, \
     DiscreteVariable, StringVariable, Table
-from Orange.data.io_base import _FileReader, _TableHeader, _TableBuilder
+from Orange.data.io_base import _TableHeader, _TableBuilder, DataTableMixin
 
 
 class InitTestData(unittest.TestCase):
@@ -143,50 +143,50 @@ class TestTableBuilder(InitTestData):
         self.assertDictEqual(column.coltype_kwargs, {})
 
 
-class TestFileReader(InitTestData):
+class TestDataTableMixin(InitTestData):
     def test_data_table_empty(self):
-        self.assertIsInstance(_FileReader.data_table([]), Table)
+        self.assertIsInstance(DataTableMixin.data_table([]), Table)
 
     def test_data_table_0(self):
-        self.assertIsInstance(_FileReader.data_table(self.header0), Table)
+        self.assertIsInstance(DataTableMixin.data_table(self.header0), Table)
 
     def test_data_table_1(self):
-        self.assertIsInstance(_FileReader.data_table(self.header1), Table)
+        self.assertIsInstance(DataTableMixin.data_table(self.header1), Table)
 
     def test_data_table_1_flags(self):
-        self.assertIsInstance(_FileReader.data_table(
+        self.assertIsInstance(DataTableMixin.data_table(
             self.header1_flags), Table)
 
     def test_data_table_3(self):
-        self.assertIsInstance(_FileReader.data_table(self.header3), Table)
+        self.assertIsInstance(DataTableMixin.data_table(self.header3), Table)
 
     def test_parse_headers_empty(self):
-        headers, data = _FileReader.parse_headers([])
+        headers, data = DataTableMixin.parse_headers([])
         self.assertListEqual(headers, [])
         self.assertListEqual(list(data), [])
 
     def test_parse_headers_0(self):
         hdata = self.header0
-        headers, data = _FileReader.parse_headers(hdata)
+        headers, data = DataTableMixin.parse_headers(hdata)
         self.assertListEqual(headers, [])
         self.assertListEqual(list(data), hdata)
 
     def test_parse_headers_1(self):
         hdata = self.header1
-        headers, data = _FileReader.parse_headers(hdata)
+        headers, data = DataTableMixin.parse_headers(hdata)
         self.assertListEqual(headers, [["a", "b", "c", "d"]])
         self.assertListEqual(list(data), hdata[1:])
 
     def test_parse_headers_1_flags(self):
         hdata = self.header1_flags
-        headers, data = _FileReader.parse_headers(hdata)
+        headers, data = DataTableMixin.parse_headers(hdata)
         self.assertListEqual(
             headers, [["m#a", "cC#b", "m#c", "d", "i#e", "f"]])
         self.assertListEqual(list(data), hdata[1:])
 
     def test_parse_headers_3(self):
         hdata = self.header3
-        headers, data = _FileReader.parse_headers(hdata)
+        headers, data = DataTableMixin.parse_headers(hdata)
         self.assertListEqual(
             headers, [["a", "b", "c", "d", "w", "e", "f", "g"],
                       ["d", "c", "c", "c", "c", "d", "s", "yes no"],
@@ -199,7 +199,7 @@ class TestFileReader(InitTestData):
         header.names = names
         header.types = types
         header.flags = flags
-        adjusted, n = _FileReader.adjust_data_width(self.header0, header)
+        adjusted, n = DataTableMixin.adjust_data_width(self.header0, header)
         _data = np.hstack((np.array(self.header0, dtype=object),
                            np.array([[""]] * 3, dtype=object)))
         np.testing.assert_array_equal(_data, adjusted)
@@ -215,7 +215,7 @@ class TestFileReader(InitTestData):
         header.names = names
         header.types = types
         header.flags = flags
-        adjusted, n = _FileReader.adjust_data_width(self.header0, header)
+        adjusted, n = DataTableMixin.adjust_data_width(self.header0, header)
         np.testing.assert_array_equal(
             adjusted, np.array(self.header0, dtype=object)[:, :3])
         self.assertEqual(adjusted.shape, (len(self.header0), 3))
@@ -231,7 +231,7 @@ class TestFileReader(InitTestData):
         header.types = types
         header.flags = flags
         data = [["", ""], ["", ""]]
-        adjusted, n = _FileReader.adjust_data_width(data, header)
+        adjusted, n = DataTableMixin.adjust_data_width(data, header)
         np.testing.assert_array_equal(adjusted, [])
         self.assertEqual(n, 2)
         self.assertListEqual(names, ["a", "b"])
