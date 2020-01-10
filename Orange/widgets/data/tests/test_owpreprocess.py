@@ -284,25 +284,22 @@ class TestRemoveSparseEditor(WidgetTest):
 
     def test_editor(self):
         widget = owpreprocess.RemoveSparseEditor()
-        self.assertEqual(widget.parameters(), {"fixedThresh" : 50,
-                                               "percThresh": 5,
-                                               "filter0" : True,
-                                               "useFixedThreshold": False})
+        self.assertEqual(
+            widget.parameters(),
+            dict(fixedThresh=50, percThresh=5, filter0=True,
+                 useFixedThreshold=False))
 
         p = widget.createinstance(widget.parameters())
         widget.filterSettingsClicked()
         self.assertTrue(widget.percSpin.isEnabled())
         self.assertFalse(widget.fixedSpin.isEnabled())
         self.assertIsInstance(p, RemoveSparse)
-        self.assertEqual(p.fixed_threshold, False)
-        self.assertEqual(p.filter_0, True)
-        self.assertEqual(p.threshold, 5)
+        self.assertEqual(p.filter0, True)
+        self.assertEqual(p.threshold, 0.05)
 
-        widget.setParameters({"useFixedThreshold" : True,
-                              "fixedThresh" : 30,
-                              "filter0" : False})
+        widget.setParameters(
+            dict(useFixedThreshold=True, fixedThresh=30, filter0=False))
         p = widget.createinstance(widget.parameters())
         self.assertIsInstance(p, RemoveSparse)
-        self.assertEqual(p.fixed_threshold, True)
         self.assertEqual(p.threshold, 30)
-        self.assertFalse(p.filter_0)
+        self.assertFalse(p.filter0)

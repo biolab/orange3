@@ -262,18 +262,19 @@ class RemoveSparseEditor(BaseEditor):
         self.filter0 = True
         self.setLayout(QVBoxLayout())
 
-        choose_filts = QGroupBox(title='Filter out features with too many:')
-        choose_filts.setLayout(QVBoxLayout())
+        self.layout().addWidget(QLabel("Remove features with too many"))
+        options = ["missing values",
+                   "zeros"]
         self.filter_buttons = QButtonGroup(exclusive=True)
         self.filter_buttons.buttonClicked.connect(self.filterByClicked)
-        for option, idx in zip(self.options, range(len(self.options))):
+        for idx, option, in enumerate(options):
             btn = QRadioButton(self, text=option, checked=idx == 0)
             self.filter_buttons.addButton(btn, id=idx)
-            choose_filts.layout().addWidget(btn)
-        self.layout().addWidget(choose_filts)
+            self.layout().addWidget(btn)
 
+        self.layout().addSpacing(20)
 
-        filter_settings = QGroupBox(title='Threshold settings:', flat=True)
+        filter_settings = QGroupBox(title='Threshold:', flat=True)
         filter_settings.setLayout(QFormLayout())
         self.settings_buttons = QButtonGroup(exclusive=True)
         self.settings_buttons.buttonClicked.connect(self.filterSettingsClicked)
@@ -347,8 +348,8 @@ class RemoveSparseEditor(BaseEditor):
         if useFixedThreshold:
             threshold = params.pop('fixedThresh', 50)
         else:
-            threshold = params.pop('percThresh', 5)
-        return RemoveSparse(filter0, useFixedThreshold, threshold=threshold)
+            threshold = params.pop('percThresh', 5) / 100
+        return RemoveSparse(threshold, filter0)
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
