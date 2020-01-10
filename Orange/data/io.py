@@ -107,29 +107,6 @@ class FileFormat(FileFormatBase):
         """
         self.sheet = sheet
 
-    def read(self):
-        """Read data from file and convert it into Orange.data.Table.
-
-        Returns
-        -------
-        Orange.data.Table
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def write_file(cls, filename, data, **_):
-        """Write data to file.
-
-        Parameters
-        ----------
-        filename : str
-            Name of the file
-
-        data : Orange.data.Table
-            Dataset
-        """
-        raise NotImplementedError
-
 
 def class_from_qualified_name(format_name):
     """ File format class from qualified name. """
