@@ -126,7 +126,7 @@ class OWSelectRows(widget.OWWidget):
     purge_classes = Setting(False, schema_only=True)
     auto_commit = Setting(True)
 
-    settings_version = 2
+    settings_version = 3
 
     Operators = {
         ContinuousVariable: [
