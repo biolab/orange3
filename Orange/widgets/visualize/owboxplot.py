@@ -252,13 +252,15 @@ class OWBoxPlot(widget.OWWidget):
         self.stretching_box.sizeHint = self.display_box.sizeHint
         gui.checkBox(
             box, self, 'stretched', "Stretch bars",
-            callback=self.display_changed)
+            callback=self.display_changed,
+            stateWhenDisabled=False)
         gui.checkBox(
             box, self, 'show_labels', "Show box labels",
             callback=self.display_changed)
         self.sort_cb = gui.checkBox(
             box, self, 'sort_freqs', "Sort by subgroup frequencies",
-            callback=self.display_changed)
+            callback=self.display_changed,
+            stateWhenDisabled=False)
 
         gui.vBox(self.mainArea, addSpace=True)
         self.box_scene = QGraphicsScene()

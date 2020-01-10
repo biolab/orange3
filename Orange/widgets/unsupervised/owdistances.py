@@ -111,7 +111,8 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             box, self, "normalized_dist", "Normalized",
             callback=self._invalidate,
             tooltip=("All dimensions are (implicitly) scaled to a common"
-                     "scale to normalize the influence across the domain.")
+                     "scale to normalize the influence across the domain."),
+            stateWhenDisabled=False
         )
         _, metric = METRICS[self.metric_idx]
         self.normalization_check.setEnabled(metric.supports_normalization)
