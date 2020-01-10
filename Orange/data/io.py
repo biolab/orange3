@@ -395,6 +395,8 @@ class FileFormat(metaclass=FileFormatMeta):
     # the sort order in file open/save combo boxes. Lower is better.
     PRIORITY = 10000
     OPTIONAL_TYPE_ANNOTATIONS = False
+    SUPPORT_COMPRESSED = False
+    SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
         """
