@@ -23,7 +23,7 @@ from Orange.data.io_util import Compression, open_compressed, \
 from Orange.data.variable import VariableMeta
 from Orange.util import Registry, flatten, namegen
 
-__all__ = ["FileFormatBase", "Flags"]
+__all__ = ["FileFormatBase", "Flags", "DataTableMixin"]
 
 
 class Flags:

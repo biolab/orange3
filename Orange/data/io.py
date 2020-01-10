@@ -23,8 +23,9 @@ import xlsxwriter
 import openpyxl
 
 from Orange.data import _io, Table, Domain, ContinuousVariable
-import Orange.data.io_base as io_base
-import Orange.data.io_util as io_util
+from Orange.data import Flags, FileFormatBase, DataTableMixin
+from Orange.data import Compression, open_compressed, detect_encoding, \
+    isnastr, guess_data_type, sanitize_variable
 
 from Orange.util import flatten
 
@@ -35,17 +36,17 @@ csv.field_size_limit(100*1024*1024)
 __all__ = ["Flags", "FileFormat"]
 
 
-Compression = io_util.Compression
-open_compressed = io_util.open_compressed
-detect_encoding = io_util.detect_encoding
-isnastr = io_util.isnastr
-guess_data_type = io_util.guess_data_type
-sanitize_variable = io_util.sanitize_variable
-Flags = io_base.Flags
-FileFormatMeta = type(io_base.FileFormatBase)
+Compression = Compression
+open_compressed = open_compressed
+detect_encoding = detect_encoding
+isnastr = isnastr
+guess_data_type = guess_data_type
+sanitize_variable = sanitize_variable
+Flags = Flags
+FileFormatMeta = type(FileFormatBase)
 
 
-class FileFormat(io_base.FileFormatBase):
+class FileFormat(FileFormatBase):
     """
     Subclasses set the following attributes and override the following methods:
 
@@ -137,7 +138,7 @@ def class_from_qualified_name(format_name):
     return getattr(m, elements[-1])
 
 
-class CSVReader(FileFormat, io_base.DataTableMixin):
+class CSVReader(FileFormat, DataTableMixin):
     """Reader for comma separated files"""
 
     EXTENSIONS = ('.csv',)
@@ -268,7 +269,7 @@ class BasketReader(FileFormat):
         return table
 
 
-class _BaseExcelReader(FileFormat, io_base.DataTableMixin):
+class _BaseExcelReader(FileFormat, DataTableMixin):
     """Base class for reading excel files"""
     SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False
