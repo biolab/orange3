@@ -1,3 +1,4 @@
+# pylint: disable=import-outside-toplevel
 import unittest
 import numpy as np
 from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, Table
@@ -6,6 +7,7 @@ try:
     import pandas as pd
 except ImportError:
     pd = None
+
 
 @unittest.skipIf(pd is None, "Missing package 'pandas'")
 class TestPandasCompat(unittest.TestCase):
@@ -73,6 +75,20 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(list(df['sepal length'])[0:4], [5.1, 4.9, 4.7, 4.6])
         self.assertEqual(list(df['iris'])[0:2], ['Iris-setosa', 'Iris-setosa'])
 
+    def test_table_to_frame_metas(self):
+        from Orange.data.pandas_compat import table_to_frame
+
+        table = Table("zoo")
+        domain = table.domain
+
+        df = table_to_frame(table)
+        cols = pd.Index([var.name for var in domain.variables])
+        pd.testing.assert_index_equal(df.columns, cols)
+
+        df = table_to_frame(table, include_metas=True)
+        cols = pd.Index([var.name for var in domain.variables + domain.metas])
+        pd.testing.assert_index_equal(df.columns, cols)
+
     @unittest.skip("Convert all Orange demo dataset. It takes about 5s which is way to slow")
     def test_table_to_frame_on_all_orange_dataset(self):
         from os import listdir
@@ -96,3 +112,7 @@ class TestPandasCompat(unittest.TestCase):
             self.assertEqual(type(df), pd.DataFrame, assert_message)
             self.assertEqual(len(df), len(table), assert_message)
             self.assertEqual(len(df.columns), len(table.domain), assert_message)
+
+
+if __name__ == "__main__":
+    unittest.main()

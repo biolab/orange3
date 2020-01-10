@@ -78,13 +78,16 @@ def table_from_frame(df, *, force_nominal=False):
                             np.column_stack(M) if M else None)
 
 
-def table_to_frame(tab):
+def table_to_frame(tab, include_metas=False):
     """
     Convert Orange.data.Table to pandas.DataFrame
 
     Parameters
     ----------
     tab : Table
+
+    include_metas : bool, (default=False)
+        Include table metas into dataframe.
 
     Returns
     -------
@@ -122,6 +125,9 @@ def table_to_frame(tab):
     if domain.metas:
         metas = _columns_to_series(domain.metas, tab.metas)
     all_series = dict(x + y + metas)
-    original_column_order = [var.name for var in tab.domain.variables + tab.domain.metas]
+    all_vars = tab.domain.variables
+    if include_metas:
+        all_vars += tab.domain.metas
+    original_column_order = [var.name for var in all_vars]
     unsorted_columns_df = pd.DataFrame(all_series)
     return unsorted_columns_df[original_column_order]
