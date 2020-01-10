@@ -252,35 +252,104 @@ class ContinuizeEditor(BaseEditor):
 
 class RemoveSparseEditor(BaseEditor):
 
+    options = ["missing", "zeros"]
+
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
+        self.fixedThresh = 50
+        self.percThresh = 5
+        self.useFixedThreshold = False
+        self.filter0 = True
         self.setLayout(QVBoxLayout())
-        self.sparse_thresh = 5
-        form = QFormLayout()
-        self.cspin = QSpinBox(minimum=1, maximum=100, value=self.sparse_thresh)
-        self.cspin.valueChanged[int].connect(self.setThresh)
-        self.cspin.editingFinished.connect(self.edited)
 
-        form.addRow("Min % of nonzero values:", self.cspin)
-        self.layout().addLayout(form)
+        self.layout().addWidget(QLabel("Remove features with too many"))
+        options = ["missing values",
+                   "zeros"]
+        self.filter_buttons = QButtonGroup(exclusive=True)
+        self.filter_buttons.buttonClicked.connect(self.filterByClicked)
+        for idx, option, in enumerate(options):
+            btn = QRadioButton(self, text=option, checked=idx == 0)
+            self.filter_buttons.addButton(btn, id=idx)
+            self.layout().addWidget(btn)
 
-    def setThresh(self, thresh):
-        if self.sparse_thresh != thresh:
-            self.sparse_thresh = thresh
-            self.cspin.setValue(thresh)
-            self.changed.emit()
+        self.layout().addSpacing(20)
+
+        filter_settings = QGroupBox(title='Threshold:', flat=True)
+        filter_settings.setLayout(QFormLayout())
+        self.settings_buttons = QButtonGroup(exclusive=True)
+        self.settings_buttons.buttonClicked.connect(self.filterSettingsClicked)
+
+        btn_perc = QRadioButton(self, text='Percentage', checked=not self.useFixedThreshold)
+        self.settings_buttons.addButton(btn_perc, id=0)
+        self.percSpin = QSpinBox(minimum=0, maximum=100, value=self.percThresh,
+                                 enabled=not self.useFixedThreshold)
+        self.percSpin.valueChanged[int].connect(self.setPercThresh)
+        self.percSpin.editingFinished.connect(self.edited)
+
+        btn_fix = QRadioButton(self, text='Fixed', checked=self.useFixedThreshold)
+        self.settings_buttons.addButton(btn_fix, id=1)
+        self.fixedSpin = QSpinBox(minimum=0, maximum=1000000, value=self.fixedThresh,
+                                  enabled=self.useFixedThreshold)
+        self.fixedSpin.valueChanged[int].connect(self.setFixedThresh)
+        self.fixedSpin.editingFinished.connect(self.edited)
+        filter_settings.layout().addRow(btn_fix, self.fixedSpin)
+        filter_settings.layout().addRow(btn_perc, self.percSpin)
+
+        self.layout().addWidget(filter_settings)
+
+    def filterSettingsClicked(self):
+        self.setUseFixedThreshold(self.settings_buttons.checkedId())
+        self.percSpin.setEnabled(not self.useFixedThreshold)
+        self.fixedSpin.setEnabled(self.useFixedThreshold)
+        self.edited.emit()
+
+    def filterByClicked(self):
+        self.setFilter0(self.filter_buttons.checkedId())
+
+    def setFilter0(self, id_):
+        if self.filter0 != id_:
+            self.filter0 = id_
+            self.edited.emit()
+
+    def setFixedThresh(self, thresh):
+        if self.fixedThresh != thresh:
+            self.fixedThresh = thresh
+            self.fixedSpin.setValue(thresh)
+            self.edited.emit()
+
+    def setPercThresh(self, thresh):
+        if self.percThresh != thresh:
+            self.percThresh = thresh
+            self.percSpin.setValue(thresh)
+            self.edited.emit()
+
+    def setUseFixedThreshold(self, val):
+        if self.useFixedThreshold != val:
+            self.useFixedThreshold = val
+            self.edited.emit()
 
     def parameters(self):
-        return {'sparse_thresh': self.sparse_thresh}
+        return {'fixedThresh': self.fixedThresh,
+                'percThresh' : self.percThresh,
+                'useFixedThreshold' : self.useFixedThreshold,
+                'filter0' : self.filter0}
 
     def setParameters(self, params):
-        self.setThresh(params.get('sparse_thresh', 5))
+        self.setPercThresh(params.get('percThresh', 5))
+        self.setFixedThresh(params.get('fixedThresh', 50))
+        self.setUseFixedThreshold(params.get('useFixedThreshold', False))
+        self.setFilter0(params.get('filter0', True))
 
     @staticmethod
     def createinstance(params):
         params = dict(params)
-        threshold = params.pop('sparse_thresh', 5)
-        return RemoveSparse(threshold=threshold / 100)
+        filter0 = params.pop('filter0', True)
+        useFixedThreshold = params.pop('useFixedThreshold', True)
+        if useFixedThreshold:
+            threshold = params.pop('fixedThresh', 50)
+        else:
+            threshold = params.pop('percThresh', 5) / 100
+        return RemoveSparse(threshold, filter0)
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,

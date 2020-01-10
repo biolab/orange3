@@ -42,7 +42,9 @@ class TestOWPreprocess(WidgetTest):
         data = Table("iris")
         idx = int(data.X.shape[0]/10)
         data.X[:idx+1, 0] = np.zeros((idx+1,))
-        saved = {"preprocessors": [("orange.preprocess.remove_sparse", {'sparse_thresh':90})]}
+        saved = {"preprocessors": [("orange.preprocess.remove_sparse",
+                                    {'filter0': True, 'useFixedThreshold': False,
+                                     'percThresh':10, 'fixedThresh': 50})]}
         model = self.widget.load(saved)
 
         self.widget.set_model(model)
@@ -282,13 +284,22 @@ class TestRemoveSparseEditor(WidgetTest):
 
     def test_editor(self):
         widget = owpreprocess.RemoveSparseEditor()
-        self.assertEqual(widget.parameters(), {"sparse_thresh": 5})
+        self.assertEqual(
+            widget.parameters(),
+            dict(fixedThresh=50, percThresh=5, filter0=True,
+                 useFixedThreshold=False))
 
         p = widget.createinstance(widget.parameters())
+        widget.filterSettingsClicked()
+        self.assertTrue(widget.percSpin.isEnabled())
+        self.assertFalse(widget.fixedSpin.isEnabled())
         self.assertIsInstance(p, RemoveSparse)
+        self.assertEqual(p.filter0, True)
         self.assertEqual(p.threshold, 0.05)
 
-        widget.setParameters({"sparse_thresh": 90})
+        widget.setParameters(
+            dict(useFixedThreshold=True, fixedThresh=30, filter0=False))
         p = widget.createinstance(widget.parameters())
         self.assertIsInstance(p, RemoveSparse)
-        self.assertEqual(p.threshold, 0.9)
+        self.assertEqual(p.threshold, 30)
+        self.assertFalse(p.filter0)
