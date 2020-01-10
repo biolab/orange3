@@ -552,6 +552,12 @@ class ConcurrentMixin:
             self.on_exception(ex)
         else:
             self.on_done(future.result())
+        # This assert prevents user to start new task (call start) from either
+        # on_done or on_exception
+        assert self.__task is None, (
+            "Starting new task from "
+            f"{'on_done' if ex is None else 'on_exception'} is forbidden"
+        )
 
 
 class ConcurrentWidgetMixin(ConcurrentMixin):
