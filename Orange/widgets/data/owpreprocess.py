@@ -1144,6 +1144,9 @@ class OWPreprocess(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Output")
         gui.auto_send(box, self, "autocommit", box=False)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         self._initialize()
 
     def _initialize(self):
@@ -1261,6 +1264,10 @@ class OWPreprocess(widget.OWWidget):
     def set_data(self, data=None):
         """Set the input dataset."""
         self.data = data
+        if data is not None:
+            self.info.set_input_summary(len(data))
+        else:
+            self.info.set_input_summary(self.info.NoInput)
 
     def handleNewSignals(self):
         self.apply()
@@ -1304,8 +1311,10 @@ class OWPreprocess(widget.OWWidget):
             except (ValueError, ZeroDivisionError) as e:
                 self.error(str(e))
                 return
+            self.info.set_output_summary(len(data))
         else:
             data = None
+            self.info.set_output_summary(self.info.NoOutput)
 
         self.Outputs.preprocessor.send(preprocessor)
         self.Outputs.preprocessed_data.send(data)
