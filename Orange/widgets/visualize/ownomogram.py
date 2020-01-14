@@ -1,6 +1,7 @@
 import time
 from itertools import chain
-
+from typing import List
+from functools import singledispatch
 from enum import IntEnum
 from collections import OrderedDict
 
@@ -15,7 +16,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.statistics.util import nanmin, nanmax, nanmean, unique
 from Orange.classification import Model
 from Orange.classification.naive_bayes import NaiveBayesModel
@@ -456,9 +457,10 @@ class DiscreteFeatureItem(RulerItem):
     bold_label = False
     DOT_ITEM_CLS = DiscreteMovableDotItem
 
-    def __init__(self, name, labels, values, scale, name_offset, offset):
+    def __init__(self, name, variable, values, scale, name_offset, offset):
+        labels = _get_labels(variable)
         indices = np.argsort(values)
-        labels, values = np.array(labels)[indices], values[indices]
+        labels, values = labels[indices], values[indices]
         super().__init__(name, values, scale, name_offset, offset, labels)
         self.dot.tooltip_labels = labels
         self.dot.tooltip_values = values
@@ -471,13 +473,29 @@ class ContinuousFeatureItem(RulerItem):
     bold_label = False
     DOT_ITEM_CLS = ContinuousMovableDotItem
 
-    def __init__(self, name, data_extremes, values, scale, name_offset, offset):
-        diff_ = np.nan_to_num(values[-1] - values[0])
-        k = (data_extremes[1] - data_extremes[0]) / diff_ if diff_ else 0
-        labels = [str(np.round(v * k + data_extremes[0], 1)) for v in values]
+    def __init__(self, name, variable, data_extremes, values, scale,
+                 name_offset, offset):
+        labels = _get_labels(variable, data_extremes, values)
         super().__init__(name, values, scale, name_offset, offset, labels)
         self.dot.tooltip_labels = labels
         self.dot.tooltip_values = values
+
+
+@singledispatch
+def _get_labels(*_):
+    return []
+
+
+@_get_labels.register(DiscreteVariable)
+def _(var: DiscreteVariable, *_):
+    return np.array(var.values)
+
+
+@_get_labels.register(ContinuousVariable)
+def _(_: ContinuousVariable, data_extremes: List, values: np.ndarray, *__):
+    diff_ = np.nan_to_num(values[-1] - values[0])
+    k = (data_extremes[1] - data_extremes[0]) / diff_ if diff_ else 0
+    return [str(np.round(v * k + data_extremes[0], 1)) for v in values]
 
 
 class ContinuousFeature2DItem(QGraphicsWidget):
@@ -487,7 +505,8 @@ class ContinuousFeature2DItem(QGraphicsWidget):
     y_diff = 80
     n_tck = 4
 
-    def __init__(self, name, data_extremes, values, scale, name_offset, offset):
+    def __init__(self, name, _, data_extremes, values, scale, name_offset,
+                 offset):
         super().__init__()
         data_start, data_stop = data_extremes[0], data_extremes[1]
         labels = [str(np.round(data_start + (data_stop - data_start) * i /
@@ -915,7 +934,8 @@ class OWNomogram(OWWidget):
         self.bottom_view.setSceneRect(rect.x(), rect.height() - 110, rect.width() - 10, 30)
 
     @staticmethod
-    def _adjust_scale(attributes, points, max_width, diff):
+    def _adjust_scale(attributes, points, max_width, diff, attr_inds,
+                      log_reg_cont_data_extremes, cls_index):
         if not diff:
             return max_width
 
@@ -923,10 +943,15 @@ class OWNomogram(OWWidget):
             text_ = QGraphicsTextItem(name).boundingRect()
             return scale * point + text_.width() / 2
 
-        names = list(chain.from_iterable([a.values for a in attributes]))
+        lr = log_reg_cont_data_extremes
+        scale = max_width / diff
+        names = list(chain.from_iterable(
+            [_get_labels(a, lr and lr[i] and lr[i][0] and lr[i][cls_index],
+                         OWNomogram.get_ruler_values(p.min(), p.max(),
+                                                     scale * p.ptp(), False))
+             for i, a, p in zip(attr_inds, attributes, points)]))
         points = list(chain.from_iterable(points))
 
-        scale = max_width / diff
         old_scale = scale + 1
         while old_scale > scale:
             old_scale = scale
@@ -944,7 +969,10 @@ class OWNomogram(OWWidget):
         values = self.get_ruler_values(min_p, max_p, max_width)
         min_p, max_p = min(values), max(values)
         diff_ = np.nan_to_num(max_p - min_p)
-        scale_x = self._adjust_scale(attributes, points, max_width, diff_)
+        scale_x = self._adjust_scale(
+            attributes, points, max_width, diff_, attr_inds,
+            self.log_reg_cont_data_extremes, cls_index
+        )
 
         nomogram_header = NomogramItem()
         point_item = RulerItem(point_text, values, scale_x, name_offset,
@@ -958,16 +986,17 @@ class OWNomogram(OWWidget):
 
         feature_items = [
             DiscreteFeatureItem(
-                name_item, attr.values, point,
+                name_item, attr, point,
                 scale_x, name_offset, - scale_x * min_p)
             if attr.is_discrete else
             cont_feature_item_class(
-                name_item, self.log_reg_cont_data_extremes[i][cls_index],
+                name_item, attr, self.log_reg_cont_data_extremes[i][cls_index],
                 self.get_ruler_values(
                     point.min(), point.max(),
                     scale_x * point.ptp(), False),
                 scale_x, name_offset, - scale_x * min_p)
-            for i, attr, name_item, point in zip(attr_inds, attributes, name_items, points)]
+            for i, attr, name_item, point in
+            zip(attr_inds, attributes, name_items, points)]
 
         self.nomogram_main.add_items(feature_items)
         self.feature_items = OrderedDict(sorted(zip(attr_inds, feature_items)))
