@@ -1,4 +1,6 @@
 import time
+from itertools import chain
+
 from enum import IntEnum
 from collections import OrderedDict
 
@@ -912,6 +914,28 @@ class OWNomogram(OWWidget):
         self.top_view.setSceneRect(rect.x(), rect.y() + 3, rect.width() - 10, 20)
         self.bottom_view.setSceneRect(rect.x(), rect.height() - 110, rect.width() - 10, 30)
 
+    @staticmethod
+    def _adjust_scale(attributes, points, max_width, diff):
+        if not diff:
+            return max_width
+
+        def offset(name, point):
+            text_ = QGraphicsTextItem(name).boundingRect()
+            return scale * point + text_.width() / 2
+
+        names = list(chain.from_iterable([a.values for a in attributes]))
+        points = list(chain.from_iterable(points))
+
+        scale = max_width / diff
+        old_scale = scale + 1
+        while old_scale > scale:
+            old_scale = scale
+            offsets = [offset(n, p) for n, p in zip(names, points)]
+            most_right_name = names[np.argmax(offsets)]
+            text = QGraphicsTextItem(most_right_name).boundingRect()
+            scale = (max_width - text.width() / 2) / diff
+        return scale
+
     def create_main_nomogram(self, attributes, attr_inds, name_items, points,
                              max_width, point_text, name_offset):
         cls_index = self.target_class_index
@@ -920,7 +944,7 @@ class OWNomogram(OWWidget):
         values = self.get_ruler_values(min_p, max_p, max_width)
         min_p, max_p = min(values), max(values)
         diff_ = np.nan_to_num(max_p - min_p)
-        scale_x = max_width / diff_ if diff_ else max_width
+        scale_x = self._adjust_scale(attributes, points, max_width, diff_)
 
         nomogram_header = NomogramItem()
         point_item = RulerItem(point_text, values, scale_x, name_offset,

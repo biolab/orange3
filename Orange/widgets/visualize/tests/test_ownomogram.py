@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 import unittest
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -249,6 +250,33 @@ class TestOWNomogram(WidgetTest):
         self.widget.n_spin.valueChanged.emit(5)
         self.widget.reset_settings()
         self.assertEqual(10, self.widget.n_attributes)
+
+    @patch("Orange.widgets.visualize.ownomogram.QGraphicsTextItem")
+    def test_adjust_scale(self, mocked_item: Mock):
+        def mocked_width():
+            nonlocal ind
+            ind += 1
+            most_right = {4: 30, 9: 59, 14: 59}
+            return [2, 30, 59, 2, most_right.get(ind)][ind % 5]
+
+        ind = -1
+        mocked_item().boundingRect().width.side_effect = mocked_width
+        attrs = [DiscreteVariable("var1", values=["foo1", "foo2"]),
+                 DiscreteVariable("var2", values=["foo3", "foo4"])]
+        points = [np.array([0, 1.8]), np.array([1.5, 2.0])]
+        diff = np.max(points) - np.min(points)
+        # foo3 eventually overcomes foo2, while the scale is getting smaller
+        #
+        #  0                        1              1.5         1.8     2
+        # foo1                                          _______foo2_______
+        #                               __________foo3__________      foo4
+        self.widget._adjust_scale(attrs, points, 100, diff, [0, 1], [], 0)
+        # most left text at 1. iteration
+        self.assertEqual(mocked_item.call_args_list[5][0][0], "foo2")
+        # most left text at 2. iteration
+        self.assertEqual(mocked_item.call_args_list[10][0][0], "foo3")
+        # most left text at 3. iteration is the same -> stop
+        self.assertEqual(mocked_item.call_args_list[15][0][0], "foo3")
 
 
 if __name__ == "__main__":
