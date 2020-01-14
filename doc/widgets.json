@@ -87,7 +87,8 @@
     "icon": "../Orange/widgets/data/icons/SelectColumns.svg",
     "background": "#FFD39F",
     "keywords": [
-     "filter"
+     "filter",
+     "attributes"
     ]
    },
    {
