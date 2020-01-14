@@ -70,6 +70,9 @@ class OWTranspose(OWWidget):
         self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
         self.apply_button.button.setAutoDefault(False)
 
+        self.info.set_output_summary(self.info.NoInput)
+        self.info.set_input_summary(self.info.NoInput)
+
         self.set_controls()
 
     def _apply_editing(self):
@@ -88,6 +91,10 @@ class OWTranspose(OWWidget):
         if self.feature_model:
             self.closeContext()
         self.data = data
+        if data:
+            self.info.set_input_summary(len(data))
+        else:
+            self.info.set_input_summary(self.info.NoInput)
         self.set_controls()
         if self.feature_model:
             self.openContext(data)
@@ -116,8 +123,11 @@ class OWTranspose(OWWidget):
                     names = self.data.get_column_view(variable)[0]
                     if len(names) != len(set(names)):
                         self.Warning.duplicate_names(variable)
+                self.info.set_output_summary(len(transposed))
             except ValueError as e:
                 self.Error.value_error(e)
+        else:
+            self.info.set_output_summary(self.info.NoInput)
         self.Outputs.data.send(transposed)
 
     def send_report(self):

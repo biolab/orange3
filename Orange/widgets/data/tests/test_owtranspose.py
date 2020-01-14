@@ -1,8 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,unsubscriptable-object
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -10,6 +10,7 @@ from Orange.data import Table
 from Orange.widgets.data.owtranspose import OWTranspose
 from Orange.widgets.tests.base import WidgetTest
 from Orange.tests import test_filename
+from orangewidget.widget import StateInfo
 
 
 class TestOWTranspose(WidgetTest):
@@ -171,6 +172,24 @@ class TestOWTranspose(WidgetTest):
             self.send_signal(self.widget.Inputs.data, self.zoo)
             apply.assert_called()
 
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(int(StateInfo.format_number(len(data))))
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(int(StateInfo.format_number(len(output))))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 if __name__ == "__main__":
     unittest.main()
