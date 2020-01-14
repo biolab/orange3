@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 
@@ -9,6 +10,7 @@ from Orange.preprocess import transformation
 from Orange.widgets.data import owcontinuize
 from Orange.widgets.data.owcontinuize import OWContinuize
 from Orange.widgets.tests.base import WidgetTest
+from orangewidget.widget import StateInfo
 
 
 class TestOWContinuize(WidgetTest):
@@ -38,6 +40,25 @@ class TestOWContinuize(WidgetTest):
         widget.unconditional_commit()
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(imp_data)
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        data = Table("iris")
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(int(StateInfo.format_number(len(data))))
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(int(StateInfo.format_number(len(output))))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
     def test_one_column_equal_values(self):
         """

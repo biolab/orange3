@@ -97,6 +97,8 @@ class OWContinuize(widget.OWWidget):
         gui.auto_apply(self.buttonsArea, self, "autosend", box=False)
 
         self.data = None
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoInput)
 
     def settings_changed(self):
         self.commit()
@@ -106,8 +108,11 @@ class OWContinuize(widget.OWWidget):
     def setData(self, data):
         self.data = data
         if data is None:
+            self.info.set_input_summary(self.info.NoInput)
+            self.info.set_output_summary(self.info.NoInput)
             self.Outputs.data.send(None)
         else:
+            self.info.set_input_summary(len(data))
             self.unconditional_commit()
 
     def constructContinuizer(self):
@@ -133,8 +138,10 @@ class OWContinuize(widget.OWWidget):
             domain = continuizer(self.data)
             data = self.data.transform(domain)
             self.Outputs.data.send(data)
+            self.info.set_output_summary(len(data))
         else:
             self.Outputs.data.send(self.data)  # None or empty data
+
 
     def send_report(self):
         self.report_items(
@@ -391,4 +398,4 @@ class DomainContinuizer(Reprable):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWContinuize).run(Table("lenses"))
+    WidgetPreview(OWContinuize).run(Table("iris"))
