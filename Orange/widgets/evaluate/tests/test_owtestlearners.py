@@ -418,6 +418,8 @@ class TestOWTestLearners(WidgetTest):
     @patch("baycomp.two_on_single", Mock(wraps=baycomp.two_on_single))
     def test_comparison_requires_cv(self):
         w = self.widget
+        self.send_signal(w.Inputs.train_data, Table("iris")[::15])
+
         w.comparison_criterion = 1
         rbs = w.controls.resampling.buttons
 
@@ -448,7 +450,6 @@ class TestOWTestLearners(WidgetTest):
         baycomp.two_on_single.assert_called()
         baycomp.two_on_single.reset_mock()
 
-    @patch("baycomp.two_on_single", Mock(wraps=baycomp.two_on_single))
     def test_comparison_requires_multiple_models(self):
         w = self.widget
         w.comparison_criterion = 1
@@ -482,7 +483,6 @@ class TestOWTestLearners(WidgetTest):
         self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
         self.assertTrue(w.comparison_table.isEnabled())
 
-    @patch("baycomp.two_on_single", Mock(wraps=baycomp.two_on_single))
     def test_comparison_bad_slots(self):
         w = self.widget
         self._set_three_majorities()
