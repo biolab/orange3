@@ -12,13 +12,7 @@ svm_pps = SklLearner.preprocessors + [AdaptiveNormalize()]
 
 
 class SVMClassifier(SklModel):
-
-    def predict(self, X):
-        value = self.skl_model.predict(X)
-        if self.skl_model.probability:
-            prob = self.skl_model.predict_proba(X)
-            return value, prob
-        return value
+    pass
 
 
 class SVMLearner(SklLearner):
