@@ -7,9 +7,7 @@ import numpy as np
 from AnyQt.QtCore import QPoint
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.classification import (
-    NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
-)
+from Orange.classification import NaiveBayesLearner, LogisticRegressionLearner
 from Orange.tests import test_filename
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.ownomogram import (
@@ -51,14 +49,6 @@ class TestOWNomogram(WidgetTest):
             len([item for item in self.widget.scene.items() if
                  isinstance(item, ContinuousFeatureItem)]),
             len([a for a in self.data.domain.attributes if a.is_continuous]))
-
-    def test_input_invalid_cls(self):
-        """Check any classifier on input"""
-        majority_cls = MajorityLearner()(self.data)
-        self.send_signal(self.widget.Inputs.classifier, majority_cls)
-        self.assertTrue(self.widget.Error.invalid_classifier.is_shown())
-        self.send_signal(self.widget.Inputs.classifier, None)
-        self.assertFalse(self.widget.Error.invalid_classifier.is_shown())
 
     def test_input_instance(self):
         """ Check data instance on input"""

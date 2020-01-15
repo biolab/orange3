@@ -6,6 +6,7 @@ import sklearn.linear_model as skl_linear_model
 
 import Orange
 from Orange.classification import SklLearner, SklModel
+from Orange.classification.base_classification import LinearModel
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import LearnerScorer
 from Orange.data import Variable, DiscreteVariable
@@ -23,7 +24,7 @@ class _FeatureScorerMixin(LearnerScorer):
         return np.abs(model.coefficients), model.domain.attributes
 
 
-class LogisticRegressionClassifier(SklModel):
+class LogisticRegressionClassifier(SklModel, LinearModel):
     @property
     def intercept(self):
         return self.skl_model.intercept_

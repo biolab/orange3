@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.classification import Learner, Model
+from Orange.classification.base_classification import LinearModel
 from Orange.data import Instance, Storage, Table
 from Orange.statistics import contingency
 from Orange.preprocess import Discretize, RemoveNaNColumns
@@ -53,7 +54,7 @@ class NaiveBayesLearner(Learner):
         return NaiveBayesModel(log_cont_prob, class_prob, table.domain)
 
 
-class NaiveBayesModel(Model):
+class NaiveBayesModel(Model, LinearModel):
     def __init__(self, log_cont_prob, class_prob, domain):
         super().__init__(domain)
         self.log_cont_prob = log_cont_prob

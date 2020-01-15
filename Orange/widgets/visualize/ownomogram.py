@@ -13,6 +13,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
 
+from Orange.classification.base_classification import LinearModel
 from Orange.data import Table, Domain
 from Orange.statistics.util import nanmin, nanmax, nanmean, unique
 from Orange.classification import Model
@@ -570,7 +571,7 @@ class OWNomogram(OWWidget):
     keywords = []
 
     class Inputs:
-        classifier = Input("Classifier", Model)
+        classifier = Input("Classifier", LinearModel)
         data = Input("Data", Table)
 
     class Outputs:
@@ -580,7 +581,6 @@ class OWNomogram(OWWidget):
     POINT_SCALE = 0
     ALIGN_LEFT = 0
     ALIGN_ZERO = 1
-    ACCEPTABLE = (NaiveBayesModel, LogisticRegressionClassifier)
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
     normalize_probabilities = Setting(False)
@@ -591,10 +591,6 @@ class OWNomogram(OWWidget):
     cont_feature_dim_index = Setting(0)
 
     graph_name = "scene"
-
-    class Error(OWWidget.Error):
-        invalid_classifier = Msg("Nomogram accepts only Naive Bayes and "
-                                 "Logistic Regression classifiers.")
 
     def __init__(self):
         super().__init__()
@@ -772,9 +768,6 @@ class OWNomogram(OWWidget):
         self.closeContext()
         self.classifier = classifier
         self.Error.clear()
-        if self.classifier and not isinstance(self.classifier, self.ACCEPTABLE):
-            self.Error.invalid_classifier()
-            self.classifier = None
         self.domain = self.classifier.domain if self.classifier else None
         self.data = None
         self.calculate_log_odds_ratios()

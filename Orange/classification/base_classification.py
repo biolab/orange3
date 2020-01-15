@@ -17,6 +17,15 @@ class ModelClassification(Model):
     pass
 
 
+class LinearModel:
+    """
+    A mix-in that serves as a flag for linear models, like naive Bayesian
+    classifier and logistic regression (but not SVM which can also be
+    non-linear -- in terms of original variables). The nomogram widget
+    accepts only models with this mix-in.
+    """
+
+
 class SklModelClassification(SklModel, ModelClassification):
     def predict(self, X):
         prediction = super().predict(X)
