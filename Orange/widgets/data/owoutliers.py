@@ -159,7 +159,7 @@ class OWOutliers(OWWidget):
     isf_editor = SettingProvider(IsolationForestEditor)
 
     settings_version = 2
-    outlier_method = Setting(OneClassSVM)
+    outlier_method = Setting(LOF)
     auto_commit = Setting(True)
 
     MAX_FEATURES = 1500
@@ -232,7 +232,7 @@ class OWOutliers(OWWidget):
     def enable_controls(self):
         self.method_combo.model().item(self.Covariance).setEnabled(True)
         if self.data and len(self.data.domain.attributes) > self.MAX_FEATURES:
-            self.outlier_method = self.OneClassSVM
+            self.outlier_method = self.LOF
             self.set_current_editor()
             self.method_combo.model().item(self.Covariance).setEnabled(False)
             self.Warning.disabled_cov()
