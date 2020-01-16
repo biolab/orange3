@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 
 import unittest
 
@@ -45,6 +45,19 @@ class TestOWOutliers(WidgetTest):
         data = Table.from_numpy(None, a)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertIsNot(self.get_output(self.widget.Outputs.inliers), None)
+
+    def test_in_out_summary(self):
+        info = self.widget.info
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertEqual(info._StateInfo__input_summary.brief, "150")
+        self.assertEqual(info._StateInfo__output_summary.brief, "76")
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
 
 
 if __name__ == "__main__":

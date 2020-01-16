@@ -37,9 +37,6 @@ class OWOutliers(widget.OWWidget):
     empirical_covariance = Setting(False)
     support_fraction = Setting(1)
 
-    data_info_default = 'No data on input.'
-    in_out_info_default = ' '
-
     class Error(widget.OWWidget.Error):
         singular_cov = Msg("Singular covariance matrix.")
         memory_error = Msg("Not enough memory")
@@ -48,11 +45,6 @@ class OWOutliers(widget.OWWidget):
         super().__init__()
         self.data = None
         self.n_inliers = self.n_outliers = None
-
-        box = gui.vBox(self.controlArea, "Information")
-        self.data_info_label = gui.widgetLabel(box, self.data_info_default)
-        self.in_out_info_label = gui.widgetLabel(box,
-                                                 self.in_out_info_default)
 
         box = gui.vBox(self.controlArea, "Outlier Detection Method")
         detection = gui.radioButtons(box, self, "outlier_method")
@@ -92,6 +84,9 @@ class OWOutliers(widget.OWWidget):
                    callback=self.commit)
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
     def nu_changed(self):
         self.outlier_method = self.OneClassSVM
 
@@ -126,14 +121,9 @@ class OWOutliers(widget.OWWidget):
 
     @Inputs.data
     @check_sql_input
-    def set_data(self, dataset):
-        self.data = dataset
-        if self.data is None:
-            self.data_info_label.setText(self.data_info_default)
-            self.in_out_info_label.setText(self.in_out_info_default)
-        else:
-            self.data_info_label.setText('%d instances' % len(self.data))
-            self.in_out_info_label.setText(' ')
+    def set_data(self, data):
+        self.data = data
+        self.info.set_input_summary(len(data) if data else self.info.NoOutput)
 
         self.enable_covariance()
         if self.data and len(self.data.domain.attributes) > 1500:
@@ -146,7 +136,6 @@ class OWOutliers(widget.OWWidget):
             y_pred, amended_data = self.detect_outliers()
         except ValueError:
             self.Error.singular_cov()
-            self.in_out_info_label.setText(self.in_out_info_default)
             return None, None
         except MemoryError:
             self.Error.memory_error()
@@ -156,8 +145,6 @@ class OWOutliers(widget.OWWidget):
             outliers_ind = np.where(y_pred == -1)[0]
             inliers = amended_data[inliers_ind]
             outliers = amended_data[outliers_ind]
-            self.in_out_info_label.setText(
-                f"{len(inliers)} inliers, {len(outliers)} outliers")
             self.n_inliers = len(inliers)
             self.n_outliers = len(outliers)
 
@@ -170,6 +157,8 @@ class OWOutliers(widget.OWWidget):
         if self.data:
             inliers, outliers = self._get_outliers()
 
+        summary = len(inliers) if inliers else self.info.NoOutput
+        self.info.set_output_summary(summary)
         self.Outputs.inliers.send(inliers)
         self.Outputs.outliers.send(outliers)
 
