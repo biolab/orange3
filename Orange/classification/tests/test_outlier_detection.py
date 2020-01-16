@@ -44,7 +44,7 @@ class TestEllipticEnvelopeLearner(unittest.TestCase):
 
     def test_EllipticEnvelope_ignores_y(self):
         domain = Domain((ContinuousVariable("x1"), ContinuousVariable("x2")),
-                        class_vars=(ContinuousVariable("y1"), ContinuousVariable("y2")))
+                        (ContinuousVariable("y1"), ContinuousVariable("y2")))
         X = np.random.random((40, 2))
         Y = np.random.random((40, 2))
         table = Table(domain, X, Y)
@@ -60,3 +60,7 @@ class TestEllipticEnvelopeLearner(unittest.TestCase):
         np.testing.assert_array_equal(pred1, pred2)
         np.testing.assert_array_equal(pred2, pred3)
         np.testing.assert_array_equal(pred3, pred4)
+
+
+if __name__ == "__main__":
+    unittest.main()
