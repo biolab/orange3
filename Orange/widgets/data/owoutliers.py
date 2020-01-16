@@ -1,11 +1,15 @@
+from typing import Dict, Tuple
+
 import numpy as np
 
-from AnyQt.QtCore import Signal
+from AnyQt.QtCore import Signal, Qt
 from AnyQt.QtWidgets import QWidget, QVBoxLayout
 
 from orangewidget.settings import SettingProvider
 
-from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
+from Orange.base import Model
+from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner,\
+    LocalOutlierFactorLearner, IsolationForestLearner
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -30,7 +34,7 @@ class ParametersEditor(QWidget, gui.OWComponent):
     def parameter_changed(self):
         self.param_changed.emit()
 
-    def get_parameters(self):
+    def get_parameters(self) -> Dict:
         raise NotImplementedError
 
 
@@ -43,7 +47,7 @@ class SVMEditor(ParametersEditor):
 
         tooltip = "An upper bound on the fraction of training errors and a " \
                   "lower bound of the fraction of support vectors"
-        gui.widgetLabel(self.param_box, "Contamination:", tooltip=tooltip)
+        gui.widgetLabel(self.param_box, "Nu:", tooltip=tooltip)
         gui.hSlider(self.param_box, self, "nu", minValue=1, maxValue=100,
                     ticks=10, labelFormat="%d %%", tooltip=tooltip,
                     callback=self.parameter_changed)
@@ -81,6 +85,53 @@ class CovarianceEditor(ParametersEditor):
                 "support_fraction": fraction}
 
 
+class LocalOutlierFactorEditor(ParametersEditor):
+    METRICS = ("euclidean", "manhattan", "cosine", "jaccard",
+               "hamming", "minkowski")
+
+    n_neighbors = Setting(20)
+    cont = Setting(10)
+    metric_index = Setting(0)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        gui.widgetLabel(self.param_box, "Contamination:")
+        gui.hSlider(self.param_box, self, "cont", minValue=1,
+                    maxValue=50, ticks=5, labelFormat="%d %%",
+                    callback=self.parameter_changed)
+        gui.spin(self.param_box, self, "n_neighbors", label="Neighbors:",
+                 minv=1, maxv=100000, callback=self.parameter_changed)
+        gui.comboBox(self.param_box, self, "metric_index", label="Metric:",
+                     orientation=Qt.Horizontal,
+                     items=[m.capitalize() for m in self.METRICS],
+                     callback=self.parameter_changed)
+
+    def get_parameters(self):
+        return {"n_neighbors": self.n_neighbors,
+                "contamination": self.cont / 100,
+                "metric": self.METRICS[self.metric_index]}
+
+
+class IsolationForestEditor(ParametersEditor):
+    cont = Setting(10)
+    replicable = Setting(False)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        gui.widgetLabel(self.param_box, "Contamination:")
+        gui.hSlider(self.param_box, self, "cont", minValue=0,
+                    maxValue=100, ticks=10, labelFormat="%d %%",
+                    callback=self.parameter_changed)
+        gui.checkBox(self.param_box, self, "replicable",
+                     "Replicable training", callback=self.parameter_changed)
+
+    def get_parameters(self):
+        return {"contamination": self.cont / 100,
+                "random_state": 42 if self.replicable else None}
+
+
 class OWOutliers(OWWidget):
     name = "Outliers"
     description = "Detect outliers."
@@ -99,10 +150,13 @@ class OWOutliers(OWWidget):
     want_main_area = False
     resizing_enabled = False
 
-    OneClassSVM, Covariance = range(2)
-    METHODS = (OneClassSVMLearner, EllipticEnvelopeLearner)
+    OneClassSVM, Covariance, LOF, IsolationForest = range(4)
+    METHODS = (OneClassSVMLearner, EllipticEnvelopeLearner,
+               LocalOutlierFactorLearner, IsolationForestLearner)
     svm_editor = SettingProvider(SVMEditor)
     cov_editor = SettingProvider(CovarianceEditor)
+    lof_editor = SettingProvider(LocalOutlierFactorEditor)
+    isf_editor = SettingProvider(IsolationForestEditor)
 
     settings_version = 2
     outlier_method = Setting(OneClassSVM)
@@ -143,10 +197,12 @@ class OWOutliers(OWWidget):
     def _init_editors(self):
         self.svm_editor = SVMEditor(self)
         self.cov_editor = CovarianceEditor(self)
+        self.lof_editor = LocalOutlierFactorEditor(self)
+        self.isf_editor = IsolationForestEditor(self)
 
         box = gui.vBox(self.controlArea, "Parameters")
-        self.editors = (self.svm_editor,
-                        self.cov_editor)
+        self.editors = (self.svm_editor, self.cov_editor,
+                        self.lof_editor, self.isf_editor)
         for editor in self.editors:
             editor.param_changed.connect(lambda: self.commit())
             box.layout().addWidget(editor)
@@ -181,7 +237,7 @@ class OWOutliers(OWWidget):
             self.method_combo.model().item(self.Covariance).setEnabled(False)
             self.Warning.disabled_cov()
 
-    def _get_outliers(self):
+    def _get_outliers(self) -> Tuple[Table, Table, Table]:
         self.Error.singular_cov.clear()
         self.Error.memory_error.clear()
         try:
@@ -212,7 +268,7 @@ class OWOutliers(OWWidget):
         self.Outputs.inliers.send(inliers)
         self.Outputs.outliers.send(outliers)
 
-    def detect_outliers(self):
+    def detect_outliers(self) -> Tuple[np.ndarray, Table]:
         learner_class = self.METHODS[self.outlier_method]
         kwargs = self.current_editor.get_parameters()
         learner = learner_class(**kwargs)
@@ -221,7 +277,7 @@ class OWOutliers(OWWidget):
         amended_data = self.amended_data(model)
         return np.array(y_pred), amended_data
 
-    def amended_data(self, model):
+    def amended_data(self, model: Model) -> Table:
         if self.outlier_method != self.Covariance:
             return self.data
         mahal = model.mahalanobis(self.data.X)
@@ -242,22 +298,38 @@ class OWOutliers(OWWidget):
                           (("Input instances", len(self.data)),
                            ("Inliers", self.n_inliers),
                            ("Outliers", self.n_outliers)))
-        if self.outlier_method == 0:
+
+        params = self.current_editor.get_parameters()
+        if self.outlier_method == self.OneClassSVM:
             self.report_items(
                 "Detection",
                 (("Detection method",
                   "One class SVM with non-linear kernel (RBF)"),
-                 ("Regularization (nu)", self.svm_editor.nu),
-                 ("Kernel coefficient", self.svm_editor.gamma)))
-        else:
+                 ("Regularization (nu)", params["nu"]),
+                 ("Kernel coefficient", params["gamma"])))
+        elif self.outlier_method == self.Covariance:
             self.report_items(
                 "Detection",
                 (("Detection method", "Covariance estimator"),
-                 ("Contamination", self.cov_editor.cont),
-                 ("Support fraction", self.cov_editor.support_fraction)))
+                 ("Contamination", params["contamination"]),
+                 ("Support fraction", params["support_fraction"])))
+        elif self.outlier_method == self.LOF:
+            self.report_items(
+                "Detection",
+                (("Detection method", "Local Outlier Factor"),
+                 ("Contamination", params["contamination"]),
+                 ("Number of neighbors", params["n_neighbors"]),
+                 ("Metric", params["metric"])))
+        elif self.outlier_method == self.IsolationForest:
+            self.report_items(
+                "Detection",
+                (("Detection method", "Isolation Forest"),
+                 ("Contamination", params["contamination"])))
+        else:
+            raise NotImplementedError
 
     @classmethod
-    def migrate_settings(cls, settings, version):
+    def migrate_settings(cls, settings: Dict, version: int):
         if version is None or version < 2:
             settings["svm_editor"] = {"nu": settings.get("nu", 50),
                                       "gamma": settings.get("gamma", 0.01)}

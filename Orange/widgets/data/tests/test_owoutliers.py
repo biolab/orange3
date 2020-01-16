@@ -8,7 +8,7 @@ import numpy as np
 
 from Orange.data import Table
 from Orange.widgets.data.owoutliers import OWOutliers
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, simulate
 
 
 class TestOWOutliers(WidgetTest):
@@ -25,6 +25,17 @@ class TestOWOutliers(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.inliers))
+        self.assertIsNone(self.get_output(self.widget.Outputs.outliers))
+
+    def test_methods(self):
+        def callback():
+            self.widget.send_report()
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.inliers))
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.outliers))
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        simulate.combobox_run_through_all(self.widget.method_combo,
+                                          callback=callback)
 
     def test_memory_error(self):
         """
