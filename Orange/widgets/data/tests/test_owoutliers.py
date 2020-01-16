@@ -20,8 +20,8 @@ class TestOWOutliers(WidgetTest):
         """Check widget's data and the output with data on the input"""
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(self.widget.data, self.iris)
-        self.assertEqual(len(self.get_output(self.widget.Outputs.inliers)), 136)
-        self.assertEqual(len(self.get_output(self.widget.Outputs.outliers)), 14)
+        self.assertEqual(len(self.get_output(self.widget.Outputs.inliers)), 135)
+        self.assertEqual(len(self.get_output(self.widget.Outputs.outliers)), 15)
         self.assertEqual(len(self.get_output(self.widget.Outputs.data)), 150)
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
@@ -68,7 +68,7 @@ class TestOWOutliers(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(info._StateInfo__input_summary.brief, "150")
-        self.assertEqual(info._StateInfo__output_summary.brief, "136")
+        self.assertEqual(info._StateInfo__output_summary.brief, "135")
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(info._StateInfo__input_summary.brief, "")

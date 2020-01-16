@@ -111,6 +111,7 @@ class LocalOutlierFactorEditor(ParametersEditor):
     def get_parameters(self):
         return {"n_neighbors": self.n_neighbors,
                 "contamination": self.cont / 100,
+                "algorithm": "brute",  # works faster for big datasets
                 "metric": self.METRICS[self.metric_index]}
 
 
