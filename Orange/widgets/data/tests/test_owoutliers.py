@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring, protected-access
 
 import unittest
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -58,6 +59,25 @@ class TestOWOutliers(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.brief, "")
+
+    @patch("Orange.widgets.data.owoutliers.OWOutliers.MAX_FEATURES", 3)
+    @patch("Orange.widgets.data.owoutliers.OWOutliers.commit", Mock())
+    def test_covariance_enabled(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Warning.disabled_cov.is_shown())
+        self.assertFalse(self.widget.rb_cov.isEnabled())
+
+        self.send_signal(self.widget.Inputs.data, self.iris[:, :2])
+        self.assertFalse(self.widget.Warning.disabled_cov.is_shown())
+        self.assertTrue(self.widget.rb_cov.isEnabled())
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Warning.disabled_cov.is_shown())
+        self.assertFalse(self.widget.rb_cov.isEnabled())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.disabled_cov.is_shown())
+        self.assertTrue(self.widget.rb_cov.isEnabled())
 
 
 if __name__ == "__main__":

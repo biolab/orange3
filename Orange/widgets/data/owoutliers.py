@@ -4,14 +4,14 @@ from AnyQt.QtWidgets import QLayout
 from Orange.base import SklLearner
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
 from Orange.data import Table, Domain, ContinuousVariable
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Msg, Input, Output
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.widget import Msg, Input, Output, OWWidget
 
 
-class OWOutliers(widget.OWWidget):
+class OWOutliers(OWWidget):
     name = "Outliers"
     description = "Detect outliers."
     icon = "icons/Outliers.svg"
@@ -37,7 +37,12 @@ class OWOutliers(widget.OWWidget):
     empirical_covariance = Setting(False)
     support_fraction = Setting(1)
 
-    class Error(widget.OWWidget.Error):
+    MAX_FEATURES = 1500
+
+    class Warning(OWWidget.Warning):
+        disabled_cov = Msg("Too many features for covariance estimation.")
+
+    class Error(OWWidget.Error):
         singular_cov = Msg("Singular covariance matrix.")
         memory_error = Msg("Not enough memory")
 
@@ -102,36 +107,32 @@ class OWOutliers(widget.OWWidget):
     def empirical_changed(self):
         self.outlier_method = self.Covariance
 
-    def disable_covariance(self):
-        self.outlier_method = self.OneClassSVM
-        self.rb_cov.setDisabled(True)
-        self.l_cov.setDisabled(True)
-        self.cont_slider.setDisabled(True)
-        self.cb_emp_cov.setDisabled(True)
-        self.support_fraction_spin.setDisabled(True)
-        self.warning('Too many features for covariance estimation.')
-
-    def enable_covariance(self):
-        self.rb_cov.setDisabled(False)
-        self.l_cov.setDisabled(False)
-        self.cont_slider.setDisabled(False)
-        self.cb_emp_cov.setDisabled(False)
-        self.support_fraction_spin.setDisabled(False)
-        self.warning()
+    def enable_covariance(self, enable=True):
+        self.rb_cov.setEnabled(enable)
+        self.l_cov.setEnabled(enable)
+        self.cont_slider.setEnabled(enable)
+        self.cb_emp_cov.setEnabled(enable)
+        self.support_fraction_spin.setEnabled(enable)
 
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
+        self.clear_messages()
         self.data = data
         self.info.set_input_summary(len(data) if data else self.info.NoOutput)
-
-        self.enable_covariance()
-        if self.data and len(self.data.domain.attributes) > 1500:
-            self.disable_covariance()
-
+        self.enable_controls()
         self.commit()
 
+    def enable_controls(self):
+        self.enable_covariance()
+        if self.data and len(self.data.domain.attributes) > self.MAX_FEATURES:
+            self.outlier_method = self.OneClassSVM
+            self.enable_covariance(False)
+            self.Warning.disabled_cov()
+
     def _get_outliers(self):
+        self.Error.singular_cov.clear()
+        self.Error.memory_error.clear()
         try:
             y_pred, amended_data = self.detect_outliers()
         except ValueError:
@@ -151,7 +152,6 @@ class OWOutliers(widget.OWWidget):
             return inliers, outliers
 
     def commit(self):
-        self.clear_messages()
         inliers = outliers = None
         self.n_inliers = self.n_outliers = None
         if self.data:
