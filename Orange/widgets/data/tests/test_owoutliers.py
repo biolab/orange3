@@ -63,21 +63,36 @@ class TestOWOutliers(WidgetTest):
     @patch("Orange.widgets.data.owoutliers.OWOutliers.MAX_FEATURES", 3)
     @patch("Orange.widgets.data.owoutliers.OWOutliers.commit", Mock())
     def test_covariance_enabled(self):
+        cov_item = self.widget.method_combo.model().item(self.widget.Covariance)
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertTrue(self.widget.Warning.disabled_cov.is_shown())
-        self.assertFalse(self.widget.rb_cov.isEnabled())
+        self.assertFalse(cov_item.isEnabled())
 
         self.send_signal(self.widget.Inputs.data, self.iris[:, :2])
         self.assertFalse(self.widget.Warning.disabled_cov.is_shown())
-        self.assertTrue(self.widget.rb_cov.isEnabled())
+        self.assertTrue(cov_item.isEnabled())
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertTrue(self.widget.Warning.disabled_cov.is_shown())
-        self.assertFalse(self.widget.rb_cov.isEnabled())
+        self.assertFalse(cov_item.isEnabled())
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.disabled_cov.is_shown())
-        self.assertTrue(self.widget.rb_cov.isEnabled())
+        self.assertTrue(cov_item.isEnabled())
+
+    def test_migrate_settings(self):
+        settings = {"cont": 20, "empirical_covariance": True,
+                    "gamma": 0.04, "nu": 30, "outlier_method": 0,
+                    "support_fraction": 0.5, "__version__": 1}
+
+        widget = self.create_widget(OWOutliers, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertEqual(widget.svm_editor.nu, 30)
+        self.assertEqual(widget.svm_editor.gamma, 0.04)
+
+        self.assertEqual(widget.cov_editor.cont, 20)
+        self.assertEqual(widget.cov_editor.empirical_covariance, True)
+        self.assertEqual(widget.cov_editor.support_fraction, 0.5)
 
 
 if __name__ == "__main__":

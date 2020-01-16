@@ -17,6 +17,7 @@ class _OutlierDetector(SklLearner):
 
 class LocalOutlierFactorLearner(_OutlierDetector):
     __wraps__ = LocalOutlierFactor
+    name = "Local Outlier Factor"
 
     def __init__(self, n_neighbors=20, algorithm="auto", leaf_size=30,
                  metric="minkowski", p=2, metric_params=None,
@@ -28,6 +29,7 @@ class LocalOutlierFactorLearner(_OutlierDetector):
 
 class IsolationForestLearner(_OutlierDetector):
     __wraps__ = IsolationForest
+    name = "Isolation Forest"
 
     def __init__(self, n_estimators=100, max_samples='auto',
                  contamination='auto', max_features=1.0, bootstrap=False,
@@ -58,6 +60,7 @@ class EllipticEnvelopeClassifier(SklModel):
 class EllipticEnvelopeLearner(_OutlierDetector):
     __wraps__ = EllipticEnvelope
     __returns__ = EllipticEnvelopeClassifier
+    name = "Covariance Estimator"
 
     def __init__(self, store_precision=True, assume_centered=False,
                  support_fraction=None, contamination=0.1,

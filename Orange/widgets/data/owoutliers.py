@@ -1,7 +1,10 @@
 import numpy as np
-from AnyQt.QtWidgets import QLayout
 
-from Orange.base import SklLearner
+from AnyQt.QtCore import Signal
+from AnyQt.QtWidgets import QWidget, QVBoxLayout
+
+from orangewidget.settings import SettingProvider
+
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import gui
@@ -9,6 +12,73 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output, OWWidget
+
+
+class ParametersEditor(QWidget, gui.OWComponent):
+    param_changed = Signal()
+
+    def __init__(self, parent):
+        QWidget.__init__(self, parent)
+        gui.OWComponent.__init__(self, parent)
+
+        self.setMinimumWidth(300)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+        self.param_box = gui.vBox(self, spacing=0)
+
+    def parameter_changed(self):
+        self.param_changed.emit()
+
+    def get_parameters(self):
+        raise NotImplementedError
+
+
+class SVMEditor(ParametersEditor):
+    nu = Setting(50)
+    gamma = Setting(0.01)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        tooltip = "An upper bound on the fraction of training errors and a " \
+                  "lower bound of the fraction of support vectors"
+        gui.widgetLabel(self.param_box, "Contamination:", tooltip=tooltip)
+        gui.hSlider(self.param_box, self, "nu", minValue=1, maxValue=100,
+                    ticks=10, labelFormat="%d %%", tooltip=tooltip,
+                    callback=self.parameter_changed)
+        gui.doubleSpin(self.param_box, self, "gamma",
+                       label="Kernel coefficient:", step=1e-2, minv=0.01,
+                       maxv=10, callback=self.parameter_changed)
+
+    def get_parameters(self):
+        return {"nu": self.nu / 100,
+                "gamma": self.gamma}
+
+
+class CovarianceEditor(ParametersEditor):
+    cont = Setting(10)
+    empirical_covariance = Setting(False)
+    support_fraction = Setting(1)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        gui.widgetLabel(self.param_box, "Contamination:")
+        gui.hSlider(self.param_box, self, "cont", minValue=0,
+                    maxValue=100, ticks=10, labelFormat="%d %%",
+                    callback=self.parameter_changed)
+
+        ebox = gui.hBox(self.param_box)
+        gui.checkBox(ebox, self, "empirical_covariance",
+                     "Support fraction:", callback=self.parameter_changed)
+        gui.doubleSpin(ebox, self, "support_fraction", step=1e-1,
+                       minv=0.1, maxv=10, callback=self.parameter_changed)
+
+    def get_parameters(self):
+        fraction = self.support_fraction if self.empirical_covariance else None
+        return {"contamination": self.cont / 100,
+                "support_fraction": fraction}
 
 
 class OWOutliers(OWWidget):
@@ -27,15 +97,15 @@ class OWOutliers(OWWidget):
         outliers = Output("Outliers", Table)
 
     want_main_area = False
+    resizing_enabled = False
 
     OneClassSVM, Covariance = range(2)
+    METHODS = (OneClassSVMLearner, EllipticEnvelopeLearner)
+    svm_editor = SettingProvider(SVMEditor)
+    cov_editor = SettingProvider(CovarianceEditor)
 
+    settings_version = 2
     outlier_method = Setting(OneClassSVM)
-    nu = Setting(50)
-    gamma = Setting(0.01)
-    cont = Setting(10)
-    empirical_covariance = Setting(False)
-    support_fraction = Setting(1)
     auto_commit = Setting(True)
 
     MAX_FEATURES = 1500
@@ -49,65 +119,50 @@ class OWOutliers(OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.data = None
-        self.n_inliers = self.n_outliers = None
+        self.data = None  # type: Table
+        self.n_inliers = None  # type: int
+        self.n_outliers = None  # type: int
+        self.editors = None  # type: Tuple[ParametersEditor]
+        self.current_editor = None  # type: ParametersEditor
+        self.method_combo = None  # type: QComboBox
+        self.init_gui()
 
-        box = gui.vBox(self.controlArea, "Outlier Detection Method")
-        detection = gui.radioButtons(box, self, "outlier_method")
+    def init_gui(self):
+        box = gui.vBox(self.controlArea, "Method")
+        self.method_combo = gui.comboBox(box, self, "outlier_method",
+                                         items=[m.name for m in self.METHODS],
+                                         callback=self.__method_changed)
 
-        gui.appendRadioButton(detection,
-                              "One class SVM with non-linear kernel (RBF)")
-        ibox = gui.indentedBox(detection)
-        tooltip = "An upper bound on the fraction of training errors and a " \
-                  "lower bound of the fraction of support vectors"
-        gui.widgetLabel(ibox, 'Nu:', tooltip=tooltip)
-        self.nu_slider = gui.hSlider(
-            ibox, self, "nu", minValue=1, maxValue=100, ticks=10,
-            labelFormat="%d %%", callback=self.__svm_param_changed,
-            tooltip=tooltip)
-        self.gamma_spin = gui.spin(
-            ibox, self, "gamma", label="Kernel coefficient:", step=1e-2,
-            spinType=float, minv=0.01, maxv=10,
-            callback=self.__svm_param_changed)
-        gui.separator(detection, 12)
-
-        self.rb_cov = gui.appendRadioButton(detection, "Covariance estimator")
-        ibox = gui.indentedBox(detection)
-        self.l_cov = gui.widgetLabel(ibox, 'Contamination:')
-        self.cont_slider = gui.hSlider(
-            ibox, self, "cont", minValue=0, maxValue=100, ticks=10,
-            labelFormat="%d %%", callback=self.__cov_param_changed)
-
-        ebox = gui.hBox(ibox)
-        self.cb_emp_cov = gui.checkBox(
-            ebox, self, "empirical_covariance",
-            "Support fraction:", callback=self.__cov_param_changed)
-        self.support_fraction_spin = gui.spin(
-            ebox, self, "support_fraction", step=1e-1, spinType=float,
-            minv=0.1, maxv=10, callback=self.__cov_param_changed)
-
-        gui.separator(detection, 12)
+        self._init_editors()
 
         gui.auto_send(self.controlArea, self, "auto_commit")
-        self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
 
-    def __svm_param_changed(self):
-        self.outlier_method = self.OneClassSVM
+    def _init_editors(self):
+        self.svm_editor = SVMEditor(self)
+        self.cov_editor = CovarianceEditor(self)
+
+        box = gui.vBox(self.controlArea, "Parameters")
+        self.editors = (self.svm_editor,
+                        self.cov_editor)
+        for editor in self.editors:
+            editor.param_changed.connect(lambda: self.commit())
+            box.layout().addWidget(editor)
+            editor.hide()
+
+        self.set_current_editor()
+
+    def __method_changed(self):
+        self.set_current_editor()
         self.commit()
 
-    def __cov_param_changed(self):
-        self.outlier_method = self.Covariance
-        self.commit()
-
-    def enable_covariance(self, enable=True):
-        self.rb_cov.setEnabled(enable)
-        self.l_cov.setEnabled(enable)
-        self.cont_slider.setEnabled(enable)
-        self.cb_emp_cov.setEnabled(enable)
-        self.support_fraction_spin.setEnabled(enable)
+    def set_current_editor(self):
+        if self.current_editor:
+            self.current_editor.hide()
+        self.current_editor = self.editors[self.outlier_method]
+        self.current_editor.show()
 
     @Inputs.data
     @check_sql_input
@@ -119,10 +174,11 @@ class OWOutliers(OWWidget):
         self.unconditional_commit()
 
     def enable_controls(self):
-        self.enable_covariance()
+        self.method_combo.model().item(self.Covariance).setEnabled(True)
         if self.data and len(self.data.domain.attributes) > self.MAX_FEATURES:
             self.outlier_method = self.OneClassSVM
-            self.enable_covariance(False)
+            self.set_current_editor()
+            self.method_combo.model().item(self.Covariance).setEnabled(False)
             self.Warning.disabled_cov()
 
     def _get_outliers(self):
@@ -143,7 +199,6 @@ class OWOutliers(OWWidget):
             outliers = amended_data[outliers_ind]
             self.n_inliers = len(inliers)
             self.n_outliers = len(outliers)
-
             return inliers, outliers
 
     def commit(self):
@@ -158,15 +213,9 @@ class OWOutliers(OWWidget):
         self.Outputs.outliers.send(outliers)
 
     def detect_outliers(self):
-        if self.outlier_method == self.OneClassSVM:
-            learner = OneClassSVMLearner(
-                gamma=self.gamma, nu=self.nu / 100,
-                preprocessors=SklLearner.preprocessors)
-        else:
-            learner = EllipticEnvelopeLearner(
-                support_fraction=self.support_fraction
-                if self.empirical_covariance else None,
-                contamination=self.cont / 100.)
+        learner_class = self.METHODS[self.outlier_method]
+        kwargs = self.current_editor.get_parameters()
+        learner = learner_class(**kwargs)
         model = learner(self.data)
         y_pred = model(self.data)
         amended_data = self.amended_data(model)
@@ -198,14 +247,24 @@ class OWOutliers(OWWidget):
                 "Detection",
                 (("Detection method",
                   "One class SVM with non-linear kernel (RBF)"),
-                 ("Regularization (nu)", self.nu),
-                 ("Kernel coefficient", self.gamma)))
+                 ("Regularization (nu)", self.svm_editor.nu),
+                 ("Kernel coefficient", self.svm_editor.gamma)))
         else:
             self.report_items(
                 "Detection",
                 (("Detection method", "Covariance estimator"),
-                 ("Contamination", self.cont),
-                 ("Support fraction", self.support_fraction)))
+                 ("Contamination", self.cov_editor.cont),
+                 ("Support fraction", self.cov_editor.support_fraction)))
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version is None or version < 2:
+            settings["svm_editor"] = {"nu": settings.get("nu", 50),
+                                      "gamma": settings.get("gamma", 0.01)}
+            ec, sf = "empirical_covariance", "support_fraction"
+            settings["cov_editor"] = {"cont": settings.get("cont", 10),
+                                      ec: settings.get(ec, False),
+                                      sf: settings.get(sf, 1)}
 
 
 if __name__ == "__main__":  # pragma: no cover

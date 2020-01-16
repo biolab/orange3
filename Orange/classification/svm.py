@@ -69,6 +69,7 @@ class NuSVMLearner(SklLearner):
 
 
 class OneClassSVMLearner(SklLearnerBase):
+    name = "One class SVM"
     __wraps__ = skl_svm.OneClassSVM
     preprocessors = svm_pps
 
