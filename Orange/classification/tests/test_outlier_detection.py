@@ -5,7 +5,8 @@ import unittest
 
 import numpy as np
 from Orange.data import Table, Domain, ContinuousVariable
-from Orange.classification import EllipticEnvelopeLearner
+from Orange.classification import EllipticEnvelopeLearner, \
+    IsolationForestLearner, LocalOutlierFactorLearner
 
 
 class TestEllipticEnvelopeLearner(unittest.TestCase):
@@ -60,6 +61,24 @@ class TestEllipticEnvelopeLearner(unittest.TestCase):
         np.testing.assert_array_equal(pred1, pred2)
         np.testing.assert_array_equal(pred2, pred3)
         np.testing.assert_array_equal(pred3, pred4)
+
+
+class TestOutlierDetection(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table("iris")
+
+    def test_LocalOutlierFactorDetector(self):
+        detector = LocalOutlierFactorLearner(contamination=0.1)
+        detect = detector(self.iris)
+        is_inlier = detect(self.iris)
+        self.assertEqual(len(np.where(is_inlier == -1)[0]), 14)
+
+    def test_IsolationForestDetector(self):
+        detector = IsolationForestLearner(contamination=0.1)
+        detect = detector(self.iris)
+        is_inlier = detect(self.iris)
+        self.assertEqual(len(np.where(is_inlier == -1)[0]), 15)
 
 
 if __name__ == "__main__":

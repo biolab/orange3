@@ -1,10 +1,40 @@
-import sklearn.covariance as skl_covariance
-
+# pylint: disable=unused-argument
+from sklearn.covariance import EllipticEnvelope
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
 from Orange.base import SklLearner, SklModel
 from Orange.data import Table, Domain
-from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
 
-__all__ = ["EllipticEnvelopeLearner"]
+__all__ = ["LocalOutlierFactorLearner", "IsolationForestLearner",
+           "EllipticEnvelopeLearner"]
+
+
+class _OutlierDetector(SklLearner):
+    def __call__(self, data: Table):
+        data = data.transform(Domain(data.domain.attributes))
+        return super().__call__(data)
+
+
+class LocalOutlierFactorLearner(_OutlierDetector):
+    __wraps__ = LocalOutlierFactor
+
+    def __init__(self, n_neighbors=20, algorithm="auto", leaf_size=30,
+                 metric="minkowski", p=2, metric_params=None,
+                 contamination="auto", novelty=True, n_jobs=None,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
+
+
+class IsolationForestLearner(_OutlierDetector):
+    __wraps__ = IsolationForest
+
+    def __init__(self, n_estimators=100, max_samples='auto',
+                 contamination='auto', max_features=1.0, bootstrap=False,
+                 n_jobs=None, behaviour='deprecated', random_state=None,
+                 verbose=0, warm_start=False, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
 
 
 class EllipticEnvelopeClassifier(SklModel):
@@ -25,10 +55,9 @@ class EllipticEnvelopeClassifier(SklModel):
         return self.skl_model.mahalanobis(observations)
 
 
-class EllipticEnvelopeLearner(SklLearner):
-    __wraps__ = skl_covariance.EllipticEnvelope
+class EllipticEnvelopeLearner(_OutlierDetector):
+    __wraps__ = EllipticEnvelope
     __returns__ = EllipticEnvelopeClassifier
-    preprocessors = [Continuize(), RemoveNaNColumns(), SklImpute()]
 
     def __init__(self, store_precision=True, assume_centered=False,
                  support_fraction=None, contamination=0.1,
@@ -36,6 +65,6 @@ class EllipticEnvelopeLearner(SklLearner):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    def __call__(self, data):
-        classless_data = data.transform(Domain(data.domain.attributes))
-        return super().__call__(classless_data)
+    def __call__(self, data: Table):
+        data = data.transform(Domain(data.domain.attributes))
+        return super().__call__(data)
