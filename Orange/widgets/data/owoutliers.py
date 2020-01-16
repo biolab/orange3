@@ -36,6 +36,7 @@ class OWOutliers(OWWidget):
     cont = Setting(10)
     empirical_covariance = Setting(False)
     support_fraction = Setting(1)
+    auto_commit = Setting(True)
 
     MAX_FEATURES = 1500
 
@@ -62,10 +63,12 @@ class OWOutliers(OWWidget):
         gui.widgetLabel(ibox, 'Nu:', tooltip=tooltip)
         self.nu_slider = gui.hSlider(
             ibox, self, "nu", minValue=1, maxValue=100, ticks=10,
-            labelFormat="%d %%", callback=self.nu_changed, tooltip=tooltip)
+            labelFormat="%d %%", callback=self.__svm_param_changed,
+            tooltip=tooltip)
         self.gamma_spin = gui.spin(
             ibox, self, "gamma", label="Kernel coefficient:", step=1e-2,
-            spinType=float, minv=0.01, maxv=10, callback=self.gamma_changed)
+            spinType=float, minv=0.01, maxv=10,
+            callback=self.__svm_param_changed)
         gui.separator(detection, 12)
 
         self.rb_cov = gui.appendRadioButton(detection, "Covariance estimator")
@@ -73,39 +76,31 @@ class OWOutliers(OWWidget):
         self.l_cov = gui.widgetLabel(ibox, 'Contamination:')
         self.cont_slider = gui.hSlider(
             ibox, self, "cont", minValue=0, maxValue=100, ticks=10,
-            labelFormat="%d %%", callback=self.cont_changed)
+            labelFormat="%d %%", callback=self.__cov_param_changed)
 
         ebox = gui.hBox(ibox)
         self.cb_emp_cov = gui.checkBox(
             ebox, self, "empirical_covariance",
-            "Support fraction:", callback=self.empirical_changed)
+            "Support fraction:", callback=self.__cov_param_changed)
         self.support_fraction_spin = gui.spin(
             ebox, self, "support_fraction", step=1e-1, spinType=float,
-            minv=0.1, maxv=10, callback=self.support_fraction_changed)
+            minv=0.1, maxv=10, callback=self.__cov_param_changed)
 
         gui.separator(detection, 12)
 
-        gui.button(self.buttonsArea, self, "Detect Outliers",
-                   callback=self.commit)
+        gui.auto_send(self.controlArea, self, "auto_commit")
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
 
-    def nu_changed(self):
+    def __svm_param_changed(self):
         self.outlier_method = self.OneClassSVM
+        self.commit()
 
-    def gamma_changed(self):
-        self.outlier_method = self.OneClassSVM
-
-    def cont_changed(self):
+    def __cov_param_changed(self):
         self.outlier_method = self.Covariance
-
-    def support_fraction_changed(self):
-        self.outlier_method = self.Covariance
-
-    def empirical_changed(self):
-        self.outlier_method = self.Covariance
+        self.commit()
 
     def enable_covariance(self, enable=True):
         self.rb_cov.setEnabled(enable)
@@ -121,7 +116,7 @@ class OWOutliers(OWWidget):
         self.data = data
         self.info.set_input_summary(len(data) if data else self.info.NoOutput)
         self.enable_controls()
-        self.commit()
+        self.unconditional_commit()
 
     def enable_controls(self):
         self.enable_covariance()
