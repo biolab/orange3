@@ -22,16 +22,19 @@ class TestOWOutliers(WidgetTest):
         self.assertEqual(self.widget.data, self.iris)
         self.assertEqual(len(self.get_output(self.widget.Outputs.inliers)), 136)
         self.assertEqual(len(self.get_output(self.widget.Outputs.outliers)), 14)
+        self.assertEqual(len(self.get_output(self.widget.Outputs.data)), 150)
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.inliers))
         self.assertIsNone(self.get_output(self.widget.Outputs.outliers))
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
     def test_methods(self):
         def callback():
             self.widget.send_report()
             self.assertIsNotNone(self.get_output(self.widget.Outputs.inliers))
             self.assertIsNotNone(self.get_output(self.widget.Outputs.outliers))
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         simulate.combobox_run_through_all(self.widget.method_combo,

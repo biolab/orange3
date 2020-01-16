@@ -10,7 +10,8 @@ from orangewidget.settings import SettingProvider
 from Orange.base import Model
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner,\
     LocalOutlierFactorLearner, IsolationForestLearner
-from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data.util import get_unique_names
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -146,6 +147,7 @@ class OWOutliers(OWWidget):
     class Outputs:
         inliers = Output("Inliers", Table)
         outliers = Output("Outliers", Table)
+        data = Output("Data", Table)
 
     want_main_area = False
     resizing_enabled = False
@@ -244,10 +246,10 @@ class OWOutliers(OWWidget):
             y_pred, amended_data = self.detect_outliers()
         except ValueError:
             self.Error.singular_cov()
-            return None, None
+            return None, None, None
         except MemoryError:
             self.Error.memory_error()
-            return None, None
+            return None, None, None
         else:
             inliers_ind = np.where(y_pred == 1)[0]
             outliers_ind = np.where(y_pred == -1)[0]
@@ -255,18 +257,19 @@ class OWOutliers(OWWidget):
             outliers = amended_data[outliers_ind]
             self.n_inliers = len(inliers)
             self.n_outliers = len(outliers)
-            return inliers, outliers
+            return inliers, outliers, self.annotated_data(amended_data, y_pred)
 
     def commit(self):
-        inliers = outliers = None
+        inliers = outliers = data = None
         self.n_inliers = self.n_outliers = None
         if self.data:
-            inliers, outliers = self._get_outliers()
+            inliers, outliers, data = self._get_outliers()
 
         summary = len(inliers) if inliers else self.info.NoOutput
         self.info.set_output_summary(summary)
         self.Outputs.inliers.send(inliers)
         self.Outputs.outliers.send(outliers)
+        self.Outputs.data.send(data)
 
     def detect_outliers(self) -> Tuple[np.ndarray, Table]:
         learner_class = self.METHODS[self.outlier_method]
@@ -290,6 +293,21 @@ class OWOutliers(OWWidget):
         amended_data = self.data.transform(new_domain)
         amended_data.metas = np.hstack((self.data.metas, mahal))
         return amended_data
+
+    @staticmethod
+    def annotated_data(data: Table, labels: np.ndarray) -> Table:
+        domain = data.domain
+        names = [v.name for v in domain.variables + domain.metas]
+        name = get_unique_names(names, "Outlier")
+
+        outlier_var = DiscreteVariable(name, values=["Yes", "No"])
+        metas = domain.metas + (outlier_var,)
+        domain = Domain(domain.attributes, domain.class_vars, metas)
+        data = data.transform(domain)
+
+        labels[labels == -1] = 0
+        data.metas[:, -1] = labels
+        return data
 
     def send_report(self):
         if self.n_outliers is None or self.n_inliers is None:
