@@ -1069,9 +1069,10 @@ class ExcelReader(_BaseExcelReader):
             return str(x) if x is not None else ""
 
         sheet = self._get_active_sheet()
-        cells = ([str_(sheet.cell(row, col).value)
-                  for col in range(sheet.min_column, sheet.max_column + 1)]
-                 for row in range(sheet.min_row, sheet.max_row + 1))
+        min_col = sheet.min_column
+        max_col = sheet.max_column
+        cells = ([str_(cell.value) for cell in row[min_col - 1: max_col]]
+                 for row in sheet.iter_rows(sheet.min_row, sheet.max_row + 1))
         return filter(any, cells)
 
     def _get_active_sheet(self) -> openpyxl.worksheet.worksheet.Worksheet:
