@@ -245,6 +245,9 @@ class OWDiscretize(widget.OWWidget):
 
         self._update_spin_positions()
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
 
     @Inputs.data
     def set_data(self, data):
@@ -257,7 +260,9 @@ class OWDiscretize(widget.OWWidget):
             self._restore(self.saved_var_states)
             # Complete the induction of cut points
             self._update_points()
+            self.info.set_input_summary(len(data))
         else:
+            self.info.set_input_summary(self.info.NoInput)
             self._clear()
         self.unconditional_commit()
 
@@ -478,6 +483,9 @@ class OWDiscretize(widget.OWWidget):
         if self.data is not None and len(self.data):
             domain = self.discretized_domain()
             output = self.data.transform(domain)
+            self.info.set_output_summary(len(output))
+        else:
+            self.info.set_output_summary(self.info.NoOutput)
         self.Outputs.data.send(output)
 
     def storeSpecificSettings(self):
