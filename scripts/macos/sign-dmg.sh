@@ -81,7 +81,11 @@ mkdir "${MOUNT}"
 hdiutil attach "${IMGRW}".sparsebundle -readwrite -noverify -noautoopen \
         -mountpoint "${MOUNT}"
 
-codesign --sign "${IDENTITY}" --deep --verbose "${MOUNT}"/*.app
+# sign app bundle
+codesign --verbose --deep --options=runtime --sign "${IDENTITY}" "${MOUNT}"/*.app
+
+# sanity check
+codesign --verify -vvv --deep --strict "${MOUNT}"/*.app/
 
 # detach/unmount to sync
 hdiutil detach "${MOUNT}" -force
@@ -90,7 +94,9 @@ hdiutil resize -sectors min "${IMGRW}".sparsebundle
 # convert back to compressed read only image
 hdiutil convert -format UDZO -imagekey zlib-level=9 \
         -o "${IMG}" "${IMGRW}.sparsebundle"
-codesign -s "${IDENTITY}" "${IMG}"
+
+codesign --force -s "${IDENTITY}" "${IMG}"
+codesign --verify -vvv --deep --strict "${IMG}"
 
 if [ ! "${OUTPUT}" ]; then
     OUTPUT=${DMG}.signed

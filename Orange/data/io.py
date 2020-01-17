@@ -395,6 +395,8 @@ class FileFormat(metaclass=FileFormatMeta):
     # the sort order in file open/save combo boxes. Lower is better.
     PRIORITY = 10000
     OPTIONAL_TYPE_ANNOTATIONS = False
+    SUPPORT_COMPRESSED = False
+    SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
         """
@@ -1053,7 +1055,8 @@ class ExcelReader(_BaseExcelReader):
     @property
     def workbook(self) -> openpyxl.Workbook:
         if not self._workbook:
-            self._workbook = openpyxl.load_workbook(self.filename)
+            self._workbook = openpyxl.load_workbook(self.filename,
+                                                    data_only=True)
         return self._workbook
 
     @property
@@ -1066,9 +1069,10 @@ class ExcelReader(_BaseExcelReader):
             return str(x) if x is not None else ""
 
         sheet = self._get_active_sheet()
-        cells = ([str_(sheet.cell(row, col).value)
-                  for col in range(sheet.min_column, sheet.max_column + 1)]
-                 for row in range(sheet.min_row, sheet.max_row + 1))
+        min_col = sheet.min_column
+        max_col = sheet.max_column
+        cells = ([str_(cell.value) for cell in row[min_col - 1: max_col]]
+                 for row in sheet.iter_rows(sheet.min_row, sheet.max_row + 1))
         return filter(any, cells)
 
     def _get_active_sheet(self) -> openpyxl.worksheet.worksheet.Worksheet:

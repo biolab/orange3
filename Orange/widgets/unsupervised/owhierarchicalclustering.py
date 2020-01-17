@@ -1,3 +1,5 @@
+import fractions
+
 from collections import namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
@@ -102,12 +104,12 @@ def path_toQtPath(geom):
 Left, Top, Right, Bottom = 1, 2, 3, 4
 
 
-def dendrogram_path(tree, orientation=Left):
+def dendrogram_path(tree, orientation=Left, scaleh=1):
     layout = dendrogram_layout(tree)
     T = {}
     paths = {}
     rootdata = tree.value
-    base = rootdata.height
+    base = scaleh * rootdata.height
 
     if orientation == Bottom:
         transform = lambda x, y: (x, y)
@@ -126,10 +128,10 @@ def dendrogram_path(tree, orientation=Left):
         else:
             left, right = paths[node.left], paths[node.right]
             lines = (left.anchor,
-                     Point(*transform(start, node.value.height)),
-                     Point(*transform(end, node.value.height)),
+                     Point(*transform(start, scaleh * node.value.height)),
+                     Point(*transform(end, scaleh * node.value.height)),
                      right.anchor)
-            anchor = Point(*transform(center, node.value.height))
+            anchor = Point(*transform(center, scaleh * node.value.height))
             paths[node] = Element(anchor, lines)
 
         T[node] = Tree((node, paths[node]),
@@ -372,11 +374,18 @@ class DendrogramWidget(QGraphicsWidget):
             height = tpoint.x()
         else:
             height = tpoint.y()
-
+        # Undo geometry prescaling
+        base = self._root.value.height
+        scale = self._height_scale_factor()
+        # Use better better precision then double provides.
+        Fr = fractions.Fraction
+        if scale > 0:
+            height = Fr(height) / Fr(scale)
+        else:
+            height = 0
         if self.orientation in [self.Left, self.Bottom]:
-            base = self._root.value.height
-            height = base - height
-        return height
+            height = Fr(base) - Fr(height)
+        return float(height)
 
     def pos_at_height(self, height):
         """Return a point in local coordinates for `height` (in cluster
@@ -384,10 +393,11 @@ class DendrogramWidget(QGraphicsWidget):
         """
         if not self._root:
             return QPointF()
-
+        scale = self._height_scale_factor()
+        base = self._root.value.height
+        height = scale * height
         if self.orientation in [self.Left, self.Bottom]:
-            base = self._root.value.height
-            height = base - height
+            height = scale * base - height
 
         if self.orientation in [self.Left, self.Right]:
             p = QPointF(height, 0)
@@ -635,11 +645,26 @@ class DendrogramWidget(QGraphicsWidget):
             ppath = self._create_path(item, path)
             selection.set_path(ppath)
 
+    def _height_scale_factor(self):
+        # Internal dendrogram height scale factor. The dendrogram geometry is
+        # scaled by this factor to better condition the geometry
+        if self._root is None:
+            return 1
+        base = self._root.value.height
+        # implicitly scale the geometry to 0..1 scale or flush to 0 for fuzz
+        if base >= np.finfo(base).eps:
+            return 1 / base
+        else:
+            return 0
+
     def _relayout(self):
-        if not self._root:
+        if self._root is None:
             return
 
-        self._layout = dendrogram_path(self._root, self.orientation)
+        scale = self._height_scale_factor()
+        base = scale * self._root.value.height
+        self._layout = dendrogram_path(self._root, self.orientation,
+                                       scaleh=scale)
         for node_geom in postorder(self._layout):
             node, geom = node_geom.value
             item = self._items[node]
@@ -647,7 +672,6 @@ class DendrogramWidget(QGraphicsWidget):
             # the untransformed source path
             item.sourcePath = path_toQtPath(geom)
             r = item.sourcePath.boundingRect()
-            base = self._root.value.height
 
             if self.orientation == Left:
                 r.setRight(base)
@@ -668,12 +692,14 @@ class DendrogramWidget(QGraphicsWidget):
         if self._root is None:
             return
 
+        scale = self._height_scale_factor()
+        base = scale * self._root.value.height
         crect = self.contentsRect()
         leaf_count = len(list(leaves(self._root)))
         if self.orientation in [Left, Right]:
-            drect = QSizeF(self._root.value.height, leaf_count)
+            drect = QSizeF(base, leaf_count)
         else:
-            drect = QSizeF(leaf_count, self._root.value.height)
+            drect = QSizeF(leaf_count, base)
 
         eps = np.finfo(np.float64).eps
 

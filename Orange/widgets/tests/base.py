@@ -495,9 +495,7 @@ class WidgetOutputsTestMixin:
     def test_outputs(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.signal_name, self.signal_data)
 
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
 
         # check selected data output
         self.assertIsNone(self.get_output("Selected Data"))
@@ -577,9 +575,7 @@ class ProjectionWidgetTestMixin:
         self.assertIsNone(self.widget.attr_label)
         self.assertIsNone(self.widget.attr_shape)
         self.assertIsNone(self.widget.attr_size)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.widget.attr_color)
 
@@ -610,9 +606,7 @@ class ProjectionWidgetTestMixin:
         cont = Continuize(multinomial_treatment=Continuize.AsOrdinal)
         data = cont(Table("zoo"))
         self.send_signal(self.widget.Inputs.data, data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
         simulate.combobox_activate_item(self.widget.controls.attr_label,
                                         data.domain[-1].name)
 
@@ -628,9 +622,7 @@ class ProjectionWidgetTestMixin:
         """Test widget for datasets with missing values and constant features"""
         for ds in datasets.datasets():
             self.send_signal(self.widget.Inputs.data, ds)
-            if self.widget.isBlocking():
-                spy = QSignalSpy(self.widget.blockingStateChanged)
-                self.assertTrue(spy.wait(timeout))
+            self.wait_until_finished(timeout=timeout)
 
     def test_none_data(self):
         """Test widget for empty dataset"""
@@ -645,9 +637,7 @@ class ProjectionWidgetTestMixin:
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
@@ -674,9 +664,7 @@ class ProjectionWidgetTestMixin:
         """Check class density update"""
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.cb_class_density.click()
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.cb_class_density.click()
 
@@ -693,9 +681,7 @@ class ProjectionWidgetTestMixin:
         table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
         self.assertEqual(len(self.widget.subset_data), 5)
 
@@ -704,9 +690,7 @@ class ProjectionWidgetTestMixin:
         self.widget.graph.update_coordinates = Mock()
         self.widget.graph.update_point_props = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
 
         self.widget.graph.update_coordinates.assert_called()
         self.widget.graph.update_point_props.assert_called()
@@ -714,9 +698,7 @@ class ProjectionWidgetTestMixin:
         self.widget.graph.update_coordinates.reset_mock()
         self.widget.graph.update_point_props.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
 
         self.widget.graph.update_coordinates.assert_not_called()
         self.widget.graph.update_point_props.assert_called_once()
@@ -745,9 +727,7 @@ class ProjectionWidgetTestMixin:
         """Test report """
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.report_button.click()
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
@@ -761,9 +741,7 @@ class ProjectionWidgetTestMixin:
                       np.array([[0., 1.], [2., 3.]]),
                       np.array([[0.], [1.]]))
         self.send_signal(self.widget.Inputs.data, table)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
+        self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data, table)
 
     def test_in_out_summary(self, timeout=DEFAULT_TIMEOUT):

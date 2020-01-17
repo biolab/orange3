@@ -165,6 +165,32 @@ class TestDiscrete(unittest.TestCase):
              3., 4., 2., 1., 1., 1., 1.])
         self.assertEqual(cont.unknowns, 1)
 
+    @staticmethod
+    def test_continuous_array_with_unknowns():
+        """
+        Test array_with_unknowns function
+        """
+        d = data.Table("iris")
+        d.Y[:50] = np.zeros(50) * float("nan")
+        cont = contingency.Continuous(d, "sepal width")
+        correct_row_unknowns = [0., 0., 1., 0., 0., 0., 0., 0., 1., 6., 5., 5.,
+                                2., 9., 6., 2., 3., 4., 2., 1., 1., 1., 1.]
+        correct_row_unknowns_no_zero = [
+            c for c in correct_row_unknowns if c > 0]
+        correct_values_no_zero = [
+            v for v, c in zip(cont.values, correct_row_unknowns) if c > 0]
+
+        np.testing.assert_almost_equal(cont.row_unknowns, correct_row_unknowns)
+        arr_unknowns = cont.array_with_unknowns
+        np.testing.assert_almost_equal(
+            arr_unknowns[-1][1], correct_row_unknowns_no_zero)
+        np.testing.assert_almost_equal(
+            arr_unknowns[-1][0], correct_values_no_zero)
+
+        # check if other match to what we get with __getitem__
+        for v1, v2 in zip(arr_unknowns[:-1], cont):
+            np.testing.assert_almost_equal(v1, v2)
+
     def test_mixedtype_metas(self):
         import Orange
         zoo = Orange.data.Table("zoo")
@@ -211,7 +237,6 @@ class TestDiscrete(unittest.TestCase):
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
         Y = np.array([[1, 2, 1, 0, 0]]).T
         return data.Table.from_numpy(domain, X, Y)
-
 
     def test_sparse(self):
         d = self._construct_sparse()

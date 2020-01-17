@@ -1,7 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-import os
 import pickle
 import unittest
 from unittest.mock import Mock
@@ -15,7 +14,6 @@ from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, \
     EqualWidth, SelectBestFeatures, RemoveNaNRows, Preprocess, Scale, \
     Randomize, Continuize, Discretize, Impute, SklImpute, Normalize, \
     ProjectCUR, ProjectPCA, RemoveConstant, AdaptiveNormalize, RemoveSparse
-from Orange.util import OrangeDeprecationWarning
 
 
 class TestPreprocess(unittest.TestCase):
@@ -183,19 +181,50 @@ class TestRemoveSparse(unittest.TestCase):
     def setUp(self):
         domain = Domain([ContinuousVariable('a'), ContinuousVariable('b')])
         self.data = Table.from_numpy(domain, np.zeros((3, 2)))
-        self.data[1:, 1] = 7
 
-    def test_dense(self):
+    def test_0_dense(self):
+        self.data[1:, 1] = 7
         true_out = self.data[:, 1]
         true_out.X = true_out.X.reshape(-1, 1)
-        out = RemoveSparse(0.5)(self.data)
+        out = RemoveSparse(0.5, True)(self.data)
         np.testing.assert_array_equal(out, true_out)
 
-    def test_sparse(self):
+        out = RemoveSparse(2, True)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_0_sparse(self):
+        self.data[1:, 1] = 7
         true_out = self.data[:, 1]
         self.data.X = csr_matrix(self.data.X)
         true_out.X = csr_matrix(true_out.X)
-        out = RemoveSparse(0.5)(self.data).X
+        out = RemoveSparse(0.5, True)(self.data).X
+        np.testing.assert_array_equal(out, true_out)
+
+        out = RemoveSparse(1, True)(self.data).X
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_nan_dense(self):
+        self.data[1:, 1] = np.nan
+        self.data.X[:, 0] = 7
+        true_out = self.data[:, 0]
+        true_out.X = true_out.X.reshape(-1, 1)
+        out = RemoveSparse(0.5, False)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+        out = RemoveSparse(1, False)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_nan_sparse(self):
+        self.data[1:, 1] = np.nan
+        self.data.X[:, 0] = 7
+        true_out = self.data[:, 0]
+        true_out.X = true_out.X.reshape(-1, 1)
+        self.data.X = csr_matrix(self.data.X)
+        true_out.X = csr_matrix(true_out.X)
+        out = RemoveSparse(0.5, False)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+        out = RemoveSparse(1, False)(self.data)
         np.testing.assert_array_equal(out, true_out)
 
 

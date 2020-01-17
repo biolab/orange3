@@ -1,8 +1,8 @@
 import os.path
 
 from Orange.data.table import Table
-from Orange.data.io import TabReader, CSVReader, PickleReader, ExcelReader, \
-    XlsReader
+from Orange.data.io import \
+    TabReader, CSVReader, PickleReader, ExcelReader, XlsReader, FileFormat
 from Orange.widgets import gui, widget
 from Orange.widgets.widget import Input
 from Orange.widgets.settings import Setting
@@ -22,14 +22,6 @@ class OWSave(OWSaveBase):
 
     settings_version = 2
 
-    writers = [TabReader, CSVReader, PickleReader, ExcelReader, XlsReader]
-    filters = {
-        **{f"{w.DESCRIPTION} (*{w.EXTENSIONS[0]})": w
-           for w in writers},
-        **{f"Compressed {w.DESCRIPTION} (*{w.EXTENSIONS[0]}.gz)": w
-           for w in writers if w.SUPPORT_COMPRESSED}
-    }
-
     class Inputs:
         data = Input("Data", Table)
 
@@ -37,6 +29,8 @@ class OWSave(OWSaveBase):
         unsupported_sparse = widget.Msg("Use Pickle format for sparse data.")
 
     add_type_annotations = Setting(True)
+
+    builtin_order = [TabReader, CSVReader, PickleReader, ExcelReader, XlsReader]
 
     def __init__(self):
         super().__init__(2)
@@ -52,6 +46,21 @@ class OWSave(OWSaveBase):
             0, 0, 1, 2)
         self.grid.setRowMinimumHeight(1, 8)
         self.adjustSize()
+
+    @classmethod
+    def get_filters(cls):
+        writers = [format for format in FileFormat.formats
+                   if getattr(format, 'write_file', None)
+                   and getattr(format, "EXTENSIONS", None)]
+        writers.sort(key=lambda writer: cls.builtin_order.index(writer)
+                     if writer in cls.builtin_order else 99)
+
+        return {
+            **{f"{w.DESCRIPTION} (*{w.EXTENSIONS[0]})": w
+               for w in writers},
+            **{f"Compressed {w.DESCRIPTION} (*{w.EXTENSIONS[0]}.gz)": w
+               for w in writers if w.SUPPORT_COMPRESSED}
+        }
 
     @Inputs.data
     def dataset(self, data):
@@ -95,21 +104,21 @@ class OWSave(OWSaveBase):
         def migrate_to_version_2():
             # Set the default; change later if possible
             settings.pop("compression", None)
-            settings["filter"] = next(iter(cls.filters))
+            settings["filter"] = next(iter(cls.get_filters()))
             filetype = settings.pop("filetype", None)
             if filetype is None:
                 return
 
             ext = cls._extension_from_filter(filetype)
             if settings.pop("compress", False):
-                for afilter in cls.filters:
+                for afilter in cls.get_filters():
                     if ext + ".gz" in afilter:
                         settings["filter"] = afilter
                         return
                 # If not found, uncompressed may have been erroneously set
                 # for a writer that didn't support if (such as .xlsx), so
                 # fall through to uncompressed
-            for afilter in cls.filters:
+            for afilter in cls.get_filters():
                 if ext in afilter:
                     settings["filter"] = afilter
                     return
@@ -128,20 +137,18 @@ class OWSave(OWSaveBase):
 
     def valid_filters(self):
         if self.data is None or not self.data.is_sparse():
-            return self.filters
+            return self.get_filters()
         else:
-            return {filt: writer for filt, writer in self.filters.items()
+            return {filt: writer for filt, writer in self.get_filters().items()
                     if writer.SUPPORT_SPARSE_DATA}
 
     def default_valid_filter(self):
+        valid = self.valid_filters()
         if self.data is None or not self.data.is_sparse() \
-                or self.filters[self.filter].SUPPORT_SPARSE_DATA:
+                or (self.filter in valid
+                        and valid[self.filter].SUPPORT_SPARSE_DATA):
             return self.filter
-        for filt, writer in self.filters.items():
-            if writer.SUPPORT_SPARSE_DATA:
-                return filt
-        # This shouldn't happen and it will trigger an error in tests
-        return None   # pragma: no cover
+        return next(iter(valid))
 
 
 if __name__ == "__main__":  # pragma: no cover

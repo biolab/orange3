@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import Mock
 
 import numpy as np
-from AnyQt.QtCore import QItemSelection
+from AnyQt.QtCore import QItemSelection, Qt
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
@@ -460,6 +460,52 @@ class TestOWDistributions(WidgetTest):
         out_selected = self.get_output(widget.Outputs.selected_data)
         self.assertEqual(
             len(out_selected.domain[ANNOTATED_DATA_FEATURE_NAME].values), 3)
+
+    def test_disable_hide_bars(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+        domain = self.iris.domain
+
+        cb = widget.controls.hide_bars
+
+        for var in ("petal length", "iris"):
+            for fitter in (0, 1):
+                self._set_var(domain[var])
+                self._set_fitter(fitter)
+                self.assertEqual(cb.isEnabled(),
+                                 var == "petal length" and fitter == 1)
+
+    def test_hide_bars(self):
+        # bar is a valid name in this context, pylint: disable=blacklisted-name
+        widget = self.widget
+        cb = widget.controls.hide_bars
+        self._set_check(cb, True)
+        self._set_fitter(1)
+
+        self.send_signal(widget.Inputs.data, self.iris)
+
+        domain = self.iris.domain
+        self._set_var(domain["petal length"])
+
+        for cvar in (None, domain["iris"]):
+            self._set_cvar(cvar)
+            self.assertTrue(cb.isEnabled())
+            self.assertTrue(all(bar.hidden
+                                for bar in widget.bar_items))
+            self.assertTrue(all(curve.opts["brush"] is not None
+                                for curve in widget.curve_items))
+
+            self._set_check(cb, False)
+            self.assertTrue(all(not bar.hidden
+                                for bar in widget.bar_items))
+            self.assertTrue(all(curve.opts["brush"].style() == Qt.NoBrush
+                                for curve in widget.curve_items))
+
+            self._set_check(cb, True)
+            self.assertTrue(all(bar.hidden
+                                for bar in widget.bar_items))
+            self.assertTrue(all(curve.opts["brush"] is not None
+                                for curve in widget.curve_items))
 
     def test_report(self):
         """Report doesn't crash"""

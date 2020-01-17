@@ -44,7 +44,7 @@ requirements:
     - keyring
     - keyrings.alt  # for alternative keyring implementations
     - pyqt
-    - pyqtgraph     >=0.10.0
+    - pyqtgraph     =0.10.0
     - anyqt         >=0.0.8
     - joblib
     - python.app    # [osx]

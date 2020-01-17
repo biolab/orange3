@@ -25,13 +25,18 @@ try:
 except ImportError:
     have_sphinx = False
 
-from distutils.command.build_ext import build_ext
-from distutils.command import install_data, sdist, config, build
+from distutils.command import install_data, sdist
+try:
 
+    from numpy.distutils.command.build_ext import build_ext
+    from numpy.distutils.command import config, build
+except ImportError:
+    from distutils.command.build_ext import build_ext
+    from distutils.command import config, build
 
 NAME = 'Orange3'
 
-VERSION = '3.24.0'
+VERSION = '3.24.1'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)

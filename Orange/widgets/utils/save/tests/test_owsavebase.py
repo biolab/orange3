@@ -36,10 +36,11 @@ class SaveWidgetsTestBaseMixin:
         widget.on_new_input.assert_called()
 
     def test_filters(self):
-        self.assertGreaterEqual(len(self.widget.filters), 1,
+        filters = self.widget.get_filters()
+        self.assertGreaterEqual(len(filters), 1,
                                 msg="Widget defines no filters")
         if type(self.widget).do_save is OWSaveBase.do_save:
-            self.assertIsInstance(self.widget.filters, collections.abc.Mapping)
+            self.assertIsInstance(filters, collections.abc.Mapping)
 
 
 class TestOWSaveBaseWithWriters(WidgetTest):
@@ -92,7 +93,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
         self.assertEqual(widget.initial_start_dir(),
                          os.path.expanduser(f"~{os.sep}"))
         self.assertEqual(widget.suggested_name(), "")
-        self.assertIs(widget.valid_filters(), widget.filters)
+        self.assertIs(widget.valid_filters(), widget.get_filters())
         self.assertIs(widget.default_valid_filter(), widget.filter)
 
 
@@ -133,7 +134,7 @@ class TestOWSaveBase(WidgetTest):
         self.assertEqual(widget.initial_start_dir(),
                          os.path.expanduser(f"~{os.sep}"))
         self.assertEqual(widget.suggested_name(), "")
-        self.assertIs(widget.valid_filters(), widget.filters)
+        self.assertIs(widget.valid_filters(), widget.get_filters())
         self.assertIs(widget.default_valid_filter(), widget.filter)
 
 
