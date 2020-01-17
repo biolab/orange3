@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,unsubscriptable-object
+from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import Table
@@ -12,6 +13,7 @@ from Orange.widgets.data import owpreprocess
 from Orange.widgets.data.owpreprocess import OWPreprocess, \
     UnivariateFeatureSelect, Scale as ScaleEditor
 from Orange.widgets.tests.base import WidgetTest, datasets
+from orangewidget.widget import StateInfo
 
 
 class TestOWPreprocess(WidgetTest):
@@ -137,6 +139,25 @@ class TestOWPreprocess(WidgetTest):
         model = self.widget.load(saved)
         self.widget.set_model(model)
         self.send_signal(self.widget.Inputs.data, table)
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        data = Table("iris")
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(int(StateInfo.format_number(len(data))))
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        output_sum.assert_called_with(int(StateInfo.format_number(len(output))))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 
 # Test for editors
