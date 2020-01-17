@@ -749,9 +749,9 @@ def _bhattacharyya(a, b):
     check_non_negative(b)
     a = _prob_dist(a)
     b = _prob_dist(b)
-    if sp.issparse(a):
-        return -np.log(np.sum(np.sqrt(a.multiply(b))))
-    return -np.log(np.sum(np.sqrt(a * b)))
+    prod = a.multiply(b) if sp.issparse(a) else a * b
+    return np.clip(-np.log(np.sum(np.sqrt(prod))), 0, None)
+
 
 
 class Bhattacharyya(Distance):
