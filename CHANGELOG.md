@@ -6,6 +6,31 @@ Change Log
 * ...
 
 
+[3.24.1] - 2020-01-17
+--------------------
+##### Enhancements
+* OWPreprocess: data info displayed in status bar ([#4333](../../pull/4333))
+* OWDiscretize: data info displayed in status bar ([#4331](../../pull/4331))
+* OWContinuize: data info displayed in status bar ([#4327](../../pull/4327))
+* OWTranspose: data info displayed in status bar ([#4295](../../pull/4295))
+* Silhouette plot: Accept distance matrix on input ([#4313](../../pull/4313))
+* Preprocess: Add filtering by missing values ([#4266](../../pull/4266))
+* Allow add-ons to register file format for the Save widget ([#4302](../../pull/4302))
+* Box Plot: Add box for missing group values ([#4292](../../pull/4292))
+* clustering/hierarchical: Use optimal\_leaf\_ordering from scipy ([#4288](../../pull/4288))
+* Distributions: Add option to hide bars ([#4301](../../pull/4301))
+
+##### Bugfixes
+* ExcelReader: Speedup ([#4339](../../pull/4339))
+* Nomogram: Adjust scale considering label width ([#4329](../../pull/4329))
+* owhierarchicalclustering: Prescale dendrogram geometry ([#4322](../../pull/4322))
+* table\_to\_frame: metas lost on conversion ([#4259](../../pull/4259))
+* TestOWRank: Setting type should not be np.ndarray ([#4315](../../pull/4315))
+* Distances: Fix restoring the cosine distance ([#4311](../../pull/4311))
+* Fix saving workflows that contain a Rank widget ([#4289](../../pull/4289))
+* utils/textimport: Remove 'exclusive' kwarg from QActionGroup call ([#4298](../../pull/4298))
+
+
 [3.24.0] - 2019-12-20
 --------------------
 ##### Enhancements
@@ -1244,7 +1269,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.24.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.24.1...HEAD
+[3.24.1]: https://github.com/biolab/orange3/compare/3.24.1...3.24.0
 [3.24.0]: https://github.com/biolab/orange3/compare/3.24.0...3.23.1
 [3.23.1]: https://github.com/biolab/orange3/compare/3.23.1...3.23.0
 [3.23.0]: https://github.com/biolab/orange3/compare/3.22.0...3.23.0
