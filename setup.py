@@ -36,8 +36,8 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.25.0'
-ISRELEASED = False
+VERSION = '3.24.1'
+ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
 FULLVERSION = VERSION
