@@ -353,8 +353,8 @@ class Script:
 
 
 class ScriptItemDelegate(QStyledItemDelegate):
-    @staticmethod
-    def displayText(script, _locale):
+    # pylint: disable=no-self-use
+    def displayText(self, script, _locale):
         if script.flags & Script.Modified:
             return "*" + script.name
         else:
@@ -369,17 +369,14 @@ class ScriptItemDelegate(QStyledItemDelegate):
             option.palette.setColor(QPalette.Highlight, QColor(Qt.darkRed))
         super().paint(painter, option, index)
 
-    @staticmethod
-    def createEditor(parent, _option, _index):
+    def createEditor(self, parent, _option, _index):
         return QLineEdit(parent)
 
-    @staticmethod
-    def setEditorData(editor, index):
+    def setEditorData(self, editor, index):
         script = index.data(Qt.DisplayRole)
         editor.setText(script.name)
 
-    @staticmethod
-    def setModelData(editor, model, index):
+    def setModelData(self, editor, model, index):
         model[index.row()].name = str(editor.text())
 
 
@@ -767,8 +764,7 @@ class OWPythonScript(OWWidget):
                 out_var = None
             getattr(self.Outputs, signal).send(out_var)
 
-    @staticmethod
-    def dragEnterEvent(event):
+    def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()
         if urls:
             # try reading the file as text
