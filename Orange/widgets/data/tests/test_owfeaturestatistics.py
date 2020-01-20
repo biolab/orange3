@@ -1,12 +1,15 @@
+# pylint: disable=unsubscriptable-object
 import datetime
 from collections import namedtuple
 from functools import partial
 from itertools import chain
 from typing import List
+from unittest.mock import Mock
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
     QItemSelectionModel, Qt
+from orangewidget.widget import StateInfo
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
@@ -461,3 +464,37 @@ class TestFeatureStatisticsUI(WidgetTest):
         # Sending back the old data restores the selection
         self.send_signal(self.widget.Inputs.data, self.data1)
         self.assertEqual(len(self.widget.selected_rows), 2)
+
+class TestSummary(WidgetTest):
+    def setUp(self):
+        self.widget = self.create_widget(OWFeatureStatistics)
+        self.data = make_table(
+            [continuous_full, continuous_missing],
+            target=[rgb_full, rgb_missing], metas=[ints_full, ints_missing]
+        )
+        self.select_rows = partial(select_rows, widget=self.widget)
+
+    def test_summary(self):
+        data = self.data
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        details = f'{len(data)} instances, ' \
+                  f'{len(self.data.domain.variables)} features'
+
+        input_sum.assert_called_with(StateInfo.format_number(len(data)),
+                                     details)
+
+        self.select_rows([0, 2])
+        self.widget.unconditional_commit()
+        output = self.get_output(self.widget.Outputs.reduced_data)
+        details = f'{len(output)} instances, ' \
+                  f'{len(output.domain.variables)} features'
+        output_sum.assert_called_with(StateInfo.format_number(len(output)),
+                                      details)
+
+        input_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
