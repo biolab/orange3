@@ -154,6 +154,21 @@ class TestNormalizer(unittest.TestCase):
             Normalize(norm_type=Normalize.NormalizeBySpan)(
                 data).domain.attributes[0].attributes, attributes)
 
+    def test_number_of_decimals(self):
+        foo = ContinuousVariable("Foo", number_of_decimals=0)
+        data = Table.from_list(Domain((foo,)), [[1], [2], [3]])
+
+        normalized = Normalize()(data)
+        norm_foo = normalized.domain.attributes[0]
+
+        self.assertEqual(norm_foo.number_of_decimals, 3)
+        self.assertEqual(norm_foo.format_str, "%g")
+        self.assertEqual(norm_foo.adjust_decimals, 2)
+
+        for val1, val2 in zip(normalized[:, "Foo"],
+                              ["-1.22474", "0", "1.22474"]):
+            self.assertEqual(str(val1[0]), val2)
+
 
 if __name__ == "__main__":
     unittest.main()
