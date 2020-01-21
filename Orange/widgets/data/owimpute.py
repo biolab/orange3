@@ -249,6 +249,9 @@ class OWImpute(OWWidget):
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 
+        self._update_input_summary(self.data, self.info.NoInput)
+        self._update_output_summary(self.data, self.info.NoOutput)
+
     def create_imputer(self, method, *args):
         # type: (Method, ...) -> impute.BaseImputeMethod
         if method == Method.Model:
@@ -295,10 +298,13 @@ class OWImpute(OWWidget):
         self.data = data
 
         if data is not None:
+            self._update_input_summary(data, self.info.format_number(len(data)))
             self.varmodel[:] = data.domain.variables
             self.openContext(data.domain)
             # restore per variable imputation state
             self._restore_state(self._variable_imputation_state)
+        else:
+            self._update_input_summary(data, self.info.NoInput)
 
         self.update_varview()
         self.unconditional_commit()
@@ -345,6 +351,7 @@ class OWImpute(OWWidget):
         self.Error.model_based_imputer_sparse.clear()
 
         if not self.data or not self.varmodel.rowCount():
+            self._update_output_summary(self.data, self.info.NoOutput)
             self.Outputs.data.send(self.data)
             self.modified = False
             return
@@ -449,6 +456,12 @@ class OWImpute(OWWidget):
                 class_vars.extend(newvar)
         else:
             data = create_data(attributes, class_vars)
+
+        if data is None:
+            self._update_output_summary(data, self.info.NoOutput)
+        else:
+            self._update_output_summary(data,
+                                        self.info.format_number(len(data)))
 
         self.Outputs.data.send(data)
         self.modified = False
@@ -643,6 +656,25 @@ class OWImpute(OWWidget):
     def storeSpecificSettings(self):
         self._variable_imputation_state = self._store_state()
         super().storeSpecificSettings()
+
+    def _update_input_summary(self, data, summary):
+        self.info.set_input_summary(summary, self._create_summary(data))
+
+    def _update_output_summary(self, data, summary):
+        self.info.set_output_summary(summary, self._create_summary(data))
+
+    def _create_summary(self, data):
+        def sp(s, capitalize=True):
+            return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
+
+        details = ""
+        if data:
+            n = data.approx_len()
+            features = len(data.domain.variables) + len(data.domain.class_vars)
+            details = \
+                f"{sp(n)[0]} instance{sp(n)[1]}, " \
+                f"{sp(features)[0]} feature{sp(features)[1]}"
+        return details
 
 
 if __name__ == "__main__":  # pragma: no cover

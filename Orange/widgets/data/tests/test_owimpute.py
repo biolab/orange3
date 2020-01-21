@@ -1,10 +1,13 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,pointless-statement,blacklisted-name
+# pylint: disable=unsubscriptable-object
+from unittest.mock import Mock
 import numpy as np
 
 from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtTest import QTest
 
+from orangewidget.widget import StateInfo
 from Orange.data import Table, Domain
 from Orange.preprocess import impute
 from Orange.widgets.data.owimpute import OWImpute, AsDefault, Learner, Method
@@ -181,3 +184,30 @@ class TestOWImpute(WidgetTest):
                         widget.value_combo.isEnabledTo(widget))
         self.assertEqual(varbg.checkedId(), Method.Default)
         self.assertEqual(widget.value_combo.currentIndex(), 1)
+
+    def test_summary(self):
+        """Check if status bar displays correct input/output summary"""
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        features = len(data.domain.variables) + len(data.domain.class_vars)
+        details = \
+            f"{StateInfo.format_number(len(data))} instances, "\
+            f"{StateInfo.format_number(features)} features"
+        input_sum.assert_called_with(str(len(data)), details)
+        output = self.get_output(self.widget.Outputs.data)
+        features = len(output.domain.variables) + len(output.domain.class_vars)
+        details = \
+            f"{StateInfo.format_number(len(output))} instances, "\
+            f"{StateInfo.format_number(features)} features"
+        output_sum.assert_called_with(str(len(output)), details)
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
