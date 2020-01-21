@@ -100,7 +100,7 @@ class OWVennDiagram(widget.OWWidget):
         self.area_keys = []
 
         # Main area view
-        self.scene = QGraphicsScene()
+        self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing)
         self.view.setBackgroundRole(QPalette.Window)

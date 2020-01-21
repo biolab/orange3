@@ -324,7 +324,7 @@ class OWMosaicDisplay(OWWidget):
 
         self.areas = []
 
-        self.canvas = QGraphicsScene()
+        self.canvas = QGraphicsScene(self)
         self.canvas_view = ViewWithPress(
             self.canvas, handler=self.clear_selection)
         self.mainArea.layout().addWidget(self.canvas_view)

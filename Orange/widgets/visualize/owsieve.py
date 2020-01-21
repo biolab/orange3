@@ -121,7 +121,7 @@ class OWSieveDiagram(OWWidget):
             self.attr_box, self, "Score Combinations", self.set_attr)
         self.vizrank_button.setSizePolicy(*fixed_size)
 
-        self.canvas = QGraphicsScene()
+        self.canvas = QGraphicsScene(self)
         self.canvasView = ViewWithPress(
             self.canvas, self.mainArea, handler=self.reset_selection)
         self.mainArea.layout().addWidget(self.canvasView)

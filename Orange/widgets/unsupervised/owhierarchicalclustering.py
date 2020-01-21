@@ -266,7 +266,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         gui.auto_send(box, self, "autocommit", box=False)
 
-        self.scene = QGraphicsScene()
+        self.scene = QGraphicsScene(self)
         self.view = StickyGraphicsView(
             self.scene,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
