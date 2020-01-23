@@ -723,15 +723,6 @@ class OWFeatureStatistics(widget.OWWidget):
 
         self.data = None  # type: Optional[Table]
 
-        # Information panel
-        info_box = gui.vBox(self.controlArea, 'Info')
-        info_box.setMinimumWidth(200)
-        self.info_summary = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_attr = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_class = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_meta = gui.widgetLabel(info_box, wordWrap=True)
-        self.set_info()
-
         # TODO: Implement filtering on the model
         # filter_box = gui.vBox(self.controlArea, 'Filter')
         # self.filter_text = gui.lineEdit(
@@ -761,6 +752,9 @@ class OWFeatureStatistics(widget.OWWidget):
         self.table_view = FeatureStatisticsTableView(self.model, parent=self)
         self.table_view.selectionModel().selectionChanged.connect(self.on_select)
         self.table_view.horizontalHeader().sectionClicked.connect(self.on_header_click)
+
+        self._update_input_summary(self.data, self.info.NoInput)
+        self._update_output_summary(self.data, self.info.NoOutput)
 
         self.mainArea.layout().addWidget(self.table_view)
 
@@ -796,9 +790,12 @@ class OWFeatureStatistics(widget.OWWidget):
             self.color_var = None
             if self.data.domain.class_vars:
                 self.color_var = self.data.domain.class_vars[0]
+            self._update_input_summary(data,
+                                       self.info.format_number(len(data)))
         else:
             self.color_var_model.set_domain(None)
             self.color_var = None
+            self._update_input_summary(data, self.info.NoInput)
         self.model.set_data(data)
 
         self.openContext(self.data)
@@ -807,7 +804,6 @@ class OWFeatureStatistics(widget.OWWidget):
         # self._filter_table_variables()
         self.__color_var_changed()
 
-        self.set_info()
         self.commit()
 
     def __restore_selection(self):
@@ -873,31 +869,30 @@ class OWFeatureStatistics(widget.OWWidget):
             var_string = attrs[0]
         return plural('%s variable{s}' % var_string, sum(counts))
 
-    def set_info(self):
-        if self.data is not None:
-            self.info_summary.setText('<b>%s</b> contains %s with %s' % (
-                self.data.name,
-                plural('{number} instance{s}', self.model.n_instances),
-                plural('{number} feature{s}', self.model.n_attributes)
-            ))
+    def _update_input_summary(self, data, summary):
+        self.info.set_input_summary(summary, self._create_summary(data))
 
-            self.info_attr.setText(
-                '<b>Attributes:</b><br>%s' %
-                self._format_variables_string(self.data.domain.attributes)
-            )
-            self.info_class.setText(
-                '<b>Class variables:</b><br>%s' %
-                self._format_variables_string(self.data.domain.class_vars)
-            )
-            self.info_meta.setText(
-                '<b>Metas:</b><br>%s' %
-                self._format_variables_string(self.data.domain.metas)
-            )
-        else:
-            self.info_summary.setText('No data on input.')
-            self.info_attr.setText('')
-            self.info_class.setText('')
-            self.info_meta.setText('')
+    def _update_output_summary(self, data, summary):
+        self.info.set_output_summary(summary, self._create_summary(data))
+
+    def _create_summary(self, data):
+        def sp(s, capitalize=True):
+            return s and s or ('No' if capitalize else 'no'), 's' * (s != 1)
+
+        details = ''
+        if data:
+            n = data.approx_len()
+            details = \
+                f'{sp(n)[0]} instance{sp(n)[1]}, ' \
+                f'{sp(len(data.domain.attributes))[0]}' \
+                f' feature{sp(len(data.domain.attributes))[1]} \n' \
+                f'Features: ' \
+                f'{self._format_variables_string(data.domain.attributes)} \n' \
+                f'Target: ' \
+                f'{self._format_variables_string(data.domain.class_vars)} \n' \
+                f'Metas: ' \
+                f'{self._format_variables_string(data.domain.metas)}'
+        return details
 
     def on_select(self):
         self.selected_rows = self.model.mapToSourceRows([
@@ -911,13 +906,16 @@ class OWFeatureStatistics(widget.OWWidget):
         if not len(self.selected_rows):
             self.Outputs.reduced_data.send(None)
             self.Outputs.statistics.send(None)
+            self._update_output_summary(None, self.info.NoOutput)
             return
 
         # Send a table with only selected columns to output
         variables = self.model.variables[self.selected_rows]
         self.Outputs.reduced_data.send(self.data[:, variables])
+        self._update_output_summary(self.data[:, variables],\
+                    self.info.format_number(len(self.data[:, variables])))
 
-        # Send the statistics of the selected variables to ouput
+        # Send the statistics of the selected variables to output
         labels, data = self.model.get_statistics_matrix(variables, return_labels=True)
         var_names = np.atleast_2d([var.name for var in variables]).T
         domain = Domain(
