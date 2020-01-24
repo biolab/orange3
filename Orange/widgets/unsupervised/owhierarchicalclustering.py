@@ -311,15 +311,26 @@ class DendrogramWidget(QGraphicsWidget):
             self.setParentItem(parent)
 
     def clear(self):
+        # Remove event filter from all items before removal.
+        # Each removeItem is linear in number of installed filters in the whole
+        # scene -> so this would be quadratic for us (not accounting any other
+        # filters not part of DendrogramWidget).
         for item in self._items.values():
-            item.setParentItem(None)
-            if item.scene() is self.scene() and self.scene() is not None:
-                self.scene().removeItem(item)
+            item.removeSceneEventFilter(self)
+        scene = self.scene()
+        if scene is not None:
+            scene.removeItem(self._itemgroup)
+        else:
+            self._itemgroup.setParentItem(None)
+        self._itemgroup = QGraphicsWidget(self)
+        self._itemgroup.setGeometry(self.contentsRect())
+        self._items.clear()
 
         for item in self._selection.values():
-            item.setParentItem(None)
-            if item.scene():
-                item.scene().removeItem(item)
+            if scene is not None:
+                scene.removeItem(item)
+            else:
+                item.setParentItem(None)
 
         self._root = None
         self._items = {}
