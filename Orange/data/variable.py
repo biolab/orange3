@@ -505,12 +505,7 @@ class ContinuousVariable(Variable):
         three, but adjusted at the first call of :obj:`to_val`.
         """
         super().__init__(name, compute_value, sparse=sparse)
-        if number_of_decimals is None:
-            self._number_of_decimals = 3
-            self.adjust_decimals = 2
-            self._format_str = "%g"
-        else:
-            self.number_of_decimals = number_of_decimals
+        self.number_of_decimals = number_of_decimals
 
     @property
     def number_of_decimals(self):
@@ -538,6 +533,12 @@ class ContinuousVariable(Variable):
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
     def number_of_decimals(self, x):
+        if x is None:
+            self._number_of_decimals = 3
+            self.adjust_decimals = 2
+            self._format_str = "%g"
+            return
+
         self._number_of_decimals = x
         self.adjust_decimals = 0
         if self._number_of_decimals <= MAX_NUM_OF_DECIMALS:
