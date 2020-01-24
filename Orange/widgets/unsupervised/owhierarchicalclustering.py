@@ -10,7 +10,7 @@ from typing import Any, List, Tuple, Dict, Optional, Set, Union
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
+    QGraphicsWidget, QGraphicsObject, QGraphicsPathItem,
     QGraphicsScene, QGridLayout, QSizePolicy,
     QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox,
     QGraphicsItemGroup, QGraphicsGridLayout, QGraphicsSceneMouseEvent
@@ -41,6 +41,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output, Msg
 
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
+from Orange.widgets.utils.graphicstextlist import TextListWidget
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -1062,11 +1063,10 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.dendrogram.selectionChanged.connect(self._invalidate_output)
         self.dendrogram.selectionEdited.connect(self._selection_edited)
 
-        self.labels = GraphicsSimpleTextList()
+        self.labels = TextListWidget()
         self.labels.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self.labels.setAlignment(Qt.AlignLeft)
         self.labels.setMaximumWidth(200)
-        self.labels.layout().setSpacing(0)
 
         scenelayout.addItem(self.top_axis, 0, 0,
                             alignment=Qt.AlignLeft | Qt.AlignVCenter)
@@ -1156,7 +1156,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 else self.annotation_if_enumerate
 
     def _clear_plot(self):
-        self.labels.set_labels([])
+        self.labels.setItems([])
         self.dendrogram.set_root(None)
 
     def _set_displayed_root(self, root):
@@ -1223,7 +1223,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [", ".join(labels[leaf.value.first: leaf.value.last])
                           for leaf in joined]
 
-        self.labels.set_labels(labels)
+        self.labels.setItems(labels)
         self.labels.setMinimumWidth(1 if labels else -1)
 
     def _restore_selection(self, state):
@@ -1612,83 +1612,6 @@ def qfont_scaled(font, factor):
     elif font.pixelSize() != -1:
         scaled.setPixelSize(int(font.pixelSize() * factor))
     return scaled
-
-
-class GraphicsSimpleTextList(QGraphicsWidget):
-    """A simple text list widget."""
-
-    def __init__(self, labels=[], orientation=Qt.Vertical,
-                 alignment=Qt.AlignCenter, parent=None):
-        QGraphicsWidget.__init__(self, parent)
-        layout = QGraphicsLinearLayout(orientation)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.setLayout(layout)
-        self.orientation = orientation
-        self.alignment = alignment
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.label_items = []
-        self.set_labels(labels)
-
-    def clear(self):
-        """Remove all text items."""
-        layout = self.layout()
-        for i in reversed(range(layout.count())):
-            witem = layout.itemAt(i)
-            witem.item.setParentItem(None)
-            if self.scene():
-                self.scene().removeItem(witem.item)
-            layout.removeAt(i)
-
-        self.label_items = []
-        self.updateGeometry()
-
-    def set_labels(self, labels):
-        """Set the text labels."""
-        self.clear()
-        orientation = Qt.Horizontal if self.orientation == Qt.Vertical else Qt.Vertical
-        for text in labels:
-            item = QGraphicsSimpleTextItem(text, self)
-            item.setFont(self.font())
-            item.setToolTip(text)
-            witem = WrapperLayoutItem(item, orientation, parent=self)
-            self.layout().addItem(witem)
-            self.layout().setAlignment(witem, self.alignment)
-            self.label_items.append(item)
-
-        self.layout().activate()
-        self.updateGeometry()
-
-    def setAlignment(self, alignment):
-        """Set alignment of text items in the widget
-        """
-        self.alignment = alignment
-        layout = self.layout()
-        for i in range(layout.count()):
-            layout.setAlignment(layout.itemAt(i), alignment)
-
-    def setVisible(self, visible):
-        QGraphicsWidget.setVisible(self, visible)
-        self.updateGeometry()
-
-    def changeEvent(self, event):
-        if event.type() == QEvent.FontChange:
-            self.__update_font()
-        return super().changeEvent(event)
-
-    def __iter__(self):
-        return iter(self.label_items)
-
-    def __update_font(self):
-        for item in self.label_items:
-            item.setFont(self.font())
-
-        layout = self.layout()
-        for i in range(layout.count()):
-            layout.itemAt(i).updateGeometry()
-
-        self.layout().invalidate()
-        self.updateGeometry()
 
 
 class WrapperLayoutItem(QGraphicsLayoutItem):
