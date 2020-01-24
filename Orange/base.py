@@ -413,7 +413,11 @@ class SklModel(Model, metaclass=WrapperMeta):
 
     def predict(self, X):
         value = self.skl_model.predict(X)
-        if hasattr(self.skl_model, "predict_proba"):
+        # SVM has probability attribute which defines if method compute probs
+        has_prob_attr = hasattr(self.skl_model, "probability")
+        if (has_prob_attr and self.skl_model.probability
+                or not has_prob_attr
+                and hasattr(self.skl_model, "predict_proba")):
             probs = self.skl_model.predict_proba(X)
             return value, probs
         return value
