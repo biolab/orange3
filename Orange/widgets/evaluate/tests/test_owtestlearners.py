@@ -597,6 +597,25 @@ class TestOWTestLearners(WidgetTest):
                         self.assertIn(f"{probs(row, col, w.rope)[0]:.3f}", text)
                         self.assertIn(f"{probs(row, col, w.rope)[1]:.3f}", text)
 
+    def test_nan_on_comparison(self):
+        w = self.widget
+        w.use_rope = True
+        self._set_three_majorities()
+        scores = [object(), object(), object()]
+        slots = w._successful_slots()
+
+        def two_on_single(_1, _2, rope=0):
+            if rope:
+                return np.nan, np.nan, np.nan
+            else:
+                return np.nan, np.nan
+
+        with patch("baycomp.two_on_single", new=two_on_single):
+            for w.rope in (0, 0.1):
+                w._fill_table(slots, scores)
+                label = w.comparison_table.cellWidget(1, 0)
+                self.assertEqual(label.text(), "NA")
+
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):

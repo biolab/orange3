@@ -487,19 +487,32 @@ class OWTestLearners(OWWidget):
     # - we don't gain much with it
     # - it complicates the unit tests
     def _update_scorers(self):
-        if self.data is None or self.data.domain.class_var is None:
-            self.scorers = []
-            self.controls.comparison_criterion.model().clear()
-            return
-        self.scorers = usable_scorers(self.data.domain.class_var)
-        self.controls.comparison_criterion.model()[:] = \
-            [scorer.long_name or scorer.name for scorer in self.scorers]
+        if self.data and self.data.domain.class_var:
+            new_scorers = usable_scorers(self.data.domain.class_var)
+        else:
+            new_scorers = []
+        # Don't unnecessarily reset the model because this would always reset
+        # comparison_criterion; we alse set it explicitly, though, for clarity
+        if new_scorers != self.scorers:
+            self.scorers = new_scorers
+            self.controls.comparison_criterion.model()[:] = \
+                [scorer.long_name or scorer.name for scorer in self.scorers]
+            self.comparison_criterion = 0
         if self.__pending_comparison_criterion is not None:
             # Check for the unlikely case that some scorers have been removed
             # from modules
             if self.__pending_comparison_criterion < len(self.scorers):
                 self.comparison_criterion = self.__pending_comparison_criterion
             self.__pending_comparison_criterion = None
+        self._update_compbox_title()
+
+    def _update_compbox_title(self):
+        criterion = self.comparison_criterion
+        if criterion < len(self.scorers):
+            scorer = self.scorers[criterion]()
+            self.compbox.setTitle(f"Model Comparison by {scorer.name}")
+        else:
+            self.compbox.setTitle(f"Model Comparison")
 
     @Inputs.preprocessor
     def set_preprocessor(self, preproc):
@@ -680,7 +693,7 @@ class OWTestLearners(OWWidget):
 
     def _scores_by_folds(self, slots):
         scorer = self.scorers[self.comparison_criterion]()
-        self.compbox.setTitle(f"Model comparison by {scorer.name}")
+        self._update_compbox_title()
         if scorer.is_binary:
             if self.class_selection != self.TARGET_AVERAGE:
                 class_var = self.data.domain.class_var
@@ -713,6 +726,9 @@ class OWTestLearners(OWWidget):
                 if self.use_rope and self.rope:
                     p0, rope, p1 = baycomp.two_on_single(
                         row_scores, col_scores, self.rope)
+                    if np.isnan(p0) or np.isnan(rope) or np.isnan(p1):
+                        self._set_cells_na(table, row, col)
+                        continue
                     self._set_cell(table, row, col,
                                    f"{p0:.3f}<br/><small>{rope:.3f}</small>",
                                    f"p({row_name} > {col_name}) = {p0:.3f}\n"
@@ -723,12 +739,20 @@ class OWTestLearners(OWWidget):
                                    f"p({col_name} = {row_name}) = {rope:.3f}")
                 else:
                     p0, p1 = baycomp.two_on_single(row_scores, col_scores)
+                    if np.isnan(p0) or np.isnan(p1):
+                        self._set_cells_na(table, row, col)
+                        continue
                     self._set_cell(table, row, col,
                                    f"{p0:.3f}",
                                    f"p({row_name} > {col_name}) = {p0:.3f}")
                     self._set_cell(table, col, row,
                                    f"{p1:.3f}",
                                    f"p({col_name} > {row_name}) = {p1:.3f}")
+
+    @classmethod
+    def _set_cells_na(cls, table, row, col):
+        cls._set_cell(table, row, col, "NA", "comparison cannot be computed")
+        cls._set_cell(table, col, row, "NA", "comparison cannot be computed")
 
     @staticmethod
     def _set_cell(table, row, col, label, tooltip):
