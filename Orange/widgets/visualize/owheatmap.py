@@ -37,12 +37,14 @@ from Orange.clustering import hierarchical, kmeans
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import colorbrewer
-from Orange.widgets.utils.graphicstextlist import scaled
+
+from Orange.widgets.utils.graphicstextlist import scaled, TextListWidget
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
+from Orange.widgets.unsupervised.owdistancemap import TextList as TextListWidget
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
@@ -1111,8 +1113,8 @@ class OWHeatMap(widget.OWWidget):
 
             labels = [str(i) for i in indices]
 
-            labelslist = GraphicsSimpleTextList(
-                labels, parent=widget, orientation=Qt.Vertical)
+            labelslist = TextListWidget(
+                items=labels, parent=widget, orientation=Qt.Vertical)
 
             labelslist._indices = indices
             labelslist.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
@@ -1135,9 +1137,9 @@ class OWHeatMap(widget.OWWidget):
 
             labels = [data.domain[i].name for i in indices]
 
-            labelslist = GraphicsSimpleTextList(
-                labels, parent=widget, orientation=Qt.Horizontal)
-            labelslist.setAlignment(Qt.AlignBottom | Qt.AlignLeft)
+            labelslist = TextListWidget(
+                items=labels, parent=widget, orientation=Qt.Horizontal)
+            labelslist.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             labelslist._indices = indices
 
             labelslist.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -1148,9 +1150,9 @@ class OWHeatMap(widget.OWWidget):
             col_annotation_widgets_top.append(labelslist)
 
             # Bottom attr annotations
-            labelslist = GraphicsSimpleTextList(
-                labels, parent=widget, orientation=Qt.Horizontal)
-            labelslist.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+            labelslist = TextListWidget(
+                items=labels, parent=widget, orientation=Qt.Horizontal)
+            labelslist.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             labelslist.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
             grid.addItem(labelslist, BottomLabelsRow, Col0 + j)
@@ -1392,7 +1394,7 @@ class OWHeatMap(widget.OWWidget):
         """Iterate over GraphicsSimpleTextList widgets.
         """
         for item in self.heatmap_scene.items():
-            if isinstance(item, GraphicsSimpleTextList):
+            if isinstance(item, TextListWidget):
                 yield item
 
     def dendrogram_widgets(self):
@@ -1491,7 +1493,7 @@ class OWHeatMap(widget.OWWidget):
                         data = annot_col[indices]
                         labels = [var.str_val(val) for val in data]
 
-                    labelslist.set_labels(labels)
+                    labelslist.setItems(labels)
 
     def update_column_annotations(self):
         if self.data is not None:
@@ -2037,130 +2039,6 @@ class GraphicsSimpleTextLayoutItem(QGraphicsLayoutItem):
     def setText(self, text):
         self.text_item.setText(text)
         self.updateGeometry()
-
-
-class GraphicsSimpleTextList(QGraphicsWidget):
-    """A simple text list widget."""
-    def __init__(self, labels=(), orientation=Qt.Vertical, parent=None):
-        super().__init__(parent)
-        self.label_items = []
-        self.orientation = orientation
-        self.alignment = Qt.AlignCenter
-        self.__resize_in_progress = False
-
-        layout = QGraphicsLinearLayout(orientation)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.setLayout(layout)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.set_labels(labels)
-
-    def clear(self):
-        """Remove all text items."""
-        layout = self.layout()
-        for i in reversed(range(layout.count())):
-            item = layout.itemAt(i)
-            item.text_item.setParentItem(None)
-            if self.scene():
-                self.scene().removeItem(item.text_item)
-            layout.removeAt(i)
-
-        self.label_items = []
-#         self.updateGeometry()
-
-    def set_labels(self, labels):
-        """Set the text labels to show in the widget.
-        """
-        self.clear()
-        orientation = Qt.Horizontal if self.orientation == Qt.Vertical else Qt.Vertical
-        for text in labels:
-            item = QGraphicsSimpleTextItem(self)
-            item.setFont(self.font())
-            item.setToolTip(text)
-            item.setText(text)
-            item = GraphicsSimpleTextLayoutItem(item, orientation, parent=self)
-            self.layout().addItem(item)
-            self.layout().setAlignment(item, self.alignment)
-            self.label_items.append(item)
-
-    def setAlignment(self, alignment):
-        """Set alignment of text items in the widget
-        """
-        self.alignment = alignment
-        layout = self.layout()
-        for i in range(layout.count()):
-            layout.setAlignment(layout.itemAt(i), alignment)
-
-    def sizeHint(self, which, constraint=QRectF()):
-        if not self.isVisible():
-            return QSizeF(0, 0)
-        elif which == Qt.PreferredSize:
-            fm = QFontMetrics(QApplication.instance().font())
-            brects = [fm.boundingRect(item.text_item.text())
-                      for item in self.label_items]
-            spacing = self.layout().spacing()
-            height = sum((r.height() + spacing for r in brects), 0)
-            width = max((r.width() for r in brects), default=0)
-
-            if self.orientation == Qt.Vertical:
-                return QSizeF(width, height)
-            else:
-                return QSizeF(height, width)
-        else:
-            return super().sizeHint(which, constraint)
-
-    def setVisible(self, visible):
-        super().setVisible(visible)
-        self.updateGeometry()
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.__resize_in_progress = True
-        self._updateFontSize()
-        self.__resize_in_progress = False
-
-    def changeEvent(self, event):
-        super().changeEvent(event)
-        if event.type() == QEvent.FontChange:
-            font = self.font()
-            for item in self.label_items:
-                item.setFont(font)
-
-            if not self.__resize_in_progress:
-                self.updateGeometry()
-                self.layout().invalidate()
-                self.layout().activate()
-
-    def _updateFontSize(self):
-        crect = self.contentsRect()
-        if self.orientation == Qt.Vertical:
-            h = crect.height()
-        else:
-            h = crect.width()
-        n = len(self.label_items)
-        if n == 0:
-            return
-
-        if self.scene() is not None:
-            maxfontsize = self.scene().font().pointSize()
-        else:
-            maxfontsize = QApplication.instance().font().pointSize()
-
-        lineheight = max(1, h / n)
-        fontsize = min(self._pointSize(lineheight), maxfontsize)
-
-        font = self.font()
-        font.setPointSize(fontsize)
-        self.setFont(font)
-
-    def _pointSize(self, height):
-        font = self.font()
-        font.setPointSize(height)
-        fix = 0
-        while QFontMetrics(font).lineSpacing() > height and height - fix > 1:
-            fix += 1
-            font.setPointSize(height - fix)
-        return height - fix
 
 
 class GradientLegendWidget(QGraphicsWidget):
