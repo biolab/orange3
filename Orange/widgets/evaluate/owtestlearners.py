@@ -296,6 +296,7 @@ class OWTestLearners(OWWidget):
         gui.lineEdit(hbox, self, "rope", validator=QDoubleValidator(),
                      controlWidth=70, callback=self.update_comparison_table,
                      alignment=Qt.AlignRight)
+        self.controls.rope.setEnabled(self.use_rope)
 
         gui.rubber(self.controlArea)
         self.score_table = ScoreTable(self)
@@ -488,6 +489,7 @@ class OWTestLearners(OWWidget):
     def _update_scorers(self):
         if self.data is None or self.data.domain.class_var is None:
             self.scorers = []
+            self.controls.comparison_criterion.model().clear()
             return
         self.scorers = usable_scorers(self.data.domain.class_var)
         self.controls.comparison_criterion.model()[:] = \
@@ -641,6 +643,8 @@ class OWTestLearners(OWWidget):
     def update_comparison_table(self):
         self.comparison_table.clearContents()
         slots = self._successful_slots()
+        if not (slots and self.scorers):
+            return
         names = [learner_name(slot.learner) for slot in slots]
         self._set_comparison_headers(names)
         if self.resampling == OWTestLearners.KFold:
@@ -662,15 +666,15 @@ class OWTestLearners(OWWidget):
         try:
             # Prevent glitching during update
             table.setUpdatesEnabled(False)
-            table.setRowCount(len(names))
-            table.setColumnCount(len(names))
-            table.setVerticalHeaderLabels(names)
-            table.setHorizontalHeaderLabels(names)
             header = table.horizontalHeader()
             if len(names) > 2:
                 header.setSectionResizeMode(QHeaderView.Stretch)
             else:
                 header.setSectionResizeMode(QHeaderView.Fixed)
+            table.setRowCount(len(names))
+            table.setColumnCount(len(names))
+            table.setVerticalHeaderLabels(names)
+            table.setHorizontalHeaderLabels(names)
         finally:
             table.setUpdatesEnabled(True)
 
