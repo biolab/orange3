@@ -453,9 +453,9 @@ class OWBoxPlot(widget.OWWidget):
         self.update_display_box()
 
     def grouping_changed(self):
-        self.controls.stretched.setDisabled(self.group_var is self.attribute)
         self.apply_attr_sorting()
         self.update_graph()
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
 
     def select_box_items(self):
         temp_cond = self.conditions.copy()
@@ -465,9 +465,9 @@ class OWBoxPlot(widget.OWWidget):
                                 [c.conditions for c in temp_cond])
 
     def attr_changed(self):
-        self.controls.stretched.setDisabled(self.group_var is self.attribute)
         self.apply_group_sorting()
         self.update_graph()
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
 
     def update_graph(self):
         self.compute_box_data()
