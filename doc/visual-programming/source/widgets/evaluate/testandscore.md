@@ -27,7 +27,7 @@ The *Learner* signal has an uncommon property: it can be connected to more than 
    - **Test on test data**: the above methods use the data from *Data* signal only. To input another dataset with testing examples (for instance from another file or some data selected in another widget), we select *Separate Test Data* signal in the communication channel and select Test on test data.
 2. For classification, *Target class* can be selected at the bottom of the widget. When *Target class* is (Average over classes), methods return scores that are weighted averages over all classes. For example, in case of the classifier with 3 classes, scores are computed for class 1 as a target class, class 2 as a target class, and class 3 as a target class. Those scores are averaged with weights based on the class size to retrieve the final score.
 3. Produce a report.
-4. The widget will compute a number of performance statistics:
+4. The widget will compute a number of performance statistics, which can be shown or hidden by right-clicking the columns:
    - Classification
    ![](images/TestLearners.png)
         - [Area under ROC](http://gim.unmc.edu/dxtests/roc3.htm) is the area under the receiver-operating curve.
@@ -41,6 +41,8 @@ The *Learner* signal has an uncommon property: it can be connected to more than 
       - [RMSE](https://en.wikipedia.org/wiki/Root_mean_square) is the square root of the arithmetic mean of the squares of a set of numbers (a measure of imperfection of the fit of the estimator to the data)
       - [MAE](<https://en.wikipedia.org/wiki/Mean_absolute_error>) is used to measure how close forecasts or predictions are to eventual outcomes.
       - [R2](<https://en.wikipedia.org/wiki/Coefficient_of_determination>) is interpreted as the proportion of the variance in the dependent variable that is predictable from the independent variable.
+5. Choose the score for pairwise comparison of models and the region of practical equivalence (ROPE), in which differences are considered negligible.
+6. Pairwise comparison of models using the selected score (available only for cross-validation). The number in the table gives the probability that the model corresponding to the row is better than the model corresponding to the column. If ROPE is enabled, the smaller number below shows the probability that the difference between the pair is negligible. The test is based on the Bayesian interpretation of the t-test; (paper: https://link.springer.com/article/10.1007/s10994-015-5486-z,16-305.html, shorter introduction: https://baycomp.readthedocs.io/en/latest/introduction.html).
 
 Example
 -------
