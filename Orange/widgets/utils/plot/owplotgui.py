@@ -575,14 +575,15 @@ class OWPlotGUI:
         else:
             return name
 
-    def _check_box(self, widget, value, label, cb_name):
+    def _check_box(self, widget, value, label, cb_name, stateWhenDisabled=None):
         '''
             Adds a :obj:`.QCheckBox` to ``widget``.
             When the checkbox is toggled, the attribute ``value`` of the plot object is set to
             the checkbox' check state, and the callback ``cb_name`` is called.
         '''
         args = dict(master=self._plot, value=value, label=label,
-                    callback=self._get_callback(cb_name, self._plot))
+                    callback=self._get_callback(cb_name, self._plot),
+                    stateWhenDisabled=stateWhenDisabled)
         if isinstance(widget.layout(), QGridLayout):
             widget = widget.layout()
         if isinstance(widget, QGridLayout):
@@ -627,7 +628,8 @@ class OWPlotGUI:
         self._master.cb_class_density = \
             self._check_box(widget=widget, value="class_density",
                             label="Show color regions",
-                            cb_name=self._plot.update_density)
+                            cb_name=self._plot.update_density,
+                            stateWhenDisabled=False)
 
     def regression_line_check_box(self, widget):
         self._master.cb_reg_line = \
