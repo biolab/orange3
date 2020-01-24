@@ -37,6 +37,7 @@ from Orange.clustering import hierarchical, kmeans
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import colorbrewer
+from Orange.widgets.utils.graphicstextlist import scaled
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets import widget, gui, settings
@@ -1614,31 +1615,6 @@ class GraphicsWidget(QGraphicsWidget):
         if event.type() == QEvent.LayoutRequest and self.layout() is not None:
             self.layoutDidActivate.emit()
         return rval
-
-
-def scaled(size, constraint, mode=Qt.KeepAspectRatio):
-    if constraint.width() < 0 and constraint.height() < 0:
-        return size
-
-    size, constraint = QSizeF(size), QSizeF(constraint)
-    if mode == Qt.IgnoreAspectRatio:
-        if constraint.width() >= 0:
-            size.setWidth(constraint.width())
-        if constraint.height() >= 0:
-            size.setHeight(constraint.height())
-    elif mode == Qt.KeepAspectRatio:
-        if constraint.width() < 0:
-            constraint.setWidth(QWIDGETSIZE_MAX)
-        if constraint.height() < 0:
-            constraint.setHeight(QWIDGETSIZE_MAX)
-        size.scale(constraint, mode)
-    elif mode == Qt.KeepAspectRatioByExpanding:
-        if constraint.width() < 0:
-            constraint.setWidth(0)
-        if constraint.height() < 0:
-            constraint.setHeight(0)
-        size.scale(constraint, mode)
-    return size
 
 
 class GraphicsPixmapWidget(QGraphicsWidget):
