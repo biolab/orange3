@@ -8,6 +8,8 @@ import unittest
 from unittest.mock import Mock, MagicMock, patch
 from itertools import chain
 from math import isnan
+from threading import Thread
+from time import sleep, time
 
 import numpy as np
 import scipy.sparse as sp
@@ -2660,6 +2662,36 @@ class TestTableSparseDense(unittest.TestCase):
         )
         d = self.iris.transform(domain)
         self.assertFalse(sp.issparse(d.metas))
+
+
+class ConcurrencyTests(unittest.TestCase):
+
+    def test_from_table_non_blocking(self):
+        iris = Table("iris")
+
+        def slow_compute_value(d):
+            sleep(0.1)
+            return d.X[:, 0]
+
+        ndom = Domain([ContinuousVariable("a", compute_value=slow_compute_value)])
+
+        def run_from_table():
+            Table.from_table(ndom, iris)
+
+        start = time()
+
+        threads = []
+        for _ in range(10):
+            thread = Thread(target=run_from_table)
+            thread.start()
+            threads.append(thread)
+        for t in threads:
+            t.join()
+
+        # if from_table was blocking these threads would need at least 0.1*10s
+        duration = time() - start
+        self.assertLess(duration, 0.5)
+
 
 if __name__ == "__main__":
     unittest.main()
