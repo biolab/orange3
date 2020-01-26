@@ -21,7 +21,7 @@ from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
 from Orange.widgets.evaluate.utils import \
     check_results_adequacy, results_for_preview
-from Orange.widgets.utils import colorpalette, colorbrewer
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 from Orange.widgets import report
@@ -462,16 +462,13 @@ class OWROCAnalysis(widget.OWWidget):
             names = ["#{}".format(i + 1)
                      for i in range(len(results.predicted))]
 
-        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
-        if len(names) > len(scheme):
-            scheme = colorpalette.DefaultRGBColors
-        self.colors = colorpalette.ColorPaletteGenerator(len(names), scheme)
+        self.colors = colorpalettes.get_default_curve_colors(len(names))
 
         self.classifier_names = names
         self.selected_classifiers = list(range(len(names)))
         for i in range(len(names)):
             listitem = self.classifiers_list_box.item(i)
-            listitem.setIcon(colorpalette.ColorPixmap(self.colors[i]))
+            listitem.setIcon(colorpalettes.ColorIcon(self.colors[i]))
 
         class_var = results.data.domain.class_var
         self.target_cb.addItems(class_var.values)
