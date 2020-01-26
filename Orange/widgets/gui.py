@@ -12,7 +12,7 @@ from AnyQt.QtCore import (
     Qt, QSize, QItemSelection,
 )
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import QWidget, QItemDelegate, QListView
+from AnyQt.QtWidgets import QWidget, QItemDelegate, QListView, QComboBox
 
 # re-export relevant objects
 from orangewidget.utils.combobox import ComboBox as OrangeComboBox
@@ -79,11 +79,21 @@ __all__ = [
     "createAttributePixmap", "attributeIconDict", "attributeItem",
     "listView", "ListViewWithSizeHint", "listBox", "OrangeListBox",
     "TableValueRole", "TableClassValueRole", "TableDistribution",
-    "TableVariable", "TableBarItem"
+    "TableVariable", "TableBarItem", "palette_combo_box"
 ]
 
 
 log = logging.getLogger(__name__)
+
+
+def palette_combo_box(initial_palette):
+    from Orange.widgets.utils import itemmodels
+    cb = QComboBox()
+    model = itemmodels.ContinuousPalettesModel()
+    cb.setModel(model)
+    cb.setCurrentIndex(model.indexOf(initial_palette))
+    cb.setIconSize(QSize(64, 16))
+    return cb
 
 
 def createAttributePixmap(char, background=Qt.black, color=Qt.white):
