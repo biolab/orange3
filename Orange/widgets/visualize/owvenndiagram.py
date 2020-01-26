@@ -29,7 +29,7 @@ from Orange.data import (
     ContinuousVariable)
 from Orange.statistics import util
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.sql import check_sql_input
@@ -255,7 +255,7 @@ class OWVennDiagram(widget.OWWidget):
         self.disjoint = disjoint(set(s.items) for s in self.itemsets.values())
 
         vennitems = []
-        colors = colorpalette.ColorPaletteHSV(n)
+        colors = colorpalettes.LimitedDiscretePalette(n, force_hsv=True)
 
         for i, (_, item) in enumerate(self.itemsets.items()):
             count = len(set(item.items))
