@@ -22,11 +22,11 @@ from pyqtgraph.graphicsItems.LegendItem import (
 )
 from pyqtgraph.graphicsItems.TextItem import TextItem
 
+from Orange.widgets.utils import colorpalettes
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import classdensity
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
 from Orange.widgets.utils.plot import OWPalette
 from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
     OWScatterPlotGraph as OWScatterPlotGraphObs
@@ -47,7 +47,7 @@ class PaletteItemSample(ItemSample):
     def __init__(self, palette, scale, label_formatter=None):
         """
         :param palette: palette used for showing continuous values
-        :type palette: ContinuousPaletteGenerator
+        :type palette: BinnedContinuousPalette
         :param scale: an instance of DiscretizedScale that defines the
                       conversion of values into bins
         :type scale: DiscretizedScale
@@ -73,12 +73,11 @@ class PaletteItemSample(ItemSample):
     def paint(self, p, *args):
         p.setRenderHint(p.Antialiasing)
         p.translate(5, 5)
-        scale = self.scale
         font = p.font()
         font.setPixelSize(11)
         p.setFont(font)
-        for i, label in enumerate(self.labels):
-            color = QColor(*self.palette.getRGB((i + 0.5) / scale.bins))
+        colors = self.palette.qcolors
+        for i, color, label in zip(itertools.count(), colors, self.labels):
             p.setPen(Qt.NoPen)
             p.setBrush(QBrush(color))
             p.drawRect(0, i * 15, 15, 15)
@@ -220,6 +219,9 @@ class DiscretizedScale:
         self.bins = bins
         self.decimals = max(decimals, 0)
         self.width = resolution
+
+    def get_bins(self):
+        return self.offset + self.width * np.arange(self.bins + 1)
 
 
 class InteractiveViewBox(ViewBox):
@@ -869,13 +871,13 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         Returns:
             (tuple): a list of pens and list of brushes
         """
-        self.palette = self.master.get_palette()
         c_data = self.master.get_color_data()
         c_data = self._filter_visible(c_data)
         subset = self.master.get_subset_mask()
         subset = self._filter_visible(subset)
         self.subset_is_shown = subset is not None
         if c_data is None:  # same color
+            self.palette = None
             return self._get_same_colors(subset)
         elif self.master.is_continuous_color():
             return self._get_continuous_colors(c_data, subset)
@@ -915,23 +917,25 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         except the former is darker. If the data has a subset, the brush
         is transparent for points that are not in the subset.
         """
-        if np.isnan(c_data).all():
-            self.scale = None
-        else:
-            self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
-            c_data -= self.scale.offset
-            c_data /= self.scale.width
-            c_data = np.floor(c_data) + 0.5
-            c_data /= self.scale.bins
-            c_data = np.clip(c_data, 0, 1)
-        pen = self.palette.getRGB(c_data)
-        brush = np.hstack(
-            [pen, np.full((len(pen), 1), self.alpha_value, dtype=int)])
-        pen *= 100
-        pen //= self.DarkerValue
+        palette = self.master.get_palette()
 
-        # Reuse pens and brushes with the same colors because PyQtGraph then builds
-        # smaller pixmap atlas, which makes the drawing faster
+        if np.isnan(c_data).all():
+            self.palette = palette
+            return self._get_continuous_nan_colors(len(c_data))
+
+        self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
+        bins = self.scale.get_bins()
+        self.palette = \
+            colorpalettes.BinnedContinuousPalette.from_palette(palette, bins)
+        colors = self.palette.values_to_colors(c_data)
+        brush = np.hstack(
+            (colors,
+             np.full((len(c_data), 1), self.alpha_value, dtype=np.ubyte)))
+        pen = (colors.astype(dtype=float) * 100 / self.DarkerValue
+               ).astype(np.ubyte)
+
+        # Reuse pens and brushes with the same colors because PyQtGraph then
+        # builds smaller pixmap atlas, which makes the drawing faster
 
         def reuse(cache, fn, *args):
             if args not in cache:
@@ -952,8 +956,17 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             brush[subset, 3] = 255
 
         cached_brushes = {}
-        brush = np.array([reuse(cached_brushes, create_brush, *col) for col in brush.tolist()])
+        brush = np.array([reuse(cached_brushes, create_brush, *col)
+                          for col in brush.tolist()])
 
+        return pen, brush
+
+    def _get_continuous_nan_colors(self, n):
+        nan_color = QColor(*self.palette.nan_color)
+        nan_pen = _make_pen(nan_color.darker(1.2), 1.5)
+        pen = np.full(n, nan_pen)
+        nan_brush = QBrush(nan_color)
+        brush = np.full(n, nan_brush)
         return pen, brush
 
     def _get_discrete_colors(self, c_data, subset):
@@ -963,27 +976,23 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         except the former is darker. If the data has a subset, the brush
         is transparent for points that are not in the subset.
         """
-        n_colors = self.palette.number_of_colors
+        self.palette = self.master.get_palette()
         c_data = c_data.copy()
-        c_data[np.isnan(c_data)] = n_colors
+        c_data[np.isnan(c_data)] = len(self.palette)
         c_data = c_data.astype(int)
-        colors = np.r_[self.palette.getRGB(np.arange(n_colors)),
-                       [[128, 128, 128]]]
+        colors = self.palette.qcolors_w_nan
         pens = np.array(
-            [_make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
-             for col in colors])
+            [_make_pen(col.darker(self.DarkerValue), 1.5) for col in colors])
         pen = pens[c_data]
-        alpha = self.alpha_value if subset is None else 255
-        brushes = np.array([
-            [QBrush(QColor(0, 0, 0, 0)),
-             QBrush(QColor(col[0], col[1], col[2], alpha))]
-            for col in colors])
+        if subset is None and self.alpha_value < 255:
+            for col in colors:
+                col.setAlpha(self.alpha_value)
+        brushes = np.array([QBrush(col) for col in colors])
         brush = brushes[c_data]
 
         if subset is not None:
-            brush = np.where(subset, brush[:, 1], brush[:, 0])
-        else:
-            brush = brush[:, 1]
+            black = np.full(len(brush), QBrush(QColor(0, 0, 0, 0)))
+            brush = np.where(subset, brush, black)
         return pen, brush
 
     def update_colors(self):
@@ -1067,7 +1076,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                     _make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1),
                     nopen)
             else:
-                palette = ColorPaletteGenerator(number_of_colors=sels + 1)
+                palette = colorpalettes.LimitedDiscretePalette(
+                    number_of_colors=sels + 1)
                 pen = np.choose(
                     self._filter_visible(self.selection),
                     [nopen] + [_make_pen(palette[i], SELECTION_WIDTH + 1)
@@ -1282,8 +1292,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             return
         if isinstance(symbols, str):
             symbols = itertools.repeat(symbols, times=len(labels))
-        for i, (label, symbol) in enumerate(zip(labels, symbols)):
-            color = QColor(*self.palette.getRGB(i))
+        colors = self.palette.values_to_colors(np.arange(len(labels)))
+        for color, label, symbol in zip(colors, labels, symbols):
+            color = QColor(*color)
             pen = _make_pen(color.darker(self.DarkerValue), 1.5)
             color.setAlpha(255 if self.subset_is_shown else self.alpha_value)
             brush = QBrush(color)

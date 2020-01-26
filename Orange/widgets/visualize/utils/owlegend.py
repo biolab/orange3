@@ -563,7 +563,8 @@ class Legend(Anchorable):
     def _convert_to_color(obj):
         if isinstance(obj, QColor):
             return obj
-        elif isinstance(obj, tuple) or isinstance(obj, list):
+        elif isinstance(obj, tuple) or isinstance(obj, list) \
+                or isinstance(obj, np.ndarray):
             assert len(obj) in (3, 4)
             return QColor(*obj)
         else:
@@ -601,7 +602,7 @@ class OWDiscreteLegend(Legend):
             raise AttributeError('[OWDiscreteLegend] The class var provided '
                                  'was not discrete.')
 
-        self.set_items(zip(class_var.values, class_var.colors.tolist()))
+        self.set_items(zip(class_var.values, list(class_var.colors)))
 
     def set_items(self, values):
         for class_name, color in values:

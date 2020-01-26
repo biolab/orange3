@@ -13,7 +13,7 @@ from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.utils.colorpalette import DefaultRGBColors
+from Orange.widgets.utils.colorpalettes import DefaultRGBColors
 from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
 from Orange.widgets.visualize.utils.widget import MAX_COLORS
@@ -835,13 +835,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertEqual(line1.pos().y(), 0)
         self.assertEqual(line1.angle, 45)
-        self.assertEqual(line1.pen.color().getRgb()[:3], graph.palette[0])
+        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb()[:3], graph.palette[1])
+        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
 
         graph.orthonormal_regression = True
         graph.update_regression_line()
@@ -850,13 +850,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertAlmostEqual(line1.pos().y(), -0.6180339887498949)
         self.assertEqual(line1.angle, 58.28252558853899)
-        self.assertEqual(line1.pen.color().getRgb()[:3], graph.palette[0])
+        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb()[:3], graph.palette[1])
+        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
 
     def test_orthonormal_line(self):
         color = QColor(1, 2, 3)
