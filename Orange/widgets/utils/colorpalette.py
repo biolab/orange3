@@ -3,6 +3,7 @@ import copy
 import math
 from numbers import Number
 from collections import Iterable
+import warnings
 
 import numpy as np
 
@@ -391,6 +392,12 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
 class ColorPalleteListing(QDialog):
     def __init__(self, parent=None, windowTitle="Color Palette List",
                  **kwargs):
+        # Import locally to prevent warning about using an obsolete module
+        # (This module itself is obsolete, but imported by its replacement,
+        # for backward compatibility, so importing colorbrewer globally would
+        # cause a warning.)
+        from Orange.widgets.utils import colorbrewer
+
         super().__init__(parent, windowTitle=windowTitle, **kwargs)
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -1008,6 +1015,9 @@ def main():  # pragma: no cover
     c.show()
     a.exec()
 
+
+warnings.warn(
+    "Module colorpalette is obsolete; use colorpalettes", DeprecationWarning)
 
 if __name__ == "__main__":  # pragma: no cover
     main()

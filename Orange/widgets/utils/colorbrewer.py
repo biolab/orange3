@@ -1,3 +1,9 @@
+import warnings
+
+warnings.warn("Module 'colorbrewer' is obsolete and will be removed.\n"
+              "Use palettes from 'Orange.misccolorpalettes'.",
+              DeprecationWarning)
+
 colorSchemes = {
     'diverging': {
         'RdYlGn': {3: [(252, 141, 89), (255, 255, 191), (145, 207, 96)],
