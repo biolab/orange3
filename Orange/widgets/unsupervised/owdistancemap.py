@@ -8,11 +8,8 @@ from AnyQt.QtWidgets import (
     QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QApplication,
     QSizePolicy
 )
-from AnyQt.QtGui import (
-    QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
-    QBrush, QTransform, QFont
-)
-from AnyQt.QtCore import Qt, QRect, QRectF, QSize, QPointF
+from AnyQt.QtGui import QFontMetrics, QPen, QTransform, QFont
+from AnyQt.QtCore import Qt, QRect, QRectF, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
@@ -23,7 +20,7 @@ from Orange.clustering import hierarchical
 from Orange.data.domain import filter_visible
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorbrewer
+from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.graphicstextlist import TextListWidget
@@ -248,11 +245,6 @@ class DistanceMapItem(pg.ImageItem):
             self.setToolTip("")
 
 
-_color_palettes = sorted(colorbrewer.colorSchemes["sequential"].items()) + \
-                  [("Blue-Yellow", {2: [(0, 0, 255), (255, 255, 0)]})]
-_default_colormap_index = len(_color_palettes) - 1
-
-
 class OWDistanceMap(widget.OWWidget):
     name = "Distance Map"
     description = "Visualize a distance matrix."
@@ -275,7 +267,7 @@ class OWDistanceMap(widget.OWWidget):
 
     sorting = settings.Setting(NoOrdering)
 
-    colormap = settings.Setting(_default_colormap_index)
+    palette_name = settings.Setting(colorpalettes.DefaultContinuousPaletteName)
     color_gamma = settings.Setting(0.0)
     color_low = settings.Setting(0.0)
     color_high = settings.Setting(1.0)
@@ -308,13 +300,9 @@ class OWDistanceMap(widget.OWWidget):
             callback=self._invalidate_ordering)
 
         box = gui.vBox(self.controlArea, "Colors")
-        self.colormap_cb = gui.comboBox(
-            box, self, "colormap", callback=self._update_color)
-        self.colormap_cb.setIconSize(QSize(64, 16))
-        self.palettes = list(_color_palettes)
-
-        init_color_combo(self.colormap_cb, self.palettes, QSize(64, 16))
-        self.colormap_cb.setCurrentIndex(self.colormap)
+        self.color_box = gui.palette_combo_box(self.palette_name)
+        self.color_box.currentIndexChanged.connect(self._update_color)
+        box.layout().addWidget(self.color_box)
 
         form = QFormLayout(
             formAlignment=Qt.AlignLeft,
@@ -621,19 +609,11 @@ class OWDistanceMap(widget.OWWidget):
         self.bottom_labels.setMaximumHeight(constraint)
 
     def _update_color(self):
+        palette = self.color_box.currentData()
+        self.palette_name = palette.name
         if self.matrix_item:
-            name, colors = self.palettes[self.colormap]
-            n, colors = max(colors.items())
-            colors = numpy.array(colors, dtype=numpy.ubyte)
-            low, high = self.color_low * 255, self.color_high * 255
-            points = numpy.linspace(low, high, n)
-            space = numpy.linspace(0, 255, 255)
-
-            r = numpy.interp(space, points, colors[:, 0], left=255, right=0)
-            g = numpy.interp(space, points, colors[:, 1], left=255, right=0)
-            b = numpy.interp(space, points, colors[:, 2], left=255, right=0)
-            colortable = numpy.c_[r, g, b]
-            self.matrix_item.setLookupTable(colortable)
+            colors = palette.lookup_table(self.color_low, self.color_high)
+            self.matrix_item.setLookupTable(colors)
 
     def _invalidate_selection(self):
         ranges = self.matrix_item.selections()
@@ -720,44 +700,6 @@ class TextList(TextListWidget):
             fix += 1
             font.setPointSize(height - fix)
         return height - fix
-
-##########################
-# Color palette management
-##########################
-
-
-def palette_gradient(colors, discrete=False):
-    n = len(colors)
-    stops = numpy.linspace(0.0, 1.0, n, endpoint=True)
-    gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]
-    grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
-    grad.setStops(gradstops)
-    return grad
-
-
-def palette_pixmap(colors, size):
-    img = QPixmap(size)
-    img.fill(Qt.transparent)
-
-    painter = QPainter(img)
-    grad = palette_gradient(colors)
-    grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
-    painter.setPen(Qt.NoPen)
-    painter.setBrush(QBrush(grad))
-    painter.drawRect(0, 0, size.width(), size.height())
-    painter.end()
-    return img
-
-
-def init_color_combo(cb, palettes, iconsize):
-    cb.clear()
-    iconsize = cb.iconSize()
-
-    for name, palette in palettes:
-        n, colors = max(palette.items())
-        colors = [QColor(*c) for c in colors]
-        cb.addItem(QIcon(palette_pixmap(colors, iconsize)), name,
-                   palette)
 
 
 # run widget with `python -m Orange.widgets.unsupervised.owdistancemap`
