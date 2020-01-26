@@ -190,31 +190,6 @@ class TestDiscreteVariable(VariableTest):
             repr(var),
             "DiscreteVariable(name='a', values=['1', '2', '3', '4', '5', '6', '7'])")
 
-    @unittest.skipUnless(is_on_path("PyQt4") or is_on_path("PyQt5"), "PyQt is not importable")
-    def test_colors(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
-        self.assertIsNone(var._colors)
-        self.assertEqual(var.colors.shape, (2, 3))
-        self.assertFalse(var.colors.flags.writeable)
-
-        var.colors = np.arange(6).reshape((2, 3))
-        np.testing.assert_almost_equal(var.colors, [[0, 1, 2], [3, 4, 5]])
-        self.assertFalse(var.colors.flags.writeable)
-        with self.assertRaises(ValueError):
-            var.colors[0] = [42, 41, 40]
-
-        var = DiscreteVariable.make("x", values=["A", "B"])
-        var.attributes["colors"] = ['#0a0b0c', '#0d0e0f']
-        np.testing.assert_almost_equal(var.colors, [[10, 11, 12], [13, 14, 15]])
-
-        # Test ncolors adapts to nvalues
-        var = DiscreteVariable.make('foo', values=['d', 'r'])
-        self.assertEqual(len(var.colors), 2)
-        var.add_value('e')
-        self.assertEqual(len(var.colors), 3)
-        var.add_value('k')
-        self.assertEqual(len(var.colors), 4)
-
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
         a = DiscreteVariable("foo", values=["a", "b", "c"])
@@ -423,17 +398,6 @@ class TestContinuousVariable(VariableTest):
         a.val_from_str_add("5.1234")
         self.assertEqual(a.str_val(4.65432), "4.6543")
 
-    def test_colors(self):
-        a = ContinuousVariable("a")
-        self.assertEqual(a.colors, ((0, 0, 255), (255, 255, 0), False))
-
-        a = ContinuousVariable("a")
-        a.attributes["colors"] = ['#010203', '#040506', True]
-        self.assertEqual(a.colors, ((1, 2, 3), (4, 5, 6), True))
-
-        a.colors = ((3, 2, 1), (6, 5, 4), True)
-        self.assertEqual(a.colors, ((3, 2, 1), (6, 5, 4), True))
-
     def varcls_modified(self, name):
         var = super().varcls_modified(name)
         var.number_of_decimals = 5
@@ -620,21 +584,6 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc1, abc2)
         self.assertEqual(hash(abc), hash(abc1))
         self.assertEqual(hash(abc1), hash(abc2))
-
-    def test_proxy_has_separate_colors(self):
-        abc = ContinuousVariable("abc")
-        abc1 = abc.make_proxy()
-        abc2 = abc1.make_proxy()
-
-        original_colors = abc.colors
-        red_to_green = (255, 0, 0), (0, 255, 0), False
-        blue_to_red = (0, 0, 255), (255, 0, 0), False
-
-        abc1.colors = red_to_green
-        abc2.colors = blue_to_red
-        self.assertEqual(abc.colors, original_colors)
-        self.assertEqual(abc1.colors, red_to_green)
-        self.assertEqual(abc2.colors, blue_to_red)
 
     def test_proxy_has_separate_attributes(self):
         image = StringVariable("image")

@@ -859,3 +859,7 @@ class TableBarItem(QItemDelegate):
         text = str(index.data(Qt.DisplayRole))
         self.drawDisplay(painter, option, text_rect, text)
         painter.restore()
+
+
+from Orange.widgets.utils.colorpalettes import patch_variable_colors
+patch_variable_colors()

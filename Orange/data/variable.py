@@ -11,8 +11,8 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import _variable
-from Orange.util import Registry, hex_to_color, Reprable,\
-    OrangeDeprecationWarning
+from Orange.util import Registry, Reprable, OrangeDeprecationWarning
+
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
            "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
@@ -323,19 +323,10 @@ class Variable(Reprable, metaclass=VariableMeta):
         self.source_variable = None
         self.sparse = sparse
         self.attributes = {}
-        self._colors = None
 
     @property
     def name(self):
         return self._name
-
-    @property
-    def colors(self):  # unreachable; pragma: no cover
-        return self._colors
-
-    @colors.setter
-    def colors(self, value):
-        self._colors = value
 
     def make_proxy(self):
         """
@@ -519,17 +510,6 @@ class ContinuousVariable(Variable):
     def format_str(self, value):
         self._format_str = value
 
-    @Variable.colors.getter
-    def colors(self):
-        if self._colors is not None:
-            return self._colors
-        try:
-            col1, col2, black = self.attributes["colors"]
-            return (hex_to_color(col1), hex_to_color(col2), black)
-        except (KeyError, ValueError):
-            # User-provided colors were not available or invalid
-            return ((0, 0, 255), (255, 255, 0), False)
-
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
     def number_of_decimals(self, x):
@@ -696,22 +676,6 @@ class DiscreteVariable(Variable):
 
         return mapper
 
-    @Variable.colors.getter
-    def colors(self):
-        if self._colors is not None:
-            colors = np.array(self._colors)
-        elif not self.values:
-            colors = np.zeros((0, 3))  # to match additional colors in vstacks
-        else:
-            from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
-            default = tuple(ColorPaletteGenerator.palette(self))
-            colors = self.attributes.get('colors', ())
-            colors = tuple(hex_to_color(color) for color in colors) \
-                    + default[len(colors):]
-            colors = np.array(colors)
-        colors.flags.writeable = False
-        return colors
-
     def to_val(self, s):
         """
         Convert the given argument to a value of the variable (`float`).
@@ -744,7 +708,6 @@ class DiscreteVariable(Variable):
         if not isinstance(s, str):
             raise TypeError("values of DiscreteVariables must be strings")
         self.values.append(s)
-        self._colors = None
 
     def val_from_str_add(self, s):
         """
@@ -787,9 +750,9 @@ class DiscreteVariable(Variable):
                                self.values, self.ordered), \
             __dict__
 
-    def copy(self, compute_value=None, *, name=None, **_):
+    def copy(self, compute_value=None, *, name=None, values=None, **_):
         return super().copy(compute_value=compute_value, name=name,
-                            values=self.values, ordered=self.ordered)
+                            values=values or self.values, ordered=self.ordered)
 
 
 class StringVariable(Variable):
