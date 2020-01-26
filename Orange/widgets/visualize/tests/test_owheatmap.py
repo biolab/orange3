@@ -9,6 +9,7 @@ from sklearn.exceptions import ConvergenceWarning
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.preprocess import Continuize
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.visualize.owheatmap import OWHeatMap, Clustering
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 
@@ -221,9 +222,9 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
         self.send_signal(self.widget.Inputs.data, table)
 
-        cb_model = self.widget.color_cb.model()
-        ind = cb_model.indexFromItem(cb_model.findItems("Green-Black-Red")[0]).row()
-        self.widget.palette_index = ind
+        self.widget.color_palette = lambda: \
+            colorpalettes.ContinuousPalette.from_colors(
+                (0, 255, 0), (255, 0, 0), (0, 0, 0)).lookup_table()
 
         desired_uncentered = [[0, 255, 0],
                               [255, 0, 0]]
