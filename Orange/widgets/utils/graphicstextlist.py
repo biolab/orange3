@@ -98,6 +98,7 @@ class TextListWidget(QGraphicsWidget):
         if self.__orientation != orientation:
             self.__orientation = orientation
             self.__layout()
+            self.updateGeometry()
 
     def orientation(self) -> Qt.Orientation:
         return self.__orientation
