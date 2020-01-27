@@ -2,20 +2,41 @@
 from sklearn.covariance import EllipticEnvelope
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
+from sklearn.svm import OneClassSVM
+
 from Orange.base import SklLearner, SklModel
 from Orange.data import Table, Domain
+from Orange.preprocess import AdaptiveNormalize
 
 __all__ = ["LocalOutlierFactorLearner", "IsolationForestLearner",
-           "EllipticEnvelopeLearner"]
+           "EllipticEnvelopeLearner", "OneClassSVMLearner"]
 
 
-class _OutlierDetector(SklLearner):
+class _OutlierLearner(SklLearner):
     def __call__(self, data: Table):
         data = data.transform(Domain(data.domain.attributes))
         return super().__call__(data)
 
 
-class LocalOutlierFactorLearner(_OutlierDetector):
+class OneClassSVMLearner(_OutlierLearner):
+    name = "One class SVM"
+    __wraps__ = OneClassSVM
+    preprocessors = SklLearner.preprocessors + [AdaptiveNormalize()]
+
+    def __init__(self, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
+                 tol=0.001, nu=0.5, shrinking=True, cache_size=200,
+                 max_iter=-1, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
+
+    def fit(self, X, Y=None, W=None):
+        clf = self.__wraps__(**self.params)
+        if W is not None:
+            return self.__returns__(clf.fit(X, W.reshape(-1)))
+        return self.__returns__(clf.fit(X))
+
+
+class LocalOutlierFactorLearner(_OutlierLearner):
     __wraps__ = LocalOutlierFactor
     name = "Local Outlier Factor"
 
@@ -27,7 +48,7 @@ class LocalOutlierFactorLearner(_OutlierDetector):
         self.params = vars()
 
 
-class IsolationForestLearner(_OutlierDetector):
+class IsolationForestLearner(_OutlierLearner):
     __wraps__ = IsolationForest
     name = "Isolation Forest"
 
@@ -57,7 +78,7 @@ class EllipticEnvelopeClassifier(SklModel):
         return self.skl_model.mahalanobis(observations)
 
 
-class EllipticEnvelopeLearner(_OutlierDetector):
+class EllipticEnvelopeLearner(_OutlierLearner):
     __wraps__ = EllipticEnvelope
     __returns__ = EllipticEnvelopeClassifier
     name = "Covariance Estimator"
