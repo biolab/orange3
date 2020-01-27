@@ -2,6 +2,7 @@ import operator
 import os
 import threading
 import warnings
+import weakref
 import zlib
 from collections import Iterable, Sequence, Sized
 from functools import reduce
@@ -316,6 +317,12 @@ class Table(Sequence, Storage):
         :rtype: Orange.data.Table
         """
 
+        def valid_refs(weakrefs):
+            for r in weakrefs:
+                if r() is None:
+                    return False
+            return True
+
         def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
                         is_sparse=False, variables=[]):
             if not len(src_cols):
@@ -356,10 +363,13 @@ class Table(Sequence, Storage):
                     a[:, i] = variables[i].Unknown
                 elif not isinstance(col, Integral):
                     if isinstance(col, SharedComputeValue):
-                        if (id(col.compute_shared), id(source)) not in shared_cache:
-                            shared_cache[id(col.compute_shared), id(source)] = \
-                                col.compute_shared(source)
-                        shared = shared_cache[id(col.compute_shared), id(source)]
+                        shared, weakrefs = shared_cache.get((id(col.compute_shared), id(source)),
+                                                            (None, None))
+                        if shared is None or not valid_refs(weakrefs):
+                            shared, _ = shared_cache[(id(col.compute_shared), id(source))] = \
+                                col.compute_shared(source), \
+                                (weakref.ref(col.compute_shared), weakref.ref(source))
+
                         if row_indices is not ...:
                             a[:, i] = match_density(
                                 col(source, shared_data=shared)[row_indices])
@@ -389,8 +399,9 @@ class Table(Sequence, Storage):
             if new_cache:
                 _thread_local.conversion_cache = {}
             else:
-                cached = _thread_local.conversion_cache.get((id(domain), id(source)))
-                if cached:
+                cached, weakrefs = \
+                    _thread_local.conversion_cache.get((id(domain), id(source)), (None, None))
+                if cached and valid_refs(weakrefs):
                     return cached
             if domain is source.domain:
                 table = cls.from_table_rows(source, row_indices)
@@ -443,7 +454,8 @@ class Table(Sequence, Storage):
             else:
                 cls._init_ids(self)
             self.attributes = getattr(source, 'attributes', {})
-            _thread_local.conversion_cache[(id(domain), id(source))] = self
+            _thread_local.conversion_cache[(id(domain), id(source))] = \
+                self, (weakref.ref(domain), weakref.ref(source))
             return self
         finally:
             if new_cache:
