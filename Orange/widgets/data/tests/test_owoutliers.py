@@ -4,8 +4,6 @@
 import unittest
 from unittest.mock import patch, Mock
 
-import numpy as np
-
 from Orange.data import Table
 from Orange.widgets.data.owoutliers import OWOutliers
 from Orange.widgets.tests.base import WidgetTest, simulate
@@ -15,19 +13,53 @@ class TestOWOutliers(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWOutliers)
         self.iris = Table("iris")
+        self.heart_disease = Table("heart_disease")
 
-    def test_data(self):
+    def test_outputs(self):
         """Check widget's data and the output with data on the input"""
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertEqual(self.widget.data, self.iris)
-        self.assertEqual(len(self.get_output(self.widget.Outputs.inliers)), 135)
-        self.assertEqual(len(self.get_output(self.widget.Outputs.outliers)), 15)
-        self.assertEqual(len(self.get_output(self.widget.Outputs.data)), 150)
+        inliers = self.get_output(self.widget.Outputs.inliers)
+        outliers = self.get_output(self.widget.Outputs.outliers)
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(inliers), 135)
+        self.assertEqual(len(outliers), 15)
+        self.assertEqual(len(data), 150)
+        self.assertEqual(len(inliers.domain.attributes), 4)
+        self.assertEqual(len(outliers.domain.attributes), 4)
+        self.assertEqual(len(data.domain.attributes), 4)
+        self.assertEqual(len(inliers.domain.class_vars), 1)
+        self.assertEqual(len(outliers.domain.class_vars), 1)
+        self.assertEqual(len(data.domain.class_vars), 1)
+        self.assertEqual(len(inliers.domain.metas), 0)
+        self.assertEqual(len(outliers.domain.metas), 0)
+        self.assertEqual(len(data.domain.metas), 1)
+
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(self.widget.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.inliers))
         self.assertIsNone(self.get_output(self.widget.Outputs.outliers))
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+    def test_output_empirical_covariance(self):
+        simulate.combobox_activate_index(self.widget.method_combo,
+                                         self.widget.Covariance)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        inliers = self.get_output(self.widget.Outputs.inliers)
+        outliers = self.get_output(self.widget.Outputs.outliers)
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(inliers), 135)
+        self.assertEqual(len(outliers), 15)
+        self.assertEqual(len(data), 150)
+        self.assertEqual(len(inliers.domain.attributes), 4)
+        self.assertEqual(len(outliers.domain.attributes), 4)
+        self.assertEqual(len(data.domain.attributes), 4)
+        self.assertEqual(len(inliers.domain.class_vars), 1)
+        self.assertEqual(len(outliers.domain.class_vars), 1)
+        self.assertEqual(len(data.domain.class_vars), 1)
+        self.assertEqual(len(inliers.domain.metas), 0)
+        self.assertEqual(len(outliers.domain.metas), 0)
+        self.assertEqual(len(data.domain.metas), 2)
+        self.assertEqual([m.name for m in data.domain.metas],
+                         ["Outlier", "Mahalanobis"])
 
     def test_methods(self):
         def callback():
@@ -55,11 +87,12 @@ class TestOWOutliers(WidgetTest):
 
     def test_nans(self):
         """Widget does not crash with nans"""
-        a = np.arange(20, dtype=float).reshape(4, 5)
-        a[0, 0] = np.nan
-        data = Table.from_numpy(None, a)
-        self.send_signal(self.widget.Inputs.data, data)
-        self.assertIsNot(self.get_output(self.widget.Outputs.inliers), None)
+        self.send_signal(self.widget.Inputs.data, self.heart_disease)
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.inliers))
+        simulate.combobox_activate_index(self.widget.method_combo,
+                                         self.widget.Covariance)
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.inliers))
+        self.assertFalse(self.widget.Error.singular_cov.is_shown())
 
     def test_in_out_summary(self):
         info = self.widget.info

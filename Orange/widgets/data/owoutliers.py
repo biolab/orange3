@@ -7,11 +7,9 @@ from AnyQt.QtWidgets import QWidget, QVBoxLayout
 
 from orangewidget.settings import SettingProvider
 
-from Orange.base import Model
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner,\
     LocalOutlierFactorLearner, IsolationForestLearner
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.data.util import get_unique_names
+from Orange.data import Table, DiscreteVariable
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -244,7 +242,7 @@ class OWOutliers(OWWidget):
         self.Error.singular_cov.clear()
         self.Error.memory_error.clear()
         try:
-            y_pred, amended_data = self.detect_outliers()
+            pred, outlier_var = self.detect_outliers()
         except ValueError:
             self.Error.singular_cov()
             return None, None, None
@@ -252,13 +250,12 @@ class OWOutliers(OWWidget):
             self.Error.memory_error()
             return None, None, None
         else:
-            inliers_ind = np.where(y_pred == 1)[0]
-            outliers_ind = np.where(y_pred == -1)[0]
-            inliers = amended_data[inliers_ind]
-            outliers = amended_data[outliers_ind]
-            self.n_inliers = len(inliers)
-            self.n_outliers = len(outliers)
-            return inliers, outliers, self.annotated_data(amended_data, y_pred)
+            col = pred[:, outlier_var].metas
+            inliers_ind = np.where(col == 1)[0]
+            outliers_ind = np.where(col == 0)[0]
+            self.n_inliers = len(inliers_ind)
+            self.n_outliers = len(outliers_ind)
+            return self.data[inliers_ind], self.data[outliers_ind], pred
 
     def commit(self):
         inliers = outliers = data = None
@@ -272,43 +269,12 @@ class OWOutliers(OWWidget):
         self.Outputs.outliers.send(outliers)
         self.Outputs.data.send(data)
 
-    def detect_outliers(self) -> Tuple[np.ndarray, Table]:
+    def detect_outliers(self) -> Tuple[Table, DiscreteVariable]:
         learner_class = self.METHODS[self.outlier_method]
         kwargs = self.current_editor.get_parameters()
         learner = learner_class(**kwargs)
         model = learner(self.data)
-        y_pred = model(self.data)
-        amended_data = self.amended_data(model)
-        return np.array(y_pred), amended_data
-
-    def amended_data(self, model: Model) -> Table:
-        if self.outlier_method != self.Covariance:
-            return self.data
-        mahal = model.mahalanobis(self.data.X)
-        mahal = mahal.reshape(len(self.data), 1)
-        attrs = self.data.domain.attributes
-        classes = self.data.domain.class_vars
-        new_metas = list(self.data.domain.metas) + \
-                    [ContinuousVariable(name="Mahalanobis")]
-        new_domain = Domain(attrs, classes, new_metas)
-        amended_data = self.data.transform(new_domain)
-        amended_data.metas = np.hstack((self.data.metas, mahal))
-        return amended_data
-
-    @staticmethod
-    def annotated_data(data: Table, labels: np.ndarray) -> Table:
-        domain = data.domain
-        names = [v.name for v in domain.variables + domain.metas]
-        name = get_unique_names(names, "Outlier")
-
-        outlier_var = DiscreteVariable(name, values=["Yes", "No"])
-        metas = domain.metas + (outlier_var,)
-        domain = Domain(domain.attributes, domain.class_vars, metas)
-        data = data.transform(domain)
-
-        labels[labels == -1] = 0
-        data.metas[:, -1] = labels
-        return data
+        return model(self.data), model.outlier_var
 
     def send_report(self):
         if self.n_outliers is None or self.n_inliers is None:

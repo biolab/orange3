@@ -1,21 +1,74 @@
 # pylint: disable=unused-argument
+import numpy as np
+
+from Orange.data.table import DomainTransformationError
+from Orange.data.util import get_unique_names
 from sklearn.covariance import EllipticEnvelope
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
 
 from Orange.base import SklLearner, SklModel
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.preprocess import AdaptiveNormalize
+from Orange.statistics.util import all_nan
 
 __all__ = ["LocalOutlierFactorLearner", "IsolationForestLearner",
            "EllipticEnvelopeLearner", "OneClassSVMLearner"]
 
 
+class _OutlierModel(SklModel):
+    def __init__(self, skl_model):
+        super().__init__(skl_model)
+        self._cached_data = None
+        self.outlier_var = None
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        pred = self.skl_model.predict(X)
+        pred[pred == -1] = 0
+        return pred[:, None]
+
+    def __call__(self, data: Table) -> Table:
+        assert isinstance(data, Table)
+        assert self.outlier_var is not None
+
+        domain = Domain(data.domain.attributes, data.domain.class_vars,
+                        data.domain.metas + (self.outlier_var,))
+        self._cached_data = self.data_to_model_domain(data)
+        metas = np.hstack((data.metas, self.predict(self._cached_data.X)))
+        return Table.from_numpy(domain, data.X, data.Y, metas)
+
+    def data_to_model_domain(self, data: Table) -> Table:
+        if data.domain == self.domain:
+            return data
+
+        if self.original_domain.attributes != data.domain.attributes \
+                and data.X.size \
+                and not all_nan(data.X):
+            new_data = data.transform(self.original_domain)
+            if all_nan(new_data.X):
+                raise DomainTransformationError(
+                    "domain transformation produced no defined values")
+            return new_data.transform(self.domain)
+        return data.transform(self.domain)
+
+
 class _OutlierLearner(SklLearner):
-    def __call__(self, data: Table):
+    __returns__ = _OutlierModel
+    supports_multiclass = True
+
+    def _fit_model(self, data: Table) -> _OutlierModel:
+        names = [v.name for v in data.domain.variables + data.domain.metas]
         data = data.transform(Domain(data.domain.attributes))
-        return super().__call__(data)
+        self.__model = super()._fit_model(data)
+        self.__model.outlier_var = DiscreteVariable(
+            get_unique_names(names, "Outlier"), values=["Yes", "No"],
+            compute_value=self.compute_value
+        )
+        return self.__model
+
+    def compute_value(self, table: Table) -> np.ndarray:
+        return self.__model(table)[:, self.__model.outlier_var].metas
 
 
 class OneClassSVMLearner(_OutlierLearner):
@@ -28,12 +81,6 @@ class OneClassSVMLearner(_OutlierLearner):
                  max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-
-    def fit(self, X, Y=None, W=None):
-        clf = self.__wraps__(**self.params)
-        if W is not None:
-            return self.__returns__(clf.fit(X, W.reshape(-1)))
-        return self.__returns__(clf.fit(X))
 
 
 class LocalOutlierFactorLearner(_OutlierLearner):
@@ -60,22 +107,31 @@ class IsolationForestLearner(_OutlierLearner):
         self.params = vars()
 
 
-class EllipticEnvelopeClassifier(SklModel):
-    def mahalanobis(self, observations):
+class EllipticEnvelopeClassifier(_OutlierModel):
+    def __init__(self, skl_model):
+        super().__init__(skl_model)
+        self.mahal_var = None
+
+    def mahalanobis(self, observations: np.ndarray) -> np.ndarray:
         """Computes squared Mahalanobis distances of given observations.
 
         Parameters
         ----------
-        observations : ndarray (n_samples, n_features) or Orange Table
+        observations : ndarray (n_samples, n_features)
 
         Returns
         -------
-        distances : ndarray (n_samples,)
+        distances : ndarray (n_samples, 1)
             Squared Mahalanobis distances given observations.
         """
-        if isinstance(observations, Table):
-            observations = observations.X
-        return self.skl_model.mahalanobis(observations)
+        return self.skl_model.mahalanobis(observations)[:, None]
+
+    def __call__(self, data: Table) -> Table:
+        pred = super().__call__(data)
+        domain = Domain(pred.domain.attributes, pred.domain.class_vars,
+                        pred.domain.metas + (self.mahal_var,))
+        metas = np.hstack((pred.metas, self.mahalanobis(self._cached_data.X)))
+        return Table.from_numpy(domain, pred.X, pred.Y, metas)
 
 
 class EllipticEnvelopeLearner(_OutlierLearner):
@@ -89,6 +145,15 @@ class EllipticEnvelopeLearner(_OutlierLearner):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    def __call__(self, data: Table):
-        data = data.transform(Domain(data.domain.attributes))
-        return super().__call__(data)
+    def _fit_model(self, data: Table) -> EllipticEnvelopeClassifier:
+        names = [v.name for v in data.domain.variables + data.domain.metas]
+        self.__model = super()._fit_model(data)
+        self.__model.mahal_var = ContinuousVariable(
+            get_unique_names(names, "Mahalanobis"),
+            compute_value=self.compute_mahal
+        )
+        return self.__model
+
+    def compute_mahal(self, table: Table) -> np.ndarray:
+        return self.__model(table)[:, self.__model.mahal_var].metas
+
