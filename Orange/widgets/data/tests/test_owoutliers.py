@@ -68,22 +68,28 @@ class TestOWOutliers(WidgetTest):
             self.assertIsNotNone(self.get_output(self.widget.Outputs.outliers))
             self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
 
-        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.widget.send_report()
+        self.send_signal(self.widget.Inputs.data, self.heart_disease)
         simulate.combobox_run_through_all(self.widget.method_combo,
                                           callback=callback)
 
-    def test_memory_error(self):
+    @patch("Orange.classification.outlier_detection._OutlierModel.predict")
+    def test_memory_error(self, mocked_predict: Mock):
         """
         Handling memory error.
         GH-2374
         """
-        data = Table("iris")[::3]
         self.assertFalse(self.widget.Error.memory_error.is_shown())
-        with unittest.mock.patch(
-                "Orange.widgets.data.owoutliers.OWOutliers.detect_outliers",
-                side_effect=MemoryError):
-            self.send_signal("Data", data)
-            self.assertTrue(self.widget.Error.memory_error.is_shown())
+        mocked_predict.side_effect = MemoryError
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Error.memory_error.is_shown())
+
+    @patch("Orange.classification.outlier_detection._OutlierModel.predict")
+    def test_singular_cov_error(self, mocked_predict: Mock):
+        self.assertFalse(self.widget.Error.singular_cov.is_shown())
+        mocked_predict.side_effect = ValueError
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Error.singular_cov.is_shown())
 
     def test_nans(self):
         """Widget does not crash with nans"""

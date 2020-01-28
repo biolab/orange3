@@ -5,9 +5,10 @@ import tempfile
 import unittest
 
 import numpy as np
-from Orange.data import Table, Domain, ContinuousVariable
+
 from Orange.classification import EllipticEnvelopeLearner, \
     IsolationForestLearner, LocalOutlierFactorLearner, OneClassSVMLearner
+from Orange.data import Table, Domain, ContinuousVariable
 
 
 class _TestDetector(unittest.TestCase):
@@ -212,6 +213,14 @@ class TestOutlierModel(_TestDetector):
         self.assert_table_appended_outlier(self.iris, pred)
         pred2 = self.iris.transform(pred.domain)
         self.assert_table_equal(pred, pred2)
+
+    def test_transformer(self):
+        detect = self.detector(self.iris)
+        pred = detect(self.iris)
+        var = pred.domain.metas[0]
+        self.assertIs(var, var.compute_value.variable)
+        np.testing.assert_array_equal(pred[:, "Outlier"].metas.ravel(),
+                                      var.compute_value(self.iris))
 
     def test_pickle_model(self):
         detect = self.detector(self.iris)

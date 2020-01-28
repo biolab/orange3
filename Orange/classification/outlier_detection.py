@@ -9,7 +9,8 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
 
 from Orange.base import SklLearner, SklModel
-from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
+    Variable
 from Orange.preprocess import AdaptiveNormalize
 from Orange.statistics.util import all_nan
 
@@ -58,17 +59,38 @@ class _OutlierLearner(SklLearner):
     supports_multiclass = True
 
     def _fit_model(self, data: Table) -> _OutlierModel:
-        names = [v.name for v in data.domain.variables + data.domain.metas]
-        data = data.transform(Domain(data.domain.attributes))
-        self.__model = super()._fit_model(data)
-        self.__model.outlier_var = DiscreteVariable(
-            get_unique_names(names, "Outlier"), values=["Yes", "No"],
-            compute_value=self.compute_value
-        )
-        return self.__model
+        domain = data.domain
+        model = super()._fit_model(data.transform(Domain(domain.attributes)))
 
-    def compute_value(self, table: Table) -> np.ndarray:
-        return self.__model(table)[:, self.__model.outlier_var].metas
+        transformer = _Transformer(model)
+        names = [v.name for v in domain.variables + domain.metas]
+        variable = DiscreteVariable(
+            get_unique_names(names, "Outlier"),
+            values=["Yes", "No"],
+            compute_value=transformer
+        )
+
+        transformer.variable = variable
+        model.outlier_var = variable
+        return model
+
+
+class _Transformer:
+    def __init__(self, model: _OutlierModel):
+        self._model = model
+        self._variable = None
+
+    @property
+    def variable(self) -> Variable:
+        return self._variable
+
+    @variable.setter
+    def variable(self, var: Variable):
+        self._variable = var
+
+    def __call__(self, data: Table) -> np.ndarray:
+        assert isinstance(self._variable, Variable)
+        return self._model(data).get_column_view(self._variable)[0]
 
 
 class OneClassSVMLearner(_OutlierLearner):
@@ -146,14 +168,17 @@ class EllipticEnvelopeLearner(_OutlierLearner):
         self.params = vars()
 
     def _fit_model(self, data: Table) -> EllipticEnvelopeClassifier:
-        names = [v.name for v in data.domain.variables + data.domain.metas]
-        self.__model = super()._fit_model(data)
-        self.__model.mahal_var = ContinuousVariable(
-            get_unique_names(names, "Mahalanobis"),
-            compute_value=self.compute_mahal
-        )
-        return self.__model
+        domain = data.domain
+        model = super()._fit_model(data.transform(Domain(domain.attributes)))
 
-    def compute_mahal(self, table: Table) -> np.ndarray:
-        return self.__model(table)[:, self.__model.mahal_var].metas
+        transformer = _Transformer(model)
+        names = [v.name for v in domain.variables + domain.metas]
+        variable = ContinuousVariable(
+            get_unique_names(names, "Mahalanobis"),
+            compute_value=transformer
+        )
+
+        transformer.variable = variable
+        model.mahal_var = variable
+        return model
 

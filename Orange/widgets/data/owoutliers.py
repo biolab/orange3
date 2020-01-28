@@ -9,7 +9,7 @@ from orangewidget.settings import SettingProvider
 
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner,\
     LocalOutlierFactorLearner, IsolationForestLearner
-from Orange.data import Table, DiscreteVariable
+from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
@@ -238,11 +238,26 @@ class OWOutliers(OWWidget):
             self.method_combo.model().item(self.Covariance).setEnabled(False)
             self.Warning.disabled_cov()
 
-    def _get_outliers(self) -> Tuple[Table, Table, Table]:
+    def commit(self):
+        inliers, outliers, data = self.detect_outliers()
+        summary = len(inliers) if inliers else self.info.NoOutput
+        self.info.set_output_summary(summary)
+        self.Outputs.inliers.send(inliers)
+        self.Outputs.outliers.send(outliers)
+        self.Outputs.data.send(data)
+
+    def detect_outliers(self) -> Tuple[Table, Table, Table]:
+        self.n_inliers = self.n_outliers = None
         self.Error.singular_cov.clear()
         self.Error.memory_error.clear()
+        if not self.data:
+            return None, None, None
         try:
-            pred, outlier_var = self.detect_outliers()
+            learner_class = self.METHODS[self.outlier_method]
+            kwargs = self.current_editor.get_parameters()
+            learner = learner_class(**kwargs)
+            model = learner(self.data)
+            pred = model(self.data)
         except ValueError:
             self.Error.singular_cov()
             return None, None, None
@@ -250,31 +265,12 @@ class OWOutliers(OWWidget):
             self.Error.memory_error()
             return None, None, None
         else:
-            col = pred[:, outlier_var].metas
+            col = pred[:, model.outlier_var].metas
             inliers_ind = np.where(col == 1)[0]
             outliers_ind = np.where(col == 0)[0]
             self.n_inliers = len(inliers_ind)
             self.n_outliers = len(outliers_ind)
             return self.data[inliers_ind], self.data[outliers_ind], pred
-
-    def commit(self):
-        inliers = outliers = data = None
-        self.n_inliers = self.n_outliers = None
-        if self.data:
-            inliers, outliers, data = self._get_outliers()
-
-        summary = len(inliers) if inliers else self.info.NoOutput
-        self.info.set_output_summary(summary)
-        self.Outputs.inliers.send(inliers)
-        self.Outputs.outliers.send(outliers)
-        self.Outputs.data.send(data)
-
-    def detect_outliers(self) -> Tuple[Table, DiscreteVariable]:
-        learner_class = self.METHODS[self.outlier_method]
-        kwargs = self.current_editor.get_parameters()
-        learner = learner_class(**kwargs)
-        model = learner(self.data)
-        return model(self.data), model.outlier_var
 
     def send_report(self):
         if self.n_outliers is None or self.n_inliers is None:
