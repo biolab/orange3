@@ -109,18 +109,6 @@ Nu-Support Vector Machines
    :members:
 
 
-
-.. index:: one class SVM
-   pair: classification; one class SVM
-
-One Class Support Vector Machines
----------------------------------
-
-.. autoclass:: OneClassSVMLearner
-   :members:
-
-
-
 .. index:: classification tree
    pair: classification; tree
 
@@ -155,16 +143,6 @@ Majority Classifier
 -------------------
 
 .. autoclass:: MajorityLearner
-   :members:
-
-
-.. index:: elliptic envelope
-   pair: classification; elliptic envelope
-
-Elliptic Envelope
------------------
-
-.. autoclass:: EllipticEnvelopeLearner
    :members:
 
 
