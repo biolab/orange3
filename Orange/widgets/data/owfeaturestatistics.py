@@ -900,9 +900,9 @@ class OWFeatureStatistics(widget.OWWidget):
             self.info_meta.setText('')
 
     def on_select(self):
-        self.selected_rows = self.model.mapToSourceRows([
+        self.selected_rows = list(self.model.mapToSourceRows([
             i.row() for i in self.table_view.selectionModel().selectedRows()
-        ])
+        ]))
         self.commit()
 
     def commit(self):

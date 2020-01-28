@@ -1,4 +1,5 @@
 import datetime
+import unittest
 from collections import namedtuple
 from functools import partial
 from itertools import chain
@@ -461,3 +462,7 @@ class TestFeatureStatisticsUI(WidgetTest):
         # Sending back the old data restores the selection
         self.send_signal(self.widget.Inputs.data, self.data1)
         self.assertEqual(len(self.widget.selected_rows), 2)
+
+
+if __name__ == "__main__":
+    unittest.main()
