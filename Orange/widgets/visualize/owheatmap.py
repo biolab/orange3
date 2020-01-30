@@ -1836,8 +1836,9 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
 
         self.heatmap_item.setMinimumSize(hmsize)
         self.averages_item.setMinimumSize(avsize)
-        self.heatmap_item.setPreferredSize(hmsize * 10)
-        self.averages_item.setPreferredSize(avsize * 10)
+        size = QFontMetrics(self.font()).lineSpacing()
+        self.heatmap_item.setPreferredSize(hmsize * size)
+        self.averages_item.setPreferredSize(avsize * size)
         self.layout().invalidate()
 
     def cell_at(self, pos):
