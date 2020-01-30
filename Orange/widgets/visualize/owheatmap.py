@@ -2071,6 +2071,7 @@ class GradientLegendWidget(QGraphicsWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.__pixitem = GraphicsPixmapWidget(parent=self, scaleContents=True,
                                               aspectMode=Qt.IgnoreAspectRatio)
+        self.__pixitem.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.__pixitem.setMinimumHeight(12)
         layout.addItem(self.__pixitem)
         self.__update()
