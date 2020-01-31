@@ -340,6 +340,9 @@ def enum_get(etype: Type[E], name: str, default: E) -> E:
         return default
 
 
+FLT_MAX = np.finfo(np.float32).max
+
+
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Plot a data matrix heatmap."
@@ -1204,7 +1207,7 @@ class OWHeatMap(widget.OWWidget):
             if mode == Qt.IgnoreAspectRatio:
                 # Reset the row height constraints ...
                 for i, hm_row in enumerate(self.heatmap_widget_grid):
-                    layout.setRowMaximumHeight(3 + i, np.finfo(np.float32).max)
+                    layout.setRowMaximumHeight(3 + i, FLT_MAX)
                 # ... and resize to match the viewport, taking the minimum size
                 # into account
                 minsize = widget.minimumSize()
@@ -1508,13 +1511,13 @@ class OWHeatMap(widget.OWWidget):
             BottomLabelsRow = Row0 + len(self.heatmapparts.rows)
 
             layout = self.heatmap_scene.widget.layout()
-            layout.setRowMaximumHeight(TopLabelsRow, -1 if show_top else 0)
+            layout.setRowMaximumHeight(TopLabelsRow, FLT_MAX if show_top else 0)
             layout.setRowSpacing(TopLabelsRow, -1 if show_top else 0)
 
             for labelslist in self.col_annotation_widgets_bottom:
                 labelslist.setVisible(show_bottom)
 
-            layout.setRowMaximumHeight(BottomLabelsRow, -1 if show_top else 0)
+            layout.setRowMaximumHeight(BottomLabelsRow, FLT_MAX if show_top else 0)
 
             self.__fixup_grid_layout()
 
