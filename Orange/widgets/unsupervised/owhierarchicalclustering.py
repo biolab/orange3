@@ -288,6 +288,8 @@ class DendrogramWidget(QGraphicsWidget):
                  **kwargs):
 
         super().__init__(None, **kwargs)
+        # Filter all events from children (`ClusterGraphicsItem`s)
+        self.setFiltersChildEvents(True)
         self.orientation = orientation
         self._root = None
         #: A tree with dendrogram geometry
@@ -312,12 +314,6 @@ class DendrogramWidget(QGraphicsWidget):
             self.setParentItem(parent)
 
     def clear(self):
-        # Remove event filter from all items before removal.
-        # Each removeItem is linear in number of installed filters in the whole
-        # scene -> so this would be quadratic for us (not accounting any other
-        # filters not part of DendrogramWidget).
-        for item in self._items.values():
-            item.removeSceneEventFilter(self)
         scene = self.scene()
         if scene is not None:
             scene.removeItem(self._itemgroup)
@@ -355,7 +351,6 @@ class DendrogramWidget(QGraphicsWidget):
                 item.setAcceptHoverEvents(True)
                 item.setPen(pen)
                 item.node = node
-                item.installSceneEventFilter(self)
                 for branch in node.branches:
                     assert branch in self._items
                     self._cluster_parent[branch] = node
