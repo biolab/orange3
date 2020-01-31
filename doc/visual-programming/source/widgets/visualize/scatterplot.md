@@ -14,7 +14,7 @@ Scatter plot visualization with explorative analysis and intelligent data visual
 - Selected Data: instances selected from the plot
 - Data: data with an additional column showing whether a point is selected
 
-The **Scatter Plot** widget provides a 2-dimensional scatter plot visualization for both continuous and discrete-valued attributes. The data is displayed as a collection of points, each having the value of the x-axis attribute determining the position on the horizontal axis and the value of the y-axis attribute determining the position on the vertical axis. Various properties of the graph, like color, size and shape of the points, axis titles, maximum point size and jittering can be adjusted on the left side of the widget. A snapshot below shows the scatter plot of the *Iris* dataset with the coloring matching of the class attribute.
+The **Scatter Plot** widget provides a 2-dimensional scatter plot visualization for continuous attributes. The data is displayed as a collection of points, each having the value of the x-axis attribute determining the position on the horizontal axis and the value of the y-axis attribute determining the position on the vertical axis. Various properties of the graph, like color, size and shape of the points, axis titles, maximum point size and jittering can be adjusted on the left side of the widget. A snapshot below shows the scatter plot of the *Iris* dataset with the coloring matching of the class attribute.
 
 ![](images/Scatterplot-Iris-stamped.png)
 
@@ -31,10 +31,6 @@ The **Scatter Plot** widget provides a 2-dimensional scatter plot visualization 
 5. If *Send automatically* is ticked, changes are communicated automatically. Alternatively, press *Send*.
 6. *Save Image* saves the created image to your computer in a .svg or .png format.
 7. Produce a report.
-
-For discrete attributes, jittering circumvents the overlap of points which have the same value for both axes, and therefore the density of points in the region corresponds better to the data. As an example, the scatter plot for the Titanic dataset, reporting on the gender of the passengers and the traveling class is shown below; without jittering, the scatter plot would display only eight distinct points.
-
-![](images/Scatterplot-Titanic.png)
 
 Here is an example of the **Scatter Plot** widget if the *Show class density* and *Show regression line* boxes are ticked.
 
@@ -69,14 +65,14 @@ Explorative Data Analysis
 
 The **Scatter Plot**, as the rest of Orange widgets, supports zooming-in and out of part of the plot and a manual selection of data instances. These functions are available in the lower left corner of the widget.
 
-The default tool is *Select*, which selects data instances within the chosen rectangular area. *Pan* enables you to move the scatter plot around the pane. With *Zoom* you can zoom in and out of the pane with a mouse scroll, while *Reset zoom* resets the visualization to its optimal size. An example of a simple schema, where we selected data instances from a rectangular region and sent them to the [Data Table](../data/datatable.md) widget, is shown below. Notice that the scatterplot doesn't show all 52 data instances, because some data instances overlap (they have the same values for both attributes used).
+The default tool is *Select*, which selects data instances within the chosen rectangular area. *Pan* enables you to move the scatter plot around the pane. With *Zoom* you can zoom in and out of the pane with a mouse scroll, while *Reset zoom* resets the visualization to its optimal size. An example of a simple schema, where we selected data instances from a rectangular region and sent them to the [Data Table](../data/datatable.md) widget, is shown below. Notice that the scatter plot doesn't show all 52 data instances, because some data instances overlap (they have the same values for both attributes used).
 
 ![](images/ScatterPlotExample-Explorative.png)
 
 Example
 -------
 
-The **Scatter Plot** can be combined with any widget that outputs a list of selected data instances. In the example below, we combine [Tree](../model/tree.md) and **Scatter Plot** to display instances taken from a chosen decision tree node (clicking on any node of the tree will send a set of selected data instances to the scatterplot and mark selected instances with filled symbols).
+The **Scatter Plot** can be combined with any widget that outputs a list of selected data instances. In the example below, we combine [Tree](../model/tree.md) and **Scatter Plot** to display instances taken from a chosen decision tree node (clicking on any node of the tree will send a set of selected data instances to the scatter plot and mark selected instances with filled symbols).
 
 ![](images/ScatterPlotExample-Classification.png)
 
