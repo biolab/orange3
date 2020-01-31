@@ -1156,8 +1156,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 else self.annotation_if_enumerate
 
     def _clear_plot(self):
-        self.labels.setItems([])
         self.dendrogram.set_root(None)
+        self.labels.setItems([])
 
     def _set_displayed_root(self, root):
         self._clear_plot()
