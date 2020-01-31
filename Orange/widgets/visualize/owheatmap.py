@@ -433,7 +433,7 @@ class OWHeatMap(widget.OWWidget):
             self.row_clustering_method = self.row_clustering.name
 
         # set default settings
-        self.space_x = 10
+        self.space_x = 3
 
         self.colorSettings = None
         self.selectedSchemaIndex = 0
