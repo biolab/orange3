@@ -38,6 +38,7 @@ class OWTranspose(OWWidget):
         duplicate_names = Msg("Values are not unique.\nTo avoid multiple "
                               "features with the same name, values \nof "
                               "'{}' have been augmented with indices.")
+        discrete_attrs = Msg("Categorical features have been encoded as numbers.")
 
     class Error(OWWidget.Error):
         value_error = Msg("{}")
@@ -123,6 +124,8 @@ class OWTranspose(OWWidget):
                     names = self.data.get_column_view(variable)[0]
                     if len(names) != len(set(names)):
                         self.Warning.duplicate_names(variable)
+                if self.data.domain.has_discrete_attributes():
+                    self.Warning.discrete_attrs()
                 self.info.set_output_summary(len(transposed))
             except ValueError as e:
                 self.Error.value_error(e)
