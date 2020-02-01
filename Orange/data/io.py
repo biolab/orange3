@@ -23,9 +23,9 @@ import xlsxwriter
 import openpyxl
 
 from Orange.data import _io, Table, Domain, ContinuousVariable
-from Orange.data import Flags, FileFormatBase, DataTableMixin
 from Orange.data import Compression, open_compressed, detect_encoding, \
     isnastr, guess_data_type, sanitize_variable
+from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
 
 from Orange.util import flatten
 
@@ -218,7 +218,7 @@ class PickleReader(FileFormat):
     @classmethod
     def write_file(cls, filename, data):
         with cls.open(filename, 'wb') as f:
-            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(data, f, protocol=PICKLE_PROTOCOL)
 
 
 class BasketReader(FileFormat):

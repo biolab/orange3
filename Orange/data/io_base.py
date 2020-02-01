@@ -23,7 +23,10 @@ from Orange.data.io_util import Compression, open_compressed, \
 from Orange.data.variable import VariableMeta
 from Orange.util import Registry, flatten, namegen
 
-__all__ = ["FileFormatBase", "Flags", "DataTableMixin"]
+__all__ = ["FileFormatBase", "Flags", "DataTableMixin", "PICKLE_PROTOCOL"]
+
+
+PICKLE_PROTOCOL = 4
 
 
 class Flags:
@@ -605,7 +608,7 @@ class _FileWriter:
                                       for kv in data.attributes.items()))
             else:
                 with open(fn, 'wb') as f:
-                    pickle.dump(data.attributes, f, pickle.HIGHEST_PROTOCOL)
+                    pickle.dump(data.attributes, f, protocol=PICKLE_PROTOCOL)
 
         if isinstance(filename, str):
             metafile = filename + '.metadata'
