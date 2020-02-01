@@ -242,7 +242,6 @@ class OWHeatMap(widget.OWWidget):
 
     threshold_low = settings.Setting(0.0)
     threshold_high = settings.Setting(1.0)
-    center_palette = settings.Setting(False)
 
     merge_kmeans = settings.Setting(False)
     merge_kmeans_k = settings.Setting(50)
@@ -356,9 +355,6 @@ class OWHeatMap(widget.OWWidget):
         form.addRow("High:", highslider)
 
         colorbox.layout().addLayout(form)
-
-        gui.checkBox(colorbox, self, 'center_palette', 'Center colors at 0',
-                     callback=self.update_color_schema)
 
         mergebox = gui.vBox(self.controlArea, "Merge",)
         gui.checkBox(mergebox, self, "merge_kmeans", "Merge by k-means",
@@ -491,6 +487,11 @@ class OWHeatMap(widget.OWWidget):
 
         self.selection_rects = []
         self.selected_rows = []
+
+    @property
+    def center_palette(self):
+        palette = self.color_cb.currentData()
+        return bool(palette.flags & palette.Diverging)
 
     def set_row_clustering(self, method: Clustering) -> None:
         assert isinstance(method, Clustering)

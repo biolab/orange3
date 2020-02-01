@@ -7,6 +7,8 @@ from unittest.mock import patch
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
+from AnyQt.QtCore import Qt, QModelIndex
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.preprocess import Continuize
 from Orange.widgets.utils import colorpalettes
@@ -217,7 +219,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertIs(w.split_by_var, None)
         self.assertEqual(len(w.heatmapparts.rows), 1)
 
-    def test_center_palette(self):
+    def test_palette_centering(self):
         data = np.arange(2).reshape(-1, 1)
         table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
         self.send_signal(self.widget.Inputs.data, table)
@@ -233,12 +235,23 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                             [255, 0, 0]]
 
         for center, desired in [(False, desired_uncentered), (True, desired_centered)]:
-            self.widget.center_palette = center
-            self.widget.update_color_schema()
-            heatmap_widget = self.widget.heatmap_widget_grid[0][0]
-            image = heatmap_widget.heatmap_item.pixmap().toImage()
-            colors = image_row_colors(image)
-            np.testing.assert_almost_equal(colors, desired)
+            with patch.object(OWHeatMap, "center_palette", center):
+                self.widget.update_color_schema()
+                heatmap_widget = self.widget.heatmap_widget_grid[0][0]
+                image = heatmap_widget.heatmap_item.pixmap().toImage()
+                colors = image_row_colors(image)
+                np.testing.assert_almost_equal(colors, desired)
+
+    def test_palette_center(self):
+        widget = self.widget
+        model = widget.color_cb.model()
+        for idx in range(model.rowCount(QModelIndex())):
+            palette = model.data(model.index(idx, 0), Qt.UserRole)
+            if palette is None:
+                continue
+            widget.color_cb.setCurrentIndex(idx)
+            self.assertEqual(widget.center_palette,
+                             bool(palette.flags & palette.Diverging))
 
     def test_migrate_settings_v3(self):
         w = self.create_widget(
