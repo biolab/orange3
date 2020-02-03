@@ -10,6 +10,9 @@ def format_variables_string(variables):
     :param variables: Features, targets or metas of the input dataset
     :return: A formatted string
     """
+    if not variables:
+        return '—'
+
     agg = []
     for var_type_name, var_type in [('categorical', DiscreteVariable),
                                     ('numeric', ContinuousVariable),
@@ -21,28 +24,19 @@ def format_variables_string(variables):
         # `isinstance`, which would fail in the above case
         var_type_list = [v for v in variables if type(v) is var_type]  # pylint: disable=unidiomatic-typecheck
         if var_type_list:
-            shown = var_type in (StringVariable,)
-            agg.append(
-                (f'{len(var_type_list)} ' + var_type_name +
-                 f"{['', ' (not shown)'][shown]}",
-                 len(var_type_list)))
-
-    if not agg:
-        return '—'
+            not_shown = ' (not shown)' if issubclass(var_type, StringVariable)\
+                else ''
+            agg.append((f'{var_type_name}{not_shown}', len(var_type_list)))
 
     attrs, counts = list(zip(*agg))
     if len(attrs) > 1:
-        var_string = ', '.join(attrs[:-1]) + ', ' + attrs[-1]
-        return f'{sum(counts)} (' + var_string + ')'
-    elif sum(counts) == 1:
-        var_string = attrs[0][2:]
-        return var_string
+        var_string = [f'{i} {j}' for i, j in zip(counts, attrs)]
+        var_string = f'{sum(counts)} ({", ".join(var_string)})'
+    elif counts[0] == 1:
+        var_string = attrs[0]
     else:
-        types = [s for s in ['categorical', 'numeric', 'time', 'string'] if
-                 s in attrs[0]]
-        ind = attrs[0].find(types[0])
-        var_string = attrs[0][ind:]
-        return f'{sum(counts)} ' + var_string
+        var_string = f'{counts[0]} {attrs[0]}'
+    return var_string
 
 
 def format_summary_details(data):
@@ -55,7 +49,7 @@ def format_summary_details(data):
     :return: A formatted string
     """
     def _plural(number):
-        return number, 's' * (number != 1)
+        return 's' * (number != 1)
 
     details = ''
     if data:
@@ -65,10 +59,8 @@ def format_summary_details(data):
 
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = \
-            f'{_plural(len(data))[0]} instance{_plural(len(data))[1]}, ' \
-            f'{_plural(n_features)[0]} feature{_plural(n_features)[1]}\n' \
-            f'Features: ' + features + '\n' + \
-            f'Target: ' + targets + '\n' + \
-            f'Metas: ' + metas
+            f'{len(data)} instance{_plural(len(data))}, ' \
+            f'{n_features} feature{_plural(n_features)}\n' \
+            f'Features: {features}\nTarget: {targets}\nMetas: {metas}'
 
     return details
