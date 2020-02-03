@@ -5,11 +5,12 @@ from operator import iadd
 import numpy
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QApplication
+    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QApplication,
+    QSizePolicy
 )
 from AnyQt.QtGui import (
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
-    QBrush, QTransform
+    QBrush, QTransform, QFont
 )
 from AnyQt.QtCore import Qt, QRect, QRectF, QSize, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal
@@ -25,10 +26,12 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.unsupervised.owhierarchicalclustering import (
-    DendrogramWidget, GraphicsSimpleTextList)
+    DendrogramWidget
+)
 
 def _remove_item(item):
     item.setParentItem(None)
@@ -379,10 +382,14 @@ class OWDistanceMap(widget.OWWidget):
         self.grid.addItem(self.top_dendrogram, 0, 1)
 
         self.right_labels = TextList(
-            alignment=Qt.AlignLeft)
-
+            alignment=Qt.AlignLeft | Qt.AlignVCenter,
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        )
         self.bottom_labels = TextList(
-            orientation=Qt.Horizontal, alignment=Qt.AlignRight)
+            orientation=Qt.Horizontal,
+            alignment=Qt.AlignRight | Qt.AlignVCenter,
+            sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        )
 
         self.grid.addItem(self.right_labels, 1, 2)
         self.grid.addItem(self.bottom_labels, 2, 1)
@@ -606,7 +613,7 @@ class OWDistanceMap(widget.OWWidget):
             labels = [labels[i] for i in sortind]
 
         for textlist in [self.right_labels, self.bottom_labels]:
-            textlist.set_labels(labels or [])
+            textlist.setItems(labels or [])
             textlist.setVisible(bool(labels))
 
         constraint = -1 if labels else 0
@@ -678,18 +685,18 @@ class OWDistanceMap(widget.OWWidget):
             self.report_plot()
 
 
-class TextList(GraphicsSimpleTextList):
+class TextList(TextListWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._updateFontSize()
 
     def _updateFontSize(self):
         crect = self.contentsRect()
-        if self.orientation == Qt.Vertical:
+        if self.orientation() == Qt.Vertical:
             h = crect.height()
         else:
             h = crect.width()
-        n = len(getattr(self, "label_items", []))
+        n = self.count()
         if n == 0:
             return
 
@@ -698,15 +705,12 @@ class TextList(GraphicsSimpleTextList):
         else:
             maxfontsize = QApplication.instance().font().pointSize()
 
-        lineheight = max(1, h / n)
+        lineheight = max(1., h / n)
         fontsize = min(self._point_size(lineheight), maxfontsize)
 
-        font = self.font()
-        font.setPointSize(fontsize)
-
-        self.setFont(font)
-        self.layout().invalidate()
-        self.layout().activate()
+        font_ = QFont()
+        font_.setPointSize(fontsize)
+        self.setFont(font_)
 
     def _point_size(self, height):
         font = self.font()
@@ -716,7 +720,6 @@ class TextList(GraphicsSimpleTextList):
             fix += 1
             font.setPointSize(height - fix)
         return height - fix
-
 
 ##########################
 # Color palette management
