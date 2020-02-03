@@ -20,6 +20,8 @@ The **Color** widget sets the color legend for visualizations.
 3. Produce a report.
 4. Apply changes. If *Apply automatically* is ticked, changes will be communicated automatically. Alternatively, just click *Apply*.
 
+![](images/Color-Continuous_unindexed.png)
+
 Palettes for numeric variables are grouped and tagged by their properties.
 
 - Diverging palettes have two colors on its ends and a central color (white or black) in the middle. Such palettes are particularly useful when the the values can be positive or negative, as some widgets (for instance the Heat map) will put the 0 at the middle point in the palette.
@@ -35,10 +37,10 @@ Palettes for numeric variables are grouped and tagged by their properties.
 Example
 -------
 
-We chose to work with the *Iris* data set. We opened the color palette and selected three new colors for the three types of Irises. Then we opened the [Scatter Plot](../visualize/scatterplot.md) widget and viewed the changes made to the scatter plot.
+We chose to work with the *heart_disease* data set. We opened the color palette and selected two new colors for diameter narrowing variable. Then we opened the [Scatter Plot](../visualize/scatterplot.md) widget and viewed the changes made to the scatter plot.
 
-![](images/Color-Example-1.png)
+![](images/Color-Example-Discrete.png)
 
-To see the effect of color palettes for numeric variables, we color the points in the scatter plot by sepal width and change the palette for this attribute in the Color widget.
+To see the effect of color palettes for numeric variables, we color the points in the scatter plot by cholesterol and change the palette for this attribute in the Color widget.
 
-![](images/Color-Example-2.png)
+![](images/Color-Example-Continuous.png)
