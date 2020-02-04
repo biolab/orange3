@@ -1505,20 +1505,8 @@ class OWHeatMap(widget.OWWidget):
 
             for labelslist in self.col_annotation_widgets_top:
                 labelslist.setVisible(show_top)
-
-            TopLabelsRow = 2
-            Row0 = 3
-            BottomLabelsRow = Row0 + len(self.heatmapparts.rows)
-
-            layout = self.heatmap_scene.widget.layout()
-            layout.setRowMaximumHeight(TopLabelsRow, FLT_MAX if show_top else 0)
-            layout.setRowSpacing(TopLabelsRow, -1 if show_top else 0)
-
             for labelslist in self.col_annotation_widgets_bottom:
                 labelslist.setVisible(show_bottom)
-
-            layout.setRowMaximumHeight(BottomLabelsRow, FLT_MAX if show_top else 0)
-
             self.__fixup_grid_layout()
 
     def __select_by_cluster(self, item, dendrogramindex):
