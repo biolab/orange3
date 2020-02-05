@@ -292,7 +292,9 @@
     "doc": "visual-programming/source/widgets/data/save.md",
     "icon": "../Orange/widgets/data/icons/Save.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "export"
+    ]
    }
   ]
  ],
