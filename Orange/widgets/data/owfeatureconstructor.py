@@ -1069,9 +1069,12 @@ class FeatureFunc:
         if isinstance(instance, Orange.data.Table):
             return [self(inst) for inst in instance]
         else:
-            args = [str(instance[var])
-                    if instance.domain[var].is_string else instance[var]
-                    for _, var in self.args]
+            try:
+                args = [str(instance[var])
+                        if instance.domain[var].is_string else instance[var]
+                        for _, var in self.args]
+            except KeyError:
+                return np.nan
             y = self.func(*args)
             if self.cast:
                 y = self.cast(y)

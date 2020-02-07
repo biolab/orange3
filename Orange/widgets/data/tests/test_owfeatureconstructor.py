@@ -274,6 +274,17 @@ class FeatureFuncTest(unittest.TestCase):
         self.assertEqual(r, [x[0] for x in zoo.metas[:, 0]])
         self.assertEqual(f(zoo[0]), str(zoo[0, "name"])[0])
 
+    def test_missing_variable(self):
+        zoo = Table("zoo")
+        assert zoo.domain.class_var.name == "type"
+        f = FeatureFunc("type[0]",
+                        [("type", zoo.domain["type"])])
+        no_class = Domain(zoo.domain.attributes, None, zoo.domain.metas)
+        data2 = zoo.transform(no_class)
+        r = f(data2)
+        self.assertTrue(np.all(np.isnan(r)))
+        self.assertTrue(np.isnan(f(data2[0])))
+
 
 class OWFeatureConstructorTests(WidgetTest):
     def setUp(self):
