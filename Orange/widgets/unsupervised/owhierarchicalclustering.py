@@ -34,7 +34,7 @@ from Orange.clustering.hierarchical import \
 from Orange.data.util import get_unique_names
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import colorpalette, itemmodels, combobox
+from Orange.widgets.utils import colorpalettes, itemmodels, combobox
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -585,7 +585,7 @@ class DendrogramWidget(QGraphicsWidget):
         items = sorted(self._selection.items(),
                        key=lambda item: item[0].node.value.first)
 
-        palette = colorpalette.ColorPaletteGenerator(len(items))
+        palette = colorpalettes.LimitedDiscretePalette(len(items))
         for i, (item, selection_item) in enumerate(items):
             # delete and then reinsert to update the ordering
             del self._selection[item]

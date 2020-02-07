@@ -19,9 +19,6 @@ from Orange.widgets.settings import (
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table
 )
-from Orange.widgets.utils.colorpalette import (
-    ColorPaletteGenerator, ContinuousPaletteGenerator, DefaultRGBColors
-)
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
@@ -224,16 +221,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         This method must be overridden if the widget offers coloring that is
         not based on attribute values.
         """
-        if self.attr_color is None:
-            return None
-        colors = self.attr_color.colors
-        if self.attr_color.is_discrete:
-            return ColorPaletteGenerator(
-                number_of_colors=min(len(colors), MAX_COLORS),
-                rgb_colors=colors if len(colors) <= MAX_COLORS
-                else DefaultRGBColors)
-        else:
-            return ContinuousPaletteGenerator(*colors)
+        return self.attr_color and self.attr_color.palette
 
     def can_draw_density(self):
         """

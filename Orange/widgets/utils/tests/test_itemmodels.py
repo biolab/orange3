@@ -11,11 +11,13 @@ from AnyQt.QtCore import Qt, QModelIndex
 from Orange.data import \
     Domain, \
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.itemmodels import \
     AbstractSortTableModel, PyTableModel,\
-    PyListModel, VariableListModel, DomainModel,\
+    PyListModel, VariableListModel, DomainModel, ContinuousPalettesModel, \
     _as_contiguous_range
 from Orange.widgets.gui import TableVariable
+from orangewidget.tests.base import GuiTest
 
 
 class TestUtils(unittest.TestCase):
@@ -334,6 +336,106 @@ class TestDomainModel(unittest.TestCase):
         self.assertSequenceEqual(model, domain)
         self.assertFalse(model.removeRows(0, 1))
         self.assertSequenceEqual(model, domain)
+
+
+class TestContinuousPalettesModel(GuiTest):
+    def setUp(self):
+        self.palette1, self.palette2 = \
+            list(colorpalettes.ContinuousPalettes.values())[:2]
+
+    def test_all_categories(self):
+        model = ContinuousPalettesModel()
+        shown = {palette.name for palette in model.items
+                 if isinstance(palette, colorpalettes.Palette)}
+        expected = {palette.name
+                    for palette in colorpalettes.ContinuousPalettes.values()}
+        self.assertEqual(expected, shown)
+
+        shown = {name for name in model.items if isinstance(name, str)}
+        expected = {palette.category
+                    for palette in colorpalettes.ContinuousPalettes.values()}
+        self.assertEqual(expected, shown)
+
+    def test_category_selection(self):
+        categories = ('Diverging', 'Linear')
+        model = ContinuousPalettesModel(categories=categories)
+        shown = {palette.name
+                 for palette in model.items
+                 if isinstance(palette, colorpalettes.Palette)}
+        expected = {palette.name
+                    for palette in colorpalettes.ContinuousPalettes.values()
+                    if palette.category in categories}
+        self.assertEqual(expected, shown)
+        self.assertIn("Diverging", model.items)
+        self.assertIn("Linear", model.items)
+
+    def test_single_category(self):
+        category = 'Diverging'
+        model = ContinuousPalettesModel(categories=(category, ))
+        shown = {palette.name
+                 for palette in model.items
+                 if isinstance(palette, colorpalettes.Palette)}
+        expected = {palette.name
+                    for palette in colorpalettes.ContinuousPalettes.values()
+                    if palette.category == category}
+        self.assertEqual(expected, shown)
+        self.assertEqual(len(model.items), len(shown))
+
+    def test_count(self):
+        model = ContinuousPalettesModel()
+        model.items = [self.palette1, self.palette1]
+        self.assertEqual(model.rowCount(QModelIndex()), 2)
+        self.assertEqual(model.columnCount(QModelIndex()), 1)
+
+    def test_data(self):
+        model = ContinuousPalettesModel()
+        model.items = ["Palettes", self.palette1, self.palette2]
+        data = model.data
+        index = model.index
+
+        self.assertEqual(data(index(0, 0), Qt.EditRole), "Palettes")
+        self.assertEqual(data(index(1, 0), Qt.EditRole),
+                         self.palette1.friendly_name)
+        self.assertEqual(data(index(2, 0), Qt.EditRole),
+                         self.palette2.friendly_name)
+
+        self.assertEqual(data(index(0, 0), Qt.DisplayRole), "Palettes")
+        self.assertEqual(data(index(1, 0), Qt.DisplayRole),
+                         self.palette1.friendly_name)
+        self.assertEqual(data(index(2, 0), Qt.DisplayRole),
+                         self.palette2.friendly_name)
+
+        self.assertIsNone(data(index(0, 0), Qt.DecorationRole))
+        with patch.object(self.palette1, "color_strip") as color_strip:
+            self.assertIs(data(index(1, 0), Qt.DecorationRole),
+                          color_strip.return_value)
+        with patch.object(self.palette2, "color_strip") as color_strip:
+            self.assertIs(data(index(2, 0), Qt.DecorationRole),
+                          color_strip.return_value)
+
+        self.assertIsNone(data(index(0, 0), Qt.UserRole))
+        self.assertIs(data(index(1, 0), Qt.UserRole), self.palette1)
+        self.assertIs(data(index(2, 0), Qt.UserRole), self.palette2)
+
+        self.assertIsNone(data(index(2, 0), Qt.FontRole))
+
+    def test_select_flags(self):
+        model = ContinuousPalettesModel()
+        model.items = ["Palettes", self.palette1, self.palette2]
+        self.assertFalse(model.flags(model.index(0, 0)) & Qt.ItemIsSelectable)
+        self.assertTrue(model.flags(model.index(1, 0)) & Qt.ItemIsSelectable)
+        self.assertTrue(model.flags(model.index(2, 0)) & Qt.ItemIsSelectable)
+
+    def testIndexOf(self):
+        model = ContinuousPalettesModel()
+        model.items = ["Palettes", self.palette1, self.palette2]
+        self.assertEqual(model.indexOf(self.palette1), 1)
+        self.assertEqual(model.indexOf(self.palette1.name), 1)
+        self.assertEqual(model.indexOf(self.palette1.friendly_name), 1)
+        self.assertEqual(model.indexOf(self.palette2), 2)
+        self.assertEqual(model.indexOf(self.palette2.name), 2)
+        self.assertEqual(model.indexOf(self.palette2.friendly_name), 2)
+        self.assertIsNone(model.indexOf(42))
 
 
 if __name__ == "__main__":

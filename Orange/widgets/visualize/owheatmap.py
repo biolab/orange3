@@ -17,8 +17,7 @@ from AnyQt.QtWidgets import (
     QFormLayout, QApplication, QComboBox, QWIDGETSIZE_MAX
 )
 from AnyQt.QtGui import (
-    QFontMetrics, QPen, QPixmap, QColor, QLinearGradient, QPainter,
-    QTransform, QIcon, QBrush,
+    QFontMetrics, QPen, QPixmap, QTransform,
     QStandardItemModel, QStandardItem,
 )
 from AnyQt.QtCore import (
@@ -34,10 +33,9 @@ from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical, kmeans
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
-from Orange.widgets.utils import colorbrewer
-
 from Orange.widgets.utils.graphicstextlist import scaled, TextListWidget
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -58,72 +56,6 @@ def leaf_indices(tree):
     return [leaf.value.index for leaf in hierarchical.leaves(tree)]
 
 
-def palette_gradient(colors):
-    n = len(colors)
-    stops = np.linspace(0.0, 1.0, n, endpoint=True)
-    gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]
-    grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
-    grad.setStops(gradstops)
-    return grad
-
-
-def palette_pixmap(colors, size):
-    img = QPixmap(size)
-    img.fill(Qt.transparent)
-
-    grad = palette_gradient(colors)
-    grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
-
-    painter = QPainter(img)
-    painter.setPen(Qt.NoPen)
-    painter.setBrush(QBrush(grad))
-    painter.drawRect(0, 0, size.width(), size.height())
-    painter.end()
-    return img
-
-
-def color_palette_model(palettes, iconsize=QSize(64, 16)):
-    model = QStandardItemModel()
-    for name, palette in palettes:
-        _, colors = max(palette.items())
-        colors = [QColor(*c) for c in colors]
-        item = QStandardItem(name)
-        item.setIcon(QIcon(palette_pixmap(colors, iconsize)))
-        item.setData(palette, Qt.UserRole)
-        model.appendRow([item])
-    return model
-
-
-def color_palette_table(colors,
-                        underflow=None, overflow=None,
-                        gamma=None):
-    colors = np.array(colors, dtype=np.ubyte)
-    points = np.linspace(0, 255, len(colors))
-    space = np.linspace(0, 255, 255)
-
-    if underflow is None:
-        underflow = [None, None, None]
-
-    if overflow is None:
-        overflow = [None, None, None]
-
-    if gamma is None or gamma < 0.0001:
-        r = np.interp(space, points, colors[:, 0],
-                      left=underflow[0], right=overflow[0])
-        g = np.interp(space, points, colors[:, 1],
-                      left=underflow[1], right=overflow[1])
-        b = np.interp(space, points, colors[:, 2],
-                      left=underflow[2], right=overflow[2])
-    else:
-        r = interp_exp(space, points, colors[:, 0], gamma=gamma,
-                       left=underflow[0], right=overflow[0])
-        g = interp_exp(space, points, colors[:, 1], gamma=gamma,
-                       left=underflow[0], right=overflow[0])
-        b = interp_exp(space, points, colors[:, 2], gamma=gamma,
-                       left=underflow[0], right=overflow[0])
-    return np.c_[r, g, b]
-
-
 def levels_with_thresholds(low, high, threshold_low, threshold_high, center_palette):
     lt = low + (high - low) * threshold_low
     ht = low + (high - low) * threshold_high
@@ -131,55 +63,6 @@ def levels_with_thresholds(low, high, threshold_low, threshold_high, center_pale
         ht = max(abs(lt), abs(ht))
         lt = -max(abs(lt), abs(ht))
     return lt, ht
-
-
-def interp_exp(x, xp, fp, gamma=0.0, left=None, right=None,):
-    assert np.all(np.diff(xp) > 0)
-    x = np.asanyarray(x)
-    xp = np.asanyarray(xp)
-    fp = np.asanyarray(fp)
-
-    if xp.shape != fp.shape:
-        raise ValueError("xp and fp must have the same shape")
-
-    ind = np.searchsorted(xp, x, side="right")
-
-    f = np.zeros(len(x))
-
-    under = ind == 0
-    over = ind == len(xp)
-    between = ~under & ~over
-
-    f[under] = left if left is not None else fp[0]
-    f[over] = right if right is not None else fp[-1]
-
-    if right is not None:
-        # Fix points exactly on the right boundary.
-        f[x == xp[-1]] = fp[-1]
-
-    ind = ind[between]
-
-    def exp_ramp(x, gamma):
-        assert gamma >= 0
-        if gamma < np.finfo(float).eps:
-            return x
-        else:
-            return (np.exp(gamma * x) - 1) / (np.exp(gamma) - 1.)
-
-    def gamma_fun(x, gamma):
-        out = np.array(x)
-        out[x < 0.5] = exp_ramp(x[x < 0.5] * 2, gamma) / 2
-        out[x > 0.5] = 1 - exp_ramp((1 - x[x > 0.5]) * 2, gamma) / 2
-        return out
-
-    y0, y1 = fp[ind - 1], fp[ind]
-    x0, x1 = xp[ind - 1], xp[ind]
-
-    m = (x[between] - x0) / (x1 - x0)
-    m = gamma_fun(m, gamma)
-    f[between] = (1 - m) * y0 + m * y1
-
-    return f
 
 # TODO:
 #     * Richer Tool Tips
@@ -259,14 +142,6 @@ class Parts(NamedTuple):
     span: Tuple[float, float]      #: (min, max) global data range
 
     levels = property(lambda self: self.span)
-
-
-_color_palettes = (sorted(colorbrewer.colorSchemes["sequential"].items()) +
-                   [("Blue-Yellow", {2: [(0, 0, 255), (255, 255, 0)]}),
-                    ("Green-Black-Red", {3: [(0, 255, 0), (0, 0, 0),
-                                             (255, 0, 0)]})])
-_default_palette_index = \
-    [name for name, _, in _color_palettes].index("Blue-Yellow")
 
 
 def cbselect(cb: QComboBox, value, role: Qt.ItemDataRole = Qt.EditRole) -> None:
@@ -365,10 +240,8 @@ class OWHeatMap(widget.OWWidget):
     # Disable cluster leaf ordering for inputs bigger than this
     MaxOrderedClustering = 1000
 
-    gamma = settings.Setting(0)
     threshold_low = settings.Setting(0.0)
     threshold_high = settings.Setting(1.0)
-    center_palette = settings.Setting(False)
 
     merge_kmeans = settings.Setting(False)
     merge_kmeans_k = settings.Setting(50)
@@ -381,15 +254,12 @@ class OWHeatMap(widget.OWWidget):
     annotation_var = settings.ContextSetting(None)
     # Discrete variable used to split that data/heatmaps (vertically)
     split_by_var = settings.ContextSetting(None)
-    # Stored color palette settings
-    color_settings = settings.Setting(None)
-    user_palettes = settings.Setting([])
 
     # Selected row/column clustering method (name)
     col_clustering_method: str = settings.Setting(Clustering.None_.name)
     row_clustering_method: str = settings.Setting(Clustering.None_.name)
 
-    palette_index = settings.Setting(_default_palette_index)
+    palette_name = settings.Setting(colorpalettes.DefaultContinuousPaletteName)
     column_label_pos = settings.Setting(PositionTop)
     selected_rows = settings.Setting(None, schema_only=True)
 
@@ -460,18 +330,10 @@ class OWHeatMap(widget.OWWidget):
 
         # GUI definition
         colorbox = gui.vBox(self.controlArea, "Color")
-        self.color_cb = gui.comboBox(colorbox, self, "palette_index")
-        self.color_cb.setIconSize(QSize(64, 16))
-        palettes = _color_palettes + self.user_palettes
+        self.color_cb = gui.palette_combo_box(self.palette_name)
+        self.color_cb.currentIndexChanged.connect(self.update_color_schema)
+        colorbox.layout().addWidget(self.color_cb)
 
-        self.palette_index = min(self.palette_index, len(palettes) - 1)
-
-        model = color_palette_model(palettes, self.color_cb.iconSize())
-        model.setParent(self)
-        self.color_cb.setModel(model)
-        self.color_cb.activated.connect(self.update_color_schema)
-
-        self.color_cb.setCurrentIndex(self.palette_index)
         # TODO: Add 'Manage/Add/Remove' action.
 
         form = QFormLayout(
@@ -488,20 +350,11 @@ class OWHeatMap(widget.OWWidget):
             colorbox, self, "threshold_high", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_highslider)
-        gammaslider = gui.hSlider(
-            colorbox, self, "gamma", minValue=0.0, maxValue=20.0,
-            step=1.0, ticks=True, intOnly=False,
-            createLabel=False, callback=self.update_color_schema
-        )
 
         form.addRow("Low:", lowslider)
         form.addRow("High:", highslider)
-        form.addRow("Gamma:", gammaslider)
 
         colorbox.layout().addLayout(form)
-
-        gui.checkBox(colorbox, self, 'center_palette', 'Center colors at 0',
-                     callback=self.update_color_schema)
 
         mergebox = gui.vBox(self.controlArea, "Merge",)
         gui.checkBox(mergebox, self, "merge_kmeans", "Merge by k-means",
@@ -635,6 +488,11 @@ class OWHeatMap(widget.OWWidget):
         self.selection_rects = []
         self.selected_rows = []
 
+    @property
+    def center_palette(self):
+        palette = self.color_cb.currentData()
+        return bool(palette.flags & palette.Diverging)
+
     def set_row_clustering(self, method: Clustering) -> None:
         assert isinstance(method, Clustering)
         if self.row_clustering != method:
@@ -653,12 +511,7 @@ class OWHeatMap(widget.OWWidget):
         return QSize(800, 400)
 
     def color_palette(self):
-        data = self.color_cb.itemData(self.palette_index, role=Qt.UserRole)
-        if data is None:
-            return []
-        else:
-            _, colors = max(data.items())
-            return color_palette_table(colors, gamma=self.gamma)
+        return self.color_cb.currentData().lookup_table()
 
     def clear(self):
         self.data = None
@@ -1441,6 +1294,7 @@ class OWHeatMap(widget.OWWidget):
         self.update_color_schema()
 
     def update_color_schema(self):
+        self.palette_name = self.color_cb.currentData().name
         palette = self.color_palette()
         for heatmap in self.heatmap_widgets():
             heatmap.set_thresholds(self.threshold_low, self.threshold_high)

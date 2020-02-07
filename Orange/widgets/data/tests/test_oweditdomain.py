@@ -7,10 +7,11 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt, QItemSelection
+from AnyQt.QtCore import QItemSelectionModel, Qt, QItemSelection
 from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, QStyleOptionViewItem
 from AnyQt.QtTest import QTest, QSignalSpy
 
+from Orange.widgets.utils import colorpalettes
 from orangewidget.tests.utils import simulate
 from orangewidget.utils.itemmodels import PyListModel
 
@@ -121,14 +122,17 @@ class TestOWEditDomain(WidgetTest):
         """Check widget's data sent from OWColor widget"""
         owcolor = self.create_widget(OWColor)
         self.send_signal("Data", self.iris, widget=owcolor)
-        owcolor.disc_model.setData(QModelIndex(), (250, 97, 70, 255), ColorRole)
-        owcolor.cont_model.setData(
-            QModelIndex(), ((255, 80, 114, 255), (255, 255, 0, 255), False),
-            ColorRole)
+        disc_model = owcolor.disc_model
+        disc_model.setData(disc_model.index(0, 1), (1, 2, 3), ColorRole)
+        cont_model = owcolor.cont_model
+        palette = list(colorpalettes.ContinuousPalettes.values())[-1]
+        cont_model.setData(cont_model.index(1, 1), palette, ColorRole)
         owcolor_output = self.get_output("Data", owcolor)
         self.send_signal("Data", owcolor_output)
         self.assertEqual(self.widget.data, owcolor_output)
-        self.assertIsNotNone(self.widget.data.domain.class_vars[-1].colors)
+        np.testing.assert_equal(self.widget.data.domain.class_var.colors[0],
+                                (1, 2, 3))
+        self.assertIs(self.widget.data.domain.attributes[1].palette, palette)
 
     def test_list_attributes_remain_lists(self):
         a = ContinuousVariable("a")
