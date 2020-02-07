@@ -1,7 +1,7 @@
 import warnings
 
 warnings.warn("Module 'colorbrewer' is obsolete and will be removed.\n"
-              "Use palettes from 'Orange.misccolorpalettes'.",
+              "Use palettes from 'Orange.widget.utils.colorpalettes'.",
               DeprecationWarning)
 
 colorSchemes = {

@@ -369,6 +369,23 @@ class TestDiscreteVariable(VariableTest):
         var.ordered = True
         return var
 
+    def test_copy_checks_len_values(self):
+        var = DiscreteVariable("gender", values=["F", "M"])
+        self.assertEqual(var.values, ["F", "M"])
+
+        self.assertRaises(ValueError, var.copy, values=["F", "M", "N"])
+        self.assertRaises(ValueError, var.copy, values=["F"])
+        self.assertRaises(ValueError, var.copy, values=[])
+
+        var2 = var.copy()
+        self.assertEqual(var2.values, ["F", "M"])
+
+        var2 = var.copy(values=None)
+        self.assertEqual(var2.values, ["F", "M"])
+
+        var2 = var.copy(values=["W", "M"])
+        self.assertEqual(var2.values, ["W", "M"])
+
 
 @variabletest(ContinuousVariable)
 class TestContinuousVariable(VariableTest):

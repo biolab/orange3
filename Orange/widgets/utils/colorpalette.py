@@ -22,6 +22,10 @@ from AnyQt.QtCore import Qt, QSize, QRectF, pyqtSignal, PYQT_VERSION
 from Orange.widgets import gui
 from Orange.widgets.utils import colorbrewer
 
+warnings.warn(
+    "Module colorpalette is obsolete; use colorpalettes", DeprecationWarning)
+
+
 DefaultRGBColors = [
     (70, 190, 250), (237, 70, 47), (170, 242, 43), (245, 174, 50), (255, 255, 0),
     (255, 0, 255), (0, 255, 255), (128, 0, 255), (0, 128, 255), (255, 223, 128),
@@ -392,12 +396,6 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
 class ColorPalleteListing(QDialog):
     def __init__(self, parent=None, windowTitle="Color Palette List",
                  **kwargs):
-        # Import locally to prevent warning about using an obsolete module
-        # (This module itself is obsolete, but imported by its replacement,
-        # for backward compatibility, so importing colorbrewer globally would
-        # cause a warning.)
-        from Orange.widgets.utils import colorbrewer
-
         super().__init__(parent, windowTitle=windowTitle, **kwargs)
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -1015,9 +1013,6 @@ def main():  # pragma: no cover
     c.show()
     a.exec()
 
-
-warnings.warn(
-    "Module colorpalette is obsolete; use colorpalettes", DeprecationWarning)
 
 if __name__ == "__main__":  # pragma: no cover
     main()

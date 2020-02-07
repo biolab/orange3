@@ -751,6 +751,9 @@ class DiscreteVariable(Variable):
             __dict__
 
     def copy(self, compute_value=None, *, name=None, values=None, **_):
+        if values is not None and len(values) != len(self.values):
+            raise ValueError(
+                "number of values must match the number of original values")
         return super().copy(compute_value=compute_value, name=name,
                             values=values or self.values, ordered=self.ordered)
 

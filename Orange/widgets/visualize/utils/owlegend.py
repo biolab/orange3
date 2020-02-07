@@ -666,7 +666,7 @@ class OWContinuousLegend(Legend):
     def set_items(self, values):
         vals, palette = values
         if self.orientation == Qt.Vertical:
-            vals = reversed(vals)
+            vals = list(reversed(vals))
         self._layout.addItem(ContinuousLegendItem(
             palette=palette,
             values=vals,
