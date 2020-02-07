@@ -3,6 +3,7 @@ import os
 import code
 import keyword
 import itertools
+import tokenize
 import unicodedata
 from functools import reduce
 from collections import defaultdict
@@ -472,7 +473,7 @@ class OWPythonScript(OWWidget):
 
         self.libraryView = QListView(
             editTriggers=QListView.DoubleClicked |
-            QListView.EditKeyPressed,
+                         QListView.EditKeyPressed,
             sizePolicy=QSizePolicy(QSizePolicy.Ignored,
                                    QSizePolicy.Preferred)
         )
@@ -639,8 +640,7 @@ class OWPythonScript(OWWidget):
         )
         if filename:
             name = os.path.basename(filename)
-            # TODO: use `tokenize.detect_encoding`
-            with open(filename, encoding="utf-8") as f:
+            with tokenize.open(filename) as f:
                 contents = f.read()
             self.libraryList.append(Script(name, contents, 0, filename))
             self.setSelectedScript(len(self.libraryList) - 1)
