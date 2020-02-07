@@ -126,9 +126,9 @@ class TestableDataProjectionWidget(OWDataProjectionWidget):
             return None
 
         x_data[x_data == np.inf] = np.nan
-        x_data = np.nanmean(x_data[self.valid_data], 1)
+        x_data_ = np.ones(len(x_data))
         y_data = np.ones(len(x_data))
-        return np.vstack((x_data, y_data)).T
+        return np.vstack((x_data_, y_data)).T
 
 
 class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
@@ -144,6 +144,15 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
 
     def setUp(self):
         self.widget = self.create_widget(TestableDataProjectionWidget)
+
+    def test_annotation_with_nans(self):
+        data = Table.from_table_rows(self.data, [0, 1, 2])
+        data.X[1, :] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        points = self.widget.graph.scatterplot_item.points()
+        self.widget.graph.select_by_click(None, [points[1]])
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_equal(annotated.get_column_view('Selected')[0], np.array([0, 0, 1]))
 
     def test_saved_selection(self):
         self.send_signal(self.widget.Inputs.data, self.data)

@@ -573,7 +573,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.output_changed.emit(selected)
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(
-            self._get_annotated_data(data, graph.get_selection(), group_sel,
+            self._get_annotated_data(data, group_sel,
                                      graph.selection))
 
     def _get_projection_data(self):
@@ -597,11 +597,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             if len(selection) else None
 
     @staticmethod
-    def _get_annotated_data(data, selection, group_sel, graph_sel):
+    def _get_annotated_data(data, group_sel, graph_sel):
         if graph_sel is not None and np.max(graph_sel) > 1:
             return create_groups_table(data, group_sel)
         else:
-            return create_annotated_table(data, selection)
+            return create_annotated_table(data, np.nonzero(group_sel)[0])
 
     # Report
     def send_report(self):
