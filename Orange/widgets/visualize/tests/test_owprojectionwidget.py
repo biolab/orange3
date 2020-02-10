@@ -11,6 +11,7 @@ from Orange.data import (
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
 )
+from Orange.widgets.utils.colorpalettes import ContinuousPalettes
 from Orange.widgets.visualize.utils.widget import (
     OWDataProjectionWidget, OWProjectionWidgetBase
 )
@@ -229,6 +230,23 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
             commit.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.data)
             commit.assert_called()
+
+    def test_model_update(self):
+        widget = self.widget
+
+        data = Table("iris")
+        domain = data.domain
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertIs(widget.controls.attr_color.model()[4], domain[0])
+
+        copy0 = domain[0].copy()
+        assert copy0.palette.name != "linear_kryw_0_100_c71"
+        copy0.palette = ContinuousPalettes["linear_kryw_0_100_c71"]
+        domain = Domain((copy0, ) + domain.attributes[1:], domain.class_var)
+        data0 = data.transform(domain)
+        self.send_signal(widget.Inputs.data, data0)
+        self.assertIs(widget.controls.attr_color.model()[4], copy0)
 
 
 if __name__ == "__main__":
