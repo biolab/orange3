@@ -59,6 +59,10 @@ class OWVennDiagram(widget.OWWidget):
         instances_mismatch = Msg("Data sets do not contain the same instances.")
         too_many_inputs = Msg("Venn diagram accepts at most five datasets.")
 
+    class Warning(widget.OWWidget.Warning):
+        renamed_vars = Msg("Some variables have been renamed "
+                           "to avoid duplicates.\n{}")
+
     selection: list
 
     settingsHandler = settings.DomainContextHandler()
@@ -73,6 +77,8 @@ class OWVennDiagram(widget.OWWidget):
 
     want_control_area = False
     graph_name = "scene"
+    atr_types = ['attributes', 'metas', 'class_vars']
+    atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
 
     def __init__(self):
         super().__init__()
@@ -347,18 +353,21 @@ class OWVennDiagram(widget.OWWidget):
 
     def merge_data(self, domain, values):
         X, metas, class_vars = None, None, None
+        renamed = []
         for val in domain.values():
             names = [var.name for var in val]
             unique_names = get_unique_names_duplicates(names)
-            for n, u, var in zip(names, unique_names, val):
+            for n, u, idx, var in zip(names, unique_names, range(len(val)), val):
                 if n != u:
-                    var.name = u
-                    #TODO: warning because of a weird clash?
-        if values['attributes']:
+                    val[idx] = var.copy(name=u)
+                    renamed.append(n)
+        if renamed:
+            self.Warning.renamed_vars(', '.join(renamed))
+        if 'attributes' in values.keys():
             X = np.hstack(values['attributes'])
-        if values['metas']:
+        if 'metas' in values.keys():
             metas = np.hstack(values['metas'])
-        if values['class_vars']:
+        if 'class_vars' in values.keys():
             class_vars = np.hstack(values['class_vars'])
         return Table.from_numpy(Domain(**domain), X, class_vars, metas)
 
@@ -380,7 +389,7 @@ class OWVennDiagram(widget.OWWidget):
                     values[atr_type].append(getattr(self.data[var_data[1][0][1]].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
         return self.merge_data(domain, values)
 
-    def curry_merge(self, table_key, atr_type, ids=None):
+    def curry_merge(self, table_key, atr_type, ids=None, selection=False):
         if self.rowwise:
             check_equality = self.arrays_equal_rows
         else:
@@ -389,23 +398,27 @@ class OWVennDiagram(widget.OWWidget):
         def inner(new_atrs, atr):
             """
             Atrs - list of variables we wish to merge
-            new_atrs - dictionary where key is old name, val
-                is [is_different:bool, table_keys:list])
+            new_atrs - dictionary where key is old var, val
+                is [is_different:bool, table_keys:list]), is_different is set to True,
+                if we are outputing duplicates, but the value is arbitrary
             """
             atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
-            if atr.name in new_atrs.keys():
-                if not new_atrs[atr.name][0]:
-                    for var, key in new_atrs[atr.name][1]:
+            if atr in new_atrs.keys():
+                if not selection and self.output_duplicates:
+                    #if output_duplicates, we just check if compute value is the same
+                    new_atrs[atr][0] = True
+                elif not new_atrs[atr][0]:
+                    for var, key in new_atrs[atr][1]:
                         if not check_equality(table_key,
                                               key,
                                               atr.name,
                                               atr_vals[atr_type],
                                               type(var), ids):
-                            new_atrs[atr.name][0] = True
+                            new_atrs[atr][0] = True
                             break
-                new_atrs[atr.name][1].append((atr, table_key))
+                new_atrs[atr][1].append((atr, table_key))
             else:
-                new_atrs[atr.name] = [False, [(atr, table_key)]]
+                new_atrs[atr] = [False, [(atr, table_key)]]
             return new_atrs
         return inner
 
@@ -468,7 +481,7 @@ class OWVennDiagram(widget.OWWidget):
             is [is_different:bool, table_keys:list])
         ids: dict with ids for each table
         """
-        all_ids = list(reduce(set.union, [set(val.keys()) for val in ids.values()], set()))
+        all_ids = sorted(list(reduce(set.union, [set(val.keys()) for val in ids.values()], set())))
 
         permutations = dict()
         for table_key, dict_ in ids.items():
@@ -479,8 +492,8 @@ class OWVennDiagram(widget.OWWidget):
         atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
-                duplicated = var_data[0]
-                if duplicated:
+                different = var_data[0]
+                if different:
                     #columns are different, copy all, rename them
                     for var, table_key in var_data[1]:
                         temp = self.data[table_key].table
@@ -517,28 +530,31 @@ class OWVennDiagram(widget.OWWidget):
 
     def get_indices(self, table, selection):
         """Returns mappings of ids (be it row id or string) to indices in tables"""
-        #TODO: refactor?
         if self.selected_feature:
-            items, ids = np.unique(getattr(table[:, self.selected_feature], 'metas'),
-                                   return_index=True)
-            if selection:
-                return OrderedDict([(item, idx) for item, idx in zip(items, ids)
-                                    if item in self.selected_items])
-            return OrderedDict(zip(items, ids))
-        if selection:
-            if not self.selected_items:
-                return None
-            return OrderedDict([(idx, val) for val, idx in zip(range(len(table.ids)), table.ids)
-                                if idx in self.selected_items])
-        return OrderedDict(zip(table.ids, range(len(table))))
+            if self.output_duplicates and selection:
+                items, inverse = np.unique(getattr(table[:, self.selected_feature], 'metas'),
+                                            return_inverse=True)
+                ids = [np.nonzero(inverse == idx)[0] for idx in range(len(items))]                    
+            else:                                
+                items, ids = np.unique(getattr(table[:, self.selected_feature], 'metas'),
+                                       return_index=True)
 
-    def get_indices_to_match_by(self, selected_keys):
-        selected, annotated = dict(), dict()
-        for key, val in self.data.items():
-            annotated[key] = self.get_indices(val.table, None)
-            if self.selection and key in selected_keys:
-                selected[key] = self.get_indices(val.table, self.selection)
-        return selected, annotated
+        else:
+            items = table.ids
+            ids = range(len(table))
+
+        if selection:
+            return OrderedDict([(item, idx) for item, idx in zip(items, ids)
+                                if item in self.selected_items])
+
+        return OrderedDict(zip(items, ids))
+
+    def get_indices_to_match_by(self, relevant_keys, selection=False):
+        dict_ = dict()
+        for key in relevant_keys:
+            table = self.data[key].table
+            dict_[key] = self.get_indices(table, selection)
+        return dict_
 
     def create_from_rows(self, relevant_keys, relevant_ids, selection=False):
         atr_types = ['attributes', 'metas', 'class_vars']
@@ -546,11 +562,59 @@ class OWVennDiagram(widget.OWWidget):
         for atr_type in atr_types:
             container = {}
             for table_key in relevant_keys:
-                merge_vars = self.curry_merge(table_key, atr_type, relevant_ids)
+                merge_vars = self.curry_merge(table_key, atr_type, relevant_ids, selection)
                 atrs = getattr(self.data[table_key].table.domain, atr_type)
                 container = reduce(merge_vars, atrs, container)
             var_dict[atr_type] = container
+        if self.output_duplicates and not selection:
+            return self.extract_rowwise_duplicates(var_dict, relevant_ids, relevant_keys)
         return self.extract_rowwise(var_dict, relevant_ids, selection)
+
+    def make_it_fit(self, a, b):
+        #TODO: rename function
+        if a == b.shape:
+            return b
+        if a[1] == 1:
+            return np.atleast_2d(b).T
+        return np.atleast_2d(b)
+
+    def expand_tables(self, table, atrs, metas, cv):
+        exp = []
+        for all_el, atr_type in zip([atrs, metas, cv], self.atr_types):
+            #TODO : pohendlaj manjakoče atr_type & columns
+            cur_el = getattr(table.domain, atr_type)
+            perm = get_perm(cur_el, all_el)
+            array = np.empty((len(table), len(all_el)))
+            array.fill(np.nan)
+            b = getattr(table, self.atr_vals[atr_type])
+            array[:, perm] = self.make_it_fit(array[:, perm].shape, b)
+            #array[:, perm] = np.atleast_2d(getattr(table, self.atr_vals[atr_type]))
+            exp.append(array)
+        #TODO: maybe this could be smarter
+        return exp[0], exp[1], exp[2]
+    
+    def extract_rowwise_duplicates(self, var_dict, ids, relevant_keys):
+        #za vsak id v vsakemu stolpcu rabimo indekse
+        #extractamo celo podtabelo, vstavimo morebitne manjkajoče stolpce, na koncu vstack
+        all_ids = sorted(list(reduce(set.union, [set(val.keys()) for val in ids.values()], set())))
+        sort_key = lambda var: var.name
+        all_atrs = sorted([var for var in var_dict['attributes'].keys()], key=sort_key)
+        all_metas = sorted([var for var in var_dict['metas'].keys()], key=sort_key)
+        all_cv = sorted([var for var in var_dict['class_vars'].keys()], key=sort_key)
+
+        all_x, all_y, all_m = [], [], []
+        for idx in all_ids:
+            #iterate trough tables with same idx
+            for table_key in relevant_keys:
+                map_ = ids[table_key][idx]
+                extracted = self.data[table_key].table[map_]
+                x, m, y = self.expand_tables(extracted, all_atrs, all_metas, all_cv)
+                all_x.append(x)
+                all_y.append(y)
+                all_m.append(m)
+        domain = {'attributes': all_atrs, 'metas': all_metas, 'class_vars': all_cv}
+        values = {'attributes': [np.vstack(all_x)], 'metas': [np.vstack(all_m)], 'class_vars': [np.vstack(all_y)]}
+        return self.merge_data(domain, values)
 
     def commit(self):
 
@@ -569,7 +633,8 @@ class OWVennDiagram(widget.OWWidget):
         selected = None
 
         if self.rowwise:
-            selected_ids, annotated_ids = self.get_indices_to_match_by(selected_keys)
+            selected_ids = self.get_indices_to_match_by(selected_keys, self.selection)
+            annotated_ids = self.get_indices_to_match_by(self.data.keys())
             annotated = self.create_from_rows(self.data.keys(), annotated_ids, True)
             if self.selected_items:
                 selected = self.create_from_rows(selected_keys, selected_ids, False)
