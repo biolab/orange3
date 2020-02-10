@@ -430,13 +430,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     def set_data(self, data):
         data_existed = self.data is not None
         effective_data = self.effective_data if data_existed else None
-        same_domain = (data_existed and data is not None and
-                       data.domain.checksum() == self.data.domain.checksum())
         self.closeContext()
         self.data = data
         self.check_data()
-        if not same_domain:
-            self.init_attr_values()
+        self.init_attr_values()
         self.openContext(self.data)
         self._invalidated = not (
             data_existed and self.data is not None and
