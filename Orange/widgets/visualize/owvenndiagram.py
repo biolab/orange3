@@ -24,7 +24,7 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
 from AnyQt.QtCore import pyqtSignal as Signal
 
-from Orange.data import Table, Domain, StringVariable
+from Orange.data import Table, Domain, StringVariable, RowInstance
 from Orange.data.util import get_unique_names_duplicates
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
@@ -351,7 +351,7 @@ class OWVennDiagram(widget.OWWidget):
     def invalidateOutput(self):
         self.commit()
 
-    def merge_data(self, domain, values):
+    def merge_data(self, domain, values, ids=None):
         X, metas, class_vars = None, None, None
         renamed = []
         for val in domain.values():
@@ -369,24 +369,31 @@ class OWVennDiagram(widget.OWWidget):
             metas = np.hstack(values['metas'])
         if 'class_vars' in values.keys():
             class_vars = np.hstack(values['class_vars'])
-        return Table.from_numpy(Domain(**domain), X, class_vars, metas)
+        table = Table.from_numpy(Domain(**domain), X, class_vars, metas)
+        if ids is not None:
+            table.ids = ids
+        return table
 
-    def extract_new_table(self, var_dict):
+    def extract_columnwise(self, var_dict):
         #for columns
         domain = defaultdict(lambda: [])
         values = defaultdict(lambda: [])
         atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
+        renamed = []
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
                 if var_data[0]:
                     #columns are different, copy all, rename them
                     for var, table_key in var_data[1]:
                         idx = list(self.data.keys()).index(table_key) + 1
-                        domain[atr_type].append(var.copy(name='{} ({})'.format(var_name, idx)))
+                        domain[atr_type].append(var.copy(name='{} ({})'.format(var_name.name, idx)))
+                        renamed.append(var_name.name)
                         values[atr_type].append(getattr(self.data[table_key].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
                 else:
                     domain[atr_type].append(deepcopy(var_data[1][0][0]))
                     values[atr_type].append(getattr(self.data[var_data[1][0][1]].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
+        if renamed:
+            self.Warning.renamed_vars(', '.join(renamed))
         return self.merge_data(domain, values)
 
     def curry_merge(self, table_key, atr_type, ids=None, selection=False):
@@ -470,7 +477,7 @@ class OWVennDiagram(widget.OWWidget):
                 merge_vars = self.curry_merge(table_key, atr_type)
                 container = reduce(merge_vars, atrs, container)
             var_dict[atr_type] = container
-        annotated = self.extract_new_table(var_dict)
+        annotated = self.extract_columnwise(var_dict)
 
         return annotated
 
@@ -490,15 +497,19 @@ class OWVennDiagram(widget.OWWidget):
         domain = defaultdict(lambda: [])
         values = defaultdict(lambda: [])
         atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
+        renamed = []
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
                 different = var_data[0]
                 if different:
-                    #columns are different, copy all, rename them
+                    # Columns are different, copy and rename them.
+                    # Renaming is done here to mark appropriately the source table.
+                    # Additional strange clashes are checked later in merge_data
                     for var, table_key in var_data[1]:
                         temp = self.data[table_key].table
                         idx = list(self.data.keys()).index(table_key) + 1
                         domain[atr_type].append(var.copy(name='{} ({})'.format(var_name, idx)))
+                        renamed.append(var_name.name)
                         v = getattr(temp[list(ids[table_key].values()), var_name],
                                     atr_vals[atr_type])
                         perm = permutations[table_key]
@@ -522,7 +533,10 @@ class OWVennDiagram(widget.OWWidget):
                         value[perm] = v
                     values[atr_type].append(value)
 
-        table = self.merge_data(domain, values)
+        if renamed:
+            self.Warning.renamed_vars(', '.join(renamed))
+        idas = None if self.selected_feature else np.array(all_ids)
+        table = self.merge_data(domain, values, idas)
         mask = [idx in self.selected_items for idx in all_ids]
         if selection:
             return create_annotated_table(table, mask)
@@ -533,9 +547,9 @@ class OWVennDiagram(widget.OWWidget):
         if self.selected_feature:
             if self.output_duplicates and selection:
                 items, inverse = np.unique(getattr(table[:, self.selected_feature], 'metas'),
-                                            return_inverse=True)
-                ids = [np.nonzero(inverse == idx)[0] for idx in range(len(items))]                    
-            else:                                
+                                           return_inverse=True)
+                ids = [np.nonzero(inverse == idx)[0] for idx in range(len(items))]
+            else:
                 items, ids = np.unique(getattr(table[:, self.selected_feature], 'metas'),
                                        return_index=True)
 
@@ -570,51 +584,47 @@ class OWVennDiagram(widget.OWWidget):
             return self.extract_rowwise_duplicates(var_dict, relevant_ids, relevant_keys)
         return self.extract_rowwise(var_dict, relevant_ids, selection)
 
-    def make_it_fit(self, a, b):
-        #TODO: rename function
-        if a == b.shape:
-            return b
-        if a[1] == 1:
-            return np.atleast_2d(b).T
-        return np.atleast_2d(b)
-
-    def expand_tables(self, table, atrs, metas, cv):
+    def expand_table(self, table, atrs, metas, cv):
         exp = []
+        row_vals = {'attributes' : 'x', 'class_vars' : 'y', 'metas' : 'metas'}
+        l = 1 if isinstance(table, RowInstance) else len(table)
+        ids = table.id.reshape(-1,1) if isinstance(table, RowInstance) else table.ids.reshape(-1, 1)
+        atr_vals = row_vals if isinstance(table, RowInstance) else self.atr_vals
         for all_el, atr_type in zip([atrs, metas, cv], self.atr_types):
-            #TODO : pohendlaj manjakoče atr_type & columns
             cur_el = getattr(table.domain, atr_type)
-            perm = get_perm(cur_el, all_el)
-            array = np.empty((len(table), len(all_el)))
+            array = np.empty((l, len(all_el)))
             array.fill(np.nan)
-            b = getattr(table, self.atr_vals[atr_type])
-            array[:, perm] = self.make_it_fit(array[:, perm].shape, b)
-            #array[:, perm] = np.atleast_2d(getattr(table, self.atr_vals[atr_type]))
+            if cur_el:
+                perm = get_perm(cur_el, all_el)
+                b = getattr(table, atr_vals[atr_type])
+                array[:, perm] = b
             exp.append(array)
-        #TODO: maybe this could be smarter
-        return exp[0], exp[1], exp[2]
-    
+        return exp[0], exp[1], exp[2], ids
+
     def extract_rowwise_duplicates(self, var_dict, ids, relevant_keys):
-        #za vsak id v vsakemu stolpcu rabimo indekse
-        #extractamo celo podtabelo, vstavimo morebitne manjkajoče stolpce, na koncu vstack
         all_ids = sorted(list(reduce(set.union, [set(val.keys()) for val in ids.values()], set())))
         sort_key = lambda var: var.name
-        all_atrs = sorted([var for var in var_dict['attributes'].keys()], key=sort_key)
-        all_metas = sorted([var for var in var_dict['metas'].keys()], key=sort_key)
-        all_cv = sorted([var for var in var_dict['class_vars'].keys()], key=sort_key)
+        all_atrs = sorted((var for var in var_dict['attributes'].keys()), key=sort_key)
+        all_metas = sorted((var for var in var_dict['metas'].keys()), key=sort_key)
+        all_cv = sorted((var for var in var_dict['class_vars'].keys()), key=sort_key)
 
         all_x, all_y, all_m = [], [], []
+        new_table_ids = []
         for idx in all_ids:
             #iterate trough tables with same idx
             for table_key in relevant_keys:
                 map_ = ids[table_key][idx]
                 extracted = self.data[table_key].table[map_]
-                x, m, y = self.expand_tables(extracted, all_atrs, all_metas, all_cv)
+                x, m, y, t_ids = self.expand_table(extracted, all_atrs, all_metas, all_cv)
                 all_x.append(x)
                 all_y.append(y)
                 all_m.append(m)
+                new_table_ids.append(t_ids)
         domain = {'attributes': all_atrs, 'metas': all_metas, 'class_vars': all_cv}
-        values = {'attributes': [np.vstack(all_x)], 'metas': [np.vstack(all_m)], 'class_vars': [np.vstack(all_y)]}
-        return self.merge_data(domain, values)
+        values = {'attributes': [np.vstack(all_x)],
+                  'metas': [np.vstack(all_m)],
+                  'class_vars': [np.vstack(all_y)]}
+        return self.merge_data(domain, values, np.vstack(new_table_ids))
 
     def commit(self):
 

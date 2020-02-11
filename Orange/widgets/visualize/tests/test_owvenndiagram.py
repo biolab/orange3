@@ -4,6 +4,7 @@
 import unittest
 from unittest.mock import patch
 from collections import defaultdict
+from copy import deepcopy
 
 import numpy as np
 import scipy.sparse as sp
@@ -35,7 +36,41 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.widget.vennwidget.vennareas()[1].setSelected(True)
         return list(range(len(self.signal_data)))
 
-    def test_multiple_input(self):
+    def test_rows_id(self):
+        data = Table('zoo')
+        data1 = deepcopy(data)
+        data1[:, 1] = 1
+        self.widget.rowwise = True
+        self.send_signal(self.signal_name, data1[:10], 1)
+        self.widget.selected_feature = 'name'
+        self.send_signal(self.signal_name, data[5:10], 2)
+
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+        self.assertTrue(self.widget.Warning.renamed_vars.is_shown())
+
+        self.widget.vennwidget.vennareas()[3].setSelected(True)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        sel_atrs = [atr.name for atr in selected.domain.attributes]
+        true_atrs = ['hair', 'feathers (1)', 'feathers (2)', 'eggs', 'milk', 'airborne', 'aquatic',
+                     'predator', 'toothed', 'backbone', 'breathes', 'venomous', 'fins', 'legs',
+                     'tail', 'domestic', 'catsize']
+        self.assertEqual(sel_atrs, true_atrs)
+        self.assertEqual(selected.domain.metas, data.domain.metas)
+        self.assertEqual(selected.domain.class_vars, data.domain.class_vars)
+
+    def test_output_duplicates(self):
+        self.widget.rowwise = True
+        self.widget.output_duplicates = True
+        self.send_signal(self.signal_name, self.data[:2], 1)
+        self.send_signal(self.signal_name, self.data[:4], 2)
+
+        self.widget.vennwidget.vennareas()[3].setSelected(True)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        in_ids = self.data[:2].ids
+        true_ids = np.array([in_ids[0], in_ids[0], in_ids[1], in_ids[1]])
+        np.testing.assert_array_equal(selected.ids.flatten(), true_ids)
+
+    def test_multiple_input_rows_id(self):
         """Over rows"""
         self.widget.rowwise = True
         self.send_signal(self.signal_name, self.data[:100], 1)
