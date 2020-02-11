@@ -125,8 +125,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(annotated), len(self.data))
         self.assertEqual(annotated.domain, self.data.domain)
         for atr in annotated.domain.attributes:
-            self.assertIsNotNone(atr.attributes[selected_atr_name])
-            self.assertFalse(atr.attributes[selected_atr_name])
+            self.assertFalse(atr.attributes)
 
         # select data instances
         self.widget.vennwidget.vennareas()[3].setSelected(True)

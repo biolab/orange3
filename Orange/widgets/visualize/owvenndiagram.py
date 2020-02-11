@@ -374,24 +374,34 @@ class OWVennDiagram(widget.OWWidget):
             table.ids = ids
         return table
 
-    def extract_columnwise(self, var_dict):
+    def extract_columnwise(self, var_dict, columns=None):
         #for columns
         domain = defaultdict(lambda: [])
         values = defaultdict(lambda: [])
-        atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
         renamed = []
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
+                is_selected = not(not columns or not var_name.name in columns)
                 if var_data[0]:
                     #columns are different, copy all, rename them
                     for var, table_key in var_data[1]:
                         idx = list(self.data.keys()).index(table_key) + 1
-                        domain[atr_type].append(var.copy(name='{} ({})'.format(var_name.name, idx)))
+                        new_atr = var.copy(name='{} ({})'.format(var_name.name, idx))
+                        if columns and atr_type == 'attributes':
+                            new_atr.attributes['Selected'] = is_selected
+                        domain[atr_type].append(new_atr)
                         renamed.append(var_name.name)
-                        values[atr_type].append(getattr(self.data[table_key].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
+                        values[atr_type].append(getattr(self.data[table_key].table[:, var_name],
+                                                        self.atr_vals[atr_type])
+                                                .reshape(-1, 1))
                 else:
-                    domain[atr_type].append(deepcopy(var_data[1][0][0]))
-                    values[atr_type].append(getattr(self.data[var_data[1][0][1]].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
+                    new_atr = deepcopy(var_data[1][0][0])
+                    if columns and atr_type == 'attributes':
+                        new_atr.attributes['Selected'] = is_selected
+                    domain[atr_type].append(new_atr)
+                    values[atr_type].append(getattr(self.data[var_data[1][0][1]].table[:, var_name],
+                                                    self.atr_vals[atr_type])
+                                            .reshape(-1, 1))
         if renamed:
             self.Warning.renamed_vars(', '.join(renamed))
         return self.merge_data(domain, values)
@@ -409,7 +419,6 @@ class OWVennDiagram(widget.OWWidget):
                 is [is_different:bool, table_keys:list]), is_different is set to True,
                 if we are outputing duplicates, but the value is arbitrary
             """
-            atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
             if atr in new_atrs.keys():
                 if not selection and self.output_duplicates:
                     #if output_duplicates, we just check if compute value is the same
@@ -419,7 +428,7 @@ class OWVennDiagram(widget.OWWidget):
                         if not check_equality(table_key,
                                               key,
                                               atr.name,
-                                              atr_vals[atr_type],
+                                              self.atr_vals[atr_type],
                                               type(var), ids):
                             new_atrs[atr][0] = True
                             break
@@ -457,10 +466,9 @@ class OWVennDiagram(widget.OWWidget):
         if only in order of values), origin table name and input slot is added to column name.
         """
         annotated = None
-        atr_types = ['attributes', 'metas', 'class_vars']
 
         var_dict = {}
-        for atr_type in atr_types:
+        for atr_type in self.atr_types:
             container = {}
             for table_key in relevant_keys:
                 table = self.data[table_key].table
@@ -470,14 +478,16 @@ class OWVennDiagram(widget.OWWidget):
                                              [c.name in columns for c in table.domain.attributes]))
                     else:
                         atrs = getattr(table.domain, atr_type)
-                        for atr in atrs:
-                            atr.attributes['Selected'] = not(not columns or not atr.name in columns)
                 else:
                     atrs = getattr(table.domain, atr_type)
                 merge_vars = self.curry_merge(table_key, atr_type)
                 container = reduce(merge_vars, atrs, container)
             var_dict[atr_type] = container
-        annotated = self.extract_columnwise(var_dict)
+
+        if get_selected:
+            annotated = self.extract_columnwise(var_dict, None)
+        else:
+            annotated = self.extract_columnwise(var_dict, columns)
 
         return annotated
 
@@ -496,7 +506,6 @@ class OWVennDiagram(widget.OWWidget):
 
         domain = defaultdict(lambda: [])
         values = defaultdict(lambda: [])
-        atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
         renamed = []
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
@@ -511,7 +520,7 @@ class OWVennDiagram(widget.OWWidget):
                         domain[atr_type].append(var.copy(name='{} ({})'.format(var_name, idx)))
                         renamed.append(var_name.name)
                         v = getattr(temp[list(ids[table_key].values()), var_name],
-                                    atr_vals[atr_type])
+                                    self.atr_vals[atr_type])
                         perm = permutations[table_key]
                         if len(v) < len(all_ids):
                             values[atr_type].append(pad_columns(v, perm, len(all_ids)))
@@ -527,7 +536,7 @@ class OWVennDiagram(widget.OWWidget):
                         perm = permutations[table_key]
                         v = getattr(self.data[table_key].table[list(ids[table_key].values()),
                                                                var_name],
-                                    atr_vals[atr_type]).reshape(-1, 1)
+                                    self.atr_vals[atr_type]).reshape(-1, 1)
                         if v.dtype != value.dtype:
                             value = value.astype(v.dtype, copy=False)
                         value[perm] = v
@@ -571,9 +580,8 @@ class OWVennDiagram(widget.OWWidget):
         return dict_
 
     def create_from_rows(self, relevant_keys, relevant_ids, selection=False):
-        atr_types = ['attributes', 'metas', 'class_vars']
         var_dict = {}
-        for atr_type in atr_types:
+        for atr_type in self.atr_types:
             container = {}
             for table_key in relevant_keys:
                 merge_vars = self.curry_merge(table_key, atr_type, relevant_ids, selection)
