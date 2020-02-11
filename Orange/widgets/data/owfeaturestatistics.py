@@ -25,11 +25,11 @@ from Orange.data import Table, StringVariable, DiscreteVariable, \
     ContinuousVariable, TimeVariable, Domain, Variable
 from Orange.widgets import widget, gui
 from Orange.widgets.data.utils.histogram import Histogram
-from Orange.widgets.report import plural
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 def _categorical_entropy(x):
@@ -723,15 +723,6 @@ class OWFeatureStatistics(widget.OWWidget):
 
         self.data = None  # type: Optional[Table]
 
-        # Information panel
-        info_box = gui.vBox(self.controlArea, 'Info')
-        info_box.setMinimumWidth(200)
-        self.info_summary = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_attr = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_class = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_meta = gui.widgetLabel(info_box, wordWrap=True)
-        self.set_info()
-
         # TODO: Implement filtering on the model
         # filter_box = gui.vBox(self.controlArea, 'Filter')
         # self.filter_text = gui.lineEdit(
@@ -755,6 +746,9 @@ class OWFeatureStatistics(widget.OWWidget):
 
         gui.rubber(self.controlArea)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         # Main area
         self.model = FeatureStatisticsTableModel(parent=self)
@@ -792,11 +786,14 @@ class OWFeatureStatistics(widget.OWWidget):
         self.data = data
 
         if data is not None:
+            self.info.set_input_summary(len(data),
+                                        format_summary_details(data))
             self.color_var_model.set_domain(data.domain)
             self.color_var = None
             if self.data.domain.class_vars:
                 self.color_var = self.data.domain.class_vars[0]
         else:
+            self.info.set_input_summary(self.info.NoInput)
             self.color_var_model.set_domain(None)
             self.color_var = None
         self.model.set_data(data)
@@ -807,7 +804,6 @@ class OWFeatureStatistics(widget.OWWidget):
         # self._filter_table_variables()
         self.__color_var_changed()
 
-        self.set_info()
         self.commit()
 
     def __restore_selection(self):
@@ -843,62 +839,6 @@ class OWFeatureStatistics(widget.OWWidget):
         if self.model is not None:
             self.model.set_target_var(self.color_var)
 
-    def _format_variables_string(self, variables):
-        agg = []
-        for var_type_name, var_type in [
-                ('categorical', DiscreteVariable),
-                ('numeric', ContinuousVariable),
-                ('time', TimeVariable),
-                ('string', StringVariable)
-        ]:
-            # Disable pylint here because a `TimeVariable` is also a
-            # `ContinuousVariable`, and should be labelled as such. That is why
-            # it is necessary to check the type this way instead of using
-            # `isinstance`, which would fail in the above case
-            var_type_list = [v for v in variables if type(v) is var_type]  # pylint: disable=unidiomatic-typecheck
-            if var_type_list:
-                shown = var_type in self.model.HIDDEN_VAR_TYPES
-                agg.append((
-                    '%d %s%s' % (len(var_type_list), var_type_name, ['', ' (not shown)'][shown]),
-                    len(var_type_list)
-                ))
-
-        if not agg:
-            return 'No variables'
-
-        attrs, counts = list(zip(*agg))
-        if len(attrs) > 1:
-            var_string = ', '.join(attrs[:-1]) + ' and ' + attrs[-1]
-        else:
-            var_string = attrs[0]
-        return plural('%s variable{s}' % var_string, sum(counts))
-
-    def set_info(self):
-        if self.data is not None:
-            self.info_summary.setText('<b>%s</b> contains %s with %s' % (
-                self.data.name,
-                plural('{number} instance{s}', self.model.n_instances),
-                plural('{number} feature{s}', self.model.n_attributes)
-            ))
-
-            self.info_attr.setText(
-                '<b>Attributes:</b><br>%s' %
-                self._format_variables_string(self.data.domain.attributes)
-            )
-            self.info_class.setText(
-                '<b>Class variables:</b><br>%s' %
-                self._format_variables_string(self.data.domain.class_vars)
-            )
-            self.info_meta.setText(
-                '<b>Metas:</b><br>%s' %
-                self._format_variables_string(self.data.domain.metas)
-            )
-        else:
-            self.info_summary.setText('No data on input.')
-            self.info_attr.setText('')
-            self.info_class.setText('')
-            self.info_meta.setText('')
-
     def on_select(self):
         self.selected_rows = list(self.model.mapToSourceRows([
             i.row() for i in self.table_view.selectionModel().selectedRows()
@@ -909,12 +849,15 @@ class OWFeatureStatistics(widget.OWWidget):
         # self.selected_rows can be list or numpy.array, thus
         # pylint: disable=len-as-condition
         if not len(self.selected_rows):
+            self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.reduced_data.send(None)
             self.Outputs.statistics.send(None)
             return
 
         # Send a table with only selected columns to output
         variables = self.model.variables[self.selected_rows]
+        self.info.set_output_summary(len(self.data[:, variables]),
+                                     format_summary_details(self.data[:, variables]))
         self.Outputs.reduced_data.send(self.data[:, variables])
 
         # Send the statistics of the selected variables to ouput
