@@ -14,7 +14,7 @@ from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner,\
 from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.concurrent import TaskState
+from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output, OWWidget
@@ -159,7 +159,7 @@ class IsolationForestEditor(ParametersEditor):
                 "random_state": 42 if self.replicable else None}
 
 
-class OWOutliers(OWWidget):
+class OWOutliers(OWWidget, ConcurrentWidgetMixin):
     name = "Outliers"
     description = "Detect outliers."
     icon = "icons/Outliers.svg"
@@ -200,7 +200,8 @@ class OWOutliers(OWWidget):
         memory_error = Msg("Not enough memory")
 
     def __init__(self):
-        super().__init__()
+        OWWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
         self.data = None  # type: Table
         self.n_inliers = None  # type: int
         self.n_outliers = None  # type: int
@@ -251,6 +252,7 @@ class OWOutliers(OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
+        self.cancel()
         self.clear_messages()
         self.data = data
         self.info.set_input_summary(len(data) if data else self.info.NoOutput)
@@ -266,32 +268,41 @@ class OWOutliers(OWWidget):
             self.Warning.disabled_cov()
 
     def commit(self):
-        inliers, outliers, data = self.detect_outliers()
+        self.Error.singular_cov.clear()
+        self.Error.memory_error.clear()
+        self.n_inliers = self.n_outliers = None
+
+        learner_class = self.METHODS[self.outlier_method]
+        kwargs = self.current_editor.get_parameters()
+        learner = learner_class(**kwargs)
+
+        self.start(run, self.data, learner)
+
+    def on_partial_result(self, _):
+        pass
+
+    def on_done(self, result: Results):
+        inliers, outliers = result.inliers, result.outliers
         summary = len(inliers) if inliers else self.info.NoOutput
         self.info.set_output_summary(summary)
         self.n_inliers = len(inliers) if inliers else None
         self.n_outliers = len(outliers) if outliers else None
+
         self.Outputs.inliers.send(inliers)
         self.Outputs.outliers.send(outliers)
-        self.Outputs.data.send(data)
+        self.Outputs.data.send(result.annotated_data)
 
-    def detect_outliers(self) -> Tuple[Table, Table, Table]:
-        self.Error.singular_cov.clear()
-        self.Error.memory_error.clear()
-        if not self.data:
-            return None, None, None
-        try:
-            learner_class = self.METHODS[self.outlier_method]
-            kwargs = self.current_editor.get_parameters()
-            learner = learner_class(**kwargs)
-            results = run(self.data, learner, None)
-            return results.inliers, results.outliers, results.annotated_data
-        except ValueError:
-            self.Error.singular_cov()
-            return None, None, None
-        except MemoryError:
+    def on_exception(self, ex):
+        if isinstance(ex, ValueError):
+            self.Error.singular_cov(ex)
+        elif isinstance(ex, MemoryError):
             self.Error.memory_error()
-            return None, None, None
+        else:
+            raise ex
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     def send_report(self):
         if self.n_outliers is None or self.n_inliers is None:

@@ -108,6 +108,7 @@ class TestOWOutliers(WidgetTest):
         self.assertFalse(self.widget.Error.memory_error.is_shown())
         mocked_predict.side_effect = MemoryError
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         self.assertTrue(self.widget.Error.memory_error.is_shown())
 
     @patch("Orange.classification.outlier_detection._OutlierModel.predict")
@@ -115,6 +116,7 @@ class TestOWOutliers(WidgetTest):
         self.assertFalse(self.widget.Error.singular_cov.is_shown())
         mocked_predict.side_effect = ValueError
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         self.assertTrue(self.widget.Error.singular_cov.is_shown())
 
     def test_nans(self):
@@ -132,10 +134,12 @@ class TestOWOutliers(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.brief, "")
 
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         self.assertEqual(info._StateInfo__input_summary.brief, "150")
         self.assertEqual(info._StateInfo__output_summary.brief, "135")
 
         self.send_signal(self.widget.Inputs.data, None)
+        self.wait_until_finished()
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.brief, "")
 
@@ -162,6 +166,7 @@ class TestOWOutliers(WidgetTest):
     @patch("Orange.widgets.data.owoutliers.OWOutliers.report_items")
     def test_report(self, mocked_report: Mock):
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         self.widget.send_report()
         mocked_report.assert_called()
         mocked_report.reset_mock()
