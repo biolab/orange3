@@ -214,6 +214,10 @@ class OWVennDiagram(widget.OWWidget):
     def _setInterAttributes(self):
         model = self.controls.selected_feature.model()
         model[:] = [None] + list(self.intersectionStringAttrs())
+        if self.selected_feature:
+            names = (var.name for var in model if var)
+            if self.selected_feature.name not in names:
+                self.selected_feature = model[0]
 
     def _itemsForInput(self, key):
         """

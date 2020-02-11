@@ -3,14 +3,12 @@
 
 import unittest
 from unittest.mock import patch
-from collections import defaultdict
 from copy import deepcopy
 
 import numpy as np
-import scipy.sparse as sp
 
 from Orange.data import (Table, Domain, StringVariable,
-                         DiscreteVariable, ContinuousVariable, Variable)
+                         ContinuousVariable)
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME)
 from Orange.widgets.visualize.owvenndiagram import (
@@ -18,7 +16,6 @@ from Orange.widgets.visualize.owvenndiagram import (
                                                     arrays_equal,
                                                     pad_columns,
                                                     get_perm)
-from Orange.tests import test_filename
 
 class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
@@ -42,7 +39,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         data1[:, 1] = 1
         self.widget.rowwise = True
         self.send_signal(self.signal_name, data1[:10], 1)
-        self.widget.selected_feature = 'name'
+        self.widget.selected_feature = None
         self.send_signal(self.signal_name, data[5:10], 2)
 
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
@@ -201,7 +198,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.widget.rowwise = True
         data = Table('zoo')
         self.send_signal(self.signal_name, data, (1, 'Data', None))
-        self.widget.selected_feature = 'name'
+        self.widget.selected_feature = data.domain.metas[0]
         self.send_signal(self.signal_name, data[:5], (2, 'Data', None))
 
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
