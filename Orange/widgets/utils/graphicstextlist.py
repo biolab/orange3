@@ -4,8 +4,9 @@ from AnyQt.QtCore import Qt, QSizeF, QEvent, QMarginsF
 from AnyQt.QtGui import QFontMetrics
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
-    QGraphicsItem, QGraphicsScene, QWIDGETSIZE_MAX,
+    QGraphicsItem, QGraphicsScene
 )
+from .graphicslayoutitem import scaled
 
 __all__ = ["TextListWidget"]
 
@@ -257,33 +258,3 @@ class TextListWidget(QGraphicsWidget):
         if self.__group is not None:
             remove([self.__group], self.scene())
             self.__group = None
-
-
-def scaled(size: QSizeF, constraint: QSizeF, mode=Qt.KeepAspectRatio) -> QSizeF:
-    """
-    Return size scaled to fit in the constrains using the aspect mode `mode`.
-
-    If  width or height of constraint are negative they are ignored,
-    ie. the result is not constrained in that dimension.
-    """
-    size, constraint = QSizeF(size), QSizeF(constraint)
-    if constraint.width() < 0 and constraint.height() < 0:
-        return size
-    if mode == Qt.IgnoreAspectRatio:
-        if constraint.width() >= 0:
-            size.setWidth(constraint.width())
-        if constraint.height() >= 0:
-            size.setHeight(constraint.height())
-    elif mode == Qt.KeepAspectRatio:
-        if constraint.width() < 0:
-            constraint.setWidth(QWIDGETSIZE_MAX)
-        if constraint.height() < 0:
-            constraint.setHeight(QWIDGETSIZE_MAX)
-        size.scale(constraint, mode)
-    elif mode == Qt.KeepAspectRatioByExpanding:
-        if constraint.width() < 0:
-            constraint.setWidth(0)
-        if constraint.height() < 0:
-            constraint.setHeight(0)
-        size.scale(constraint, mode)
-    return size
