@@ -35,6 +35,7 @@ Available classes and methods.
 
    reference/data
    reference/preprocess
+   reference/outliers
    reference/classification
    reference/regression
    reference/clustering
