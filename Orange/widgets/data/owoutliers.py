@@ -1,4 +1,5 @@
 from typing import Dict, Tuple
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -7,14 +8,40 @@ from AnyQt.QtWidgets import QWidget, QVBoxLayout
 
 from orangewidget.settings import SettingProvider
 
+from Orange.base import Learner
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner,\
     LocalOutlierFactorLearner, IsolationForestLearner
 from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.concurrent import TaskState
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output, OWWidget
+
+
+class Results(SimpleNamespace):
+    inliers = None  # type: Optional[Table]
+    outliers = None  # type: Optional[Table]
+    annotated_data = None  # type: Optional[Table]
+
+
+def run(data: Table, learner: Learner, state: TaskState) -> Results:
+    results = Results()
+    if not data:
+        return results
+
+    model = learner(data)
+    pred = model(data)  # type: Table
+
+    col = pred.get_column_view(model.outlier_var)[0]
+    inliers_ind = np.where(col == 1)[0]
+    outliers_ind = np.where(col == 0)[0]
+
+    results.inliers = data[inliers_ind]
+    results.outliers = data[outliers_ind]
+    results.annotated_data = pred
+    return results
 
 
 class ParametersEditor(QWidget, gui.OWComponent):
@@ -242,12 +269,13 @@ class OWOutliers(OWWidget):
         inliers, outliers, data = self.detect_outliers()
         summary = len(inliers) if inliers else self.info.NoOutput
         self.info.set_output_summary(summary)
+        self.n_inliers = len(inliers) if inliers else None
+        self.n_outliers = len(outliers) if outliers else None
         self.Outputs.inliers.send(inliers)
         self.Outputs.outliers.send(outliers)
         self.Outputs.data.send(data)
 
     def detect_outliers(self) -> Tuple[Table, Table, Table]:
-        self.n_inliers = self.n_outliers = None
         self.Error.singular_cov.clear()
         self.Error.memory_error.clear()
         if not self.data:
@@ -256,21 +284,14 @@ class OWOutliers(OWWidget):
             learner_class = self.METHODS[self.outlier_method]
             kwargs = self.current_editor.get_parameters()
             learner = learner_class(**kwargs)
-            model = learner(self.data)
-            pred = model(self.data)
+            results = run(self.data, learner, None)
+            return results.inliers, results.outliers, results.annotated_data
         except ValueError:
             self.Error.singular_cov()
             return None, None, None
         except MemoryError:
             self.Error.memory_error()
             return None, None, None
-        else:
-            col = pred[:, model.outlier_var].metas
-            inliers_ind = np.where(col == 1)[0]
-            outliers_ind = np.where(col == 0)[0]
-            self.n_inliers = len(inliers_ind)
-            self.n_outliers = len(outliers_ind)
-            return self.data[inliers_ind], self.data[outliers_ind], pred
 
     def send_report(self):
         if self.n_outliers is None or self.n_inliers is None:

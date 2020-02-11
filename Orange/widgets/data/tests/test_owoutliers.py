@@ -5,8 +5,34 @@ import unittest
 from unittest.mock import patch, Mock
 
 from Orange.data import Table
-from Orange.widgets.data.owoutliers import OWOutliers
+from Orange.classification import LocalOutlierFactorLearner
+from Orange.widgets.data.owoutliers import OWOutliers, run
 from Orange.widgets.tests.base import WidgetTest, simulate
+
+
+class TestRun(unittest.TestCase):
+    def test_results(self):
+        iris = Table("iris")
+        learner = LocalOutlierFactorLearner()
+
+        res = run(iris, learner, Mock())
+        self.assertIsInstance(res.inliers, Table)
+        self.assertIsInstance(res.outliers, Table)
+        self.assertIsInstance(res.annotated_data, Table)
+
+        self.assertEqual(iris.domain, res.inliers.domain)
+        self.assertEqual(iris.domain, res.outliers.domain)
+        self.assertIn("Outlier", res.annotated_data.domain)
+
+        self.assertEqual(len(res.inliers), 145)
+        self.assertEqual(len(res.outliers), 5)
+        self.assertEqual(len(res.annotated_data), 150)
+
+    def test_no_data(self):
+        res = run(None, LocalOutlierFactorLearner(), Mock())
+        self.assertIsNone(res.inliers)
+        self.assertIsNone(res.outliers)
+        self.assertIsNone(res.annotated_data)
 
 
 class TestOWOutliers(WidgetTest):
@@ -132,6 +158,17 @@ class TestOWOutliers(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.disabled_cov.is_shown())
         self.assertTrue(cov_item.isEnabled())
+
+    @patch("Orange.widgets.data.owoutliers.OWOutliers.report_items")
+    def test_report(self, mocked_report: Mock):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.widget.send_report()
+        mocked_report.assert_called()
+        mocked_report.reset_mock()
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.send_report()
+        mocked_report.assert_not_called()
 
     def test_migrate_settings(self):
         settings = {"cont": 20, "empirical_covariance": True,
