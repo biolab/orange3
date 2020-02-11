@@ -3,6 +3,7 @@ Outlier detection (``classification``)
 #########################################
 
 .. automodule:: Orange.classification
+   :noindex:
 
 .. index:: one class SVM
    pair: classification; one class SVM

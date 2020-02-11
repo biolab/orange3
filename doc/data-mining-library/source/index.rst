@@ -9,10 +9,10 @@ This is a gentle introduction on scripting in `Orange <http://orange.biolab.si>`
    % python
    >>> import Orange
    >>> Orange.version.version
-   '3.2.dev0+8907f35'
+   '3.25.0.dev0+3bdef92'
    >>>
 
-If this leaves no error and warning, Orange and Python are properly installed and you are ready to continue with the Tutorial.
+If this leaves no error and warning, Orange and Python are properly installed and you are ready to continue with the tutorial.
 
 .. toctree::
    :maxdepth: 3
