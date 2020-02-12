@@ -4,6 +4,7 @@ Data-manipulation utilities.
 import re
 from collections import Counter, defaultdict
 from itertools import chain
+from functools import wraps
 
 import numpy as np
 import bottleneck as bn
@@ -250,3 +251,26 @@ def get_unique_names_domain(attributes, class_vars=(), metas=()):
                                  for old, new in zip(all_names, unique_names)
                                  if new != old))
     return (attributes, class_vars, metas), renamed
+
+
+def progress_callback(callback, start=0, end=1):
+    """
+    Wraps a callback function to allocate it end-start proportion of
+    the progress.
+
+    :param callback: callable
+    :param start: float
+    :param end: float
+    :return: callable
+    """
+    @wraps(callback)
+    def func(i, *args, **kwargs):
+        x = start + i * (end - start)
+        return callback(x, *args, **kwargs)
+    return func
+
+
+def dummy_callback(*_, **__):
+    """ A dummy callable. """
+    return 1
+
