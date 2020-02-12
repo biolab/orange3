@@ -12,8 +12,8 @@ from Orange.preprocess import discretize, impute, fss, score
 from Orange.widgets.data import owpreprocess
 from Orange.widgets.data.owpreprocess import OWPreprocess, \
     UnivariateFeatureSelect, Scale as ScaleEditor
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest, datasets
-from orangewidget.widget import StateInfo
 
 
 class TestOWPreprocess(WidgetTest):
@@ -147,9 +147,10 @@ class TestOWPreprocess(WidgetTest):
         output_sum = self.widget.info.set_output_summary = Mock()
 
         self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(int(StateInfo.format_number(len(data))))
+        input_sum.assert_called_with(len(data), format_summary_details(data))
         output = self.get_output(self.widget.Outputs.preprocessed_data)
-        output_sum.assert_called_with(int(StateInfo.format_number(len(output))))
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
 
         input_sum.reset_mock()
         output_sum.reset_mock()
