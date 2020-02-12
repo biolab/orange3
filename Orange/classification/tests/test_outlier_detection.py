@@ -3,12 +3,14 @@
 import pickle
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 
 from Orange.classification import EllipticEnvelopeLearner, \
     IsolationForestLearner, LocalOutlierFactorLearner, OneClassSVMLearner
 from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data.table import DomainTransformationError
 
 
 class _TestDetector(unittest.TestCase):
@@ -207,6 +209,17 @@ class TestOutlierModel(_TestDetector):
         pred = detect(table)
         self.assertEqual(pred.domain.metas[0].name, "Outlier (1)")
 
+    def test_predict(self):
+        detect = self.detector(self.iris)
+        subset = self.iris[:, :3]
+        pred = detect(subset)
+        self.assert_table_appended_outlier(subset, pred)
+
+    def test_predict_all_nan(self):
+        detect = self.detector(self.iris[:, :2])
+        subset = self.iris[:, 2:]
+        self.assertRaises(DomainTransformationError, detect, subset)
+
     def test_transform(self):
         detect = self.detector(self.iris)
         pred = detect(self.iris)
@@ -234,6 +247,23 @@ class TestOutlierModel(_TestDetector):
         f = tempfile.NamedTemporaryFile(suffix='.pkl', delete=False)
         pickle.dump(pred, f)
         f.close()
+
+    def test_fit_callback(self):
+        callback = Mock()
+        self.detector(self.iris, callback)
+        args = [x[0][0] for x in callback.call_args_list]
+        self.assertEqual(min(args), 0)
+        self.assertEqual(max(args), 1)
+        self.assertListEqual(args, sorted(args))
+
+    def test_predict_callback(self):
+        callback = Mock()
+        detect = self.detector(self.iris)
+        detect(self.iris, callback)
+        args = [x[0][0] for x in callback.call_args_list]
+        self.assertEqual(min(args), 0)
+        self.assertEqual(max(args), 1)
+        self.assertListEqual(args, sorted(args))
 
 
 if __name__ == "__main__":

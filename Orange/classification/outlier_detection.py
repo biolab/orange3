@@ -1,8 +1,8 @@
 # pylint: disable=unused-argument
+from typing import Callable
+
 import numpy as np
 
-from Orange.data.table import DomainTransformationError
-from Orange.data.util import get_unique_names
 from sklearn.covariance import EllipticEnvelope
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
@@ -11,6 +11,9 @@ from sklearn.svm import OneClassSVM
 from Orange.base import SklLearner, SklModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
     Variable
+from Orange.data.table import DomainTransformationError
+from Orange.data.util import get_unique_names, progress_callback, \
+    dummy_callback
 from Orange.preprocess import AdaptiveNormalize
 from Orange.statistics.util import all_nan
 
@@ -29,29 +32,44 @@ class _OutlierModel(SklModel):
         pred[pred == -1] = 0
         return pred[:, None]
 
-    def __call__(self, data: Table) -> Table:
+    def __call__(self, data: Table, callback: Callable = None) -> Table:
         assert isinstance(data, Table)
         assert self.outlier_var is not None
 
         domain = Domain(data.domain.attributes, data.domain.class_vars,
                         data.domain.metas + (self.outlier_var,))
-        self._cached_data = self.data_to_model_domain(data)
+        if callback is None:
+            callback = dummy_callback
+        callback(0, "Preprocessing...")
+        self._cached_data = self.data_to_model_domain(
+            data, progress_callback(callback, end=0.1))
+        callback(0.1, "Predicting...")
         metas = np.hstack((data.metas, self.predict(self._cached_data.X)))
+        callback(1)
         return Table.from_numpy(domain, data.X, data.Y, metas)
 
-    def data_to_model_domain(self, data: Table) -> Table:
+    def data_to_model_domain(self, data: Table, callback: Callable) -> Table:
         if data.domain == self.domain:
             return data
 
+        callback(0)
         if self.original_domain.attributes != data.domain.attributes \
                 and data.X.size \
                 and not all_nan(data.X):
+            callback(0.5)
             new_data = data.transform(self.original_domain)
             if all_nan(new_data.X):
                 raise DomainTransformationError(
                     "domain transformation produced no defined values")
-            return new_data.transform(self.domain)
-        return data.transform(self.domain)
+            callback(0.75)
+            data = new_data.transform(self.domain)
+            callback(1)
+            return data
+
+        callback(0.5)
+        data = data.transform(self.domain)
+        callback(1)
+        return data
 
 
 class _OutlierLearner(SklLearner):
@@ -148,8 +166,8 @@ class EllipticEnvelopeClassifier(_OutlierModel):
         """
         return self.skl_model.mahalanobis(observations)[:, None]
 
-    def __call__(self, data: Table) -> Table:
-        pred = super().__call__(data)
+    def __call__(self, data: Table, callback: Callable = None) -> Table:
+        pred = super().__call__(data, callback)
         domain = Domain(pred.domain.attributes, pred.domain.class_vars,
                         pred.domain.metas + (self.mahal_var,))
         metas = np.hstack((pred.metas, self.mahalanobis(self._cached_data.X)))
@@ -181,4 +199,3 @@ class EllipticEnvelopeLearner(_OutlierLearner):
         transformer.variable = variable
         model.mahal_var = variable
         return model
-
