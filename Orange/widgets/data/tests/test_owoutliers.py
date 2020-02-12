@@ -13,9 +13,9 @@ from Orange.widgets.tests.base import WidgetTest, simulate
 class TestRun(unittest.TestCase):
     def test_results(self):
         iris = Table("iris")
-        learner = LocalOutlierFactorLearner()
-
-        res = run(iris, learner, Mock())
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+        res = run(iris, LocalOutlierFactorLearner(), state)
         self.assertIsInstance(res.inliers, Table)
         self.assertIsInstance(res.outliers, Table)
         self.assertIsInstance(res.annotated_data, Table)

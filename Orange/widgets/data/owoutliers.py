@@ -12,6 +12,7 @@ from Orange.base import Learner
 from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner,\
     LocalOutlierFactorLearner, IsolationForestLearner
 from Orange.data import Table
+from Orange.data.util import progress_callback
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
@@ -31,8 +32,16 @@ def run(data: Table, learner: Learner, state: TaskState) -> Results:
     if not data:
         return results
 
-    model = learner(data)
-    pred = model(data)  # type: Table
+    def callback(i: float, status=""):
+        state.set_progress_value(i * 100)
+        if status:
+            state.set_status(status)
+        if state.is_interruption_requested():
+            raise Exception
+
+    callback(0, "Initializing...")
+    model = learner(data, progress_callback(callback, end=0.6))
+    pred = model(data, progress_callback(callback, start=0.6, end=0.99))
 
     col = pred.get_column_view(model.outlier_var)[0]
     inliers_ind = np.where(col == 1)[0]
@@ -41,6 +50,7 @@ def run(data: Table, learner: Learner, state: TaskState) -> Results:
     results.inliers = data[inliers_ind]
     results.outliers = data[outliers_ind]
     results.annotated_data = pred
+    callback(1)
     return results
 
 
