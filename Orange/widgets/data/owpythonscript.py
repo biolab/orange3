@@ -397,6 +397,33 @@ if TYPE_CHECKING:
     })
 
 
+def get_default_scripts():
+    return [{
+        "name": "Pandas example",
+        "filename": None,
+        "script": """\
+from Orange.data.pandas_compat import table_to_frame, table_from_frame
+
+# Convert in_data: Orange.data.Table to pandas.DataFrame
+in_df = table_to_frame(in_data)
+# To include meta attributes:
+# in_df = table_to_frame(in_data, include_metas=True)
+
+
+print('Hello world')
+out_df = in_df
+
+
+# Convert out_df: pandas.DataFrame to Orange.data.Table
+out_data = table_from_frame(out_df)
+# To interpret strings as discrete attributes:
+# out_data = table_from_frame(out_df, force_nominal=True)
+
+# Consider using Select Columns to set out_data features as target/meta\
+"""
+    }]
+
+
 class OWPythonScript(OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
@@ -423,11 +450,7 @@ class OWPythonScript(OWWidget):
     signal_names = ("data", "learner", "classifier", "object")
 
     settings_version = 2
-    scriptLibrary: 'List[_ScriptData]' = Setting([{
-        "name": "Hello world",
-        "script": "print('Hello world')\n",
-        "filename": None
-    }])
+    scriptLibrary: 'List[_ScriptData]' = Setting(get_default_scripts())
     currentScriptIndex = Setting(0)
     scriptText: Optional[str] = Setting(None, schema_only=True)
     splitterState: Optional[bytes] = Setting(None)
