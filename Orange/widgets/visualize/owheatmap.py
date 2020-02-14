@@ -215,6 +215,9 @@ def enum_get(etype: Type[E], name: str, default: E) -> E:
         return default
 
 
+FLT_MAX = np.finfo(np.float32).max
+
+
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Plot a data matrix heatmap."
@@ -303,7 +306,7 @@ class OWHeatMap(widget.OWWidget):
             self.row_clustering_method = self.row_clustering.name
 
         # set default settings
-        self.space_x = 10
+        self.space_x = 3
 
         self.colorSettings = None
         self.selectedSchemaIndex = 0
@@ -852,12 +855,13 @@ class OWHeatMap(widget.OWWidget):
         Col0 = 3
         LegendRow = 0
         # The column for the vertical dendrogram
-        DendrogramColumn = 0
+        DendrogramColumn = 1
         # The row for the horizontal dendrograms
         DendrogramRow = 1
         RightLabelColumn = Col0 + M
         TopLabelsRow = 2
-        BottomLabelsRow = Row0 + 2 * N
+        BottomLabelsRow = Row0 + N
+        GroupTitleColumn = 0
 
         widget.setLayout(grid)
 
@@ -872,9 +876,9 @@ class OWHeatMap(widget.OWWidget):
         for i, rowitem in enumerate(parts.rows):
             if rowitem.title:
                 title = QGraphicsSimpleTextItem(rowitem.title, widget)
-                item = GraphicsSimpleTextLayoutItem(title, parent=grid)
-                item.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-                grid.addItem(item, Row0 + i * 2, Col0)
+                item = GraphicsSimpleTextLayoutItem(title, orientation=Qt.Vertical, parent=grid)
+                item.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Maximum)
+                grid.addItem(item, Row0 + i, GroupTitleColumn, alignment=Qt.AlignCenter)
 
             if rowitem.cluster:
                 dendrogram = DendrogramWidget(
@@ -893,7 +897,7 @@ class OWHeatMap(widget.OWWidget):
                     self.__select_by_cluster(item, partindex)
                 )
 
-                grid.addItem(dendrogram, Row0 + i * 2 + 1, DendrogramColumn)
+                grid.addItem(dendrogram, Row0 + i, DendrogramColumn)
                 sort_i.append(np.array(leaf_indices(rowitem.cluster)))
                 row_dendrograms[i] = dendrogram
             else:
@@ -945,8 +949,8 @@ class OWHeatMap(widget.OWWidget):
                 hw.set_show_averages(self.averages)
                 hw.set_heatmap_data(X_part)
 
-                grid.addItem(hw, Row0 + i * 2 + 1, Col0 + j)
-                grid.setRowStretchFactor(Row0 + i * 2 + 1, X_part.shape[0] * 100)
+                grid.addItem(hw, Row0 + i, Col0 + j)
+                grid.setRowStretchFactor(Row0 + i, X_part.shape[0] * 100)
                 heatmap_row.append(hw)
             heatmap_widgets.append(heatmap_row)
 
@@ -974,7 +978,7 @@ class OWHeatMap(widget.OWWidget):
             labelslist.setContentsMargins(0.0, 0.0, 0.0, 0.0)
             labelslist.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
-            grid.addItem(labelslist, Row0 + i * 2 + 1, RightLabelColumn)
+            grid.addItem(labelslist, Row0 + i, RightLabelColumn)
             grid.setAlignment(labelslist, Qt.AlignLeft)
             row_annotation_widgets.append(labelslist)
 
@@ -1056,8 +1060,7 @@ class OWHeatMap(widget.OWWidget):
             if mode == Qt.IgnoreAspectRatio:
                 # Reset the row height constraints ...
                 for i, hm_row in enumerate(self.heatmap_widget_grid):
-                    layout.setRowMaximumHeight(3 + i * 2 + 1, np.finfo(np.float32).max)
-                    layout.setRowPreferredHeight(3 + i * 2 + 1, 0)
+                    layout.setRowMaximumHeight(3 + i, FLT_MAX)
                 # ... and resize to match the viewport, taking the minimum size
                 # into account
                 minsize = widget.minimumSize()
@@ -1087,8 +1090,8 @@ class OWHeatMap(widget.OWWidget):
                             Qt.KeepAspectRatioByExpanding)
 
                         heights.append(hm_size.height())
-                    layout.setRowMaximumHeight(3 + i * 2 + 1, max(heights))
-                    layout.setRowPreferredHeight(3 + i * 2 + 1, max(heights))
+                    layout.setRowMaximumHeight(3 + i, max(heights))
+                    layout.setRowPreferredHeight(3 + i, max(heights))
 
                 # set/update the widget's height
                 constraint = QSizeF(size.width(), -1)
@@ -1356,20 +1359,8 @@ class OWHeatMap(widget.OWWidget):
 
             for labelslist in self.col_annotation_widgets_top:
                 labelslist.setVisible(show_top)
-
-            TopLabelsRow = 2
-            Row0 = 3
-            BottomLabelsRow = Row0 + 2 * len(self.heatmapparts.rows)
-
-            layout = self.heatmap_scene.widget.layout()
-            layout.setRowMaximumHeight(TopLabelsRow, -1 if show_top else 0)
-            layout.setRowSpacing(TopLabelsRow, -1 if show_top else 0)
-
             for labelslist in self.col_annotation_widgets_bottom:
                 labelslist.setVisible(show_bottom)
-
-            layout.setRowMaximumHeight(BottomLabelsRow, -1 if show_top else 0)
-
             self.__fixup_grid_layout()
 
     def __select_by_cluster(self, item, dendrogramindex):
@@ -1690,8 +1681,9 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
 
         self.heatmap_item.setMinimumSize(hmsize)
         self.averages_item.setMinimumSize(avsize)
-        self.heatmap_item.setPreferredSize(hmsize * 10)
-        self.averages_item.setPreferredSize(avsize * 10)
+        size = QFontMetrics(self.font()).lineSpacing()
+        self.heatmap_item.setPreferredSize(hmsize * size)
+        self.averages_item.setPreferredSize(avsize * size)
         self.layout().invalidate()
 
     def cell_at(self, pos):
@@ -1925,6 +1917,7 @@ class GradientLegendWidget(QGraphicsWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.__pixitem = GraphicsPixmapWidget(parent=self, scaleContents=True,
                                               aspectMode=Qt.IgnoreAspectRatio)
+        self.__pixitem.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.__pixitem.setMinimumHeight(12)
         layout.addItem(self.__pixitem)
         self.__update()
