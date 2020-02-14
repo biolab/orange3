@@ -60,7 +60,7 @@ def format_summary_details(data):
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = \
             f'{len(data)} instance{_plural(len(data))}, ' \
-            f'{n_features} feature{_plural(n_features)}\n' \
+            f'{n_features} variable{_plural(n_features)}\n' \
             f'Features: {features}\nTarget: {targets}\nMetas: {metas}'
 
     return details
