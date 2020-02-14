@@ -4,9 +4,9 @@ from collections import namedtuple
 
 import numpy as np
 
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
+from Orange.widgets.utils.state_summary import format_summary_details
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
 
@@ -40,9 +40,11 @@ ints_missing = VarDataPair(
     np.array([0, 1, 1, np.nan, 2], dtype=float),
 )
 
+
 def _to_timestamps(years):
     return [datetime.datetime(year, 1, 1).timestamp() if not np.isnan(year)
             else np.nan for year in years]
+
 
 time_full = VarDataPair(
     TimeVariable('time_full'),
@@ -103,7 +105,7 @@ class TestUtils(unittest.TestCase):
         data = Table('zoo')
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
-                  f'{n_features} features\n' \
+                  f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} categorical\n' \
                   f'Target: categorical\n' \
                   f'Metas: string (not shown)'
@@ -112,7 +114,7 @@ class TestUtils(unittest.TestCase):
         data = Table('housing')
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
-                  f'{n_features} features\n' \
+                  f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} numeric\n' \
                   f'Target: numeric\n' \
                   f'Metas: —'
@@ -121,7 +123,7 @@ class TestUtils(unittest.TestCase):
         data = Table('heart_disease')
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
-                  f'{n_features} features\n' \
+                  f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} ' \
                   f'(7 categorical, 6 numeric)\n' \
                   f'Target: categorical\n' \
@@ -134,7 +136,7 @@ class TestUtils(unittest.TestCase):
         )
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
-                  f'{n_features} features\n' \
+                  f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} numeric\n' \
                   f'Target: {len(data.domain.class_vars)} categorical\n' \
                   f'Metas: {len(data.domain.metas)} categorical'
@@ -147,7 +149,7 @@ class TestUtils(unittest.TestCase):
         )
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
-                  f'{n_features} features\n' \
+                  f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} ' \
                   f'(2 categorical, 1 numeric, 1 time)\n' \
                   f'Target: {len(data.domain.class_vars)} ' \
@@ -158,15 +160,15 @@ class TestUtils(unittest.TestCase):
         data = make_table([time_full, time_missing], target=[ints_missing],
                           metas=None)
         details = f'{len(data)} instances, ' \
-                  f'{len(data.domain.variables)} features\n' \
-                  f'Features: {len(data.domain.attributes)} time\n'\
+                  f'{len(data.domain.variables)} variables\n' \
+                  f'Features: {len(data.domain.attributes)} time\n' \
                   f'Target: categorical\n' \
                   f'Metas: —'
         self.assertEqual(details, format_summary_details(data))
 
         data = make_table([rgb_full, ints_full], target=None, metas=None)
         details = f'{len(data)} instances, ' \
-                  f'{len(data.domain.variables)} features\n' \
+                  f'{len(data.domain.variables)} variables\n' \
                   f'Features: {len(data.domain.variables)} categorical\n' \
                   f'Target: —\n' \
                   f'Metas: —'
@@ -174,7 +176,7 @@ class TestUtils(unittest.TestCase):
 
         data = make_table([rgb_full], target=None, metas=None)
         details = f'{len(data)} instances, ' \
-                  f'{len(data.domain.variables)} feature\n' \
+                  f'{len(data.domain.variables)} variable\n' \
                   f'Features: categorical\n' \
                   f'Target: —\n' \
                   f'Metas: —'
@@ -182,3 +184,7 @@ class TestUtils(unittest.TestCase):
 
         data = None
         self.assertEqual('', format_summary_details(data))
+
+
+if __name__ == "__main__":
+    unittest.main()
