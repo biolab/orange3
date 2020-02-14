@@ -2,7 +2,7 @@
 Data-manipulation utilities.
 """
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from itertools import chain
 
 import numpy as np
@@ -202,14 +202,20 @@ def get_unique_names(names, proposed):
 def get_unique_names_duplicates(proposed: list) -> list:
     """
     Returns list of unique names. If a name is duplicated, the
-    function appends an index in parentheses.
+    function appends the smallest available index in parentheses.
+
+    For example, a proposed list of names `x`, `x` and `x (2)`
+    results in `x (1)`, `x (3)`, `x (2)`.
     """
     counter = Counter(proposed)
-    temp_counter = Counter()
+    index = defaultdict(int)
     names = []
     for name in proposed:
-        if counter[name] > 1:
-            temp_counter.update([name])
-            name = f"{name} ({temp_counter[name]})"
+        if name and counter[name] > 1:
+            unique_name = name
+            while unique_name in counter:
+                index[name] += 1
+                unique_name = f"{name} ({index[name]})"
+            name = unique_name
         names.append(name)
     return names

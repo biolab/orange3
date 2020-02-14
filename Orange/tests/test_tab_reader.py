@@ -168,9 +168,9 @@ class TestTabReader(unittest.TestCase):
             table = read_tab_file(filename)
             domain = table.domain
             self.assertEqual([x.name for x in domain.attributes],
-                             ["a_1", "b_1", "a_2", "a_3", "c", "a_5"])
-            self.assertEqual([x.name for x in domain.class_vars], ["b_2", "a_4"])
-            self.assertEqual([x.name for x in domain.metas], ["b_3"])
+                             ["a (1)", "b (1)", "a (2)", "a (3)", "c", "a (5)"])
+            self.assertEqual([x.name for x in domain.class_vars], ["b (2)", "a (4)"])
+            self.assertEqual([x.name for x in domain.metas], ["b (3)"])
         finally:
             remove(filename)
 
