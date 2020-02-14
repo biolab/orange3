@@ -110,6 +110,45 @@ class TestOWContinuize(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.unconditional_commit()
 
+    def test_disable_normalize_sparse(self):
+        def assert_enabled(enabled):
+            buttons[BySpan].click()
+            buttons[BySD].click()
+            self.assertTrue(buttons[Leave].isEnabled())
+            self.assertEqual(buttons[BySpan].isEnabled(), enabled)
+            self.assertEqual(buttons[BySD].isEnabled(), enabled)
+
+        w = self.widget
+        Leave, BySpan, BySD = w.Leave, w.NormalizeBySpan, w.NormalizeBySD
+        buttons = w.controls.continuous_treatment.buttons
+        iris = Table("iris")
+        sparse_iris = iris.to_sparse()
+
+        # input dense
+        self.send_signal(w.Inputs.data, iris)
+        assert_enabled(True)
+        self.assertEqual(w.continuous_treatment, BySD)
+
+        # input sparse
+        self.send_signal(w.Inputs.data, sparse_iris)
+        assert_enabled(False)
+        self.assertEqual(w.continuous_treatment, Leave)
+
+        self.widget.continuous_treatment = BySpan
+        self.assertRaises(ValueError, w.commit)
+
+        # remove data
+        self.send_signal(w.Inputs.data, None)
+        assert_enabled(True)
+
+        # input sparse
+        self.send_signal(w.Inputs.data, sparse_iris)
+        assert_enabled(False)
+
+        # input dense
+        self.send_signal(w.Inputs.data, iris)
+        assert_enabled(True)
+
 
 class TestOWContinuizeUtils(unittest.TestCase):
     def test_dummy_coding_zero_based(self):
