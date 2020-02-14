@@ -21,8 +21,8 @@ import Orange.data  # import for io.py
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
-    ContinuousVariable, DiscreteVariable, MISSING_VALUES
-)
+    ContinuousVariable, DiscreteVariable, MISSING_VALUES,
+    DomainConversion)
 from Orange.data.util import SharedComputeValue, \
     assure_array_dense, assure_array_sparse, \
     assure_column_dense, assure_column_sparse, get_unique_names_duplicates
@@ -424,7 +424,7 @@ class Table(Sequence, Storage):
 
             self = cls()
             self.domain = domain
-            conversion = domain.get_conversion(source.domain)
+            conversion = DomainConversion(source.domain, domain)
             self.X = get_columns(row_indices, conversion.attributes, n_rows,
                                  is_sparse=conversion.sparse_X,
                                  variables=domain.attributes)
@@ -1829,7 +1829,7 @@ def assure_domain_conversion_sparsity(target, source):
         Table: with fixed sparsity. The sparsity is set as it is recommended by domain conversion
             for transformation from source to the target domain.
     """
-    conversion = target.domain.get_conversion(source.domain)
+    conversion = DomainConversion(source.domain, target.domain)
     match_density = [assure_array_dense, assure_array_sparse]
     target.X = match_density[conversion.sparse_X](target.X)
     target.Y = match_density[conversion.sparse_Y](target.Y)
