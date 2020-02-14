@@ -89,7 +89,6 @@ class OWSilhouettePlot(widget.OWWidget):
     #: A fixed size for an instance bar
     bar_size = settings.Setting(3)
     #: Add silhouette scores to output data
-    add_scores = settings.Setting(False)
     auto_commit = settings.Setting(True)
 
     pending_selection = settings.Setting(None, schema_only=True)
@@ -178,9 +177,6 @@ class OWSilhouettePlot(widget.OWWidget):
 
         gui.separator(self.buttonsArea)
         box = gui.vBox(self.buttonsArea, "Output")
-        # Thunk the call to commit to call conditional commit
-        gui.checkBox(box, self, "add_scores", "Add silhouette scores",
-                     callback=lambda: self.commit())
         gui.auto_send(box, self, "auto_commit", box=False)
         # Ensure that the controlArea is not narrower than buttonsArea
         self.controlArea.layout().addWidget(self.buttonsArea)
@@ -499,28 +495,22 @@ class OWSilhouettePlot(widget.OWWidget):
             else:
                 scores = self._silhouette
 
-            silhouette_var = None
-            if self.add_scores:
-                var = self.cluster_var_model[self.cluster_var_idx]
-                silhouette_var = Orange.data.ContinuousVariable(
-                    "Silhouette ({})".format(escape(var.name)))
-                domain = Orange.data.Domain(
-                    self.data.domain.attributes,
-                    self.data.domain.class_vars,
-                    self.data.domain.metas + (silhouette_var, ))
-                data = self.data.transform(domain)
-            else:
-                domain = self.data.domain
-                data = self.data
+            var = self.cluster_var_model[self.cluster_var_idx]
+            silhouette_var = Orange.data.ContinuousVariable(
+                "Silhouette ({})".format(escape(var.name)))
+            domain = Orange.data.Domain(
+                self.data.domain.attributes,
+                self.data.domain.class_vars,
+                self.data.domain.metas + (silhouette_var, ))
+            data = self.data.transform(domain)
 
             if np.count_nonzero(selectedmask):
                 selected = self.data.from_table(
                     domain, self.data, np.flatnonzero(selectedmask))
 
-            if self.add_scores:
-                if selected is not None:
-                    selected[:, silhouette_var] = np.c_[scores[selectedmask]]
-                data[:, silhouette_var] = np.c_[scores]
+            if selected is not None:
+                selected[:, silhouette_var] = np.c_[scores[selectedmask]]
+            data[:, silhouette_var] = np.c_[scores]
 
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(create_annotated_table(data, indices))
