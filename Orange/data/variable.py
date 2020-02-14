@@ -585,16 +585,19 @@ class DiscreteVariable(Variable):
     def __init__(self, name="", values=(), ordered=False, compute_value=None,
                  *, sparse=False):
         """ Construct a discrete variable descriptor with the given values. """
-        self.values = list(values)
-        if not all(isinstance(value, str) for value in self.values):
+        values = list(values)  # some people (including me) pass a generator
+        if not all(isinstance(value, str) for value in values):
             raise TypeError("values of DiscreteVariables must be strings")
+
         super().__init__(name, compute_value, sparse=sparse)
+        self.values = values
+        self._value_index = {value: i for i, value in enumerate(values)}
         self.ordered = ordered
 
     def get_mapping_from(self, other):
         return np.array(
-            [self.values.index(value) if value in self.values else np.nan
-             for value in other.values], dtype=float)
+            [self._value_index.get(value, np.nan) for value in other.values],
+            dtype=float)
 
     def get_mapper_from(self, other):
         mapping = self.get_mapping_from(other)
@@ -700,13 +703,16 @@ class DiscreteVariable(Variable):
         if not isinstance(s, str):
             raise TypeError('Cannot convert {} to value of "{}"'.format(
                 type(s).__name__, self.name))
-        return self.values.index(s)
+        if s not in self._value_index:
+            raise ValueError(f"Value {s} does not exist")
+        return self._value_index[s]
 
     def add_value(self, s):
         """ Add a value `s` to the list of values.
         """
         if not isinstance(s, str):
             raise TypeError("values of DiscreteVariables must be strings")
+        self._value_index[s] = len(self.values)
         self.values.append(s)
 
     def val_from_str_add(self, s):
@@ -719,12 +725,13 @@ class DiscreteVariable(Variable):
         :rtype: float
         """
         s = str(s) if s is not None else s
-        try:
-            return ValueUnknown if s in self.unknown_str \
-                else self.values.index(s)
-        except ValueError:
+        if s in self.unknown_str:
+            return ValueUnknown
+        val = self._value_index.get(s)
+        if val is None:
             self.add_value(s)
-            return len(self.values) - 1
+            val = len(self.values) - 1
+        return val
 
     def repr_val(self, val):
         """
