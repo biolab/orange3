@@ -66,9 +66,10 @@ class DomainContextHandler(ContextHandler):
 
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
-    def __init__(self, *, match_values=0, **kwargs):
+    def __init__(self, *, match_values=0, first_match=True, **kwargs):
         super().__init__()
         self.match_values = match_values
+        self.first_match = first_match
 
         for name in kwargs:
             warnings.warn(
@@ -81,7 +82,8 @@ class DomainContextHandler(ContextHandler):
         warnings.warn(
             "Storing variables as strings in settings is deprecated.\n"
             "Support for this will be dropped in Orange 3.26.\n"
-            f"Change {setting.name} to store an instance of `Variable`.")
+            f"Change {setting.name} to store an instance of `Variable`.",
+            stacklevel=9)
 
     def encode_domain(self, domain):
         """
@@ -208,9 +210,6 @@ class DomainContextHandler(ContextHandler):
                 metas.get(attr_name, -1) == attr_type)
 
     def match(self, context, domain, attrs, metas):
-        if (attrs, metas) == (context.attributes, context.metas):
-            return self.PERFECT_MATCH
-
         matches = []
         try:
             for setting, data, _ in \
@@ -234,9 +233,11 @@ class DomainContextHandler(ContextHandler):
         except IncompatibleContext:
             return self.NO_MATCH
 
+        if self.first_match:
+            return 1  # Change to self.MATCH after releasing orange-widget-base
+
         matches.append((0, 0))
         matched, available = [sum(m) for m in zip(*matches)]
-
         return matched / available if available else 0.1
 
     def match_list(self, setting, value, context, attrs, metas):
