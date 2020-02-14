@@ -21,8 +21,7 @@ from Orange.data.util import get_unique_names, array_equal
 from Orange import preprocess
 from Orange.projection import PCA
 from Orange.widgets import widget, gui, report
-from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
-    Setting
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns, \
     ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.concurrent import FutureWatcher
@@ -54,8 +53,6 @@ class OWLouvainClustering(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
-    settingsHandler = DomainContextHandler()
-
     class Inputs:
         data = Input("Data", Table, default=True)
 
@@ -64,12 +61,12 @@ class OWLouvainClustering(widget.OWWidget):
         if Network is not None:
             graph = Output("Network", Network)
 
-    apply_pca = ContextSetting(True)
-    pca_components = ContextSetting(_DEFAULT_PCA_COMPONENTS)
-    normalize = ContextSetting(True)
-    metric_idx = ContextSetting(0)
-    k_neighbors = ContextSetting(_DEFAULT_K_NEIGHBORS)
-    resolution = ContextSetting(1.)
+    apply_pca = Setting(True)
+    pca_components = Setting(_DEFAULT_PCA_COMPONENTS)
+    normalize = Setting(True)
+    metric_idx = Setting(0)
+    k_neighbors = Setting(_DEFAULT_K_NEIGHBORS)
+    resolution = Setting(1.)
     auto_commit = Setting(False)
 
     class Information(widget.OWWidget.Information):
@@ -400,11 +397,9 @@ class OWLouvainClustering(widget.OWWidget):
 
     @Inputs.data
     def set_data(self, data):
-        self.closeContext()
         self.Error.clear()
 
         prev_data, self.data = self.data, data
-        self.openContext(self.data)
         # Make sure to properly enable/disable slider based on `apply_pca` setting
         self.controls.pca_components.setEnabled(self.apply_pca)
 
