@@ -175,8 +175,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        gui.separator(self.buttonsArea)
-        box = gui.vBox(self.buttonsArea, "Output")
+        box = gui.vBox(self.buttonsArea, box=True)
         gui.auto_send(box, self, "auto_commit", box=False)
         # Ensure that the controlArea is not narrower than buttonsArea
         self.controlArea.layout().addWidget(self.buttonsArea)
