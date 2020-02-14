@@ -36,7 +36,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
                       'd2': Discrete, 'd3': Discrete},
                      {'c2': Continuous, 'd4': Discrete, })
 
-        self.handler = SelectAttributesDomainContextHandler()
+        self.handler = SelectAttributesDomainContextHandler(first_match=False)
         self.handler.read_defaults = lambda: None
 
     def test_open_context(self):
@@ -67,6 +67,10 @@ class TestSelectAttributesDomainContextHandler(TestCase):
 
     def test_open_context_with_imperfect_match(self):
         self.handler.bind(SimpleWidget)
+        context1 = Mock(values=dict(
+            domain_role_hints=({('d1', Discrete): ('attribute', 0),
+                                ('m2', Discrete): ('meta', 0)})
+        ))
         context = Mock(values=dict(
             domain_role_hints=({('d1', Discrete): ('available', 0),
                                 ('d2', Discrete): ('meta', 0),
@@ -76,7 +80,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
                                 ('c2', Continuous): ('class', 0)}, -2)
         ))
         self.handler.global_contexts = \
-            [Mock(values={}), context, Mock(values={})]
+            [Mock(values={}), context1, context, Mock(values={})]
 
         widget = SimpleWidget()
         self.handler.initialize(widget)

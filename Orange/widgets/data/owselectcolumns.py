@@ -119,7 +119,7 @@ class OWSelectAttributes(widget.OWWidget):
     want_main_area = False
     want_control_area = True
 
-    settingsHandler = SelectAttributesDomainContextHandler()
+    settingsHandler = SelectAttributesDomainContextHandler(first_match=False)
     domain_role_hints = ContextSetting({})
     use_input_features = Setting(False)
     auto_commit = Setting(True)
