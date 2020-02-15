@@ -9,9 +9,8 @@ import numpy as np
 from Orange.data import (
     Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
 )
-from Orange.widgets.data.owconcatenate import (
-    OWConcatenate, domain_intersection, domain_union
-)
+from Orange.preprocess.transformation import Identity
+from Orange.widgets.data.owconcatenate import OWConcatenate
 
 from Orange.widgets.tests.base import WidgetTest
 
@@ -133,55 +132,237 @@ class TestOWConcatenate(WidgetTest):
         self.send_signal(self.widget.Inputs.additional_data, self.DummyTable())
         self.assertTrue(self.widget.Error.bow_concatenation.is_shown())
 
+    def test_same_var_name(self):
+        widget = self.widget
 
-class TestTools(unittest.TestCase):
+        var1 = DiscreteVariable(name="x", values=list("abcd"))
+        data1 = Table.from_numpy(Domain([var1]),
+                                 np.arange(4).reshape(4, 1), np.zeros((4, 0)))
+        var2 = DiscreteVariable(name="x", values=list("def"))
+        data2 = Table.from_numpy(Domain([var2]),
+                                 np.arange(3).reshape(3, 1), np.zeros((3, 0)))
+
+        self.send_signal(widget.Inputs.additional_data, data1, 1)
+        self.send_signal(widget.Inputs.additional_data, data2, 2)
+        output = self.get_output(widget.Outputs.data)
+        np.testing.assert_equal(output.X,
+                                np.array([0, 1, 2, 3, 3, 4, 5]).reshape(7, 1))
+
     def test_domain_intersect(self):
+        widget = self.widget
+        widget.merge_type = OWConcatenate.MergeIntersection
+
         X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
         D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
                          ["D1", "D2", "D3"])
         S1, S2 = map(StringVariable, ["S1", "S2"])
         domain1 = Domain([X1, X2], [D1], [S1])
         domain2 = Domain([X3], [D2], [S2])
-        res = domain_intersection(domain1, domain2)
 
+        res = widget.merge_domains([domain1, domain2])
         self.assertSequenceEqual(res.attributes, [])
         self.assertSequenceEqual(res.class_vars, [])
         self.assertSequenceEqual(res.metas, [])
 
         domain2 = Domain([X2, X3], [D1, D2, D3], [S1, S2])
-        res = domain_intersection(domain1, domain2)
+        res = widget.merge_domains([domain1, domain2])
         self.assertSequenceEqual(res.attributes, [X2])
         self.assertSequenceEqual(res.class_vars, [D1])
         self.assertSequenceEqual(res.metas, [S1])
 
-        res = domain_intersection(domain1, domain1)
+        res = widget.merge_domains([domain1, domain1])
         self.assertSequenceEqual(res.attributes, domain1.attributes)
         self.assertSequenceEqual(res.class_vars, domain1.class_vars)
         self.assertSequenceEqual(res.metas, domain1.metas)
 
     def test_domain_union(self):
+        widget = self.widget
+        widget.merge_type = OWConcatenate.MergeUnion
+
         X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
         D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
                          ["D1", "D2", "D3"])
         S1, S2 = map(StringVariable, ["S1", "S2"])
         domain1 = Domain([X1, X2], [D1], [S1])
         domain2 = Domain([X3], [D2], [S2])
-        res = domain_union(domain1, domain2)
+        res = widget.merge_domains([domain1, domain2])
 
         self.assertSequenceEqual(res.attributes, [X1, X2, X3])
         self.assertSequenceEqual(res.class_vars, [D1, D2])
         self.assertSequenceEqual(res.metas, [S1, S2])
 
         domain2 = Domain([X3, X2], [D2, D1, D3], [S2, S1])
-        res = domain_union(domain1, domain2)
+        res = widget.merge_domains([domain1, domain2])
         self.assertSequenceEqual(res.attributes, [X1, X2, X3])
         self.assertSequenceEqual(res.class_vars, [D1, D2, D3])
         self.assertSequenceEqual(res.metas, [S1, S2])
 
-        res = domain_union(domain1, domain1)
+        res = widget.merge_domains([domain1, domain1])
         self.assertSequenceEqual(res.attributes, domain1.attributes)
         self.assertSequenceEqual(res.class_vars, domain1.class_vars)
         self.assertSequenceEqual(res.metas, domain1.metas)
+
+    def test_domain_union_duplicated_names(self):
+        widget = self.widget
+        widget.merge_type = OWConcatenate.MergeUnion
+
+        X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
+        D1, D2 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
+                     ["D1", "X2"])
+        S1, S2 = map(StringVariable, ["S1", "X3"])
+        domain1 = Domain([X1, X2], [D1], [S1])
+        domain2 = Domain([X3], [D2], [S2])
+        res = widget.merge_domains([domain1, domain2])
+
+        attributes = res.attributes
+        class_vars = res.class_vars
+        metas = res.metas
+
+        self.assertEqual([var.name for var in attributes],
+                         ["X1", "X2 (1)", "X3 (1)"])
+        self.assertEqual([var.name for var in class_vars],
+                         ["D1", "X2 (2)"])
+        self.assertEqual([var.name for var in metas],
+                         ["S1", "X3 (2)"])
+
+        x21_val_from = attributes[1].compute_value
+        self.assertIsInstance(x21_val_from, Identity)
+        self.assertIsInstance(x21_val_from.variable, ContinuousVariable)
+        self.assertEqual(x21_val_from.variable.name, "X2")
+
+        x22_val_from = class_vars[1].compute_value
+        self.assertIsInstance(x22_val_from, Identity)
+        self.assertIsInstance(x22_val_from.variable, DiscreteVariable)
+        self.assertEqual(x22_val_from.variable.name, "X2")
+
+        x31_val_from = attributes[2].compute_value
+        self.assertIsInstance(x31_val_from, Identity)
+        self.assertIsInstance(x31_val_from.variable, ContinuousVariable)
+        self.assertEqual(x31_val_from.variable.name, "X3")
+
+        x32_val_from = metas[1].compute_value
+        self.assertIsInstance(x32_val_from, Identity)
+        self.assertIsInstance(x32_val_from.variable, StringVariable)
+        self.assertEqual(x32_val_from.variable.name, "X3")
+
+    def test_get_part_union(self):
+        get_part = OWConcatenate._get_part  # pylint: disable=protected-access
+
+        X1, X2, X3, X4 = map(ContinuousVariable, ["X1", "X2", "X3", "X4"])
+        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
+                         ["X1", "X2", "X3"])
+        S1, S2, S3 = map(StringVariable, ["X1", "X2", "X3"])
+        domain1 = Domain([X1, X2], [D1], [S1, S3])
+        domain2 = Domain([X3, X2], [D2, D1], [S2, S3, S1])
+        domain3 = Domain([X3, X2, X4], [D2, D1, D3], [S2, S1, S3])
+
+        self.assertEqual(
+            get_part([domain1, domain2], set.union, "attributes"),
+            [X1, X2, X3]
+        )
+        self.assertEqual(
+            get_part([domain3, domain1, domain2], set.union, "attributes"),
+            [X3, X2, X4, X1]
+        )
+        self.assertEqual(
+            get_part([domain1, domain2], set.union, "class_vars"),
+            [D1, D2]
+        )
+        self.assertEqual(
+            get_part([domain3, domain1, domain2], set.union, "class_vars"),
+            [D2, D1, D3]
+        )
+        self.assertEqual(
+            get_part([domain3, domain1, domain2], set.union, "class_vars"),
+            [D2, D1, D3]
+        )
+        self.assertEqual(
+            get_part([domain1, domain2], set.union, "metas"),
+            [S1, S3, S2]
+        )
+        self.assertEqual(
+            get_part([domain2, domain1], set.union, "metas"),
+            [S2, S3, S1]
+        )
+        self.assertEqual(
+            get_part([domain3, domain2, domain1], set.union, "metas"),
+            [S2, S1, S3]
+        )
+
+    def test_get_part_intersection(self):
+        get_part = OWConcatenate._get_part  # pylint: disable=protected-access
+
+        X1, X2, X3, X4 = map(ContinuousVariable, ["X1", "X2", "X3", "X4"])
+        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
+                         ["X1", "X2", "X3"])
+        S1, S2, S3 = map(StringVariable, ["X1", "X2", "X3"])
+        domain1 = Domain([X1, X2], [D1], [S1, S3])
+        domain2 = Domain([X3, X2], [D2, D1], [S2, S3, S1])
+        domain3 = Domain([X3, X2, X4], [D2, D1, D3], [S2, S1, S3])
+
+        self.assertEqual(
+            get_part([domain1, domain2], set.intersection, "attributes"),
+            [X2]
+        )
+        self.assertEqual(
+            get_part([domain1, domain2, domain3], set.intersection, "class_vars"),
+            [D1]
+        )
+        self.assertEqual(
+            get_part([domain3, domain1, domain2], set.intersection, "metas"),
+            [S1, S3]
+        )
+        self.assertEqual(
+            get_part([domain2, domain1, domain3], set.intersection, "metas"),
+            [S3, S1]
+        )
+
+    def test_get_unique_vars(self):
+        X1, X1a, X2, X2a = map(ContinuousVariable, ["X1", "X1", "X2", "X2"])
+        X2.number_of_decimals = 3
+        X2a.number_of_decimals = 4
+        D1 = DiscreteVariable("X1", values=["a", "b", "c"])
+        D1a = DiscreteVariable("X1", values=["e", "b", "d"])
+        D2 = DiscreteVariable("X2", values=["a", "b", "c"])
+        S1 = StringVariable("X1")
+
+        # pylint: disable=unbalanced-tuple-unpacking,protected-access
+        uX1, uX2, uD1, uD2, uS1 =\
+            OWConcatenate._unique_vars([X1, X1a, X2, X2a, D1, D2, D1a, S1])
+
+        self.assertIs(X1, uX1)
+
+        self.assertEqual(X2, uX2)
+        self.assertEqual(X2a, uX2)
+        self.assertEqual(X2.number_of_decimals, 3)
+        self.assertEqual(X2a.number_of_decimals, 4)
+        self.assertEqual(uX2.number_of_decimals, 4)
+
+        self.assertEqual(D1.values, list("abc"))
+        self.assertEqual(D1a.values, list("ebd"))
+        self.assertEqual(uD1, D1)
+        self.assertEqual(uD1, D1a)
+        self.assertEqual(uD1.values, list("abced"))
+
+        self.assertIs(uD2, D2)
+
+        self.assertIs(S1, uS1)
+
+    def test_different_number_decimals(self):
+        widget = self.widget
+
+        x1 = ContinuousVariable("x", number_of_decimals=3)
+        x2 = ContinuousVariable("x", number_of_decimals=4)
+        data1 = Table.from_numpy(Domain([x1]), np.array([[1], [2], [3]]))
+        data2 = Table.from_numpy(Domain([x2]), np.array([[1], [2], [3]]))
+        for d1, d2, id1, id2 in ((data1, data2, 1, 2), (data1, data2, 2, 1),
+                                 (data2, data1, 1, 2), (data2, data1, 2, 1)):
+            self.send_signal(widget.Inputs.additional_data, d1, id1)
+            self.send_signal(widget.Inputs.additional_data, d2, id2)
+            out_dom = self.get_output(widget.Outputs.data).domain
+            self.assertEqual(len(out_dom.attributes), 1)
+            x = out_dom.attributes[0]
+            self.assertEqual(x.number_of_decimals, 4)
 
 
 if __name__ == "__main__":
