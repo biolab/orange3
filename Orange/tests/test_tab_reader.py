@@ -81,7 +81,7 @@ class TestTabReader(unittest.TestCase):
         file = io.StringIO(samplefile)
         table = read_tab_file(file)
 
-        f1, f2, c1, c2 = table.domain.variables
+        _, f2, c1, _ = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
         self.assertEqual(f2.name, "Feature 2")
         self.assertEqual(f2.attributes, {'a': 1, 'b': 2})
@@ -97,7 +97,7 @@ class TestTabReader(unittest.TestCase):
         file = io.StringIO(saved)
         table = read_tab_file(file)
 
-        f1, f2, c1, c2 = table.domain.variables
+        _, f2, c1, _ = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
         self.assertEqual(f2.name, "Feature 2")
         self.assertEqual(f2.attributes, {'a': 1, 'b': 2})
@@ -106,16 +106,16 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(c1.name, "Class 1")
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
 
-        path = "/path/to/somewhere"
-        c1.attributes["path"] = path
+        spath = "/path/to/somewhere"
+        c1.attributes["path"] = spath
         outf = io.StringIO()
         outf.close = lambda: None
         TabReader.write_file(outf, table)
         outf.seek(0)
 
         table = read_tab_file(outf)
-        f1, f2, c1, c2 = table.domain.variables
-        self.assertEqual(c1.attributes["path"], path)
+        _, _, c1, _ = table.domain.variables
+        self.assertEqual(c1.attributes["path"], spath)
 
     def test_read_data_oneline_header(self):
         samplefile = """\
@@ -273,7 +273,8 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(data.domain["INDUS"].number_of_decimals, 2)
         self.assertEqual(data.domain["AGE"].number_of_decimals, 1)
 
-    def test_many_discrete(self):
+    @staticmethod
+    def test_many_discrete():
         b = io.StringIO()
         b.write("Poser\nd\n\n")
         b.writelines("K" + str(i) + "\n" for i in range(30000))

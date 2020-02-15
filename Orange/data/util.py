@@ -25,14 +25,15 @@ def one_hot(values, dtype=float):
     result
         2d array with ones in respective indicator columns.
     """
-    if not len(values):
+    if len(values) == 0:
         return np.zeros((0, 0), dtype=dtype)
     return np.eye(int(np.max(values) + 1), dtype=dtype)[np.asanyarray(values, dtype=int)]
 
 
+# pylint: disable=redefined-builtin
 def scale(values, min=0, max=1):
     """Return values scaled to [min, max]"""
-    if not len(values):
+    if len(values) == 0:
         return np.array([])
     minval = np.float_(bn.nanmin(values))
     ptp = bn.nanmax(values) - minval
@@ -185,7 +186,8 @@ def get_unique_names(names, proposed):
     Return:
         str or list of str
     """
-    from Orange.data import Domain  # prevent cyclic import
+    # prevent cyclic import: pylint: disable=import-outside-toplevel
+    from Orange.data import Domain
     if isinstance(names, Domain):
         names = [var.name for var in chain(names.variables, names.metas)]
     if isinstance(proposed, str):

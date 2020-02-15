@@ -5,7 +5,7 @@ import warnings
 from typing import Iterable, Optional, Tuple, List, Generator, Callable, Any
 
 from ast import literal_eval
-from collections import OrderedDict, Counter
+from collections import OrderedDict
 from functools import lru_cache
 from itertools import chain, repeat
 from math import isnan
@@ -93,12 +93,15 @@ _RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format(
 
 class _ColumnProperties:
     def __init__(self, valuemap=None, values=None, orig_values=None,
-                 coltype=None, coltype_kwargs={}):
+                 coltype=None, coltype_kwargs=None):
         self.valuemap = valuemap
         self.values = values
         self.orig_values = orig_values
         self.coltype = coltype
-        self.coltype_kwargs = dict(coltype_kwargs)
+        if coltype_kwargs is None:
+            self.coltype_kwargs = {}
+        else:
+            self.coltype_kwargs = dict(coltype_kwargs)
 
 
 class _TableHeader:
