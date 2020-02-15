@@ -2,7 +2,7 @@
 Data-manipulation utilities.
 """
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from itertools import chain
 
 import numpy as np
@@ -25,14 +25,15 @@ def one_hot(values, dtype=float):
     result
         2d array with ones in respective indicator columns.
     """
-    if not len(values):
+    if len(values) == 0:
         return np.zeros((0, 0), dtype=dtype)
     return np.eye(int(np.max(values) + 1), dtype=dtype)[np.asanyarray(values, dtype=int)]
 
 
+# pylint: disable=redefined-builtin
 def scale(values, min=0, max=1):
     """Return values scaled to [min, max]"""
-    if not len(values):
+    if len(values) == 0:
         return np.array([])
     minval = np.float_(bn.nanmin(values))
     ptp = bn.nanmax(values) - minval
@@ -185,7 +186,8 @@ def get_unique_names(names, proposed):
     Return:
         str or list of str
     """
-    from Orange.data import Domain  # prevent cyclic import
+    # prevent cyclic import: pylint: disable=import-outside-toplevel
+    from Orange.data import Domain
     if isinstance(names, Domain):
         names = [var.name for var in chain(names.variables, names.metas)]
     if isinstance(proposed, str):
@@ -202,14 +204,20 @@ def get_unique_names(names, proposed):
 def get_unique_names_duplicates(proposed: list) -> list:
     """
     Returns list of unique names. If a name is duplicated, the
-    function appends an index in parentheses.
+    function appends the smallest available index in parentheses.
+
+    For example, a proposed list of names `x`, `x` and `x (2)`
+    results in `x (1)`, `x (3)`, `x (2)`.
     """
     counter = Counter(proposed)
-    temp_counter = Counter()
+    index = defaultdict(int)
     names = []
     for name in proposed:
-        if counter[name] > 1:
-            temp_counter.update([name])
-            name = f"{name} ({temp_counter[name]})"
+        if name and counter[name] > 1:
+            unique_name = name
+            while unique_name in counter:
+                index[name] += 1
+                unique_name = f"{name} ({index[name]})"
+            name = unique_name
         names.append(name)
     return names

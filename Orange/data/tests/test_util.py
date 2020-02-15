@@ -53,6 +53,15 @@ class TestGetUniqueNames(unittest.TestCase):
         self.assertEqual(
             get_unique_names_duplicates(["foo", "bar", "baz", "bar"]),
             ["foo", "bar (1)", "baz", "bar (2)"])
+        self.assertEqual(
+            get_unique_names_duplicates(["x", "x", "x (1)"]),
+            ["x (2)", "x (3)", "x (1)"])
+        self.assertEqual(
+            get_unique_names_duplicates(["x (2)", "x", "x", "x (2)", "x (3)"]),
+            ["x (2) (1)", "x (1)", "x (4)", "x (2) (2)", "x (3)"])
+        self.assertEqual(
+            get_unique_names_duplicates(["x", "", "", None, None, "x"]),
+            ["x (1)", "", "", None, None, "x (2)"])
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ import warnings
 from typing import Iterable, Optional, Tuple, List, Generator, Callable, Any
 
 from ast import literal_eval
-from collections import OrderedDict, Counter
+from collections import OrderedDict
 from functools import lru_cache
 from itertools import chain, repeat
 from math import isnan
@@ -20,6 +20,7 @@ from Orange.data import Table, Domain, Variable, DiscreteVariable, \
     StringVariable, ContinuousVariable, TimeVariable
 from Orange.data.io_util import Compression, open_compressed, \
     isnastr, guess_data_type, sanitize_variable
+from Orange.data.util import get_unique_names_duplicates
 from Orange.data.variable import VariableMeta
 from Orange.util import Registry, flatten, namegen
 
@@ -92,12 +93,15 @@ _RE_FLAGS = re.compile(r'^\s*( |{}|)*\s*$'.format(
 
 class _ColumnProperties:
     def __init__(self, valuemap=None, values=None, orig_values=None,
-                 coltype=None, coltype_kwargs={}):
+                 coltype=None, coltype_kwargs=None):
         self.valuemap = valuemap
         self.values = values
         self.orig_values = orig_values
         self.coltype = coltype
-        self.coltype_kwargs = dict(coltype_kwargs)
+        if coltype_kwargs is None:
+            self.coltype_kwargs = {}
+        else:
+            self.coltype_kwargs = dict(coltype_kwargs)
 
 
 class _TableHeader:
@@ -114,7 +118,7 @@ class _TableHeader:
             Header rows, to be used for constructing domain.
         """
         names, types, flags = self.create_header_data(headers)
-        self.names = self.rename_variables(names)
+        self.names = get_unique_names_duplicates(names)
         self.types = types
         self.flags = flags
 
@@ -172,34 +176,6 @@ class _TableHeader:
     @staticmethod
     def _flag_from_flag(flags: List[str]) -> List[str]:
         return [Flags.join(filter(str.islower, flag)) for flag in flags]
-
-    @staticmethod
-    def rename_variables(names: List[str]) -> List[str]:
-        """
-        Rename variables if necessary. Append index to the name, if the name
-        is duplicated.
-        Reusing across files still works if both files have same duplicates.
-
-        Parameters
-        ----------
-        names: List
-            Variable names.
-
-        Returns
-        -------
-        names: List
-            Variable names with appended index.
-        """
-        name_counts = Counter(names)
-        del name_counts[""]
-        if len(name_counts) != len(names) and name_counts:
-            uses = {name: 0 for name, count in name_counts.items() if
-                    count > 1}
-            for i, name in enumerate(names):
-                if name in uses:
-                    uses[name] += 1
-                    names[i] = f"{name}_{uses[name]}"
-        return names
 
 
 class _TableBuilder:

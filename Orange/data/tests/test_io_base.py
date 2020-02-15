@@ -31,9 +31,8 @@ class InitTestData(unittest.TestCase):
 
 class TestTableHeader(InitTestData):
     def test_rename_variables(self):
-        names = ["a", "", "b", "", "a", None]
-        names = _TableHeader.rename_variables(names)
-        self.assertListEqual(names, ["a_1", "", "b", "", "a_2", None])
+        th = _TableHeader([["a", "", "b", "", "a"]])
+        self.assertListEqual(th.names, ["a (1)", "", "b", "", "a (2)"])
 
     def test_get_header_data_0(self):
         names, types, flags = _TableHeader.create_header_data([])
