@@ -460,6 +460,10 @@ class Variable(Reprable, metaclass=VariableMeta):
         var.attributes = dict(self.attributes)
         return var
 
+    def renamed(self, new_name):
+        # prevent cyclic import, pylint: disable=import-outside-toplevel
+        from Orange.preprocess.transformation import Identity
+        return self.copy(name=new_name, compute_value=Identity(variable=self))
 
 del _predicatedescriptor
 
