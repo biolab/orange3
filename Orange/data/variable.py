@@ -556,11 +556,16 @@ class ContinuousVariable(Variable):
     str_val = repr_val
 
     def copy(self, compute_value=None, *, name=None, **kwargs):
-        var = super().copy(compute_value=compute_value, name=name,
-                           number_of_decimals=self.number_of_decimals,
-                           **kwargs)
-        var.adjust_decimals = self.adjust_decimals
-        var.format_str = self._format_str
+        # pylint understand not that `var` is `DiscreteVariable`:
+        # pylint: disable=protected-access
+        number_of_decimals = kwargs.pop("number_of_decimals", None)
+        var = super().copy(compute_value=compute_value, name=name, **kwargs)
+        if number_of_decimals is not None:
+            var.number_of_decimals = number_of_decimals
+        else:
+            var._number_of_decimals = self._number_of_decimals
+            var.adjust_decimals = self.adjust_decimals
+            var.format_str = self._format_str
         return var
 
 
