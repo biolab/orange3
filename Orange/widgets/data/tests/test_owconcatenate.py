@@ -148,6 +148,20 @@ class TestOWConcatenate(WidgetTest):
         np.testing.assert_equal(output.X,
                                 np.array([0, 1, 2, 3, 3, 4, 5]).reshape(7, 1))
 
+    def test_duplicated_id_column(self):
+        widget = self.widget
+
+        var1 = DiscreteVariable(name="x", values=list("abcd"))
+        data1 = Table.from_numpy(Domain([var1]),
+                                 np.arange(4).reshape(4, 1), np.zeros((4, 0)))
+        widget.append_source_column = True
+        widget.source_column_role = 0
+        widget.source_attr_name = "x"
+        self.send_signal(widget.Inputs.primary_data, data1)
+        out = self.get_output(widget.Outputs.data)
+        self.assertEqual(out.domain.attributes[0].name, "x")
+        self.assertEqual(out.domain.class_var.name, "x (1)")
+
     def test_domain_intersect(self):
         widget = self.widget
         widget.merge_type = OWConcatenate.MergeIntersection

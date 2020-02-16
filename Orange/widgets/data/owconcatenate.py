@@ -16,7 +16,7 @@ from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 import Orange.data
-from Orange.data.util import get_unique_names_duplicates
+from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.util import flatten
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.settings import Setting
@@ -196,7 +196,7 @@ class OWConcatenate(widget.OWWidget):
                 names = ['{} ({})'.format(name, i)
                          for i, name in enumerate(names)]
             source_var = Orange.data.DiscreteVariable(
-                self.source_attr_name,
+                get_unique_names(domain, self.source_attr_name),
                 values=names
             )
             places = ["class_vars", "attributes", "metas"]
