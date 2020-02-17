@@ -10,6 +10,7 @@ import numpy as np
 
 from Orange.data import (
     Table, ContinuousVariable, StringVariable, DiscreteVariable, Domain)
+from Orange.preprocess import discretize
 from Orange.widgets.data.owselectrows import (
     OWSelectRows, FilterDiscreteType, SelectRowsContextHandler)
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -311,6 +312,21 @@ and remove test_support_old_settings and this test.
 
 Basically, revert this commit.
 """)
+
+    def test_purge_discretized(self):
+        housing = Table("housing")
+        method = discretize.EqualFreq(n=3)
+        discretizer = discretize.DomainDiscretizer(
+            discretize_class=True, method=method)
+        domain = discretizer(housing)
+        data = housing.transform(domain)
+        widget = self.widget_with_context(domain, [["MEDV", 2, (2, 3)]])
+        widget.purge_classes = True
+        self.send_signal(widget.Inputs.data, data)
+        out = self.get_output(widget.Outputs.matching_data)
+        expected = data.Y[(data.Y == 1) + (data.Y == 2)]
+        expected = (expected == 2).astype(float)
+        np.testing.assert_equal(out.Y, expected)
 
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()

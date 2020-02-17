@@ -2,7 +2,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from Orange.data import Domain, DiscreteVariable, Table
+from Orange.data import Domain, DiscreteVariable
 from Orange.preprocess.transformation import Lookup
 from Orange.statistics.util import nanunique
 from .preprocess import Preprocess
@@ -238,7 +238,10 @@ def remove_unused_values(var, data):
     if len(unique) == len(var.values):
         return var
     used_values = [var.values[i] for i in unique]
-    return DiscreteVariable(var.name, values=used_values, sparse=var.sparse)
+    translation_table = np.array([np.NaN] * len(var.values))
+    translation_table[unique] = range(len(used_values))
+    return DiscreteVariable(var.name, values=used_values, sparse=var.sparse,
+                            compute_value=Lookup(var, translation_table))
 
 
 def sort_var_values(var):
