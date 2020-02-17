@@ -76,7 +76,7 @@ class OWPredictions(OWWidget):
         gui.listBox(self.controlArea, self, "selected_classes", "class_values",
                     box="Show probabibilities for",
                     callback=self._update_prediction_delegate,
-                    selectionMode=QListWidget.MultiSelection,
+                    selectionMode=QListWidget.ExtendedSelection,
                     addSpace=False,
                     sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred))
         gui.rubber(self.controlArea)
