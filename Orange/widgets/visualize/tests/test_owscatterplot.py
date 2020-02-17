@@ -8,7 +8,9 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 from AnyQt.QtGui import QColor
 
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import (
+    Table, Domain, ContinuousVariable, DiscreteVariable, TimeVariable
+)
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
@@ -1073,6 +1075,31 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         simulate.combobox_activate_index(self.widget.controls.attr_x, 3)
         urline.assert_called_once()
         urline.reset_mock()
+
+    def test_time_axis(self):
+        a = np.array([[1581953776, 1], [1581963776, 2], [1582953776, 3]])
+        d1 = Domain([ContinuousVariable("time"), ContinuousVariable("value")])
+        data = Table.from_numpy(d1, a)
+        d2 = Domain([TimeVariable("time"), ContinuousVariable("value")])
+        data_time = Table.from_numpy(d2, a)
+
+        x_axis = self.widget.graph.plot_widget.plotItem.getAxis("bottom")
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(x_axis._use_time)
+        _ticks = x_axis.tickValues(1581953776, 1582953776, 1000)
+        ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
+        try:
+            float(ticks[0])
+        except ValueError:
+            self.fail("axis should display floats")
+
+        self.send_signal(self.widget.Inputs.data, data_time)
+        self.assertTrue(x_axis._use_time)
+        _ticks = x_axis.tickValues(1581953776, 1582953776, 1000)
+        ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
+        with self.assertRaises(ValueError):
+            float(ticks[0])
 
 
 if __name__ == "__main__":

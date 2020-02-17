@@ -3,6 +3,8 @@ import itertools
 import warnings
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
+from datetime import datetime, timezone
+from time import gmtime
 
 import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
@@ -22,6 +24,7 @@ from pyqtgraph.graphicsItems.LegendItem import (
 )
 from pyqtgraph.graphicsItems.TextItem import TextItem
 
+from Orange.preprocess.discretize import _time_binnings
 from Orange.widgets.utils import colorpalettes
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets import gui
@@ -286,6 +289,77 @@ def _make_pen(color, width):
     return p
 
 
+class AxisItem(pg.AxisItem):
+    """
+    Axis that if needed displays ticks appropriate for time data.
+    """
+
+    _label_width = 80
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._use_time = False
+
+    def use_time(self, enable):
+        """Enables axes to display ticks for time data."""
+        self._use_time = enable
+        self.enableAutoSIPrefix(not enable)
+
+    def tickValues(self, minVal, maxVal, size):
+        """Find appropriate tick locations."""
+        if not self._use_time:
+            return super().tickValues(minVal, maxVal, size)
+
+        # if timezone is not set, then local is used which cause exceptions
+        minVal = max(minVal,
+                     datetime.min.replace(tzinfo=timezone.utc).timestamp() + 1)
+        maxVal = min(maxVal,
+                     datetime.max.replace(tzinfo=timezone.utc).timestamp() - 1)
+        mn, mx = gmtime(minVal), gmtime(maxVal)
+
+        try:
+            bins = _time_binnings(mn, mx, 6, 30)[-1]
+        except (IndexError, ValueError):
+            # cannot handle very large and very small time intervals
+            return super().tickValues(minVal, maxVal, size)
+
+        ticks = bins.thresholds
+
+        max_steps = max(int(size / self._label_width), 1)
+        if len(ticks) > max_steps:
+            # remove some of ticks so that they don't overlap
+            step = int(np.ceil(float(len(ticks)) / max_steps))
+            ticks = ticks[::step]
+
+        spacing = min(b - a for a, b in zip(ticks[:-1], ticks[1:]))
+        return [(spacing, ticks)]
+
+    def tickStrings(self, values, scale, spacing):
+        """Format tick values according to space between them."""
+        if not self._use_time:
+            return super().tickStrings(values, scale, spacing)
+
+        if spacing >= 3600 * 24 * 365:
+            fmt = "%Y"
+        elif spacing >= 3600 * 24 * 28:
+            fmt = "%Y %b"
+        elif spacing >= 3600 * 24:
+            fmt = "%Y %b %d"
+        elif spacing >= 3600:
+            fmt = "%d %Hh"
+        elif spacing >= 60:
+            fmt = "%H:%M"
+        elif spacing >= 1:
+            fmt = "%H:%M:%S"
+        else:
+            fmt = '%S.%f'
+
+        # if timezone is not set, then local timezone is used
+        # which cause exceptions for edge cases
+        return [datetime.fromtimestamp(x, tz=timezone.utc).strftime(fmt)
+                for x in values]
+
+
 class OWScatterPlotBase(gui.OWComponent, QObject):
     """
     Provide a graph component for widgets that show any kind of point plot
@@ -408,8 +482,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.subset_is_shown = False
 
         self.view_box = view_box(self)
+        _axis = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
-                                         background="w")
+                                         background="w", axisItems=_axis)
         self.plot_widget.hideAxis("left")
         self.plot_widget.hideAxis("bottom")
         self.plot_widget.getPlotItem().buttonsHidden = True
