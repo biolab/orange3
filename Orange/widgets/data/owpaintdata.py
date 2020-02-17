@@ -22,6 +22,7 @@ from AnyQt.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
 import Orange.data
+from Orange.data.util import get_unique_names_duplicates
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -752,6 +753,7 @@ class OWPaintData(OWWidget):
     table_name = Setting("Painted data")
     attr1 = Setting("x")
     attr2 = Setting("y")
+    unique_names = [attr1, attr2]
     hasAttr2 = Setting(True)
 
     brushRadius = Setting(75)
@@ -768,6 +770,8 @@ class OWPaintData(OWWidget):
         no_input_variables = Msg("Input data has no variables")
         continuous_target = Msg("Continuous target value can not be used.")
         sparse_not_supported = Msg("Sparse data is ignored.")
+        renamed_vars = Msg("Some variables have been renamed "
+                           "to avoid duplicates.\n{}")
 
     class Information(OWWidget.Information):
         use_first_two = \
@@ -1259,14 +1263,24 @@ class OWPaintData(OWWidget):
         self.commit()
 
     def commit(self):
+        self.Warning.renamed_vars.clear()
+        self.unique_names = get_unique_names_duplicates([self.attr1, self.attr2])
+        renamed = []
+        if self.attr1 != self.unique_names[0]:
+            renamed.append(self.attr1)
+        if self.attr2 != self.unique_names[1]:
+            renamed.append(self.attr2)
+        if renamed:
+            self.Warning.renamed_vars(renamed)
+
         if not self.data:
             self.Outputs.data.send(None)
             return
         data = np.array(self.data)
         if self.hasAttr2:
             X, Y = data[:, :2], data[:, 2]
-            attrs = (Orange.data.ContinuousVariable(self.attr1),
-                     Orange.data.ContinuousVariable(self.attr2))
+            attrs = (Orange.data.ContinuousVariable(self.unique_names[0]),
+                     Orange.data.ContinuousVariable(self.unique_names[1]))
         else:
             X, Y = data[:, np.newaxis, 0], data[:, 2]
             attrs = (Orange.data.ContinuousVariable(self.attr1),)
