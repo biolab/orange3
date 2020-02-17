@@ -17,6 +17,7 @@ from Orange.widgets.visualize.owvenndiagram import (
                                                     pad_columns,
                                                     get_perm)
 
+
 class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):

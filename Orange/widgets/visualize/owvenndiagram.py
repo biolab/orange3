@@ -6,11 +6,11 @@ Venn Diagram Widget
 
 import math
 import unicodedata
-from collections import namedtuple, defaultdict, OrderedDict
-from itertools import compress
+from collections import namedtuple, defaultdict
+from itertools import compress, count
 from functools import reduce
+from operator import attrgetter
 from xml.sax.saxutils import escape
-from copy import deepcopy
 
 import numpy as np
 
@@ -79,6 +79,7 @@ class OWVennDiagram(widget.OWWidget):
     graph_name = "scene"
     atr_types = ['attributes', 'metas', 'class_vars']
     atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
+    row_vals = {'attributes': 'x', 'class_vars': 'y', 'metas': 'metas'}
 
     def __init__(self):
         super().__init__()
@@ -88,9 +89,9 @@ class OWVennDiagram(widget.OWWidget):
         # Input update is in progress
         self._inputUpdate = False
         # Input datasets in the order they were 'connected'.
-        self.data = OrderedDict()
+        self.data = {}
         # Extracted input item sets in the order they were 'connected'
-        self.itemsets = OrderedDict()
+        self.itemsets = {}
 
         # Main area view
         self.scene = QGraphicsScene()
@@ -184,7 +185,7 @@ class OWVennDiagram(widget.OWWidget):
             if not self.data_equality():
                 self.vennwidget.clear()
                 self.Error.instances_mismatch()
-                self.itemsets = OrderedDict()
+                self.itemsets = {}
                 return False
         return True
 
@@ -258,9 +259,9 @@ class OWVennDiagram(widget.OWWidget):
 
         oldselection = list(self.selection)
 
-        #self.vennwidget.clear()
         n = len(self.itemsets)
-        self.disjoint, self.area_keys = self.get_disjoint(set(s.items) for s in self.itemsets.values())
+        self.disjoint, self.area_keys = \
+            self.get_disjoint(set(s.items) for s in self.itemsets.values())
 
         vennitems = []
         colors = colorpalette.ColorPaletteHSV(n)
@@ -349,7 +350,7 @@ class OWVennDiagram(widget.OWWidget):
 
     def _on_itemTextEdited(self, index, text):
         text = str(text)
-        key = list(self.itemsets.keys())[index]
+        key = list(self.itemsets)[index]
         self.itemsets[key] = self.itemsets[key]._replace(title=text)
 
     def invalidateOutput(self):
@@ -361,17 +362,17 @@ class OWVennDiagram(widget.OWWidget):
         for val in domain.values():
             names = [var.name for var in val]
             unique_names = get_unique_names_duplicates(names)
-            for n, u, idx, var in zip(names, unique_names, range(len(val)), val):
+            for n, u, idx, var in zip(names, unique_names, count(), val):
                 if n != u:
                     val[idx] = var.copy(name=u)
                     renamed.append(n)
         if renamed:
             self.Warning.renamed_vars(', '.join(renamed))
-        if 'attributes' in values.keys():
+        if 'attributes' in values:
             X = np.hstack(values['attributes'])
-        if 'metas' in values.keys():
+        if 'metas' in values:
             metas = np.hstack(values['metas'])
-        if 'class_vars' in values.keys():
+        if 'class_vars' in values:
             class_vars = np.hstack(values['class_vars'])
         table = Table.from_numpy(Domain(**domain), X, class_vars, metas)
         if ids is not None:
@@ -380,17 +381,17 @@ class OWVennDiagram(widget.OWWidget):
 
     def extract_columnwise(self, var_dict, columns=None):
         #for columns
-        domain = defaultdict(lambda: [])
-        values = defaultdict(lambda: [])
+        domain = defaultdict(list)
+        values = defaultdict(list)
         renamed = []
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
-                is_selected = not(not columns or not var_name.name in columns)
+                is_selected = bool(columns) and var_name.name in columns
                 if var_data[0]:
                     #columns are different, copy all, rename them
                     for var, table_key in var_data[1]:
-                        idx = list(self.data.keys()).index(table_key) + 1
-                        new_atr = var.copy(name='{} ({})'.format(var_name.name, idx))
+                        idx = list(self.data).index(table_key) + 1
+                        new_atr = var.copy(name=f'{var_name.name} ({idx})')
                         if columns and atr_type == 'attributes':
                             new_atr.attributes['Selected'] = is_selected
                         domain[atr_type].append(new_atr)
@@ -399,7 +400,7 @@ class OWVennDiagram(widget.OWWidget):
                                                         self.atr_vals[atr_type])
                                                 .reshape(-1, 1))
                 else:
-                    new_atr = deepcopy(var_data[1][0][0])
+                    new_atr = var_data[1][0][0].copy()
                     if columns and atr_type == 'attributes':
                         new_atr.attributes['Selected'] = is_selected
                     domain[atr_type].append(new_atr)
@@ -423,7 +424,7 @@ class OWVennDiagram(widget.OWWidget):
                 is [is_different:bool, table_keys:list]), is_different is set to True,
                 if we are outputing duplicates, but the value is arbitrary
             """
-            if atr in new_atrs.keys():
+            if atr in new_atrs:
                 if not selection and self.output_duplicates:
                     #if output_duplicates, we just check if compute value is the same
                     new_atrs[atr][0] = True
@@ -446,7 +447,7 @@ class OWVennDiagram(widget.OWWidget):
         #gets masks, compares same as cols
         t1 = self.data[key1].table
         t2 = self.data[key2].table
-        inter_val = set.intersection(set(ids[key1].keys()), set(ids[key2].keys()))
+        inter_val = set(ids[key1]) & set(ids[key2])
         t1_inter = [ids[key1][val] for val in inter_val]
         t2_inter = [ids[key2][val] for val in inter_val]
         return arrays_equal(
@@ -469,8 +470,6 @@ class OWVennDiagram(widget.OWWidget):
         Columns are duplicated only if values differ (even
         if only in order of values), origin table name and input slot is added to column name.
         """
-        annotated = None
-
         var_dict = {}
         for atr_type in self.atr_types:
             container = {}
@@ -502,14 +501,14 @@ class OWVennDiagram(widget.OWWidget):
             is [is_different:bool, table_keys:list])
         ids: dict with ids for each table
         """
-        all_ids = sorted(list(reduce(set.union, [set(val.keys()) for val in ids.values()], set())))
+        all_ids = sorted(reduce(set.union, [set(val) for val in ids.values()], set()))
 
-        permutations = dict()
+        permutations = {}
         for table_key, dict_ in ids.items():
-            permutations[table_key] = get_perm(list(dict_.keys()), all_ids)
+            permutations[table_key] = get_perm(list(dict_), all_ids)
 
-        domain = defaultdict(lambda: [])
-        values = defaultdict(lambda: [])
+        domain = defaultdict(list)
+        values = defaultdict(list)
         renamed = []
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
@@ -520,7 +519,7 @@ class OWVennDiagram(widget.OWWidget):
                     # Additional strange clashes are checked later in merge_data
                     for var, table_key in var_data[1]:
                         temp = self.data[table_key].table
-                        idx = list(self.data.keys()).index(table_key) + 1
+                        idx = list(self.data).index(table_key) + 1
                         domain[atr_type].append(var.copy(name='{} ({})'.format(var_name, idx)))
                         renamed.append(var_name.name)
                         v = getattr(temp[list(ids[table_key].values()), var_name],
@@ -531,18 +530,15 @@ class OWVennDiagram(widget.OWWidget):
                         else:
                             values[atr_type].append(v[perm].reshape(-1, 1))
                 else:
-                    var = var_data[1][0]
-                    value = np.empty((len(all_ids), 1))
-                    value.fill(np.nan)
-                    domain[atr_type].append(deepcopy(var_data[1][0][0]))
+                    value = np.full((len(all_ids), 1), np.nan)
+                    domain[atr_type].append(var_data[1][0][0].copy())
                     for _, table_key in var_data[1]:
                         #different tables have different part of the same attribute vector
                         perm = permutations[table_key]
                         v = getattr(self.data[table_key].table[list(ids[table_key].values()),
                                                                var_name],
                                     self.atr_vals[atr_type]).reshape(-1, 1)
-                        if v.dtype != value.dtype:
-                            value = value.astype(v.dtype, copy=False)
+                        value = value.astype(v.dtype, copy=False)
                         value[perm] = v
                     values[atr_type].append(value)
 
@@ -550,8 +546,8 @@ class OWVennDiagram(widget.OWWidget):
             self.Warning.renamed_vars(', '.join(renamed))
         idas = None if self.selected_feature else np.array(all_ids)
         table = self.merge_data(domain, values, idas)
-        mask = [idx in self.selected_items for idx in all_ids]
         if selection:
+            mask = [idx in self.selected_items for idx in all_ids]
             return create_annotated_table(table, mask)
         return table
 
@@ -571,13 +567,13 @@ class OWVennDiagram(widget.OWWidget):
             ids = range(len(table))
 
         if selection:
-            return OrderedDict([(item, idx) for item, idx in zip(items, ids)
-                                if item in self.selected_items])
+            return {item: idx for item, idx in zip(items, ids)
+                    if item in self.selected_items}
 
-        return OrderedDict(zip(items, ids))
+        return dict(zip(items, ids))
 
     def get_indices_to_match_by(self, relevant_keys, selection=False):
-        dict_ = dict()
+        dict_ = {}
         for key in relevant_keys:
             table = self.data[key].table
             dict_[key] = self.get_indices(table, selection)
@@ -598,27 +594,29 @@ class OWVennDiagram(widget.OWWidget):
 
     def expand_table(self, table, atrs, metas, cv):
         exp = []
-        row_vals = {'attributes' : 'x', 'class_vars' : 'y', 'metas' : 'metas'}
-        l = 1 if isinstance(table, RowInstance) else len(table)
-        ids = table.id.reshape(-1,1) if isinstance(table, RowInstance) else table.ids.reshape(-1, 1)
-        atr_vals = row_vals if isinstance(table, RowInstance) else self.atr_vals
+        n = 1 if isinstance(table, RowInstance) else len(table)
+        if isinstance(table, RowInstance):
+            ids = table.id.reshape(-1, 1)
+            atr_vals = self.row_vals
+        else:
+            ids = table.ids.reshape(-1, 1)
+            atr_vals = self.atr_vals
         for all_el, atr_type in zip([atrs, metas, cv], self.atr_types):
             cur_el = getattr(table.domain, atr_type)
-            array = np.empty((l, len(all_el)))
-            array.fill(np.nan)
+            array = np.full((n, len(all_el)), np.nan)
             if cur_el:
                 perm = get_perm(cur_el, all_el)
                 b = getattr(table, atr_vals[atr_type])
                 array[:, perm] = b
             exp.append(array)
-        return exp[0], exp[1], exp[2], ids
+        return (*exp, ids)
 
     def extract_rowwise_duplicates(self, var_dict, ids, relevant_keys):
-        all_ids = sorted(list(reduce(set.union, [set(val.keys()) for val in ids.values()], set())))
-        sort_key = lambda var: var.name
-        all_atrs = sorted((var for var in var_dict['attributes'].keys()), key=sort_key)
-        all_metas = sorted((var for var in var_dict['metas'].keys()), key=sort_key)
-        all_cv = sorted((var for var in var_dict['class_vars'].keys()), key=sort_key)
+        all_ids = sorted(reduce(set.union, [set(val) for val in ids.values()], set()))
+        sort_key = attrgetter("name")
+        all_atrs = sorted(var_dict['attributes'], key=sort_key)
+        all_metas = sorted(var_dict['metas'], key=sort_key)
+        all_cv = sorted(var_dict['class_vars'], key=sort_key)
 
         all_x, all_y, all_m = [], [], []
         new_table_ids = []
@@ -639,8 +637,7 @@ class OWVennDiagram(widget.OWWidget):
         return self.merge_data(domain, values, np.vstack(new_table_ids))
 
     def commit(self):
-
-        if not self.vennwidget.vennareas() or not self.data.keys():
+        if not self.vennwidget.vennareas() or not self.data:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
@@ -649,21 +646,21 @@ class OWVennDiagram(widget.OWWidget):
             set.union, [self.disjoint[index] for index in self.selection],
             set()
         )
-        selected_keys = reduce(set.union,
-                               [set(self.area_keys[area]) for area in self.selection],
-                               set())
+        selected_keys = reduce(
+            set.union, [set(self.area_keys[area]) for area in self.selection],
+            set())
         selected = None
 
         if self.rowwise:
             selected_ids = self.get_indices_to_match_by(selected_keys, self.selection)
-            annotated_ids = self.get_indices_to_match_by(self.data.keys())
-            annotated = self.create_from_rows(self.data.keys(), annotated_ids, True)
+            annotated_ids = self.get_indices_to_match_by(self.data)
+            annotated = self.create_from_rows(self.data, annotated_ids, True)
             if self.selected_items:
                 selected = self.create_from_rows(selected_keys, selected_ids, False)
         else:
-            annotated = self.create_from_columns(list(self.selected_items), self.data.keys(), False)
+            annotated = self.create_from_columns(self.selected_items, self.data, False)
             if self.selected_items:
-                selected = self.create_from_columns(list(self.selected_items), selected_keys, True)
+                selected = self.create_from_columns(self.selected_items, selected_keys, True)
 
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(annotated)
@@ -691,7 +688,7 @@ class OWVennDiagram(widget.OWWidget):
             s = reduce(set.difference, excluded, s)
 
             disjoint_sets[i] = s
-            included_tables[i] = [k for k, inc in zip(self.data.keys(), key) if inc]
+            included_tables[i] = [k for k, inc in zip(self.data, key) if inc]
 
         return disjoint_sets, included_tables
 
@@ -1370,23 +1367,21 @@ def arrays_equal(a, b, type_):
     if a is None or b is None:
         return False
     if type_ is not StringVariable:
-        if not np.all(np.isnan(a) == np.isnan(b)):
-            return False
-        return np.all(a[np.logical_not(np.isnan(a))] == b[np.logical_not(np.isnan(b))])
+        nana = np.isnan(a)
+        nanb = np.isnan(b)
+        return np.all(nana == nanb) and np.all(a[~nana] == b[~nanb])
     else:
-        if not(a == b).all():
-            return False
-        return True
+        return np.all(a == b)
 
 def pad_columns(values, mask, l):
     #inflates columns with nans
-    a = np.empty((l, 1)).astype(values.dtype)
-    a.fill(np.nan)
+    a = np.full((l, 1), np.nan, dtype=values.dtype)
     a[mask] = values
     return a
 
 def get_perm(ids, all_ids):
     return [all_ids.index(el) for el in ids if el in all_ids]
+
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.evaluation import ShuffleSplit
