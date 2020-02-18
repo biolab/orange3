@@ -1,7 +1,7 @@
 # pylint: disable=missing-docstring
 from typing import Iterable, Set
 from collections import defaultdict
-from itertools import product
+from itertools import product, chain
 
 import numpy as np
 from scipy import sparse as sp
@@ -15,6 +15,7 @@ from AnyQt.QtWidgets import (QTableView, QSizePolicy, QHeaderView,
 from Orange.data import (Table, DiscreteVariable, Variable, Domain,
                          ContinuousVariable)
 from Orange.data.domain import filter_visible
+from Orange.data.util import get_unique_names_duplicates
 from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
 from Orange.statistics.util import (nanmin, nanmax, nanunique, nansum, nanvar,
                                     nanmean, nanmedian, nanmode, bincount)
@@ -82,6 +83,7 @@ class Pivot:
         self._table = table
         self._row_var = row_var
         self._col_var = col_var if col_var else row_var
+        self.renamed = []
 
         if not table:
             return
@@ -293,8 +295,35 @@ class Pivot:
                               for i, v in enumerate(vals, 2)])
             for x in (X_v, X_t):
                 attrs.append([DiscreteVariable("Total", map_values(0, x))])
-        row_var_h = DiscreteVariable(self._row_var.name, values=("Total", ))
-        aggr_attr = DiscreteVariable("Aggregate", [str(f) for f in agg_funs])
+        row_var_h = DiscreteVariable(self._row_var.name, values=["Total"])
+        aggr_attr = DiscreteVariable('Aggregate', [str(f) for f in agg_funs])
+
+        change_domain = self._col_var == self._row_var
+
+        extra_vars = [self._row_var, aggr_attr]
+        uniq_a = get_unique_names_duplicates([v.name for v in extra_vars]
+                                             + [atr.name for atr in attrs[0]])
+        for (idx, var), u in zip(enumerate(chain(extra_vars, attrs[0])), uniq_a):
+            if var.name == u:
+                continue
+            if idx == 0:
+                self.renamed.append(self._row_var.name)
+                self._row_var = self._row_var.copy(name=u)
+                row_var_h = row_var_h.copy(name=u)
+            elif idx == 1:
+                self.renamed.append(aggr_attr.name)
+                aggr_attr = aggr_attr.copy(name=u)
+            else:
+                self.renamed.append(var.name)
+                attrs[0][idx-2] = var.copy(name=u)
+                attrs[1][idx-2] = var.copy(name=u)
+
+        if change_domain:
+            vals = tuple(v.name for v in attrs[0])
+            self._row_var.make(self._row_var.name, values=vals)
+            vals = tuple(v.name for v in attrs[2])
+            row_var_h.make(row_var_h.name, vals)
+
         return (Domain([self._row_var, aggr_attr] + attrs[0]),
                 Domain([row_var_h, aggr_attr] + attrs[1]),
                 Domain(attrs[2]), Domain(attrs[3]))
@@ -664,6 +693,8 @@ class OWPivot(OWWidget):
         # TODO - inconsistent for different variable types
         no_col_feature = Msg("Column feature should be selected.")
         cannot_aggregate = Msg("Some aggregations ({}) cannot be performed.")
+        renamed_vars = Msg("Some variables have been renamed "
+                           "to avoid duplicates.\n{}")
 
     settingsHandler = DomainContextHandler()
     row_feature = ContextSetting(None)
@@ -813,6 +844,7 @@ class OWPivot(OWWidget):
                 if domain.variables[0] in model else model[2]
 
     def commit(self):
+        self.Warning.renamed_vars.clear()
         if self.pivot is None:
             self.Warning.no_col_feature.clear()
             if self.no_col_feature:
@@ -833,6 +865,9 @@ class OWPivot(OWWidget):
         summary = len(filtered_data) if filtered_data else self.info.NoOutput
         details = format_summary_details(filtered_data) if filtered_data else ""
         self.info.set_output_summary(summary, details)
+
+        if self.pivot.renamed:
+            self.Warning.renamed_vars(self.pivot.renamed)
 
     def _update_graph(self):
         self.table_view.clear()
