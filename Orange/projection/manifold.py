@@ -8,10 +8,6 @@ from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
 import sklearn.manifold as skl_manifold
 
-import openTSNE
-import openTSNE.affinity
-import openTSNE.initialization
-
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.distance import Distance, DistanceModel, Euclidean
@@ -21,9 +17,19 @@ from Orange.projection.base import TransformDomain, ComputeValueProjector
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
 
-# Disable t-SNE user warnings
-openTSNE.tsne.log.setLevel(logging.ERROR)
-openTSNE.affinity.log.setLevel(logging.ERROR)
+
+class _LazyTSNE:  # pragma: no cover
+    def __getattr__(self, attr):
+        # pylint: disable=import-outside-toplevel,redefined-outer-name,global-statement
+        global openTSNE
+        import openTSNE
+        # Disable t-SNE user warnings
+        openTSNE.tsne.log.setLevel(logging.ERROR)
+        openTSNE.affinity.log.setLevel(logging.ERROR)
+        return openTSNE.__dict__[attr]
+
+
+openTSNE = _LazyTSNE()
 
 
 def torgerson(distances, n_components=2, eigen_solver="auto"):
