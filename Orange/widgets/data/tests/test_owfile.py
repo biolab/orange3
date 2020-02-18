@@ -141,6 +141,22 @@ class TestOWFile(WidgetTest):
         data = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(data.domain["iris"], StringVariable)
 
+    def test_rename_duplicates(self):
+        self.open_dataset("iris")
+
+        idx = self.widget.domain_editor.model().createIndex(3, 0)
+        self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+        self.widget.domain_editor.model().setData(idx, "iris", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("iris (1)", data.domain)
+        self.assertIn("iris (2)", data.domain)
+        self.assertTrue(self.widget.Warning.renamed_vars.is_shown())
+
+        self.widget.domain_editor.model().setData(idx, "different iris", Qt.EditRole)
+        self.widget.apply_button.click()
+        self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+
     def test_variable_name_change(self):
         """
         Test whether the name of the variable is changed correctly by

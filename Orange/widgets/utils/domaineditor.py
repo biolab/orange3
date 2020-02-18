@@ -10,6 +10,7 @@ from AnyQt.QtWidgets import QComboBox, QTableView, QSizePolicy
 
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable, Domain
+from Orange.data.util import get_unique_names_duplicates
 from Orange.statistics.util import unique
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate
@@ -219,6 +220,8 @@ class DomainEditor(QTableView):
         self.place_delegate = PlaceDelegate(self, VarTableModel.places)
         self.setItemDelegateForColumn(Column.place, self.place_delegate)
 
+        self.renamed_variables = []
+
     @staticmethod
     def _is_missing(x):
         return str(x) in ("nan", "")
@@ -264,7 +267,7 @@ class DomainEditor(QTableView):
         """
         # Allow type-checking with type() instead of isinstance() for exact comparison
         # pylint: disable=unidiomatic-typecheck
-
+        self.renamed_variables = []
         variables = self.model().variables
         places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols
@@ -284,6 +287,13 @@ class DomainEditor(QTableView):
                          ((cl, Place.class_var) for cl in domain.class_vars),
                          ((mt, Place.meta) for mt in domain.metas)))):
             return domain, [data.X, data.Y, data.metas]
+
+        unique_names = get_unique_names_duplicates([var[0] for  var in variables])
+        for var, u in zip(variables, unique_names):
+            if var[0] != u:
+                self.renamed_variables.append(var[0])
+                var[0] = u
+        self.model().set_variables(variables)
 
         for (name, tpe, place, _, may_be_numeric), (orig_var, orig_plc) in \
                 zip(variables,
