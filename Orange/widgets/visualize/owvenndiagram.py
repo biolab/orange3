@@ -579,17 +579,17 @@ class OWVennDiagram(widget.OWWidget):
             dict_[key] = self.get_indices(table, selection)
         return dict_
 
-    def create_from_rows(self, relevant_keys, relevant_ids, selection=False):
+    def create_from_rows(self, relevant_ids, selection=False):
         var_dict = {}
         for atr_type in self.atr_types:
             container = {}
-            for table_key in relevant_keys:
+            for table_key in relevant_ids:
                 merge_vars = self.curry_merge(table_key, atr_type, relevant_ids, selection)
                 atrs = getattr(self.data[table_key].table.domain, atr_type)
                 container = reduce(merge_vars, atrs, container)
             var_dict[atr_type] = container
         if self.output_duplicates and not selection:
-            return self.extract_rowwise_duplicates(var_dict, relevant_ids, relevant_keys)
+            return self.extract_rowwise_duplicates(var_dict, relevant_ids)
         return self.extract_rowwise(var_dict, relevant_ids, selection)
 
     def expand_table(self, table, atrs, metas, cv):
@@ -611,7 +611,7 @@ class OWVennDiagram(widget.OWWidget):
             exp.append(array)
         return (*exp, ids)
 
-    def extract_rowwise_duplicates(self, var_dict, ids, relevant_keys):
+    def extract_rowwise_duplicates(self, var_dict, ids):
         all_ids = sorted(reduce(set.union, [set(val) for val in ids.values()], set()))
         sort_key = attrgetter("name")
         all_atrs = sorted(var_dict['attributes'], key=sort_key)
@@ -622,8 +622,8 @@ class OWVennDiagram(widget.OWWidget):
         new_table_ids = []
         for idx in all_ids:
             #iterate trough tables with same idx
-            for table_key in relevant_keys:
-                map_ = ids[table_key][idx]
+            for table_key, t_indices in ids.items():
+                map_ = t_indices[idx]
                 extracted = self.data[table_key].table[map_]
                 x, m, y, t_ids = self.expand_table(extracted, all_atrs, all_metas, all_cv)
                 all_x.append(x)
@@ -654,9 +654,9 @@ class OWVennDiagram(widget.OWWidget):
         if self.rowwise:
             selected_ids = self.get_indices_to_match_by(selected_keys, self.selection)
             annotated_ids = self.get_indices_to_match_by(self.data)
-            annotated = self.create_from_rows(self.data, annotated_ids, True)
+            annotated = self.create_from_rows(annotated_ids, True)
             if self.selected_items:
-                selected = self.create_from_rows(selected_keys, selected_ids, False)
+                selected = self.create_from_rows(selected_ids, False)
         else:
             annotated = self.create_from_columns(self.selected_items, self.data, False)
             if self.selected_items:
@@ -1376,7 +1376,7 @@ def arrays_equal(a, b, type_):
 def pad_columns(values, mask, l):
     #inflates columns with nans
     a = np.full((l, 1), np.nan, dtype=values.dtype)
-    a[mask] = values
+    a[mask] = values.reshape(-1, 1)
     return a
 
 def get_perm(ids, all_ids):
