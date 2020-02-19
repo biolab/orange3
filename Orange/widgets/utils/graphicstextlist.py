@@ -32,17 +32,16 @@ class TextListWidget(QGraphicsWidget):
             orientation: Qt.Orientation = Qt.Vertical,
             **kwargs: Any
     ) -> None:
-        sizePolicy = kwargs.pop(
-            "sizePolicy", None)  # type: Optional[QSizePolicy]
-        super().__init__(None, **kwargs)
-        self.setFlag(QGraphicsWidget.ItemClipsChildrenToShape, True)
         self.__items: List[str] = []
         self.__textitems: List[QGraphicsSimpleTextItem] = []
         self.__group: Optional[QGraphicsItemGroup] = None
         self.__spacing = 0
         self.__alignment = Qt.AlignmentFlag(alignment)
         self.__orientation = orientation
-
+        sizePolicy = kwargs.pop(
+            "sizePolicy", None)  # type: Optional[QSizePolicy]
+        super().__init__(None, **kwargs)
+        self.setFlag(QGraphicsWidget.ItemClipsChildrenToShape, True)
         sp = QSizePolicy(QSizePolicy.Preferred,
                          QSizePolicy.Preferred)
         sp.setWidthForHeight(True)
