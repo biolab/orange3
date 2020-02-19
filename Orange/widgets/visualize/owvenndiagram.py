@@ -606,7 +606,8 @@ class OWVennDiagram(widget.OWWidget):
             array = np.full((n, len(all_el)), np.nan)
             if cur_el:
                 perm = get_perm(cur_el, all_el)
-                b = getattr(table, atr_vals[atr_type])
+                b = getattr(table, atr_vals[atr_type]).reshape(len(array), len(perm))
+                array = array.astype(b.dtype, copy=False)
                 array[:, perm] = b
             exp.append(array)
         return (*exp, ids)
@@ -623,6 +624,8 @@ class OWVennDiagram(widget.OWWidget):
         for idx in all_ids:
             #iterate trough tables with same idx
             for table_key, t_indices in ids.items():
+                if idx not in t_indices:
+                    continue
                 map_ = t_indices[idx]
                 extracted = self.data[table_key].table[map_]
                 x, m, y, t_ids = self.expand_table(extracted, all_atrs, all_metas, all_cv)
@@ -1391,7 +1394,7 @@ if __name__ == "__main__":  # pragma: no cover
     # datasets = [(data, 1), (data, 2)]
 
     data = append_column(data, "M", StringVariable("Test"),
-                         np.arange(len(data)).reshape(-1, 1) % 30)
+                         (np.arange(len(data)).reshape(-1, 1) % 30).astype(str))
     res = ShuffleSplit(n_resamples=5, test_size=0.7, stratified=False)
     indices = iter(res.get_indices(data))
     datasets = []
