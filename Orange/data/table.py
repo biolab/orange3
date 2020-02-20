@@ -15,7 +15,7 @@ import numpy as np
 from Orange.misc.collections import frozendict
 from Orange.util import OrangeDeprecationWarning
 from scipy import sparse as sp
-from scipy.sparse import issparse
+from scipy.sparse import issparse, csc_matrix
 
 import Orange.data  # import for io.py
 from Orange.data import (
@@ -349,47 +349,80 @@ class Table(Sequence, Storage):
                     source._Y, row_indices,
                     [x - n_src_attrs for x in src_cols]))
 
-            # initialize final array & set `match_density` for columns
-            if is_sparse:
-                a = sp.dok_matrix((n_rows, len(src_cols)), dtype=dtype)
-                match_density = assure_column_sparse
-            else:
-                a = np.empty((n_rows, len(src_cols)), dtype=dtype)
-                match_density = assure_column_dense
+            # initialize arrays & set `match_density` for columns
+            # F-order enables faster writing to the array while accessing and
+            # matrix operations work with same speed (e.g. dot)
+            a = None if is_sparse else np.zeros(
+                (n_rows, len(src_cols)), order="F", dtype=dtype)
+            data = []
+            sp_col = []
+            sp_row = []
+            match_density = (
+                assure_column_sparse if is_sparse else assure_column_dense
+            )
+
+            # converting to csc before instead of each column is faster
+            # do not convert if not required
+            if any([isinstance(x, int) for x in src_cols]):
+                X = csc_matrix(source.X) if is_sparse else source.X
+                Y = csc_matrix(source._Y) if is_sparse else source._Y
 
             shared_cache = _thread_local.conversion_cache
             for i, col in enumerate(src_cols):
                 if col is None:
-                    a[:, i] = variables[i].Unknown
+                    col_array = match_density(
+                        np.full((n_rows, 1), variables[i].Unknown)
+                    )
                 elif not isinstance(col, Integral):
                     if isinstance(col, SharedComputeValue):
-                        shared, weakrefs = shared_cache.get((id(col.compute_shared), id(source)),
-                                                            (None, None))
+                        shared, weakrefs = shared_cache.get(
+                            (id(col.compute_shared), id(source)),
+                            (None, None)
+                        )
                         if shared is None or not valid_refs(weakrefs):
                             shared, _ = shared_cache[(id(col.compute_shared), id(source))] = \
                                 col.compute_shared(source), \
                                 (weakref.ref(col.compute_shared), weakref.ref(source))
 
                         if row_indices is not ...:
-                            a[:, i] = match_density(
+                            col_array = match_density(
                                 col(source, shared_data=shared)[row_indices])
                         else:
-                            a[:, i] = match_density(
+                            col_array = match_density(
                                 col(source, shared_data=shared))
                     else:
                         if row_indices is not ...:
-                            a[:, i] = match_density(col(source)[row_indices])
+                            col_array = match_density(col(source)[row_indices])
                         else:
-                            a[:, i] = match_density(col(source))
+                            col_array = match_density(col(source))
                 elif col < 0:
-                    a[:, i] = match_density(source.metas[row_indices, -1 - col])
+                    col_array = match_density(
+                        source.metas[row_indices, -1 - col]
+                    )
                 elif col < n_src_attrs:
-                    a[:, i] = match_density(source.X[row_indices, col])
+                    col_array = match_density(X[row_indices, col])
                 else:
-                    a[:, i] = match_density(
-                        source._Y[row_indices, col - n_src_attrs])
+                    col_array = match_density(
+                        Y[row_indices, col - n_src_attrs]
+                    )
+
+                if is_sparse:
+                    # col_array should be coo matrix
+                    data.append(col_array.data)
+                    sp_col.append(np.full(len(col_array.data), i))
+                    sp_row.append(col_array.indices)  # row indices should be same
+                else:
+                    a[:, i] = col_array
 
             if is_sparse:
+                # creating csr directly would need plenty of manual work which
+                # would probably slow down the process - conversion coo to csr
+                # is fast
+                a = sp.coo_matrix(
+                    (np.hstack(data), (np.hstack(sp_row), np.hstack(sp_col))),
+                    shape=(n_rows, len(src_cols)),
+                    dtype=dtype
+                )
                 a = a.tocsr()
 
             return a
