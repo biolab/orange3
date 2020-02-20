@@ -9,7 +9,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
-    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal)
+    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer)
 
 import Orange
 from Orange.evaluation import Results
@@ -72,6 +72,7 @@ class OWPredictions(OWWidget):
         self.predictors = {}  # type: Dict[object, PredictorSlot]
         self.class_values = []  # type: List[str]
         self._delegates = []
+        self.left_width = 10
 
         gui.listBox(self.controlArea, self, "selected_classes", "class_values",
                     box="Show probabibilities for",
@@ -111,6 +112,7 @@ class OWPredictions(OWWidget):
 
         self.splitter = QSplitter(
             orientation=Qt.Horizontal, childrenCollapsible=False, handleWidth=2)
+        self.splitter.splitterMoved.connect(self.splitter_resized)
         self.splitter.addWidget(self.predictionsview)
         self.splitter.addWidget(self.dataview)
 
@@ -470,22 +472,24 @@ class OWPredictions(OWWidget):
             self.predictionsview.setColumnHidden(col, False)
 
         self.predictionsview.resizeColumnsToContents()
-        self._update_spliter()
+        self._recompute_splitter_sizes()
         if self.predictionsview.model() is not None:
             self.predictionsview.model().setProbInd(self.selected_classes)
 
-    def _update_spliter(self):
+    def _recompute_splitter_sizes(self):
         if not self.data:
             return
+        view = self.predictionsview
+        self.left_width = \
+            view.horizontalHeader().length() + view.verticalHeader().width()
+        self._update_splitter()
 
-        def width(view):
-            h_header = view.horizontalHeader()
-            v_header = view.verticalHeader()
-            return h_header.length() + v_header.width()
-
-        w = width(self.predictionsview) + 4
+    def _update_splitter(self):
         w1, w2 = self.splitter.sizes()
-        self.splitter.setSizes([w, w1 + w2 - w])
+        self.splitter.setSizes([self.left_width, w1 + w2 - self.left_width])
+
+    def splitter_resized(self):
+        self.left_width = self.splitter.sizes()[0]
 
     def commit(self):
         self._commit_predictions()
@@ -589,6 +593,14 @@ class OWPredictions(OWWidget):
             self.report_paragraph('Info', text)
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_splitter()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(0, self._update_splitter)
 
 
 class PredictionsItemDelegate(QStyledItemDelegate):
