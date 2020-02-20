@@ -403,7 +403,7 @@ class TestOWTestLearners(WidgetTest):
         w = self.widget
         control = w.controls.comparison_criterion
         control.setCurrentText(score)
-        w.comparison_criterion = control.model().indexOf(score)
+        w.comparison_criterion = control.findText(score)
 
     def _set_three_majorities(self):
         w = self.widget

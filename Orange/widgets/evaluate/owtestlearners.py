@@ -39,7 +39,6 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.concurrent import ThreadExecutor, TaskState
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
-from orangewidget.utils.itemmodels import PyListModel
 
 log = logging.getLogger(__name__)
 
@@ -280,13 +279,12 @@ class OWTestLearners(OWWidget):
         self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
             self.cbox, self, "class_selection", items=[],
-            sendSelectedValue=True, valueType=str,
-            callback=self._on_target_class_changed,
+            sendSelectedValue=True, callback=self._on_target_class_changed,
             contentsLength=8)
 
         self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")
         gui.comboBox(
-            box, self, "comparison_criterion", model=PyListModel(),
+            box, self, "comparison_criterion",
             callback=self.update_comparison_table)
 
         hbox = gui.hBox(box)
@@ -491,12 +489,14 @@ class OWTestLearners(OWWidget):
             new_scorers = usable_scorers(self.data.domain.class_var)
         else:
             new_scorers = []
-        # Don't unnecessarily reset the model because this would always reset
-        # comparison_criterion; we alse set it explicitly, though, for clarity
+        # Don't unnecessarily reset the combo because this would always reset
+        # comparison_criterion; we also set it explicitly, though, for clarity
         if new_scorers != self.scorers:
             self.scorers = new_scorers
-            self.controls.comparison_criterion.model()[:] = \
-                [scorer.long_name or scorer.name for scorer in self.scorers]
+            combo = self.controls.comparison_criterion
+            combo.clear()
+            combo.addItems([scorer.long_name or scorer.name
+                            for scorer in self.scorers])
             self.comparison_criterion = 0
         if self.__pending_comparison_criterion is not None:
             # Check for the unlikely case that some scorers have been removed
