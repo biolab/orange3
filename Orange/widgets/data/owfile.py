@@ -124,16 +124,16 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         file_too_big = Msg("The file is too large to load automatically."
                            " Press Reload to load.")
         load_warning = Msg("Read warning:\n{}")
-        performance_warning = widget.Msg(
+        performance_warning = Msg(
             "Categorical variables with >100 values may decrease performance.")
         renamed_vars = Msg("Some variables have been renamed "
                            "to avoid duplicates.\n{}")
 
     class Error(widget.OWWidget.Error):
-        file_not_found = widget.Msg("File not found.")
-        missing_reader = widget.Msg("Missing reader.")
-        sheet_error = widget.Msg("Error listing available sheets.")
-        unknown = widget.Msg("Read error:\n{}")
+        file_not_found = Msg("File not found.")
+        missing_reader = Msg("Missing reader.")
+        sheet_error = Msg("Error listing available sheets.")
+        unknown = Msg("Read error:\n{}")
 
     class NoFileSelected:
         pass
@@ -484,7 +484,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         if self.data is None:
             table = None
         else:
-            domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
+            domain, cols, renamed = \
+                self.domain_editor.get_domain(self.data.domain, self.data,
+                                              deduplicate=True)
             if not (domain.variables or domain.metas):
                 table = None
             elif domain is self.data.domain:
@@ -496,8 +498,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 table.ids = np.array(self.data.ids)
                 table.attributes = getattr(self.data, 'attributes', {})
                 self._inspect_discrete_variables(domain)
-        if self.domain_editor.renamed_variables:
-            self.Warning.renamed_vars(', '.join(self.domain_editor.renamed_variables))
+            if renamed:
+                self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
 
         self.Outputs.data.send(table)
         self.apply_button.setEnabled(False)
