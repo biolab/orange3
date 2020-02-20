@@ -221,3 +221,32 @@ def get_unique_names_duplicates(proposed: list) -> list:
             name = unique_name
         names.append(name)
     return names
+
+
+def get_unique_names_domain(attributes, class_vars=(), metas=()):
+    """
+    Return de-duplicated names for variables for attributes, class_vars
+    and metas. If a name appears more than once, the function appends
+    indices in parentheses.
+
+    Args:
+        attributes (list of str): proposed names for attributes
+        class_vars (list of str): proposed names for class_vars
+        metas (list of str): proposed names for metas
+
+    Returns:
+        (attributes, class_vars, metas): new names
+        renamed: list of names renamed variables; names appear in order of
+            appearance in original lists; every name appears only once
+    """
+    all_names = list(chain(attributes, class_vars, metas))
+    unique_names = get_unique_names_duplicates(all_names)
+    # don't be smart with negative indices: they won't work for empty lists
+    attributes = unique_names[:len(attributes)]
+    class_vars = unique_names[len(attributes):len(attributes) + len(class_vars)]
+    metas = unique_names[len(attributes) + len(class_vars):]
+    # use dict, not set, to keep the order
+    renamed = list(dict.fromkeys(old
+                                 for old, new in zip(all_names, unique_names)
+                                 if new != old))
+    return (attributes, class_vars, metas), renamed
