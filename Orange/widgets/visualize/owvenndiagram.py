@@ -6,13 +6,13 @@ Venn Diagram Widget
 
 import math
 import unicodedata
-from collections import namedtuple, defaultdict, OrderedDict, Counter
-from itertools import count, compress
+from collections import namedtuple, defaultdict
+from itertools import compress, count
 from functools import reduce
+from operator import attrgetter
 from xml.sax.saxutils import escape
-from copy import deepcopy
 
-import numpy
+import numpy as np
 
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget,
@@ -24,10 +24,8 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
 from AnyQt.QtCore import pyqtSignal as Signal
 
-from Orange.data import (
-    Table, Domain, StringVariable, DiscreteVariable,
-    ContinuousVariable)
-from Orange.statistics import util
+from Orange.data import Table, Domain, StringVariable, RowInstance
+from Orange.data.util import get_unique_names_duplicates
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -61,10 +59,14 @@ class OWVennDiagram(widget.OWWidget):
         instances_mismatch = Msg("Data sets do not contain the same instances.")
         too_many_inputs = Msg("Venn diagram accepts at most five datasets.")
 
+    class Warning(widget.OWWidget.Warning):
+        renamed_vars = Msg("Some variables have been renamed "
+                           "to avoid duplicates.\n{}")
+
     selection: list
 
     settingsHandler = settings.DomainContextHandler()
-    # Selected disjoint subset indices
+    # Indices of selected disjoint areas
     selection = settings.Setting([], schema_only=True)
     #: Output unique items (one output row for every unique instance `key`)
     #: or preserve all duplicates in the output.
@@ -75,6 +77,9 @@ class OWVennDiagram(widget.OWWidget):
 
     want_control_area = False
     graph_name = "scene"
+    atr_types = ['attributes', 'metas', 'class_vars']
+    atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
+    row_vals = {'attributes': 'x', 'class_vars': 'y', 'metas': 'metas'}
 
     def __init__(self):
         super().__init__()
@@ -84,9 +89,15 @@ class OWVennDiagram(widget.OWWidget):
         # Input update is in progress
         self._inputUpdate = False
         # Input datasets in the order they were 'connected'.
-        self.data = OrderedDict()
+        self.data = {}
         # Extracted input item sets in the order they were 'connected'
-        self.itemsets = OrderedDict()
+        self.itemsets = {}
+        # A list with 2 ** len(self.data) elements that store item sets
+        # belonging to each area
+        self.disjoint = []
+        # A list with  2 ** len(self.data) elements that store keys of tables
+        # intersected in each area
+        self.area_keys = []
 
         # Main area view
         self.scene = QGraphicsScene()
@@ -117,8 +128,9 @@ class OWVennDiagram(widget.OWWidget):
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
         self.outputs_box = box = gui.vBox(controls, "Output")
-        self.output_duplicates_cb = gui.checkBox(box, self, "output_duplicates", "Output duplicates",
-                     callback=lambda: self.commit())
+        self.output_duplicates_cb = gui.checkBox(
+            box, self, "output_duplicates", "Output duplicates",
+            callback=lambda: self.commit())  # pylint: disable=unnecessary-lambda
         gui.auto_send(box, self, "autocommit", box=False)
         self.output_duplicates_cb.setEnabled(bool(self.rowwise))
         self._queue = []
@@ -180,7 +192,7 @@ class OWVennDiagram(widget.OWWidget):
             if not self.data_equality():
                 self.vennwidget.clear()
                 self.Error.instances_mismatch()
-                self.itemsets = OrderedDict()
+                self.itemsets = {}
                 return False
         return True
 
@@ -210,6 +222,10 @@ class OWVennDiagram(widget.OWWidget):
     def _setInterAttributes(self):
         model = self.controls.selected_feature.model()
         model[:] = [None] + list(self.intersectionStringAttrs())
+        if self.selected_feature:
+            names = (var.name for var in model if var)
+            if self.selected_feature.name not in names:
+                self.selected_feature = model[0]
 
     def _itemsForInput(self, key):
         """
@@ -219,9 +235,9 @@ class OWVennDiagram(widget.OWWidget):
         attr = self.selected_feature
         if attr:
             return [str(inst[attr]) for inst in table
-                    if not numpy.isnan(inst[attr])]
+                    if not np.isnan(inst[attr])]
         else:
-            return list(map(ComparableInstance, table))
+            return list(table.ids)
 
     def _createItemsets(self):
         """
@@ -250,21 +266,21 @@ class OWVennDiagram(widget.OWWidget):
 
         oldselection = list(self.selection)
 
-        #self.vennwidget.clear()
         n = len(self.itemsets)
-        self.disjoint = disjoint(set(s.items) for s in self.itemsets.values())
+        self.disjoint, self.area_keys = \
+            self.get_disjoint(set(s.items) for s in self.itemsets.values())
 
         vennitems = []
         colors = colorpalettes.LimitedDiscretePalette(n, force_hsv=True)
 
-        for i, (_, item) in enumerate(self.itemsets.items()):
-            count = len(set(item.items))
-            count_all = len(item.items)
-            if count != count_all:
+        for i, item in enumerate(self.itemsets.values()):
+            cnt = len(set(item.items))
+            cnt_all = len(item.items)
+            if cnt != cnt_all:
                 fmt = '{} <i>(all: {})</i>'
             else:
                 fmt = '{}'
-            counts = fmt.format(count, count_all)
+            counts = fmt.format(cnt, cnt_all)
             gr = VennSetItem(text=item.title, informativeText=counts)
             color = colors[i]
             color.setAlpha(100)
@@ -341,519 +357,350 @@ class OWVennDiagram(widget.OWWidget):
 
     def _on_itemTextEdited(self, index, text):
         text = str(text)
-        key = list(self.itemsets.keys())[index]
+        key = list(self.itemsets)[index]
         self.itemsets[key] = self.itemsets[key]._replace(title=text)
 
     def invalidateOutput(self):
         self.commit()
 
+    def merge_data(self, domain, values, ids=None):
+        X, metas, class_vars = None, None, None
+        renamed = []
+        for val in domain.values():
+            names = [var.name for var in val]
+            unique_names = get_unique_names_duplicates(names)
+            for n, u, idx, var in zip(names, unique_names, count(), val):
+                if n != u:
+                    val[idx] = var.copy(name=u)
+                    renamed.append(n)
+        if renamed:
+            self.Warning.renamed_vars(', '.join(renamed))
+        if 'attributes' in values:
+            X = np.hstack(values['attributes'])
+        if 'metas' in values:
+            metas = np.hstack(values['metas'])
+        if 'class_vars' in values:
+            class_vars = np.hstack(values['class_vars'])
+        table = Table.from_numpy(Domain(**domain), X, class_vars, metas)
+        if ids is not None:
+            table.ids = ids
+        return table
 
-    def extract_new_table(self, var_dict):
-        domain = defaultdict(lambda: [])
-        values = defaultdict(lambda: [])
-        atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
+    def extract_columnwise(self, var_dict, columns=None):
+        #for columns
+        domain = defaultdict(list)
+        values = defaultdict(list)
+        renamed = []
         for atr_type, vars_dict in var_dict.items():
             for var_name, var_data in vars_dict.items():
+                is_selected = bool(columns) and var_name.name in columns
                 if var_data[0]:
                     #columns are different, copy all, rename them
                     for var, table_key in var_data[1]:
-                        domain[atr_type].append(var.make('{}-{}{}'.format(var_name, self.data[table_key].table.name, table_key[0])))
-                        values[atr_type].append(getattr(self.data[table_key].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
+                        idx = list(self.data).index(table_key) + 1
+                        new_atr = var.copy(name=f'{var_name.name} ({idx})')
+                        if columns and atr_type == 'attributes':
+                            new_atr.attributes['Selected'] = is_selected
+                        domain[atr_type].append(new_atr)
+                        renamed.append(var_name.name)
+                        values[atr_type].append(getattr(self.data[table_key].table[:, var_name],
+                                                        self.atr_vals[atr_type])
+                                                .reshape(-1, 1))
                 else:
-                    domain[atr_type].append(deepcopy(var_data[1][0][0]))
-                    values[atr_type].append(getattr(self.data[var_data[1][0][1]].table[:, var_name], atr_vals[atr_type]).reshape(-1, 1))
-        X, metas, class_vars = None, None, None
-        if values['attributes']:
-            X = numpy.hstack(values['attributes'])
-        if values['metas']:
-            metas = numpy.hstack(values['metas'])
-        if values['class_vars']:
-            class_vars = numpy.hstack(values['class_vars'])
-        table = Table.from_numpy(Domain(**domain), X, class_vars, metas)
-        return table
+                    new_atr = var_data[1][0][0].copy()
+                    if columns and atr_type == 'attributes':
+                        new_atr.attributes['Selected'] = is_selected
+                    domain[atr_type].append(new_atr)
+                    values[atr_type].append(getattr(self.data[var_data[1][0][1]].table[:, var_name],
+                                                    self.atr_vals[atr_type])
+                                            .reshape(-1, 1))
+        if renamed:
+            self.Warning.renamed_vars(', '.join(renamed))
+        return self.merge_data(domain, values)
 
-    def create_from_columns(self, columns):
+    def curry_merge(self, table_key, atr_type, ids=None, selection=False):
+        if self.rowwise:
+            check_equality = self.arrays_equal_rows
+        else:
+            check_equality = self.arrays_equal_cols
+
+        def inner(new_atrs, atr):
+            """
+            Atrs - list of variables we wish to merge
+            new_atrs - dictionary where key is old var, val
+                is [is_different:bool, table_keys:list]), is_different is set to True,
+                if we are outputing duplicates, but the value is arbitrary
+            """
+            if atr in new_atrs:
+                if not selection and self.output_duplicates:
+                    #if output_duplicates, we just check if compute value is the same
+                    new_atrs[atr][0] = True
+                elif not new_atrs[atr][0]:
+                    for var, key in new_atrs[atr][1]:
+                        if not check_equality(table_key,
+                                              key,
+                                              atr.name,
+                                              self.atr_vals[atr_type],
+                                              type(var), ids):
+                            new_atrs[atr][0] = True
+                            break
+                new_atrs[atr][1].append((atr, table_key))
+            else:
+                new_atrs[atr] = [False, [(atr, table_key)]]
+            return new_atrs
+        return inner
+
+    def arrays_equal_rows(self, key1, key2, name, data_type, type_, ids):
+        #gets masks, compares same as cols
+        t1 = self.data[key1].table
+        t2 = self.data[key2].table
+        inter_val = set(ids[key1]) & set(ids[key2])
+        t1_inter = [ids[key1][val] for val in inter_val]
+        t2_inter = [ids[key2][val] for val in inter_val]
+        return arrays_equal(
+            getattr(t1[t1_inter, name],
+                    data_type).reshape(-1, 1),
+            getattr(t2[t2_inter, name],
+                    data_type).reshape(-1, 1),
+            type_)
+
+    def arrays_equal_cols(self, key1, key2, name, data_type, type_, _ids=None):
+        return arrays_equal(
+            getattr(self.data[key1].table[:, name],
+                    data_type),
+            getattr(self.data[key2].table[:, name],
+                    data_type),
+            type_)
+
+    def create_from_columns(self, columns, relevant_keys, get_selected):
         """
         Columns are duplicated only if values differ (even
         if only in order of values), origin table name and input slot is added to column name.
         """
-        if not self.data.keys():
-            return None, None
-        selected = None
-        atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
-
-        def merge_vars(new_atrs, atr):
-            """
-            Atrs - list of variables we wish to merge
-            new_atrs - dictionary where key is old name, val
-                is [is_different, [table_keys]])
-            """
-            if atr.name in new_atrs.keys():
-                if not new_atrs[atr.name][0]:
-                    for var, key in new_atrs[atr.name][1]:
-                        if not arrays_equal(
-                                getattr(self.data[table_key].table[:, atr.name],
-                                        atr_vals[atr_type]),
-                                getattr(self.data[key].table[:, atr.name],
-                                        atr_vals[atr_type]),
-                                type(var)):
-                            new_atrs[atr.name][0] = True
-                            break
-                new_atrs[atr.name][1].append((atr, table_key))
-            else:
-                new_atrs[atr.name] = [False, [(atr, table_key)]]
-            return new_atrs
-
-
-        annotated = None
-        atr_types = ['attributes', 'metas', 'class_vars']
-        if columns:
-            sel_dict = {atr_type:{} for atr_type in atr_types}
-            for table_key in self.data.keys():
-                table = self.data[table_key].table
-                if all(col in {atr.name for atr in table.domain.attributes} for col in columns):
-                    atrs = list(compress(table.domain.attributes, [col.name in columns for col in table.domain.attributes]))
-                    data_ = [atrs, getattr(table.domain, 'metas'), getattr(table.domain, 'class_vars')]
-                    for atr_type, data in zip(atr_types, data_):
-                        sel_dict[atr_type] = reduce(merge_vars, data, sel_dict[atr_type])
-            selected = self.extract_new_table(sel_dict)
-
         var_dict = {}
-        for atr_type in atr_types:
+        for atr_type in self.atr_types:
             container = {}
-            for table_key in self.data.keys():
+            for table_key in relevant_keys:
+                table = self.data[table_key].table
+                if atr_type == 'attributes':
+                    if get_selected:
+                        atrs = list(compress(table.domain.attributes,
+                                             [c.name in columns for c in table.domain.attributes]))
+                    else:
+                        atrs = getattr(table.domain, atr_type)
+                else:
+                    atrs = getattr(table.domain, atr_type)
+                merge_vars = self.curry_merge(table_key, atr_type)
+                container = reduce(merge_vars, atrs, container)
+            var_dict[atr_type] = container
+
+        if get_selected:
+            annotated = self.extract_columnwise(var_dict, None)
+        else:
+            annotated = self.extract_columnwise(var_dict, columns)
+
+        return annotated
+
+    def extract_rowwise(self, var_dict, ids=None, selection=False):
+        """
+        keys : ['attributes', 'metas', 'class_vars']
+        vals: new_atrs - dictionary where key is old name, val
+            is [is_different:bool, table_keys:list])
+        ids: dict with ids for each table
+        """
+        all_ids = sorted(reduce(set.union, [set(val) for val in ids.values()], set()))
+
+        permutations = {}
+        for table_key, dict_ in ids.items():
+            permutations[table_key] = get_perm(list(dict_), all_ids)
+
+        domain = defaultdict(list)
+        values = defaultdict(list)
+        renamed = []
+        for atr_type, vars_dict in var_dict.items():
+            for var_name, var_data in vars_dict.items():
+                different = var_data[0]
+                if different:
+                    # Columns are different, copy and rename them.
+                    # Renaming is done here to mark appropriately the source table.
+                    # Additional strange clashes are checked later in merge_data
+                    for var, table_key in var_data[1]:
+                        temp = self.data[table_key].table
+                        idx = list(self.data).index(table_key) + 1
+                        domain[atr_type].append(var.copy(name='{} ({})'.format(var_name, idx)))
+                        renamed.append(var_name.name)
+                        v = getattr(temp[list(ids[table_key].values()), var_name],
+                                    self.atr_vals[atr_type])
+                        perm = permutations[table_key]
+                        if len(v) < len(all_ids):
+                            values[atr_type].append(pad_columns(v, perm, len(all_ids)))
+                        else:
+                            values[atr_type].append(v[perm].reshape(-1, 1))
+                else:
+                    value = np.full((len(all_ids), 1), np.nan)
+                    domain[atr_type].append(var_data[1][0][0].copy())
+                    for _, table_key in var_data[1]:
+                        #different tables have different part of the same attribute vector
+                        perm = permutations[table_key]
+                        v = getattr(self.data[table_key].table[list(ids[table_key].values()),
+                                                               var_name],
+                                    self.atr_vals[atr_type]).reshape(-1, 1)
+                        value = value.astype(v.dtype, copy=False)
+                        value[perm] = v
+                    values[atr_type].append(value)
+
+        if renamed:
+            self.Warning.renamed_vars(', '.join(renamed))
+        idas = None if self.selected_feature else np.array(all_ids)
+        table = self.merge_data(domain, values, idas)
+        if selection:
+            mask = [idx in self.selected_items for idx in all_ids]
+            return create_annotated_table(table, mask)
+        return table
+
+    def get_indices(self, table, selection):
+        """Returns mappings of ids (be it row id or string) to indices in tables"""
+        if self.selected_feature:
+            if self.output_duplicates and selection:
+                items, inverse = np.unique(getattr(table[:, self.selected_feature], 'metas'),
+                                           return_inverse=True)
+                ids = [np.nonzero(inverse == idx)[0] for idx in range(len(items))]
+            else:
+                items, ids = np.unique(getattr(table[:, self.selected_feature], 'metas'),
+                                       return_index=True)
+
+        else:
+            items = table.ids
+            ids = range(len(table))
+
+        if selection:
+            return {item: idx for item, idx in zip(items, ids)
+                    if item in self.selected_items}
+
+        return dict(zip(items, ids))
+
+    def get_indices_to_match_by(self, relevant_keys, selection=False):
+        dict_ = {}
+        for key in relevant_keys:
+            table = self.data[key].table
+            dict_[key] = self.get_indices(table, selection)
+        return dict_
+
+    def create_from_rows(self, relevant_ids, selection=False):
+        var_dict = {}
+        for atr_type in self.atr_types:
+            container = {}
+            for table_key in relevant_ids:
+                merge_vars = self.curry_merge(table_key, atr_type, relevant_ids, selection)
                 atrs = getattr(self.data[table_key].table.domain, atr_type)
                 container = reduce(merge_vars, atrs, container)
             var_dict[atr_type] = container
-        annotated = self.extract_new_table(var_dict)
+        if self.output_duplicates and not selection:
+            return self.extract_rowwise_duplicates(var_dict, relevant_ids)
+        return self.extract_rowwise(var_dict, relevant_ids, selection)
 
-        for atr in annotated.domain.attributes:
-            #written in this form to allow for selected to be None
-            atr.attributes['Selected'] = not (not columns or not atr in selected.domain.attributes)
+    def expand_table(self, table, atrs, metas, cv):
+        exp = []
+        n = 1 if isinstance(table, RowInstance) else len(table)
+        if isinstance(table, RowInstance):
+            ids = table.id.reshape(-1, 1)
+            atr_vals = self.row_vals
+        else:
+            ids = table.ids.reshape(-1, 1)
+            atr_vals = self.atr_vals
+        for all_el, atr_type in zip([atrs, metas, cv], self.atr_types):
+            cur_el = getattr(table.domain, atr_type)
+            array = np.full((n, len(all_el)), np.nan)
+            if cur_el:
+                perm = get_perm(cur_el, all_el)
+                b = getattr(table, atr_vals[atr_type]).reshape(len(array), len(perm))
+                array = array.astype(b.dtype, copy=False)
+                array[:, perm] = b
+            exp.append(array)
+        return (*exp, ids)
 
-        return selected, annotated
+    def extract_rowwise_duplicates(self, var_dict, ids):
+        all_ids = sorted(reduce(set.union, [set(val) for val in ids.values()], set()))
+        sort_key = attrgetter("name")
+        all_atrs = sorted(var_dict['attributes'], key=sort_key)
+        all_metas = sorted(var_dict['metas'], key=sort_key)
+        all_cv = sorted(var_dict['class_vars'], key=sort_key)
 
+        all_x, all_y, all_m = [], [], []
+        new_table_ids = []
+        for idx in all_ids:
+            #iterate trough tables with same idx
+            for table_key, t_indices in ids.items():
+                if idx not in t_indices:
+                    continue
+                map_ = t_indices[idx]
+                extracted = self.data[table_key].table[map_]
+                # pylint: disable=unbalanced-tuple-unpacking
+                x, m, y, t_ids = self.expand_table(extracted, all_atrs, all_metas, all_cv)
+                all_x.append(x)
+                all_y.append(y)
+                all_m.append(m)
+                new_table_ids.append(t_ids)
+        domain = {'attributes': all_atrs, 'metas': all_metas, 'class_vars': all_cv}
+        values = {'attributes': [np.vstack(all_x)],
+                  'metas': [np.vstack(all_m)],
+                  'class_vars': [np.vstack(all_y)]}
+        return self.merge_data(domain, values, np.vstack(new_table_ids))
 
     def commit(self):
-
-        if not self.vennwidget.vennareas():
+        if not self.vennwidget.vennareas() or not self.data:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
 
-        selected_subsets = []
-        annotated_data = None
-        annotated_data_subsets = []
-        annotated_data_masks = []
-        selected_items = reduce(
+        self.selected_items = reduce(
             set.union, [self.disjoint[index] for index in self.selection],
             set()
         )
+        selected_keys = reduce(
+            set.union, [set(self.area_keys[area]) for area in self.selection],
+            set())
+        selected = None
 
-        if not self.rowwise:
-            selected_data, annotated_data = self.create_from_columns(list(selected_items))
-            self.Outputs.selected_data.send(selected_data)
-            self.Outputs.annotated_data.send(annotated_data)
-            return
-
-        def match(val):
-            if numpy.isnan(val):
-                return False
-            else:
-                return str(val) in selected_items
-
-        source_var = StringVariable("source")
-        item_id_var = StringVariable("item_id")
-
-        names = [itemset.title.strip() for itemset in self.itemsets.values()]
-        names = uniquify(names)
-
-        for i, input in enumerate(self.data.values()):
-            # cell vars are in functions that are only used in the loop
-            # pylint: disable=cell-var-from-loop
-            if not len(input.table):
-                continue
-            if self.selected_feature is not None:
-                mask = list(map(match,
-                                (inst[self.selected_feature]
-                                 for inst in input.table)))
-
-                def instance_key(inst):
-                    return str(inst[self.selected_feature])
-
-                def instance_key_all(inst):
-                    return str(inst[self.selected_feature])
-            else:
-                mask = [ComparableInstance(inst) in selected_items
-                        for inst in input.table]
-                _map = {item: str(i) for i, item in enumerate(selected_items)}
-                _map_all = {
-                    ComparableInstance(i):  hash(ComparableInstance(i))
-                    for i in input.table
-                }
-
-                def instance_key(inst):
-                    return _map[ComparableInstance(inst)]
-
-                def instance_key_all(inst):
-                    return _map_all[ComparableInstance(inst)]
-
-            mask = numpy.array(mask, dtype=bool)
-            subset = input.table[mask]
-
-            annotated_subset = input.table
-            id_column = numpy.array(
-                [[instance_key_all(inst)] for inst in annotated_subset])
-            source_names = numpy.array([[names[i]]] * len(annotated_subset))
-            annotated_subset = append_column(
-                annotated_subset, "M", source_var, source_names)
-            annotated_subset = append_column(
-                annotated_subset, "M", item_id_var, id_column)
-            annotated_data_subsets.append(annotated_subset)
-            annotated_data_masks.append(mask)
-
-            if not subset:
-                continue
-
-            # add columns with source table id and set id
-
-            if not self.output_duplicates:
-                id_column = numpy.array([[instance_key(inst)] for inst in subset],
-                                        dtype=object)
-                source_names = numpy.array([[names[i]]] * len(subset),
-                                           dtype=object)
-
-                subset = append_column(subset, "M", source_var, source_names)
-                subset = append_column(subset, "M", item_id_var, id_column)
-
-            selected_subsets.append(subset)
-
-        if selected_subsets and not self.output_duplicates:
-            data = table_concat(selected_subsets)
-            # Get all variables which are not constant between the same
-            # item set
-            varying = varying_between(data, item_id_var)
-
-            if source_var in varying:
-                varying.remove(source_var)
-
-            data = reshape_wide(data, varying, [item_id_var], [source_var])
-            # remove the temporary item set id column
-            data = drop_columns(data, [item_id_var])
-        elif selected_subsets:
-            data = table_concat(selected_subsets)
+        if self.rowwise:
+            if self.selected_items:
+                selected_ids = self.get_indices_to_match_by(
+                    selected_keys, bool(self.selection))
+                selected = self.create_from_rows(selected_ids, False)
+            annotated_ids = self.get_indices_to_match_by(self.data)
+            annotated = self.create_from_rows(annotated_ids, True)
         else:
-            data = None
+            annotated = self.create_from_columns(self.selected_items, self.data, False)
+            if self.selected_items:
+                selected = self.create_from_columns(self.selected_items, selected_keys, True)
 
-        if annotated_data_subsets:
-            annotated_data = table_concat(annotated_data_subsets)
-            indices = numpy.hstack(annotated_data_masks)
-            annotated_data = create_annotated_table(annotated_data, indices)
-            varying = varying_between(annotated_data, item_id_var)
-            if source_var in varying:
-                varying.remove(source_var)
-            annotated_data = reshape_wide(annotated_data, varying,
-                                          [item_id_var], [source_var])
-            annotated_data = drop_columns(annotated_data, [item_id_var])
-
-        self.Outputs.selected_data.send(data)
-        self.Outputs.annotated_data.send(annotated_data)
+        self.Outputs.selected_data.send(selected)
+        self.Outputs.annotated_data.send(annotated)
 
     def send_report(self):
         self.report_plot()
 
-
-def pairwise(iterable):
-    """
-    Return an iterator over consecutive pairs in `iterable`.
-
-    >>> list(pairwise([1, 2, 3, 4])
-    [(1, 2), (2, 3), (3, 4)]
-
-    """
-    it = iter(iterable)
-    try:
-        first = next(it)
-    except StopIteration:
-        return
-    for second in it:
-        yield first, second
-        first = second
-
-
-class ComparableInstance:
-    __slots__ = ["inst", "domain", "__hash"]
-
-    def __init__(self, inst):
-        self.inst = inst
-        self.domain = inst.domain
-        self.__hash = hash((self.inst.x.data.tobytes(),
-                            self.inst.y.data.tobytes()))
-
-    def __hash__(self):
-        return self.__hash
-
-    def __eq__(self, other):
-        # XXX: comparing NaN with different payload
-        return (isinstance(other, ComparableInstance)
-                and self.domain.variables == other.domain.variables
-                and self.inst.x.data.tobytes() == other.inst.x.data.tobytes()
-                and self.inst.y.data.tobytes() == other.inst.y.data.tobytes())
-
-    def __iter__(self):
-        return iter(self.inst)
-
-    def __repr__(self):
-        return repr(self.inst)
-
-    def __str__(self):
-        return str(self.inst)
-
-
-def table_concat(tables):
-    """
-    Concatenate a list of tables.
-
-    The resulting table will have a union of all attributes of `tables`.
-
-    """
-    attributes = []
-    class_vars = []
-    metas = []
-    variables_seen = set()
-
-    for table in tables:
-        attributes.extend(v for v in table.domain.attributes
-                          if v not in variables_seen)
-        variables_seen.update(table.domain.attributes)
-
-        class_vars.extend(v for v in table.domain.class_vars
-                          if v not in variables_seen)
-        variables_seen.update(table.domain.class_vars)
-
-        metas.extend(v for v in table.domain.metas
-                     if v not in variables_seen)
-
-        variables_seen.update(table.domain.metas)
-
-    domain = Domain(attributes, class_vars, metas)
-
-    tables = [tab.transform(domain) for tab in tables]
-    return tables[0].concatenate(tables, axis=0)
-
-
-def copy_descriptor(descriptor, newname=None):
-    """
-    Create a copy of the descriptor.
-
-    If newname is not None the new descriptor will have the same
-    name as the input.
-
-    """
-    if newname is None:
-        newname = descriptor.name
-
-    if descriptor.is_discrete:
-        newf = DiscreteVariable(
-            newname,
-            values=descriptor.values,
-            ordered=descriptor.ordered,
-        )
-        newf.attributes = dict(descriptor.attributes)
-
-    elif descriptor.is_continuous:
-        newf = ContinuousVariable(newname)
-        newf.number_of_decimals = descriptor.number_of_decimals
-        newf.attributes = dict(descriptor.attributes)
-
-    else:
-        newf = type(descriptor)(newname)
-        newf.attributes = dict(descriptor.attributes)
-
-    return newf
-
-
-def reshape_wide(table, varlist, idvarlist, groupvarlist):
-    """
-    Reshape a data table into a wide format.
-
-    :param Orange.data.Table table:
-        Source data table in long format.
-    :param varlist:
-        A list of variables to reshape.
-    :param list idvarlist:
-        A list of variables in `table` uniquely identifying multiple
-        records in `table` (i.e. subject id).
-    :param groupvarlist:
-        A list of variables differentiating multiple records
-        (i.e. conditions).
-
-    """
-    def inst_key(inst, vars):
-        return tuple(str(inst[var]) for var in vars)
-
-    instance_groups = [inst_key(inst, groupvarlist) for inst in table]
-    # A list of groups (for each element in a group the varying variable
-    # will be duplicated)
-    groups = list(unique(instance_groups))
-    group_names = [", ".join(group) for group in groups]
-
-    # A list of instance ids (subject ids)
-    # Each instance in the output will correspond to one of these ids)
-    instance_ids = [inst_key(inst, idvarlist) for inst in table]
-    ids = list(unique(instance_ids))
-
-    # an mapping from ids to an list of input instance indices
-    # each instance in this list belongs to one group (but not all
-    # groups need to be present).
-    inst_by_id = defaultdict(list)
-    id_by_inst = defaultdict(list)  # inverse mapping
-
-    for i in range(len(table)):
-        inst_id = instance_ids[i]
-        inst_by_id[inst_id].append(i)
-        id_by_inst[i] = inst_id
-
-    newfeatures = []
-    newclass_vars = []
-    newmetas = []
-    expanded_features = {}
-
-    def expanded(feat):
-        return [copy_descriptor(feat, newname="%s (%s)" %
-                                (feat.name, group_name))
-                for group_name in group_names]
-
-    for feat in table.domain.attributes:
-        if feat in varlist:
-            features = expanded(feat)
-            newfeatures.extend(features)
-            expanded_features[feat] = dict(zip(groups, features))
-        elif feat not in groupvarlist:
-            newfeatures.append(feat)
-
-    for feat in table.domain.class_vars:
-        if feat in varlist:
-            features = expanded(feat)
-            newclass_vars.extend(features)
-            expanded_features[feat] = dict(zip(groups, features))
-        elif feat not in groupvarlist:
-            newclass_vars.append(feat)
-
-    for meta in table.domain.metas:
-        if meta in varlist:
-            metas = expanded(meta)
-            newmetas.extend(metas)
-            expanded_features[meta] = dict(zip(groups, metas))
-        elif meta not in groupvarlist:
-            newmetas.append(meta)
-
-    domain = Domain(newfeatures, newclass_vars, newmetas)
-    prototype_indices = [inst_by_id[inst_id][0] for inst_id in ids]
-    newtable = table[prototype_indices].transform(domain)
-    in_expanded = set(f for efd in expanded_features.values() for f in efd.values())
-
-    # Fill-in nan values
-    for var in domain.variables + domain.metas:
-        if var in idvarlist or var in in_expanded:
-            continue
-        col, _ = newtable.get_column_view(var)
-        nan_indices = (i for i in col.nonzero()[0]
-                       if isinstance(col[i], str) or numpy.isnan(col[i]))
-        for i in nan_indices:
-            for ind in inst_by_id[ids[i]]:
-                if not numpy.isnan(table[ind, var]):
-                    newtable[i, var] = table[ind, var]
-                    break
-
-    # Fill-in expanded features if any
-    for i, inst_id in enumerate(ids):
-        indices = inst_by_id[inst_id]
-        instance = newtable[i]
-
-        for index in indices:
-            source_inst = table[index]
-            group = instance_groups[index]
-            for source_var in varlist:
-                newf = expanded_features[source_var][group]
-                instance[newf] = source_inst[source_var]
-
-    return newtable
-
-
-def unique(seq):
-    """
-    Return an iterator over unique items of `seq`.
-
-    .. note:: Items must be hashable.
-
-    """
-    seen = set()
-    for item in seq:
-        if item not in seen:
-            yield item
-            seen.add(item)
-
-
-def unique_non_nan(ar):
-    # metas have sometimes object dtype, but values are numpy floats
-    ar = ar.astype('float64')
-    uniq = numpy.unique(ar)
-    return uniq[~numpy.isnan(uniq)]
-
-
-def varying_between(table, idvar):
-    """
-    Return a list of all variables with non constant values between
-    groups defined by `idvar`.
-
-    """
-    all_possible = [var for var in table.domain.variables + table.domain.metas
-                    if var != idvar]
-    candidate_set = set(all_possible)
-
-    idmap = group_table_indices(table, idvar)
-
-    varying = set()
-    for indices in idmap.values():
-        subset = table[indices]
-        for var in list(candidate_set):
-            column, _ = subset.get_column_view(var)
-            with numpy.errstate(invalid="ignore"):  # nans are removed below
-                values = util.unique(column)
-
-            if not var.is_string:
-                values = unique_non_nan(values)
-
-            if len(values) > 1:
-                varying.add(var)
-                candidate_set.remove(var)
-
-    return sorted(varying, key=all_possible.index)
-
-
-def uniquify(strings):
-    """
-    Return a list of unique strings.
-
-    The string at i'th position will have the same prefix as strings[i]
-    with an appended suffix to make the item unique (if necessary).
-
-    >>> uniquify(["cat", "dog", "cat"])
-    ["cat 1", "dog", "cat 2"]
-
-    """
-    counter = Counter(strings)
-    counts = defaultdict(count)
-    newstrings = []
-    for string in strings:
-        if counter[string] > 1:
-            newstrings.append(string + (" %i" % (next(counts[string]) + 1)))
-        else:
-            newstrings.append(string)
-
-    return newstrings
-
+    def get_disjoint(self, sets):
+        """
+        Return all disjoint subsets.
+        """
+        sets = list(sets)
+        n = len(sets)
+        disjoint_sets = [None] * (2 ** n)
+        included_tables = [None] * (2 ** n)
+        for i in range(2 ** n):
+            key = setkey(i, n)
+            included = [s for s, inc in zip(sets, key) if inc]
+            if included:
+                excluded = [s for s, inc in zip(sets, key) if not inc]
+                s = reduce(set.intersection, included)
+                s = reduce(set.difference, excluded, s)
+            else:
+                s = set()
+            disjoint_sets[i] = s
+            included_tables[i] = [k for k, inc in zip(self.data, key) if inc]
+
+        return disjoint_sets, included_tables
 
 def string_attributes(domain):
     """
@@ -861,41 +708,12 @@ def string_attributes(domain):
     """
     return [attr for attr in domain.variables + domain.metas if attr.is_string]
 
-
-def discrete_attributes(domain):
-    """
-    Return all discrete attributes from the domain.
-    """
-    return [attr for attr in domain.variables + domain.metas if attr.is_discrete]
-
-
 def source_attributes(domain):
     """
     Return all suitable attributes for the venn diagram.
     """
     return string_attributes(domain)  # + discrete_attributes(domain)
 
-def disjoint(sets):
-    """
-    Return all disjoint subsets.
-    """
-    sets = list(sets)
-    n = len(sets)
-    disjoint_sets = [None] * (2 ** n)
-    for i in range(2 ** n):
-        key = setkey(i, n)
-        included = [s for s, inc in zip(sets, key) if inc]
-        excluded = [s for s, inc in zip(sets, key) if not inc]
-        if any(included):
-            s = reduce(set.intersection, included)
-        else:
-            s = set()
-
-        s = reduce(set.difference, excluded, s)
-
-        disjoint_sets[i] = s
-
-    return disjoint_sets
 
 def disjoint_set_label(i, n, simplify=False):
     """
@@ -942,7 +760,7 @@ class VennIntersectionArea(QGraphicsPathItem):
         layout = self.text.document().documentLayout()
         layout.documentSizeChanged.connect(self._onLayoutChanged)
 
-        self._text = ""
+        self._text = text
         self._anchor = QPointF()
 
     def setText(self, text):
@@ -979,7 +797,7 @@ class VennIntersectionArea(QGraphicsPathItem):
     def mouseReleaseEvent(self, event):
         pass
 
-    def paint(self, painter, option, widget=None):
+    def paint(self, painter, option, _widget=None):
         painter.save()
         path = self.path()
         brush = QBrush(self.brush())
@@ -1072,13 +890,11 @@ class VennDiagram(QGraphicsWidget):
     def __init__(self, parent=None):
         super(VennDiagram, self).__init__(parent)
         self.shapeType = VennDiagram.Circle
-
-        self._setup()
-
-    def _setup(self):
         self._items = []
         self._vennareas = []
         self._textitems = []
+        self._subsettextitems = []
+        self._textanchors = []
 
     def item(self, index):
         return self._items[index]
@@ -1143,6 +959,8 @@ class VennDiagram(QGraphicsWidget):
         self._items = []
         self._vennareas = []
         self._textitems = []
+        self._subsettextitems = []
+        self._textanchors = []
 
         for item in items:
             item.setVisible(False)
@@ -1167,7 +985,7 @@ class VennDiagram(QGraphicsWidget):
         if not n:
             return
 
-        regions = venn_diagram(n, shape=self.shapeType)
+        regions = venn_diagram(n)
 
         # The y axis in Qt points downward
         transform = QTransform().scale(1, -1)
@@ -1409,9 +1227,9 @@ def bit_rot_left(x, y, bits=32):
 
 def rotate_point(p, angle):
     r = radians(angle)
-    R = numpy.array([[math.cos(r), -math.sin(r)],
-                     [math.sin(r), math.cos(r)]])
-    x, y = numpy.dot(R, p)
+    R = np.array([[math.cos(r), -math.sin(r)],
+                  [math.sin(r), math.cos(r)]])
+    x, y = np.dot(R, p)
     return (float(x), float(y))
 
 
@@ -1456,7 +1274,7 @@ def ellipse_path(center, a, b, rotation=0):
 # mayor/minor axis.
 
 
-def venn_diagram(n, shape=VennDiagram.Circle):
+def venn_diagram(n):
     if n < 1 or n > 5:
         raise ValueError()
 
@@ -1535,46 +1353,19 @@ def append_column(data, where, variable, column):
     metas = domain.metas
     if where == "X":
         attr = attr + (variable,)
-        X = numpy.hstack((X, column))
+        X = np.hstack((X, column))
     elif where == "Y":
         class_vars = class_vars + (variable,)
-        Y = numpy.hstack((Y, column))
+        Y = np.hstack((Y, column))
     elif where == "M":
         metas = metas + (variable,)
-        M = numpy.hstack((M, column))
+        M = np.hstack((M, column))
     else:
         raise ValueError
     domain = Domain(attr, class_vars, metas)
     new_data = data.transform(domain)
     new_data[:, variable] = column
     return new_data
-
-
-def drop_columns(data, columns):
-    columns = set(data.domain[col] for col in columns)
-
-    def filter_vars(vars_):
-        return tuple(var for var in vars_ if var not in columns)
-
-    domain = Domain(
-        filter_vars(data.domain.attributes),
-        filter_vars(data.domain.class_vars),
-        filter_vars(data.domain.metas)
-    )
-    return Table.from_table(domain, data)
-
-
-def group_table_indices(table, key_var):
-    """
-    Group table indices based on values of selected columns (`key_vars`).
-
-    Return a dictionary mapping all unique value combinations (keys)
-    into a list of indices in the table where they are present.
-    """
-    groups = defaultdict(list)
-    for i, inst in enumerate(table):
-        groups[str(inst[key_var])].append(i)
-    return groups
 
 def arrays_equal(a, b, type_):
     """
@@ -1586,32 +1377,47 @@ def arrays_equal(a, b, type_):
     if a is None or b is None:
         return False
     if type_ is not StringVariable:
-        if not numpy.all(numpy.isnan(a) == numpy.isnan(b)):
-            return False
-        return numpy.all(a[numpy.logical_not(numpy.isnan(a))] == b[numpy.logical_not(numpy.isnan(b))])
+        nana = np.isnan(a)
+        nanb = np.isnan(b)
+        return np.all(nana == nanb) and np.all(a[~nana] == b[~nanb])
     else:
-        if not(a == b).all():
-            return False
-        return True
+        return np.all(a == b)
 
-if __name__ == "__main__":  # pragma: no cover
+def pad_columns(values, mask, l):
+    #inflates columns with nans
+    a = np.full((l, 1), np.nan, dtype=values.dtype)
+    a[mask] = values.reshape(-1, 1)
+    return a
+
+def get_perm(ids, all_ids):
+    return [all_ids.index(el) for el in ids if el in all_ids]
+
+
+def main():  # pragma: no cover
+    # pylint: disable=import-outside-toplevel
     from Orange.evaluation import ShuffleSplit
 
     data = Table("brown-selected")
-    # data1 = Orange.data.Table("brown-selected")
-    # datasets = [(data, 1), (data, 2)]
 
-    data = append_column(data, "M", StringVariable("Test"),
-                         numpy.arange(len(data)).reshape(-1, 1) % 30)
-    res = ShuffleSplit(n_resamples=5, test_size=0.7, stratified=False)
-    indices = iter(res.get_indices(data))
-    datasets = []
-    for i in range(1, 6):
-        sample, _ = next(indices)
-        data1 = data[sample]
-        data1.name = chr(ord("A") + i)
-        datasets.append((data1, i))
+    if not "test_rows":  # change to `if not "test_rows" to test columns
+        data = append_column(data, "M", StringVariable("Test"),
+                             (np.arange(len(data)).reshape(-1, 1) % 30).astype(str))
+        res = ShuffleSplit(n_resamples=5, test_size=0.7, stratified=False)
+        indices = iter(res.get_indices(data))
+        datasets = []
+        for i in range(1, 6):
+            sample, _ = next(indices)
+            data1 = data[sample]
+            data1.name = chr(ord("A") + i)
+            datasets.append((data1, i))
+    else:
+        domain = data.domain
+        data1 = data.transform(Domain(domain.attributes[:15], domain.class_var))
+        data2 = data.transform(Domain(domain.attributes[10:], domain.class_var))
+        datasets = [(data1, 1), (data2, 2)]
 
     WidgetPreview(OWVennDiagram).run(setData=datasets)
 
-    indices = iter(res.indices)
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

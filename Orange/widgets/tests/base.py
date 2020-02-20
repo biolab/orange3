@@ -488,9 +488,10 @@ class WidgetOutputsTestMixin:
     _compare_selected_annotated_domains.
     """
 
-    def init(self):
+    def init(self, same_table_attributes=True):
         self.data = Table("iris")
         self.same_input_output_domain = True
+        self.same_table_attributes = same_table_attributes
 
     def test_outputs(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.signal_name, self.signal_data)
@@ -516,12 +517,14 @@ class WidgetOutputsTestMixin:
                          self.same_input_output_domain)
         np.testing.assert_array_equal(selected.X[:, :n_attr],
                                       self.data.X[selected_indices])
-        self.assertEqual(selected.attributes, self.data.attributes)
+        if self.same_table_attributes:
+            self.assertEqual(selected.attributes, self.data.attributes)
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
-        self.assertEqual(annotated.attributes, self.data.attributes)
+        if self.same_table_attributes:
+            self.assertEqual(annotated.attributes, self.data.attributes)
 
         # compare selected and annotated data domains
         self._compare_selected_annotated_domains(selected, annotated)
