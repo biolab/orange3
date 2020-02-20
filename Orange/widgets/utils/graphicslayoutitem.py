@@ -1,3 +1,4 @@
+from fractions import Fraction
 from typing import Optional
 
 from AnyQt.QtCore import Qt, QPointF, QRectF, QSizeF, QMarginsF
@@ -38,6 +39,7 @@ class SimpleLayoutItem(QGraphicsLayoutItem):
         "__resizeContents",
         "__aspectMode",
         "__transform",
+        "__scale",
     )
 
     def __init__(
@@ -57,6 +59,8 @@ class SimpleLayoutItem(QGraphicsLayoutItem):
         self.__resizeContents = resizeContents
         self.__aspectMode = aspectMode
         self.__transform = None  # type: Optional[QGraphicsScale]
+        self.__scale = (Fraction(1), Fraction(1))
+
         if resizeContents:
             self.__transform = QGraphicsScale()
             trs = item.transformations()
@@ -82,8 +86,9 @@ class SimpleLayoutItem(QGraphicsLayoutItem):
             size = brect.size()
             if scale is not None:
                 # undo the scaling
-                sx, sy = scale.xScale(), scale.yScale()
-                size = QSizeF(size.width() / sx, size.height() / sy)
+                sx, sy = self.__scale
+                size = QSizeF(float(Fraction(size.width()) / sx),
+                              float(Fraction(size.height()) / sy))
             if constraint != QSizeF(-1, -1):
                 size = scaled(size, constraint, self.__aspectMode)
             return size
@@ -104,10 +109,14 @@ class SimpleLayoutItem(QGraphicsLayoutItem):
             return
         itemsize = self.sizeHint(Qt.PreferredSize)
         scaledsize = scaled(itemsize, geom.size(), self.__aspectMode)
-        sx = scaledsize.width() / itemsize.width()
-        sy = scaledsize.height() / itemsize.height()
-        self.__transform.setXScale(sx)
-        self.__transform.setYScale(sy)
+        if not itemsize.isEmpty():
+            sx = Fraction(scaledsize.width()) / Fraction(itemsize.width())
+            sy = Fraction(scaledsize.height()) / Fraction(itemsize.height())
+        else:
+            sx = sy = Fraction(1)
+        self.__scale = (sx, sy)
+        self.__transform.setXScale(float(sx))
+        self.__transform.setYScale(float(sy))
 
     def __layout(self):
         item = self.item
