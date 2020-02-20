@@ -66,7 +66,7 @@ class OWVennDiagram(widget.OWWidget):
     selection: list
 
     settingsHandler = settings.DomainContextHandler()
-    # Selected disjoint subset indices
+    # Indices of selected disjoint areas
     selection = settings.Setting([], schema_only=True)
     #: Output unique items (one output row for every unique instance `key`)
     #: or preserve all duplicates in the output.
@@ -92,6 +92,12 @@ class OWVennDiagram(widget.OWWidget):
         self.data = {}
         # Extracted input item sets in the order they were 'connected'
         self.itemsets = {}
+        # A list with 2 ** len(self.data) elements that store item sets
+        # belonging to each area
+        self.disjoint = []
+        # A list with  2 ** len(self.data) elements that store keys of tables
+        # intersected in each area
+        self.area_keys = []
 
         # Main area view
         self.scene = QGraphicsScene()
@@ -122,8 +128,9 @@ class OWVennDiagram(widget.OWWidget):
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
         self.outputs_box = box = gui.vBox(controls, "Output")
-        self.output_duplicates_cb = gui.checkBox(box, self, "output_duplicates", "Output duplicates",
-                                                 callback=lambda: self.commit())
+        self.output_duplicates_cb = gui.checkBox(
+            box, self, "output_duplicates", "Output duplicates",
+            callback=lambda: self.commit())  # pylint: disable=unnecessary-lambda
         gui.auto_send(box, self, "autocommit", box=False)
         self.output_duplicates_cb.setEnabled(bool(self.rowwise))
         self._queue = []
@@ -266,14 +273,14 @@ class OWVennDiagram(widget.OWWidget):
         vennitems = []
         colors = colorpalette.ColorPaletteHSV(n)
 
-        for i, (_, item) in enumerate(self.itemsets.items()):
-            count = len(set(item.items))
-            count_all = len(item.items)
-            if count != count_all:
+        for i, item in enumerate(self.itemsets.values()):
+            cnt = len(set(item.items))
+            cnt_all = len(item.items)
+            if cnt != cnt_all:
                 fmt = '{} <i>(all: {})</i>'
             else:
                 fmt = '{}'
-            counts = fmt.format(count, count_all)
+            counts = fmt.format(cnt, cnt_all)
             gr = VennSetItem(text=item.title, informativeText=counts)
             color = colors[i]
             color.setAlpha(100)
@@ -457,7 +464,7 @@ class OWVennDiagram(widget.OWWidget):
                     data_type).reshape(-1, 1),
             type_)
 
-    def arrays_equal_cols(self, key1, key2, name, data_type, type_, ids=None):
+    def arrays_equal_cols(self, key1, key2, name, data_type, type_, _ids=None):
         return arrays_equal(
             getattr(self.data[key1].table[:, name],
                     data_type),
@@ -628,6 +635,7 @@ class OWVennDiagram(widget.OWWidget):
                     continue
                 map_ = t_indices[idx]
                 extracted = self.data[table_key].table[map_]
+                # pylint: disable=unbalanced-tuple-unpacking
                 x, m, y, t_ids = self.expand_table(extracted, all_atrs, all_metas, all_cv)
                 all_x.append(x)
                 all_y.append(y)
@@ -655,11 +663,12 @@ class OWVennDiagram(widget.OWWidget):
         selected = None
 
         if self.rowwise:
-            selected_ids = self.get_indices_to_match_by(selected_keys, self.selection)
+            if self.selected_items:
+                selected_ids = self.get_indices_to_match_by(
+                    selected_keys, bool(self.selection))
+                selected = self.create_from_rows(selected_ids, False)
             annotated_ids = self.get_indices_to_match_by(self.data)
             annotated = self.create_from_rows(annotated_ids, True)
-            if self.selected_items:
-                selected = self.create_from_rows(selected_ids, False)
         else:
             annotated = self.create_from_columns(self.selected_items, self.data, False)
             if self.selected_items:
@@ -682,14 +691,12 @@ class OWVennDiagram(widget.OWWidget):
         for i in range(2 ** n):
             key = setkey(i, n)
             included = [s for s, inc in zip(sets, key) if inc]
-            excluded = [s for s, inc in zip(sets, key) if not inc]
-            if any(included):
+            if included:
+                excluded = [s for s, inc in zip(sets, key) if not inc]
                 s = reduce(set.intersection, included)
+                s = reduce(set.difference, excluded, s)
             else:
                 s = set()
-
-            s = reduce(set.difference, excluded, s)
-
             disjoint_sets[i] = s
             included_tables[i] = [k for k, inc in zip(self.data, key) if inc]
 
@@ -753,7 +760,7 @@ class VennIntersectionArea(QGraphicsPathItem):
         layout = self.text.document().documentLayout()
         layout.documentSizeChanged.connect(self._onLayoutChanged)
 
-        self._text = ""
+        self._text = text
         self._anchor = QPointF()
 
     def setText(self, text):
@@ -790,7 +797,7 @@ class VennIntersectionArea(QGraphicsPathItem):
     def mouseReleaseEvent(self, event):
         pass
 
-    def paint(self, painter, option, widget=None):
+    def paint(self, painter, option, _widget=None):
         painter.save()
         path = self.path()
         brush = QBrush(self.brush())
@@ -883,13 +890,11 @@ class VennDiagram(QGraphicsWidget):
     def __init__(self, parent=None):
         super(VennDiagram, self).__init__(parent)
         self.shapeType = VennDiagram.Circle
-
-        self._setup()
-
-    def _setup(self):
         self._items = []
         self._vennareas = []
         self._textitems = []
+        self._subsettextitems = []
+        self._textanchors = []
 
     def item(self, index):
         return self._items[index]
@@ -954,6 +959,8 @@ class VennDiagram(QGraphicsWidget):
         self._items = []
         self._vennareas = []
         self._textitems = []
+        self._subsettextitems = []
+        self._textanchors = []
 
         for item in items:
             item.setVisible(False)
@@ -978,7 +985,7 @@ class VennDiagram(QGraphicsWidget):
         if not n:
             return
 
-        regions = venn_diagram(n, shape=self.shapeType)
+        regions = venn_diagram(n)
 
         # The y axis in Qt points downward
         transform = QTransform().scale(1, -1)
@@ -1267,7 +1274,7 @@ def ellipse_path(center, a, b, rotation=0):
 # mayor/minor axis.
 
 
-def venn_diagram(n, shape=VennDiagram.Circle):
+def venn_diagram(n):
     if n < 1 or n > 5:
         raise ValueError()
 
@@ -1386,24 +1393,31 @@ def get_perm(ids, all_ids):
     return [all_ids.index(el) for el in ids if el in all_ids]
 
 
-if __name__ == "__main__":  # pragma: no cover
+def main():  # pragma: no cover
+    # pylint: disable=import-outside-toplevel
     from Orange.evaluation import ShuffleSplit
 
     data = Table("brown-selected")
-    # data1 = Orange.data.Table("brown-selected")
-    # datasets = [(data, 1), (data, 2)]
 
-    data = append_column(data, "M", StringVariable("Test"),
-                         (np.arange(len(data)).reshape(-1, 1) % 30).astype(str))
-    res = ShuffleSplit(n_resamples=5, test_size=0.7, stratified=False)
-    indices = iter(res.get_indices(data))
-    datasets = []
-    for i in range(1, 6):
-        sample, _ = next(indices)
-        data1 = data[sample]
-        data1.name = chr(ord("A") + i)
-        datasets.append((data1, i))
+    if not "test_rows":  # change to `if not "test_rows" to test columns
+        data = append_column(data, "M", StringVariable("Test"),
+                             (np.arange(len(data)).reshape(-1, 1) % 30).astype(str))
+        res = ShuffleSplit(n_resamples=5, test_size=0.7, stratified=False)
+        indices = iter(res.get_indices(data))
+        datasets = []
+        for i in range(1, 6):
+            sample, _ = next(indices)
+            data1 = data[sample]
+            data1.name = chr(ord("A") + i)
+            datasets.append((data1, i))
+    else:
+        domain = data.domain
+        data1 = data.transform(Domain(domain.attributes[:15], domain.class_var))
+        data2 = data.transform(Domain(domain.attributes[10:], domain.class_var))
+        datasets = [(data1, 1), (data2, 2)]
 
     WidgetPreview(OWVennDiagram).run(setData=datasets)
 
-    indices = iter(res.indices)
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
