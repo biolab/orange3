@@ -2,8 +2,6 @@ from collections import OrderedDict
 import threading
 import textwrap
 
-from AnyQt.QtWidgets import QLayout
-
 from Orange.widgets import widget, gui
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
@@ -30,6 +28,7 @@ class OWDataInfo(widget.OWWidget):
         data = Input("Data", Table)
 
     want_main_area = False
+    resizing_enabled = False
 
     def __init__(self):
         super().__init__()
@@ -52,8 +51,6 @@ class OWDataInfo(widget.OWWidget):
         # override any minimum/fixed size set on `self`).
         self.targets = ""
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
-        self.layout().setSizeConstraint(QLayout.SetFixedSize)
-
 
     @Inputs.data
     def data(self, data):

@@ -75,6 +75,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     autocommit = Setting(True)       # type: bool
 
     want_main_area = False
+    resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
 
     class Error(OWWidget.Error):
@@ -118,7 +119,6 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         self.normalization_check.setEnabled(metric.supports_normalization)
 
         gui.auto_apply(self.controlArea, self, "autocommit")
-        self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
     @Inputs.data
     @check_sql_input

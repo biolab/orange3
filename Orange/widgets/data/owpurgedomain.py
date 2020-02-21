@@ -169,7 +169,7 @@ class OWPurgeDomain(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("car.tab")
+    data = Table.from_url("https://datasets.biolab.si/core/car.tab")
     subset = [inst for inst in data if inst["buying"] == "v-high"]
     subset = Table(data.domain, subset)
     # The "buying" should be removed and the class "y" reduced
