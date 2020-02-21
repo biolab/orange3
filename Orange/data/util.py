@@ -2,8 +2,8 @@
 Data-manipulation utilities.
 """
 import re
-from collections import Counter, defaultdict
-from itertools import chain
+from collections import Counter
+from itertools import chain, count
 from typing import Callable
 
 import numpy as np
@@ -155,8 +155,8 @@ def get_indices(names, name):
     :param name: str
     :return: list of indices
     """
-    return [int(a.group(2)) for x in names
-            for a in re.finditer(RE_FIND_INDEX.format(name), x)]
+    return [int(a.group(2)) for x in filter(None, names)
+            for a in re.finditer(RE_FIND_INDEX.format(re.escape(name)), x)]
 
 
 def get_unique_names(names, proposed):
@@ -203,26 +203,22 @@ def get_unique_names(names, proposed):
     return [f"{name} ({max_index})" for name in proposed]
 
 
-def get_unique_names_duplicates(proposed: list) -> list:
+def get_unique_names_duplicates(proposed: list, return_duplicated=False) -> list:
     """
     Returns list of unique names. If a name is duplicated, the
-    function appends the smallest available index in parentheses.
+    function appends the next available index in parentheses.
 
     For example, a proposed list of names `x`, `x` and `x (2)`
-    results in `x (1)`, `x (3)`, `x (2)`.
+    results in `x (3)`, `x (4)`, `x (2)`.
     """
-    counter = Counter(proposed)
-    index = defaultdict(int)
-    names = []
-    for name in proposed:
-        if name and counter[name] > 1:
-            unique_name = name
-            while unique_name in counter:
-                index[name] += 1
-                unique_name = f"{name} ({index[name]})"
-            name = unique_name
-        names.append(name)
-    return names
+    indices = {name: count(max(get_indices(proposed, name), default=0) + 1)
+               for name, cnt in Counter(proposed).items()
+               if name and cnt > 1}
+    new_names = [f"{name} ({next(indices[name])})" if name in indices else name
+                 for name in proposed]
+    if return_duplicated:
+        return new_names, list(indices)
+    return new_names
 
 
 def get_unique_names_domain(attributes, class_vars=(), metas=()):
