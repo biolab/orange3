@@ -2,6 +2,7 @@ import inspect
 import itertools
 from collections import Iterable
 import re
+import warnings
 
 import numpy as np
 import scipy
@@ -13,7 +14,8 @@ from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute, Normalize
 from Orange.statistics.util import all_nan
-from Orange.util import Reprable
+from Orange.util import Reprable, OrangeDeprecationWarning, wrap_callback, \
+    dummy_callback
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel",
            "ReprableWithPreprocessors"]
@@ -101,7 +103,7 @@ class Learner(ReprableWithPreprocessors):
         X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
         return self.fit(X, Y, W)
 
-    def __call__(self, data):
+    def __call__(self, data, progress_callback=None):
         if not self.check_learner_adequacy(data.domain):
             raise ValueError(self.learner_adequacy_err_msg)
 
@@ -110,12 +112,26 @@ class Learner(ReprableWithPreprocessors):
         if isinstance(data, Instance):
             data = Table(data.domain, [data])
         origdata = data
-        data = self.preprocess(data)
+
+        if progress_callback is None:
+            progress_callback = dummy_callback
+        progress_callback(0, "Preprocessing...")
+        try:
+            cb = wrap_callback(progress_callback, end=0.1)
+            data = self.preprocess(data, progress_callback=cb)
+        except TypeError:
+            data = self.preprocess(data)
+            warnings.warn("A keyword argument 'progress_callback' has been "
+                          "added to the preprocess() signature. Implementing "
+                          "the method without the argument is deprecated and "
+                          "will result in an error in the future.",
+                          OrangeDeprecationWarning)
 
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
             raise TypeError("%s doesn't support multiple class variables" %
                             self.__class__.__name__)
 
+        progress_callback(0.1, "Fitting...")
         model = self._fit_model(data)
         model.used_vals = [np.unique(y).astype(int) for y in data.Y[:, None].T]
         model.domain = data.domain
@@ -123,6 +139,7 @@ class Learner(ReprableWithPreprocessors):
         model.name = self.name
         model.original_domain = origdomain
         model.original_data = origdata
+        progress_callback(1)
         return model
 
     def _fit_model(self, data):
@@ -132,10 +149,15 @@ class Learner(ReprableWithPreprocessors):
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
             return self.fit(X, Y, W)
 
-    def preprocess(self, data):
+    def preprocess(self, data, progress_callback=None):
         """Apply the `preprocessors` to the data"""
-        for pp in self.active_preprocessors:
+        if progress_callback is None:
+            progress_callback = dummy_callback
+        n_pps = len(list(self.active_preprocessors))
+        for i, pp in enumerate(self.active_preprocessors):
+            progress_callback(i / n_pps)
             data = pp(data)
+        progress_callback(1)
         return data
 
     @property
@@ -468,8 +490,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
             raise TypeError("Wrapper does not define '__wraps__'")
         return params
 
-    def preprocess(self, data):
-        data = super().preprocess(data)
+    def preprocess(self, data, progress_callback=None):
+        data = super().preprocess(data, progress_callback)
 
         if any(v.is_discrete and len(v.values) > 2
                for v in data.domain.attributes):
@@ -478,8 +500,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
         return data
 
-    def __call__(self, data):
-        m = super().__call__(data)
+    def __call__(self, data, progress_callback=None):
+        m = super().__call__(data, progress_callback)
         m.params = self.params
         return m
 

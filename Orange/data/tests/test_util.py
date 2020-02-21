@@ -1,8 +1,8 @@
 import unittest
 
 from Orange.data import Domain, ContinuousVariable
-from Orange.data.util import \
-    get_unique_names, get_unique_names_duplicates, get_unique_names_domain
+from Orange.data.util import get_unique_names, get_unique_names_duplicates, \
+    get_unique_names_domain
 
 
 class TestGetUniqueNames(unittest.TestCase):

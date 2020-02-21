@@ -41,8 +41,8 @@ class Fitter(Learner):
             X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
             return learner.fit(X, Y, W)
 
-    def preprocess(self, data):
-        return self.get_learner(data).preprocess(data)
+    def preprocess(self, data, progress_callback=None):
+        return self.get_learner(data).preprocess(data, progress_callback)
 
     def get_learner(self, problem_type):
         """Get the learner for a given problem type.
