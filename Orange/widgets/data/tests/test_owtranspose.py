@@ -9,8 +9,8 @@ import numpy as np
 from Orange.data import Table
 from Orange.widgets.data.owtranspose import OWTranspose
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.tests import test_filename
-from orangewidget.widget import StateInfo
 
 
 class TestOWTranspose(WidgetTest):
@@ -179,9 +179,10 @@ class TestOWTranspose(WidgetTest):
 
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(int(StateInfo.format_number(len(data))))
+        input_sum.assert_called_with(len(data), format_summary_details(data))
         output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(int(StateInfo.format_number(len(output))))
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
 
         input_sum.reset_mock()
         output_sum.reset_mock()

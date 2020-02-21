@@ -3,6 +3,7 @@ from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets import gui
 from Orange.widgets.widget import Input, Output
@@ -71,8 +72,8 @@ class OWTranspose(OWWidget):
         self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
         self.apply_button.button.setAutoDefault(False)
 
-        self.info.set_output_summary(self.info.NoInput)
         self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         self.set_controls()
 
@@ -93,7 +94,7 @@ class OWTranspose(OWWidget):
             self.closeContext()
         self.data = data
         if data:
-            self.info.set_input_summary(len(data))
+            self.info.set_input_summary(len(data), format_summary_details(data))
         else:
             self.info.set_input_summary(self.info.NoInput)
         self.set_controls()
@@ -126,11 +127,12 @@ class OWTranspose(OWWidget):
                         self.Warning.duplicate_names(variable)
                 if self.data.domain.has_discrete_attributes():
                     self.Warning.discrete_attrs()
-                self.info.set_output_summary(len(transposed))
+                self.info.set_output_summary(len(transposed),
+                                             format_summary_details(transposed))
             except ValueError as e:
                 self.Error.value_error(e)
         else:
-            self.info.set_output_summary(self.info.NoInput)
+            self.info.set_output_summary(self.info.NoOutput)
         self.Outputs.data.send(transposed)
 
     def send_report(self):
