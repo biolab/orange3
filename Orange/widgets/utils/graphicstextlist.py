@@ -1,7 +1,8 @@
-from typing import Optional, Union, Any, Iterable, List
+import math
+from typing import Optional, Union, Any, Iterable, List, Sequence
 
 from AnyQt.QtCore import Qt, QSizeF, QEvent, QMarginsF
-from AnyQt.QtGui import QFontMetrics
+from AnyQt.QtGui import QFont, QFontMetricsF, QFontInfo
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
     QGraphicsItem, QGraphicsScene
@@ -9,6 +10,10 @@ from AnyQt.QtWidgets import (
 from .graphicslayoutitem import scaled
 
 __all__ = ["TextListWidget"]
+
+
+def apply_all(iter, op):
+    for el in iter:  op(el)
 
 
 class TextListWidget(QGraphicsWidget):
@@ -30,6 +35,7 @@ class TextListWidget(QGraphicsWidget):
             items: Iterable[str] = (),
             alignment: Union[Qt.AlignmentFlag, Qt.Alignment] = Qt.AlignLeading,
             orientation: Qt.Orientation = Qt.Vertical,
+            autoScale=False,
             **kwargs: Any
     ) -> None:
         self.__items: List[str] = []
@@ -38,6 +44,9 @@ class TextListWidget(QGraphicsWidget):
         self.__spacing = 0
         self.__alignment = Qt.AlignmentFlag(alignment)
         self.__orientation = orientation
+        self.__autoScale = autoScale
+        # The effective font when autoScale is in effect
+        self.__effectiveFont = QFont()
         sizePolicy = kwargs.pop(
             "sizePolicy", None)  # type: Optional[QSizePolicy]
         super().__init__(None, **kwargs)
@@ -134,7 +143,7 @@ class TextListWidget(QGraphicsWidget):
 
     def __naturalsh(self) -> QSizeF:
         """Return the natural size hint (preferred sh with no constraints)."""
-        fm = QFontMetrics(self.font())
+        fm = QFontMetricsF(self.font())
         spacing = self.__spacing
         N = len(self.__items)
         width = max((fm.width(text) for text in self.__items),
@@ -154,9 +163,11 @@ class TextListWidget(QGraphicsWidget):
     def changeEvent(self, event):
         if event.type() == QEvent.FontChange:
             self.updateGeometry()
-            font = self.font()
-            for item in self.__textitems:
-                item.setFont(font)
+            if self.__autoScale:
+                self.__layout()
+            else:
+                apply_all(self.__textitems, lambda it: it.setFont(self.font()))
+
         elif event.type() == QEvent.PaletteChange:
             palette = self.palette()
             brush = palette.brush(palette.Text)
@@ -205,22 +216,33 @@ class TextListWidget(QGraphicsWidget):
             return
 
         assert self.__group is not None
+        font = self.font()
+        fm = QFontMetricsF(font)
 
-        fm = QFontMetrics(self.font())
-        naturalheight = fm.height()
-        cell_height = (crect.height() - (N - 1) * spacing) / N
+        fontheight = fm.height()
+        # the available vertical space
+        vspace = crect.height() - (N - 1) * spacing
+        cell_height = vspace / N
 
-        if cell_height > naturalheight and N > 1:
-            cell_height = naturalheight
+        if cell_height > fontheight and N > 1:
+            # use font height, adjust (widen) spacing.
+            cell_height = fontheight
             spacing = (crect.height() - N * cell_height) / N
+        elif self.__autoScale:
+            # find a smaller font size to fit the height
+            psize = effective_point_size_for_height(font, cell_height)
+            font.setPointSizeF(psize)
+            fm = QFontMetricsF(font)
+            # print(fontheight, cell_height, f"-> ({psize})", fm.height())
+            fontheight = fm.height()
 
         advance = cell_height + spacing
         if align_vertical == Qt.AlignTop:
             align_dy = 0.
         elif align_vertical == Qt.AlignVCenter:
-            align_dy = advance / 2.0 - naturalheight / 2.0
+            align_dy = advance / 2.0 - fontheight / 2.0
         else:
-            align_dy = advance - naturalheight
+            align_dy = advance - fontheight
 
         if align_horizontal == Qt.AlignLeft:
             for i, item in enumerate(self.__textitems):
@@ -237,6 +259,11 @@ class TextListWidget(QGraphicsWidget):
                     crect.right() - item.boundingRect().width(),
                     crect.top() + i * advance + align_dy
                 )
+
+        if self.__autoScale and self.__effectiveFont != font:
+            self.__effectiveFont = font
+            for it in self.__textitems:
+                it.setFont(font)
 
         if self.__orientation == Qt.Vertical:
             self.__group.setRotation(0)
@@ -257,3 +284,36 @@ class TextListWidget(QGraphicsWidget):
         if self.__group is not None:
             remove([self.__group], self.scene())
             self.__group = None
+
+
+def effective_point_size_for_height(
+        font: QFont, height: float, step=0.25, minsize=1.
+) -> float:
+    font = QFont(font)
+    start = max(math.ceil(height), minsize)
+    font.setPointSizeF(start)
+    fix = 0
+    while QFontMetricsF(font).height() > height and start - fix > minsize:
+        fix += step
+        font.setPointSizeF(start - fix)
+    # return start - fix
+    return QFontInfo(font).pointSizeF()
+    # return font
+
+
+def effective_point_size_for_width(
+        font: QFont, width: float, items: Sequence[str], step=1.0, minsize=1.,
+) -> float:
+    start = max(math.ceil(width), minsize)
+    font.setPointSizeF(start)
+    fix = 0
+
+    def twidth(fm, items) -> float:
+        return max((fm.width(t) for t in items), default=0)
+
+    fm = QFontMetricsF(font)
+
+    while twidth(fm, items) > width and start - fix >= minsize:
+        fix += step
+        font.setPointSizeF(start - fix)
+    return QFontInfo(font).pointSizeF()
