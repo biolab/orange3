@@ -62,13 +62,14 @@ class VarTableModel(QAbstractTableModel):
     def rowCount(self, parent):
         return 0 if parent.isValid() else len(self.variables)
 
-    def columnCount(self, parent):
+    @staticmethod
+    def columnCount(parent):
         return 0 if parent.isValid() else Column.not_valid
 
     def data(self, index, role):
         row, col = index.row(), index.column()
         val = self.variables[row][col]
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             if col == Column.tpe:
                 return self.type2name[val]
             if col == Column.place:
@@ -91,6 +92,7 @@ class VarTableModel(QAbstractTableModel):
                 font = QFont()
                 font.setBold(True)
                 return font
+        return None
 
     def setData(self, index, value, role=Qt.EditRole):
         row, col = index.row(), index.column()
@@ -111,6 +113,7 @@ class VarTableModel(QAbstractTableModel):
             # Settings may change background colors
             self.dataChanged.emit(index.sibling(row, 0), index.sibling(row, 3))
             return True
+        return False
 
     def headerData(self, i, orientation, role=Qt.DisplayRole):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole and i < 4:
@@ -131,7 +134,7 @@ class ComboDelegate(HorizontalGridDelegate):
         self.view = view
         self.items = items
 
-    def createEditor(self, parent, option, index):
+    def createEditor(self, parent, _option, index):
         # This ugly hack closes the combo when the user selects an item
         class Combo(QComboBox):
             def __init__(self, *args):
@@ -146,6 +149,8 @@ class ComboDelegate(HorizontalGridDelegate):
                 super().showPopup(*args)
                 self.popup_shown = True
 
+            # Here, we need `self` from the closure
+            # pylint: disable=no-self-argument,attribute-defined-outside-init
             def hidePopup(me):
                 if me.popup_shown:
                     self.view.model().setData(
@@ -356,7 +361,7 @@ class DomainEditor(QTableView):
 
         # merge columns for X, Y and metas
         feats = cols[Place.feature]
-        X = self._merge(feats) if len(feats) else np.empty((len(data), 0))
+        X = self._merge(feats) if feats else np.empty((len(data), 0))
         Y = self._merge(cols[Place.class_var], force_dense=True)
         m = self._merge(cols[Place.meta], force_dense=True)
         domain = Domain(*places)
@@ -365,7 +370,8 @@ class DomainEditor(QTableView):
         else:
             return domain, [X, Y, m]
 
-    def _get_column(self, data, source_var, source_place):
+    @staticmethod
+    def _get_column(data, source_var, source_place):
         """ Extract column from data and preserve sparsity. """
         if source_place == Place.meta:
             col_data = data[:, source_var].metas

@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import Mock
 
 import numpy as np
 
@@ -8,7 +7,7 @@ from orangewidget.widget import OWBaseWidget
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable, Domain, Table
 from Orange.widgets.tests.base import GuiTest
-from Orange.widgets.utils.domaineditor import DomainEditor, Column, Place
+from Orange.widgets.utils.domaineditor import DomainEditor, Column
 
 
 class MockWidget(OWBaseWidget):

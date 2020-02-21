@@ -171,6 +171,12 @@ class TestOWFile(WidgetTest):
         data = self.get_output(self.widget.Outputs.data)
         self.assertIn("a", data.domain)
 
+        idx = self.widget.domain_editor.model().createIndex(3, 0)
+        self.widget.domain_editor.model().setData(idx, "d", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("d", data.domain)
+
         # rename and change to text
         idx = self.widget.domain_editor.model().createIndex(4, 0)
         self.widget.domain_editor.model().setData(idx, "b", Qt.EditRole)
@@ -265,6 +271,13 @@ class TestOWFile(WidgetTest):
         self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)
         self.widget.domain_editor.model().setData(idx, "", Qt.EditRole)
         self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)
+
+    def test_invalid_role_mode(self):
+        self.open_dataset("iris")
+        model = self.widget.domain_editor.model()
+        idx = model.createIndex(1, 0)
+        self.assertFalse(model.setData(idx, Qt.StatusTipRole, ""))
+        self.assertIsNone(model.data(idx, Qt.StatusTipRole))
 
     def test_context_match_includes_variable_values(self):
         file1 = """\
