@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+# pylint: disable=protected-access
 
 import sys
 import math
@@ -174,6 +175,20 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertTrue(math.isnan(var.to_val(None)))
         self.assertEqual(var.to_val(1), 1)
+
+    def test_val_from_str_add(self):
+        var = DiscreteVariable.make("a", values=["F", "M"])
+        self.assertTrue(math.isnan(var.val_from_str_add(None)))
+        self.assertEqual(var.val_from_str_add("M"), 1)
+        self.assertEqual(var.val_from_str_add("F"), 0)
+        self.assertEqual(var.values, ["F", "M"])
+        self.assertEqual(var.val_from_str_add("N"), 2)
+        self.assertEqual(var.values, ["F", "M", "N"])
+        self.assertEqual(var._value_index, {"F": 0, "M": 1, "N": 2})
+        self.assertEqual(var.val_from_str_add("M"), 1)
+        self.assertEqual(var.val_from_str_add("F"), 0)
+        self.assertEqual(var.val_from_str_add("N"), 2)
+
 
     def test_repr(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
@@ -365,7 +380,8 @@ class TestDiscreteVariable(VariableTest):
 
     def varcls_modified(self, name):
         var = super().varcls_modified(name)
-        var.values = ["A", "B"]
+        var.add_value("A")
+        var.add_value("B")
         var.ordered = True
         return var
 

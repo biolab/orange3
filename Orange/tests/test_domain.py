@@ -390,7 +390,7 @@ class TestDomainInit(unittest.TestCase):
                 (d, f, [1], [-2, 2], [0, 2, -1]),
                 (f, g, [], [], [-1, 0, -3]),
                 (g, h, [-2], [None, compute_value], [-1, compute_value, -3])):
-            to_domain = domain.get_conversion(conver)
+            to_domain = DomainConversion(conver, domain)
             self.assertIs(to_domain.source, conver)
             self.assertEqual(to_domain.attributes, attr)
             self.assertEqual(to_domain.class_vars, class_vars)
