@@ -416,6 +416,29 @@ class Reprable:
             name, ", ".join("{}={!r}".format(f, v) for f, _, v in self._reprable_items())
         )
 
+
+def wrap_callback(progress_callback, start=0, end=1):
+    """
+    Wraps a progress callback function to allocate it end-start proportion
+    of an execution time.
+
+    :param progress_callback: callable
+    :param start: float
+    :param end: float
+    :return: callable
+    """
+    @wraps(progress_callback)
+    def func(progress, *args, **kwargs):
+        adjusted_progress = start + progress * (end - start)
+        return progress_callback(adjusted_progress, *args, **kwargs)
+    return func
+
+
+def dummy_callback(*_, **__):
+    """ A dummy callable. """
+    return 1
+
+
 # For best result, keep this at the bottom
 __all__ = export_globals(globals(), __name__)
 

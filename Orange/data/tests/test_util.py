@@ -2,7 +2,7 @@ import unittest
 
 from Orange.data import Domain, ContinuousVariable
 from Orange.data.util import get_unique_names, get_unique_names_duplicates, \
-    get_unique_names_domain, progress_callback
+    get_unique_names_domain
 
 
 class TestGetUniqueNames(unittest.TestCase):
@@ -113,22 +113,6 @@ class TestGetUniqueNames(unittest.TestCase):
         self.assertEqual(classes, [])
         self.assertEqual(metas, [])
         self.assertEqual(renamed, [])
-
-
-class TestProgressCallback(unittest.TestCase):
-    def test_wrap(self):
-        def func(i):
-            return i
-
-        f = progress_callback(func, start=0, end=0.8)
-        self.assertEqual(f(0), 0)
-        self.assertEqual(round(f(0.1), 2), 0.08)
-        self.assertEqual(f(1), 0.8)
-
-        f = progress_callback(func, start=0.1, end=0.8)
-        self.assertEqual(f(0), 0.1)
-        self.assertEqual(f(0.1), 0.17)
-        self.assertEqual(f(1), 0.8)
 
 
 if __name__ == "__main__":
