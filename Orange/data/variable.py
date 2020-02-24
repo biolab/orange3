@@ -719,6 +719,8 @@ class DiscreteVariable(Variable):
         """
         if not isinstance(s, str):
             raise TypeError("values of DiscreteVariables must be strings")
+        if s in self._value_index:
+            return
         self._value_index[s] = len(self.values)
         self.values.append(s)
 

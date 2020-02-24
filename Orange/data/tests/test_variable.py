@@ -209,6 +209,12 @@ class TestDiscreteVariable(VariableTest):
         a = DiscreteVariable("foo", values=["a", "b", "c"])
         self.assertRaises(TypeError, a.add_value, 42)
 
+    def test_no_duplicated_values(self):
+        a = DiscreteVariable("foo", values=["a", "b", "c"])
+        a.add_value("b")
+        self.assertEqual(list(a.values), ["a", "b", "c"])
+        self.assertEqual(list(a._value_index), ["a", "b", "c"])
+
     def test_unpickle(self):
         d1 = DiscreteVariable("A", values=["two", "one"])
         s = pickle.dumps(d1)
