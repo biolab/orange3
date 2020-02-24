@@ -1,11 +1,11 @@
 import math
-from typing import Optional, Union, Any, Iterable, List, Sequence
+from typing import Optional, Union, Any, Iterable, List, Callable
 
 from AnyQt.QtCore import Qt, QSizeF, QEvent, QMarginsF
 from AnyQt.QtGui import QFont, QFontMetricsF, QFontInfo
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
-    QGraphicsItem, QGraphicsScene
+    QGraphicsItem, QGraphicsScene, QGraphicsSceneResizeEvent
 )
 from .graphicslayoutitem import scaled
 
@@ -47,6 +47,7 @@ class TextListWidget(QGraphicsWidget):
         self.__autoScale = autoScale
         # The effective font when autoScale is in effect
         self.__effectiveFont = QFont()
+        self.__widthCache = {}
         sizePolicy = kwargs.pop(
             "sizePolicy", None)  # type: Optional[QSizePolicy]
         super().__init__(None, **kwargs)
@@ -56,14 +57,14 @@ class TextListWidget(QGraphicsWidget):
         sp.setWidthForHeight(True)
         self.setSizePolicy(sp)
 
-        if items is not None:
-            self.setItems(items)
-
         if sizePolicy is not None:
             self.setSizePolicy(sizePolicy)
 
         if parent is not None:
             self.setParentItem(parent)
+
+        if items is not None:
+            self.setItems(items)
 
     def setItems(self, items: Iterable[str]) -> None:
         """
@@ -75,6 +76,7 @@ class TextListWidget(QGraphicsWidget):
         """
         self.__clear()
         self.__items = list(items)
+        self.__widthCache.clear()
         self.__setup()
         self.__layout()
         self.updateGeometry()
@@ -118,6 +120,7 @@ class TextListWidget(QGraphicsWidget):
         """
         self.__clear()
         self.__items = []
+        self.__widthCache.clear()
         self.updateGeometry()
 
     def count(self) -> int:
@@ -129,32 +132,65 @@ class TextListWidget(QGraphicsWidget):
     def sizeHint(self, which: Qt.SizeHint, constraint=QSizeF()) -> QSizeF:
         """Reimplemented."""
         if which == Qt.PreferredSize:
+            scale = self.__autoScale
+            size = self.size()
             sh = self.__naturalsh()
             if self.__orientation == Qt.Vertical:
                 if 0 < constraint.height() < sh.height():
                     sh = scaled(sh, constraint, Qt.KeepAspectRatioByExpanding)
+                elif scale and size.height() > 0:
+                    sh = scaled(sh, QSizeF(-1, size.height()), Qt.KeepAspectRatioByExpanding)
             else:
                 sh = sh.transposed()
                 if 0 < constraint.width() < sh.width():
                     sh = scaled(sh, constraint, Qt.KeepAspectRatioByExpanding)
+                elif scale and size.width() > 0:
+                    sh = scaled(sh, QSizeF(size.width(), -1), Qt.KeepAspectRatioByExpanding)
         else:
             sh = super().sizeHint(which, constraint)
         return sh
+
+    def __width_for_font(self, font: QFont) -> float:
+        """Return item width for the font"""
+        key = font.key()
+        if key in self.__widthCache:
+            return self.__widthCache[key]
+        fm = QFontMetricsF(font)
+        width = max((fm.width(text) for text in self.__items),
+                    default=0)
+        self.__widthCache[key] = width
+        return width
 
     def __naturalsh(self) -> QSizeF:
         """Return the natural size hint (preferred sh with no constraints)."""
         fm = QFontMetricsF(self.font())
         spacing = self.__spacing
         N = len(self.__items)
-        width = max((fm.width(text) for text in self.__items),
-                    default=0)
+        width = self.__width_for_font(self.font())
         height = N * fm.height() + max(N - 1, 0) * spacing
         return QSizeF(width, height)
 
+    def resizeEvent(self, event: QGraphicsSceneResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.__layout()
+        if not self.__autoScale:
+            return
+        # Be careful. We propagate current height/width up in sizeHint via
+        # fixed constraints. This can lead to infinite relayout.
+        old = event.oldSize()
+        new = event.newSize()
+        invalidate = False
+        if self.__orientation == Qt.Vertical:
+            if not math.isclose(old.height(), new.height(), rel_tol=1e-4):
+                invalidate = True
+        else:
+            if not math.isclose(old.width(), new.width(), rel_tol=1e-4):
+                invalidate = True
+        if invalidate:
+            self.updateGeometry()
+
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.LayoutRequest:
-            self.__layout()
-        elif event.type() == QEvent.GraphicsSceneResize:
             self.__layout()
         elif event.type() == QEvent.ContentsRectChange:
             self.__layout()
@@ -166,7 +202,8 @@ class TextListWidget(QGraphicsWidget):
             if self.__autoScale:
                 self.__layout()
             else:
-                apply_all(self.__textitems, lambda it: it.setFont(self.font()))
+                font = self.font()
+                apply_all(self.__textitems, lambda it: it.setFont(font))
 
         elif event.type() == QEvent.PaletteChange:
             palette = self.palette()
@@ -232,8 +269,10 @@ class TextListWidget(QGraphicsWidget):
             # find a smaller font size to fit the height
             psize = effective_point_size_for_height(font, cell_height)
             font.setPointSizeF(psize)
+            psize = effective_point_size_for_width(
+                font, crect.width(), self.__width_for_font)
+            font.setPointSizeF(psize)
             fm = QFontMetricsF(font)
-            # print(fontheight, cell_height, f"-> ({psize})", fm.height())
             fontheight = fm.height()
 
         advance = cell_height + spacing
@@ -293,27 +332,20 @@ def effective_point_size_for_height(
     start = max(math.ceil(height), minsize)
     font.setPointSizeF(start)
     fix = 0
-    while QFontMetricsF(font).height() > height and start - fix > minsize:
+    while QFontMetricsF(font).height() > height and start - (fix  + step) > minsize:
         fix += step
         font.setPointSizeF(start - fix)
-    # return start - fix
     return QFontInfo(font).pointSizeF()
-    # return font
 
 
 def effective_point_size_for_width(
-        font: QFont, width: float, items: Sequence[str], step=1.0, minsize=1.,
+        font: QFont, width: float, width_for_font: Callable[[QFont], float],
+        step=1.0, minsize=1.,
 ) -> float:
-    start = max(math.ceil(width), minsize)
+    start = max(QFontInfo(font).pointSizeF(), minsize)
     font.setPointSizeF(start)
     fix = 0
-
-    def twidth(fm, items) -> float:
-        return max((fm.width(t) for t in items), default=0)
-
-    fm = QFontMetricsF(font)
-
-    while twidth(fm, items) > width and start - fix >= minsize:
+    while width_for_font(font) > width and start - (fix + step) >= minsize:
         fix += step
         font.setPointSizeF(start - fix)
     return QFontInfo(font).pointSizeF()
