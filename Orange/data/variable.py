@@ -47,7 +47,7 @@ def is_discrete_values(values):
     ----
     Assumes consistent type of items of `values`.
     """
-    if not len(values):
+    if len(values) == 0:
         return None
     # If the first few values are, or can be converted to, floats,
     # the type is numeric
@@ -165,6 +165,7 @@ class Value(float):
         return self
 
     def __init__(self, _, __=Unknown):
+        # __new__ does the job, pylint: disable=super-init-not-called
         pass
 
     def __repr__(self):
@@ -176,8 +177,10 @@ class Value(float):
 
     def __eq__(self, other):
         if isinstance(self, Real) and isnan(self):
-            return (isinstance(other, Real) and isnan(other)
-                    or other in self.variable.unknown_str)
+            if isinstance(other, Real):
+                return isnan(other)
+            else:
+                return other in self.variable.unknown_str
         if isinstance(other, str):
             return self.variable.str_val(self) == other
         if isinstance(other, Value):
@@ -219,7 +222,9 @@ class Value(float):
         if self.variable.is_discrete:
             # It is not possible to hash the id and the domain value to the
             # same number as required by __eq__.
-            # hash(1) == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1)) == hash("green")
+            # hash(1)
+            # == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1))
+            # == hash("green")
             # User should hash directly ids or domain values instead.
             raise TypeError("unhashable type - cannot hash values of discrete variables!")
         if self._value is None:
@@ -242,6 +247,7 @@ class Value(float):
         return dict(value=getattr(self, '_value', None))
 
     def __setstate__(self, state):
+        # defined in __new__, pylint: disable=attribute-defined-outside-init
         self._value = state.get('value', None)
 
 
@@ -391,7 +397,8 @@ class Variable(Reprable, metaclass=VariableMeta):
     def is_time(self):
         return isinstance(self, TimeVariable)
 
-    def repr_val(self, val):
+    @staticmethod
+    def repr_val(val):
         """
         Return a textual representation of variable's value `val`. Argument
         `val` must be a float (for primitive variables) or an arbitrary
@@ -621,7 +628,7 @@ class DiscreteVariable(Variable):
                     value.data[nans] = 0
                     value.data[col] = mapping[value.data[col].astype(int)]
                     value.data[nans] = np.nan
-                    return
+                    return None
 
                 # Dense and CSC map a contiguous area
                 if isinstance(value, np.ndarray) and value.ndim == 2:
@@ -638,11 +645,11 @@ class DiscreteVariable(Variable):
                 col[nans] = 0
                 col[:] = mapping[col.astype(int)]
                 col[nans] = np.nan
-                return
+                return None
 
             # Mapping into a copy
             if isinstance(value, (int, float)):
-                return mapping[int(value)] if value == value else value
+                return value if np.isnan(value) else mapping[int(value)]
             if isinstance(value, str):
                 return mapping[other.values.index(value)]
             if isinstance(value, np.ndarray):
@@ -672,7 +679,7 @@ class DiscreteVariable(Variable):
                 value.data = mapper(value.data)
                 return value
             if isinstance(value, Iterable):
-                return type(value)(mapping[int(val)] if val == val else val
+                return type(value)(val if np.isnan(val) else mapping[int(val)]
                                    for val in value)
             raise ValueError(
                 f"invalid type for value(s): {type(value).__name__}")
@@ -758,6 +765,7 @@ class DiscreteVariable(Variable):
             __dict__
 
     def copy(self, compute_value=None, *, name=None, values=None, **_):
+        # pylint: disable=arguments-differ
         if values is not None and len(values) != len(self.values):
             raise ValueError(
                 "number of values must match the number of original values")
@@ -789,10 +797,10 @@ class StringVariable(Variable):
     @staticmethod
     def str_val(val):
         """Return a string representation of the value."""
-        if val is "":
+        if isinstance(val, str) and val == "":
             return "?"
         if isinstance(val, Value):
-            if val.value is "":
+            if not val.value:
                 return "?"
             val = val.value
         return str(val)
