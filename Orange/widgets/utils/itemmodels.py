@@ -11,8 +11,7 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
     Qt, QObject, QAbstractListModel, QModelIndex,
-    QItemSelectionModel
-)
+    QItemSelectionModel, QItemSelection)
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import (
@@ -676,6 +675,23 @@ def select_row(view, row):
     selmodel.select(view.model().index(row, 0),
                     QItemSelectionModel.ClearAndSelect |
                     QItemSelectionModel.Rows)
+
+
+def select_rows(view, row_indices, command=QItemSelectionModel.ClearAndSelect):
+    """
+    Select several rows in view.
+
+    :param QAbstractItemView view:
+    :param row_indices: Integer indices of rows to select.
+    :param command: QItemSelectionModel.SelectionFlags
+    """
+    selmodel = view.selectionModel()
+    model = view.model()
+    selection = QItemSelection()
+    for row in row_indices:
+        index = model.index(row, 0)
+        selection.select(index, index)
+    selmodel.select(selection, command | QItemSelectionModel.Rows)
 
 
 class ModelActionsWidget(QWidget):
