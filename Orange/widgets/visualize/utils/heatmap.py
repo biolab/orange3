@@ -30,8 +30,7 @@ from Orange.widgets.utils.graphicspixmapwidget import GraphicsPixmapWidget
 from Orange.widgets.utils.image import qimage_from_array
 
 from Orange.widgets.utils.graphicstextlist import TextListWidget
-from Orange.widgets.unsupervised.owhierarchicalclustering import \
-    DendrogramWidget
+from Orange.widgets.utils.dendrogram import DendrogramWidget
 
 
 _T1 = TypeVar("_T1")
