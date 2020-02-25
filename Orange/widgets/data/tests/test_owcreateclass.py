@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, unsubscriptable-object
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -10,6 +10,7 @@ from Orange.widgets.data.owcreateclass import (
     OWCreateClass,
     map_by_substring, ValueFromStringSubstring, ValueFromDiscreteSubstring)
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestHelpers(unittest.TestCase):
@@ -404,7 +405,25 @@ class TestOWCreateClass(WidgetTest):
             self.get_output(widget1.Outputs.data, widget=widget1).domain.class_var,
             self.get_output(widget2.Outputs.data, widget=widget2).domain.class_var
         )
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
 
+        data = self.zoo
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 if __name__ == "__main__":
     unittest.main()
