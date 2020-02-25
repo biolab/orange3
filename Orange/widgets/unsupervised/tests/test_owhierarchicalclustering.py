@@ -5,17 +5,14 @@ import warnings
 import numpy as np
 
 from AnyQt.QtCore import QPoint, Qt
-from AnyQt.QtWidgets import QGraphicsScene, QGraphicsView
 from AnyQt.QtTest import QTest
 
-from orangewidget.tests.base import GuiTest
 import Orange.misc
-from Orange.clustering import hierarchical
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
-    OWHierarchicalClustering, DendrogramWidget
+    OWHierarchicalClustering
 
 
 class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
@@ -173,54 +170,3 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.distances, self.distances, widget=w)
         ids_2 = self.get_output(w.Outputs.selected_data, widget=w).ids
         self.assertSequenceEqual(list(ids_1), list(ids_2))
-
-
-class TestDendrogramWidget(GuiTest):
-    def setUp(self) -> None:
-        super().setUp()
-        self.scene = QGraphicsScene()
-        self.view = QGraphicsView(self.scene)
-        self.widget = DendrogramWidget()
-        self.scene.addItem(self.widget)
-
-    def tearDown(self) -> None:
-        self.scene.clear()
-        del self.widget
-        del self.view
-        super().tearDown()
-
-    def test_widget(self):
-        w = self.widget
-
-        T = hierarchical.Tree
-        C = hierarchical.ClusterData
-        S = hierarchical.SingletonData
-
-        def t(h: float, left: T, right: T):
-            return T(C((left.value.first, right.value.last), h), (left, right))
-
-        def leaf(r, index):
-            return T(S((r, r + 1), 0.0, index))
-
-        T = hierarchical.Tree
-
-        w.set_root(t(0.0, leaf(0, 0), leaf(1, 1)))
-        w.resize(w.effectiveSizeHint(Qt.PreferredSize))
-        h = w.height_at(QPoint())
-        self.assertEqual(h, 0)
-        h = w.height_at(QPoint(10, 0))
-        self.assertEqual(h, 0)
-
-        self.assertEqual(w.pos_at_height(0).x(), w.rect().x())
-        self.assertEqual(w.pos_at_height(1).x(), w.rect().x())
-
-        height = np.finfo(float).eps
-        w.set_root(t(height, leaf(0, 0), leaf(1, 1)))
-
-        h = w.height_at(QPoint())
-        self.assertEqual(h, height)
-        h = w.height_at(QPoint(w.size().width(), 0))
-        self.assertEqual(h, 0)
-
-        self.assertEqual(w.pos_at_height(0).x(), w.rect().right())
-        self.assertEqual(w.pos_at_height(height).x(), w.rect().left())
