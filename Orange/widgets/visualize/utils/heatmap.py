@@ -29,7 +29,7 @@ from Orange.widgets.utils.graphicslayoutitem import SimpleLayoutItem, scaled
 from Orange.widgets.utils.graphicspixmapwidget import GraphicsPixmapWidget
 from Orange.widgets.utils.image import qimage_from_array
 
-from Orange.widgets.unsupervised.owdistancemap import TextList as TextListWidget
+from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
 
@@ -430,18 +430,19 @@ class HeatmapGridWidget(QGraphicsWidget):
             labelslist = TextListWidget(
                 items=labels, parent=self, orientation=Qt.Vertical,
                 alignment=Qt.AlignLeft | Qt.AlignVCenter,
-                sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Ignored)
+                sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Ignored),
+                autoScale=True,
+                objectName="row-labels-right"
             )
-            pm = QPixmap(5, rowitem.size)
-            pm.fill(Qt.darkMagenta)
+            pm = QPixmap(1, rowitem.size)
+            pm.fill(Qt.transparent)
             rowauxsidecolor = GraphicsPixmapWidget(
                 parent=self, visible=False,
                 scaleContents=True, aspectMode=Qt.IgnoreAspectRatio,
             )
             rowauxsidecolor.setVisible(False)
             grid.addItem(rowauxsidecolor, Row0 + i, RightLabelColumn - 1)
-
-            grid.addItem(labelslist, Row0 + i, RightLabelColumn, alignment=Qt.AlignLeft)
+            grid.addItem(labelslist, Row0 + i, RightLabelColumn, Qt.AlignLeft)
             row_annotation_widgets.append(labelslist)
             right_side_colors[i] = rowauxsidecolor
 
@@ -453,12 +454,11 @@ class HeatmapGridWidget(QGraphicsWidget):
                 items=labels, parent=self,
                 alignment=Qt.AlignLeft | Qt.AlignVCenter,
                 orientation=Qt.Horizontal,
-                visible=self.__columnLabelPosition & Position.Top
+                autoScale=True,
+                sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed),
+                visible=self.__columnLabelPosition & Position.Top,
+                objectName="column-labels-top",
             )
-            labelslist.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-            labelslist.setSizePolicy(QSizePolicy.Expanding,
-                                     QSizePolicy.Fixed)
-
             grid.addItem(labelslist, TopLabelsRow, Col0 + 2 * j + 1,
                          Qt.AlignBottom | Qt.AlignLeft)
             col_annotation_widgets.append(labelslist)
@@ -469,10 +469,11 @@ class HeatmapGridWidget(QGraphicsWidget):
                 items=labels, parent=self,
                 alignment=Qt.AlignRight | Qt.AlignVCenter,
                 orientation=Qt.Horizontal,
-                visible=self.__columnLabelPosition & Position.Bottom
+                autoScale=True,
+                sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed),
+                visible=self.__columnLabelPosition & Position.Bottom,
+                objectName="column-labels-bottom",
             )
-            labelslist.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
             grid.addItem(labelslist, BottomLabelsRow, Col0 + 2 * j + 1)
             col_annotation_widgets.append(labelslist)
             col_annotation_widgets_bottom.append(labelslist)
