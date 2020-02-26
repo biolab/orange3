@@ -31,7 +31,7 @@ from orangewidget.gui import (
     VisibleHeaderSectionContextEventFilter,
     checkButtonOffsetHint, toolButtonSizeHint, FloatSlider,
     ControlGetter, VerticalScrollArea, ProgressBar,
-    ControlledCallback, ControlledCallFront, connectControl,
+    ControlledCallback, ControlledCallFront, ValueCallback, connectControl,
 )
 # exposed for backcompat. Should not be imported from here, or not
 # imported at all
@@ -72,6 +72,7 @@ __all__ = [
     "BarRatioRole", "BarBrushRole", "SortOrderRole", "LinkRole",
     "BarItemDelegate", "IndicatorItemDelegate", "LinkStyledItemDelegate",
     "ColoredBarItemDelegate", "HorizontalGridDelegate", "VerticalItemDelegate",
+    "ValueCallback",
     # Defined here
     "createAttributePixmap", "attributeIconDict", "attributeItem",
     "listView", "ListViewWithSizeHint", "listBox", "OrangeListBox",
