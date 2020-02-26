@@ -247,6 +247,24 @@ class TestOWRank(WidgetTest):
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 8))
 
+    def test_no_class_data_learner_class_reg(self):
+        """
+        Check workflow with learners that can be both classifier
+        or regressor and data have no class variable. This test should not
+        fail.
+        """
+        data = Table.from_table(Domain(self.iris.domain.variables), self.iris)
+        random_forest = RandomForestLearner()
+        self.assertIsNone(data.domain.class_var)
+        self.send_signal(self.widget.Inputs.data, data)
+
+        with patch("Orange.widgets.data.owrank.log.error") as log:
+            self.send_signal(self.widget.Inputs.scorer, random_forest, 1)
+            log.assert_called()
+
+        self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
+                         (len(self.iris.domain.variables), 1))
+
     def test_scores_sorting(self):
         """Check clicking on header column orders scores in a different way"""
         self.send_signal(self.widget.Inputs.data, self.iris)
