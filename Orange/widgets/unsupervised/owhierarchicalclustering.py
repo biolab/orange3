@@ -1430,6 +1430,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             rect.setLeft(geom.left())
             return rect
         margin = 3
+        self.scene.setSceneRect(geom)
         self.view.setSceneRect(geom)
         self.view.setHeaderSceneRect(
             adjustLeft(self.top_axis.geometry()).adjusted(0, 0, 0, margin)
