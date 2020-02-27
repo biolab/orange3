@@ -43,6 +43,7 @@ from Orange.widgets.settings import Setting, ContextSetting
 class ScaleData:
     jitter_size = Setting(10)
     jitter_continuous = Setting(False)
+    a = 3
 
     def _reset_data(self):
         self.domain = None
