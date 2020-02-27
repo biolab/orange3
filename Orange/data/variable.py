@@ -606,9 +606,13 @@ class DiscreteVariable(Variable):
             raise TypeError("values of DiscreteVariables must be strings")
 
         super().__init__(name, compute_value, sparse=sparse)
-        self.values = values
+        self._values = values
         self._value_index = {value: i for i, value in enumerate(values)}
         self.ordered = ordered
+
+    @property
+    def values(self):
+        return self._values
 
     def get_mapping_from(self, other):
         return np.array(
@@ -730,8 +734,8 @@ class DiscreteVariable(Variable):
             raise TypeError("values of DiscreteVariables must be strings")
         if s in self._value_index:
             return
-        self._value_index[s] = len(self.values)
-        self.values = self.values + (s, )
+        self._value_index[s] = len(self._values)
+        self._values = self._values + (s, )
 
     def val_from_str_add(self, s):
         """
@@ -748,7 +752,7 @@ class DiscreteVariable(Variable):
         val = self._value_index.get(s)
         if val is None:
             self.add_value(s)
-            val = len(self.values) - 1
+            val = len(self._values) - 1
         return val
 
     def repr_val(self, val):
@@ -762,7 +766,7 @@ class DiscreteVariable(Variable):
         """
         if isnan(val):
             return "?"
-        return '{}'.format(self.values[int(val)])
+        return '{}'.format(self._values[int(val)])
 
     str_val = repr_val
 
@@ -770,9 +774,9 @@ class DiscreteVariable(Variable):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
         __dict__ = dict(self.__dict__)
-        __dict__.pop("values")
+        __dict__.pop("_values")
         return make_variable, (self.__class__, self._compute_value, self.name,
-                               self.values, self.ordered), \
+                               self._values, self.ordered), \
             __dict__
 
     def copy(self, compute_value=None, *, name=None, values=None, **_):
@@ -781,7 +785,7 @@ class DiscreteVariable(Variable):
             raise ValueError(
                 "number of values must match the number of original values")
         return super().copy(compute_value=compute_value, name=name,
-                            values=values or self.values, ordered=self.ordered)
+                            values=values or self._values, ordered=self.ordered)
 
 
 class StringVariable(Variable):

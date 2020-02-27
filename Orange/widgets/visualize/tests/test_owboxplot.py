@@ -81,7 +81,9 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         """Check widget with discrete data with missing values and group variable"""
         data = self.zoo
         data.X[:, 1] = np.nan
-        data.domain.attributes[1].values = []
+        # This is a test and does it at its own risk:
+        # pylint: disable=protected-access
+        data.domain.attributes[1]._values = []
         self.send_signal("Data", data)
         self.widget.controls.order_by_importance.setChecked(True)
         self._select_list_items(self.widget.controls.attribute)
@@ -92,7 +94,9 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         data = self.zoo
         data.domain.class_var = ContinuousVariable("cls")
         data.X[:, 1] = np.nan
-        data.domain.attributes[1].values = []
+        # This is a test and does it at its own risk:
+        # pylint: disable=protected-access
+        data.domain.attributes[1]._values = []
         self.send_signal("Data", data)
         self._select_list_items(self.widget.controls.attribute)
         self._select_list_items(self.widget.controls.group_var)
