@@ -576,6 +576,24 @@ class ContinuousVariable(Variable):
         return var
 
 
+class TupleList(tuple):
+    def __add__(self, other):
+        if isinstance(other, list):
+            warnings.warn(
+                "DiscreteVariable.values is a tuple; "
+                "support for adding a list will be dropped in Orange 3.27",
+                DeprecationWarning)
+            other = tuple(other)
+        return super().__add__(other)
+
+    def copy(self):
+        warnings.warn(
+            "DiscreteVariable.values is a tuple;"
+            "method copy  will be dropped in Orange 3.27",
+            DeprecationWarning)
+        return tuple(self)
+
+
 class DiscreteVariable(Variable):
     """
     Descriptor for symbolic, discrete variables. Values of discrete variables
@@ -601,7 +619,7 @@ class DiscreteVariable(Variable):
     def __init__(self, name="", values=(), ordered=False, compute_value=None,
                  *, sparse=False):
         """ Construct a discrete variable descriptor with the given values. """
-        values = tuple(values)  # some people (including me) pass a generator
+        values = TupleList(values)  # some people (including me) pass a generator
         if not all(isinstance(value, str) for value in values):
             raise TypeError("values of DiscreteVariables must be strings")
 
