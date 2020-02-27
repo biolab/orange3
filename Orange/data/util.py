@@ -4,7 +4,6 @@ Data-manipulation utilities.
 import re
 from collections import Counter, defaultdict
 from itertools import chain
-from typing import Callable
 
 import numpy as np
 import bottleneck as bn
@@ -119,33 +118,32 @@ def array_equal(a1, a2):
 def assure_array_dense(a):
     if sp.issparse(a):
         a = a.toarray()
-    return np.asarray(a)
+    return a
 
 
-def assure_array_sparse(a, sparse_class: Callable = sp.csc_matrix):
+def assure_array_sparse(a):
     if not sp.issparse(a):
         # since x can be a list, cast to np.array
         # since x can come from metas with string, cast to float
         a = np.asarray(a).astype(np.float)
-    return sparse_class(a)
+        return sp.csc_matrix(a)
+    return a
 
 
 def assure_column_sparse(a):
-    # if x of shape (n, ) is passed to csc_matrix constructor or
-    # sparse matrix with shape (1, n) is passed,
+    a = assure_array_sparse(a)
+    # if x of shape (n, ) is passed to csc_matrix constructor,
     # the resulting matrix is of shape (1, n) and hence we
     # need to transpose it to make it a column
-    if a.ndim == 1 or a.shape[0] == 1:
-        # csr matrix becomes csc when transposed
-        return assure_array_sparse(a, sparse_class=sp.csr_matrix).T
-    else:
-        return assure_array_sparse(a, sparse_class=sp.csc_matrix)
+    if a.shape[0] == 1:
+        a = a.T
+    return a
 
 
 def assure_column_dense(a):
     a = assure_array_dense(a)
-    # column assignments must be (n, )
-    return a.reshape(-1)
+    # column assignments must be of shape (n,) and not (n, 1)
+    return np.ravel(a)
 
 
 def get_indices(names, name):
