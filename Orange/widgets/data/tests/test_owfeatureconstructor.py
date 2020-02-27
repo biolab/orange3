@@ -39,7 +39,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
-        self.assertEqual(data.domain[name].values, list(values))
+        self.assertEqual(data.domain[name].values, values)
         for i in range(3):
             self.assertEqual(data[i * 50, name], values[i])
 

@@ -283,7 +283,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         nmodels = results.predicted.shape[0]
         self.headers = class_values + \
-                       [unicodedata.lookup("N-ARY SUMMATION")]
+                       (unicodedata.lookup("N-ARY SUMMATION"), )
 
         # NOTE: The 'learner_names' is set in 'Test Learners' widget.
         self.learners = getattr(

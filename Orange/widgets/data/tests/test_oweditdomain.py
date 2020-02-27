@@ -706,13 +706,13 @@ class TestReinterpretTransforms(TestCase):
                 [1, 0, 0, 0],
             ], dtype=float)
         )
-        self.assertEqual(tdomain["A"].values, ["a", "b", "c"])
-        self.assertEqual(tdomain["B"].values, ["0", "1", "2"])
-        self.assertEqual(tdomain["C"].values, ["0.0", "0.2", "0.25", "1.25"])
+        self.assertEqual(tdomain["A"].values, ("a", "b", "c"))
+        self.assertEqual(tdomain["B"].values, ("0", "1", "2"))
+        self.assertEqual(tdomain["C"].values, ("0.0", "0.2", "0.25", "1.25"))
         self.assertEqual(
             tdomain["D"].values,
-            ["1970-01-01 00:00:00", "1970-01-01 00:03:00",
-             "1970-01-01 00:06:00", "1970-01-01 00:12:00"]
+            ("1970-01-01 00:00:00", "1970-01-01 00:03:00",
+             "1970-01-01 00:06:00", "1970-01-01 00:12:00")
         )
 
     def test_as_continuous(self):

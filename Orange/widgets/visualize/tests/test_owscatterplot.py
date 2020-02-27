@@ -198,7 +198,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         np.testing.assert_equal(selected_groups(), np.zeros(5))
         sel_column[:5] = 1
         np.testing.assert_equal(annotated(), sel_column)
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes", ))
 
         # Shift-select 5:10; now we have groups 0:5 and 5:10
         with self.modifiers(Qt.ShiftModifier):
@@ -217,7 +217,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         sel_column[15:20] = 1
         np.testing.assert_equal(selectedx(), x[15:20])
         np.testing.assert_equal(selected_groups(), np.zeros(5))
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes"))
 
         # Alt-select (remove) 10:17; we have 17:20
         with self.modifiers(Qt.AltModifier):
@@ -226,7 +226,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         np.testing.assert_equal(selected_groups(), np.zeros(3))
         sel_column[15:17] = 0
         np.testing.assert_equal(annotated(), sel_column)
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes"))
 
         # Ctrl-Shift-select (add-to-last) 10:17; we have 17:25
         with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
@@ -235,7 +235,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         np.testing.assert_equal(selected_groups(), np.zeros(8))
         sel_column[20:25] = 1
         np.testing.assert_equal(annotated(), sel_column)
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes"))
 
         # Shift-select (add) 30:35; we have 17:25, 30:35
         with self.modifiers(Qt.ShiftModifier):

@@ -168,7 +168,7 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertIsInstance(var, DiscreteVariable)
         self.assertEqual(var.name, "a")
-        self.assertEqual(var.values, ["F", "M"])
+        self.assertEqual(var.values, ("F", "M"))
 
     def test_val_from_str(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
@@ -180,9 +180,9 @@ class TestDiscreteVariable(VariableTest):
         self.assertTrue(math.isnan(var.val_from_str_add(None)))
         self.assertEqual(var.val_from_str_add("M"), 1)
         self.assertEqual(var.val_from_str_add("F"), 0)
-        self.assertEqual(var.values, ["F", "M"])
+        self.assertEqual(var.values, ("F", "M"))
         self.assertEqual(var.val_from_str_add("N"), 2)
-        self.assertEqual(var.values, ["F", "M", "N"])
+        self.assertEqual(var.values, ("F", "M", "N"))
         self.assertEqual(var._value_index, {"F": 0, "M": 1, "N": 2})
         self.assertEqual(var.val_from_str_add("M"), 1)
         self.assertEqual(var.val_from_str_add("F"), 0)
@@ -193,16 +193,16 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'])")
+            "DiscreteVariable(name='a', values=('F', 'M'))")
         var.ordered = True
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'], ordered=True)")
+            "DiscreteVariable(name='a', values=('F', 'M'), ordered=True)")
 
         var = DiscreteVariable.make("a", values="1234567")
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['1', '2', '3', '4', '5', '6', '7'])")
+            "DiscreteVariable(name='a', values=('1', '2', '3', '4', '5', '6', '7'))")
 
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
@@ -395,20 +395,20 @@ class TestDiscreteVariable(VariableTest):
 
     def test_copy_checks_len_values(self):
         var = DiscreteVariable("gender", values=["F", "M"])
-        self.assertEqual(var.values, ["F", "M"])
+        self.assertEqual(var.values, ("F", "M"))
 
         self.assertRaises(ValueError, var.copy, values=["F", "M", "N"])
         self.assertRaises(ValueError, var.copy, values=["F"])
         self.assertRaises(ValueError, var.copy, values=[])
 
         var2 = var.copy()
-        self.assertEqual(var2.values, ["F", "M"])
+        self.assertEqual(var2.values, ("F", "M"))
 
         var2 = var.copy(values=None)
-        self.assertEqual(var2.values, ["F", "M"])
+        self.assertEqual(var2.values, ("F", "M"))
 
         var2 = var.copy(values=["W", "M"])
-        self.assertEqual(var2.values, ["W", "M"])
+        self.assertEqual(var2.values, ("W", "M"))
 
 
 @variabletest(ContinuousVariable)

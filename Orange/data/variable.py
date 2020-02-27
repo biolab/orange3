@@ -601,7 +601,7 @@ class DiscreteVariable(Variable):
     def __init__(self, name="", values=(), ordered=False, compute_value=None,
                  *, sparse=False):
         """ Construct a discrete variable descriptor with the given values. """
-        values = list(values)  # some people (including me) pass a generator
+        values = tuple(values)  # some people (including me) pass a generator
         if not all(isinstance(value, str) for value in values):
             raise TypeError("values of DiscreteVariables must be strings")
 
@@ -731,7 +731,7 @@ class DiscreteVariable(Variable):
         if s in self._value_index:
             return
         self._value_index[s] = len(self.values)
-        self.values.append(s)
+        self.values = self.values + (s, )
 
     def val_from_str_add(self, s):
         """
