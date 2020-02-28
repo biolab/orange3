@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,unsubscriptable-object
 import time
+from unittest.mock import Mock
 
 from AnyQt.QtCore import QLocale, Qt
 from AnyQt.QtTest import QTest
@@ -17,6 +18,7 @@ from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.data.filter import FilterContinuous, FilterString
 from Orange.widgets.tests.utils import simulate, override_locale
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.tests import test_filename
 from orangewidget.settings import VERSION_KEY
 
@@ -226,6 +228,30 @@ class TestOWSelectRows(WidgetTest):
 
         # Test saving of settings
         self.widget.settingsHandler.pack_data(self.widget)
+
+    def test_summary(self):
+        """Check if status bar displays correct input/output summary"""
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output("Matching Data")
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+
+        self.enterFilter(data.domain["iris"], "is", "Iris-setosa")
+        output = self.get_output("Matching Data")
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
     def test_output_filter(self):
         """
