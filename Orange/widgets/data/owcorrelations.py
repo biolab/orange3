@@ -25,6 +25,7 @@ from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg
 
@@ -292,6 +293,9 @@ class OWCorrelations(OWWidget):
         button_box = gui.hBox(self.mainArea)
         button_box.layout().addWidget(self.vizrank.button)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
     @staticmethod
     def sizeHint():
         return QSize(350, 400)
@@ -358,6 +362,10 @@ class OWCorrelations(OWWidget):
                     self.Warning.not_enough_vars()
                 else:
                     self.cont_data = SklImpute()(cont_data)
+            self.info.set_input_summary(len(data),
+                                        format_summary_details(data))
+        else:
+            self.info.set_input_summary(self.info.NoInput)
         self.set_feature_model()
         self.openContext(self.cont_data)
         self.apply()
@@ -380,8 +388,12 @@ class OWCorrelations(OWWidget):
             self.commit()
 
     def commit(self):
+        self.Outputs.data.send(self.data)
+        summary = len(self.data) if self.data else self.info.NoOutput
+        details = format_summary_details(self.data) if self.data else ""
+        self.info.set_output_summary(summary, details)
+
         if self.data is None or self.cont_data is None:
-            self.Outputs.data.send(self.data)
             self.Outputs.features.send(None)
             self.Outputs.correlations.send(None)
             return
@@ -401,7 +413,6 @@ class OWCorrelations(OWWidget):
         corr_table = Table(domain, x, metas=m)
         corr_table.name = "Correlations"
 
-        self.Outputs.data.send(self.data)
         # data has been imputed; send original attributes
         self.Outputs.features.send(AttributeList(
             [self.data.domain[name] for name, _ in self.selection]))
