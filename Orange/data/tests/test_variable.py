@@ -34,11 +34,10 @@ def is_on_path(name):
     -------
     found : bool
     """
-    for loader, name_, ispkg in pkgutil.iter_modules(sys.path):
+    for _, name_, _ in pkgutil.iter_modules(sys.path):
         if name == name_:
             return True
-    else:
-        return False
+    return False
 
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
@@ -210,6 +209,12 @@ class TestDiscreteVariable(VariableTest):
         a = DiscreteVariable("foo", values=["a", "b", "c"])
         self.assertRaises(TypeError, a.add_value, 42)
 
+    def test_no_duplicated_values(self):
+        a = DiscreteVariable("foo", values=["a", "b", "c"])
+        a.add_value("b")
+        self.assertEqual(list(a.values), ["a", "b", "c"])
+        self.assertEqual(list(a._value_index), ["a", "b", "c"])
+
     def test_unpickle(self):
         d1 = DiscreteVariable("A", values=["two", "one"])
         s = pickle.dumps(d1)
@@ -263,12 +268,15 @@ class TestDiscreteVariable(VariableTest):
 
         arr_list = list(arr)
         self.assertIsNot(mapper(arr_list), arr_list)
-        self.assertTrue(all(x == y or (x != x and y != y) for x, y in zip(
-            mapper(arr_list), [2, 2, 1, np.nan, 2, np.nan, np.nan])))
+        self.assertTrue(
+            all(x == y or (np.isnan(x) and np.isnan(y))
+                for x, y in zip(mapper(arr_list),
+                                [2, 2, 1, np.nan, 2, np.nan, np.nan])))
 
-        self.assertTrue(x == y or (x != x and y != y) for x, y in zip(
-            mapper(tuple(arr)),
-            (2, 2, 1, np.nan, 2, np.nan, np.nan)))
+        self.assertTrue(
+            x == y or (np.isnan(x) and np.isnan(y))
+            for x, y in zip(mapper(tuple(arr)),
+                            (2, 2, 1, np.nan, 2, np.nan, np.nan)))
 
         self.assertRaises(ValueError, mapper, object())
 
