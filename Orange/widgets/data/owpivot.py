@@ -25,6 +25,7 @@ from Orange.widgets.settings import (Setting, ContextSetting,
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -711,6 +712,9 @@ class OWPivot(OWWidget):
         gui.rubber(self.controlArea)
         gui.auto_apply(self.controlArea, self, "auto_commit")
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
     def __add_aggregation_controls(self):
         box = gui.vBox(self.controlArea, "Aggregations")
         for agg in self.AGGREGATIONS:
@@ -790,6 +794,10 @@ class OWPivot(OWWidget):
         self.clear_messages()
         if not self.data:
             self.table_view.clear()
+            self.info.set_input_summary(self.info.NoInput)
+        else:
+            self.info.set_input_summary(len(self.data),
+                                        format_summary_details(self.data))
 
     def init_attr_values(self):
         domain = self.data.domain if self.data and len(self.data) else None
@@ -817,9 +825,14 @@ class OWPivot(OWWidget):
         if self.skipped_aggs:
             self.Warning.cannot_aggregate(self.skipped_aggs)
         self._update_graph()
+        filtered_data = self.get_filtered_data()
         self.Outputs.grouped_data.send(self.pivot.group_table)
         self.Outputs.pivot_table.send(self.pivot.pivot_table)
-        self.Outputs.filtered_data.send(self.get_filtered_data())
+        self.Outputs.filtered_data.send(filtered_data)
+
+        summary = len(filtered_data) if filtered_data else self.info.NoOutput
+        details = format_summary_details(filtered_data) if filtered_data else ""
+        self.info.set_output_summary(summary, details)
 
     def _update_graph(self):
         self.table_view.clear()
