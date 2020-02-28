@@ -218,17 +218,17 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(list(a._value_index), ["a", "b", "c"])
 
     def test_tuple_list_warning(self):
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.27"):
+        if LooseVersion(Orange.version.short_version) >= LooseVersion("3.27"):
             self.fail("Remove class TupleList; replace it with tuple.")
 
         d1 = DiscreteVariable("A", values=("one", "two"))
         with self.assertWarns(DeprecationWarning):
-            val = d1.values + ("three", )
-        self.assertEqual(val, ("one", "two", "three"))
+            val = d1.values + ["three", ]
+        self.assertEqual(val, ["one", "two", "three"])
         with self.assertWarns(DeprecationWarning):
             val = d1.values.copy()
-        self.assertEqual(val, d1.values)
-        self.assertIsNot(val, d1.values)
+        self.assertIsInstance(val, list)
+        self.assertSequenceEqual(val, d1.values)
 
     def test_unpickle(self):
         d1 = DiscreteVariable("A", values=("two", "one"))

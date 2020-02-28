@@ -583,15 +583,15 @@ class TupleList(tuple):
                 "DiscreteVariable.values is a tuple; "
                 "support for adding a list will be dropped in Orange 3.27",
                 DeprecationWarning)
-            other = tuple(other)
+            return list(self) + other
         return super().__add__(other)
 
     def copy(self):
         warnings.warn(
             "DiscreteVariable.values is a tuple;"
-            "method copy  will be dropped in Orange 3.27",
+            "method copy will be dropped in Orange 3.27",
             DeprecationWarning)
-        return tuple(self)
+        return list(self)
 
 
 class DiscreteVariable(Variable):
@@ -752,8 +752,8 @@ class DiscreteVariable(Variable):
             raise TypeError("values of DiscreteVariables must be strings")
         if s in self._value_index:
             return
-        self._value_index[s] = len(self._values)
-        self._values = self._values + (s, )
+        self._value_index[s] = len(self.values)
+        self._values += (s, )
 
     def val_from_str_add(self, s):
         """
@@ -770,7 +770,7 @@ class DiscreteVariable(Variable):
         val = self._value_index.get(s)
         if val is None:
             self.add_value(s)
-            val = len(self._values) - 1
+            val = len(self.values) - 1
         return val
 
     def repr_val(self, val):
@@ -784,7 +784,7 @@ class DiscreteVariable(Variable):
         """
         if isnan(val):
             return "?"
-        return '{}'.format(self._values[int(val)])
+        return '{}'.format(self.values[int(val)])
 
     str_val = repr_val
 
@@ -794,7 +794,7 @@ class DiscreteVariable(Variable):
         __dict__ = dict(self.__dict__)
         __dict__.pop("_values")
         return make_variable, (self.__class__, self._compute_value, self.name,
-                               self._values, self.ordered), \
+                               self.values, self.ordered), \
             __dict__
 
     def copy(self, compute_value=None, *, name=None, values=None, **_):
@@ -803,7 +803,7 @@ class DiscreteVariable(Variable):
             raise ValueError(
                 "number of values must match the number of original values")
         return super().copy(compute_value=compute_value, name=name,
-                            values=values or self._values, ordered=self.ordered)
+                            values=values or self.values, ordered=self.ordered)
 
 
 class StringVariable(Variable):
