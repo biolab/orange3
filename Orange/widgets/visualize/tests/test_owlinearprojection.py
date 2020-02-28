@@ -73,7 +73,7 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         data = Table("iris")[:20]
         domain = data.domain
         domain = Domain(
-            attributes=domain.attributes[:4], class_vars=DiscreteVariable("class", values=["a"]))
+            attributes=domain.attributes[:4], class_vars=DiscreteVariable("class", values=("a", )))
         data = Table.from_numpy(domain=domain, X=data.X, Y=data.Y)
         self.assertTrue(w.radio_placement.buttons[1].isEnabled())
         self.send_signal(w.Inputs.data, data)

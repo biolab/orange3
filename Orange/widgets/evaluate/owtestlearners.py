@@ -1155,7 +1155,7 @@ def results_one_vs_rest(results, pos_index):
     value = results.domain.class_var.values[pos_index]
     class_var = Orange.data.DiscreteVariable(
         "I({}=={})".format(results.domain.class_var.name, value),
-        values=["False", "True"],
+        values=("False", "True"),
         compute_value=Indicator(results.domain.class_var, pos_index)
     )
     domain = Orange.data.Domain(

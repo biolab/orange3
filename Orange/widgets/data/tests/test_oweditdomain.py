@@ -212,7 +212,7 @@ class TestOWEditDomain(WidgetTest):
     def test_change_ordered(self):
         """Test categorical ordered flag change"""
         table = Table.from_domain(Domain(
-            [DiscreteVariable("A", values=["a", "b"], ordered=True)]))
+            [DiscreteVariable("A", values=("a", "b"), ordered=True)]))
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)
         self.assertTrue(output.domain[0].ordered)
@@ -641,8 +641,8 @@ class TestReinterpretTransforms(TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         domain = Domain([
-            DiscreteVariable("A", values=["a", "b", "c"]),
-            DiscreteVariable("B", values=["0", "1", "2"]),
+            DiscreteVariable("A", values=("a", "b", "c")),
+            DiscreteVariable("B", values=("0", "1", "2")),
             ContinuousVariable("C"),
             TimeVariable("D", have_time=True),
         ],

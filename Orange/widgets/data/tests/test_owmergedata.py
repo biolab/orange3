@@ -833,7 +833,7 @@ class TestOWMergeData(WidgetTest):
     def test_nonunique(self):
         widget = self.widget
         x = ContinuousVariable("x")
-        d = DiscreteVariable("d", values=list("abc"))
+        d = DiscreteVariable("d", values=tuple("abc"))
         domain = Domain([x, d], [])
         dataA = Table.from_numpy(
             domain, np.array([[1.0, 0], [1, 1], [2, 1]]))
@@ -905,7 +905,7 @@ class TestOWMergeData(WidgetTest):
     def test_invalide_pairs(self):
         widget = self.widget
         x = ContinuousVariable("x")
-        d = DiscreteVariable("d", values=list("abc"))
+        d = DiscreteVariable("d", values=tuple("abc"))
         domain = Domain([x, d], [])
         dataA = Table.from_numpy(
             domain, np.array([[1.0, 0], [1, 1], [2, 1]]))
@@ -959,7 +959,7 @@ class TestOWMergeData(WidgetTest):
 
     def test_duplicate_names(self):
         domain = Domain([ContinuousVariable("C1")],
-                        metas=[DiscreteVariable("Feature", values=["A", "B"])])
+                        metas=[DiscreteVariable("Feature", values=("A", "B"))])
         data = Table(domain, np.array([[1.], [0.]]),
                      metas=np.array([[1.], [0.]]))
         domain = Domain([ContinuousVariable("C1")],
@@ -984,7 +984,7 @@ class TestOWMergeData(WidgetTest):
                              ["A", "B (1)", "B (2)"])
 
     def test_keep_non_duplicate_variables_missing_rows(self):
-        c = DiscreteVariable("C", values=["a", "b", "c"])
+        c = DiscreteVariable("C", values=("a", "b", "c"))
         domain = Domain([ContinuousVariable("A"), ContinuousVariable("B"), c])
         data = Table(domain, np.array([[0., 0, 0], [1, 1, 1]]))
         extra_data = Table(domain, np.array([[0., 1, 1], [0, 1, 2]]))

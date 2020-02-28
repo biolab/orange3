@@ -31,8 +31,8 @@ class TestDiscreteDistribution(unittest.TestCase):
         self.data = data.Table.from_numpy(
             data.Domain(
                 attributes=[
-                    data.DiscreteVariable('rgb', values=['r', 'g', 'b', 'a']),
-                    data.DiscreteVariable('num', values=['1', '2', '3'], ordered=True),
+                    data.DiscreteVariable('rgb', values=('r', 'g', 'b', 'a')),
+                    data.DiscreteVariable('num', values=('1', '2', '3'), ordered=True),
                 ]
             ),
             X=np.array([
@@ -355,9 +355,9 @@ class TestClassDistribution(unittest.TestCase):
             data.Domain(
                 attributes=[data.ContinuousVariable('n1')],
                 class_vars=[
-                    data.DiscreteVariable('c1', values=['r', 'g', 'b', 'a']),
-                    data.DiscreteVariable('c2', values=['r', 'g', 'b', 'a']),
-                    data.DiscreteVariable('c3', values=['r', 'g', 'b', 'a']),
+                    data.DiscreteVariable('c1', values=('r', 'g', 'b', 'a')),
+                    data.DiscreteVariable('c2', values=('r', 'g', 'b', 'a')),
+                    data.DiscreteVariable('c3', values=('r', 'g', 'b', 'a')),
                 ]
             ),
             X=np.array([range(5)]).T,
@@ -429,7 +429,7 @@ class TestDomainDistribution(unittest.TestCase):
             self.assertEqual(computed.unknowns, n_all - sum_dist)
 
         domain = data.Domain(
-            [data.DiscreteVariable("d%i" % i, values=list("abc")) for i in range(10)] +
+            [data.DiscreteVariable("d%i" % i, values=tuple("abc")) for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)])
 
         # pylint: disable=bad-whitespace

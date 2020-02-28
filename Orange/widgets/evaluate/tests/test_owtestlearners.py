@@ -40,7 +40,7 @@ class TestOWTestLearners(WidgetTest):
 
         self.scores_domain = Domain(
             [ContinuousVariable("a"), ContinuousVariable("b")],
-            [DiscreteVariable("c", values=["y", "n"])])
+            [DiscreteVariable("c", values=("y", "n"))])
 
         self.scores_table_values = [[1, 1, 1.23, 23.8], [1., 2., 3., 4.]]
 
@@ -159,7 +159,7 @@ class TestOWTestLearners(WidgetTest):
         table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b")],
-                [DiscreteVariable("c", values=["y"])]),
+                [DiscreteVariable("c", values=("y", ))]),
             list(zip(
                 [42.48, 16.84, 15.23, 23.8],
                 [1., 2., 3., 4.],

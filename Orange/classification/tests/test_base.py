@@ -174,7 +174,7 @@ class TestModelMapping(unittest.TestCase):
             test_val_prob(val1, prob1)
 
     def test_no_common_values(self):
-        abc = DiscreteVariable("iris", values=list("abc"))
+        abc = DiscreteVariable("iris", values=tuple("abc"))
         iris_abc = Table.from_numpy(
             Domain(self.iris.domain.attributes, abc),
             self.iris.X, self.iris.Y)

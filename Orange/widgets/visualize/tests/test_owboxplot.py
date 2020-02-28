@@ -320,8 +320,8 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         handle this.
         """
         data = Table.from_list(
-            Domain([DiscreteVariable("a", values=["v1", "v2", "v3"]),
-                    DiscreteVariable("b", values=["v3", "v4"])]),
+            Domain([DiscreteVariable("a", values=("v1", "v2", "v3")),
+                    DiscreteVariable("b", values=("v3", "v4"))]),
             [[0., 0.],
              [0., 1.],
              [1., np.nan],

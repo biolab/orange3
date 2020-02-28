@@ -183,7 +183,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_cls_with_single_instance(self):
         table = Table(Domain([ContinuousVariable("c1")],
-                             [DiscreteVariable("c2", values=["a", "b"])]),
+                             [DiscreteVariable("c2", values=("a", "b"))]),
                       np.array([[1], [2], [3]]), np.array([[0], [0], [1]]))
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.set_row_clustering(Clustering.Clustering)

@@ -104,8 +104,8 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         Check if it can calculate chi square when there are no attributes
         which suppose to be.
         """
-        a = DiscreteVariable("a", values=["y", "n"])
-        b = DiscreteVariable("b", values=["y", "n", "o"])
+        a = DiscreteVariable("a", values=("y", "n"))
+        b = DiscreteVariable("b", values=("y", "n", "o"))
         table = Table.from_list(Domain([a, b]), list(zip("yynny", "ynyyn")))
         chi = ChiSqStats(table, 0, 1)
         self.assertFalse(isnan(chi.chisq))
@@ -121,7 +121,7 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
                 [],
                 [],
                 [ContinuousVariable("a"),
-                 DiscreteVariable("b", values=["y", "n"])]
+                 DiscreteVariable("b", values=("y", "n"))]
             ),
             list(zip(
                 [42.48, 16.84, 15.23, 23.8],

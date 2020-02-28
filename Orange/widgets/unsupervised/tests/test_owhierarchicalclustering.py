@@ -122,7 +122,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         table = Table.from_list(
             Domain(
                 [ContinuousVariable("a")],
-                [DiscreteVariable("b", values=["y"])]),
+                [DiscreteVariable("b", values=("y", ))]),
             list(zip([1.79e308, -1e120],
                      "yy"))
         )

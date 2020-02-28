@@ -167,18 +167,18 @@ class TestDiscreteVariable(VariableTest):
             var.to_val("G")
 
     def test_make(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
+        var = DiscreteVariable.make("a", values=("F", "M"))
         self.assertIsInstance(var, DiscreteVariable)
         self.assertEqual(var.name, "a")
         self.assertEqual(var.values, ("F", "M"))
 
     def test_val_from_str(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
+        var = DiscreteVariable.make("a", values=("F", "M"))
         self.assertTrue(math.isnan(var.to_val(None)))
         self.assertEqual(var.to_val(1), 1)
 
     def test_val_from_str_add(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
+        var = DiscreteVariable.make("a", values=("F", "M"))
         self.assertTrue(math.isnan(var.val_from_str_add(None)))
         self.assertEqual(var.val_from_str_add("M"), 1)
         self.assertEqual(var.val_from_str_add("F"), 0)
@@ -192,7 +192,7 @@ class TestDiscreteVariable(VariableTest):
 
 
     def test_repr(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
+        var = DiscreteVariable.make("a", values=("F", "M"))
         self.assertEqual(
             repr(var),
             "DiscreteVariable(name='a', values=('F', 'M'))")
@@ -207,8 +207,8 @@ class TestDiscreteVariable(VariableTest):
             "DiscreteVariable(name='a', values=('1', '2', '3', '4', '5', '6', '7'))")
 
     def test_no_nonstringvalues(self):
-        self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
-        a = DiscreteVariable("foo", values=["a", "b", "c"])
+        self.assertRaises(TypeError, DiscreteVariable, "foo", values=("a", 42))
+        a = DiscreteVariable("foo", values=("a", "b", "c"))
         self.assertRaises(TypeError, a.add_value, 42)
 
     def test_no_duplicated_values(self):
@@ -221,9 +221,9 @@ class TestDiscreteVariable(VariableTest):
         if LooseVersion(Orange.__version__) >= LooseVersion("3.27"):
             self.fail("Remove class TupleList; replace it with tuple.")
 
-        d1 = DiscreteVariable("A", values=["one", "two"])
+        d1 = DiscreteVariable("A", values=("one", "two"))
         with self.assertWarns(DeprecationWarning):
-            val = d1.values + ["three"]
+            val = d1.values + ("three", )
         self.assertEqual(val, ("one", "two", "three"))
         with self.assertWarns(DeprecationWarning):
             val = d1.values.copy()
@@ -231,9 +231,9 @@ class TestDiscreteVariable(VariableTest):
         self.assertIsNot(val, d1.values)
 
     def test_unpickle(self):
-        d1 = DiscreteVariable("A", values=["two", "one"])
+        d1 = DiscreteVariable("A", values=("two", "one"))
         s = pickle.dumps(d1)
-        d2 = DiscreteVariable.make("A", values=["one", "two", "three"])
+        d2 = DiscreteVariable.make("A", values=("one", "two", "three"))
         d2_values = tuple(d2.values)
         d1c = pickle.loads(s)
         # See: gh-3238
@@ -242,14 +242,14 @@ class TestDiscreteVariable(VariableTest):
         self.assertSequenceEqual(d2.values, d2_values)
         self.assertSequenceEqual(d1c.values, d1.values)
         s = pickle.dumps(d2)
-        d1 = DiscreteVariable("A", values=["one", "two"])
+        d1 = DiscreteVariable("A", values=("one", "two"))
         d2 = pickle.loads(s)
-        self.assertSequenceEqual(d2.values, ["one", "two", "three"])
-        self.assertSequenceEqual(d1.values, ["one", "two"])
+        self.assertSequenceEqual(d2.values, ("one", "two", "three"))
+        self.assertSequenceEqual(d1.values, ("one", "two"))
 
     def test_mapper_dense(self):
-        abc = DiscreteVariable("a", values=list("abc"))
-        dca = DiscreteVariable("a", values=list("dca"))
+        abc = DiscreteVariable("a", values=tuple("abc"))
+        dca = DiscreteVariable("a", values=tuple("dca"))
         mapper = dca.get_mapper_from(abc)
 
         self.assertEqual(mapper(0), 2)
@@ -296,8 +296,8 @@ class TestDiscreteVariable(VariableTest):
         self.assertRaises(ValueError, mapper, object())
 
     def test_mapper_sparse(self):
-        abc = DiscreteVariable("a", values=list("abc"))
-        dca = DiscreteVariable("a", values=list("dca"))
+        abc = DiscreteVariable("a", values=tuple("abc"))
+        dca = DiscreteVariable("a", values=tuple("dca"))
         mapper = dca.get_mapper_from(abc)
 
         arr = np.array([0, 0, 2, 1, 0, 1, np.nan])
@@ -316,7 +316,7 @@ class TestDiscreteVariable(VariableTest):
             np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
 
         # 0 maps to 0 -> keep sparse
-        acd = DiscreteVariable("a", values=list("acd"))
+        acd = DiscreteVariable("a", values=tuple("acd"))
         mapper = acd.get_mapper_from(abc)
 
         arr_csr = sp.csr_matrix(arr)
@@ -337,8 +337,8 @@ class TestDiscreteVariable(VariableTest):
 
     def test_mapper_inplace(self):
         s = list(range(7))
-        abc = DiscreteVariable("a", values=list("abc"))
-        dca = DiscreteVariable("a", values=list("dca"))
+        abc = DiscreteVariable("a", values=tuple("abc"))
+        dca = DiscreteVariable("a", values=tuple("dca"))
         mapper = dca.get_mapper_from(abc)
 
         arr = np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T
@@ -350,7 +350,7 @@ class TestDiscreteVariable(VariableTest):
         self.assertRaises(ValueError, mapper, [1, 2, 3], 0)
         self.assertRaises(ValueError, mapper, 1, 0)
 
-        acd = DiscreteVariable("a", values=list("acd"))
+        acd = DiscreteVariable("a", values=tuple("acd"))
         mapper = acd.get_mapper_from(abc)
 
         arr = np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T
@@ -371,8 +371,8 @@ class TestDiscreteVariable(VariableTest):
             np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
 
     def test_mapper_dim_check(self):
-        abc = DiscreteVariable("a", values=list("abc"))
-        dca = DiscreteVariable("a", values=list("dca"))
+        abc = DiscreteVariable("a", values=tuple("abc"))
+        dca = DiscreteVariable("a", values=tuple("dca"))
         mapper = dca.get_mapper_from(abc)
 
         self.assertRaises(ValueError, mapper, np.zeros((7, 2)))
@@ -380,8 +380,8 @@ class TestDiscreteVariable(VariableTest):
         self.assertRaises(ValueError, mapper, sp.csc_matrix(np.zeros((7, 2))))
 
     def test_mapper_from_no_values(self):
-        abc = DiscreteVariable("a", values=[])
-        dca = DiscreteVariable("a", values=list("dca"))
+        abc = DiscreteVariable("a", values=())
+        dca = DiscreteVariable("a", values=tuple("dca"))
         mapper = dca.get_mapper_from(abc)
 
         arr = np.full(7, np.nan)
@@ -409,12 +409,12 @@ class TestDiscreteVariable(VariableTest):
         return var
 
     def test_copy_checks_len_values(self):
-        var = DiscreteVariable("gender", values=["F", "M"])
+        var = DiscreteVariable("gender", values=("F", "M"))
         self.assertEqual(var.values, ("F", "M"))
 
-        self.assertRaises(ValueError, var.copy, values=["F", "M", "N"])
-        self.assertRaises(ValueError, var.copy, values=["F"])
-        self.assertRaises(ValueError, var.copy, values=[])
+        self.assertRaises(ValueError, var.copy, values=("F", "M", "N"))
+        self.assertRaises(ValueError, var.copy, values=("F",))
+        self.assertRaises(ValueError, var.copy, values=())
 
         var2 = var.copy()
         self.assertEqual(var2.values, ("F", "M"))
@@ -422,7 +422,7 @@ class TestDiscreteVariable(VariableTest):
         var2 = var.copy(values=None)
         self.assertEqual(var2.values, ("F", "M"))
 
-        var2 = var.copy(values=["W", "M"])
+        var2 = var.copy(values=("W", "M"))
         self.assertEqual(var2.values, ("W", "M"))
 
 
@@ -595,9 +595,9 @@ PickleDiscreteVariable = create_pickling_tests(
     "PickleDiscreteVariable",
     ("with_name", lambda: DiscreteVariable(name="Feature 0")),
     ("with_str_value", lambda: DiscreteVariable(name="Feature 0",
-                                                values=["F", "M"])),
+                                                values=("F", "M"))),
     ("ordered", lambda: DiscreteVariable(name="Feature 0",
-                                         values=["F", "M"],
+                                         values=("F", "M"),
                                          ordered=True)),
 )
 

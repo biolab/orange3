@@ -395,7 +395,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data2 = Table("iris")[::30]
         data2.Y[:] = np.nan
         domain = Domain(
-            attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=[]))
+            attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=()))
         data2 = Table(domain, data2.X, Y=data2.Y)
         data3 = Table("iris")[::30]
         data3.Y[:] = np.nan
@@ -434,7 +434,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                          ContinuousVariable("c2"),
                          ContinuousVariable("c3"),
                          ContinuousVariable("c4")],
-                        DiscreteVariable("cls", values=["a", "b"]))
+                        DiscreteVariable("cls", values=("a", "b")))
         X = np.zeros((10, 4))
         table = Table(domain, X, np.random.randint(2, size=10))
         self.send_signal(self.widget.Inputs.data, table)
@@ -460,7 +460,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                          ContinuousVariable("c2"),
                          ContinuousVariable("c3"),
                          ContinuousVariable("c4")],
-                        DiscreteVariable("cls", values=["a", "b"]))
+                        DiscreteVariable("cls", values=("a", "b")))
         table = Table(domain, np.random.random((10, 4)), np.full(10, np.nan))
         self.send_signal(self.widget.Inputs.data, table)
         self.assertFalse(self.widget.vizrank_button.isEnabled())

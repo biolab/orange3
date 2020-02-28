@@ -261,8 +261,8 @@ class TestOWNomogram(WidgetTest):
 
         ind = -1
         mocked_item().boundingRect().width.side_effect = mocked_width
-        attrs = [DiscreteVariable("var1", values=["foo1", "foo2"]),
-                 DiscreteVariable("var2", values=["foo3", "foo4"])]
+        attrs = [DiscreteVariable("var1", values=("foo1", "foo2")),
+                 DiscreteVariable("var2", values=("foo3", "foo4"))]
         points = [np.array([0, 1.8]), np.array([1.5, 2.0])]
         diff = np.max(points) - np.min(points)
         # foo3 eventually overcomes foo2, while the scale is getting smaller

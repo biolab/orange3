@@ -60,10 +60,10 @@ class TestOWPredictions(WidgetTest):
         train = Table("titanic")
         model = ConstantLearner()(train)
         self.send_signal(self.widget.Inputs.predictors, model)
-        domain = Domain([DiscreteVariable("status", values=["first", "third"]),
-                         DiscreteVariable("age", values=["adult", "child"]),
-                         DiscreteVariable("sex", values=["female", "male"])],
-                        [DiscreteVariable("survived", values=[])])
+        domain = Domain([DiscreteVariable("status", values=("first", "third")),
+                         DiscreteVariable("age", values=("adult", "child")),
+                         DiscreteVariable("sex", values=("female", "male"))],
+                        [DiscreteVariable("survived", values=())])
         test = Table(domain, np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]),
                      np.full((3, 1), np.nan))
         self.send_signal(self.widget.Inputs.data, test)

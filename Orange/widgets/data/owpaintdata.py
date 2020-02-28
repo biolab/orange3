@@ -1274,7 +1274,7 @@ class OWPaintData(OWWidget):
             domain = Orange.data.Domain(
                 attrs,
                 Orange.data.DiscreteVariable(
-                    "Class", values=list(self.class_model))
+                    "Class", values=tuple(self.class_model))
             )
             data = Orange.data.Table.from_numpy(domain, X, Y)
         else:

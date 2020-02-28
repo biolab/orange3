@@ -167,7 +167,7 @@ class TestOWConcatenate(WidgetTest):
         widget.merge_type = OWConcatenate.MergeIntersection
 
         X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
-        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
+        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=("a", "b")),
                          ["D1", "D2", "D3"])
         S1, S2 = map(StringVariable, ["S1", "S2"])
         domain1 = Domain([X1, X2], [D1], [S1])
@@ -194,7 +194,7 @@ class TestOWConcatenate(WidgetTest):
         widget.merge_type = OWConcatenate.MergeUnion
 
         X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
-        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
+        D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=("a", "b")),
                          ["D1", "D2", "D3"])
         S1, S2 = map(StringVariable, ["S1", "S2"])
         domain1 = Domain([X1, X2], [D1], [S1])
@@ -335,9 +335,9 @@ class TestOWConcatenate(WidgetTest):
         X1, X1a, X2, X2a = map(ContinuousVariable, ["X1", "X1", "X2", "X2"])
         X2.number_of_decimals = 3
         X2a.number_of_decimals = 4
-        D1 = DiscreteVariable("X1", values=["a", "b", "c"])
-        D1a = DiscreteVariable("X1", values=["e", "b", "d"])
-        D2 = DiscreteVariable("X2", values=["a", "b", "c"])
+        D1 = DiscreteVariable("X1", values=("a", "b", "c"))
+        D1a = DiscreteVariable("X1", values=("e", "b", "d"))
+        D2 = DiscreteVariable("X2", values=("a", "b", "c"))
         S1 = StringVariable("X1")
 
         # pylint: disable=unbalanced-tuple-unpacking,protected-access
@@ -352,11 +352,11 @@ class TestOWConcatenate(WidgetTest):
         self.assertEqual(X2a.number_of_decimals, 4)
         self.assertEqual(uX2.number_of_decimals, 4)
 
-        self.assertEqual(D1.values, list("abc"))
-        self.assertEqual(D1a.values, list("ebd"))
+        self.assertEqual(D1.values, tuple("abc"))
+        self.assertEqual(D1a.values, tuple("ebd"))
         self.assertEqual(uD1, D1)
         self.assertEqual(uD1, D1a)
-        self.assertEqual(uD1.values, list("abced"))
+        self.assertEqual(uD1.values, tuple("abced"))
 
         self.assertIs(uD2, D2)
 

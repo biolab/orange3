@@ -8,7 +8,7 @@ This section describes how to load the data in Orange. We also show how to explo
 Data Input
 ----------
 
-..  index:: 
+..  index::
     single: data; input
 
 Orange can read files in native tab-delimited format, or can load data from any of the major standard spreadsheet file types, like CSV and Excel. Native format starts with a header row with feature (column) names. The second header row gives the attribute type, which can be continuous, discrete, time, or string. The third header line contains meta information to identify dependent features (class), irrelevant features (ignore) or meta features (meta).
@@ -16,7 +16,7 @@ More detailed specification is available in :doc:`../reference/data.io`.
 Here are the first few lines from a dataset :download:`lenses.tab <code/lenses.tab>`::
 
     age       prescription  astigmatic    tear_rate     lenses
-    discrete  discrete      discrete      discrete      discrete 
+    discrete  discrete      discrete      discrete      discrete
                                                         class
     young     myope         no            reduced       none
     young     myope         no            normal        soft
@@ -28,7 +28,7 @@ Here are the first few lines from a dataset :download:`lenses.tab <code/lenses.t
 Values are tab-limited. This dataset has four attributes (age of the patient, spectacle prescription, notion on astigmatism, and information on tear production rate) and an associated three-valued dependent variable encoding lens prescription for the patient (hard contact lenses, soft contact lenses, no lenses). Feature descriptions could use one letter only, so the header of this dataset could also read::
 
     age       prescription  astigmatic    tear_rate     lenses
-    d         d             d             d             d 
+    d         d             d             d             d
                                                         c
 
 The rest of the table gives the data. Note that there are 5 instances in our table above. For the full dataset, check out or download :download:`lenses.tab <code/lenses.tab>`) to a target directory. You can also skip this step as Orange comes preloaded with several demo datasets, lenses being one of them. Now, open a python shell, import Orange and load the data:
@@ -40,12 +40,12 @@ The rest of the table gives the data. Note that there are 5 instances in our tab
 Note that for the file name no suffix is needed, as Orange checks if any files in the current directory are of a readable type. The call to ``Orange.data.Table`` creates an object called ``data`` that holds your dataset and information about the lenses domain:
 
     >>> data.domain.attributes
-    (DiscreteVariable('age', values=['pre-presbyopic', 'presbyopic', 'young']),
-     DiscreteVariable('prescription', values=['hypermetrope', 'myope']),
-     DiscreteVariable('astigmatic', values=['no', 'yes']),
-     DiscreteVariable('tear_rate', values=['normal', 'reduced']))
+    (DiscreteVariable('age', values=('pre-presbyopic', 'presbyopic', 'young')),
+     DiscreteVariable('prescription', values=('hypermetrope', 'myope')),
+     DiscreteVariable('astigmatic', values=('no', 'yes')),
+     DiscreteVariable('tear_rate', values=('normal', 'reduced')))
     >>> data.domain.class_var
-    DiscreteVariable('lenses', values=['hard', 'none', 'soft'])
+    DiscreteVariable('lenses', values=('hard', 'none', 'soft'))
     >>> for d in data[:3]:
        ...:     print(d)
        ...:
@@ -185,7 +185,7 @@ We can also construct a (classless) dataset from a numpy array::
 
 If we want to provide meaninful names to attributes, we need to construct an appropriate data domain::
 
-    >>> domain = Orange.data.Domain([Orange.data.ContinuousVariable("lenght"), 
+    >>> domain = Orange.data.Domain([Orange.data.ContinuousVariable("lenght"),
                                      Orange.data.ContinuousVariable("width")])
     >>> data = Orange.data.Table(domain, X)
     >>> data.domain
@@ -274,7 +274,7 @@ First three lines of the output of this script are::
 A single-liner that reports on number of data instances with at least one missing value is::
 
     >>> sum(any(np.isnan(d[x]) for x in data.domain.attributes) for d in data)
-    203 
+    203
 
 .. sum([np.any(np.isnan(x)) for x in data.X])
 
