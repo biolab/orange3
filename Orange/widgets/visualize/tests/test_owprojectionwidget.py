@@ -241,8 +241,8 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIs(widget.controls.attr_color.model()[4], domain[0])
 
         copy0 = domain[0].copy()
-        assert copy0.palette.name != "linear_kry_0_97_c73"
-        copy0.palette = ContinuousPalettes["linear_kry_0_97_c73"]
+        assert copy0.palette.name != "diverging_tritanopic_cwr_75_98_c20"
+        copy0.palette = ContinuousPalettes["diverging_tritanopic_cwr_75_98_c20"]
         domain = Domain((copy0, ) + domain.attributes[1:], domain.class_var)
         data0 = data.transform(domain)
         self.send_signal(widget.Inputs.data, data0)
