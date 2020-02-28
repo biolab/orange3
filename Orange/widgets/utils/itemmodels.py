@@ -105,7 +105,7 @@ class PyTableModel(AbstractSortTableModel):
         self._headers = {}
         self._editable = editable
         self._table = None
-        self._roleData = None
+        self._roleData = {}
         self.wrap(sequence or [])
 
     def rowCount(self, parent=QModelIndex()):
@@ -265,15 +265,21 @@ class PyTableModel(AbstractSortTableModel):
         self.endRemoveRows()
 
     def __setitem__(self, i, value):
-        if isinstance(i, slice):
-            start, stop, _ = _as_contiguous_range(i, len(self))
-            stop -= 1
-        else:
-            start = stop = i = i if i >= 0 else len(self) + i
         self._check_sort_order()
-        self._table[i] = value
-        self.dataChanged.emit(self.index(start, 0),
-                              self.index(stop, self.columnCount() - 1))
+        if isinstance(i, slice):
+            self.beginResetModel()
+            start, stop, _ = _as_contiguous_range(i, len(self))
+            self.removeRows(start, stop - start)
+            self.insertRows(start, len(value))
+            self._table[start:start + len(value)] = value
+            self.dataChanged.emit(
+                self.index(start, 0),
+                self.index(start + len(value) - 1, self.columnCount() - 1))
+            self.endResetModel()
+        else:
+            self._table[i] = value
+            self.dataChanged.emit(self.index(i, 0),
+                                  self.index(i, self.columnCount() - 1))
 
     def _check_sort_order(self):
         if self.mapToSourceRows(Ellipsis) is not Ellipsis:
