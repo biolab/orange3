@@ -214,7 +214,7 @@ class TextListWidget(QGraphicsWidget):
 
     def __setup(self) -> None:
         self.__clear()
-        font = self.font()
+        font = self.__effectiveFont if self.__autoScale else self.font()
         assert self.__group is None
         group = QGraphicsItemGroup()
         for text in self.__items:
