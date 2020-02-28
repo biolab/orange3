@@ -19,6 +19,7 @@ import Orange
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
 from Orange.data.io import CSVReader
+from Orange.preprocess.transformation import Identity
 from Orange.tests.base import create_pickling_tests
 from Orange.util import OrangeDeprecationWarning
 
@@ -142,6 +143,67 @@ class TestVariable(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertIsNot(a, b)
         self.assertNotEqual(a, "somestring")
+        self.assertEqual(hash(a), hash(b))
+
+    def test_eq_with_compute_value(self):
+        a = ContinuousVariable("a")
+        b = ContinuousVariable("a")
+        self.assertEqual(a, a)
+        self.assertEqual(a, b)
+        self.assertIsNot(a, b)
+
+        a._compute_value = lambda x: x
+        self.assertEqual(a, a)
+        self.assertNotEqual(a, b)
+
+        a1 = ContinuousVariable("a")
+        a2 = ContinuousVariable("a")
+        c = ContinuousVariable("c")
+
+        a._compute_value = Identity(a1)
+        self.assertEqual(a, a)
+        self.assertEqual(a, b)
+
+        b._compute_value = a.compute_value
+        self.assertEqual(a, b)
+
+        b._compute_value = Identity(a1)
+        self.assertEqual(a, b)
+
+        b._compute_value = Identity(a2)
+        self.assertEqual(a, b)
+
+        b._compute_value = Identity(c)
+        self.assertNotEqual(a, b)
+
+        b._compute_value = Identity(a2)
+        a1._compute_value = lambda x: x
+        self.assertNotEqual(a, b)
+
+        a1._compute_value = Identity(c)
+        self.assertNotEqual(a, b)
+
+        a2._compute_value = Identity(c)
+        self.assertEqual(a, b)
+
+    def test_hash(self):
+        a = ContinuousVariable("a")
+        b = ContinuousVariable("a")
+        self.assertEqual(hash(a), hash(b))
+
+        a._compute_value = lambda x: x
+        self.assertNotEqual(hash(a), hash(b))
+
+        b._compute_value = lambda x: x
+        self.assertNotEqual(hash(a), hash(b))
+
+        a1 = ContinuousVariable("a")
+        a2 = ContinuousVariable("a")
+
+        a._compute_value = Identity(a1)
+        self.assertNotEqual(hash(a), hash(b))
+
+        b._compute_value = Identity(a2)
         self.assertEqual(hash(a), hash(b))
 
 
