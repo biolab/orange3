@@ -11,27 +11,24 @@ from itertools import zip_longest, repeat, chain
 from contextlib import contextmanager
 from collections import namedtuple, Counter
 from functools import singledispatch, partial
-
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
     FrozenSet, Type, Callable, TypeVar, Mapping, Hashable
 )
+
+import numpy as np
+import pandas as pd
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
     QToolButton, QLineEdit, QAction, QActionGroup, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
-    QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QShortcut,
-    QStackedLayout
-)
+    QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
+    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox)
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
-    Qt, QEvent, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex,
-    QRect,
+    Qt, QEvent, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-
-import numpy as np
-import pandas as pd
 
 import Orange.data
 
@@ -72,6 +69,20 @@ class _DataType:
 
     def __hash__(self):
         return hash((type(self), super().__hash__()))
+
+    def name_type(self):
+        """
+        Returns a tuple with name and type of the variable.
+        It is used since it is forbidden to use names of variables in settings.
+        """
+        type_number = {
+            "Categorical": 0,
+            "Ordered": 1,
+            "Real": 2,
+            "Time": 3,
+            "String": 4
+        }
+        return self.name, type_number[type(self).__name__]
 
 
 #: An ordered sequence of key, value pairs (variable annotations)
@@ -662,6 +673,198 @@ class VariableEditor(QWidget):
         self.remove_label_action.setEnabled(bool(len(selected)))
 
 
+class GroupItemsDialog(QDialog):
+    """
+    A dialog for group less frequent values.
+    """
+    DEFAULT_LABEL = "other"
+
+    def __init__(
+            self, variable: Categorical, data: Union[np.ndarray, List],
+            selected_attributes: List[str], dialog_settings: Dict[str, Any],
+            parent: QWidget = None, flags: Qt.WindowFlags = Qt.Dialog, **kwargs
+    ) -> None:
+        super().__init__(parent, flags, **kwargs)
+        self.variable = variable
+        self.data = data
+        self.selected_attributes = selected_attributes
+
+        # grouping strategy
+        self.selected_radio = radio1 = QRadioButton("Group selected values")
+        self.frequent_abs_radio = radio2 = QRadioButton(
+            "Group values with less than"
+        )
+        self.frequent_rel_radio = radio3 = QRadioButton(
+            "Group values with less than"
+        )
+        self.n_values_radio = radio4 = QRadioButton(
+            "Group all except"
+        )
+
+        # if selected attributes available check the first radio button,
+        # otherwise disable it
+        if selected_attributes:
+            radio1.setChecked(True)
+        else:
+            radio1.setEnabled(False)
+            # they are remembered by number since radio button instance is
+            # new object for each dialog
+            checked = dialog_settings.get("selected_radio", 0)
+            [radio2, radio3, radio4][checked].setChecked(True)
+
+        label2 = QLabel("occurrences")
+        label3 = QLabel("occurrences")
+        label4 = QLabel("most frequent values")
+
+        self.frequent_abs_spin = spin2 = QSpinBox()
+        max_val = len(data)
+        spin2.setMinimum(1)
+        spin2.setMaximum(max_val)
+        spin2.setValue(dialog_settings.get("frequent_abs_spin", 10))
+        spin2.setMinimumWidth(
+            self.fontMetrics().width("X") * (len(str(max_val)) + 1) + 20
+        )
+        spin2.valueChanged.connect(self._frequent_abs_spin_changed)
+
+        self.frequent_rel_spin = spin3 = QDoubleSpinBox()
+        spin3.setMinimum(0)
+        spin3.setDecimals(1)
+        spin3.setSingleStep(0.1)
+        spin3.setMaximum(100)
+        spin3.setValue(dialog_settings.get("frequent_rel_spin", 10))
+        spin3.setMinimumWidth(self.fontMetrics().width("X") * (2 + 1) + 20)
+        spin3.setSuffix(" %")
+        spin3.valueChanged.connect(self._frequent_rel_spin_changed)
+
+        self.n_values_spin = spin4 = QSpinBox()
+        spin4.setMinimum(0)
+        spin4.setMaximum(len(variable.categories))
+        spin4.setValue(
+            dialog_settings.get(
+                "n_values_spin", min(10, len(variable.categories))
+            )
+        )
+        spin4.setMinimumWidth(
+            self.fontMetrics().width("X") * (len(str(max_val)) + 1) + 20
+        )
+        spin4.valueChanged.connect(self._n_values_spin_spin_changed)
+
+        grid_layout = QGridLayout()
+        # first row
+        grid_layout.addWidget(radio1, 0, 0, 1, 2)
+        # second row
+        grid_layout.addWidget(radio2, 1, 0, 1, 2)
+        grid_layout.addWidget(spin2, 1, 2)
+        grid_layout.addWidget(label2, 1, 3)
+        # third row
+        grid_layout.addWidget(radio3, 2, 0, 1, 2)
+        grid_layout.addWidget(spin3, 2, 2)
+        grid_layout.addWidget(label3, 2, 3)
+        # fourth row
+        grid_layout.addWidget(radio4, 3, 0)
+        grid_layout.addWidget(spin4, 3, 1)
+        grid_layout.addWidget(label4, 3, 2, 1, 2)
+
+        group_box = QGroupBox()
+        group_box.setLayout(grid_layout)
+
+        # grouped variable name
+        new_name_label = QLabel("New value name: ")
+        self.new_name_line_edit = n_line_edit = QLineEdit(
+            dialog_settings.get("name_line_edit", self.DEFAULT_LABEL)
+        )
+        # it is shown gray when user removes the text and let user know that
+        # word others is default one
+        n_line_edit.setPlaceholderText(self.DEFAULT_LABEL)
+        name_hlayout = QHBoxLayout()
+        name_hlayout.addWidget(new_name_label)
+        name_hlayout.addWidget(n_line_edit)
+
+        # confirm_button = QPushButton("Apply")
+        # cancel_button = QPushButton("Cancel")
+        buttons = QDialogButtonBox(
+            orientation=Qt.Horizontal,
+            standardButtons=(QDialogButtonBox.Ok | QDialogButtonBox.Cancel),
+            objectName="dialog-button-box",
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        # join components
+        self.setLayout(QVBoxLayout())
+        self.layout().addWidget(group_box)
+        self.layout().addLayout(name_hlayout)
+        self.layout().addWidget(buttons)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+    def _frequent_abs_spin_changed(self) -> None:
+        self.frequent_abs_radio.setChecked(True)
+
+    def _n_values_spin_spin_changed(self) -> None:
+        self.n_values_radio.setChecked(True)
+
+    def _frequent_rel_spin_changed(self) -> None:
+        self.frequent_rel_radio.setChecked(True)
+
+    def get_merge_attributes(self) -> List[str]:
+        """
+        Returns attributes that will be merged
+
+        Returns
+        -------
+        List of attributes' to be merged names
+        """
+        counts = Counter(self.data)
+        if self.selected_radio.isChecked():
+            return self.selected_attributes
+        elif self.n_values_radio.isChecked():
+            keep_values = self.n_values_spin.value()
+            values = counts.most_common()[keep_values:]
+            indices = [i for i, _ in values]
+        elif self.frequent_abs_radio.isChecked():
+            indices = [v for v, c in counts.most_common()
+                       if c < self.frequent_abs_spin.value()]
+        else:  # self.frequent_rel_radio.isChecked():
+            n_all = sum(counts.values())
+            indices = [v for v, c in counts.most_common()
+                       if c / n_all * 100 < self.frequent_rel_spin.value()]
+        return np.array(self.variable.categories)[indices].tolist()
+
+    def get_merged_value_name(self) -> str:
+        """
+        Returns
+        -------
+        New label of merged values
+        """
+        return self.new_name_line_edit.text() or self.DEFAULT_LABEL
+
+    def get_dialog_settings(self) -> Dict[str, Any]:
+        """
+        Returns
+        -------
+        Return the dictionary with vlues set by user in each of the line edits
+        and selected radio button.
+        """
+        settings_dict = {
+            "frequent_abs_spin": self.frequent_abs_spin.value(),
+            "frequent_rel_spin": self.frequent_rel_spin.value(),
+            "n_values_spin": self.n_values_spin.value(),
+            "name_line_edit": self.new_name_line_edit.text()
+        }
+        checked = [
+            i for i, s in enumerate(
+                [self.frequent_abs_radio,
+                 self.frequent_rel_radio,
+                 self.n_values_radio]
+            ) if s.isChecked()]
+        # when checked empty radio button for selected values is selected
+        # it is not stored in setting since its selection depends on users
+        # selection of values in list
+        if checked:
+            settings_dict["selected_radio"] = checked[0]
+        return settings_dict
+
+
 @contextmanager
 def disconnected(signal, slot, connection_type=Qt.AutoConnection):
     signal.disconnect(slot)
@@ -847,6 +1050,9 @@ class DiscreteVariableEditor(VariableEditor):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.merge_dialog_settings = {}
+        self._values = None
+
         form = self.layout().itemAt(0)
         assert isinstance(form, QFormLayout)
         self.ordered_cb = QCheckBox(
@@ -916,8 +1122,7 @@ class DiscreteVariableEditor(VariableEditor):
             objectName="action-merge-item",
             toolTip="Merge selected items.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Equal),
-            shortcutContext=Qt.WidgetShortcut,
-            enabled=False,
+            shortcutContext=Qt.WidgetShortcut
         )
 
         self.add_new_item.triggered.connect(self._add_category)
@@ -945,8 +1150,7 @@ class DiscreteVariableEditor(VariableEditor):
             accessibleName="Merge",
         )
         self.values_edit.addActions([self.move_value_up, self.move_value_down,
-                                     self.add_new_item, self.remove_item,
-                                     self.merge_items])
+                                     self.add_new_item, self.remove_item])
         hlayout.addWidget(button1)
         hlayout.addWidget(button2)
         hlayout.addSpacing(3)
@@ -969,12 +1173,18 @@ class DiscreteVariableEditor(VariableEditor):
         QWidget.setTabOrder(button3, button4)
 
     def set_data(self, var, transform=()):
-        # type: (Optional[Categorical], Sequence[Transform]) -> None
+        raise NotImplementedError
+
+    def set_data_categorical(self, var, values, transform=()):
+        # type: (Optional[Categorical], Optional[Sequence[float]], Sequence[Transform]) -> None
         """
         Set the variable to edit.
+
+        `values` is needed for categorical features to perform grouping.
         """
         # pylint: disable=too-many-branches
-        super().set_data(var, transform)
+        super().set_data(var, transform=transform)
+        self._values = values
         tr = None  # type: Optional[CategoriesMapping]
         ordered = None  # type: Optional[ChangeOrdered]
         for tr_ in transform:
@@ -1118,7 +1328,6 @@ class DiscreteVariableEditor(VariableEditor):
             len(rows) > 1 and \
             not any(index.data(EditStateRole) != ItemEditState.NoState
                     for index in rows)
-        self.merge_items.setEnabled(enable_merge)
 
         if len(rows) == 1:
             i = rows[0].row()
@@ -1182,65 +1391,65 @@ class DiscreteVariableEditor(VariableEditor):
             view.edit(index)
         self.on_values_changed()
 
-    def _merge_categories(self):
+    def _reset_name_merge(self) -> None:
         """
-        Merge selected categories into one.
-
-        Popup an editable combo box for selection/edit of a new value.
+        This function resets renamed and merged variables in the model.
         """
         view = self.values_edit
         model = view.model()  # type: QAbstractItemModel
-        rows = view.selectedIndexes()  # type: List[QModelIndex]
-        if not len(rows) >= 2:
-            return  # pragma: no cover
-        first_row = rows[0]
+        prows = [
+            QPersistentModelIndex(model.index(i, 0))
+            for i in range(model.rowCount())
+        ]
+        with disconnected(model.dataChanged, self.on_values_changed):
+            for prow in prows:
+                if prow.isValid():
+                    model.setData(
+                        QModelIndex(prow), prow.data(SourceNameRole),
+                        Qt.EditRole
+                    )
+        self.variable_changed.emit()
 
-        def mapRectTo(widget, parent, rect):
-            # type: (QWidget, QWidget, QRect) -> QRect
-            return QRect(
-                widget.mapTo(parent, rect.topLeft()),
-                rect.size(),
-            )
+    def _merge_categories(self) -> None:
+        """
+        Merge less common categories into one with the dialog for merge
+        selection.
+        """
+        view = self.values_edit
+        model = view.model()  # type: QAbstractItemModel
 
-        def mapRectToGlobal(widget, rect):
-            # type: (QWidget, QRect) -> QRect
-            return QRect(
-                widget.mapToGlobal(rect.topLeft()),
-                rect.size(),
-            )
-        view.scrollTo(first_row)
-        vport = view.viewport()
-        vrect = view.visualRect(first_row)
-        vrect = mapRectTo(vport, view, vrect)
-        vrect = vrect.intersected(vport.geometry())
-        vrect = mapRectToGlobal(vport, vrect)
+        selected_attributes = [ind.data() for ind in view.selectedIndexes()]
 
-        cb = QComboBox(editable=True, insertPolicy=QComboBox.InsertAtBottom)
-        cb.setAttribute(Qt.WA_DeleteOnClose)
-        sh = QShortcut(QKeySequence(QKeySequence.Cancel), cb)
-        sh.activated.connect(cb.close)
-        cb.setParent(self, Qt.Popup)
-        cb.move(vrect.topLeft())
+        dlg = GroupItemsDialog(
+            self.var, self._values, selected_attributes,
+            self.merge_dialog_settings.get(self.var, {}), self,
+            windowTitle="Import Options",
+            sizeGripEnabled=True,
+        )
+        dlg.setWindowModality(Qt.WindowModal)
+        status = dlg.exec_()
+        dlg.deleteLater()
+        self.merge_dialog_settings[self.var] = dlg.get_dialog_settings()
 
-        cb.addItems(
-            list(unique(str(row.data(Qt.EditRole)) for row in rows)))
-        prows = [QPersistentModelIndex(row) for row in rows]
+        prows = [
+            QPersistentModelIndex(model.index(i, 0))
+            for i in range(model.rowCount())
+        ]
 
-        def complete_merge(text):
+        def complete_merge(text, merge_attributes):
             # write the new text for edit role in all rows
+            self._reset_name_merge()
             with disconnected(model.dataChanged, self.on_values_changed):
                 for prow in prows:
-                    if prow.isValid():
+                    if (prow.isValid()
+                            and prow.data(SourceNameRole) in merge_attributes):
                         model.setData(QModelIndex(prow), text, Qt.EditRole)
-            cb.close()
             self.variable_changed.emit()
 
-        cb.activated[str].connect(complete_merge)
-        size = cb.sizeHint().expandedTo(vrect.size())
-        cb.resize(size)
-        cb.show()
-        cb.raise_()
-        cb.setFocus(Qt.PopupFocusReason)
+        if status == QDialog.Accepted:
+            complete_merge(
+                dlg.get_merged_value_name(), dlg.get_merge_attributes()
+            )
 
     def _set_ordered(self, ordered):
         self.ordered_cb.setChecked(ordered)
@@ -1389,7 +1598,7 @@ class ReinterpretVariableEditor(VariableEditor):
         # This is ugly. Create an editor for each type and insert a type
         # selection combo box into its layout. Switch between widgets
         # on type change.
-        dedit = decorate(DiscreteVariableEditor())
+        self.disc_edit = dedit = decorate(DiscreteVariableEditor())
         cedit = decorate(ContinuousVariableEditor())
         tedit = decorate(TimeVariableEditor())
         sedit = decorate(VariableEditor())
@@ -1438,7 +1647,10 @@ class ReinterpretVariableEditor(VariableEditor):
         if index != -1:
             w = self.layout().currentWidget()
             assert isinstance(w, VariableEditor)
-            w.set_data(var, transform)
+            if isinstance(var, Categorical):
+                w.set_data_categorical(var, data.data(), transform=transform)
+            else:
+                w.set_data(var, transform=transform)
             self.__history[var] = tuple(transform)
             cb = w.findChild(QComboBox, "type-combo")
             cb.setCurrentIndex(index)
@@ -1494,6 +1706,7 @@ class ReinterpretVariableEditor(VariableEditor):
             var = self.var
 
         self.__transform = transform
+        data = None
         if transform is not None and self.__data is not None:
             data = transform(self.__data)
             var = data.vtype
@@ -1510,8 +1723,18 @@ class ReinterpretVariableEditor(VariableEditor):
                 w.variable_changed, self.variable_changed,
                 Qt.UniqueConnection
         ):
-            w.set_data(var, tr)
+            if isinstance(w, DiscreteVariableEditor):
+                data = data or self.__data
+                w.set_data_categorical(var, data.data(), transform=tr)
+            else:
+                w.set_data(var, transform=tr)
         self.variable_changed.emit()
+
+    def set_merge_context(self, merge_context):
+        self.disc_edit.merge_dialog_settings = merge_context
+
+    def get_merge_context(self):
+        return self.disc_edit.merge_dialog_settings
 
 
 class OWEditDomain(widget.OWWidget):
@@ -1534,7 +1757,8 @@ class OWEditDomain(widget.OWWidget):
     settings_version = 2
 
     _domain_change_store = settings.ContextSetting({})
-    _selected_item = settings.ContextSetting(None)  # type: Optional[str]
+    _selected_item = settings.ContextSetting(None)  # type: Optional[Tuple[str, int]]
+    _merge_dialog_settings = settings.ContextSetting({})
 
     want_control_area = False
 
@@ -1622,6 +1846,7 @@ class OWEditDomain(widget.OWWidget):
                                         format_summary_details(data))
             self.setup_model(data)
             self.openContext(self.data)
+            self._editor.set_merge_context(self._merge_dialog_settings)
             self._restore()
         else:
             self.info.set_input_summary(self.info.NoInput)
@@ -1637,6 +1862,7 @@ class OWEditDomain(widget.OWWidget):
 
         self._selected_item = None
         self._domain_change_store = {}
+        self._merge_dialog_settings = {}
 
     def reset_selected(self):
         """Reset the currently selected variable to its original state."""
@@ -1652,7 +1878,7 @@ class OWEditDomain(widget.OWWidget):
             with disconnected(editor.variable_changed,
                               self._on_variable_changed):
                 model.setData(midx, [], TransformRole)
-                editor.set_data(var, [])
+                editor.set_data(var, transform=[])
             self._invalidate()
 
     def reset_all(self):
@@ -1711,7 +1937,7 @@ class OWEditDomain(widget.OWWidget):
         i = -1
         if self._selected_item is not None:
             for i, vec in enumerate(model):
-                if vec.vtype.name == self._selected_item:
+                if vec.vtype.name_type() == self._selected_item:
                     break
         if i == -1 and model.rowCount():
             i = 0
@@ -1722,7 +1948,7 @@ class OWEditDomain(widget.OWWidget):
     def _on_selection_changed(self):
         self.selected_index = self.selected_var_index()
         if self.selected_index != -1:
-            self._selected_item = self.variables_model[self.selected_index].vtype.name
+            self._selected_item = self.variables_model[self.selected_index].vtype.name_type()
         else:
             self._selected_item = None
         self.open_editor(self.selected_index)
@@ -1739,7 +1965,7 @@ class OWEditDomain(widget.OWWidget):
         if tr is None:
             tr = []
         editor = self._editor
-        editor.set_data(vector, tr)
+        editor.set_data(vector, transform=tr)
         editor.variable_changed.connect(
             self._on_variable_changed, Qt.UniqueConnection
         )
@@ -1858,6 +2084,12 @@ class OWEditDomain(widget.OWWidget):
     def sizeHint(self):
         sh = super().sizeHint()
         return sh.expandedTo(QSize(660, 550))
+
+    def storeSpecificSettings(self):
+        """
+        Update setting before context closes - also when widget closes.
+        """
+        self._merge_dialog_settings = self._editor.get_merge_context()
 
     def send_report(self):
 
