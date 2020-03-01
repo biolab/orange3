@@ -676,7 +676,7 @@ class CanvasRectangle(QGraphicsRectItem):
                  onclick=None):
         super().__init__(x, y, width, height, None)
         self.onclick = onclick
-        if brush_color is not None:
+        if brush_color:
             self.setBrush(QBrush(brush_color))
         if pen:
             self.setPen(pen)

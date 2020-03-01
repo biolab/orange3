@@ -27,6 +27,7 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.widgets.utils import to_html
+from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.utils.tree.rules import Rule
 from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
 
@@ -43,8 +44,8 @@ class PythagorasTreeViewer(QGraphicsWidget):
     Examples
     --------
     >>> from Orange.widgets.visualize.utils.tree.treeadapter import (
-    ...     TreeAdapter
-    ... )
+    >>>     TreeAdapter
+    >>> )
     Pass tree through constructor.
     >>> tree_view = PythagorasTreeViewer(parent=scene, adapter=tree_adapter)
 
@@ -596,8 +597,9 @@ class TreeNode(metaclass=ABCMeta):
         """
 
     @property
+    @abstractmethod
     def color_palette(self):
-        return self.tree.domain.class_var.palette
+        pass
 
     def _rules_str(self):
         rules = self.tree.rules(self.label)
@@ -621,19 +623,21 @@ class DiscreteTreeNode(TreeNode):
     """
 
     @property
+    def color_palette(self):
+        return [QColor(*c) for c in self.tree.domain.class_var.colors]
+
+    @property
     def color(self):
         distribution = self.tree.get_distribution(self.label)[0]
         total = np.sum(distribution)
 
         if self.target_class_index:
             p = distribution[self.target_class_index - 1] / total
-            color = self.color_palette[self.target_class_index - 1]
-            color = color.lighter(200 - 100 * p)
+            color = self.color_palette[self.target_class_index - 1].lighter(200 - 100 * p)
         else:
             modus = np.argmax(distribution)
             p = distribution[modus] / (total or 1)
-            color = self.color_palette[int(modus)]
-            color = color.lighter(400 - 300 * p)
+            color = self.color_palette[int(modus)].lighter(400 - 300 * p)
         return color
 
     @property
@@ -685,6 +689,10 @@ class ContinuousTreeNode(TreeNode):
     }
 
     @property
+    def color_palette(self):
+        return ContinuousPaletteGenerator(*self.tree.domain.class_var.colors)
+
+    @property
     def color(self):
         if self.target_class_index is self.COLOR_MEAN:
             return self._color_mean()
@@ -699,16 +707,14 @@ class ContinuousTreeNode(TreeNode):
         max_mean = np.max(self.tree.instances.Y)
         instances = self.tree.get_instances_in_nodes(self.label)
         mean = np.mean(instances.Y)
-        return self.color_palette.value_to_qcolor(
-            mean, low=min_mean, high=max_mean)
+        return self.color_palette[(mean - min_mean) / (max_mean - min_mean)]
 
     def _color_var(self):
         """Color the nodes with respect to the variance of instances inside."""
         min_std, max_std = 0, np.std(self.tree.instances.Y)
         instances = self.tree.get_instances_in_nodes(self.label)
         std = np.std(instances.Y)
-        return self.color_palette.value_to_qcolor(
-            std, low=min_std, high=max_std)
+        return self.color_palette[(std - min_std) / (max_std - min_std)]
 
     @property
     def tooltip(self):

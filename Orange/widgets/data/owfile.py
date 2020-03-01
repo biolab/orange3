@@ -21,7 +21,7 @@ from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Output, Msg
+from Orange.widgets.widget import Output
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -121,19 +121,17 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     domain_editor = SettingProvider(DomainEditor)
 
     class Warning(widget.OWWidget.Warning):
-        file_too_big = Msg("The file is too large to load automatically."
-                           " Press Reload to load.")
-        load_warning = Msg("Read warning:\n{}")
-        performance_warning = Msg(
+        file_too_big = widget.Msg("The file is too large to load automatically."
+                                  " Press Reload to load.")
+        load_warning = widget.Msg("Read warning:\n{}")
+        performance_warning = widget.Msg(
             "Categorical variables with >100 values may decrease performance.")
-        renamed_vars = Msg("Some variables have been renamed "
-                           "to avoid duplicates.\n{}")
 
     class Error(widget.OWWidget.Error):
-        file_not_found = Msg("File not found.")
-        missing_reader = Msg("Missing reader.")
-        sheet_error = Msg("Error listing available sheets.")
-        unknown = Msg("Read error:\n{}")
+        file_not_found = widget.Msg("File not found.")
+        missing_reader = widget.Msg("Missing reader.")
+        sheet_error = widget.Msg("Error listing available sheets.")
+        unknown = widget.Msg("Read error:\n{}")
 
     class NoFileSelected:
         pass
@@ -480,13 +478,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def apply_domain_edit(self):
         self.Warning.performance_warning.clear()
-        self.Warning.renamed_vars.clear()
         if self.data is None:
             table = None
         else:
-            domain, cols, renamed = \
-                self.domain_editor.get_domain(self.data.domain, self.data,
-                                              deduplicate=True)
+            domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
             if not (domain.variables or domain.metas):
                 table = None
             elif domain is self.data.domain:
@@ -498,8 +493,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 table.ids = np.array(self.data.ids)
                 table.attributes = getattr(self.data, 'attributes', {})
                 self._inspect_discrete_variables(domain)
-            if renamed:
-                self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
 
         self.Outputs.data.send(table)
         self.apply_button.setEnabled(False)

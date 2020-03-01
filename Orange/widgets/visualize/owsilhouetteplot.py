@@ -10,8 +10,9 @@ import sklearn.metrics
 
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsWidget, QGraphicsGridLayout,
-    QGraphicsSimpleTextItem, QGraphicsRectItem, QStyleOptionGraphicsItem,
-    QSizePolicy, QWidget, QWIDGETSIZE_MAX, QVBoxLayout
+    QGraphicsItemGroup, QGraphicsSimpleTextItem, QGraphicsRectItem,
+    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX,
+    QVBoxLayout
 )
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
@@ -30,12 +31,12 @@ from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
+from Orange.widgets.visualize.owheatmap import scaled
 
 
 ROW_NAMES_WIDTH = 200
@@ -89,6 +90,7 @@ class OWSilhouettePlot(widget.OWWidget):
     #: A fixed size for an instance bar
     bar_size = settings.Setting(3)
     #: Add silhouette scores to output data
+    add_scores = settings.Setting(False)
     auto_commit = settings.Setting(True)
 
     pending_selection = settings.Setting(None, schema_only=True)
@@ -175,7 +177,11 @@ class OWSilhouettePlot(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        box = gui.vBox(self.buttonsArea, box=True)
+        gui.separator(self.buttonsArea)
+        box = gui.vBox(self.buttonsArea, "Output")
+        # Thunk the call to commit to call conditional commit
+        gui.checkBox(box, self, "add_scores", "Add silhouette scores",
+                     callback=lambda: self.commit())
         gui.auto_send(box, self, "auto_commit", box=False)
         # Ensure that the controlArea is not narrower than buttonsArea
         self.controlArea.layout().addWidget(self.buttonsArea)
@@ -494,22 +500,28 @@ class OWSilhouettePlot(widget.OWWidget):
             else:
                 scores = self._silhouette
 
-            var = self.cluster_var_model[self.cluster_var_idx]
-            silhouette_var = Orange.data.ContinuousVariable(
-                "Silhouette ({})".format(escape(var.name)))
-            domain = Orange.data.Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                self.data.domain.metas + (silhouette_var, ))
-            data = self.data.transform(domain)
+            silhouette_var = None
+            if self.add_scores:
+                var = self.cluster_var_model[self.cluster_var_idx]
+                silhouette_var = Orange.data.ContinuousVariable(
+                    "Silhouette ({})".format(escape(var.name)))
+                domain = Orange.data.Domain(
+                    self.data.domain.attributes,
+                    self.data.domain.class_vars,
+                    self.data.domain.metas + (silhouette_var, ))
+                data = self.data.transform(domain)
+            else:
+                domain = self.data.domain
+                data = self.data
 
             if np.count_nonzero(selectedmask):
                 selected = self.data.from_table(
                     domain, self.data, np.flatnonzero(selectedmask))
 
-            if selected is not None:
-                selected[:, silhouette_var] = np.c_[scores[selectedmask]]
-            data[:, silhouette_var] = np.c_[scores]
+            if self.add_scores:
+                if selected is not None:
+                    selected[:, silhouette_var] = np.c_[scores[selectedmask]]
+                data[:, silhouette_var] = np.c_[scores]
 
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(create_annotated_table(data, indices))
@@ -1194,6 +1206,112 @@ class BarPlotItem(QGraphicsWidget):
         for i, (v, item) in enumerate(zip(datascaled, self.__items)):
             item.setRect(QRectF(base, rect.top() + i * (h + spacing),
                                 v - base, h).normalized())
+
+
+class TextListWidget(QGraphicsWidget):
+    def __init__(self, parent=None, items=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.setFlag(QGraphicsWidget.ItemClipsChildrenToShape, True)
+        self.__items = []
+        self.__textitems = []
+        self.__group = None
+        self.__spacing = 0
+
+        sp = QSizePolicy(QSizePolicy.Preferred,
+                         QSizePolicy.Preferred)
+        sp.setWidthForHeight(True)
+        self.setSizePolicy(sp)
+
+        if items is not None:
+            self.setItems(items)
+
+    def setItems(self, items):
+        self.__clear()
+        self.__items = list(items)
+        self.__setup()
+        self.__layout()
+        self.updateGeometry()
+
+    def clear(self):
+        self.__clear()
+        self.__items = []
+        self.updateGeometry()
+
+    def sizeHint(self, which, constraint=QSizeF()):
+        if which == Qt.PreferredSize:
+            sh = self.__naturalsh()
+            if 0 < constraint.height() < sh.height():
+                sh = scaled(sh, constraint, Qt.KeepAspectRatioByExpanding)
+            return sh
+
+        return super().sizeHint(which, constraint)
+
+    def __naturalsh(self):
+        fm = QFontMetrics(self.font())
+        spacing = self.__spacing
+        N = len(self.__items)
+        width = max((fm.width(text) for text in self.__items),
+                    default=0)
+        height = N * fm.height() + (N - 1) * spacing
+        return QSizeF(width, height)
+
+    def event(self, event):
+        if event.type() == QEvent.LayoutRequest:
+            self.__layout()
+        elif event.type() == QEvent.GraphicsSceneResize:
+            self.__layout()
+
+        return super().event(event)
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.FontChange:
+            self.updateGeometry()
+            font = self.font()
+            for item in self.__textitems:
+                item.setFont(font)
+
+    def __setup(self):
+        self.__clear()
+        font = self.font()
+        group = QGraphicsItemGroup(self)
+
+        for text in self.__items:
+            t = QGraphicsSimpleTextItem(text, group)
+            t.setData(0, text)
+            t.setFont(font)
+            t.setToolTip(text)
+            self.__textitems.append(t)
+
+    def __layout(self):
+        crect = self.contentsRect()
+        spacing = self.__spacing
+        N = len(self.__items)
+
+        if not N:
+            return
+
+        fm = QFontMetrics(self.font())
+        naturalheight = fm.height()
+        th = (crect.height() - (N - 1) * spacing) / N
+        if th > naturalheight and N > 1:
+            th = naturalheight
+            spacing = (crect.height() - N * th) / (N - 1)
+
+        for i, item in enumerate(self.__textitems):
+            item.setPos(crect.left(), crect.top() + i * (th + spacing))
+
+    def __clear(self):
+        def remove(items, scene):
+            for item in items:
+                item.setParentItem(None)
+                if scene is not None:
+                    scene.removeItem(item)
+
+        remove(self.__textitems, self.scene())
+        if self.__group is not None:
+            remove([self.__group], self.scene())
+
+        self.__textitems = []
 
 
 if __name__ == "__main__":  # pragma: no cover

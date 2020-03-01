@@ -18,7 +18,7 @@ class OWSave(OWSaveBase):
     description = "Save data to an output file."
     icon = "icons/Save.svg"
     category = "Data"
-    keywords = ["export"]
+    keywords = []
 
     settings_version = 2
 

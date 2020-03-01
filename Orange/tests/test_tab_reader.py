@@ -81,7 +81,7 @@ class TestTabReader(unittest.TestCase):
         file = io.StringIO(samplefile)
         table = read_tab_file(file)
 
-        _, f2, c1, _ = table.domain.variables
+        f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
         self.assertEqual(f2.name, "Feature 2")
         self.assertEqual(f2.attributes, {'a': 1, 'b': 2})
@@ -97,7 +97,7 @@ class TestTabReader(unittest.TestCase):
         file = io.StringIO(saved)
         table = read_tab_file(file)
 
-        _, f2, c1, _ = table.domain.variables
+        f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
         self.assertEqual(f2.name, "Feature 2")
         self.assertEqual(f2.attributes, {'a': 1, 'b': 2})
@@ -106,16 +106,16 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(c1.name, "Class 1")
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
 
-        spath = "/path/to/somewhere"
-        c1.attributes["path"] = spath
+        path = "/path/to/somewhere"
+        c1.attributes["path"] = path
         outf = io.StringIO()
         outf.close = lambda: None
         TabReader.write_file(outf, table)
         outf.seek(0)
 
         table = read_tab_file(outf)
-        _, _, c1, _ = table.domain.variables
-        self.assertEqual(c1.attributes["path"], spath)
+        f1, f2, c1, c2 = table.domain.variables
+        self.assertEqual(c1.attributes["path"], path)
 
     def test_read_data_oneline_header(self):
         samplefile = """\
@@ -168,9 +168,9 @@ class TestTabReader(unittest.TestCase):
             table = read_tab_file(filename)
             domain = table.domain
             self.assertEqual([x.name for x in domain.attributes],
-                             ["a (1)", "b (1)", "a (2)", "a (3)", "c", "a (5)"])
-            self.assertEqual([x.name for x in domain.class_vars], ["b (2)", "a (4)"])
-            self.assertEqual([x.name for x in domain.metas], ["b (3)"])
+                             ["a_1", "b_1", "a_2", "a_3", "c", "a_5"])
+            self.assertEqual([x.name for x in domain.class_vars], ["b_2", "a_4"])
+            self.assertEqual([x.name for x in domain.metas], ["b_3"])
         finally:
             remove(filename)
 
@@ -273,8 +273,7 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(data.domain["INDUS"].number_of_decimals, 2)
         self.assertEqual(data.domain["AGE"].number_of_decimals, 1)
 
-    @staticmethod
-    def test_many_discrete():
+    def test_many_discrete(self):
         b = io.StringIO()
         b.write("Poser\nd\n\n")
         b.writelines("K" + str(i) + "\n" for i in range(30000))

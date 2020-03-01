@@ -39,11 +39,9 @@ class Normalizer(Reprable):
         if not var.is_continuous or (var.is_time and not self.normalize_datetime):
             return var
         elif self.norm_type == Normalize.NormalizeBySD:
-            var = self.normalize_by_sd(dist, var)
+            return self.normalize_by_sd(dist, var)
         elif self.norm_type == Normalize.NormalizeBySpan:
-            var = self.normalize_by_span(dist, var)
-        var.number_of_decimals = None
-        return var
+            return self.normalize_by_span(dist, var)
 
     def normalize_by_sd(self, dist, var):
         avg, sd = (dist.mean(), dist.standard_deviation()) if dist.size else (0, 1)

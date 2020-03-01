@@ -87,10 +87,7 @@
     "icon": "../Orange/widgets/data/icons/SelectColumns.svg",
     "background": "#FFD39F",
     "keywords": [
-     "filter",
-     "attributes",
-     "target",
-     "variable"
+     "filter"
     ]
    },
    {
@@ -292,9 +289,7 @@
     "doc": "visual-programming/source/widgets/data/save.md",
     "icon": "../Orange/widgets/data/icons/Save.svg",
     "background": "#FFD39F",
-    "keywords": [
-     "export"
-    ]
+    "keywords": []
    }
   ]
  ],

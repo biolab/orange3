@@ -1,28 +1,26 @@
 import operator
 import os
-import threading
 import warnings
-import weakref
 import zlib
 from collections import Iterable, Sequence, Sized
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
-from threading import Lock
+from threading import Lock, RLock
 
 import bottleneck as bn
 import numpy as np
 from Orange.misc.collections import frozendict
 from Orange.util import OrangeDeprecationWarning
 from scipy import sparse as sp
-from scipy.sparse import issparse, csc_matrix
+from scipy.sparse import issparse
 
 import Orange.data  # import for io.py
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
-    ContinuousVariable, DiscreteVariable, MISSING_VALUES,
-    DomainConversion)
+    ContinuousVariable, DiscreteVariable, MISSING_VALUES
+)
 from Orange.data.util import SharedComputeValue, \
     assure_array_dense, assure_array_sparse, \
     assure_column_dense, assure_column_sparse, get_unique_names_duplicates
@@ -42,16 +40,11 @@ def get_sample_datasets_dir():
 dataset_dirs = ['', get_sample_datasets_dir()]
 
 
-class _ThreadLocal(threading.local):
-    def __init__(self):
-        super().__init__()
-        # Domain conversion cache used in Table.from_table. It is defined
-        # here instead of as a class variable of a Table so that caching also works
-        # with descendants of Table.
-        self.conversion_cache = None
-
-
-_thread_local = _ThreadLocal()
+"""Domain conversion cache used in Table.from_table. It is global so that
+chaining of domain conversions also works with caching even with descendants
+of Table."""
+_conversion_cache = None
+_conversion_cache_lock = RLock()
 
 
 class DomainTransformationError(Exception):
@@ -317,11 +310,7 @@ class Table(Sequence, Storage):
         :rtype: Orange.data.Table
         """
 
-        def valid_refs(weakrefs):
-            for r in weakrefs:
-                if r() is None:
-                    return False
-            return True
+        global _conversion_cache
 
         def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
                         is_sparse=False, variables=[]):
@@ -349,150 +338,113 @@ class Table(Sequence, Storage):
                     source._Y, row_indices,
                     [x - n_src_attrs for x in src_cols]))
 
-            # initialize arrays & set `match_density` for columns
-            # F-order enables faster writing to the array while accessing and
-            # matrix operations work with same speed (e.g. dot)
-            a = None if is_sparse else np.zeros(
-                (n_rows, len(src_cols)), order="F", dtype=dtype)
-            data = []
-            sp_col = []
-            sp_row = []
-            match_density = (
-                assure_column_sparse if is_sparse else assure_column_dense
-            )
+            # initialize final array & set `match_density` for columns
+            if is_sparse:
+                a = sp.dok_matrix((n_rows, len(src_cols)), dtype=dtype)
+                match_density = assure_column_sparse
+            else:
+                a = np.empty((n_rows, len(src_cols)), dtype=dtype)
+                match_density = assure_column_dense
 
-            # converting to csc before instead of each column is faster
-            # do not convert if not required
-            if any([isinstance(x, int) for x in src_cols]):
-                X = csc_matrix(source.X) if is_sparse else source.X
-                Y = csc_matrix(source._Y) if is_sparse else source._Y
-
-            shared_cache = _thread_local.conversion_cache
+            shared_cache = _conversion_cache
             for i, col in enumerate(src_cols):
                 if col is None:
-                    col_array = match_density(
-                        np.full((n_rows, 1), variables[i].Unknown)
-                    )
+                    a[:, i] = variables[i].Unknown
                 elif not isinstance(col, Integral):
                     if isinstance(col, SharedComputeValue):
-                        shared, weakrefs = shared_cache.get(
-                            (id(col.compute_shared), id(source)),
-                            (None, None)
-                        )
-                        if shared is None or not valid_refs(weakrefs):
-                            shared, _ = shared_cache[(id(col.compute_shared), id(source))] = \
-                                col.compute_shared(source), \
-                                (weakref.ref(col.compute_shared), weakref.ref(source))
-
+                        if (id(col.compute_shared), id(source)) not in shared_cache:
+                            shared_cache[id(col.compute_shared), id(source)] = \
+                                col.compute_shared(source)
+                        shared = shared_cache[id(col.compute_shared), id(source)]
                         if row_indices is not ...:
-                            col_array = match_density(
+                            a[:, i] = match_density(
                                 col(source, shared_data=shared)[row_indices])
                         else:
-                            col_array = match_density(
+                            a[:, i] = match_density(
                                 col(source, shared_data=shared))
                     else:
                         if row_indices is not ...:
-                            col_array = match_density(col(source)[row_indices])
+                            a[:, i] = match_density(col(source)[row_indices])
                         else:
-                            col_array = match_density(col(source))
+                            a[:, i] = match_density(col(source))
                 elif col < 0:
-                    col_array = match_density(
-                        source.metas[row_indices, -1 - col]
-                    )
+                    a[:, i] = match_density(source.metas[row_indices, -1 - col])
                 elif col < n_src_attrs:
-                    col_array = match_density(X[row_indices, col])
+                    a[:, i] = match_density(source.X[row_indices, col])
                 else:
-                    col_array = match_density(
-                        Y[row_indices, col - n_src_attrs]
-                    )
-
-                if is_sparse:
-                    # col_array should be coo matrix
-                    data.append(col_array.data)
-                    sp_col.append(np.full(len(col_array.data), i))
-                    sp_row.append(col_array.indices)  # row indices should be same
-                else:
-                    a[:, i] = col_array
+                    a[:, i] = match_density(
+                        source._Y[row_indices, col - n_src_attrs])
 
             if is_sparse:
-                # creating csr directly would need plenty of manual work which
-                # would probably slow down the process - conversion coo to csr
-                # is fast
-                a = sp.coo_matrix(
-                    (np.hstack(data), (np.hstack(sp_row), np.hstack(sp_col))),
-                    shape=(n_rows, len(src_cols)),
-                    dtype=dtype
-                )
                 a = a.tocsr()
 
             return a
 
-        new_cache = _thread_local.conversion_cache is None
-        try:
-            if new_cache:
-                _thread_local.conversion_cache = {}
-            else:
-                cached, weakrefs = \
-                    _thread_local.conversion_cache.get((id(domain), id(source)), (None, None))
-                if cached and valid_refs(weakrefs):
-                    return cached
-            if domain is source.domain:
-                table = cls.from_table_rows(source, row_indices)
-                # assure resulting domain is the instance passed on input
-                table.domain = domain
-                # since sparse flags are not considered when checking for
-                # domain equality, fix manually.
-                table = assure_domain_conversion_sparsity(table, source)
-                return table
+        with _conversion_cache_lock:
+            new_cache = _conversion_cache is None
+            try:
+                if new_cache:
+                    _conversion_cache = {}
+                else:
+                    cached = _conversion_cache.get((id(domain), id(source)))
+                    if cached:
+                        return cached
+                if domain is source.domain:
+                    table = cls.from_table_rows(source, row_indices)
+                    # assure resulting domain is the instance passed on input
+                    table.domain = domain
+                    # since sparse flags are not considered when checking for
+                    # domain equality, fix manually.
+                    table = assure_domain_conversion_sparsity(table, source)
+                    return table
 
-            if isinstance(row_indices, slice):
-                start, stop, stride = row_indices.indices(source.X.shape[0])
-                n_rows = (stop - start) // stride
-                if n_rows < 0:
-                    n_rows = 0
-            elif row_indices is ...:
-                n_rows = len(source)
-            else:
-                n_rows = len(row_indices)
+                if isinstance(row_indices, slice):
+                    start, stop, stride = row_indices.indices(source.X.shape[0])
+                    n_rows = (stop - start) // stride
+                    if n_rows < 0:
+                        n_rows = 0
+                elif row_indices is ...:
+                    n_rows = len(source)
+                else:
+                    n_rows = len(row_indices)
 
-            self = cls()
-            self.domain = domain
-            conversion = DomainConversion(source.domain, domain)
-            self.X = get_columns(row_indices, conversion.attributes, n_rows,
-                                 is_sparse=conversion.sparse_X,
-                                 variables=domain.attributes)
-            if self.X.ndim == 1:
-                self.X = self.X.reshape(-1, len(self.domain.attributes))
+                self = cls()
+                self.domain = domain
+                conversion = domain.get_conversion(source.domain)
+                self.X = get_columns(row_indices, conversion.attributes, n_rows,
+                                     is_sparse=conversion.sparse_X,
+                                     variables=domain.attributes)
+                if self.X.ndim == 1:
+                    self.X = self.X.reshape(-1, len(self.domain.attributes))
 
-            self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
-                                 is_sparse=conversion.sparse_Y,
-                                 variables=domain.class_vars)
+                self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
+                                     is_sparse=conversion.sparse_Y,
+                                     variables=domain.class_vars)
 
-            dtype = np.float64
-            if any(isinstance(var, StringVariable) for var in domain.metas):
-                dtype = np.object
-            self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, dtype,
-                                     is_sparse=conversion.sparse_metas,
-                                     variables=domain.metas)
-            if self.metas.ndim == 1:
-                self.metas = self.metas.reshape(-1, len(self.domain.metas))
-            if source.has_weights():
-                self.W = source.W[row_indices]
-            else:
-                self.W = np.empty((n_rows, 0))
-            self.name = getattr(source, 'name', '')
-            if hasattr(source, 'ids'):
-                self.ids = source.ids[row_indices]
-            else:
-                cls._init_ids(self)
-            self.attributes = getattr(source, 'attributes', {})
-            _thread_local.conversion_cache[(id(domain), id(source))] = \
-                self, (weakref.ref(domain), weakref.ref(source))
-            return self
-        finally:
-            if new_cache:
-                _thread_local.conversion_cache = None
+                dtype = np.float64
+                if any(isinstance(var, StringVariable) for var in domain.metas):
+                    dtype = np.object
+                self.metas = get_columns(row_indices, conversion.metas,
+                                         n_rows, dtype,
+                                         is_sparse=conversion.sparse_metas,
+                                         variables=domain.metas)
+                if self.metas.ndim == 1:
+                    self.metas = self.metas.reshape(-1, len(self.domain.metas))
+                if source.has_weights():
+                    self.W = source.W[row_indices]
+                else:
+                    self.W = np.empty((n_rows, 0))
+                self.name = getattr(source, 'name', '')
+                if hasattr(source, 'ids'):
+                    self.ids = source.ids[row_indices]
+                else:
+                    cls._init_ids(self)
+                self.attributes = getattr(source, 'attributes', {})
+                _conversion_cache[(id(domain), id(source))] = self
+                return self
+            finally:
+                if new_cache:
+                    _conversion_cache = None
 
     def transform(self, domain):
         """
@@ -1862,7 +1814,7 @@ def assure_domain_conversion_sparsity(target, source):
         Table: with fixed sparsity. The sparsity is set as it is recommended by domain conversion
             for transformation from source to the target domain.
     """
-    conversion = DomainConversion(source.domain, target.domain)
+    conversion = target.domain.get_conversion(source.domain)
     match_density = [assure_array_dense, assure_array_sparse]
     target.X = match_density[conversion.sparse_X](target.X)
     target.Y = match_density[conversion.sparse_Y](target.Y)

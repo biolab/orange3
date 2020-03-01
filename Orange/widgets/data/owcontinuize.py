@@ -34,12 +34,9 @@ class OWContinuize(widget.OWWidget):
     buttons_area_orientation = Qt.Vertical
     resizing_enabled = False
 
-    # continuous treats
-    Leave, NormalizeBySpan, NormalizeBySD = range(3)
-
     multinomial_treatment = Setting(0)
     zero_based = Setting(1)
-    continuous_treatment = Setting(Leave)
+    continuous_treatment = Setting(0)
     class_treatment = Setting(0)
 
     transform_class = Setting(False)
@@ -110,7 +107,6 @@ class OWContinuize(widget.OWWidget):
     @check_sql_input
     def setData(self, data):
         self.data = data
-        self.enable_normalization()
         if data is None:
             self.info.set_input_summary(self.info.NoInput)
             self.info.set_output_summary(self.info.NoOutput)
@@ -118,15 +114,6 @@ class OWContinuize(widget.OWWidget):
         else:
             self.info.set_input_summary(len(data))
             self.unconditional_commit()
-
-    def enable_normalization(self):
-        enable = not (self.data and self.data.is_sparse())
-        if not enable and self.continuous_treatment in (self.NormalizeBySpan,
-                                                        self.NormalizeBySD):
-            self.continuous_treatment = self.Leave
-        buttons = self.controls.continuous_treatment.buttons
-        buttons[self.NormalizeBySpan].setEnabled(enable)
-        buttons[self.NormalizeBySD].setEnabled(enable)
 
     def constructContinuizer(self):
         conzer = DomainContinuizer(

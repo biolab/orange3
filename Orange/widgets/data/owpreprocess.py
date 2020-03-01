@@ -29,7 +29,6 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 from Orange.preprocess import Normalize
 from Orange.widgets.data.utils.preprocess import (
@@ -1266,7 +1265,7 @@ class OWPreprocess(widget.OWWidget):
         """Set the input dataset."""
         self.data = data
         if data is not None:
-            self.info.set_input_summary(len(data), format_summary_details(data))
+            self.info.set_input_summary(len(data))
         else:
             self.info.set_input_summary(self.info.NoInput)
 
@@ -1312,7 +1311,7 @@ class OWPreprocess(widget.OWWidget):
             except (ValueError, ZeroDivisionError) as e:
                 self.error(str(e))
                 return
-            self.info.set_output_summary(len(data), format_summary_details(data))
+            self.info.set_output_summary(len(data))
         else:
             data = None
             self.info.set_output_summary(self.info.NoOutput)

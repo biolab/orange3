@@ -99,7 +99,7 @@ class TestSqlTable(unittest.TestCase, dbt):
             filtered_table = filter.SameValue(table.domain[0], 'm')(table)
             self.assertEqual(len(filtered_table), 13)
 
-            table.domain[0].add_value('x')
+            table.domain[0].values.append('x')
             filtered_table = filter.SameValue(table.domain[0], 'x')(table)
             self.assertEqual(len(filtered_table), 0)
 

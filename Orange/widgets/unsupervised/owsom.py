@@ -24,8 +24,8 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.annotated_data import \
     create_annotated_table, create_groups_table, ANNOTATED_DATA_SIGNAL_NAME
-from Orange.widgets.utils.colorpalettes import \
-    BinnedContinuousPalette, LimitedDiscretePalette
+from Orange.widgets.utils.colorpalette import \
+    ContinuousPaletteGenerator, ColorPaletteGenerator
 from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
 from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 
@@ -481,7 +481,7 @@ class OWSOM(OWWidget):
 
         mark_brush = QBrush(QColor(224, 255, 255))
         sels = self.selection is not None and np.max(self.selection)
-        palette = LimitedDiscretePalette(number_of_colors=sels + 1)
+        palette = ColorPaletteGenerator(number_of_colors=sels + 1)
         brushes = [QBrush(Qt.NoBrush)] + \
                   [QBrush(palette[i].lighter(165)) for i in range(sels)]
 
@@ -587,7 +587,7 @@ class OWSOM(OWWidget):
             int_col[np.isnan(color_column)] = len(self.colors)
         else:
             int_col = np.zeros(len(color_column), dtype=int)
-            # The following line is unnecessary because rows with missing
+            # The following line is not necessary because rows with missing
             # numeric data are excluded. Uncomment it if you change SOM to
             # tolerate missing values.
             # int_col[np.isnan(color_column)] = len(self.colors)
@@ -618,7 +618,7 @@ class OWSOM(OWWidget):
     def _draw_pie_charts(self, sizes):
         fx, fy = self._grid_factors
         color_column = self._get_color_column()
-        colors = self.colors.qcolors_w_nan
+        colors = self.colors + [Qt.gray]
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = sizes[x, y]
@@ -836,7 +836,7 @@ class OWSOM(OWWidget):
             self.thresholds = self.bin_labels = self.colors = None
         elif self.attr_color.is_discrete:
             self.thresholds = self.bin_labels = None
-            self.colors = self.attr_color.palette
+            self.colors = [QColor(*color) for color in self.attr_color.colors]
         else:
             col = self.data.get_column_view(self.attr_color)[0].astype(float)
             if self.attr_color.is_time:
@@ -845,9 +845,9 @@ class OWSOM(OWWidget):
                 binning = decimal_binnings(col, min_bins=4)[-1]
             self.thresholds = binning.thresholds[1:-1]
             self.bin_labels = (binning.labels[1:-1], binning.short_labels[1:-1])
-            palette = BinnedContinuousPalette.from_palette(
-                self.attr_color.palette, binning.thresholds)
-            self.colors = palette
+            palette = ContinuousPaletteGenerator(*self.attr_color.colors)
+            nbins = len(self.thresholds) + 1
+            self.colors = [palette[i / (nbins - 1)] for i in range(nbins)]
 
     def create_legend(self):
         if self.legend is not None:

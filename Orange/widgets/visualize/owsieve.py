@@ -111,7 +111,7 @@ class OWSieveDiagram(OWWidget):
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
         combo_args = dict(
             widget=self.attr_box, master=self, contentsLength=12,
-            callback=self.attr_changed, sendSelectedValue=True,
+            callback=self.attr_changed, sendSelectedValue=True, valueType=str,
             model=self.domain_model)
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)

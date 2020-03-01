@@ -39,7 +39,6 @@ from Orange.preprocess.transformation import Transformation, Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 ndarray = np.ndarray  # pylint: disable=invalid-name
@@ -1607,9 +1606,6 @@ class OWEditDomain(widget.OWWidget):
         mainlayout.addWidget(bbox)
         self.variables_view.setFocus(Qt.NoFocusReason)  # initial focus
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
     @Inputs.data
     def set_data(self, data):
         """Set input dataset."""
@@ -1618,13 +1614,9 @@ class OWEditDomain(widget.OWWidget):
         self.data = data
 
         if self.data is not None:
-            self.info.set_input_summary(len(data),
-                                        format_summary_details(data))
             self.setup_model(data)
             self.openContext(self.data)
             self._restore()
-        else:
-            self.info.set_input_summary(self.info.NoInput)
 
         self.commit()
 
@@ -1804,7 +1796,6 @@ class OWEditDomain(widget.OWWidget):
         data = self.data
         if data is None:
             self.Outputs.data.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
             return
         model = self.variables_model
 
@@ -1817,8 +1808,6 @@ class OWEditDomain(widget.OWWidget):
         state = [state(i) for i in range(model.rowCount())]
         if all(tr is None or not tr for _, tr in state):
             self.Outputs.data.send(data)
-            self.info.set_output_summary(len(data),
-                                         format_summary_details(data))
             return
 
         output_vars = []
@@ -1835,7 +1824,6 @@ class OWEditDomain(widget.OWWidget):
         if len(output_vars) != len({v.name for v in output_vars}):
             self.Error.duplicate_var_name()
             self.Outputs.data.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
             return
 
         domain = data.domain
@@ -1852,8 +1840,6 @@ class OWEditDomain(widget.OWWidget):
         domain = Orange.data.Domain(Xs, Ys, Ms)
         new_data = data.transform(domain)
         self.Outputs.data.send(new_data)
-        self.info.set_output_summary(len(new_data),
-                                     format_summary_details(new_data))
 
     def sizeHint(self):
         sh = super().sizeHint()

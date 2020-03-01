@@ -11,7 +11,6 @@ from Orange.data import Table
 from Orange.data.util import vstack, hstack, array_equal
 from Orange.statistics.util import stats
 from Orange.tests.test_statistics import dense_sparse
-from Orange.util import wrap_callback
 
 SOMETHING = 0xf00babe
 
@@ -159,21 +158,3 @@ class TestUtil(unittest.TestCase):
         a1 = sp.csc_matrix(([1, 4, 5], [0, 0, 1], [0, 1, 1, 3]), shape=(2, 3))
         a2 = sp.csc_matrix(([1, 5, 4], [0, 1, 0], [0, 1, 1, 3]), shape=(2, 3))
         self.assertTrue(array_equal(a1, a2))
-
-    def test_wrap_callback(self):
-        def func(i):
-            return i
-
-        f = wrap_callback(func, start=0, end=0.8)
-        self.assertEqual(f(0), 0)
-        self.assertEqual(round(f(0.1), 2), 0.08)
-        self.assertEqual(f(1), 0.8)
-
-        f = wrap_callback(func, start=0.1, end=0.8)
-        self.assertEqual(f(0), 0.1)
-        self.assertEqual(f(0.1), 0.17)
-        self.assertEqual(f(1), 0.8)
-
-
-if __name__ == "__main__":
-    unittest.main()

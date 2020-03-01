@@ -4,20 +4,21 @@ Wrappers for controls used in widgets
 import math
 
 import logging
-import warnings
 import weakref
 from collections.abc import Sequence
 
 from AnyQt import QtWidgets, QtCore, QtGui
-from AnyQt.QtCore import Qt, QSize, QItemSelection
+from AnyQt.QtCore import (
+    Qt, QSize, QItemSelection,
+)
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import QWidget, QItemDelegate, QListView, QComboBox
+from AnyQt.QtWidgets import QWidget, QItemDelegate, QListView
 
 # re-export relevant objects
+from orangewidget.utils.combobox import ComboBox as OrangeComboBox
 from orangewidget.gui import (
     OWComponent, OrangeUserRole, TableView, resource_filename,
     miscellanea, setLayout, separator, rubber, widgetBox, hBox, vBox,
-    comboBox as gui_comboBox,
     indentedBox, widgetLabel, label, spin, doubleSpin, checkBox, lineEdit,
     button, toolButton, radioButtons, radioButtonsInBox, appendRadioButton,
     hSlider, labeledSlider, valueSlider, auto_commit, auto_send, auto_apply,
@@ -36,7 +37,9 @@ from orangewidget.gui import (
 # exposed for backcompat. Should not be imported from here, or not
 # imported at all
 from orangewidget.gui import (
-    SpinBoxWFocusOut, DoubleSpinBoxWFocusOut, LineEditWFocusOut, OrangeComboBox
+    SpinBoxWFocusOut, DoubleSpinBoxWFocusOut, LineEditWFocusOut,
+    LAMBDA_NAME, disable_opposite,
+    _addSpace  # was included in docs
 )  # pylint: disable=unused-import
 from Orange.widgets.utils.buttons import (
     VariableTextPushButton
@@ -62,7 +65,7 @@ __all__ = [
     "miscellanea", "setLayout", "separator", "rubber",
     "widgetBox", "hBox", "vBox", "indentedBox",
     "widgetLabel", "label", "spin", "doubleSpin",
-    "checkBox", "lineEdit", "button", "toolButton", "comboBox",
+    "checkBox", "lineEdit", "button", "toolButton",
     "radioButtons", "radioButtonsInBox", "appendRadioButton",
     "hSlider", "labeledSlider", "valueSlider",
     "auto_commit", "auto_send", "auto_apply", "ProgressBar",
@@ -72,26 +75,15 @@ __all__ = [
     "BarRatioRole", "BarBrushRole", "SortOrderRole", "LinkRole",
     "BarItemDelegate", "IndicatorItemDelegate", "LinkStyledItemDelegate",
     "ColoredBarItemDelegate", "HorizontalGridDelegate", "VerticalItemDelegate",
-    "ValueCallback",
     # Defined here
     "createAttributePixmap", "attributeIconDict", "attributeItem",
     "listView", "ListViewWithSizeHint", "listBox", "OrangeListBox",
     "TableValueRole", "TableClassValueRole", "TableDistribution",
-    "TableVariable", "TableBarItem", "palette_combo_box"
+    "TableVariable", "TableBarItem"
 ]
 
 
 log = logging.getLogger(__name__)
-
-
-def palette_combo_box(initial_palette):
-    from Orange.widgets.utils import itemmodels
-    cb = QComboBox()
-    model = itemmodels.ContinuousPalettesModel()
-    cb.setModel(model)
-    cb.setCurrentIndex(model.indexOf(initial_palette))
-    cb.setIconSize(QSize(64, 16))
-    return cb
 
 
 def createAttributePixmap(char, background=Qt.black, color=Qt.white):
@@ -468,12 +460,172 @@ class ControlledList(list):
         super().remove(item)
 
 
-def comboBox(*args, **kwargs):
-    if "valueType" in kwargs:
-        del kwargs["valueType"]
-        warnings.warn("Argument 'valueType' is deprecated and ignored",
-                      DeprecationWarning)
-    return gui_comboBox(*args, **kwargs)
+# TODO comboBox looks overly complicated:
+# - can valueType be anything else than str?
+# - sendSelectedValue is not a great name
+def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
+             orientation=Qt.Vertical, items=(), callback=None,
+             sendSelectedValue=False, valueType=str,
+             emptyString=None, editable=False,
+             contentsLength=None, maximumContentsLength=25,
+             **misc):
+    """
+    Construct a combo box.
+
+    The `value` attribute of the `master` contains either the index of the
+    selected row (if `sendSelected` is left at default, `False`) or a value
+    converted to `valueType` (`str` by default).
+
+    :param widget: the widget into which the box is inserted
+    :type widget: QWidget or None
+    :param master: master widget
+    :type master: OWWidget or OWComponent
+    :param value: the master's attribute with which the value is synchronized
+    :type value:  str
+    :param box: tells whether the widget has a border, and its label
+    :type box: int or str or None
+    :param orientation: tells whether to put the label above or to the left
+    :type orientation: `Qt.Horizontal` (default), `Qt.Vertical` or
+        instance of `QLayout`
+    :param label: a label that is inserted into the box
+    :type label: str
+    :param labelWidth: the width of the label
+    :type labelWidth: int
+    :param callback: a function that is called when the value is changed
+    :type callback: function
+    :param items: items (optionally with data) that are put into the box
+    :type items: tuple of str or tuples
+    :param sendSelectedValue: flag telling whether to store/retrieve indices
+        or string values from `value`
+    :type sendSelectedValue: bool
+    :param valueType: the type into which the selected value is converted
+        if sentSelectedValue is `False`
+    :type valueType: type
+    :param emptyString: the string value in the combo box that gets stored as
+        an empty string in `value`
+    :type emptyString: str
+    :param editable: a flag telling whether the combo is editable
+    :type editable: bool
+    :param int contentsLength: Contents character length to use as a
+        fixed size hint. When not None, equivalent to::
+
+            combo.setSizeAdjustPolicy(
+                QComboBox.AdjustToMinimumContentsLengthWithIcon)
+            combo.setMinimumContentsLength(contentsLength)
+    :param int maximumContentsLength: Specifies the upper bound on the
+        `sizeHint` and `minimumSizeHint` width specified in character
+        length (default: 25, use 0 to disable)
+    :rtype: QComboBox
+    """
+
+    # Local import to avoid circular imports
+    from Orange.widgets.utils.itemmodels import VariableListModel
+
+    if box or label:
+        hb = widgetBox(widget, box, orientation, addToLayout=False)
+        if label is not None:
+            label = widgetLabel(hb, label, labelWidth)
+    else:
+        hb = widget
+
+    combo = OrangeComboBox(
+        hb, maximumContentsLength=maximumContentsLength,
+        editable=editable)
+
+    if contentsLength is not None:
+        combo.setSizeAdjustPolicy(
+            QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        combo.setMinimumContentsLength(contentsLength)
+
+    combo.box = hb
+    combo.label = label
+    for item in items:
+        if isinstance(item, (tuple, list)):
+            combo.addItem(*item)
+        else:
+            combo.addItem(str(item))
+
+    if value:
+        cindex = getdeepattr(master, value)
+        model = misc.pop("model", None)
+        if model is not None:
+            combo.setModel(model)
+        if isinstance(model, VariableListModel):
+            callfront = CallFrontComboBoxModel(combo, model)
+            callfront.action(cindex)
+        else:
+            if isinstance(cindex, str):
+                if items and cindex in items:
+                    cindex = items.index(cindex)
+                else:
+                    cindex = 0
+            if cindex > combo.count() - 1:
+                cindex = 0
+            combo.setCurrentIndex(cindex)
+
+        if isinstance(model, VariableListModel):
+            connectControl(
+                master, value, callback, combo.activated[int],
+                callfront,
+                ValueCallbackComboModel(master, value, model)
+            )
+        elif sendSelectedValue:
+            connectControl(
+                master, value, callback, combo.activated[str],
+                CallFrontComboBox(combo, valueType, emptyString),
+                ValueCallbackCombo(master, value, valueType, emptyString))
+        else:
+            connectControl(
+                master, value, callback, combo.activated[int],
+                CallFrontComboBox(combo, None, emptyString))
+    miscellanea(combo, hb, widget, **misc)
+    combo.emptyString = emptyString
+    return combo
+
+
+class ValueCallbackCombo(ValueCallback):
+    def __init__(self, widget, attribute, f=None, emptyString=""):
+        super().__init__(widget, attribute, f)
+        self.emptyString = emptyString
+
+    def __call__(self, value):
+        value = str(value)
+        return super().__call__("" if value == self.emptyString else value)
+
+
+class ValueCallbackComboModel(ValueCallback):
+    def __init__(self, widget, attribute, model):
+        super().__init__(widget, attribute)
+        self.model = model
+
+    def __call__(self, index):
+        # Can't use super here since, it doesn't set `None`'s?!
+        return self.acyclic_setattr(self.model[index])
+
+
+class FunctionCallback:
+    def __init__(self, master, f, widget=None, id=None, getwidget=False):
+        self.master = master
+        self.widget = widget
+        self.func = f
+        self.id = id
+        self.getwidget = getwidget
+        if hasattr(master, "callbackDeposit"):
+            master.callbackDeposit.append(self)
+        self.disabled = 0
+
+    def __call__(self, *value):
+        if not self.disabled and value is not None:
+            kwds = {}
+            if self.id is not None:
+                kwds['id'] = self.id
+            if self.getwidget:
+                kwds['widget'] = self.widget
+            if isinstance(self.func, list):
+                for func in self.func:
+                    func(**kwds)
+            else:
+                self.func(**kwds)
 
 
 class CallBackListView(ControlledCallback):
@@ -520,6 +672,51 @@ class CallBackListBox:
 
 ##############################################################################
 # call fronts (change of the attribute value changes the related control)
+
+
+class CallFrontComboBox(ControlledCallFront):
+    def __init__(self, control, valType=None, emptyString=""):
+        super().__init__(control)
+        self.valType = valType
+        self.emptyString = emptyString
+
+    def action(self, value):
+        if value in ('', None):
+            value = self.emptyString
+        if self.valType:
+            for i in range(self.control.count()):
+                if self.valType(self.control.itemText(i)) == value:
+                    self.control.setCurrentIndex(i)
+                    return
+            if value:
+                log.warning("Unable to set %s to '%s'. Possible values are: %s",
+                            self.control, value,
+                            ', '.join(self.control.itemText(i)
+                                      for i in range(self.control.count())))
+        else:
+            if value < self.control.count():
+                self.control.setCurrentIndex(value)
+
+
+class CallFrontComboBoxModel(ControlledCallFront):
+    def __init__(self, control, model):
+        super().__init__(control)
+        self.model = model
+
+    def action(self, value):
+        if value == "":  # the latter accomodates PyListModel
+            value = None
+        if value is None and None not in self.model:
+            return  # e.g. attribute x in uninitialized scatter plot
+        if value in self.model:
+            self.control.setCurrentIndex(self.model.indexOf(value))
+            return
+        elif isinstance(value, str):
+            for i, val in enumerate(self.model):
+                if value == str(val):
+                    self.control.setCurrentIndex(i)
+                    return
+        raise ValueError("Combo box does not contain item " + repr(value))
 
 
 class CallFrontListView(ControlledCallFront):
@@ -662,7 +859,3 @@ class TableBarItem(QItemDelegate):
         text = str(index.data(Qt.DisplayRole))
         self.drawDisplay(painter, option, text_rect, text)
         painter.restore()
-
-
-from Orange.widgets.utils.colorpalettes import patch_variable_colors
-patch_variable_colors()

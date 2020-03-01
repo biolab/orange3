@@ -3,7 +3,7 @@ import numpy as np
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, \
     TimeVariable
-from Orange.data.io_util import guess_data_type
+from Orange.data.io import guess_data_type
 
 
 class TestTableFilters(unittest.TestCase):

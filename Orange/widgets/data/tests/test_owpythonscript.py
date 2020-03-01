@@ -8,7 +8,7 @@ from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.tests import named_file
-from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content, Script
+from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content
 from Orange.widgets.tests.base import WidgetTest, DummySignalManager
 from Orange.widgets.widget import OWWidget
 
@@ -241,17 +241,3 @@ class TestOWPythonScript(WidgetTest):
         widget3.text.setPlainText("out_object = 2 * x")
         widget3.execute_button.click()
         self.assertIsNotNone(sys.last_traceback)
-
-    def test_migrate(self):
-        w = self.create_widget(OWPythonScript, {
-            "libraryListSource": [Script("A", "1")],
-            "__version__": 0
-        })
-        self.assertEqual(w.libraryListSource[0].name, "A")
-
-    def test_restore(self):
-        w = self.create_widget(OWPythonScript, {
-            "scriptLibrary": [dict(name="A", script="1", filename=None)],
-            "__version__": 2
-        })
-        self.assertEqual(w.libraryListSource[0].name, "A")

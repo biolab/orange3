@@ -575,15 +575,14 @@ class OWPlotGUI:
         else:
             return name
 
-    def _check_box(self, widget, value, label, cb_name, stateWhenDisabled=None):
+    def _check_box(self, widget, value, label, cb_name):
         '''
             Adds a :obj:`.QCheckBox` to ``widget``.
             When the checkbox is toggled, the attribute ``value`` of the plot object is set to
             the checkbox' check state, and the callback ``cb_name`` is called.
         '''
         args = dict(master=self._plot, value=value, label=label,
-                    callback=self._get_callback(cb_name, self._plot),
-                    stateWhenDisabled=stateWhenDisabled)
+                    callback=self._get_callback(cb_name, self._plot))
         if isinstance(widget.layout(), QGridLayout):
             widget = widget.layout()
         if isinstance(widget, QGridLayout):
@@ -628,8 +627,7 @@ class OWPlotGUI:
         self._master.cb_class_density = \
             self._check_box(widget=widget, value="class_density",
                             label="Show color regions",
-                            cb_name=self._plot.update_density,
-                            stateWhenDisabled=False)
+                            cb_name=self._plot.update_density)
 
     def regression_line_check_box(self, widget):
         self._master.cb_reg_line = \
@@ -693,7 +691,7 @@ class OWPlotGUI:
             widget, gui.comboBox, label,
             master=self._master, value=value, items=items, model=model,
             callback=self._get_callback(cb_name, self._master),
-            orientation=Qt.Horizontal,
+            orientation=Qt.Horizontal, valueType=str,
             sendSelectedValue=True, contentsLength=12,
             labelWidth=50)
 
@@ -903,7 +901,7 @@ class OWPlotGUI:
 
     def theme_combo_box(self, widget):
         c = gui.comboBox(widget, self._plot, "theme_name", "Theme",
-                         callback=self._plot.update_theme, sendSelectedValue=1)
+                         callback=self._plot.update_theme, sendSelectedValue=1, valueType=str)
         c.addItem('Default')
         c.addItem('Light')
         c.addItem('Dark')

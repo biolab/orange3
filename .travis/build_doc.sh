@@ -11,9 +11,6 @@ images="$(git diff --name-only origin/master..HEAD |
 echo "Checking if images are indexed:"
 while read image; do
     [ -f "$image" ] || continue
-    if  [[ "$image" == *"_unindexed"* ]]; then
-      continue
-    fi
     imtype=$(identify -verbose "$image" | awk '/^ *Type: /{ print $2 }')
     echo "$image  $imtype"
     if ! echo "$imtype" | grep -Eq '(Palette|Grayscale)'; then

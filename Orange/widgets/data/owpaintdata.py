@@ -25,7 +25,7 @@ import Orange.data
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import itemmodels, colorpalettes
+from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.util import scale, namegen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -710,12 +710,13 @@ class ColoredListModel(itemmodels.PyListModel):
 
         super().__init__(iterable, parent, flags, list_item_role,
                          supportedDropActions)
-        self.colors = colorpalettes.DefaultRGBColors
+        self.colors = colorpalette.ColorPaletteGenerator(
+            len(colorpalette.DefaultRGBColors))
 
     def data(self, index, role=Qt.DisplayRole):
         if self._is_index_valid(index) and \
                 role == Qt.DecorationRole and \
-                0 <= index.row() < len(self):
+                0 <= index.row() < self.colors.number_of_colors:
             return gui.createAttributePixmap("", self.colors[index.row()])
         return super().data(index, role)
 
@@ -808,7 +809,8 @@ class OWPaintData(OWWidget):
         else:
             self.__buffer = np.array(self.data)
 
-        self.colors = colorpalettes.DefaultRGBColors
+        self.colors = colorpalette.ColorPaletteGenerator(
+            len(colorpalette.DefaultRGBColors))
         self.tools_cache = {}
 
         self._init_ui()
@@ -1019,7 +1021,7 @@ class OWPaintData(OWWidget):
             y = np.zeros(len(data))
         else:
             self.input_classes = y.values
-            self.input_colors = y.palette
+            self.input_colors = y.colors
 
             y = data[:, y].Y
 
@@ -1039,9 +1041,11 @@ class OWPaintData(OWWidget):
 
         index = self.selected_class_label()
         if self.input_colors is not None:
-            palette = self.input_colors
+            colors = self.input_colors
         else:
-            palette = colorpalettes.DefaultRGBColors
+            colors = colorpalette.DefaultRGBColors
+        palette = colorpalette.ColorPaletteGenerator(
+            number_of_colors=len(colors), rgb_colors=colors)
         self.colors = palette
         self.class_model.colors = palette
         self.class_model[:] = self.input_classes
@@ -1098,7 +1102,7 @@ class OWPaintData(OWWidget):
         self.labels = list(self.class_model)
         self.removeClassLabel.setEnabled(len(self.class_model) > 1)
         self.addClassLabel.setEnabled(
-            len(self.class_model) < len(self.colors))
+            len(self.class_model) < self.colors.number_of_colors)
         if self.selected_class_label() is None:
             itemmodels.select_row(self.classValuesView, 0)
 

@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 from Orange.data import Table
-from Orange.preprocess import Remove, discretize
+from Orange.preprocess import Remove
 from Orange.tests import test_filename
 
 
@@ -160,16 +160,3 @@ class TestRemover(unittest.TestCase):
         cleaned = remover(data)
         np.testing.assert_array_equal(cleaned.Y[:50], 0)
         np.testing.assert_array_equal(cleaned.Y[50:], 1)
-
-    def test_remove_mapping_after_compute_value(self):
-        housing = Table("housing")
-        method = discretize.EqualFreq(n=3)
-        discretizer = discretize.DomainDiscretizer(
-            discretize_class=True, method=method)
-        domain = discretizer(housing)
-        data = housing.transform(domain)
-        val12 = np.nonzero(data.Y > 0)[0]
-        data = data[val12]
-        remover = Remove(class_flags=Remove.RemoveUnusedValues)
-        cleaned = remover(data)
-        np.testing.assert_equal(cleaned.Y, data.Y - 1)

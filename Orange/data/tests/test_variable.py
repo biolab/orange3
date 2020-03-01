@@ -1,6 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-# pylint: disable=protected-access
 
 import sys
 import math
@@ -34,10 +33,11 @@ def is_on_path(name):
     -------
     found : bool
     """
-    for _, name_, _ in pkgutil.iter_modules(sys.path):
+    for loader, name_, ispkg in pkgutil.iter_modules(sys.path):
         if name == name_:
             return True
-    return False
+    else:
+        return False
 
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
@@ -175,20 +175,6 @@ class TestDiscreteVariable(VariableTest):
         self.assertTrue(math.isnan(var.to_val(None)))
         self.assertEqual(var.to_val(1), 1)
 
-    def test_val_from_str_add(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
-        self.assertTrue(math.isnan(var.val_from_str_add(None)))
-        self.assertEqual(var.val_from_str_add("M"), 1)
-        self.assertEqual(var.val_from_str_add("F"), 0)
-        self.assertEqual(var.values, ["F", "M"])
-        self.assertEqual(var.val_from_str_add("N"), 2)
-        self.assertEqual(var.values, ["F", "M", "N"])
-        self.assertEqual(var._value_index, {"F": 0, "M": 1, "N": 2})
-        self.assertEqual(var.val_from_str_add("M"), 1)
-        self.assertEqual(var.val_from_str_add("F"), 0)
-        self.assertEqual(var.val_from_str_add("N"), 2)
-
-
     def test_repr(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertEqual(
@@ -204,16 +190,35 @@ class TestDiscreteVariable(VariableTest):
             repr(var),
             "DiscreteVariable(name='a', values=['1', '2', '3', '4', '5', '6', '7'])")
 
+    @unittest.skipUnless(is_on_path("PyQt4") or is_on_path("PyQt5"), "PyQt is not importable")
+    def test_colors(self):
+        var = DiscreteVariable.make("a", values=["F", "M"])
+        self.assertIsNone(var._colors)
+        self.assertEqual(var.colors.shape, (2, 3))
+        self.assertFalse(var.colors.flags.writeable)
+
+        var.colors = np.arange(6).reshape((2, 3))
+        np.testing.assert_almost_equal(var.colors, [[0, 1, 2], [3, 4, 5]])
+        self.assertFalse(var.colors.flags.writeable)
+        with self.assertRaises(ValueError):
+            var.colors[0] = [42, 41, 40]
+
+        var = DiscreteVariable.make("x", values=["A", "B"])
+        var.attributes["colors"] = ['#0a0b0c', '#0d0e0f']
+        np.testing.assert_almost_equal(var.colors, [[10, 11, 12], [13, 14, 15]])
+
+        # Test ncolors adapts to nvalues
+        var = DiscreteVariable.make('foo', values=['d', 'r'])
+        self.assertEqual(len(var.colors), 2)
+        var.add_value('e')
+        self.assertEqual(len(var.colors), 3)
+        var.add_value('k')
+        self.assertEqual(len(var.colors), 4)
+
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
         a = DiscreteVariable("foo", values=["a", "b", "c"])
         self.assertRaises(TypeError, a.add_value, 42)
-
-    def test_no_duplicated_values(self):
-        a = DiscreteVariable("foo", values=["a", "b", "c"])
-        a.add_value("b")
-        self.assertEqual(list(a.values), ["a", "b", "c"])
-        self.assertEqual(list(a._value_index), ["a", "b", "c"])
 
     def test_unpickle(self):
         d1 = DiscreteVariable("A", values=["two", "one"])
@@ -268,15 +273,12 @@ class TestDiscreteVariable(VariableTest):
 
         arr_list = list(arr)
         self.assertIsNot(mapper(arr_list), arr_list)
-        self.assertTrue(
-            all(x == y or (np.isnan(x) and np.isnan(y))
-                for x, y in zip(mapper(arr_list),
-                                [2, 2, 1, np.nan, 2, np.nan, np.nan])))
+        self.assertTrue(all(x == y or (x != x and y != y) for x, y in zip(
+            mapper(arr_list), [2, 2, 1, np.nan, 2, np.nan, np.nan])))
 
-        self.assertTrue(
-            x == y or (np.isnan(x) and np.isnan(y))
-            for x, y in zip(mapper(tuple(arr)),
-                            (2, 2, 1, np.nan, 2, np.nan, np.nan)))
+        self.assertTrue(x == y or (x != x and y != y) for x, y in zip(
+            mapper(tuple(arr)),
+            (2, 2, 1, np.nan, 2, np.nan, np.nan)))
 
         self.assertRaises(ValueError, mapper, object())
 
@@ -388,27 +390,9 @@ class TestDiscreteVariable(VariableTest):
 
     def varcls_modified(self, name):
         var = super().varcls_modified(name)
-        var.add_value("A")
-        var.add_value("B")
+        var.values = ["A", "B"]
         var.ordered = True
         return var
-
-    def test_copy_checks_len_values(self):
-        var = DiscreteVariable("gender", values=["F", "M"])
-        self.assertEqual(var.values, ["F", "M"])
-
-        self.assertRaises(ValueError, var.copy, values=["F", "M", "N"])
-        self.assertRaises(ValueError, var.copy, values=["F"])
-        self.assertRaises(ValueError, var.copy, values=[])
-
-        var2 = var.copy()
-        self.assertEqual(var2.values, ["F", "M"])
-
-        var2 = var.copy(values=None)
-        self.assertEqual(var2.values, ["F", "M"])
-
-        var2 = var.copy(values=["W", "M"])
-        self.assertEqual(var2.values, ["W", "M"])
 
 
 @variabletest(ContinuousVariable)
@@ -438,6 +422,17 @@ class TestContinuousVariable(VariableTest):
         self.assertEqual(a.str_val(4.65432), "4.65")
         a.val_from_str_add("5.1234")
         self.assertEqual(a.str_val(4.65432), "4.6543")
+
+    def test_colors(self):
+        a = ContinuousVariable("a")
+        self.assertEqual(a.colors, ((0, 0, 255), (255, 255, 0), False))
+
+        a = ContinuousVariable("a")
+        a.attributes["colors"] = ['#010203', '#040506', True]
+        self.assertEqual(a.colors, ((1, 2, 3), (4, 5, 6), True))
+
+        a.colors = ((3, 2, 1), (6, 5, 4), True)
+        self.assertEqual(a.colors, ((3, 2, 1), (6, 5, 4), True))
 
     def varcls_modified(self, name):
         var = super().varcls_modified(name)
@@ -625,6 +620,21 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc1, abc2)
         self.assertEqual(hash(abc), hash(abc1))
         self.assertEqual(hash(abc1), hash(abc2))
+
+    def test_proxy_has_separate_colors(self):
+        abc = ContinuousVariable("abc")
+        abc1 = abc.make_proxy()
+        abc2 = abc1.make_proxy()
+
+        original_colors = abc.colors
+        red_to_green = (255, 0, 0), (0, 255, 0), False
+        blue_to_red = (0, 0, 255), (255, 0, 0), False
+
+        abc1.colors = red_to_green
+        abc2.colors = blue_to_red
+        self.assertEqual(abc.colors, original_colors)
+        self.assertEqual(abc1.colors, red_to_green)
+        self.assertEqual(abc2.colors, blue_to_red)
 
     def test_proxy_has_separate_attributes(self):
         image = StringVariable("image")

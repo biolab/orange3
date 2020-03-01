@@ -1,5 +1,3 @@
-from unittest.mock import patch
-
 from AnyQt.QtCore import Qt
 
 from Orange.data import ContinuousVariable
@@ -98,9 +96,3 @@ class ComboBoxTest(GuiTest):
         widget.foo = variables[1]
         combo = gui.comboBox(widget.controlArea, widget, "foo", model=model)
         self.assertEqual(combo.currentIndex(), 1)
-
-    @patch("Orange.widgets.gui.gui_comboBox")
-    def test_warn_value_type(self, gui_combobox):
-        with self.assertWarns(DeprecationWarning):
-            gui.comboBox(None, None, "foo", valueType=int, editable=True)
-        self.assertEqual(gui_combobox.call_args[1], {"editable": True})

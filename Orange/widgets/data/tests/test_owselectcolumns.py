@@ -1,4 +1,3 @@
-# pylint: disable=unsubscriptable-object
 from unittest import TestCase
 from unittest.mock import Mock
 
@@ -10,7 +9,6 @@ from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils import vartype
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.data.owselectcolumns \
     import OWSelectAttributes, VariablesListItemModel
@@ -388,23 +386,3 @@ class TestOWSelectAttributes(WidgetTest):
             d1.domain.attributes,
             data.domain.attributes
         )
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
-        output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")

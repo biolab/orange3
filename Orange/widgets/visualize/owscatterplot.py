@@ -119,8 +119,6 @@ class OWScatterPlotGraph(OWScatterPlotBase):
 
     def update_axes(self):
         for axis, title in self.master.get_axes().items():
-            use_time = title is not None and title.is_time
-            self.plot_widget.plotItem.getAxis(axis).use_time(use_time)
             self.plot_widget.setLabel(axis=axis, text=title or "")
             if title is None:
                 self.plot_widget.hideAxis(axis)
@@ -274,7 +272,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     def _add_controls_axis(self):
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
-            contentsLength=14
+            valueType=str, contentsLength=14
         )
         self.attr_box = gui.vBox(self.controlArea, True)
         dmod = DomainModel

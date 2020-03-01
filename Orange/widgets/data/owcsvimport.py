@@ -489,7 +489,6 @@ class OWCSVFileImport(widget.OWWidget):
 
     want_main_area = False
     buttons_area_orientation = None
-    resizing_enabled = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)

@@ -11,7 +11,8 @@ from pyqtgraph import mkPen
 
 from Orange.widgets.settings import SettingProvider
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils import colorpalettes
+from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, \
+    ContinuousPaletteGenerator, NAN_GREY
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
     ScatterPlotItem, SELECTION_WIDTH
 from Orange.widgets.widget import OWWidget
@@ -40,9 +41,9 @@ class MockWidget(OWWidget):
 
     def get_palette(self):
         if self.is_continuous_color():
-            return colorpalettes.DefaultContinuousPalette
+            return ContinuousPaletteGenerator(Qt.white, Qt.black, False)
         else:
-            return colorpalettes.DefaultDiscretePalette
+            return ColorPaletteGenerator(12)
 
 
 class TestOWScatterPlotBase(WidgetTest):
@@ -565,7 +566,7 @@ class TestOWScatterPlotBase(WidgetTest):
         graph.reset_graph()
         pens = graph.scatterplot_item.data["pen"]
         brushes = graph.scatterplot_item.data["brush"]
-        nan_color = QColor(*colorpalettes.NAN_COLOR)
+        nan_color = QColor(*NAN_GREY)
         self.assertEqual(pens[4].color().hue(), nan_color.hue())
         self.assertEqual(brushes[4].color().hue(), nan_color.hue())
 
@@ -1076,7 +1077,6 @@ class TestOWScatterPlotBase(WidgetTest):
             for color_labels in (None, ["c", "d"], None):
                 for visible in (True, False, True):
                     graph.show_legend = visible
-                    graph.palette = graph.master.get_palette()
                     graph.update_legends()
                     self.assertIs(
                         shape_legend.call_args[0][0],

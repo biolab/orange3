@@ -278,8 +278,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
-        not_enough_cols = Msg("Input data needs at least 2 attributes")
         constant_data = Msg("Input data is constant")
+        no_attributes = Msg("Data has no attributes")
         no_valid_data = Msg("No projection due to no valid data")
 
     def __init__(self):
@@ -387,8 +387,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if len(self.data) < 2:
             error(self.Error.not_enough_rows)
 
-        elif len(self.data.domain.attributes) < 2:
-            error(self.Error.not_enough_cols)
+        elif not self.data.domain.attributes:
+            error(self.Error.no_attributes)
 
         elif not self.data.is_sparse():
             if np.all(~np.isfinite(self.data.X)):

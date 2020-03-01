@@ -217,6 +217,10 @@ class OWRuleLearner(OWBaseLearner):
     priority = 19
     keywords = []
 
+    want_main_area = False
+    resizing_enabled = False
+    auto_apply = Setting(True)
+
     LEARNER = CustomRuleLearner
     supports_sparse = False
 

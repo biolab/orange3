@@ -3,7 +3,6 @@ import copy
 import math
 from numbers import Number
 from collections import Iterable
-import warnings
 
 import numpy as np
 
@@ -21,10 +20,6 @@ from AnyQt.QtCore import Qt, QSize, QRectF, pyqtSignal, PYQT_VERSION
 
 from Orange.widgets import gui
 from Orange.widgets.utils import colorbrewer
-
-warnings.warn(
-    "Module colorpalette is obsolete; use colorpalettes", DeprecationWarning)
-
 
 DefaultRGBColors = [
     (70, 190, 250), (237, 70, 47), (170, 242, 43), (245, 174, 50), (255, 255, 0),

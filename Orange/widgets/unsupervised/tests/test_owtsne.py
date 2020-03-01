@@ -70,57 +70,49 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
     def test_wrong_input(self):
         # no data
-        data = None
-        self.send_signal(self.widget.Inputs.data, data)
+        self.data = None
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
 
         # <2 rows
-        data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
-        self.send_signal(self.widget.Inputs.data, data)
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.not_enough_rows.is_shown())
 
         # no attributes
-        data = Table.from_list(self.empty_domain, [['STG1']] * 2)
-        self.send_signal(self.widget.Inputs.data, data)
+        self.data = Table.from_list(self.empty_domain, [['STG1']] * 2)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
-        self.assertTrue(self.widget.Error.not_enough_cols.is_shown())
-
-        # one attributes
-        data = Table.from_list(self.empty_domain, [[1, 'STG1'],
-                                                   [2, 'STG1']])
-        self.send_signal(self.widget.Inputs.data, data)
-        self.wait_until_stop_blocking()
-        self.assertIsNone(self.widget.data)
-        self.assertTrue(self.widget.Error.not_enough_cols.is_shown())
+        self.assertTrue(self.widget.Error.no_attributes.is_shown())
 
         # constant data
-        data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
-        self.send_signal(self.widget.Inputs.data, data)
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.constant_data.is_shown())
 
         # correct input
-        data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
-                                             [5, 4, 3, 2, 1, 'STG1']])
-        self.send_signal(self.widget.Inputs.data, data)
+        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
+                                                  [5, 4, 3, 2, 1, 'STG1']])
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
         self.assertIsNotNone(self.widget.data)
         self.assertFalse(self.widget.Error.not_enough_rows.is_shown())
-        self.assertFalse(self.widget.Error.not_enough_cols.is_shown())
+        self.assertFalse(self.widget.Error.no_attributes.is_shown())
         self.assertFalse(self.widget.Error.constant_data.is_shown())
 
     def test_input(self):
-        data = Table.from_list(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
-                                             [2, 2, 2, 2, 2, 'STG1'],
-                                             [4, 4, 4, 4, 4, 'STG2'],
-                                             [5, 5, 5, 5, 5, 'STG2']])
+        self.data = Table.from_list(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
+                                                  [2, 2, 2, 2, 2, 'STG1'],
+                                                  [4, 4, 4, 4, 4, 'STG2'],
+                                                  [5, 5, 5, 5, 5, 'STG2']])
 
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.wait_until_stop_blocking()
 
     def test_attr_models(self):

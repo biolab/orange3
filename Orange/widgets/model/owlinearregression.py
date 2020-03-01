@@ -41,6 +41,8 @@ class OWLinearRegression(OWBaseLearner):
     l2_ratio = settings.Setting(0.5)
     autosend = settings.Setting(True)
 
+    want_main_area = False
+
     alphas = list(chain([x / 10000 for x in range(1, 10)],
                         [x / 1000 for x in range(1, 20)],
                         [x / 100 for x in range(2, 20)],

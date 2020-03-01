@@ -14,7 +14,7 @@ This is the latest version of Orange (for Python 3). The deprecated version of O
 
 [Orange]: https://orange.biolab.si/
 [binaries]: https://orange.biolab.si/orange2/
-[sources]: https://github.com/biolab/orange2
+[sources]: https://github.com/biolab/orange
 
 
 Installing with Miniconda / Anaconda

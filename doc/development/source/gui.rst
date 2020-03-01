@@ -192,4 +192,5 @@ Other functions
 
 .. autofunction:: miscellanea
 .. autofunction:: setLayout
+.. autofunction:: _addSpace
 .. autofunction:: createAttributePixmap

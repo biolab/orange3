@@ -19,6 +19,7 @@ from Orange.data import Table
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
 from Orange.widgets import gui
+from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
@@ -275,13 +276,15 @@ class OWTreeGraph(OWTreeViewer2D):
             else:
                 self.clf_dataset = self.dataset
             class_var = self.domain.class_var
-            self.scene.colors = class_var.palette
             if class_var.is_discrete:
+                self.scene.colors = [QColor(*col) for col in class_var.colors]
                 self.color_label.setText("Target class: ")
                 self.color_combo.addItem("None")
                 self.color_combo.addItems(self.domain.class_vars[0].values)
                 self.color_combo.setCurrentIndex(self.target_class_index)
             else:
+                self.scene.colors = \
+                    ContinuousPaletteGenerator(*model.domain.class_var.colors)
                 self.color_label.setText("Color by: ")
                 self.color_combo.addItems(self.COL_OPTIONS)
                 self.color_combo.setCurrentIndex(self.regression_colors)
@@ -389,8 +392,7 @@ class OWTreeGraph(OWTreeViewer2D):
             else:
                 modus = np.argmax(distr)
                 p = distr[modus] / (total or 1)
-                color = colors.value_to_qcolor(int(modus))
-                color = color.lighter(300 - 200 * p)
+                color = colors[int(modus)].lighter(300 - 200 * p)
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 
@@ -412,11 +414,11 @@ class OWTreeGraph(OWTreeViewer2D):
         elif self.regression_colors == self.COL_MEAN:
             minv = np.nanmin(self.dataset.Y)
             maxv = np.nanmax(self.dataset.Y)
+            fact = 1 / (maxv - minv) if minv != maxv else 1
             colors = self.scene.colors
             for node in self.scene.nodes():
                 node_mean = self.tree_adapter.get_distribution(node.node_inst)[0][0]
-                color = colors.value_to_qcolor(node_mean, minv, maxv)
-                node.backgroundBrush = QBrush(color)
+                node.backgroundBrush = QBrush(colors[fact * (node_mean - minv)])
         else:
             nodes = list(self.scene.nodes())
             variances = [self.tree_adapter.get_distribution(node.node_inst)[0][1]
@@ -436,7 +438,6 @@ class OWTreeGraph(OWTreeViewer2D):
 if __name__ == "__main__":  # pragma: no cover
     from Orange.modelling.tree import TreeLearner
     data = Table("titanic")
-    # data = Table("housing")
     clf = TreeLearner()(data)
     clf.instances = data
     WidgetPreview(OWTreeGraph).run(clf)

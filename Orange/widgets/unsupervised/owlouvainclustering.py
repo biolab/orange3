@@ -52,7 +52,6 @@ class OWLouvainClustering(widget.OWWidget):
     priority = 2110
 
     want_main_area = False
-    resizing_enabled = False
 
     settingsHandler = DomainContextHandler()
 

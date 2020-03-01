@@ -8,14 +8,12 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 from AnyQt.QtGui import QColor
 
-from Orange.data import (
-    Table, Domain, ContinuousVariable, DiscreteVariable, TimeVariable
-)
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.utils.colorpalettes import DefaultRGBColors
+from Orange.widgets.utils.colorpalette import DefaultRGBColors
 from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
 from Orange.widgets.visualize.utils.widget import MAX_COLORS
@@ -837,13 +835,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertEqual(line1.pos().y(), 0)
         self.assertEqual(line1.angle, 45)
-        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
+        self.assertEqual(line1.pen.color().getRgb()[:3], graph.palette[0])
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
+        self.assertEqual(line2.pen.color().getRgb()[:3], graph.palette[1])
 
         graph.orthonormal_regression = True
         graph.update_regression_line()
@@ -852,13 +850,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertAlmostEqual(line1.pos().y(), -0.6180339887498949)
         self.assertEqual(line1.angle, 58.28252558853899)
-        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
+        self.assertEqual(line1.pen.color().getRgb()[:3], graph.palette[0])
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
+        self.assertEqual(line2.pen.color().getRgb()[:3], graph.palette[1])
 
     def test_orthonormal_line(self):
         color = QColor(1, 2, 3)
@@ -1075,31 +1073,6 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         simulate.combobox_activate_index(self.widget.controls.attr_x, 3)
         urline.assert_called_once()
         urline.reset_mock()
-
-    def test_time_axis(self):
-        a = np.array([[1581953776, 1], [1581963776, 2], [1582953776, 3]])
-        d1 = Domain([ContinuousVariable("time"), ContinuousVariable("value")])
-        data = Table.from_numpy(d1, a)
-        d2 = Domain([TimeVariable("time"), ContinuousVariable("value")])
-        data_time = Table.from_numpy(d2, a)
-
-        x_axis = self.widget.graph.plot_widget.plotItem.getAxis("bottom")
-
-        self.send_signal(self.widget.Inputs.data, data)
-        self.assertFalse(x_axis._use_time)
-        _ticks = x_axis.tickValues(1581953776, 1582953776, 1000)
-        ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
-        try:
-            float(ticks[0])
-        except ValueError:
-            self.fail("axis should display floats")
-
-        self.send_signal(self.widget.Inputs.data, data_time)
-        self.assertTrue(x_axis._use_time)
-        _ticks = x_axis.tickValues(1581953776, 1582953776, 1000)
-        ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
-        with self.assertRaises(ValueError):
-            float(ticks[0])
 
 
 if __name__ == "__main__":

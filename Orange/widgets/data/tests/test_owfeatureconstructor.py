@@ -274,35 +274,6 @@ class FeatureFuncTest(unittest.TestCase):
         self.assertEqual(r, [x[0] for x in zoo.metas[:, 0]])
         self.assertEqual(f(zoo[0]), str(zoo[0, "name"])[0])
 
-    def test_missing_variable(self):
-        zoo = Table("zoo")
-        assert zoo.domain.class_var.name == "type"
-        f = FeatureFunc("type[0]",
-                        [("type", zoo.domain["type"])])
-        no_class = Domain(zoo.domain.attributes, None, zoo.domain.metas)
-        data2 = zoo.transform(no_class)
-        r = f(data2)
-        self.assertTrue(np.all(np.isnan(r)))
-        self.assertTrue(np.isnan(f(data2[0])))
-
-    def test_invalid_expression_variable(self):
-        iris = Table("iris")
-        f = FeatureFunc("1 / petal_length",
-                        [("petal_length", iris.domain["petal length"])])
-        iris[0]["petal length"] = 0
-
-        f.mask_exceptions = False
-        self.assertRaises(Exception, f, iris)
-        self.assertRaises(Exception, f, iris[0])
-        _ = f(iris[1])
-
-        f.mask_exceptions = True
-        r = f(iris)
-        self.assertTrue(np.isnan(r[0]))
-        self.assertFalse(np.isnan(r[1]))
-        self.assertTrue(np.isnan(f(iris[0])))
-        self.assertFalse(np.isnan(f(iris[1])))
-
 
 class OWFeatureConstructorTests(WidgetTest):
     def setUp(self):

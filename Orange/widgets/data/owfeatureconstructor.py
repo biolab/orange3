@@ -659,18 +659,12 @@ class OWFeatureConstructor(OWWidget):
         )
 
         try:
-            for variable in new_variables:
-                variable.compute_value.mask_exceptions = False
             data = self.data.transform(new_domain)
         # user's expression can contain arbitrary errors
         # pylint: disable=broad-except
         except Exception as err:
             report_error(err)
             return
-        finally:
-            for variable in new_variables:
-                variable.compute_value.mask_exceptions = True
-
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
         if disc_attrs_not_ok:
@@ -1070,23 +1064,15 @@ class FeatureFunc:
         self.func = make_lambda(ast.parse(expression, mode="eval"),
                                 [name for name, _ in args], self.extra_env)
         self.cast = cast
-        self.mask_exceptions = True
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
             return [self(inst) for inst in instance]
         else:
-            try:
-                args = [str(instance[var])
-                        if instance.domain[var].is_string else instance[var]
-                        for _, var in self.args]
-                y = self.func(*args)
-            # user's expression can contain arbitrary errors
-            # this also covers missing attributes
-            except:  # pylint: disable=bare-except
-                if not self.mask_exceptions:
-                    raise
-                return np.nan
+            args = [str(instance[var])
+                    if instance.domain[var].is_string else instance[var]
+                    for _, var in self.args]
+            y = self.func(*args)
             if self.cast:
                 y = self.cast(y)
             return y

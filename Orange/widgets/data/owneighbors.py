@@ -55,7 +55,6 @@ class OWNeighbors(OWWidget):
     auto_apply = Setting(True)
 
     want_main_area = False
-    resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
 
     def __init__(self):

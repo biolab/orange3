@@ -10,8 +10,9 @@ from warnings import warn
 from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
-    Qt, QObject, QAbstractListModel, QModelIndex,
-    QItemSelectionModel, QItemSelection)
+    Qt, QObject, QAbstractListModel, QAbstractTableModel, QModelIndex,
+    QItemSelectionModel, QMimeData, QT_VERSION
+)
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import (
@@ -24,7 +25,6 @@ from orangewidget.utils.itemmodels import (
     PyListModel, AbstractSortTableModel as _AbstractSortTableModel
 )
 
-from Orange.widgets.utils.colorpalettes import ContinuousPalettes, ContinuousPalette
 from Orange.data import Variable, Storage, DiscreteVariable, ContinuousVariable
 from Orange.data.domain import filter_visible
 from Orange.widgets import gui
@@ -570,66 +570,6 @@ def safe_text(text):
     return text
 
 
-class ContinuousPalettesModel(QAbstractListModel):
-    """
-    Model for combo boxes
-    """
-    def __init__(self, parent=None, categories=None, icon_width=64):
-        super().__init__(parent)
-        self.icon_width = icon_width
-
-        palettes = list(ContinuousPalettes.values())
-        if categories is None:
-            # Use dict, not set, to keep order of categories
-            categories = dict.fromkeys(palette.category for palette in palettes)
-
-        self.items = []
-        for category in categories:
-            self.items.append(category)
-            self.items += [palette for palette in palettes
-                           if palette.category == category]
-        if len(categories) == 1:
-            del self.items[0]
-
-    def rowCount(self, parent):
-        return 0 if parent.isValid() else len(self.items)
-
-    @staticmethod
-    def columnCount(parent):
-        return 0 if parent.isValid() else 1
-
-    def data(self, index, role):
-        item = self.items[index.row()]
-        if isinstance(item, str):
-            if role in [Qt.EditRole, Qt.DisplayRole]:
-                return item
-        else:
-            if role in [Qt.EditRole, Qt.DisplayRole]:
-                return item.friendly_name
-            if role == Qt.DecorationRole:
-                return item.color_strip(self.icon_width, 16)
-            if role == Qt.UserRole:
-                return item
-        return None
-
-    def flags(self, index):
-        item = self.items[index.row()]
-        if isinstance(item, ContinuousPalette):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        else:
-            return Qt.ItemIsEnabled
-
-    def indexOf(self, x):
-        if isinstance(x, str):
-            for i, item in enumerate(self.items):
-                if not isinstance(item, str) \
-                        and x in (item.name, item.friendly_name):
-                    return i
-        elif isinstance(x, ContinuousPalette):
-            return self.items.index(x)
-        return None
-
-
 class ListSingleSelectionModel(QItemSelectionModel):
     """ Item selection model for list item models with single selection.
 
@@ -675,23 +615,6 @@ def select_row(view, row):
     selmodel.select(view.model().index(row, 0),
                     QItemSelectionModel.ClearAndSelect |
                     QItemSelectionModel.Rows)
-
-
-def select_rows(view, row_indices, command=QItemSelectionModel.ClearAndSelect):
-    """
-    Select several rows in view.
-
-    :param QAbstractItemView view:
-    :param row_indices: Integer indices of rows to select.
-    :param command: QItemSelectionModel.SelectionFlags
-    """
-    selmodel = view.selectionModel()
-    model = view.model()
-    selection = QItemSelection()
-    for row in row_indices:
-        index = model.index(row, 0)
-        selection.select(index, index)
-    selmodel.select(selection, command | QItemSelectionModel.Rows)
 
 
 class ModelActionsWidget(QWidget):

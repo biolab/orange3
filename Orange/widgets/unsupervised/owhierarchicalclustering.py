@@ -10,7 +10,7 @@ from typing import Any, List, Tuple, Dict, Optional, Set, Union
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGraphicsWidget, QGraphicsObject, QGraphicsPathItem,
+    QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
     QGraphicsScene, QGridLayout, QSizePolicy,
     QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox,
     QGraphicsItemGroup, QGraphicsGridLayout, QGraphicsSceneMouseEvent
@@ -34,14 +34,13 @@ from Orange.clustering.hierarchical import \
 from Orange.data.util import get_unique_names
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import colorpalettes, itemmodels, combobox
+from Orange.widgets.utils import colorpalette, itemmodels, combobox
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output, Msg
 
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
-from Orange.widgets.utils.graphicstextlist import TextListWidget
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -288,8 +287,6 @@ class DendrogramWidget(QGraphicsWidget):
                  **kwargs):
 
         super().__init__(None, **kwargs)
-        # Filter all events from children (`ClusterGraphicsItem`s)
-        self.setFiltersChildEvents(True)
         self.orientation = orientation
         self._root = None
         #: A tree with dendrogram geometry
@@ -314,20 +311,15 @@ class DendrogramWidget(QGraphicsWidget):
             self.setParentItem(parent)
 
     def clear(self):
-        scene = self.scene()
-        if scene is not None:
-            scene.removeItem(self._itemgroup)
-        else:
-            self._itemgroup.setParentItem(None)
-        self._itemgroup = QGraphicsWidget(self)
-        self._itemgroup.setGeometry(self.contentsRect())
-        self._items.clear()
+        for item in self._items.values():
+            item.setParentItem(None)
+            if item.scene() is self.scene() and self.scene() is not None:
+                self.scene().removeItem(item)
 
         for item in self._selection.values():
-            if scene is not None:
-                scene.removeItem(item)
-            else:
-                item.setParentItem(None)
+            item.setParentItem(None)
+            if item.scene():
+                item.scene().removeItem(item)
 
         self._root = None
         self._items = {}
@@ -351,6 +343,7 @@ class DendrogramWidget(QGraphicsWidget):
                 item.setAcceptHoverEvents(True)
                 item.setPen(pen)
                 item.node = node
+                item.installSceneEventFilter(self)
                 for branch in node.branches:
                     assert branch in self._items
                     self._cluster_parent[branch] = node
@@ -585,7 +578,7 @@ class DendrogramWidget(QGraphicsWidget):
         items = sorted(self._selection.items(),
                        key=lambda item: item[0].node.value.first)
 
-        palette = colorpalettes.LimitedDiscretePalette(len(items))
+        palette = colorpalette.ColorPaletteGenerator(len(items))
         for i, (item, selection_item) in enumerate(items):
             # delete and then reinsert to update the ordering
             del self._selection[item]
@@ -1058,10 +1051,11 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.dendrogram.selectionChanged.connect(self._invalidate_output)
         self.dendrogram.selectionEdited.connect(self._selection_edited)
 
-        self.labels = TextListWidget()
+        self.labels = GraphicsSimpleTextList()
         self.labels.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self.labels.setAlignment(Qt.AlignLeft)
         self.labels.setMaximumWidth(200)
+        self.labels.layout().setSpacing(0)
 
         scenelayout.addItem(self.top_axis, 0, 0,
                             alignment=Qt.AlignLeft | Qt.AlignVCenter)
@@ -1151,8 +1145,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 else self.annotation_if_enumerate
 
     def _clear_plot(self):
+        self.labels.set_labels([])
         self.dendrogram.set_root(None)
-        self.labels.setItems([])
 
     def _set_displayed_root(self, root):
         self._clear_plot()
@@ -1218,7 +1212,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [", ".join(labels[leaf.value.first: leaf.value.last])
                           for leaf in joined]
 
-        self.labels.setItems(labels)
+        self.labels.set_labels(labels)
         self.labels.setMinimumWidth(1 if labels else -1)
 
     def _restore_selection(self, state):
@@ -1430,7 +1424,6 @@ class OWHierarchicalClustering(widget.OWWidget):
             rect.setLeft(geom.left())
             return rect
         margin = 3
-        self.scene.setSceneRect(geom)
         self.view.setSceneRect(geom)
         self.view.setHeaderSceneRect(
             adjustLeft(self.top_axis.geometry()).adjusted(0, 0, 0, margin)
@@ -1608,6 +1601,83 @@ def qfont_scaled(font, factor):
     elif font.pixelSize() != -1:
         scaled.setPixelSize(int(font.pixelSize() * factor))
     return scaled
+
+
+class GraphicsSimpleTextList(QGraphicsWidget):
+    """A simple text list widget."""
+
+    def __init__(self, labels=[], orientation=Qt.Vertical,
+                 alignment=Qt.AlignCenter, parent=None):
+        QGraphicsWidget.__init__(self, parent)
+        layout = QGraphicsLinearLayout(orientation)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.setLayout(layout)
+        self.orientation = orientation
+        self.alignment = alignment
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.label_items = []
+        self.set_labels(labels)
+
+    def clear(self):
+        """Remove all text items."""
+        layout = self.layout()
+        for i in reversed(range(layout.count())):
+            witem = layout.itemAt(i)
+            witem.item.setParentItem(None)
+            if self.scene():
+                self.scene().removeItem(witem.item)
+            layout.removeAt(i)
+
+        self.label_items = []
+        self.updateGeometry()
+
+    def set_labels(self, labels):
+        """Set the text labels."""
+        self.clear()
+        orientation = Qt.Horizontal if self.orientation == Qt.Vertical else Qt.Vertical
+        for text in labels:
+            item = QGraphicsSimpleTextItem(text, self)
+            item.setFont(self.font())
+            item.setToolTip(text)
+            witem = WrapperLayoutItem(item, orientation, parent=self)
+            self.layout().addItem(witem)
+            self.layout().setAlignment(witem, self.alignment)
+            self.label_items.append(item)
+
+        self.layout().activate()
+        self.updateGeometry()
+
+    def setAlignment(self, alignment):
+        """Set alignment of text items in the widget
+        """
+        self.alignment = alignment
+        layout = self.layout()
+        for i in range(layout.count()):
+            layout.setAlignment(layout.itemAt(i), alignment)
+
+    def setVisible(self, visible):
+        QGraphicsWidget.setVisible(self, visible)
+        self.updateGeometry()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.FontChange:
+            self.__update_font()
+        return super().changeEvent(event)
+
+    def __iter__(self):
+        return iter(self.label_items)
+
+    def __update_font(self):
+        for item in self.label_items:
+            item.setFont(self.font())
+
+        layout = self.layout()
+        for i in range(layout.count()):
+            layout.itemAt(i).updateGeometry()
+
+        self.layout().invalidate()
+        self.updateGeometry()
 
 
 class WrapperLayoutItem(QGraphicsLayoutItem):

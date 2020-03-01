@@ -8,8 +8,6 @@ import unittest
 from unittest.mock import Mock, MagicMock, patch
 from itertools import chain
 from math import isnan
-from threading import Thread
-from time import sleep, time
 
 import numpy as np
 import scipy.sparse as sp
@@ -17,7 +15,6 @@ import scipy.sparse as sp
 from Orange import data
 from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
-from Orange.data.util import SharedComputeValue
 from Orange.tests import test_dirname
 from Orange.data.table import _optimize_indices
 
@@ -1767,36 +1764,6 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertEqual(back_brown.X.shape, brown.X.shape)
         self.assertEqual(back_brown.metas.shape, brown.metas.shape)
 
-    def test_from_table_shared_compute_value(self):
-        iris = data.Table("iris").to_sparse()
-        d1 = Domain(
-            [
-                ContinuousVariable(
-                    name=at.name,
-                    compute_value=PreprocessSharedComputeValue(
-                        None, PreprocessShared(iris.domain, None)
-                    )
-                )
-                for at in iris.domain.attributes
-            ]
-        )
-
-        new_table = Table.from_table(d1, iris)
-        np.testing.assert_array_equal(
-            new_table.X[:3],
-            [[5.1, 5.1, 5.1, 5.1],
-             [4.9, 4.9, 4.9, 4.9],
-             [4.7, 4.7, 4.7, 4.7]]
-        )
-
-        new_table = Table.from_table(d1, iris, row_indices=[0, 1, 2])
-        np.testing.assert_array_equal(
-            new_table.X[:3],
-            [[5.1, 5.1, 5.1, 5.1],
-             [4.9, 4.9, 4.9, 4.9],
-             [4.7, 4.7, 4.7, 4.7]]
-        )
-
     def assert_table_with_filter_matches(
             self, new_table, old_table,
             rows=..., xcols=..., ycols=..., mcols=...):
@@ -2654,16 +2621,6 @@ class TestTableSparseDense(unittest.TestCase):
         d = self.iris.transform(domain)
         self.assertFalse(sp.issparse(d.X))
 
-        # try with indices that are not Ellipsis
-        d = Table.from_table(domain, self.iris, row_indices=[0, 1, 2])
-        np.testing.assert_array_equal(
-            d.X,
-            [[5.1, 3.5, 1.4, 0.2, 0],
-             [4.9, 3.0, 1.4, 0.2, 0],
-             [4.7, 3.2, 1.3, 0.2, 0]]
-        )
-        self.assertFalse(sp.issparse(d.X))
-
     def test_from_table_add_lots_of_sparse_columns(self):
         n_attrs = len(self.iris.domain.attributes)
 
@@ -2703,178 +2660,6 @@ class TestTableSparseDense(unittest.TestCase):
         )
         d = self.iris.transform(domain)
         self.assertFalse(sp.issparse(d.metas))
-
-
-class ConcurrencyTests(unittest.TestCase):
-
-    def test_from_table_non_blocking(self):
-        iris = Table("iris")
-
-        def slow_compute_value(d):
-            sleep(0.1)
-            return d.X[:, 0]
-
-        ndom = Domain([ContinuousVariable("a", compute_value=slow_compute_value)])
-
-        def run_from_table():
-            Table.from_table(ndom, iris)
-
-        start = time()
-
-        threads = []
-        for _ in range(10):
-            thread = Thread(target=run_from_table)
-            thread.start()
-            threads.append(thread)
-        for t in threads:
-            t.join()
-
-        # if from_table was blocking these threads would need at least 0.1*10s
-        duration = time() - start
-        self.assertLess(duration, 0.5)
-
-
-class PreprocessComputeValue:
-
-    def __init__(self, domain, callback):
-        self.domain = domain
-        self.callback = callback
-
-    def __call__(self, data_):
-        self.callback(data_)
-        data_.transform(self.domain)
-        return data_.X[:, 0]
-
-
-class PreprocessShared:
-
-    def __init__(self, domain, callback):
-        self.domain = domain
-        self.callback = callback
-
-    def __call__(self, data_):
-        if self.callback:
-            self.callback(data_)
-        data_.transform(self.domain)
-        return True
-
-
-class PreprocessSharedComputeValue(SharedComputeValue):
-
-    def __init__(self, callback, shared):
-        super().__init__(compute_shared=shared)
-        self.callback = callback
-
-    # pylint: disable=arguments-differ
-    def compute(self, data_, shared_data):
-        if self.callback:
-            self.callback(data_)
-        return data_.X[:, 0]
-
-
-def preprocess_domain_single(domain, callback):
-    """ Preprocess domain with single-source compute values.
-    """
-    return Domain([
-        ContinuousVariable(name=at.name,
-                           compute_value=PreprocessComputeValue(Domain([at]), callback))
-        for at in domain.attributes])
-
-
-def preprocess_domain_shared(domain, callback, callback_shared):
-    """ Preprocess domain with shared compute values.
-    """
-    shared = PreprocessShared(domain, callback_shared)
-    return Domain([
-        ContinuousVariable(name=at.name,
-                           compute_value=PreprocessSharedComputeValue(callback, shared))
-        for at in domain.attributes])
-
-
-def preprocess_domain_single_stupid(domain, callback):
-    """ Preprocess domain with single-source compute values with stupid
-    implementation: before applying it, instead of transforming just one column
-    into the input domain, do a needless transform of the whole domain.
-    """
-    return Domain([
-        ContinuousVariable(name=at.name,
-                           compute_value=PreprocessComputeValue(domain, callback))
-        for at in domain.attributes])
-
-
-class EfficientTransformTests(unittest.TestCase):
-
-    def setUp(self):
-        self.iris = Table("iris")
-
-    def test_simple(self):
-        call_cv = Mock()
-        d1 = preprocess_domain_single(self.iris.domain, call_cv)
-        self.iris.transform(d1)
-        self.assertEqual(4, call_cv.call_count)
-
-    def test_shared(self):
-        call_cv = Mock()
-        call_shared = Mock()
-        d1 = preprocess_domain_shared(self.iris.domain, call_cv, call_shared)
-        self.iris.transform(d1)
-        self.assertEqual(4, call_cv.call_count)
-        self.assertEqual(1, call_shared.call_count)
-
-    def test_simple_simple_shared(self):
-        call_cv = Mock()
-        d1 = preprocess_domain_single(self.iris.domain, call_cv)
-        d2 = preprocess_domain_single(d1, call_cv)
-        call_shared = Mock()
-        d3 = preprocess_domain_shared(d2, call_cv, call_shared)
-        self.iris.transform(d3)
-        self.assertEqual(1, call_shared.call_count)
-        self.assertEqual(12, call_cv.call_count)
-
-    def test_simple_simple_shared_simple(self):
-        call_cv = Mock()
-        d1 = preprocess_domain_single(self.iris.domain, call_cv)
-        d2 = preprocess_domain_single(d1, call_cv)
-        call_shared = Mock()
-        d3 = preprocess_domain_shared(d2, call_cv, call_shared)
-        d4 = preprocess_domain_single(d3, call_cv)
-        self.iris.transform(d4)
-        self.assertEqual(1, call_shared.call_count)
-        self.assertEqual(16, call_cv.call_count)
-
-    def test_simple_simple_shared_simple_shared_simple(self):
-        call_cv = Mock()
-        d1 = preprocess_domain_single(self.iris.domain, call_cv)
-        d2 = preprocess_domain_single(d1, call_cv)
-        call_shared = Mock()
-        d3 = preprocess_domain_shared(d2, call_cv, call_shared)
-        d4 = preprocess_domain_single(d3, call_cv)
-        d5 = preprocess_domain_shared(d4, call_cv, call_shared)
-        d6 = preprocess_domain_single(d5, call_cv)
-        self.iris.transform(d6)
-        self.assertEqual(2, call_shared.call_count)
-        self.assertEqual(24, call_cv.call_count)
-
-    def test_same_simple_shared_union(self):
-        call_cv = Mock()
-        call_shared = Mock()
-        call_cvs = Mock()
-        same_simple = preprocess_domain_single(self.iris.domain, call_cv)
-        s1 = preprocess_domain_shared(same_simple, call_cvs, call_shared)
-        s2 = preprocess_domain_shared(same_simple, call_cvs, call_shared)
-        ndom = Domain(s1.attributes + s2.attributes)
-        self.iris.transform(ndom)
-        self.assertEqual(2, call_shared.call_count)
-        self.assertEqual(4, call_cv.call_count)
-        self.assertEqual(8, call_cvs.call_count)
-
-    def test_simple_simple_stupid(self):
-        call_cv = Mock()
-        d1 = preprocess_domain_single_stupid(self.iris.domain, call_cv)
-        d2 = preprocess_domain_single_stupid(d1, call_cv)
-        self.iris.transform(d2)
-        self.assertEqual(8, call_cv.call_count)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -395,7 +395,7 @@ class OWRank(OWWidget):
     def get_scorer_scores(self, scorer):
         try:
             scores = scorer.scorer.score_data(self.data).T
-        except (ValueError, TypeError):
+        except ValueError:
             log.error("%s doesn't work on this data", scorer.name)
             scores = np.full((len(self.data.domain.attributes), 1), np.nan)
 

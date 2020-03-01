@@ -9,10 +9,10 @@ This is a gentle introduction on scripting in `Orange <http://orange.biolab.si>`
    % python
    >>> import Orange
    >>> Orange.version.version
-   '3.25.0.dev0+3bdef92'
+   '3.2.dev0+8907f35'
    >>>
 
-If this leaves no error and warning, Orange and Python are properly installed and you are ready to continue with the tutorial.
+If this leaves no error and warning, Orange and Python are properly installed and you are ready to continue with the Tutorial.
 
 .. toctree::
    :maxdepth: 3
@@ -35,7 +35,6 @@ Available classes and methods.
 
    reference/data
    reference/preprocess
-   reference/outliers
    reference/classification
    reference/regression
    reference/clustering

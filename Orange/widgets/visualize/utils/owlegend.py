@@ -8,8 +8,6 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QBrush, QPen, QLinearGradient, QFont
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QPoint, QSize, QRect
 
-from Orange.widgets.utils.colorpalettes import ContinuousPalette
-
 
 class Anchorable(QGraphicsWidget):
     """Anchorable base class.
@@ -397,18 +395,6 @@ class LegendGradient(QGraphicsWidget):
         return self._size_hint
 
 
-class ColorStripItem(QGraphicsWidget):
-    def __init__(self, palette, parent, orientation):
-        super().__init__(parent)
-        self.__strip = palette.color_strip(150, 13, orientation)
-
-    def paint(self, painter, option, widget):
-        painter.drawPixmap(0, 0, self.__strip)
-
-    def sizeHint(self, *_):
-        return QSizeF(self.__strip.width(), self.__strip.height())
-
-
 class ContinuousLegendItem(QGraphicsLinearLayout):
     """Continuous legend item.
 
@@ -438,10 +424,7 @@ class ContinuousLegendItem(QGraphicsLinearLayout):
         self.__palette = palette
         self.__values = values
 
-        if isinstance(palette, ContinuousPalette):
-            self.__gradient = ColorStripItem(palette, parent, orientation)
-        else:
-            self.__gradient = LegendGradient(palette, parent, orientation)
+        self.__gradient = LegendGradient(palette, parent, orientation)
         self.__labels_layout = QGraphicsLinearLayout(orientation)
 
         str_vals = self._format_values(values)
@@ -580,8 +563,7 @@ class Legend(Anchorable):
     def _convert_to_color(obj):
         if isinstance(obj, QColor):
             return obj
-        elif isinstance(obj, tuple) or isinstance(obj, list) \
-                or isinstance(obj, np.ndarray):
+        elif isinstance(obj, tuple) or isinstance(obj, list):
             assert len(obj) in (3, 4)
             return QColor(*obj)
         else:
@@ -619,7 +601,7 @@ class OWDiscreteLegend(Legend):
             raise AttributeError('[OWDiscreteLegend] The class var provided '
                                  'was not discrete.')
 
-        self.set_items(zip(class_var.values, list(class_var.colors)))
+        self.set_items(zip(class_var.values, class_var.colors.tolist()))
 
     def set_items(self, values):
         for class_name, color in values:
@@ -661,14 +643,28 @@ class OWContinuousLegend(Legend):
         # The first and last values must represent the range, the rest should
         # be dummy variables, as they are not shown anywhere
         values = self.__range
-        self.set_items((values, class_var.palette))
+
+        start, end, pass_through_black = class_var.colors
+        # If pass through black, push black in between and add index to vals
+        if pass_through_black:
+            colors = [self._convert_to_color(c) for c
+                      in [start, '#000000', end]]
+            values.insert(1, -1)
+        else:
+            colors = [self._convert_to_color(c) for c in [start, end]]
+
+        self.set_items(list(zip(values, colors)))
 
     def set_items(self, values):
-        vals, palette = values
-        if self.orientation == Qt.Vertical:
-            vals = list(reversed(vals))
+        vals, colors = list(zip(*values))
+
+        # If the orientation is vertical, it makes more sense for the smaller
+        # value to be shown on the bottom
+        if self.orientation == Qt.Vertical and vals[0] < vals[len(vals) - 1]:
+            colors, vals = list(reversed(colors)), list(reversed(vals))
+
         self._layout.addItem(ContinuousLegendItem(
-            palette=palette,
+            palette=colors,
             values=vals,
             parent=self,
             font=self.font,

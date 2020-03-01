@@ -202,7 +202,9 @@ class TestOWSOM(WidgetTest):
         combo.setCurrentIndex(ind_gen)
         combo.activated[int].emit(ind_gen)
         self.assertTrue(widget.controls.pie_charts.isEnabled())
-        np.testing.assert_equal(widget.colors.palette, gender.colors)
+        self.assertEqual(
+            [(c.red(), c.green(), c.blue()) for c in widget.colors],
+            [tuple(c) for c in gender.colors])
         self.assertIsNone(widget.thresholds)
         widget._redraw.assert_called()
 
@@ -214,6 +216,7 @@ class TestOWSOM(WidgetTest):
         combo.activated[int].emit(ind_age)
         self.assertTrue(widget.controls.pie_charts.isEnabled())
         self.assertIsNotNone(widget.thresholds)
+        self.assertEqual(len(widget.colors), len(widget.thresholds) + 1)
         widget._redraw.assert_called()
 
     @_patch_recompute_som

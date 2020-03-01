@@ -20,7 +20,6 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
     def setUpClass(cls):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
-        cls.same_input_output_domain = False
 
         cls.signal_name = "Data"
         cls.signal_data = cls.data
@@ -38,6 +37,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
     def test_outputs_add_scores(self):
         # check output when appending scores
         self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.controls.add_scores.setChecked(1)
         selected_indices = self._select_data()
         selected = self.get_output(self.widget.Outputs.selected_data)
         annotated = self.get_output(self.widget.Outputs.annotated_data)
@@ -63,6 +63,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Error.singleton_clusters_all.is_shown())
 
     def test_unknowns_in_labels(self):
+        self.widget.controls.add_scores.setChecked(1)
         data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
         data.Y[::3] = np.nan
         valid = ~np.isnan(data.Y.flatten())
@@ -82,6 +83,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         np.testing.assert_almost_equal(scores_1, scores[valid], decimal=12)
 
     def test_nan_distances(self):
+        self.widget.controls.add_scores.setChecked(1)
         self.widget.distance_idx = 2
         self.assertEqual(self.widget.Distances[self.widget.distance_idx][0],
                          'Cosine')
@@ -155,6 +157,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
                      [16, nan, nan],
                      "nyy"))
         )
+        self.widget.controls.add_scores.setChecked(1)
         self.send_signal(self.widget.Inputs.data, table)
 
     def test_saved_selection(self):

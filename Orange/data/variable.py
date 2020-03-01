@@ -11,8 +11,8 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import _variable
-from Orange.util import Registry, Reprable, OrangeDeprecationWarning
-
+from Orange.util import Registry, hex_to_color, Reprable,\
+    OrangeDeprecationWarning
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
            "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
@@ -47,7 +47,7 @@ def is_discrete_values(values):
     ----
     Assumes consistent type of items of `values`.
     """
-    if len(values) == 0:
+    if not len(values):
         return None
     # If the first few values are, or can be converted to, floats,
     # the type is numeric
@@ -165,7 +165,6 @@ class Value(float):
         return self
 
     def __init__(self, _, __=Unknown):
-        # __new__ does the job, pylint: disable=super-init-not-called
         pass
 
     def __repr__(self):
@@ -177,10 +176,8 @@ class Value(float):
 
     def __eq__(self, other):
         if isinstance(self, Real) and isnan(self):
-            if isinstance(other, Real):
-                return isnan(other)
-            else:
-                return other in self.variable.unknown_str
+            return (isinstance(other, Real) and isnan(other)
+                    or other in self.variable.unknown_str)
         if isinstance(other, str):
             return self.variable.str_val(self) == other
         if isinstance(other, Value):
@@ -222,9 +219,7 @@ class Value(float):
         if self.variable.is_discrete:
             # It is not possible to hash the id and the domain value to the
             # same number as required by __eq__.
-            # hash(1)
-            # == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1))
-            # == hash("green")
+            # hash(1) == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1)) == hash("green")
             # User should hash directly ids or domain values instead.
             raise TypeError("unhashable type - cannot hash values of discrete variables!")
         if self._value is None:
@@ -247,7 +242,6 @@ class Value(float):
         return dict(value=getattr(self, '_value', None))
 
     def __setstate__(self, state):
-        # defined in __new__, pylint: disable=attribute-defined-outside-init
         self._value = state.get('value', None)
 
 
@@ -329,10 +323,19 @@ class Variable(Reprable, metaclass=VariableMeta):
         self.source_variable = None
         self.sparse = sparse
         self.attributes = {}
+        self._colors = None
 
     @property
     def name(self):
         return self._name
+
+    @property
+    def colors(self):  # unreachable; pragma: no cover
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        self._colors = value
 
     def make_proxy(self):
         """
@@ -397,8 +400,7 @@ class Variable(Reprable, metaclass=VariableMeta):
     def is_time(self):
         return isinstance(self, TimeVariable)
 
-    @staticmethod
-    def repr_val(val):
+    def repr_val(self, val):
         """
         Return a textual representation of variable's value `val`. Argument
         `val` must be a float (for primitive variables) or an arbitrary
@@ -467,10 +469,6 @@ class Variable(Reprable, metaclass=VariableMeta):
         var.attributes = dict(self.attributes)
         return var
 
-    def renamed(self, new_name):
-        # prevent cyclic import, pylint: disable=import-outside-toplevel
-        from Orange.preprocess.transformation import Identity
-        return self.copy(name=new_name, compute_value=Identity(variable=self))
 
 del _predicatedescriptor
 
@@ -507,7 +505,12 @@ class ContinuousVariable(Variable):
         three, but adjusted at the first call of :obj:`to_val`.
         """
         super().__init__(name, compute_value, sparse=sparse)
-        self.number_of_decimals = number_of_decimals
+        if number_of_decimals is None:
+            self._number_of_decimals = 3
+            self.adjust_decimals = 2
+            self._format_str = "%g"
+        else:
+            self.number_of_decimals = number_of_decimals
 
     @property
     def number_of_decimals(self):
@@ -521,15 +524,20 @@ class ContinuousVariable(Variable):
     def format_str(self, value):
         self._format_str = value
 
+    @Variable.colors.getter
+    def colors(self):
+        if self._colors is not None:
+            return self._colors
+        try:
+            col1, col2, black = self.attributes["colors"]
+            return (hex_to_color(col1), hex_to_color(col2), black)
+        except (KeyError, ValueError):
+            # User-provided colors were not available or invalid
+            return ((0, 0, 255), (255, 255, 0), False)
+
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
     def number_of_decimals(self, x):
-        if x is None:
-            self._number_of_decimals = 3
-            self.adjust_decimals = 2
-            self._format_str = "%g"
-            return
-
         self._number_of_decimals = x
         self.adjust_decimals = 0
         if self._number_of_decimals <= MAX_NUM_OF_DECIMALS:
@@ -563,16 +571,11 @@ class ContinuousVariable(Variable):
     str_val = repr_val
 
     def copy(self, compute_value=None, *, name=None, **kwargs):
-        # pylint understand not that `var` is `DiscreteVariable`:
-        # pylint: disable=protected-access
-        number_of_decimals = kwargs.pop("number_of_decimals", None)
-        var = super().copy(compute_value=compute_value, name=name, **kwargs)
-        if number_of_decimals is not None:
-            var.number_of_decimals = number_of_decimals
-        else:
-            var._number_of_decimals = self._number_of_decimals
-            var.adjust_decimals = self.adjust_decimals
-            var.format_str = self._format_str
+        var = super().copy(compute_value=compute_value, name=name,
+                           number_of_decimals=self.number_of_decimals,
+                           **kwargs)
+        var.adjust_decimals = self.adjust_decimals
+        var.format_str = self._format_str
         return var
 
 
@@ -601,19 +604,16 @@ class DiscreteVariable(Variable):
     def __init__(self, name="", values=(), ordered=False, compute_value=None,
                  *, sparse=False):
         """ Construct a discrete variable descriptor with the given values. """
-        values = list(values)  # some people (including me) pass a generator
-        if not all(isinstance(value, str) for value in values):
+        self.values = list(values)
+        if not all(isinstance(value, str) for value in self.values):
             raise TypeError("values of DiscreteVariables must be strings")
-
         super().__init__(name, compute_value, sparse=sparse)
-        self.values = values
-        self._value_index = {value: i for i, value in enumerate(values)}
         self.ordered = ordered
 
     def get_mapping_from(self, other):
         return np.array(
-            [self._value_index.get(value, np.nan) for value in other.values],
-            dtype=float)
+            [self.values.index(value) if value in self.values else np.nan
+             for value in other.values], dtype=float)
 
     def get_mapper_from(self, other):
         mapping = self.get_mapping_from(other)
@@ -637,7 +637,7 @@ class DiscreteVariable(Variable):
                     value.data[nans] = 0
                     value.data[col] = mapping[value.data[col].astype(int)]
                     value.data[nans] = np.nan
-                    return None
+                    return
 
                 # Dense and CSC map a contiguous area
                 if isinstance(value, np.ndarray) and value.ndim == 2:
@@ -654,11 +654,11 @@ class DiscreteVariable(Variable):
                 col[nans] = 0
                 col[:] = mapping[col.astype(int)]
                 col[nans] = np.nan
-                return None
+                return
 
             # Mapping into a copy
             if isinstance(value, (int, float)):
-                return value if np.isnan(value) else mapping[int(value)]
+                return mapping[int(value)] if value == value else value
             if isinstance(value, str):
                 return mapping[other.values.index(value)]
             if isinstance(value, np.ndarray):
@@ -688,12 +688,28 @@ class DiscreteVariable(Variable):
                 value.data = mapper(value.data)
                 return value
             if isinstance(value, Iterable):
-                return type(value)(val if np.isnan(val) else mapping[int(val)]
+                return type(value)(mapping[int(val)] if val == val else val
                                    for val in value)
             raise ValueError(
                 f"invalid type for value(s): {type(value).__name__}")
 
         return mapper
+
+    @Variable.colors.getter
+    def colors(self):
+        if self._colors is not None:
+            colors = np.array(self._colors)
+        elif not self.values:
+            colors = np.zeros((0, 3))  # to match additional colors in vstacks
+        else:
+            from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
+            default = tuple(ColorPaletteGenerator.palette(self))
+            colors = self.attributes.get('colors', ())
+            colors = tuple(hex_to_color(color) for color in colors) \
+                    + default[len(colors):]
+            colors = np.array(colors)
+        colors.flags.writeable = False
+        return colors
 
     def to_val(self, s):
         """
@@ -719,19 +735,15 @@ class DiscreteVariable(Variable):
         if not isinstance(s, str):
             raise TypeError('Cannot convert {} to value of "{}"'.format(
                 type(s).__name__, self.name))
-        if s not in self._value_index:
-            raise ValueError(f"Value {s} does not exist")
-        return self._value_index[s]
+        return self.values.index(s)
 
     def add_value(self, s):
         """ Add a value `s` to the list of values.
         """
         if not isinstance(s, str):
             raise TypeError("values of DiscreteVariables must be strings")
-        if s in self._value_index:
-            return
-        self._value_index[s] = len(self.values)
         self.values.append(s)
+        self._colors = None
 
     def val_from_str_add(self, s):
         """
@@ -743,13 +755,12 @@ class DiscreteVariable(Variable):
         :rtype: float
         """
         s = str(s) if s is not None else s
-        if s in self.unknown_str:
-            return ValueUnknown
-        val = self._value_index.get(s)
-        if val is None:
+        try:
+            return ValueUnknown if s in self.unknown_str \
+                else self.values.index(s)
+        except ValueError:
             self.add_value(s)
-            val = len(self.values) - 1
-        return val
+            return len(self.values) - 1
 
     def repr_val(self, val):
         """
@@ -775,13 +786,9 @@ class DiscreteVariable(Variable):
                                self.values, self.ordered), \
             __dict__
 
-    def copy(self, compute_value=None, *, name=None, values=None, **_):
-        # pylint: disable=arguments-differ
-        if values is not None and len(values) != len(self.values):
-            raise ValueError(
-                "number of values must match the number of original values")
+    def copy(self, compute_value=None, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
-                            values=values or self.values, ordered=self.ordered)
+                            values=self.values, ordered=self.ordered)
 
 
 class StringVariable(Variable):
@@ -808,10 +815,10 @@ class StringVariable(Variable):
     @staticmethod
     def str_val(val):
         """Return a string representation of the value."""
-        if isinstance(val, str) and val == "":
+        if val is "":
             return "?"
         if isinstance(val, Value):
-            if not val.value:
+            if val.value is "":
                 return "?"
             val = val.value
         return str(val)

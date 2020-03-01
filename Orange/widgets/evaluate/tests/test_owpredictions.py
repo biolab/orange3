@@ -4,7 +4,6 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner
 from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
@@ -18,7 +17,6 @@ from Orange.data import Table, Domain, DiscreteVariable
 from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
 
 
 class TestOWPredictions(WidgetTest):
@@ -178,7 +176,7 @@ class TestOWPredictions(WidgetTest):
         model2 = ConstantLearner()(titanic)
         self.send_signal(self.widget.Inputs.predictors, model2, 2)
 
-    def test_sort_matching(self):
+    def test_sort(self):
         def get_items_order(model):
             n = pred_model.rowCount()
             return [
@@ -224,193 +222,11 @@ class TestOWPredictions(WidgetTest):
         self.assertListEqual(pred_order, list(range(n)))
         self.assertListEqual(data_order, list(range(n)))
 
-    def test_sort_predictions(self):
-        """
-        Test whether sorting of probabilities by FilterSortProxy is correct.
-        """
-        def get_items_order(model):
-            n = pred_model.rowCount()
-            return [
-                pred_model.mapToSource(model.index(i, 0)).row()
-                for i in range(n)
-            ]
-
-        log_reg_iris = LogisticRegressionLearner()(self.iris)
-        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        _, log_reg_probs = log_reg_iris(self.iris, Model.ValueProbs)
-        # here I assume that classes are in order 0, 1, 2 in widget
-
-        pred_model = self.widget.predictionsview.model()
-        pred_model.sort(0)
-        widget_order = get_items_order(pred_model)
-
-        # correct order first sort by probs[:,0] then probs[:,1], ...
-        keys = tuple(
-            log_reg_probs[:, i] for i in range(
-                log_reg_probs.shape[1] - 1, -1, -1))
-        sort_order = np.lexsort(keys)
-        np.testing.assert_array_equal(widget_order, sort_order)
-
     def test_reset_no_data(self):
         """
         Check no error when resetting the view without model and data
         """
         self.widget.reset_button.click()
-
-    def test_colors_same_domain(self):
-        """
-        Test whether the color selection for values is correct.
-        """
-        # pylint: disable=protected-access
-        self.send_signal(self.widget.Inputs.data, self.iris)
-
-        # case 1: one same model
-        predictor_iris = ConstantLearner()(self.iris)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris)
-        colors = self.widget._get_colors()
-        np.testing.assert_array_equal(
-            colors, self.iris.domain.class_var.colors)
-
-        # case 2: two same models
-        predictor_iris1 = ConstantLearner()(self.iris)
-        predictor_iris2 = ConstantLearner()(self.iris)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
-        colors = self.widget._get_colors()
-        # assume that colors have same order since values have same order
-        np.testing.assert_array_equal(
-            colors, self.iris.domain.class_var.colors)
-
-        # case 3: two same models - changed color order
-        idom = self.iris.domain
-        dom = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values)
-        )
-        dom.class_var.colors = dom.class_var.colors[::-1]
-        iris2 = self.iris.transform(dom)
-
-        predictor_iris1 = ConstantLearner()(iris2)
-        predictor_iris2 = ConstantLearner()(iris2)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
-        colors = self.widget._get_colors()
-        np.testing.assert_array_equal(colors, iris2.domain.class_var.colors)
-
-    def test_colors_diff_domain(self):
-        """
-        Test whether the color selection for values is correct.
-        """
-        # pylint: disable=protected-access
-        self.send_signal(self.widget.Inputs.data, self.iris)
-
-        # case 1: two domains one subset other
-        idom = self.iris.domain
-        dom1 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values)
-        )
-        dom2 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values[:2])
-        )
-        iris1 = self.iris[:100].transform(dom1)
-        iris2 = self.iris[:100].transform(dom2)
-
-        predictor_iris1 = ConstantLearner()(iris1)
-        predictor_iris2 = ConstantLearner()(iris2)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
-        colors = self.widget._get_colors()
-        np.testing.assert_array_equal(colors, iris1.domain.class_var.colors)
-
-        # case 2: two domains one subset other - different color order
-        idom = self.iris.domain
-        colors = idom.class_var.colors[::-1]
-        dom1 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values)
-        )
-        dom2 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values[:2])
-        )
-        dom1.class_var.colors = colors
-        dom2.class_var.colors = colors[:2]
-        iris1 = self.iris[:100].transform(dom1)
-        iris2 = self.iris[:100].transform(dom2)
-
-        predictor_iris1 = ConstantLearner()(iris1)
-        predictor_iris2 = ConstantLearner()(iris2)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
-        colors = self.widget._get_colors()
-        np.testing.assert_array_equal(colors, iris1.domain.class_var.colors)
-
-        # case 3: domain color, values miss-match - use default colors
-        idom = self.iris.domain
-        dom1 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values)
-        )
-        dom2 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values)
-        )
-        dom1.class_var.colors = dom1.class_var.colors[::-1]
-        iris1 = self.iris.transform(dom1)
-        iris2 = self.iris.transform(dom2)
-
-        predictor_iris1 = ConstantLearner()(iris1)
-        predictor_iris2 = ConstantLearner()(iris2)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
-        colors = self.widget._get_colors()
-        np.testing.assert_array_equal(colors, ColorPaletteGenerator.palette(3))
-
-        # case 4: two domains different values order, matching colors
-        idom = self.iris.domain
-        # this way we know that default colors are not used
-        colors = ColorPaletteGenerator.palette(5)[2:]
-        dom1 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values)
-        )
-        dom2 = Domain(
-            idom.attributes,
-            DiscreteVariable(idom.class_var.name, idom.class_var.values[::-1])
-        )
-        dom1.class_var.colors = colors
-        dom2.class_var.colors = colors[::-1]  # colors mixed same than values
-        iris1 = self.iris[:100].transform(dom1)
-        iris2 = self.iris[:100].transform(dom2)
-
-        predictor_iris1 = ConstantLearner()(iris1)
-        predictor_iris2 = ConstantLearner()(iris2)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
-        colors = self.widget._get_colors()
-        np.testing.assert_array_equal(colors, iris1.domain.class_var.colors)
-
-    def test_colors_continuous(self):
-        """
-        When only continuous variables in predictor no color should be selected
-        we do not work with classes.
-        When we add one classifier there should be colors.
-        """
-        # pylint: disable=protected-access
-        data = Table("housing")
-        cl_data = ConstantLearner()(data)
-        self.send_signal(self.widget.Inputs.predictors, cl_data)
-        self.send_signal(self.widget.Inputs.data, data)
-        colors = self.widget._get_colors()
-        self.assertListEqual([], colors)
-
-        predictor_iris = ConstantLearner()(self.iris)
-        self.send_signal(self.widget.Inputs.predictors, predictor_iris, 1)
-        colors = self.widget._get_colors()
-        self.assertEqual(3, len(colors))
 
 
 if __name__ == "__main__":
