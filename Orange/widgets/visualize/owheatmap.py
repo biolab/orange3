@@ -21,11 +21,11 @@ from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical, kmeans
-from Orange.widgets.utils import colorpalettes
+from Orange.widgets.utils import colorpalettes, apply_all
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils.graphicsview import GraphicsWidgetView
-from Orange.widgets.utils.colorpalettes import DiscretePalette
+from Orange.widgets.utils.colorpalettes import DiscretePalette, Palette
 
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -33,7 +33,8 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.widget import Msg, Input, Output
 
 from Orange.widgets.data.oweditdomain import table_column_data
-from Orange.widgets.visualize.utils.heatmap import HeatmapGridWidget, ColorMap
+from Orange.widgets.visualize.utils.heatmap import HeatmapGridWidget, \
+    ColorMap, CategoricalColorMap, GradientColorMap
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
@@ -349,7 +350,9 @@ class OWHeatMap(widget.OWWidget):
         self.connect_control("annotation_var", self.annotation_var_changed)
 
         self.row_side_color_model = DomainModel(
-            placeholder="(None)", valid_types=(DiscreteVariable,),
+            order=(DomainModel.CLASSES, DomainModel.Separator,
+                   DomainModel.METAS),
+            placeholder="(None)", valid_types=DomainModel.PRIMITIVE,
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled,
             parent=self,
         )
@@ -401,6 +404,11 @@ class OWHeatMap(widget.OWWidget):
             "Decrease Font", self, shortcut=QKeySequence("ctrl+<"))
         self.__font_inc.triggered.connect(lambda: self.__adjust_font_size(1))
         self.__font_dec.triggered.connect(lambda: self.__adjust_font_size(-1))
+        if hasattr(QAction, "setShortcutVisibleInContextMenu"):
+            apply_all(
+                [self.__font_inc, self.__font_dec],
+                lambda a: a.setShortcutVisibleInContextMenu(True)
+            )
         self.addActions([self.__font_inc, self.__font_dec])
 
     @property
@@ -438,8 +446,8 @@ class OWHeatMap(widget.OWWidget):
     def color_palette(self):
         return self.color_cb.currentData().lookup_table()
 
-    def color_map(self) -> ColorMap:
-        return ColorMap(
+    def color_map(self) -> GradientColorMap:
+        return GradientColorMap(
             self.color_palette(), (self.threshold_low, self.threshold_high),
             0 if self.center_palette else None
         )
@@ -788,7 +796,7 @@ class OWHeatMap(widget.OWWidget):
         widget.setHeatmaps(parts)
         side = self.row_side_colors()
         if side is not None:
-            widget.setRowSideColorAnnotations(side[0], name=side[1].name)
+            widget.setRowSideColorAnnotations(side[0], side[1], name=side[2].name)
         widget.setColumnLabelsPosition(self._column_label_pos)
         widget.setAspectRatioMode(
             Qt.KeepAspectRatio if self.keep_aspect else Qt.IgnoreAspectRatio
@@ -965,13 +973,15 @@ class OWHeatMap(widget.OWWidget):
         var = self.annotation_color_var
         if var is None:
             return None
-        assert var.is_discrete
         column_data = column_data_from_table(self.input_data, var)
+        span = (np.nanmin(column_data), np.nanmax(column_data))
         merges = self._merge_row_indices()
         if merges is not None:
             column_data = aggregate(var, column_data, merges)
-        colors = self._colorize(var, column_data)
-        return colors, var
+        data, colormap = self._colorize(var, column_data)
+        if var.is_continuous:
+            colormap.span = span
+        return data, colormap, var
 
     def set_annotation_color_var(self, var: Union[None, Variable, int]):
         """Set the current side color annotation variable."""
@@ -989,18 +999,29 @@ class OWHeatMap(widget.OWWidget):
         if colors is None:
             widget.setRowSideColorAnnotations(None)
         else:
-            widget.setRowSideColorAnnotations(colors[0], colors[1].name)
+            widget.setRowSideColorAnnotations(colors[0], colors[1], colors[2].name)
 
-    def _colorize(self, var: DiscreteVariable, data: np.ndarray) -> np.ndarray:
-        palette = var.palette  # type: DiscretePalette
+    def _colorize(self, var: Variable, data: np.ndarray) -> Tuple[np.ndarray, ColorMap]:
+        palette = var.palette  # type: Palette
         colors = np.array(
-            [[c.red(), c.green(), c.blue()]
-             for c in palette.qcolors_w_nan],
+            [[c.red(), c.green(), c.blue()] for c in palette.qcolors_w_nan],
             dtype=np.uint8,
         )
-        mask = np.isnan(data)
-        data[mask] = -1
-        return colors[data.astype(int)]
+        if var.is_discrete:
+            mask = np.isnan(data)
+            data[mask] = -1
+            data = data.astype(int)
+            if mask.any():
+                values = (*var.values, "N/A")
+            else:
+                values = var.values
+                colors = colors[: -1]
+            return data, CategoricalColorMap(colors, values)
+        elif var.is_continuous:
+            cmap = GradientColorMap(colors[:-1])
+            return data, cmap
+        else:
+            raise TypeError
 
     def update_column_annotations(self):
         widget = self.scene.widget
