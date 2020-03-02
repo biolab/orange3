@@ -1,0 +1,37 @@
+name: Cleanup workflow
+
+on: [push]
+
+# This is a temporary solution until Github actions provide an official support for this.
+# Workflow ids are located here: https://api.github.com/repos/biolab/orange3/actions/workflows
+
+jobs:
+  cancel:
+    name: 'Cancel Previous Runs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Cleanup Linux workflow
+        uses: styfle/cancel-workflow-action@0.2.0
+        with:
+          workflow_id: 685155
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup macOS workflow
+        uses: styfle/cancel-workflow-action@0.2.0
+        with:
+          workflow_id: 685156
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup Windows workflow
+        uses: styfle/cancel-workflow-action@0.2.0
+        with:
+          workflow_id: 685157
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup Documentation workflow
+        uses: styfle/cancel-workflow-action@0.2.0
+        with:
+          workflow_id: 685153
+          access_token: ${{ secrets.GITHUB_TOKEN }}
