@@ -112,6 +112,54 @@ class TestOWEditDomain(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
 
+    def test_widget_state(self):
+        """Check if widget clears its state when the input is disconnected"""
+        editor = self.widget.findChild(ContinuousVariableEditor)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertEqual(editor.name_edit.text(), "sepal length")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.name_edit.text(), "")
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
+        editor = self.widget.findChild(DiscreteVariableEditor)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        index = self.widget.domain_view.model().index(4)
+        self.widget.variables_view.setCurrentIndex(index)
+        self.assertEqual(editor.name_edit.text(), "iris")
+        self.assertEqual(editor.labels_model.get_dict(), {})
+        self.assertNotEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+        model = editor.values_edit.selectionModel().model()
+        self.assertEqual(model.index(0).data(Qt.EditRole), "Iris-setosa")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.name_edit.text(), "")
+        self.assertEqual(editor.labels_model.get_dict(), {})
+        self.assertEqual(model.index(0).data(Qt.EditRole), None)
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
+        editor = self.widget.findChild(TimeVariableEditor)
+        table = Table(test_filename("datasets/cyber-security-breaches.tab"))
+        self.send_signal(self.widget.Inputs.data, table)
+        index = self.widget.domain_view.model().index(4)
+        self.widget.variables_view.setCurrentIndex(index)
+        self.assertEqual(editor.name_edit.text(), "Date_Posted_or_Updated")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.name_edit.text(), "")
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
+        editor = self.widget.findChild(VariableEditor)
+        self.send_signal(self.widget.Inputs.data, table)
+        index = self.widget.domain_view.model().index(8)
+        self.widget.variables_view.setCurrentIndex(index)
+        self.assertEqual(editor.var.name, "Business_Associate_Involved")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.var, None)
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
     def test_output_data(self):
         """Check data on the output after apply"""
         self.send_signal(self.widget.Inputs.data, self.iris)

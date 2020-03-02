@@ -1382,9 +1382,9 @@ class ReinterpretVariableEditor(VariableEditor):
             typecb.activated[int].connect(self.__reinterpret_activated)
             form.insertRow(1, "Type:", typecb)
             # Insert the typecb after name edit in the focus chain
-            nameedit = editor.findChild(QLineEdit, )
-            if nameedit is not None:
-                QWidget.setTabOrder(nameedit, typecb)
+            name_edit = editor.findChild(QLineEdit, )
+            if name_edit is not None:
+                QWidget.setTabOrder(name_edit, typecb)
             return editor
         # This is ugly. Create an editor for each type and insert a type
         # selection combo box into its layout. Switch between widgets
@@ -1632,6 +1632,7 @@ class OWEditDomain(widget.OWWidget):
         """Clear the widget state."""
         self.data = None
         self.variables_model.clear()
+        self.clear_editor()
         assert self.selected_index == -1
         self.selected_index = -1
 
@@ -1751,6 +1752,7 @@ class OWEditDomain(widget.OWWidget):
         except TypeError:
             pass
         current.set_data(None)
+        current.layout().currentWidget().clear()
 
     @Slot()
     def _on_variable_changed(self):
