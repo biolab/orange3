@@ -483,7 +483,7 @@ class HeatmapGridWidget(QGraphicsWidget):
             parent=self,
             minimumSize=QSizeF(100, 20),
             visible=self.__legendVisible,
-            sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+            sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         )
         legend.setMaximumWidth(300)
         grid.addItem(legend, self.LegendRow, self.LegendCol)
