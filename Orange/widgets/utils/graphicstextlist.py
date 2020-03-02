@@ -132,20 +132,14 @@ class TextListWidget(QGraphicsWidget):
     def sizeHint(self, which: Qt.SizeHint, constraint=QSizeF()) -> QSizeF:
         """Reimplemented."""
         if which == Qt.PreferredSize:
-            scale = self.__autoScale
-            size = self.size()
             sh = self.__naturalsh()
             if self.__orientation == Qt.Vertical:
                 if 0 < constraint.height() < sh.height():
                     sh = scaled(sh, constraint, Qt.KeepAspectRatioByExpanding)
-                elif scale and size.height() > 0:
-                    sh = scaled(sh, QSizeF(-1, size.height()), Qt.KeepAspectRatioByExpanding)
             else:
                 sh = sh.transposed()
                 if 0 < constraint.width() < sh.width():
                     sh = scaled(sh, constraint, Qt.KeepAspectRatioByExpanding)
-                elif scale and size.width() > 0:
-                    sh = scaled(sh, QSizeF(size.width(), -1), Qt.KeepAspectRatioByExpanding)
         else:
             sh = super().sizeHint(which, constraint)
         return sh
@@ -173,21 +167,6 @@ class TextListWidget(QGraphicsWidget):
     def resizeEvent(self, event: QGraphicsSceneResizeEvent) -> None:
         super().resizeEvent(event)
         self.__layout()
-        if not self.__autoScale:
-            return
-        # Be careful. We propagate current height/width up in sizeHint via
-        # fixed constraints. This can lead to infinite relayout.
-        old = event.oldSize()
-        new = event.newSize()
-        invalidate = False
-        if self.__orientation == Qt.Vertical:
-            if not math.isclose(old.height(), new.height(), rel_tol=1e-4):
-                invalidate = True
-        else:
-            if not math.isclose(old.width(), new.width(), rel_tol=1e-4):
-                invalidate = True
-        if invalidate:
-            self.updateGeometry()
 
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.LayoutRequest:
@@ -269,9 +248,6 @@ class TextListWidget(QGraphicsWidget):
             # find a smaller font size to fit the height
             psize = effective_point_size_for_height(font, cell_height)
             font.setPointSizeF(psize)
-            psize = effective_point_size_for_width(
-                font, crect.width(), self.__width_for_font)
-            font.setPointSizeF(psize)
             fm = QFontMetricsF(font)
             fontheight = fm.height()
 
@@ -332,7 +308,7 @@ def effective_point_size_for_height(
     start = max(math.ceil(height), minsize)
     font.setPointSizeF(start)
     fix = 0
-    while QFontMetricsF(font).height() > height and start - (fix  + step) > minsize:
+    while QFontMetricsF(font).height() > height and start - (fix + step) > minsize:
         fix += step
         font.setPointSizeF(start - fix)
     return QFontInfo(font).pointSizeF()
