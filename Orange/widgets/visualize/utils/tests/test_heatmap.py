@@ -122,7 +122,11 @@ class TestHeatmapGridWidget(GuiTest):
         ):
             w.setColumnLabelsPosition(pos)
 
-        w.setRowSideColorAnnotations(np.array([[255] * 3, [0] * 3]), "c")
+        w.setRowSideColorAnnotations(
+            np.array([0, 1]),
+            CategoricalColorMap(np.array([[255] * 3, [0] * 3]),
+                                names=["a", "b"])
+        )
         w.setRowSideColorAnnotations(None)
 
     def test_selection(self):
