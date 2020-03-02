@@ -1,0 +1,62 @@
+name: Linux Job
+
+on:
+  # Trigger the workflow on push or pull request, but only for the master branch
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: False
+      matrix:
+        python: [3.6, 3.7]
+        os: [ubuntu-18.04]
+
+    services:
+      postgres:
+        image: orangedm/postgres:11
+        env:
+          POSTGRES_USER: postgres_user
+          POSTGRES_PASSWORD: postgres_password
+          POSTGRES_DB: postgres_db
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      SQLServer:
+        image: mcr.microsoft.com/mssql/server:2017-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: sqlServerPassw0rd
+        ports:
+          - 1433:1433
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install linux system dependencies
+        run: sudo apt-get install -y libxkbcommon-x11-0  # for PyQt 5.12
+
+      - name: Install Tox
+        run: pip install tox
+
+      - name: Run Tox
+        run: xvfb-run -a -s "-screen 0 1280x1024x24" tox -e coverage
+        env:
+          ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
+
+      - name: Upload code coverage
+        run:
+          pip install codecov
+          codecov
+        if: ${{ matrix.python }} == '3.6'
