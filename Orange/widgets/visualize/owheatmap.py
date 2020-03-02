@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QFormLayout, QComboBox, QGroupBox,
     QMenu, QAction
 )
-from AnyQt.QtGui import QStandardItemModel, QStandardItem
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QFont, QKeySequence
 from AnyQt.QtCore import Qt, QSize, QRectF, QObject
 
 from orangewidget.utils.combobox import ComboBox, ComboBoxSearch
@@ -395,6 +395,13 @@ class OWHeatMap(widget.OWWidget):
         )
         self.mainArea.layout().addWidget(self.view)
         self.selected_rows = []
+        self.__font_inc = QAction(
+            "Increase Font", self, shortcut=QKeySequence("ctrl+>"))
+        self.__font_dec = QAction(
+            "Decrease Font", self, shortcut=QKeySequence("ctrl+<"))
+        self.__font_inc.triggered.connect(lambda: self.__adjust_font_size(1))
+        self.__font_dec.triggered.connect(lambda: self.__adjust_font_size(-1))
+        self.addActions([self.__font_inc, self.__font_dec])
 
     @property
     def center_palette(self):
@@ -992,6 +999,20 @@ class OWHeatMap(widget.OWWidget):
         if self.data is not None and widget is not None:
             widget.setColumnLabelsPosition(self._column_label_pos)
 
+    def __adjust_font_size(self, diff):
+        widget = self.scene.widget
+        if widget is None:
+            return
+        curr = widget.font().pointSizeF()
+        new = curr + diff
+
+        self.__font_dec.setEnabled(new > 1.0)
+        self.__font_inc.setEnabled(new <= 32)
+        if new > 1.0:
+            font = QFont()
+            font.setPointSizeF(new)
+            widget.setFont(font)
+
     def _on_view_context_menu(self, pos):
         widget = self.scene.widget
         if widget is None:
@@ -1000,6 +1021,8 @@ class OWHeatMap(widget.OWWidget):
         menu = QMenu(self.view.viewport())
         menu.setAttribute(Qt.WA_DeleteOnClose)
         menu.addActions(self.view.actions())
+        menu.addSeparator()
+        menu.addActions([self.__font_inc, self.__font_dec])
         menu.addSeparator()
         a = QAction("Keep aspect ratio", menu, checkable=True)
         a.setChecked(self.keep_aspect)
