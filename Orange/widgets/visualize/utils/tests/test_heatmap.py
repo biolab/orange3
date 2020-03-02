@@ -8,7 +8,8 @@ from orangecanvas.gui.test import mouseMove
 from orangewidget.tests.base import GuiTest
 
 from Orange.clustering.hierarchical import Tree, SingletonData, ClusterData
-from Orange.widgets.visualize.utils.heatmap import HeatmapGridWidget, ColorMap
+from Orange.widgets.visualize.utils.heatmap import HeatmapGridWidget, ColorMap, \
+    GradientColorMap, CategoricalColorMap
 
 
 class TestHeatmapGridWidget(GuiTest):
@@ -163,5 +164,5 @@ class TestHeatmapGridWidget(GuiTest):
         w = HeatmapGridWidget()
         self.scene.addItem(w)
         w.setHeatmaps(self._Data["2-2"])
-        w.setColorMap(ColorMap([[255] * 3, [0] * 3]))
-        w.setColorMap(ColorMap([[255] * 3, [0] * 3], center=0))
+        w.setColorMap(GradientColorMap([[255] * 3, [0] * 3]))
+        w.setColorMap(GradientColorMap([[255] * 3, [0] * 3], center=0))

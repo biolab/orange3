@@ -37,20 +37,57 @@ def leaf_indices(tree: Tree) -> Sequence[int]:
 
 
 class ColorMap:
+    """Base color map class."""
+
+    def apply(self, data: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+    def replace(self, **kwargs) -> 'ColorMap':
+        raise NotImplementedError
+
+
+class CategoricalColorMap(ColorMap):
+    """A categorical color map."""
+    #: A color table. A (N, 3) uint8 ndarray
+    colortable: np.ndarray
+    #: A N sequence of categorical names
+    names: Sequence[str]
+
+    def __init__(self, colortable, names):
+        self.colortable = np.asarray(colortable)
+        self.names = names
+        assert len(colortable) == len(names)
+
+    def apply(self, data) -> np.ndarray:
+        data = np.asarray(data, dtype=int)
+        table = self.colortable[data]
+        return table
+
+    def replace(self, **kwargs) -> 'CategoricalColorMap':
+        kwargs.setdefault("colortable", self.colortable)
+        kwargs.setdefault("names", self.names)
+        return CategoricalColorMap(**kwargs)
+
+
+class GradientColorMap(ColorMap):
     """Color map for the heatmap."""
     #: A color table. A (N, 3) uint8 ndarray
     colortable: np.ndarray
-    #: Lower ad upper thresholding operator parameters. Expressed as relative
-    #: to the data span (range) so (0, 1) applies no thresholding
+    #: The data range (min, max)
+    span: Optional[Tuple[float, float]] = None
+    #: Lower and upper thresholding operator parameters. Expressed as relative
+    #: to the data span (range) so (0, 1) applies no thresholding, while
+    #: (0.05, 0.95) squeezes the effective range by 5% from both ends
     thresholds: Tuple[float, float] = (0., 1.)
     #: Should the color map be center and if so around which value.
     center: Optional[float] = None
 
-    def __init__(self, colors, thresholds=thresholds, center=None):
-        self.colortable = colors
+    def __init__(self, colortable, thresholds=thresholds, center=None, span=None):
+        self.colortable = np.asarray(colortable)
         self.thresholds = thresholds
         assert thresholds[0] < thresholds[1]
         self.center = center
+        self.span = span
 
     def adjust_levels(self, low: float, high: float) -> Tuple[float, float]:
         """
@@ -67,6 +104,32 @@ class ColorMap:
             lt = center - maxoff
             ht = center + maxoff
         return lt, ht
+
+    def apply(self, data) -> np.ndarray:
+        if self.span is None:
+            low, high = np.nanmin(data), np.nanmax(data)
+        else:
+            low, high = self.span
+        low, high = self.adjust_levels(low, high)
+        mask = np.isnan(data)
+        normalized = (data - low) / (high - low)
+        normalized = np.clip(normalized, 0, 1, out=normalized)
+        table = np.empty_like(normalized, dtype=np.uint8)
+        ncolors = len(self.colortable)
+        assert ncolors - 1 <= np.iinfo(table.dtype).max
+        table = np.multiply(
+            normalized, ncolors - 1, out=table, where=~mask, casting="unsafe",
+        )
+        colors = self.colortable[table]
+        colors[mask] = 0
+        return colors
+
+    def replace(self, **kwargs) -> 'GradientColorMap':
+        kwargs.setdefault("colortable", self.colortable)
+        kwargs.setdefault("thresholds", self.thresholds)
+        kwargs.setdefault("center", self.center)
+        kwargs.setdefault("span", self.span)
+        return GradientColorMap(**kwargs)
 
 
 def normalized_indices(item: Union['RowItem', 'ColumnItem']) -> np.ndarray:
@@ -230,7 +293,7 @@ class HeatmapGridWidget(QGraphicsWidget):
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.__spacing = 3
-        self.__colormap = ColorMap(
+        self.__colormap = GradientColorMap(
             DefaultContinuousPalette.lookup_table()
         )
         self.parts = None  # type: Optional[Parts]
@@ -657,7 +720,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         else:
             return QRectF()
 
-    def setColorMap(self, colormap: ColorMap) -> None:
+    def setColorMap(self, colormap: GradientColorMap) -> None:
         self.__colormap = colormap
         for hm in chain.from_iterable(self.heatmap_widget_grid):
             hm.setColorMap(colormap)
@@ -817,7 +880,7 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
         self.setAcceptHoverEvents(True)
         self.__levels = span
         if colormap is None:
-            colormap = ColorMap(DefaultContinuousPalette.lookup_table())
+            colormap = GradientColorMap(DefaultContinuousPalette.lookup_table())
         self.__colormap = colormap
         self.__data: Optional[np.ndarray] = None
         self.__pixmap = QPixmap()
@@ -899,13 +962,11 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
 
     def __updatePixmap(self):
         if self.__data is not None:
-            cmap = self.__colormap
             ll, lh = self.__levels
-            ll, lh = cmap.adjust_levels(ll, lh)
-            argb, _ = pg.makeARGB(
-                self.__data, lut=cmap.colortable, levels=(ll, lh))
-            argb[np.isnan(self.__data)] = (100, 100, 100, 255)
-            qimage = pg.makeQImage(argb, transpose=False)
+            cmap = self.__colormap.replace(span=(ll, lh))
+            rgb = cmap.apply(self.__data)
+            rgb[np.isnan(self.__data)] = (100, 100, 100)
+            qimage = qimage_from_array(rgb)
             self.__pixmap = QPixmap.fromImage(qimage)
         else:
             self.__pixmap = QPixmap()
@@ -990,7 +1051,7 @@ def remove_item(item: QGraphicsItem) -> None:
 
 class GradientLegendWidget(QGraphicsWidget):
     def __init__(
-            self, low, high, colormap: ColorMap, parent=None, **kwargs
+            self, low, high, colormap: GradientColorMap, parent=None, **kwargs
     ):
         kwargs.setdefault(
             "sizePolicy", QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -1029,14 +1090,12 @@ class GradientLegendWidget(QGraphicsWidget):
         return self.colormap
 
     def __update(self):
-        data = np.linspace(self.low, self.high, num=1000)
-        data = data.reshape((1, -1))
-        ll, lh = self.colormap.adjust_levels(self.low, self.high)
-        argb, _ = pg.makeARGB(data, lut=self.colormap.colortable,
-                              levels=(ll, lh))
-        qimg = pg.makeQImage(argb, transpose=False)
-        self.__pixitem.setPixmap(QPixmap.fromImage(qimg))
         low, high = self.low, self.high
+        data = np.linspace(low, high, num=1000).reshape((1, -1))
+        cmap = self.colormap.replace(span=(low, high))
+        qimg = qimage_from_array(cmap.apply(data))
+        self.__pixitem.setPixmap(QPixmap.fromImage(qimg))
+
         if self.colormap.center is not None and low < self.colormap.center < high:
             ticks = [(low, f"{low:.2f}"), (0, "0"), (high, f"{high:.2f}")]
         else:
