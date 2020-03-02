@@ -433,6 +433,7 @@ class HeatmapGridWidget(QGraphicsWidget):
                 autoScale=True,
                 objectName="row-labels-right"
             )
+            labelslist.setMaximumWidth(300)
             pm = QPixmap(1, rowitem.size)
             pm.fill(Qt.transparent)
             rowauxsidecolor = GraphicsPixmapWidget(
@@ -449,12 +450,14 @@ class HeatmapGridWidget(QGraphicsWidget):
             # Top attr annotations
             indices = np.asarray(colitem.normalized_indices, dtype=np.intp)
             labels = col_names[indices]
+            sp = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+            sp.setHeightForWidth(True)
             labelslist = TextListWidget(
                 items=labels, parent=self,
                 alignment=Qt.AlignLeft | Qt.AlignVCenter,
                 orientation=Qt.Horizontal,
                 autoScale=True,
-                sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed),
+                sizePolicy=sp,
                 visible=self.__columnLabelPosition & Position.Top,
                 objectName="column-labels-top",
             )
@@ -469,7 +472,7 @@ class HeatmapGridWidget(QGraphicsWidget):
                 alignment=Qt.AlignRight | Qt.AlignVCenter,
                 orientation=Qt.Horizontal,
                 autoScale=True,
-                sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed),
+                sizePolicy=sp,
                 visible=self.__columnLabelPosition & Position.Bottom,
                 objectName="column-labels-bottom",
             )
