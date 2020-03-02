@@ -1,11 +1,9 @@
 import math
 import enum
-from collections import deque
 from itertools import chain, zip_longest
 
 from typing import (
-    Optional, List, NamedTuple, Iterable, Sequence, Tuple, Dict, TypeVar,
-    Callable, Any, Deque, Union,
+    Optional, List, NamedTuple, Sequence, Tuple, Dict, Union,
 )
 
 import numpy as np
@@ -24,6 +22,7 @@ import pyqtgraph as pg
 
 from Orange.clustering import hierarchical
 from Orange.clustering.hierarchical import Tree
+from Orange.widgets.utils import apply_all
 from Orange.widgets.utils.colorpalettes import DefaultContinuousPalette
 from Orange.widgets.utils.graphicslayoutitem import SimpleLayoutItem, scaled
 from Orange.widgets.utils.graphicspixmapwidget import GraphicsPixmapWidget
@@ -31,16 +30,6 @@ from Orange.widgets.utils.image import qimage_from_array
 
 from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.dendrogram import DendrogramWidget
-
-
-_T1 = TypeVar("_T1")
-
-
-def apply_all(seq, op):
-    # type: (Iterable[_T1], Callable[[_T1], Any]) -> None
-    """Apply `op` on all elements of `seq`."""
-    d = deque(maxlen=0)  # type: Deque[_T1]
-    d.extend(map(op, seq))
 
 
 def leaf_indices(tree: Tree) -> Sequence[int]:

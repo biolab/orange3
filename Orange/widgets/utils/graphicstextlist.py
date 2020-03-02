@@ -7,13 +7,10 @@ from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
     QGraphicsItem, QGraphicsScene, QGraphicsSceneResizeEvent
 )
+from . import apply_all
 from .graphicslayoutitem import scaled
 
 __all__ = ["TextListWidget"]
-
-
-def apply_all(iter, op):
-    for el in iter:  op(el)
 
 
 class TextListWidget(QGraphicsWidget):
