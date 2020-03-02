@@ -922,11 +922,18 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
             self.__pixmap = QPixmap()
 
         self.__pixmapItem.setPixmap(self.__pixmap)
+        self.__updateSizeHints()
+
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.FontChange:
+            self.__updateSizeHints()
+
+    def __updateSizeHints(self):
         hmsize = QSizeF(self.__pixmap.size())
         size = QFontMetrics(self.font()).lineSpacing()
         self.__pixmapItem.setMinimumSize(hmsize)
         self.__pixmapItem.setPreferredSize(hmsize * size)
-        self.layout().invalidate()
 
     def heatmapCellAt(self, pos: QPointF) -> Tuple[int, int]:
         """Return the cell row, column from `pos` in local coordinates.
