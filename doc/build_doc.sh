@@ -3,8 +3,6 @@
 set -o pipefail
 set -o errexit
 
-cd "$TRAVIS_BUILD_DIR"
-
 # Ensure new images have indexed palettes
 images="$(git diff --name-only origin/master..HEAD |
           grep -E '\bdoc/' | grep -iE '\.(png|jpg)$' || true )"
@@ -24,35 +22,20 @@ done < <(echo "$images")
 [ "$not_ok" ] && false
 echo -e 'all ok\n'
 
-# build Orange inplace (needed for docs to build)
-python setup.py egg_info build_ext --inplace
-
-# build docs for upload to the old web page
-cd $TRAVIS_BUILD_DIR/doc/development
-make html
-cd $TRAVIS_BUILD_DIR/doc/data-mining-library
-make html
-cd $TRAVIS_BUILD_DIR/doc/visual-programming
-make html
-
-# create widget catalog for the old (django) Orange webpage
-export PYTHONPATH=$TRAVIS_BUILD_DIR:$PYTHONPATH
-# Screen must be 24bpp lest pyqt5 crashes, see pytest-dev/pytest-qt/35
-XVFBARGS="-screen 0 1280x1024x24"
-catchsegv xvfb-run -a -s "$XVFBARGS" \
-    python $TRAVIS_BUILD_DIR/scripts/create_widget_catalog.py \
-        --output build/html/ \
-        --url-prefix "http://docs.biolab.si/3/visual-programming/"
+SCRIPT_DIR=$(dirname "$BASH_SOURCE")
+make html --directory "$SCRIPT_DIR"/development
+make html --directory "$SCRIPT_DIR"/data-mining-library
+make html --directory "$SCRIPT_DIR"/visual-programming
 
 # check if the widget catalog in the repository (for orange-hugo is up to date
-cd $TRAVIS_BUILD_DIR/doc/
+cd "$SCRIPT_DIR"
 wget_command="wget -N https://raw.githubusercontent.com/biolab/orange-hugo/master/scripts/create_widget_catalog.py"
 run_command="python create_widget_catalog.py --categories Data,Visualize,Model,Evaluate,Unsupervised --doc visual-programming/source/"
 eval "$wget_command"
-eval "catchsegv xvfb-run -a -s "\"$XVFBARGS"\" $run_command"
+eval "$run_command"
 diff=$(git diff -- widgets.json)
-echo $diff
-if [ ! -z "$diff" ]
+echo "$diff"
+if [ -n "$diff" ]
 then
   echo "Widget catalog is stale. Rebuild it with:"
   echo "cd doc"
