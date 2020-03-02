@@ -10,7 +10,7 @@ import scipy.sparse as sp
 
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QFormLayout, QComboBox, QGroupBox,
-    QMenu, QAction
+    QMenu, QAction, QSizePolicy
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QFont, QKeySequence
 from AnyQt.QtCore import Qt, QSize, QRectF, QObject
@@ -823,6 +823,14 @@ class OWHeatMap(widget.OWWidget):
         widget.setAspectRatioMode(
             Qt.KeepAspectRatio if self.keep_aspect else Qt.IgnoreAspectRatio
         )
+        # when aspect fixed the vertical sh is fixex, when not, it can
+        # shrink vertically
+        sp = widget.sizePolicy()
+        if self.keep_aspect:
+            sp.setVerticalPolicy(QSizePolicy.Fixed)
+        else:
+            sp.setVerticalPolicy(QSizePolicy.Preferred)
+        widget.setSizePolicy(sp)
 
     def __update_clustering_enable_state(self, data):
         if data is not None:
