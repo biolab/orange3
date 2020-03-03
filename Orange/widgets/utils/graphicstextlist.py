@@ -248,6 +248,10 @@ class TextListWidget(QGraphicsWidget):
             fm = QFontMetricsF(font)
             fontheight = fm.height()
 
+        if self.__autoScale and self.__effectiveFont != font:
+            self.__effectiveFont = font
+            apply_all(self.__textitems, lambda it: it.setFont(font))
+
         advance = cell_height + spacing
         if align_vertical == Qt.AlignTop:
             align_dy = 0.
@@ -271,11 +275,6 @@ class TextListWidget(QGraphicsWidget):
                     crect.right() - item.boundingRect().width(),
                     crect.top() + i * advance + align_dy
                 )
-
-        if self.__autoScale and self.__effectiveFont != font:
-            self.__effectiveFont = font
-            for it in self.__textitems:
-                it.setFont(font)
 
         if self.__orientation == Qt.Vertical:
             self.__group.setRotation(0)
