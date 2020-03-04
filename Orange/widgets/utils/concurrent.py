@@ -595,3 +595,147 @@ class ConcurrentWidgetMixin(ConcurrentMixin):
     def _on_task_done(self, future: Future):
         super()._on_task_done(future)
         self.__set_state_ready()
+
+
+class MultiTaskWidgetMixin:
+    """
+    A concurrent mixin to be used along with OWWidget. The class provides
+    methods for running multiple tasks in a separate thread.
+
+    Attributes
+    ----------
+    max_workers: int
+        The maximum number of threads that can be used to
+        execute the given calls.
+    """
+    def __init__(self, max_workers):
+        self.__executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=max_workers)
+        self.__tasks = {}  # type: Dict[Optional[str, TaskState]]
+
+    def on_done(self, task_id: str, result: Any) -> None:
+        """
+        Invoked when task is done.
+        Override in derived class to perform operations with
+        obtained results, eg. send data to the output.
+
+        Parameters
+        ----------
+        task_id : str
+            Task identifier.
+        result : Any
+            Result of the calculation the task performed.
+        """
+        raise NotImplementedError
+
+    def on_exception(self, ex):
+        """
+        Invoked when an exception occurs during the task execution.
+        Override in order to handle exceptions, eg. show an error
+        message in the widget.
+
+        Parameters
+        ----------
+        ex : Exception
+            Exception.
+        """
+        raise ex
+
+    def start(self, task_id, task, *args, **kwargs):
+        """
+        Call from derived class to start the task.
+
+        Parameters
+        ----------
+        task_id : str
+            Task identifier.
+        task : Callable
+            A method to run in a thread - should accept `state` parameter
+        """
+        self.__set_state_ready()
+        self.__cancel_task(task_id, wait=False)
+        assert callable(task), "`task` must be callable!"
+        state = TaskState(self)
+        task = partial(task, *(args + (state,)), **kwargs)
+        self.__start_task(task_id, task, state)
+        self.__set_state_busy()
+
+    def cancel(self):
+        """
+        Call from derived class to cancel all tasks.
+        """
+        for task_id in self.__tasks:
+            self.__cancel_task(task_id, wait=False)
+        self.__set_state_ready()
+
+    def shutdown(self):
+        for task_id in self.__tasks:
+            self.__cancel_task(task_id, wait=True)
+        self.__executor.shutdown(True)
+
+    def __set_state_ready(self):
+        task_still_running = any(self.__tasks.values())
+        self.setBlocking(task_still_running)
+        if not task_still_running:
+            self.progressBarFinished()
+            self.setStatusMessage("")
+
+    def __set_state_busy(self):
+        self.setBlocking(True)
+        self.progressBarInit()
+
+    def __start_task(self, task_id: str, task: Callable[[], Any],
+                     state: TaskState):
+        assert self.__tasks.get(task_id, None) is None
+        self.__on_task_done_setter(task_id)
+        self.__connect_signals(task_id, state)
+        state.start(self.__executor, task)
+        state.setParent(self)
+        self.__tasks[task_id] = state
+
+    def __cancel_task(self, task_id: str, wait: bool = True):
+        if self.__tasks.get(task_id, None) is not None:
+            state, self.__tasks[task_id] = self.__tasks[task_id], None
+            state.cancel()
+            self.__disconnect_signals(task_id, state)
+            if wait:
+                concurrent.futures.wait([state.future])
+                state.deleteLater()
+            else:
+                w = FutureWatcher(state.future, parent=state)
+                w.done.connect(state.deleteLater)
+
+    def __connect_signals(self, task_id: str, state: TaskState):
+        state.watcher.done.connect(self.__on_task_done_getter(task_id))
+        state.status_changed.connect(self.setStatusMessage)
+        state.progress_changed.connect(self.progressBarSet)
+
+    def __disconnect_signals(self, task_id: str, state: TaskState):
+        state.watcher.done.disconnect(self.__on_task_done_getter(task_id))
+        state.status_changed.disconnect(self.setStatusMessage)
+        state.progress_changed.disconnect(self.progressBarSet)
+
+    def __on_task_done_getter(self, task_id: str):
+        return getattr(self.__class__, self.__on_done_name(task_id))
+
+    def __on_task_done_setter(self, task_id: str):
+        setattr(self.__class__, self.__on_done_name(task_id),
+                lambda future: self.__on_task_done(task_id, future))
+
+    def __on_task_done(self, task_id: str, future: concurrent.futures.Future):
+        assert future.done()
+        assert self.__tasks.get(task_id, None) is not None
+        assert self.__tasks[task_id].future is future
+        assert self.__tasks[task_id].watcher.future() is future
+        self.__tasks[task_id], task = None, self.__tasks[task_id]
+        task.deleteLater()
+        ex = future.exception()
+        if ex is not None:
+            self.on_exception(ex)
+        else:
+            self.on_done(task_id, future.result())
+        self.__set_state_ready()
+
+    @staticmethod
+    def __on_done_name(task_id):
+        return f"__on_done_{task_id}"
