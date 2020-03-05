@@ -15,6 +15,7 @@ from scipy.stats import f_oneway, chi2_contingency
 
 import Orange.data
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values
+from Orange.data.variable import MAX_NUM_OF_DECIMALS
 from Orange.statistics import contingency, distribution
 
 from Orange.widgets import widget, gui
@@ -824,7 +825,9 @@ class OWBoxPlot(widget.OWWidget):
 
     def mean_label(self, stat, attr, val_name):
         label = QGraphicsItemGroup()
-        t = QGraphicsSimpleTextItem(attr.str_val(stat.mean), label)
+        t = QGraphicsSimpleTextItem(
+            str(round(stat.mean, MAX_NUM_OF_DECIMALS)), label
+        )
         t.setFont(self._label_font)
         bbox = t.boundingRect()
         w2, h = bbox.width() / 2, bbox.height()
