@@ -1,13 +1,15 @@
 from unittest.mock import patch
 
 import numpy as np
+from sklearn.utils import check_random_state
+
+from orangewidget.settings import Context
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import table_dense_sparse
 from Orange.widgets.unsupervised.owlouvainclustering import OWLouvainClustering
-from sklearn.utils import check_random_state
 
 # Deterministic tests
 np.random.seed(42)
@@ -249,3 +251,22 @@ class TestOWLouvain(WidgetTest):
         self.send_signal(w.Inputs.data, None)
         graph = self.get_output(w.Outputs.graph)
         self.assertIsNone(graph)
+
+    def test_migrate_settings(self):
+        # any context settings are removed
+        settings = {"context_settings": []}
+        self.widget.migrate_settings(settings, 1)
+        self.assertEqual(len(settings), 0)
+
+        # context settings become ordinary settings
+        settings = {"context_settings": [Context(values={'__version__': 1,
+                                                         'apply_pca': (True, -2),
+                                                         'k_neighbors': (29, -2),
+                                                         'metric_idx': (1, -2),
+                                                         'normalize': (False, -2),
+                                                         'pca_components': (10, -2),
+                                                         'resolution': (1.0, -2)})]}
+        self.widget.migrate_settings(settings, 1)
+        correct = {'apply_pca': True, 'k_neighbors': 29, 'metric_idx': 1,
+                   'normalize': False, 'pca_components': 10, 'resolution': 1.0}
+        self.assertEqual(sorted(settings.items()), sorted(correct.items()))

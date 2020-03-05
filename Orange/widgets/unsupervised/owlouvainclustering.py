@@ -50,6 +50,8 @@ class OWLouvainClustering(widget.OWWidget):
     icon = "icons/LouvainClustering.svg"
     priority = 2110
 
+    settings_version = 2
+
     want_main_area = False
     resizing_enabled = False
 
@@ -465,6 +467,20 @@ class OWLouvainClustering(widget.OWWidget):
             ("k neighbors", self.k_neighbors),
             ("Resolution", self.resolution),
         ))
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2 and "context_settings" in settings:
+            try:
+                current_context = settings["context_settings"][0]
+                for n in ['apply_pca', 'k_neighbors', 'metric_idx',
+                          'normalize', 'pca_components', 'resolution']:
+                    if n in current_context.values:
+                        settings[n] = current_context.values[n][0]
+            except:  # pylint: disable=bare-except
+                pass
+            finally:
+                del settings["context_settings"]
 
 
 class TaskState(QObject):
