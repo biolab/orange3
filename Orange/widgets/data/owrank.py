@@ -34,6 +34,7 @@ from Orange.widgets.settings import (DomainContextHandler, Setting,
 from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import (
     OWWidget, Msg, Input, Output, AttributeList
 )
@@ -293,6 +294,9 @@ class OWRank(OWWidget):
 
         gui.auto_send(selMethBox, self, "auto_apply", box=False)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         self.resize(690, 500)
 
     def switchProblemType(self, index):
@@ -325,6 +329,8 @@ class OWRank(OWWidget):
         self.switchProblemType(ProblemType.CLASSIFICATION)
         if self.data is not None:
             domain = self.data.domain
+            self.info.set_input_summary(len(self.data),
+                                        format_summary_details(self.data))
 
             if domain.has_discrete_class:
                 problem_type = ProblemType.CLASSIFICATION
@@ -346,6 +352,8 @@ class OWRank(OWWidget):
                 max((a.name for a in domain.attributes), key=len))
 
             self.selectionMethod = OWRank.SelectNBest
+        else:
+            self.info.set_input_summary(self.info.NoInput)
 
         self.openContext(data)
         self.selectButtons.button(self.selectionMethod).setChecked(True)
@@ -536,6 +544,7 @@ class OWRank(OWWidget):
             self.Outputs.reduced_data.send(None)
             self.Outputs.features.send(None)
             self.out_domain_desc = None
+            self.info.set_output_summary(self.info.NoOutput)
         else:
             reduced_domain = Domain(
                 selected_attrs, self.data.domain.class_var, self.data.domain.metas)
@@ -543,6 +552,8 @@ class OWRank(OWWidget):
             self.Outputs.reduced_data.send(data)
             self.Outputs.features.send(AttributeList(selected_attrs))
             self.out_domain_desc = report.describe_domain(data.domain)
+            self.info.set_output_summary(len(data),
+                                         format_summary_details(data))
 
     def create_scores_table(self, labels):
         model_list = self.ranksModel.tolist()

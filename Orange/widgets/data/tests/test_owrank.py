@@ -1,6 +1,7 @@
+# pylint: disable=unsubscriptable-object
 import warnings
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
@@ -17,6 +18,7 @@ from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWRank(WidgetTest):
@@ -404,6 +406,26 @@ class TestOWRank(WidgetTest):
         output = self.get_output(w.Outputs.reduced_data)
 
         self.assertEqual(len(output), len(self.iris))
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        data = self.iris
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.reduced_data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 
 if __name__ == "__main__":
