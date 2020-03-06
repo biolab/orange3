@@ -5,6 +5,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 
@@ -100,11 +101,16 @@ class OWPurgeDomain(widget.OWWidget):
         gui.auto_send(self.buttonsArea, self, "autoSend")
         gui.rubber(self.controlArea)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
     @Inputs.data
     @check_sql_input
     def setData(self, dataset):
         if dataset is not None:
             self.data = dataset
+            self.info.set_input_summary(len(dataset),
+                                        format_summary_details(dataset))
             self.unconditional_commit()
         else:
             self.removedAttrs = "-"
@@ -117,6 +123,8 @@ class OWPurgeDomain(widget.OWWidget):
             self.reducedMetas = "-"
             self.Outputs.data.send(None)
             self.data = None
+            self.info.set_input_summary(self.info.NoInput)
+            self.info.set_output_summary(self.info.NoOutput)
 
     def optionsChanged(self):
         self.commit()
@@ -149,6 +157,8 @@ class OWPurgeDomain(widget.OWWidget):
         self.removedMetas = meta_res['removed']
         self.reducedMetas = meta_res['reduced']
 
+        self.info.set_output_summary(len(cleaned),
+                                     format_summary_details(cleaned))
         self.Outputs.data.send(cleaned)
 
     def send_report(self):
