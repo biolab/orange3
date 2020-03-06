@@ -5,6 +5,7 @@ from unittest.mock import Mock
 from Orange.data import Table
 from Orange.widgets.data.owdatasampler import OWDataSampler
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWDataSampler(WidgetTest):
@@ -38,7 +39,6 @@ class TestOWDataSampler(WidgetTest):
         self.assertTrue(self.widget.Warning.could_not_stratify.is_shown())
 
     def test_bootstrap(self):
-        output_sum = self.widget.info.set_output_summary = Mock()
         self.select_sampling_type(self.widget.Bootstrap)
 
         self.send_signal("Data", self.iris)
@@ -59,8 +59,6 @@ class TestOWDataSampler(WidgetTest):
         # high probability (1-(1/150*2/150*...*150/150) ~= 1-2e-64)
         self.assertGreater(len(in_sample), 0)
         self.assertGreater(len(in_remaining), 0)
-        #Check if status bar shows correct number of output data
-        output_sum.assert_called_with(str(len(sample)))
 
     def select_sampling_type(self, sampling_type):
         buttons = self.widget.controls.sampling_type.group.buttons()
@@ -68,11 +66,9 @@ class TestOWDataSampler(WidgetTest):
 
     def test_no_intersection_in_outputs(self):
         """ Check whether outputs intersect and whether length of outputs sums
-        to length of original data and
-        if status bar displays correct output for each sampling type"""
+        to length of original data"""
         self.send_signal("Data", self.iris)
         w = self.widget
-        output_sum = self.widget.info.set_output_summary = Mock()
         sampling_types = [w.FixedProportion, w.FixedSize, w.CrossValidation]
 
         for replicable in [True, False]:
@@ -87,7 +83,6 @@ class TestOWDataSampler(WidgetTest):
                     other = self.get_output("Remaining Data")
                     self.assertEqual(len(self.iris), len(sample) + len(other))
                     self.assertNoIntersection(sample, other)
-                    output_sum.assert_called_with(str(len(sample)))
 
     def test_bigger_size_with_replacement(self):
         """Allow bigger output without replacement."""
@@ -126,17 +121,23 @@ class TestOWDataSampler(WidgetTest):
 
     def test_summary(self):
         """Check if status bar is updated when data is received"""
-        input_sum = self.widget.info.set_input_summary = Mock()
         data = self.iris
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.data_sample)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
 
         input_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, data[:])
-        input_sum.assert_called_with("150")
-
-        input_sum.reset_mock()
+        output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
         self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
     def set_fixed_sample_size(self, sample_size, with_replacement=False):
         """Set fixed sample size and return the number of gui spin.
