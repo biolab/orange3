@@ -55,7 +55,7 @@ class DiscAttrTest(unittest.TestCase):
         var = desc.create_variable()
         self.assertIsInstance(var, DiscreteVariable)
         self.assertEqual(var.name, "z")
-        self.assertEqual(var.values, ["a", "d", "c"])
+        self.assertEqual(var.values, ("a", "d", "c"))
         np.testing.assert_equal(var.colors, [[1, 2, 3], [4, 5, 6], [7, 8, 9]])
 
         palette = desc.var.attributes["palette"] = object()

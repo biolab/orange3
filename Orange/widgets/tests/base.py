@@ -739,7 +739,7 @@ class ProjectionWidgetTestMixin:
         hidden_var1.attributes["hidden"] = True
         hidden_var2 = ContinuousVariable("c2")
         hidden_var2.attributes["hidden"] = True
-        class_vars = [DiscreteVariable("cls", values=["a", "b"])]
+        class_vars = [DiscreteVariable("cls", values=("a", "b"))]
         table = Table(Domain([hidden_var1, hidden_var2], class_vars),
                       np.array([[0., 1.], [2., 3.]]),
                       np.array([[0.], [1.]]))
@@ -876,7 +876,7 @@ class datasets:
             Domain(
                 [ContinuousVariable("a"),
                  ContinuousVariable("b"),
-                 DiscreteVariable("c", values=["y", "n"])]
+                 DiscreteVariable("c", values=("y", "n"))]
             ),
             list(zip(
                 [42.48, 16.84, 15.23, 23.8],

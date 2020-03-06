@@ -77,7 +77,7 @@ class DiscAttrDesc(AttrDesc):
 
     def set_value(self, i, value):
         if not self.new_values:
-            self.new_values = self.var.values.copy()
+            self.new_values = list(self.var.values)
         self.new_values[i] = value
 
     def create_variable(self):

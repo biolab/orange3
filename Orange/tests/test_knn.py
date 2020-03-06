@@ -42,7 +42,7 @@ class TestKNNLearner(unittest.TestCase):
                 ContinuousVariable('Feature 3'),
                 ContinuousVariable('Feature 4'),
                 ContinuousVariable('Feature 5'))
-        class_vars = (DiscreteVariable('Target 1', values=list("abcdefghij")),)
+        class_vars = (DiscreteVariable('Target 1', values=tuple("abcdefghij")),)
         domain = Domain(attr, class_vars)
         t = Table(domain, x1, y1)
         lrn = KNNLearner()

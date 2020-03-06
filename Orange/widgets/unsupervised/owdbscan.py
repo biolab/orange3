@@ -198,7 +198,7 @@ class OWDBSCAN(widget.OWWidget):
 
         clust_var = DiscreteVariable(
             "Cluster", values=["C%d" % (x + 1) for x in range(k)])
-        in_core_var = DiscreteVariable("DBSCAN Core", values=["0", "1"])
+        in_core_var = DiscreteVariable("DBSCAN Core", values=("0", "1"))
 
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars

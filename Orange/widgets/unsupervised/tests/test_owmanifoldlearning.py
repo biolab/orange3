@@ -118,7 +118,7 @@ class TestOWManifoldLearning(WidgetTest):
         table = Table(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b")],
-                class_vars=DiscreteVariable("c", values=["0", "1"])),
+                class_vars=DiscreteVariable("c", values=("0", "1"))),
             list(zip(
                 [1, 1, 1],
                 [0, 1, 2],

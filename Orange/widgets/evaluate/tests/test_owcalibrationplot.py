@@ -78,7 +78,7 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
         check_clsfr_names(["majority", "knn-3", "knn-1"])
         self.assertEqual(widget.selected_classifiers, [0, 1, 2])
         self.assertEqual(
-            [tcomb.itemText(i) for i in range(tcomb.count())],
+            tuple(tcomb.itemText(i) for i in range(tcomb.count())),
             self.lenses.domain.class_var.values)
         self.assertEqual(widget.target_index, 0)
 

@@ -513,7 +513,7 @@ class OWMergeData(widget.OWWidget):
             if var.is_discrete:
                 col = col.astype(int)
                 col[nans] = len(var.values)
-                col = np.array(var.values + [np.nan])[col]
+                col = np.array(var.values + (np.nan, ))[col]
         else:
             col = col.copy()
             defined = col.astype(bool)

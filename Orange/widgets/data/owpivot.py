@@ -95,7 +95,7 @@ class Pivot:
         self._row_var_groups = nanunique(self._row_var_col)
         self._col_var_groups = nanunique(self._col_var_col)
 
-        self._total_var = DiscreteVariable("Total", values=["total"])
+        self._total_var = DiscreteVariable("Total", values=("total", ))
         self._current_agg_functions = sorted(agg_funs)
         self._indepen_agg_done = {}  # type: Dict[Functions, int]
         self._depen_agg_done = {}  # type: Dict[Functions, Dict[Variable, int]]
@@ -292,7 +292,7 @@ class Pivot:
                               for i, v in enumerate(vals, 2)])
             for x in (X_v, X_t):
                 attrs.append([DiscreteVariable("Total", map_values(0, x))])
-        row_var_h = DiscreteVariable(self._row_var.name, values=["Total"])
+        row_var_h = DiscreteVariable(self._row_var.name, values=("Total", ))
         aggr_attr = DiscreteVariable("Aggregate", [str(f) for f in agg_funs])
         return (Domain([self._row_var, aggr_attr] + attrs[0]),
                 Domain([row_var_h, aggr_attr] + attrs[1]),

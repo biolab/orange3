@@ -46,7 +46,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
         self.widget = self.create_widget(OWtSNE, stored_settings={"multiscale": False})
 
-        self.class_var = DiscreteVariable("Stage name", values=["STG1", "STG2"])
+        self.class_var = DiscreteVariable("Stage name", values=("STG1", "STG2"))
         self.attributes = [ContinuousVariable("GeneName" + str(i)) for i in range(5)]
         self.domain = Domain(self.attributes, class_vars=self.class_var)
         self.empty_domain = Domain([], class_vars=self.class_var)

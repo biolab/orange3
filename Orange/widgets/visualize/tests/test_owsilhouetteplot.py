@@ -149,7 +149,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b"), ContinuousVariable("c")],
-                [DiscreteVariable("d", values=["y", "n"])]),
+                [DiscreteVariable("d", values=("y", "n"))]),
             list(zip([4, nan, nan],
                      [15, nan, nan],
                      [16, nan, nan],

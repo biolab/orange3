@@ -212,7 +212,7 @@ class TestOWEditDomain(WidgetTest):
     def test_change_ordered(self):
         """Test categorical ordered flag change"""
         table = Table.from_domain(Domain(
-            [DiscreteVariable("A", values=["a", "b"], ordered=True)]))
+            [DiscreteVariable("A", values=("a", "b"), ordered=True)]))
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)
         self.assertTrue(output.domain[0].ordered)
@@ -641,8 +641,8 @@ class TestReinterpretTransforms(TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         domain = Domain([
-            DiscreteVariable("A", values=["a", "b", "c"]),
-            DiscreteVariable("B", values=["0", "1", "2"]),
+            DiscreteVariable("A", values=("a", "b", "c")),
+            DiscreteVariable("B", values=("0", "1", "2")),
             ContinuousVariable("C"),
             TimeVariable("D", have_time=True),
         ],
@@ -706,13 +706,13 @@ class TestReinterpretTransforms(TestCase):
                 [1, 0, 0, 0],
             ], dtype=float)
         )
-        self.assertEqual(tdomain["A"].values, ["a", "b", "c"])
-        self.assertEqual(tdomain["B"].values, ["0", "1", "2"])
-        self.assertEqual(tdomain["C"].values, ["0.0", "0.2", "0.25", "1.25"])
+        self.assertEqual(tdomain["A"].values, ("a", "b", "c"))
+        self.assertEqual(tdomain["B"].values, ("0", "1", "2"))
+        self.assertEqual(tdomain["C"].values, ("0.0", "0.2", "0.25", "1.25"))
         self.assertEqual(
             tdomain["D"].values,
-            ["1970-01-01 00:00:00", "1970-01-01 00:03:00",
-             "1970-01-01 00:06:00", "1970-01-01 00:12:00"]
+            ("1970-01-01 00:00:00", "1970-01-01 00:03:00",
+             "1970-01-01 00:06:00", "1970-01-01 00:12:00")
         )
 
     def test_as_continuous(self):

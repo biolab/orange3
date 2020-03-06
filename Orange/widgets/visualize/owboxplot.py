@@ -496,8 +496,8 @@ class OWBoxPlot(widget.OWWidget):
             self.dist = []
             self.conts = contingency.get_contingency(
                 dataset, attr, self.group_var)
-            group_var_labels = self.group_var.values + [
-                f"missing '{self.group_var.name}'"]
+            group_var_labels = self.group_var.values + (
+                f"missing '{self.group_var.name}'", )
             if self.is_continuous:
                 stats, label_texts = [], []
                 for i, cont in enumerate(self.conts.array_with_unknowns):
@@ -1074,7 +1074,7 @@ class OWBoxPlot(widget.OWWidget):
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
             box.append(FilterGraphicsRectItem(cond, 0, -10, 1, 10))
         cum = 0
-        values = attr.values + [f"missing '{attr.name}'"]
+        values = attr.values + (f"missing '{attr.name}'", )
         colors = np.vstack((attr.colors, [128, 128, 128]))
         for i, v in enumerate(dist):
             if v < 1e-6:

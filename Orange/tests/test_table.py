@@ -669,7 +669,7 @@ class TableTestCase(unittest.TestCase):
         a = np.arange(20, dtype="d").reshape((4, 5))
         a[:, -1] = [0, 0, 0, 1]
         dom = data.Domain([data.ContinuousVariable(x) for x in "abcd"],
-                          data.DiscreteVariable("e", values=["no", "yes"]))
+                          data.DiscreteVariable("e", values=("no", "yes")))
         table = data.Table(dom, a)
         for i in range(4):
             self.assertEqual(table[i].get_class(), "no" if i < 3 else "yes")
@@ -883,7 +883,7 @@ class TableTestCase(unittest.TestCase):
         f = filter.FilterDiscrete(d.domain.class_var, values=[2, "martian"])
         self.assertRaises(ValueError, d._filter_values, f)
 
-        f = filter.FilterDiscrete(d.domain.class_var, values=[2, data.Table])
+        f = filter.FilterDiscrete(d.domain.class_var, values=(2, data.Table))
         self.assertRaises(TypeError, d._filter_values, f)
 
         v = d.columns
@@ -1440,7 +1440,7 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.Y, Y)
         self.assertIsInstance(table.domain.class_vars[0],
                               data.DiscreteVariable)
-        self.assertEqual(table.domain.class_vars[0].values, ["v1", "v2"])
+        self.assertEqual(table.domain.class_vars[0].values, ("v1", "v2"))
 
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()
@@ -2010,14 +2010,14 @@ class InterfaceTest(unittest.TestCase):
     features = (
         data.ContinuousVariable(name="Continuous Feature 1"),
         data.ContinuousVariable(name="Continuous Feature 2"),
-        data.DiscreteVariable(name="Discrete Feature 1", values=["0", "1"]),
+        data.DiscreteVariable(name="Discrete Feature 1", values=("0", "1")),
         data.DiscreteVariable(name="Discrete Feature 2",
-                              values=["value1", "value2"]),
+                              values=("value1", "value2")),
     )
 
     class_vars = (
         data.ContinuousVariable(name="Continuous Class"),
-        data.DiscreteVariable(name="Discrete Class", values=["m", "f"])
+        data.DiscreteVariable(name="Discrete Class", values=("m", "f"))
     )
 
     feature_data = (
@@ -2196,7 +2196,7 @@ class TestTableTranspose(unittest.TestCase):
 
     def test_transpose_discrete_class(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
-        domain = Domain(attrs, [DiscreteVariable("cls", values=["a", "b"])])
+        domain = Domain(attrs, [DiscreteVariable("cls", values=("a", "b"))])
         data = Table(domain, np.arange(8).reshape((4, 2)),
                      np.array([1, 1, 0, 0]))
 
@@ -2327,7 +2327,7 @@ class TestTableTranspose(unittest.TestCase):
 
     def test_transpose_discrete_metas(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
-        metas = [DiscreteVariable("m1", values=["aa", "bb"])]
+        metas = [DiscreteVariable("m1", values=("aa", "bb"))]
         domain = Domain(attrs, metas=metas)
         X = np.arange(8).reshape((4, 2))
         M = np.array([0, 1, 0, 1])[:, None]

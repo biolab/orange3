@@ -41,7 +41,7 @@ class TestTableInit(unittest.TestCase):
         attributes = dict(a=5, b="foo")
 
         dom = Domain([ContinuousVariable(x) for x in "abcd"],
-                     DiscreteVariable("e", values=["no", "yes"]),
+                     DiscreteVariable("e", values=("no", "yes")),
                      [StringVariable("s")])
 
         for func in (Table.from_numpy, Table):
@@ -91,10 +91,10 @@ class TestTableFilters(unittest.TestCase):
         self.domain = Domain(
             [ContinuousVariable("c1"),
              ContinuousVariable("c2"),
-             DiscreteVariable("d1", values=["a", "b"])],
+             DiscreteVariable("d1", values=("a", "b"))],
             ContinuousVariable("y"),
             [ContinuousVariable("c3"),
-             DiscreteVariable("d2", values=["c", "d"]),
+             DiscreteVariable("d2", values=("c", "d")),
              StringVariable("s1"),
              StringVariable("s2")]
         )

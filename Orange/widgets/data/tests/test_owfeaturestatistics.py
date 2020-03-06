@@ -45,23 +45,23 @@ continuous = [
 
 # Unordered discrete variable variations
 rgb_full = VarDataPair(
-    DiscreteVariable('rgb_full', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_full', values=('r', 'g', 'b')),
     np.array([0, 1, 1, 1, 2], dtype=float),
 )
 rgb_missing = VarDataPair(
-    DiscreteVariable('rgb_missing', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_missing', values=('r', 'g', 'b')),
     np.array([0, 1, 1, np.nan, 2], dtype=float),
 )
 rgb_all_missing = VarDataPair(
-    DiscreteVariable('rgb_all_missing', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_all_missing', values=('r', 'g', 'b')),
     np.array([np.nan] * 5, dtype=float),
 )
 rgb_bins_missing = VarDataPair(
-    DiscreteVariable('rgb_bins_missing', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_bins_missing', values=('r', 'g', 'b')),
     np.array([np.nan, 1, 1, 1, np.nan], dtype=float),
 )
 rgb_same = VarDataPair(
-    DiscreteVariable('rgb_same', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_same', values=('r', 'g', 'b')),
     np.array([2] * 5, dtype=float),
 )
 rgb = [
@@ -70,23 +70,23 @@ rgb = [
 
 # Ordered discrete variable variations
 ints_full = VarDataPair(
-    DiscreteVariable('ints_full', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_full', values=('2', '3', '4'), ordered=True),
     np.array([0, 1, 1, 1, 2], dtype=float),
 )
 ints_missing = VarDataPair(
-    DiscreteVariable('ints_missing', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_missing', values=('2', '3', '4'), ordered=True),
     np.array([0, 1, 1, np.nan, 2], dtype=float),
 )
 ints_all_missing = VarDataPair(
-    DiscreteVariable('ints_all_missing', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_all_missing', values=('2', '3', '4'), ordered=True),
     np.array([np.nan] * 5, dtype=float),
 )
 ints_bins_missing = VarDataPair(
-    DiscreteVariable('ints_bins_missing', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_bins_missing', values=('2', '3', '4'), ordered=True),
     np.array([np.nan, 1, 1, 1, np.nan], dtype=float),
 )
 ints_same = VarDataPair(
-    DiscreteVariable('ints_same', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_same', values=('2', '3', '4'), ordered=True),
     np.array([0] * 5, dtype=float),
 )
 ints = [

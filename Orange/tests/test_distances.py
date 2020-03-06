@@ -990,8 +990,8 @@ class TestDistances(TestCase):
 
     def test_preprocess(self):
         domain = Domain([ContinuousVariable("c"),
-                         DiscreteVariable("d", values=['a', 'b'])],
-                        [DiscreteVariable("cls", values=['e', 'f'])],
+                         DiscreteVariable("d", values=('a', 'b'))],
+                        [DiscreteVariable("cls", values=('e', 'f'))],
                         [StringVariable("m")])
         table = Table.from_list(domain, [[1, 'a', 'e', 'm1'],
                                          [2, 'b', 'f', 'm2']])
