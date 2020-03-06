@@ -10,6 +10,7 @@ import Orange.preprocess.discretize as disc
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 __all__ = ["OWDiscretize"]
@@ -260,7 +261,8 @@ class OWDiscretize(widget.OWWidget):
             self._restore(self.saved_var_states)
             # Complete the induction of cut points
             self._update_points()
-            self.info.set_input_summary(len(data))
+            self.info.set_input_summary(len(data),
+                                        format_summary_details(data))
         else:
             self.info.set_input_summary(self.info.NoInput)
             self._clear()
@@ -483,9 +485,10 @@ class OWDiscretize(widget.OWWidget):
         if self.data is not None and len(self.data):
             domain = self.discretized_domain()
             output = self.data.transform(domain)
-            self.info.set_output_summary(len(output))
-        else:
-            self.info.set_output_summary(self.info.NoOutput)
+
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.data.send(output)
 
     def storeSpecificSettings(self):
