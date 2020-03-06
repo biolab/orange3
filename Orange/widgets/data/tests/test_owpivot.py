@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,unsubscriptable-object
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from pickle import loads, dumps
 
 import numpy as np
@@ -16,7 +16,7 @@ from Orange.widgets.data.owpivot import (OWPivot, Pivot,
                                          AggregationFunctionsEnum)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
-
+from Orange.widgets.utils.state_summary import format_summary_details
 
 class TestOWPivot(WidgetTest):
     def setUp(self):
@@ -231,6 +231,33 @@ class TestOWPivot(WidgetTest):
         self.widget.report_button.click()
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        data = self.iris
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.filtered_data)
+        self.assertIsNone(output)
+        simulate.combobox_activate_item(self.widget.controls.row_feature,
+                                        self.iris.domain.attributes[0].name)
+        simulate.combobox_activate_item(self.widget.controls.col_feature,
+                                        self.iris.domain.class_var.name)
+        self.widget.table_view.set_selection(set([(11, 0), (11, 1), (12, 0)]))
+        self.widget.table_view.selection_changed.emit()
+        output = self.get_output(self.widget.Outputs.filtered_data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 
 class TestAggregationFunctionsEnum(unittest.TestCase):
