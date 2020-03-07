@@ -804,7 +804,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
     def _update_plot_coordinates(self, plot, x, y):
         """
-        Change the coordinates of points while keeping other properites
+        Change the coordinates of points while keeping other properites.
+
+        Asserts that the number of points stays the same.
 
         Note. Pyqtgraph does not offer a method for this: setting coordinates
         invalidates other data. We therefore retrieve the data to set it
@@ -814,6 +816,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         update for every property would essentially reset the graph, which
         can be time consuming.
         """
+        assert self.n_shown == len(x) == len(y)
         data = dict(x=x, y=y)
         for prop in ('pen', 'brush', 'size', 'symbol', 'data',
                      'sourceRect', 'targetRect'):
