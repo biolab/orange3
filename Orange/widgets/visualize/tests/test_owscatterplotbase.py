@@ -58,6 +58,7 @@ class TestOWScatterPlotBase(WidgetTest):
     # pylint: disable=keyword-arg-before-vararg
     def setRange(self, rect=None, *_, **__):
         if isinstance(rect, QRectF):
+            # pylint: disable=attribute-defined-outside-init
             self.last_setRange = [[rect.left(), rect.right()],
                                   [rect.top(), rect.bottom()]]
 
@@ -308,12 +309,13 @@ class TestOWScatterPlotBase(WidgetTest):
 
     base = "Orange.widgets.visualize.owscatterplotgraph.OWScatterPlotBase."
 
+    @staticmethod
     @patch(base + "update_sizes")
     @patch(base + "update_colors")
     @patch(base + "update_selection_colors")
     @patch(base + "update_shapes")
     @patch(base + "update_labels")
-    def test_reset_calls_all_updates_and_update_doesnt(self, *mocks):
+    def test_reset_calls_all_updates_and_update_doesnt(*mocks):
         master = MockWidget()
         graph = OWScatterPlotBase(master)
         for mock in mocks:
@@ -443,6 +445,7 @@ class TestOWScatterPlotBase(WidgetTest):
 
         graph = self.graph
 
+        # pylint: disable=attribute-defined-outside-init
         self.master.get_size_data = lambda: d
         self.master.impute_sizes = impute_max
         d = np.arange(10, dtype=float)
@@ -1168,6 +1171,7 @@ class TestOWScatterPlotBase(WidgetTest):
         def impute0(data, _):
             data[np.isnan(data)] = 0
 
+        # pylint: disable=attribute-defined-outside-init
         self.master.impute_shapes = impute0
         d = np.arange(10, dtype=float) % 3
         d[2] = np.nan

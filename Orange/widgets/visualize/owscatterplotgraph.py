@@ -128,7 +128,8 @@ class LegendItem(PgLegendItem):
         anchor, parentanchor = anchors
         self.anchor(*bound_anchor_pos(anchor, parentanchor))
 
-    def paint(self, painter, option, widget=None):
+    # pylint: disable=arguments-differ
+    def paint(self, painter, _option, _widget=None):
         painter.setPen(self.__pen)
         painter.setBrush(self.__brush)
         rect = self.contentsRect()
@@ -619,7 +620,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     def update_jittering(self):
         self.update_tooltip()
         x, y = self.get_coordinates()
-        if x is None or not len(x) or self.scatterplot_item is None:
+        if x is None or len(x) == 0 or self.scatterplot_item is None:
             return
         self._update_plot_coordinates(self.scatterplot_item, x, y)
         self._update_plot_coordinates(self.scatterplot_item_sel, x, y)
@@ -834,7 +835,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         the complete update by calling `reset_graph` instead of this method.
         """
         x, y = self.get_coordinates()
-        if x is None or not len(x):
+        if x is None or len(x) == 0:
             return
         if self.scatterplot_item is None:
             if self.sample_indices is None:
@@ -1053,9 +1054,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         # Reuse pens and brushes with the same colors because PyQtGraph then
         # builds smaller pixmap atlas, which makes the drawing faster
 
-        def reuse(cache, fn, *args):
+        def reuse(cache, fun, *args):
             if args not in cache:
-                cache[args] = fn(args)
+                cache[args] = fun(args)
             return cache[args]
 
         def create_pen(col):
@@ -1113,7 +1114,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
     def update_colors(self):
         """
-        Trigger an update of point sizes
+        Trigger an update of point colors
 
         The method calls `self.get_colors`, which in turn calls the widget's
         `get_color_data` to get the indices in the pallette. `get_colors`
