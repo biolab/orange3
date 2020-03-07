@@ -26,9 +26,8 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
-from Orange.widgets.unsupervised.owhierarchicalclustering import (
-    DendrogramWidget
-)
+from Orange.widgets.utils.dendrogram import DendrogramWidget
+
 
 def _remove_item(item):
     item.setParentItem(None)
