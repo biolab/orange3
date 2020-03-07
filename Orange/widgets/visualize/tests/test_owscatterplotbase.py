@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring,too-many-lines,too-many-public-methods
 # pylint: disable=protected-access
+from itertools import count
 from unittest.mock import patch, Mock
 import numpy as np
 
@@ -9,6 +10,7 @@ from AnyQt.QtTest import QSignalSpy
 
 from pyqtgraph import mkPen
 
+from orangewidget.tests.base import GuiTest
 from Orange.widgets.settings import SettingProvider
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils import colorpalettes
@@ -700,6 +702,127 @@ class TestOWScatterPlotBase(WidgetTest):
             else:
                 self.assertEqual(pen.style(), Qt.NoPen)
 
+    def test_z_values(self):
+        def check_ranks(exp_ranks):
+            z = set_z.call_args[0][0]
+            self.assertEqual(len(z), len(exp_ranks))
+            for i, exp1, z1 in zip(count(), exp_ranks, z):
+                for j, exp2, z2 in zip(range(i), exp_ranks, z):
+                    if exp1 != exp2:
+                        self.assertEqual(exp1 < exp2, z1 < z2,
+                                         f"error at pair ({j}, {i})")
+
+        colors = np.array([0, 1, 1, 0, np.nan, 2, 2, 2, 1, 1])
+        self.master.get_color_data = lambda: colors
+        self.master.is_continuous_color = lambda: False
+
+        graph = self.graph
+        with patch.object(ScatterPlotItem, "setZ") as set_z:
+            # Just colors
+            graph.reset_graph()
+            check_ranks([3, 1, 1, 3, 0, 2, 2, 2, 1, 1])
+
+            # Colors and selection
+            graph.selection_select([1, 5])
+            check_ranks([3, 11, 1, 3, 0, 12, 2, 2, 1, 1])
+
+            # Colors and selection, and nan is selected
+            graph.selection_append([4])
+            check_ranks([3, 11, 1, 3, 10, 12, 2, 2, 1, 1])
+
+            # Just colors again, no selection
+            graph.selection_select([])
+            check_ranks([3, 1, 1, 3, 0, 2, 2, 2, 1, 1])
+
+            # Colors and subset
+            self.master.get_subset_mask = \
+                lambda: np.array([True, True, False, False, True] * 2)
+            graph.update_colors()  # selecting subset triggers update_colors
+            check_ranks([23, 21, 1, 3, 20, 22, 22, 2, 1, 21])
+
+            # Colors, subset and selection
+            graph.selection_select([1, 5])
+            check_ranks([23, 31, 1, 3, 20, 32, 22, 2, 1, 21])
+
+            # Continuous colors
+            self.master.is_continuous_color = lambda: True
+            graph.update_colors()
+            check_ranks([20, 30, 0, 0, 20, 30, 20, 0, 0, 20])
+
+            # No colors => just subset and selection
+            # pylint: disable=attribute-defined-outside-init
+            self.master.get_colors = lambda: None
+            graph.update_colors()
+            check_ranks([20, 30, 0, 0, 20, 30, 20, 0, 0, 20])
+
+            # No selection or subset, but continuous colors with nan
+            graph.selection_select([1, 5])
+            self.master.get_subset_mask = lambda: None
+            self.master.get_color_data = lambda: colors
+            graph.update_colors()
+            check_ranks(np.isfinite(colors))
+
+    def test_z_values_with_sample(self):
+        def check_ranks(exp_ranks):
+            z = set_z.call_args[0][0]
+            self.assertEqual(len(z), len(exp_ranks))
+            for i, exp1, z1 in zip(count(), exp_ranks, z):
+                for j, exp2, z2 in zip(range(i), exp_ranks, z):
+                    if exp1 != exp2:
+                        self.assertEqual(exp1 < exp2, z1 < z2,
+                                         f"error at pair ({j}, {i})")
+
+        def create_sample():
+            graph.sample_indices = np.array([0, 1, 3, 4, 5, 6, 7, 8, 9])
+            graph.n_shown = 9
+
+        graph = self.graph
+        graph.sample_size = 9
+        graph._create_sample = create_sample
+
+        self.master.is_continuous_color = lambda: False
+        self.master.get_color_data = \
+            lambda: np.array([0, 1, 1, 0, np.nan, 2, 2, 2, 1, 1])
+
+        with patch.object(ScatterPlotItem, "setZ") as set_z:
+            # Just colors
+            graph.reset_graph()
+            check_ranks([3, 1, 3, 0, 2, 2, 2, 1, 1])
+
+            # Colors and selection
+            graph.selection_select([1, 5])
+            check_ranks([3, 11, 3, 0, 12, 2, 2, 1, 1])
+
+            # Colors and selection, and nan is selected
+            graph.selection_append([4])
+            check_ranks([3, 11, 3, 10, 12, 2, 2, 1, 1])
+
+            # Just colors again, no selection
+            graph.selection_select([])
+            check_ranks([3, 1, 3, 0, 2, 2, 2, 1, 1])
+
+            # Colors and subset
+            self.master.get_subset_mask = \
+                lambda: np.array([True, True, False, False, True] * 2)
+            graph.update_colors()  # selecting subset triggers update_colors
+            check_ranks([23, 21, 3, 20, 22, 22, 2, 1, 21])
+
+            # Colors, subset and selection
+            graph.selection_select([1, 5])
+            check_ranks([23, 31, 3, 20, 32, 22, 2, 1, 21])
+
+            # Continuous colors => just subset and selection
+            self.master.is_continuous_color = lambda: False
+            graph.update_colors()
+            check_ranks([20, 30, 0, 20, 30, 20, 0, 0, 20])
+
+            # No colors => just subset and selection
+            self.master.is_continuous_color = lambda: True
+            # pylint: disable=attribute-defined-outside-init
+            self.master.get_colors = lambda: None
+            graph.update_colors()
+            check_ranks([20, 30, 0, 20, 30, 20, 0, 0, 20])
+
     def test_density(self):
         graph = self.graph
         density = object()
@@ -1292,6 +1415,91 @@ class TestOWScatterPlotBase(WidgetTest):
         graph = self.graph
         graph.reset_graph()
         self.assertIsNone(graph.scatterplot_item.fragmentAtlas.atlas)
+
+
+class TestScatterPlotItem(GuiTest):
+    def test_setZ(self):
+        """setZ sets the appropriate mapping and inverse mapping"""
+        scp = ScatterPlotItem(x=np.arange(5), y=np.arange(5))
+        scp.setZ(np.array([3.12, 5.2, 1.2, 0, 2.15]))
+        np.testing.assert_equal(scp._z_mapping, [3, 2, 4, 0, 1])
+        np.testing.assert_equal(scp._inv_mapping, [3, 4, 1, 0, 2])
+
+        scp.setZ(None)
+        self.assertIsNone(scp._z_mapping)
+        self.assertIsNone(scp._inv_mapping)
+
+        self.assertRaises(AssertionError, scp.setZ, np.arange(4))
+
+    @staticmethod
+    def test_paint_mapping():
+        """paint permutes the points and reverses the permutation afterwards"""
+        def test_self_data(this, *_, **_1):
+            x, y = this.getData()
+            np.testing.assert_equal(x, exp_x)
+            np.testing.assert_equal(y, exp_y)
+
+        orig_x = np.arange(10, 15)
+        orig_y = np.arange(20, 25)
+        scp = ScatterPlotItem(x=orig_x[:], y=orig_y[:])
+        with patch("pyqtgraph.ScatterPlotItem.paint", new=test_self_data):
+            exp_x = orig_x
+            exp_y = orig_y
+            scp.paint(Mock(), Mock())
+
+            scp._z_mapping = np.array([3, 2, 4, 0, 1])
+            scp._inv_mapping = np.array([3, 4, 1, 0, 2])
+            exp_x = [13, 12, 14, 10, 11]
+            exp_y = [23, 22, 24, 20, 21]
+            scp.paint(Mock(), Mock())
+            x, y = scp.getData()
+            np.testing.assert_equal(x, np.arange(10, 15))
+            np.testing.assert_equal(y, np.arange(20, 25))
+
+    def test_paint_mapping_exception(self):
+        """exception in paint does not leave the points permuted"""
+        orig_x = np.arange(10, 15)
+        orig_y = np.arange(20, 25)
+        scp = ScatterPlotItem(x=orig_x[:], y=orig_y[:])
+        scp._z_mapping = np.array([3, 2, 4, 0, 1])
+        scp._inv_mapping = np.array([3, 4, 1, 0, 2])
+        with patch("pyqtgraph.ScatterPlotItem.paint", side_effect=ValueError):
+            self.assertRaises(ValueError, scp.paint, Mock(), Mock())
+            x, y = scp.getData()
+            np.testing.assert_equal(x, np.arange(10, 15))
+            np.testing.assert_equal(y, np.arange(20, 25))
+
+    @staticmethod
+    def test_paint_mapping_integration():
+        """setZ causes rendering in the appropriate order"""
+        def test_self_data(this, *_, **_1):
+            x, y = this.getData()
+            np.testing.assert_equal(x, exp_x)
+            np.testing.assert_equal(y, exp_y)
+
+        orig_x = np.arange(10, 15)
+        orig_y = np.arange(20, 25)
+        scp = ScatterPlotItem(x=orig_x[:], y=orig_y[:])
+        with patch("pyqtgraph.ScatterPlotItem.paint", new=test_self_data):
+            exp_x = orig_x
+            exp_y = orig_y
+            scp.paint(Mock(), Mock())
+
+            scp.setZ(np.array([3.12, 5.2, 1.2, 0, 2.15]))
+            exp_x = [13, 12, 14, 10, 11]
+            exp_y = [23, 22, 24, 20, 21]
+            scp.paint(Mock(), Mock())
+            x, y = scp.getData()
+            np.testing.assert_equal(x, np.arange(10, 15))
+            np.testing.assert_equal(y, np.arange(20, 25))
+
+            scp.setZ(None)
+            exp_x = orig_x
+            exp_y = orig_y
+            scp.paint(Mock(), Mock())
+            x, y = scp.getData()
+            np.testing.assert_equal(x, np.arange(10, 15))
+            np.testing.assert_equal(y, np.arange(20, 25))
 
 
 if __name__ == "__main__":

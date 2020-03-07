@@ -244,22 +244,60 @@ class OWScatterPlotGraph(OWScatterPlotGraphObs):
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
-    """PyQtGraph's ScatterPlotItem calls updateSpots at any change of sizes/colors/symbols,
-    which then rebuilds the stored pixmaps for each symbol. Because Orange calls
-    set* function in succession, we postpone updateSpots() to paint()."""
+    """
+    Modifies the behaviour of ScatterPlotItem as follows:
 
-    _update_spots_in_paint = False
+    - Add z-index. ScatterPlotItem paints points in order of appearance in
+      self.data. Plotting by z-index is achieved by sorting before calling
+      super().paint() and re-sorting afterwards. Re-sorting (instead of
+      storing the original data) is needed because the inherited paint
+      may modify the data.
+
+    - Prevent multiple calls to updateSpots. ScatterPlotItem calls updateSpots
+      at any change of sizes/colors/symbols, which then rebuilds the stored
+      pixmaps for each symbol. Orange calls set* functions in succession,
+      so we postpone updateSpots() to paint()."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._update_spots_in_paint = False
+        self._z_mapping = None
+        self._inv_mapping = None
+
+    def setZ(self, z):
+        """
+        Set z values for all points.
+
+        Points with higher values are plotted on top of those with lower.
+
+        Args:
+            z (np.ndarray or None): a vector of z values
+        """
+        if z is None:
+            self._z_mapping = self._inv_mapping = None
+        else:
+            assert len(z) == len(self.data)
+            self._z_mapping = np.argsort(z)
+            self._inv_mapping = np.argsort(self._z_mapping)
 
     def updateSpots(self, dataSet=None):  # pylint: disable=unused-argument
         self._update_spots_in_paint = True
         self.update()
 
+    # pylint: disable=arguments-differ
     def paint(self, painter, option, widget=None):
-        if self._update_spots_in_paint:
-            self._update_spots_in_paint = False
-            super().updateSpots()
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-        super().paint(painter, option, widget)
+        try:
+            if self._z_mapping is not None:
+                assert len(self._z_mapping) == len(self.data)
+                self.data = self.data[self._z_mapping]
+            if self._update_spots_in_paint:
+                self._update_spots_in_paint = False
+                super().updateSpots()
+            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+            super().paint(painter, option, widget)
+        finally:
+            if self._inv_mapping is not None:
+                self.data = self.data[self._inv_mapping]
 
 
 def _define_symbols():
@@ -1084,6 +1122,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             pen_data, brush_data = self.get_colors()
             self.scatterplot_item.setPen(pen_data, update=False, mask=None)
             self.scatterplot_item.setBrush(brush_data, mask=None)
+        self.update_z_values()
         self.update_legends()
         self.update_density()
 
@@ -1128,6 +1167,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         pen, brush = self.get_colors_sel()
         self.scatterplot_item_sel.setPen(pen, update=False, mask=None)
         self.scatterplot_item_sel.setBrush(brush, mask=None)
+        self.update_z_values()
 
     def get_colors_sel(self):
         """
@@ -1291,6 +1331,52 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             shape_data = self.get_shapes()
             self.scatterplot_item.setSymbol(shape_data)
         self.update_legends()
+
+    def update_z_values(self):
+        """
+        Set z-values for point in the plot
+
+        The order is as follows:
+        - selected points that are also in the subset on top,
+        - followed by selected points,
+        - followed by points from the subset,
+        - followed by the rest.
+        Within each of these four groups, points are ordered by their colors.
+
+        Points with less frequent colors are above those with more frequent.
+        The points for which the value for the color is missing are at the
+        bottom of their respective group.
+        """
+        if not self.scatterplot_item:
+            return
+
+        subset = self.master.get_subset_mask()
+        c_data = self.master.get_color_data()
+        if subset is None and self.selection is None and c_data is None:
+            self.scatterplot_item.setZ(None)
+            return
+
+        z = np.zeros(self.n_shown)
+
+        if subset is not None:
+            subset = self._filter_visible(subset)
+            z[subset] += 1000
+
+        if self.selection is not None:
+            z[self._filter_visible(self.selection) != 0] += 2000
+
+        if c_data is not None:
+            c_nan = np.isnan(c_data)
+            vis_data = self._filter_visible(c_data)
+            vis_nan = np.isnan(vis_data)
+            z[vis_nan] -= 999
+            if not self.master.is_continuous_color():
+                dist = np.bincount(c_data[~c_nan].astype(int))
+                vis_knowns = vis_data[~vis_nan].astype(int)
+                argdist = np.argsort(dist)
+                z[~vis_nan] -= argdist[vis_knowns]
+
+        self.scatterplot_item.setZ(z)
 
     def update_grid_visibility(self):
         """Show or hide the grid"""
