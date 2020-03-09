@@ -379,8 +379,12 @@ class OWVennDiagram(widget.OWWidget):
             X = np.hstack(values['attributes'])
         if 'metas' in values:
             metas = np.hstack(values['metas'])
+            n = len(metas)
         if 'class_vars' in values:
             class_vars = np.hstack(values['class_vars'])
+            n = len(class_vars)
+        if X is None:
+            X = np.empty((n,0))
         table = Table.from_numpy(Domain(**domain), X, class_vars, metas)
         if ids is not None:
             table.ids = ids
@@ -388,7 +392,7 @@ class OWVennDiagram(widget.OWWidget):
 
     def extract_columnwise(self, var_dict, columns=None):
         #for columns
-        domain = defaultdict(list)
+        domain = {type_ : [] for type_ in self.atr_types} 
         values = defaultdict(list)
         renamed = []
         for atr_type, vars_dict in var_dict.items():
@@ -514,7 +518,7 @@ class OWVennDiagram(widget.OWWidget):
         for table_key, dict_ in ids.items():
             permutations[table_key] = get_perm(list(dict_), all_ids)
 
-        domain = defaultdict(list)
+        domain = {type_ : [] for type_ in self.atr_types}
         values = defaultdict(list)
         renamed = []
         for atr_type, vars_dict in var_dict.items():
@@ -551,8 +555,8 @@ class OWVennDiagram(widget.OWWidget):
 
         if renamed:
             self.Warning.renamed_vars(', '.join(renamed))
-        idas = None if self.selected_feature else np.array(all_ids)
-        table = self.merge_data(domain, values, idas)
+        ids = None if self.selected_feature else np.array(all_ids)
+        table = self.merge_data(domain, values, ids)
         if selection:
             mask = [idx in self.selected_items for idx in all_ids]
             return create_annotated_table(table, mask)
