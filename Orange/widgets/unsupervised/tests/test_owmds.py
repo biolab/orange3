@@ -157,7 +157,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
                     time=1500000000,
                     values={'__version__': 1,
                             'color_value': ('iris', 1),
-                            'shape_value': ('iris', 2),
+                            'shape_value': ('iris', 1),
                             'size_value': ('Stress', -2),
                             'label_value': ('sepal length', 2)})]
         settings = {

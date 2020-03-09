@@ -1,13 +1,15 @@
 from unittest.mock import patch
 
 import numpy as np
+from sklearn.utils import check_random_state
+
+from orangewidget.settings import Context
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import table_dense_sparse, simulate
+from Orange.widgets.tests.utils import table_dense_sparse
 from Orange.widgets.unsupervised.owlouvainclustering import OWLouvainClustering
-from sklearn.utils import check_random_state
 
 # Deterministic tests
 np.random.seed(42)
@@ -235,37 +237,6 @@ class TestOWLouvain(WidgetTest):
         sparse_result = _compute_clustering(sparse_data)
         np.testing.assert_equal(dense_result.metas, sparse_result.metas)
 
-    def test_settings_correctly_restored(self):
-        """
-        This test checks if contextsettings are correctly restored after
-        dataset changed.
-        """
-        w = self.widget
-
-        self.send_signal(w.Inputs.data, self.iris)
-        w.controls.apply_pca.setChecked(False)
-        w.controls.pca_components.setValue(2)
-        simulate.combobox_activate_item(w.controls.metric_idx, "Manhattan")
-        w.controls.normalize.setChecked(False)
-        w.controls.k_neighbors.setValue(4)
-        w.controls.resolution.setValue(0.5)
-
-        self.send_signal(w.Inputs.data, Table("zoo"))
-        w.controls.apply_pca.setChecked(True)
-        w.controls.pca_components.setValue(3)
-        simulate.combobox_activate_item(w.controls.metric_idx, "Euclidean")
-        w.controls.normalize.setChecked(True)
-        w.controls.k_neighbors.setValue(5)
-        w.controls.resolution.setValue(1)
-
-        self.send_signal(w.Inputs.data, self.iris)
-        self.assertFalse(w.apply_pca)
-        self.assertEqual(2, w.pca_components)
-        self.assertEqual(1, w.metric_idx)
-        self.assertFalse(w.normalize)
-        self.assertEqual(4, w.k_neighbors)
-        self.assertEqual(0.5, w.resolution)
-
     def test_graph_output(self):
         w = self.widget
 
@@ -280,3 +251,22 @@ class TestOWLouvain(WidgetTest):
         self.send_signal(w.Inputs.data, None)
         graph = self.get_output(w.Outputs.graph)
         self.assertIsNone(graph)
+
+    def test_migrate_settings(self):
+        # any context settings are removed
+        settings = {"context_settings": []}
+        self.widget.migrate_settings(settings, 1)
+        self.assertEqual(len(settings), 0)
+
+        # context settings become ordinary settings
+        settings = {"context_settings": [Context(values={'__version__': 1,
+                                                         'apply_pca': (True, -2),
+                                                         'k_neighbors': (29, -2),
+                                                         'metric_idx': (1, -2),
+                                                         'normalize': (False, -2),
+                                                         'pca_components': (10, -2),
+                                                         'resolution': (1.0, -2)})]}
+        self.widget.migrate_settings(settings, 1)
+        correct = {'apply_pca': True, 'k_neighbors': 29, 'metric_idx': 1,
+                   'normalize': False, 'pca_components': 10, 'resolution': 1.0}
+        self.assertEqual(sorted(settings.items()), sorted(correct.items()))

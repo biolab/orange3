@@ -178,7 +178,7 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
 
         self.widget.setup_plot.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.setup_plot.assert_called_once()
+        self.widget.setup_plot.assert_not_called()
 
     def test_two_classes_dataset(self):
         self.widget.radio_placement.buttons[1].click()

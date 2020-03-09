@@ -68,11 +68,6 @@ class TestDomainContextHandler(TestCase):
         self.assertEqual(encoded_metas,
                          {'c2': Continuous - 100, 'd4': tuple('jkl')})
 
-    def test_match_returns_2_on_perfect_match(self):
-        context = Mock(
-            attributes=self.args[1], metas=self.args[2], values={})
-        self.assertEqual(2., self.handler.match(context, *self.args))
-
     def test_match_returns_1_if_everything_matches(self):
         self.handler.bind(SimpleWidget)
 
@@ -100,11 +95,11 @@ class TestDomainContextHandler(TestCase):
         ))
         self.assertEqual(1., self.handler.match(context, *self.args))
 
-    def test_match_returns_point_1_when_nothing_to_match(self):
+    def test_match_when_nothing_to_match(self):
         self.handler.bind(SimpleWidget)
 
         context = Mock(values={})
-        self.assertEqual(0.1, self.handler.match(context, *self.args))
+        self.assertEqual(1, self.handler.match(context, *self.args))
 
     def test_match_returns_zero_on_incompatible_context(self):
         self.handler.bind(SimpleWidget)
@@ -137,7 +132,7 @@ class TestDomainContextHandler(TestCase):
             with_metas=[('d1', Discrete), ('d2', Discrete)]
         ))
         self.handler.global_contexts = \
-            [Mock(values={}), context, Mock(values={})]
+            [context, Mock(values={})]
 
         widget = SimpleWidget()
         self.handler.initialize(widget)
@@ -161,7 +156,30 @@ class TestDomainContextHandler(TestCase):
                         ('c1', Continuous), ('c1', Discrete)]
         ))
         self.handler.global_contexts = \
+            [context, Mock(values={})]
+
+        widget = SimpleWidget()
+        self.handler.initialize(widget)
+        self.handler.open_context(widget, self.args[0])
+
+        context = widget.current_context
+        self.assertEqual(context.attributes, self.args[1])
+        self.assertEqual(context.metas, self.args[2])
+
+        self.assertEqual(widget.text, 'u')
+        self.assertEqual(widget.with_metas, [('d1', Discrete),
+                                             ('c1', Continuous)])
+
+    def test_open_context_not_first_match(self):
+        self.handler.bind(SimpleWidget)
+        context = self.create_context(None, dict(
+            text=('u', -2),
+            with_metas=[('d1', Discrete), ('d1', Continuous),
+                        ('c1', Continuous), ('c1', Discrete)]
+        ))
+        self.handler.global_contexts = \
             [Mock(values={}), context, Mock(values={})]
+        self.handler.first_match = False
 
         widget = SimpleWidget()
         self.handler.initialize(widget)
