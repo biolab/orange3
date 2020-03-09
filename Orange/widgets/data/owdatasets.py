@@ -28,6 +28,7 @@ from Orange.misc.environ import data_dir
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg
 
 
@@ -231,6 +232,8 @@ class OWDataSets(OWWidget):
         box.layout().addWidget(self.descriptionlabel)
         self.splitter.addWidget(self.view)
         self.splitter.addWidget(box)
+
+        self.info.set_output_summary(self.info.NoOutput)
 
         self.splitter.setSizes([300, 200])
         self.splitter.splitterMoved.connect(
@@ -535,9 +538,12 @@ class OWDataSets(OWWidget):
     def load_and_output(self, path):
         if path is None:
             self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
         else:
             data = self.load_data(path)
             self.Outputs.data.send(data)
+            self.info.set_output_summary(len(data),
+                                         format_summary_details(data))
 
         self.current_output = path
         self.__update_cached_state()
