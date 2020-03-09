@@ -29,6 +29,7 @@ from Orange.widgets.utils import itemmodels, colorpalettes
 
 from Orange.util import scale, namegen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -862,6 +863,9 @@ class OWPaintData(OWWidget):
         buttonBox = gui.hBox(tBox)
         toolsBox = gui.widgetBox(buttonBox, orientation=QGridLayout())
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         self.toolActions = QActionGroup(self)
         self.toolActions.setExclusive(True)
         self.toolButtons = []
@@ -996,11 +1000,15 @@ class OWPaintData(OWWidget):
                 self.Warning.sparse_not_supported()
                 return False
             if data:
+                self.info.set_input_summary(len(data),
+                                            format_summary_details(data))
                 if not data.domain.attributes:
                     self.Warning.no_input_variables()
                     data = None
                 elif len(data.domain.attributes) > 2:
                     self.Information.use_first_two()
+            else:
+                self.info.set_input_summary(self.info.NoInput)
             self.input_data = data
             self.btResetToInput.setDisabled(data is None)
             return bool(data)
@@ -1262,6 +1270,7 @@ class OWPaintData(OWWidget):
     def commit(self):
         if not self.data:
             self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
         data = np.array(self.data)
         if self.hasAttr2:
@@ -1283,6 +1292,8 @@ class OWPaintData(OWWidget):
             data = Orange.data.Table.from_numpy(domain, X)
         data.name = self.table_name
         self.Outputs.data.send(data)
+        self.info.set_output_summary(len(data),
+                                     format_summary_details(data))
 
     def sizeHint(self):
         sh = super().sizeHint()
