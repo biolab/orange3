@@ -669,7 +669,7 @@ class TableTestCase(unittest.TestCase):
         a = np.arange(20, dtype="d").reshape((4, 5))
         a[:, -1] = [0, 0, 0, 1]
         dom = data.Domain([data.ContinuousVariable(x) for x in "abcd"],
-                          data.DiscreteVariable("e", values=["no", "yes"]))
+                          data.DiscreteVariable("e", values=("no", "yes")))
         table = data.Table(dom, a)
         for i in range(4):
             self.assertEqual(table[i].get_class(), "no" if i < 3 else "yes")
@@ -883,7 +883,7 @@ class TableTestCase(unittest.TestCase):
         f = filter.FilterDiscrete(d.domain.class_var, values=[2, "martian"])
         self.assertRaises(ValueError, d._filter_values, f)
 
-        f = filter.FilterDiscrete(d.domain.class_var, values=[2, data.Table])
+        f = filter.FilterDiscrete(d.domain.class_var, values=(2, data.Table))
         self.assertRaises(TypeError, d._filter_values, f)
 
         v = d.columns
@@ -1440,7 +1440,7 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.Y, Y)
         self.assertIsInstance(table.domain.class_vars[0],
                               data.DiscreteVariable)
-        self.assertEqual(table.domain.class_vars[0].values, ["v1", "v2"])
+        self.assertEqual(table.domain.class_vars[0].values, ("v1", "v2"))
 
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()
@@ -1767,6 +1767,36 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertEqual(back_brown.X.shape, brown.X.shape)
         self.assertEqual(back_brown.metas.shape, brown.metas.shape)
 
+    def test_from_table_shared_compute_value(self):
+        iris = data.Table("iris").to_sparse()
+        d1 = Domain(
+            [
+                ContinuousVariable(
+                    name=at.name,
+                    compute_value=PreprocessSharedComputeValue(
+                        None, PreprocessShared(iris.domain, None)
+                    )
+                )
+                for at in iris.domain.attributes
+            ]
+        )
+
+        new_table = Table.from_table(d1, iris)
+        np.testing.assert_array_equal(
+            new_table.X[:3],
+            [[5.1, 5.1, 5.1, 5.1],
+             [4.9, 4.9, 4.9, 4.9],
+             [4.7, 4.7, 4.7, 4.7]]
+        )
+
+        new_table = Table.from_table(d1, iris, row_indices=[0, 1, 2])
+        np.testing.assert_array_equal(
+            new_table.X[:3],
+            [[5.1, 5.1, 5.1, 5.1],
+             [4.9, 4.9, 4.9, 4.9],
+             [4.7, 4.7, 4.7, 4.7]]
+        )
+
     def assert_table_with_filter_matches(
             self, new_table, old_table,
             rows=..., xcols=..., ycols=..., mcols=...):
@@ -1980,14 +2010,14 @@ class InterfaceTest(unittest.TestCase):
     features = (
         data.ContinuousVariable(name="Continuous Feature 1"),
         data.ContinuousVariable(name="Continuous Feature 2"),
-        data.DiscreteVariable(name="Discrete Feature 1", values=["0", "1"]),
+        data.DiscreteVariable(name="Discrete Feature 1", values=("0", "1")),
         data.DiscreteVariable(name="Discrete Feature 2",
-                              values=["value1", "value2"]),
+                              values=("value1", "value2")),
     )
 
     class_vars = (
         data.ContinuousVariable(name="Continuous Class"),
-        data.DiscreteVariable(name="Discrete Class", values=["m", "f"])
+        data.DiscreteVariable(name="Discrete Class", values=("m", "f"))
     )
 
     feature_data = (
@@ -2166,7 +2196,7 @@ class TestTableTranspose(unittest.TestCase):
 
     def test_transpose_discrete_class(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
-        domain = Domain(attrs, [DiscreteVariable("cls", values=["a", "b"])])
+        domain = Domain(attrs, [DiscreteVariable("cls", values=("a", "b"))])
         data = Table(domain, np.arange(8).reshape((4, 2)),
                      np.array([1, 1, 0, 0]))
 
@@ -2297,7 +2327,7 @@ class TestTableTranspose(unittest.TestCase):
 
     def test_transpose_discrete_metas(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
-        metas = [DiscreteVariable("m1", values=["aa", "bb"])]
+        metas = [DiscreteVariable("m1", values=("aa", "bb"))]
         domain = Domain(attrs, metas=metas)
         X = np.arange(8).reshape((4, 2))
         M = np.array([0, 1, 0, 1])[:, None]
@@ -2624,6 +2654,16 @@ class TestTableSparseDense(unittest.TestCase):
         d = self.iris.transform(domain)
         self.assertFalse(sp.issparse(d.X))
 
+        # try with indices that are not Ellipsis
+        d = Table.from_table(domain, self.iris, row_indices=[0, 1, 2])
+        np.testing.assert_array_equal(
+            d.X,
+            [[5.1, 3.5, 1.4, 0.2, 0],
+             [4.9, 3.0, 1.4, 0.2, 0],
+             [4.7, 3.2, 1.3, 0.2, 0]]
+        )
+        self.assertFalse(sp.issparse(d.X))
+
     def test_from_table_add_lots_of_sparse_columns(self):
         n_attrs = len(self.iris.domain.attributes)
 
@@ -2713,7 +2753,8 @@ class PreprocessShared:
         self.callback = callback
 
     def __call__(self, data_):
-        self.callback(data_)
+        if self.callback:
+            self.callback(data_)
         data_.transform(self.domain)
         return True
 
@@ -2726,7 +2767,8 @@ class PreprocessSharedComputeValue(SharedComputeValue):
 
     # pylint: disable=arguments-differ
     def compute(self, data_, shared_data):
-        self.callback(data_)
+        if self.callback:
+            self.callback(data_)
         return data_.X[:, 0]
 
 

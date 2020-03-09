@@ -59,10 +59,39 @@ class TestGetUniqueNames(unittest.TestCase):
             ["x (2)", "x (3)", "x (1)"])
         self.assertEqual(
             get_unique_names_duplicates(["x (2)", "x", "x", "x (2)", "x (3)"]),
-            ["x (2) (1)", "x (1)", "x (4)", "x (2) (2)", "x (3)"])
+            ["x (2) (1)", "x (4)", "x (5)", "x (2) (2)", "x (3)"])
+        self.assertEqual(
+                        get_unique_names_duplicates(["iris", "iris", "iris (1)"]),
+                        ["iris (2)", "iris (3)", "iris (1)"])
+
+        self.assertEqual(
+            get_unique_names_duplicates(["foo", "bar", "baz"], return_duplicated=True),
+            (["foo", "bar", "baz"], []))
+        self.assertEqual(
+            get_unique_names_duplicates(["foo", "bar", "baz", "bar"], return_duplicated=True),
+            (["foo", "bar (1)", "baz", "bar (2)"], ["bar"]))
+        self.assertEqual(
+            get_unique_names_duplicates(["x", "x", "x (1)"], return_duplicated=True),
+            (["x (2)", "x (3)", "x (1)"], ["x"]))
+        self.assertEqual(
+            get_unique_names_duplicates(["x (2)", "x", "x", "x (2)", "x (3)"], return_duplicated=True),
+            (["x (2) (1)", "x (4)", "x (5)", "x (2) (2)", "x (3)"], ["x (2)", "x"]))
         self.assertEqual(
             get_unique_names_duplicates(["x", "", "", None, None, "x"]),
             ["x (1)", "", "", None, None, "x (2)"])
+        self.assertEqual(
+            get_unique_names_duplicates(["iris", "iris", "iris (1)", "iris (2)"], return_duplicated=True),
+            (["iris (3)", "iris (4)", "iris (1)", "iris (2)"], ["iris"]))
+
+        self.assertEqual(
+            get_unique_names_duplicates(["iris (1) (1)", "iris (1)", "iris (1)"]),
+            ["iris (1) (1)", "iris (1) (2)", "iris (1) (3)"]
+        )
+
+        self.assertEqual(
+            get_unique_names_duplicates(["iris (1) (1)", "iris (1)", "iris (1)", "iris", "iris"]),
+            ["iris (1) (1)", "iris (1) (2)", "iris (1) (3)", "iris (2)", "iris (3)"]
+        )
 
     def test_get_unique_names_domain(self):
         (attrs, classes, metas), renamed = \

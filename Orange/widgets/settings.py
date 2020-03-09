@@ -297,8 +297,12 @@ class ClassValuesContextHandler(ContextHandler):
             return (self.PERFECT_MATCH if context.classes is None
                     else self.NO_MATCH)
         else:
-            return (self.PERFECT_MATCH if context.classes == classes
-                    else self.NO_MATCH)
+            # variable.values used to be a list, and so were context.classes
+            # cast to tuple for compatibility with past contexts
+            if context.classes is not None and tuple(context.classes) == classes:
+                return self.PERFECT_MATCH
+            else:
+                return self.NO_MATCH
 
 
 class PerfectDomainContextHandler(DomainContextHandler):

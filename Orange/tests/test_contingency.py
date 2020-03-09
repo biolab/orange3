@@ -212,10 +212,10 @@ class TestDiscrete(unittest.TestCase):
     @staticmethod
     def _construct_sparse():
         domain = data.Domain(
-            [data.DiscreteVariable("d%i" % i, values=list("abc"))
+            [data.DiscreteVariable("d%i" % i, values=tuple("abc"))
              for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)],
-            data.DiscreteVariable("y", values=list("abc")))
+            data.DiscreteVariable("y", values=tuple("abc")))
 
         #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
         #------------------------------------------------------------

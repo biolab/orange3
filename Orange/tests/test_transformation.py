@@ -45,7 +45,7 @@ class TestTransformation(unittest.TestCase):
 
     def test_identity(self):
         domain = Domain([ContinuousVariable("X")],
-                        [DiscreteVariable("C", values=["0", "1", "2"])],
+                        [DiscreteVariable("C", values=("0", "1", "2"))],
                         [StringVariable("S")])
         X = np.random.normal(size=(4, 1))
         Y = np.random.randint(3, size=(4, 1))

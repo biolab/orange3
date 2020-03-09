@@ -5,12 +5,12 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from Orange.data import Table, DiscreteVariable
+from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.preprocess import transformation
 from Orange.widgets.data import owcontinuize
 from Orange.widgets.data.owcontinuize import OWContinuize
 from Orange.widgets.tests.base import WidgetTest
-from orangewidget.widget import StateInfo
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWContinuize(WidgetTest):
@@ -48,9 +48,11 @@ class TestOWContinuize(WidgetTest):
         output_sum = self.widget.info.set_output_summary = Mock()
 
         self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(int(StateInfo.format_number(len(data))))
+        input_sum.assert_called_with(len(data),
+                                     format_summary_details(data))
         output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(int(StateInfo.format_number(len(output))))
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
 
         input_sum.reset_mock()
         output_sum.reset_mock()
@@ -92,7 +94,6 @@ class TestOWContinuize(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.unconditional_commit()
 
-
     def test_one_column_nan_values_normalize_span(self):
         """
         No crash on a column with NaN values and with selected option
@@ -112,14 +113,14 @@ class TestOWContinuize(WidgetTest):
 
     def test_disable_normalize_sparse(self):
         def assert_enabled(enabled):
-            buttons[BySpan].click()
-            buttons[BySD].click()
-            self.assertTrue(buttons[Leave].isEnabled())
-            self.assertEqual(buttons[BySpan].isEnabled(), enabled)
-            self.assertEqual(buttons[BySD].isEnabled(), enabled)
+            for button, (method, supports_sparse) in \
+                    zip(buttons, w.continuous_treats):
+                self.assertEqual(button.isEnabled(), enabled or supports_sparse,
+                                 msg=f"Error in {method}")
+            buttons[w.Normalize.Leave].click()
+            buttons[w.Normalize.Standardize].click()
 
         w = self.widget
-        Leave, BySpan, BySD = w.Leave, w.NormalizeBySpan, w.NormalizeBySD
         buttons = w.controls.continuous_treatment.buttons
         iris = Table("iris")
         sparse_iris = iris.to_sparse()
@@ -127,32 +128,105 @@ class TestOWContinuize(WidgetTest):
         # input dense
         self.send_signal(w.Inputs.data, iris)
         assert_enabled(True)
-        self.assertEqual(w.continuous_treatment, BySD)
+        self.assertEqual(w.continuous_treatment, w.Normalize.Standardize)
 
         # input sparse
         self.send_signal(w.Inputs.data, sparse_iris)
+        self.assertEqual(w.continuous_treatment, w.Normalize.Scale)
         assert_enabled(False)
-        self.assertEqual(w.continuous_treatment, Leave)
-
-        self.widget.continuous_treatment = BySpan
-        self.assertRaises(ValueError, w.commit)
+        self.assertEqual(w.continuous_treatment, w.Normalize.Leave)
 
         # remove data
         self.send_signal(w.Inputs.data, None)
         assert_enabled(True)
 
         # input sparse
+        buttons[w.Normalize.Normalize11].click()
         self.send_signal(w.Inputs.data, sparse_iris)
+        self.assertEqual(w.continuous_treatment, w.Normalize.Leave)
         assert_enabled(False)
 
         # input dense
         self.send_signal(w.Inputs.data, iris)
         assert_enabled(True)
 
+    def test_migrate_settings_to_v2(self):
+        Normalize = OWContinuize.Normalize
+
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=0))
+        self.assertEqual(widget.continuous_treatment, Normalize.Leave)
+
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=1, zero_based=True))
+        self.assertEqual(widget.continuous_treatment, Normalize.Normalize01)
+
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=1, zero_based=False))
+        self.assertEqual(widget.continuous_treatment, Normalize.Normalize11)
+
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=2))
+        self.assertEqual(widget.continuous_treatment, Normalize.Standardize)
+
+    def test_normalizations(self):
+        buttons = self.widget.controls.continuous_treatment.buttons
+        Normalize = self.widget.Normalize
+
+        domain = Domain([ContinuousVariable(name) for name in "xyz"])
+        col0 = np.arange(0, 10, 2).reshape(5, 1)
+        col1 = np.ones((5, 1))
+        col2 = np.arange(-2, 3).reshape(5, 1)
+        means = np.array([4, 1, 0])
+        sds = np.sqrt(np.array([16 + 4 + 0 + 4 + 16, 5, 4 + 1 + 0 + 1 + 4]) / 5)
+
+        x = np.hstack((col0, col1, col2))
+        data = Table.from_numpy(domain, x)
+        self.send_signal(OWContinuize.Inputs.data, data)
+
+        buttons[Normalize.Leave].click()
+        out = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_equal(out.X, x)
+
+        buttons[Normalize.Standardize].click()
+        out = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_almost_equal(out.X, (x - means) / sds)
+
+        buttons[Normalize.Center].click()
+        out = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_almost_equal(out.X, x - means)
+
+        buttons[Normalize.Scale].click()
+        out = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_almost_equal(out.X, x / sds)
+
+        buttons[Normalize.Normalize01].click()
+        out = self.get_output(self.widget.Outputs.data)
+        col = (np.arange(5) / 4).reshape(5, 1)
+        np.testing.assert_almost_equal(
+            out.X,
+            np.hstack((col, np.zeros((5, 1)), col))
+        )
+
+        buttons[Normalize.Normalize11].click()
+        out = self.get_output(self.widget.Outputs.data)
+        col = (np.arange(5) / 2).reshape(5, 1) - 1
+        np.testing.assert_almost_equal(
+            out.X,
+            np.hstack((col, np.zeros((5, 1)), col))
+        )
+
+    def test_send_report(self):
+        self.widget.send_report()
+
 
 class TestOWContinuizeUtils(unittest.TestCase):
     def test_dummy_coding_zero_based(self):
-        var = DiscreteVariable("foo", values=list("abc"))
+        var = DiscreteVariable("foo", values=tuple("abc"))
 
         varb, varc = owcontinuize.dummy_coding(var)
 
@@ -166,20 +240,8 @@ class TestOWContinuizeUtils(unittest.TestCase):
         self.assertEqual(varc.compute_value.value, 2)
         self.assertIs(varc.compute_value.variable, var)
 
-        varb, varc = owcontinuize.dummy_coding(var, zero_based=False)
-
-        self.assertEqual(varb.name, "foo=b")
-        self.assertIsInstance(varb.compute_value, transformation.Indicator1)
-        self.assertEqual(varb.compute_value.value, 1)
-        self.assertIs(varb.compute_value.variable, var)
-
-        self.assertEqual(varc.name, "foo=c")
-        self.assertIsInstance(varc.compute_value, transformation.Indicator1)
-        self.assertEqual(varc.compute_value.value, 2)
-        self.assertIs(varb.compute_value.variable, var)
-
     def test_dummy_coding_base_value(self):
-        var = DiscreteVariable("foo", values=list("abc"))
+        var = DiscreteVariable("foo", values=tuple("abc"))
 
         varb, varc = owcontinuize.dummy_coding(var, base_value=0)
 
@@ -200,19 +262,12 @@ class TestOWContinuizeUtils(unittest.TestCase):
         self.assertEqual(varc.compute_value.value, 2)
 
     def test_one_hot_coding(self):
-        var = DiscreteVariable("foo", values=list("abc"))
+        var = DiscreteVariable("foo", values=tuple("abc"))
 
-        vars = owcontinuize.one_hot_coding(var)
-        for i, (c, nvar) in enumerate(zip("abc", vars)):
+        new_vars = owcontinuize.one_hot_coding(var)
+        for i, (c, nvar) in enumerate(zip("abc", new_vars)):
             self.assertEqual(nvar.name, f"foo={c}")
             self.assertIsInstance(nvar.compute_value, transformation.Indicator)
-            self.assertEqual(nvar.compute_value.value, i)
-            self.assertIs(nvar.compute_value.variable, var)
-
-        vars = owcontinuize.one_hot_coding(var, zero_based=False)
-        for i, (c, nvar) in enumerate(zip("abc", vars)):
-            self.assertEqual(nvar.name, f"foo={c}")
-            self.assertIsInstance(nvar.compute_value, transformation.Indicator1)
             self.assertEqual(nvar.compute_value.value, i)
             self.assertIs(nvar.compute_value.variable, var)
 

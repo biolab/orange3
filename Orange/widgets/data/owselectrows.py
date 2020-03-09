@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel)
+    QLabel, QHBoxLayout)
 from AnyQt.QtGui import (
     QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
     QFontMetrics, QPalette
@@ -33,6 +33,7 @@ from Orange.widgets import report
 from Orange.widgets.widget import Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class SelectRowsContextHandler(DomainContextHandler):
@@ -214,17 +215,10 @@ class OWSelectRows(widget.OWWidget):
             box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        boxes = gui.widgetBox(self.controlArea, orientation=QGridLayout())
+        boxes = gui.widgetBox(self.controlArea, orientation=QHBoxLayout())
         layout = boxes.layout()
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 1)
 
-        box_data = gui.vBox(boxes, 'Data', addToLayout=False)
-        self.data_in_variables = gui.widgetLabel(box_data, " ")
-        self.data_out_rows = gui.widgetLabel(box_data, " ")
-        layout.addWidget(box_data, 0, 0)
-
-        box_setting = gui.vBox(boxes, 'Purging', addToLayout=False)
+        box_setting = gui.vBox(boxes, addToLayout=False, box=True)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
@@ -232,14 +226,18 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        layout.addWidget(box_setting, 0, 1)
+        layout.addWidget(box_setting, 1)
 
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
-        layout.addWidget(self.buttonsArea, 1, 0)
+        layout.addWidget(self.buttonsArea)
 
         acbox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(acbox, 1, 1)
+        layout.addWidget(acbox, 1)
+        layout.setAlignment(acbox, Qt.AlignBottom)
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         self.set_data(None)
         self.resize(600, 400)
@@ -431,7 +429,7 @@ class OWSelectRows(widget.OWWidget):
                 self.cond_list.setCellWidget(oper_combo.row, 2, button)
             else:
                 combo = QComboBox()
-                combo.addItems([""] + var.values)
+                combo.addItems(("", ) + var.values)
                 if lc[0]:
                     combo.setCurrentIndex(int(lc[0]))
                 else:
@@ -471,6 +469,7 @@ class OWSelectRows(widget.OWWidget):
             data is None or
             len(data.domain.variables) + len(data.domain.metas) > 100)
         if not data:
+            self.info.set_input_summary(self.info.NoInput)
             self.data_desc = None
             self.commit()
             return
@@ -492,7 +491,8 @@ class OWSelectRows(widget.OWWidget):
         else:
             self.add_row()
 
-        self.update_info(data, self.data_in_variables, "In: ")
+        self.info.set_input_summary(len(data),
+                                    format_summary_details(data))
         self.unconditional_commit()
 
     def conditions_changed(self):
@@ -628,20 +628,9 @@ class OWSelectRows(widget.OWWidget):
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
 
-        self.update_info(matching_output, self.data_out_rows, "Out: ")
-
-    def update_info(self, data, lab1, label):
-        def sp(s, capitalize=True):
-            return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
-
-        if data is None:
-            lab1.setText("")
-        else:
-            lab1.setText(label + "~%s row%s, %s variable%s" %
-                         (sp(data.approx_len()) +
-                          sp(len(data.domain.variables) +
-                             len(data.domain.metas)))
-                        )
+        summary = len(matching_output) if matching_output else self.info.NoOutput
+        details = format_summary_details(matching_output) if matching_output else ""
+        self.info.set_output_summary(summary, details)
 
     def send_report(self):
         if not self.data:

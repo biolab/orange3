@@ -82,7 +82,7 @@ class ModelTest(unittest.TestCase):
         x = np.zeros((42, 5))
         y = np.zeros(42)
         domain = Domain([ContinuousVariable(n) for n in "abcde"],
-                        DiscreteVariable("y", values=["a", "b"]))
+                        DiscreteVariable("y", values=("a", "b")))
         data = Table.from_numpy(domain, x, y)
         a_list = [[0] * 5] * 42
         a_tuple = ((0, ) * 5,) * 42

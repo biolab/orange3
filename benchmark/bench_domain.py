@@ -13,7 +13,7 @@ class BenchConversion(Benchmark):
         cols = 1000
         rows = 100
         cont = [ContinuousVariable(str(i)) for i in range(cols)]
-        disc = [DiscreteVariable("D" + str(i), values=["1", "2"]) for i in range(cols)]
+        disc = [DiscreteVariable("D" + str(i), values=("1", "2")) for i in range(cols)]
         self.domain = Domain(cont + disc)
         self.domain_x = Domain(list(self.domain.attributes) + [ContinuousVariable("x")])
         self.single = Domain([ContinuousVariable("0")])

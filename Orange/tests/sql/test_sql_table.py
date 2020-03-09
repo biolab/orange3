@@ -63,7 +63,7 @@ class TestSqlTable(unittest.TestCase, dbt):
             self.assertIsInstance(discrete_attr, DiscreteVariable)
             self.assertEqual(discrete_attr.name, "col1")
             self.assertTrue('"col1"' in discrete_attr.to_sql())
-            self.assertEqual(discrete_attr.values, ['f', 'm'])
+            self.assertEqual(discrete_attr.values, ('f', 'm'))
 
             self.assertIsInstance(string_attr, StringVariable)
             self.assertEqual(string_attr.name, "col2")
@@ -109,7 +109,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         conn, table_name = self.create_sql_table(mat)
         sql_table = SqlTable(conn, table_name,
                              type_hints=Domain([], DiscreteVariable(
-                                 name='col2', values=['0', '1', '2'])))
+                                 name='col2', values=('0', '1', '2'))))
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
@@ -121,7 +121,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         conn, table_name = self.create_sql_table(mat)
         sql_table = SqlTable(conn, table_name,
                              type_hints=Domain([], DiscreteVariable(
-                                 name='col2', values=['0', '1', '2'])))
+                                 name='col2', values=('0', '1', '2'))))
         self.assertRaises(ValueError, lambda: sql_table.X)
         self.assertRaises(ValueError, lambda: sql_table.Y)
         with self.assertRaises(ValueError):
@@ -142,7 +142,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         for member in ('X', 'Y', 'metas', 'W', 'ids'):
             sql_table = SqlTable(conn, table_name,
                                  type_hints=Domain([], DiscreteVariable(
-                                     name='col2', values=['0', '1', '2'])))
+                                     name='col2', values=('0', '1', '2'))))
             self.assertFalse(getattr(sql_table, member) is None)
         # has all necessary class members to create a standard Table
         Table.from_table(sql_table.domain, sql_table)
@@ -232,7 +232,7 @@ class TestSqlTable(unittest.TestCase, dbt):
                  ORDER BY a."sepal length", b. "petal length" ASC""",
             type_hints=Domain([DiscreteVariable(
                 name="qualitative petal length",
-                values=['<', '>'])], []))
+                values=('<', '>'))], []))
 
         self.assertEqual(len(table), 498)
         self.assertAlmostEqual(list(table[497]), [5.8, 1.2, 0.])
@@ -281,7 +281,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         return self.create_sql_table(table)
 
     IRIS_VARIABLE = DiscreteVariable(
-        "iris", values=['Iris-setosa', 'Iris-virginica', 'Iris-versicolor'])
+        "iris", values=('Iris-setosa', 'Iris-virginica', 'Iris-versicolor'))
 
     @dbt.run_on(["postgres", "mssql"])
     def test_class_var_type_hints(self):

@@ -86,7 +86,7 @@ class _OutlierLearner(SklLearner):
         names = [v.name for v in domain.variables + domain.metas]
         variable = DiscreteVariable(
             get_unique_names(names, "Outlier"),
-            values=["Yes", "No"],
+            values=("Yes", "No"),
             compute_value=transformer
         )
 

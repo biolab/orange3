@@ -3,6 +3,7 @@
 import pickle
 from itertools import product
 from unittest import TestCase
+from unittest.mock import Mock
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -35,6 +36,7 @@ from Orange.widgets.data.oweditdomain import (
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.tests import test_filename, assert_array_nanequal
+from Orange.widgets.utils.state_summary import format_summary_details
 
 MArray = np.ma.MaskedArray
 
@@ -210,7 +212,7 @@ class TestOWEditDomain(WidgetTest):
     def test_change_ordered(self):
         """Test categorical ordered flag change"""
         table = Table.from_domain(Domain(
-            [DiscreteVariable("A", values=["a", "b"], ordered=True)]))
+            [DiscreteVariable("A", values=("a", "b"), ordered=True)]))
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)
         self.assertTrue(output.domain[0].ordered)
@@ -243,6 +245,45 @@ class TestOWEditDomain(WidgetTest):
         restore({viris: [("AsString", ()), ("Rename", ("Z",))]})
         tr = model.data(model.index(4), TransformRole)
         self.assertEqual(tr, [AsString(), Rename("Z")])
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        data = Table("iris")
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+
+        def enter_text(widget, text):
+            # type: (QLineEdit, str) -> None
+            widget.selectAll()
+            QTest.keyClick(widget, Qt.Key_Delete)
+            QTest.keyClicks(widget, text)
+            QTest.keyClick(widget, Qt.Key_Return)
+
+        editor = self.widget.findChild(ContinuousVariableEditor)
+        enter_text(editor.name_edit, "sepal height")
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+        output_sum.reset_mock()
+        enter_text(editor.name_edit, "sepal width")
+        self.widget.commit()
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 
 class TestEditors(GuiTest):
@@ -600,8 +641,8 @@ class TestReinterpretTransforms(TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         domain = Domain([
-            DiscreteVariable("A", values=["a", "b", "c"]),
-            DiscreteVariable("B", values=["0", "1", "2"]),
+            DiscreteVariable("A", values=("a", "b", "c")),
+            DiscreteVariable("B", values=("0", "1", "2")),
             ContinuousVariable("C"),
             TimeVariable("D", have_time=True),
         ],
@@ -665,13 +706,13 @@ class TestReinterpretTransforms(TestCase):
                 [1, 0, 0, 0],
             ], dtype=float)
         )
-        self.assertEqual(tdomain["A"].values, ["a", "b", "c"])
-        self.assertEqual(tdomain["B"].values, ["0", "1", "2"])
-        self.assertEqual(tdomain["C"].values, ["0.0", "0.2", "0.25", "1.25"])
+        self.assertEqual(tdomain["A"].values, ("a", "b", "c"))
+        self.assertEqual(tdomain["B"].values, ("0", "1", "2"))
+        self.assertEqual(tdomain["C"].values, ("0.0", "0.2", "0.25", "1.25"))
         self.assertEqual(
             tdomain["D"].values,
-            ["1970-01-01 00:00:00", "1970-01-01 00:03:00",
-             "1970-01-01 00:06:00", "1970-01-01 00:12:00"]
+            ("1970-01-01 00:00:00", "1970-01-01 00:03:00",
+             "1970-01-01 00:06:00", "1970-01-01 00:12:00")
         )
 
     def test_as_continuous(self):

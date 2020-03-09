@@ -52,7 +52,7 @@ class TestDomainContextHandler(TestCase):
         self.assertEqual(encoded_attributes,
                          {'c1': Continuous - 100, 'd1': Discrete - 100,
                           'd2': Discrete - 100,
-                          'd3': list('ghi')})
+                          'd3': tuple('ghi')})
         self.assertEqual(encoded_metas,
                          {'c2': Continuous - 100, 'd4': Discrete - 100})
 
@@ -63,10 +63,10 @@ class TestDomainContextHandler(TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
         self.assertEqual(encoded_attributes,
-                         {'c1': Continuous - 100, 'd1': list('abc'),
-                          'd2': list('def'), 'd3': list('ghi')})
+                         {'c1': Continuous - 100, 'd1': tuple('abc'),
+                          'd2': tuple('def'), 'd3': tuple('ghi')})
         self.assertEqual(encoded_metas,
-                         {'c2': Continuous - 100, 'd4': list('jkl')})
+                         {'c2': Continuous - 100, 'd4': tuple('jkl')})
 
     def test_match_returns_2_on_perfect_match(self):
         context = Mock(

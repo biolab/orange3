@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from Orange.data import Table
 from Orange.widgets.data.owdiscretize import OWDiscretize
 from Orange.widgets.tests.base import WidgetTest
-from orangewidget.widget import StateInfo
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWDiscretize(WidgetTest):
@@ -28,9 +28,10 @@ class TestOWDiscretize(WidgetTest):
 
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(int(StateInfo.format_number(len(data))))
+        input_sum.assert_called_with(len(data), format_summary_details(data))
         output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(int(StateInfo.format_number(len(output))))
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
 
         input_sum.reset_mock()
         output_sum.reset_mock()

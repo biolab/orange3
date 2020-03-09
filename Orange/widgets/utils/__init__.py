@@ -1,5 +1,7 @@
 import inspect
 import sys
+from collections import deque
+from typing import TypeVar, Deque, Callable, Any, Iterable
 
 from AnyQt.QtCore import QObject
 
@@ -77,3 +79,14 @@ def getmembers(obj, predicate=None):
     else:
         mypredicate = predicate
     return inspect.getmembers(obj, mypredicate)
+
+
+
+_T1 = TypeVar("_T1")
+
+
+def apply_all(seq, op):
+    # type: (Iterable[_T1], Callable[[_T1], Any]) -> None
+    """Apply `op` on all elements of `seq`."""
+    # from itertools recipes `consume`
+    deque(map(op, seq), maxlen=0)

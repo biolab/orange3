@@ -22,13 +22,13 @@ from Orange.util import OrangeDeprecationWarning
 def create_domain(*ss):
     vars = dict(
         age=ContinuousVariable(name="AGE"),
-        gender=DiscreteVariable(name="Gender", values=["M", "F"]),
+        gender=DiscreteVariable(name="Gender", values=("M", "F")),
         incomeA=ContinuousVariable(name="incomeA"),
         income=ContinuousVariable(name="income"),
-        education=DiscreteVariable(name="education", values=["GS", "HS", "C"]),
+        education=DiscreteVariable(name="education", values=("GS", "HS", "C")),
         ssn=StringVariable(name="SSN"),
         race=DiscreteVariable(name="race",
-                              values=["White", "Hypsanic", "African", "Other"]),
+                              values=("White", "Hypsanic", "African", "Other")),
         arrival=TimeVariable("arrival"))
 
     def map_vars(s):
@@ -511,7 +511,7 @@ class TestDomainInit(unittest.TestCase):
                 ContinuousVariable(name='b'),
                 ContinuousVariable(name='c'),
             ],
-            class_vars=[DiscreteVariable('d', values=['e'])],
+            class_vars=[DiscreteVariable('d', values=('e', ))],
             metas=[StringVariable('f')]
         )
 

@@ -533,7 +533,7 @@ class PatchedVariableTest(unittest.TestCase):
 
 class PatchedDiscreteVariableTest(unittest.TestCase):
     def test_colors(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
+        var = DiscreteVariable.make("a", values=("F", "M"))
         self.assertIsNone(var._colors)
         self.assertEqual(var.colors.shape, (2, 3))
         self.assertFalse(var.colors.flags.writeable)
@@ -545,12 +545,12 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             var.colors[0] = [42, 41, 40]
 
-        var = DiscreteVariable.make("x", values=["A", "B"])
+        var = DiscreteVariable.make("x", values=("A", "B"))
         var.attributes["colors"] = ['#0a0b0c', '#0d0e0f']
         np.testing.assert_almost_equal(var.colors, [[10, 11, 12], [13, 14, 15]])
 
         # Test ncolors adapts to nvalues
-        var = DiscreteVariable.make('foo', values=['d', 'r'])
+        var = DiscreteVariable.make('foo', values=('d', 'r'))
         self.assertEqual(len(var.colors), 2)
         var.add_value('e')
         self.assertEqual(len(var.colors), 3)
@@ -558,7 +558,7 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         self.assertEqual(len(var.colors), 4)
 
     def test_colors_fallback_to_palette(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
+        var = DiscreteVariable.make("a", values=("F", "M"))
         var.palette = Dark2Colors
         colors = var.colors
         self.assertEqual(len(colors), 2)
@@ -573,7 +573,7 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
             np.testing.assert_equal(color, palcol.getRgb()[:3])
 
     def test_colors_default(self):
-        var = DiscreteVariable.make("a", values=["F", "M"])
+        var = DiscreteVariable.make("a", values=("F", "M"))
         colors = var.colors
         self.assertEqual(len(colors), 2)
         for color, palcol in zip(colors, DefaultRGBColors):
@@ -585,7 +585,7 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         for color, palcol in zip(colors, LimitedDiscretePalette(40)):
             np.testing.assert_equal(color, palcol.getRgb()[:3])
 
-        var = DiscreteVariable.make("a", values=["M", "F"])
+        var = DiscreteVariable.make("a", values=("M", "F"))
         var.attributes["colors"] = "foo"
         colors = var.colors
         self.assertEqual(len(colors), 2)
@@ -593,27 +593,27 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
             np.testing.assert_equal(color, palcol.getRgb()[:3])
 
     def test_colors_no_values(self):
-        var = DiscreteVariable.make("a", values=[])
+        var = DiscreteVariable.make("a", values=())
         colors = var.colors
         self.assertEqual(len(colors), 0)
 
-        var = DiscreteVariable.make("a", values=[])
+        var = DiscreteVariable.make("a", values=())
         var.palette = DefaultRGBColors
         colors = var.colors
         self.assertEqual(len(colors), 0)
 
     def test_get_palette(self):
-        var = DiscreteVariable.make("a", values=["M", "F"])
+        var = DiscreteVariable.make("a", values=("M", "F"))
         palette = var.palette
         self.assertEqual(len(palette), 2)
         np.testing.assert_equal(palette.palette, DefaultRGBColors.palette[:2])
 
-        var = DiscreteVariable.make("a", values=["M", "F"])
+        var = DiscreteVariable.make("a", values=("M", "F"))
         var.attributes["palette"] = "dark"
         palette = var.palette
         self.assertIs(palette, Dark2Colors)
 
-        var = DiscreteVariable.make("a", values=["M", "F"])
+        var = DiscreteVariable.make("a", values=("M", "F"))
         var.attributes["colors"] = ['#0a0b0c', '#0d0e0f']
         palette = var.palette
         np.testing.assert_equal(palette.palette, [[10, 11, 12], [13, 14, 15]])

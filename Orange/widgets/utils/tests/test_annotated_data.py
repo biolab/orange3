@@ -119,7 +119,7 @@ class TestAnnotatedData(unittest.TestCase):
             len(SameValue(selvar, "Unselected")(table)),
             len(self.zoo) - len(group_indices)
         )
-        self.assertEqual(selvar.values, ["G1", "G2", "Unselected"])
+        self.assertEqual(selvar.values, ("G1", "G2", "Unselected"))
 
     def test_create_groups_table_set_values(self):
         group_indices = random.sample(range(0, len(self.zoo)), 20)

@@ -62,6 +62,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.widget.set_row_clustering(Clustering.OrderedClustering)
         continuizer = Continuize()
         cont_titanic = continuizer(self.titanic)
+        self.widget.MaxClustering = 1000
         self.send_signal(self.widget.Inputs.data, cont_titanic)
         self.assertTrue(self.widget.Information.active)
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -87,7 +88,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def _select_data(self):
         selected_indices = list(range(10, 31))
-        self.widget.selection_manager.select_rows(selected_indices)
+        self.widget.scene.widget.selectRows(selected_indices)
         self.widget.on_selection_finished()
         return selected_indices
 
@@ -175,15 +176,15 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.threshold_high = 0.05
         self.widget.update_color_schema()
-        heatmap_widget = self.widget.heatmap_widget_grid[0][0]
-        image = heatmap_widget.heatmap_item.pixmap().toImage()
+        heatmap_widget = self.widget.scene.widget.heatmap_widget_grid[0][0]
+        image = heatmap_widget.pixmap().toImage()
         colors = image_row_colors(image)
         unique_colors = len(np.unique(colors, axis=0))
         self.assertLessEqual(len(data)*self.widget.threshold_low, unique_colors)
 
     def test_cls_with_single_instance(self):
         table = Table(Domain([ContinuousVariable("c1")],
-                             [DiscreteVariable("c2", values=["a", "b"])]),
+                             [DiscreteVariable("c2", values=("a", "b"))]),
                       np.array([[1], [2], [3]]), np.array([[0], [0], [1]]))
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.set_row_clustering(Clustering.Clustering)
@@ -200,7 +201,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
         self.send_signal(self.widget.Inputs.data, iris)
         selected_indices = list(range(10, 31))
-        self.widget.selection_manager.select_rows(selected_indices)
+        self.widget.scene.widget.selectRows(selected_indices)
         self.widget.on_selection_finished()
         settings = self.widget.settingsHandler.pack_data(self.widget)
 
@@ -213,11 +214,11 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         w = self.widget
         self.send_signal(self.widget.Inputs.data, data, widget=w)
         self.assertIs(w.split_by_var, data.domain.class_var)
-        self.assertEqual(len(w.heatmapparts.rows),
+        self.assertEqual(len(w.parts.rows),
                          len(data.domain.class_var.values))
         w.set_split_variable(None)
         self.assertIs(w.split_by_var, None)
-        self.assertEqual(len(w.heatmapparts.rows), 1)
+        self.assertEqual(len(w.parts.rows), 1)
 
     def test_palette_centering(self):
         data = np.arange(2).reshape(-1, 1)
@@ -237,8 +238,8 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         for center, desired in [(False, desired_uncentered), (True, desired_centered)]:
             with patch.object(OWHeatMap, "center_palette", center):
                 self.widget.update_color_schema()
-                heatmap_widget = self.widget.heatmap_widget_grid[0][0]
-                image = heatmap_widget.heatmap_item.pixmap().toImage()
+                heatmap_widget = self.widget.scene.widget.heatmap_widget_grid[0][0]
+                image = heatmap_widget.pixmap().toImage()
                 colors = image_row_colors(image)
                 np.testing.assert_almost_equal(colors, desired)
 
@@ -263,6 +264,14 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(w.row_clustering, Clustering.None_)
         self.assertEqual(w.col_clustering, Clustering.OrderedClustering)
 
+    def test_row_color_annotations(self):
+        widget = self.widget
+        data = Table("brown-selected")[::5]
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        widget.set_annotation_color_var(data.domain["function"])
+        self.assertTrue(widget.scene.widget.right_side_colors[0].isVisible())
+        widget.set_annotation_color_var(None)
+        self.assertFalse(widget.scene.widget.right_side_colors[0].isVisible())
 
 
 if __name__ == "__main__":

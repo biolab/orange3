@@ -47,7 +47,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
         d = Domain((ContinuousVariable(name="A"),
                     ContinuousVariable(name="B"),
                     ContinuousVariable(name="C")),
-                   DiscreteVariable(name="CLASS", values=["M", "F"]))
+                   DiscreteVariable(name="CLASS", values=("M", "F")))
         t = Table.from_list(d, [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 1]])
         nb = NaiveBayesLearner()
         model = nb(t)
