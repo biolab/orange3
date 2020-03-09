@@ -10,6 +10,7 @@ from Orange.widgets import gui, report
 from Orange.widgets.credentials import CredentialManager
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg
 
 
@@ -43,6 +44,8 @@ class OWBaseSql(OWWidget, openclass=True):
 
     def _setup_gui(self):
         self.controlArea.setMinimumWidth(360)
+
+        self.info.set_output_summary(self.info.NoOutput)
 
         vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
         self.serverbox = gui.vBox(vbox)
@@ -157,8 +160,9 @@ class OWBaseSql(OWWidget, openclass=True):
         data = self.get_table()
         self.data_desc_table = data
         self.Outputs.data.send(data)
-        info = str(len(data)) if data else self.info.NoOutput
-        self.info.set_output_summary(info)
+        summary = len(data) if data else self.info.NoOutput
+        details = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, details)
 
     def get_table(self) -> Table:
         """
