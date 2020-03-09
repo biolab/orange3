@@ -1029,7 +1029,6 @@ class OWPaintData(OWWidget):
         else:
             self.input_data = np.column_stack((X, y))
         self.reset_to_input()
-        self.unconditional_commit()
 
     def reset_to_input(self):
         """Reset the painting to input data if present."""
@@ -1058,6 +1057,8 @@ class OWPaintData(OWWidget):
             self.set_dimensions()
         else:  # set_dimensions already calls _replot, no need to call it again
             self._replot()
+
+        self.commit()
 
     def add_new_class_label(self, undoable=True):
 
