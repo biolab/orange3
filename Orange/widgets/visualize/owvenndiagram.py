@@ -384,15 +384,14 @@ class OWVennDiagram(widget.OWWidget):
             class_vars = np.hstack(values['class_vars'])
             n = len(class_vars)
         if X is None:
-            X = np.empty((n,0))
+            X = np.empty((n, 0))
         table = Table.from_numpy(Domain(**domain), X, class_vars, metas)
         if ids is not None:
             table.ids = ids
         return table
 
     def extract_columnwise(self, var_dict, columns=None):
-        #for columns
-        domain = {type_ : [] for type_ in self.atr_types} 
+        domain = {type_ : [] for type_ in self.atr_types}
         values = defaultdict(list)
         renamed = []
         for atr_type, vars_dict in var_dict.items():

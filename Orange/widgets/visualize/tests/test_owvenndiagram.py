@@ -12,10 +12,10 @@ from Orange.data import (Table, Domain, StringVariable,
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME)
 from Orange.widgets.visualize.owvenndiagram import (
-                                                    OWVennDiagram,
-                                                    arrays_equal,
-                                                    pad_columns,
-                                                    get_perm)
+                        OWVennDiagram,
+                        arrays_equal,
+                        pad_columns,
+                        get_perm)
 
 
 class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
@@ -224,6 +224,15 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, None, 6)
         self.assertFalse(self.widget.Error.too_many_inputs.is_shown())
 
+    def test_no_attributes(self):
+        domain = Domain([], class_vars=self.data.domain.attributes)
+        n = len(self.data)
+        table = Table.from_numpy(domain, np.empty((n, 0)), self.data.X)
+
+        self.widget.rowwise = True
+        self.send_signal(self.signal_name, table, 1)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(len(out), len(table))
 
 class TestVennUtilities(unittest.TestCase):
 
