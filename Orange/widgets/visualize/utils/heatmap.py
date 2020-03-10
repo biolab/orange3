@@ -457,6 +457,7 @@ class HeatmapGridWidget(QGraphicsWidget):
                     data=np.nanmean(X_part, axis=1, keepdims=True),
                     span=parts.span, colormap=colormap,
                     visible=self.__averagesVisible,
+                    minimumSize=QSizeF(5, -1)
                 )
                 avgimg.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Ignored)
                 grid.addItem(avgimg, Row0 + i, Col0 + 2 * j)
@@ -496,9 +497,9 @@ class HeatmapGridWidget(QGraphicsWidget):
             rowauxsidecolor = GraphicsPixmapWidget(
                 parent=self, visible=False,
                 scaleContents=True, aspectMode=Qt.IgnoreAspectRatio,
-                sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Ignored)
+                sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Ignored),
+                minimumSize=QSizeF(10, -1)
             )
-            rowauxsidecolor.setVisible(False)
             grid.addItem(rowauxsidecolor, Row0 + i, RightLabelColumn - 1)
             grid.addItem(labelslist, Row0 + i, RightLabelColumn, Qt.AlignLeft)
             row_annotation_widgets.append(labelslist)
@@ -688,11 +689,13 @@ class HeatmapGridWidget(QGraphicsWidget):
 
         def set_hidden(item: GraphicsPixmapWidget):
             item.setVisible(False)
-            item.setPreferredWidth(-1)
+            item.setMinimumWidth(-1)
+            item.updateGeometry()
 
         def set_visible(item: GraphicsPixmapWidget):
             item.setVisible(True)
-            item.setPreferredWidth(width)
+            item.setMinimumWidth(10)
+            item.updateGeometry()
 
         if data is None:
             apply_all(filter(None, items), set_hidden)
