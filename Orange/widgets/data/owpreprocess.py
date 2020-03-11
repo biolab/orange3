@@ -1063,7 +1063,7 @@ PREPROCESS_ACTIONS = [
 # * the drag/drop is controlled by the controller/adapter,
 
 
-class OWPreprocess(widget.OWWidget):
+class OWPreprocess(widget.OWWidget, openclass=True):
     name = "Preprocess"
     description = "Construct a data preprocessing pipeline."
     icon = "icons/Preprocess.svg"
