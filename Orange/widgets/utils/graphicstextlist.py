@@ -2,7 +2,7 @@ import math
 from typing import Optional, Union, Any, Iterable, List, Callable
 
 from AnyQt.QtCore import Qt, QSizeF, QEvent, QMarginsF
-from AnyQt.QtGui import QFont, QFontMetricsF, QFontInfo
+from AnyQt.QtGui import QFont, QFontMetrics, QFontInfo
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
     QGraphicsItem, QGraphicsScene, QGraphicsSceneResizeEvent
@@ -146,7 +146,7 @@ class TextListWidget(QGraphicsWidget):
         key = font.key()
         if key in self.__widthCache:
             return self.__widthCache[key]
-        fm = QFontMetricsF(font)
+        fm = QFontMetrics(font)
         width = max((fm.width(text) for text in self.__items),
                     default=0)
         self.__widthCache[key] = width
@@ -154,7 +154,7 @@ class TextListWidget(QGraphicsWidget):
 
     def __naturalsh(self) -> QSizeF:
         """Return the natural size hint (preferred sh with no constraints)."""
-        fm = QFontMetricsF(self.font())
+        fm = QFontMetrics(self.font())
         spacing = self.__spacing
         N = len(self.__items)
         width = self.__width_for_font(self.font())
@@ -230,7 +230,7 @@ class TextListWidget(QGraphicsWidget):
 
         assert self.__group is not None
         font = self.font()
-        fm = QFontMetricsF(font)
+        fm = QFontMetrics(font)
 
         fontheight = fm.height()
         # the available vertical space
@@ -245,7 +245,7 @@ class TextListWidget(QGraphicsWidget):
             # find a smaller font size to fit the height
             psize = effective_point_size_for_height(font, cell_height)
             font.setPointSizeF(psize)
-            fm = QFontMetricsF(font)
+            fm = QFontMetrics(font)
             fontheight = fm.height()
 
         if self.__autoScale and self.__effectiveFont != font:
@@ -304,7 +304,7 @@ def effective_point_size_for_height(
     start = max(math.ceil(height), minsize)
     font.setPointSizeF(start)
     fix = 0
-    while QFontMetricsF(font).height() > height and start - (fix + step) > minsize:
+    while QFontMetrics(font).height() > height and start - (fix + step) > minsize:
         fix += step
         font.setPointSizeF(start - fix)
     return QFontInfo(font).pointSizeF()
