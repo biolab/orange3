@@ -1,4 +1,5 @@
 # pylint: disable=unsubscriptable-object
+import unittest
 from unittest.mock import Mock
 
 from Orange.data import Table
@@ -30,3 +31,10 @@ class TestOWPurgeDomain(WidgetTest):
         self.assertEqual(input_sum.call_args[0][0].brief, "")
         output_sum.assert_called_once()
         self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+    def test_minimum_size(self):
+        pass
+
+
+if __name__ == "__main__":
+    unittest.main()
