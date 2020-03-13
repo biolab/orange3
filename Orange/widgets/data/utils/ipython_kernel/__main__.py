@@ -1,0 +1,3 @@
+from ipykernel.kernelapp import IPKernelApp
+from kernel import OrangeIPythonKernel
+IPKernelApp.launch_instance(kernel_class=OrangeIPythonKernel)

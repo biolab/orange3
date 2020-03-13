@@ -5,11 +5,13 @@ import keyword
 import itertools
 import tokenize
 import unicodedata
+import codecs
+import pickle
 from functools import reduce
 from collections import defaultdict
 from unittest.mock import patch
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING, NamedTuple
 
 import qutepart
 
@@ -23,6 +25,10 @@ from AnyQt.QtGui import (
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
 )
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize
+
+from ipython_genutils.tempdir import TemporaryDirectory
+from qtconsole.manager import QtKernelManager
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 from Orange.data import Table
 from Orange.base import Learner, Model
@@ -54,165 +60,6 @@ def read_file_content(filename, limit=None):
     except (OSError, UnicodeDecodeError):
         return None
 
-
-class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
-    # `locals` is reasonably used as argument name
-    # pylint: disable=redefined-builtin
-    def __init__(self, locals=None, parent=None):
-        QPlainTextEdit.__init__(self, parent)
-        code.InteractiveConsole.__init__(self, locals)
-        self.newPromptPos = 0
-        self.history, self.historyInd = [""], 0
-        self.loop = self.interact()
-        next(self.loop)
-
-    def setLocals(self, locals):
-        self.locals = locals
-
-    def updateLocals(self, locals):
-        self.locals.update(locals)
-
-    def interact(self, banner=None, _=None):
-        try:
-            sys.ps1
-        except AttributeError:
-            sys.ps1 = ">>> "
-        try:
-            sys.ps2
-        except AttributeError:
-            sys.ps2 = "... "
-        cprt = ('Type "help", "copyright", "credits" or "license" '
-                'for more information.')
-        if banner is None:
-            self.write("Python %s on %s\n%s\n(%s)\n" %
-                       (sys.version, sys.platform, cprt,
-                        self.__class__.__name__))
-        else:
-            self.write("%s\n" % str(banner))
-        more = 0
-        while 1:
-            try:
-                if more:
-                    prompt = sys.ps2
-                else:
-                    prompt = sys.ps1
-                self.new_prompt(prompt)
-                yield
-                try:
-                    line = self.raw_input(prompt)
-                except EOFError:
-                    self.write("\n")
-                    break
-                else:
-                    more = self.push(line)
-            except KeyboardInterrupt:
-                self.write("\nKeyboardInterrupt\n")
-                self.resetbuffer()
-                more = 0
-
-    def raw_input(self, prompt=""):
-        input_str = str(self.document().lastBlock().previous().text())
-        return input_str[len(prompt):]
-
-    def new_prompt(self, prompt):
-        self.write(prompt)
-        self.newPromptPos = self.textCursor().position()
-        self.repaint()
-
-    def write(self, data):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
-        cursor.insertText(data)
-        self.setTextCursor(cursor)
-        self.ensureCursorVisible()
-
-    def writelines(self, lines):
-        for line in lines:
-            self.write(line)
-
-    def flush(self):
-        pass
-
-    def push(self, line):
-        if self.history[0] != line:
-            self.history.insert(0, line)
-        self.historyInd = 0
-
-        # prevent console errors to trigger error reporting & patch stdout, stderr
-        with patch('sys.excepthook', sys.__excepthook__),\
-             patch('sys.stdout', self),\
-             patch('sys.stderr', self):
-            return code.InteractiveConsole.push(self, line)
-
-    def setLine(self, line):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End)
-        cursor.setPosition(self.newPromptPos, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
-        cursor.insertText(line)
-        self.setTextCursor(cursor)
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            self.write("\n")
-            next(self.loop)
-        elif event.key() == Qt.Key_Up:
-            self.historyUp()
-        elif event.key() == Qt.Key_Down:
-            self.historyDown()
-        elif event.key() == Qt.Key_Tab:
-            self.complete()
-        elif event.key() in [Qt.Key_Left, Qt.Key_Backspace]:
-            if self.textCursor().position() > self.newPromptPos:
-                QPlainTextEdit.keyPressEvent(self, event)
-        else:
-            QPlainTextEdit.keyPressEvent(self, event)
-
-    def historyUp(self):
-        self.setLine(self.history[self.historyInd])
-        self.historyInd = min(self.historyInd + 1, len(self.history) - 1)
-
-    def historyDown(self):
-        self.setLine(self.history[self.historyInd])
-        self.historyInd = max(self.historyInd - 1, 0)
-
-    def complete(self):
-        pass
-
-    def _moveCursorToInputLine(self):
-        """
-        Move the cursor to the input line if not already there. If the cursor
-        if already in the input line (at position greater or equal to
-        `newPromptPos`) it is left unchanged, otherwise it is moved at the
-        end.
-
-        """
-        cursor = self.textCursor()
-        pos = cursor.position()
-        if pos < self.newPromptPos:
-            cursor.movePosition(QTextCursor.End)
-            self.setTextCursor(cursor)
-
-    def pasteCode(self, source):
-        """
-        Paste source code into the console.
-        """
-        self._moveCursorToInputLine()
-
-        for line in interleave(source.splitlines(), itertools.repeat("\n")):
-            if line != "\n":
-                self.insertPlainText(line)
-            else:
-                self.write("\n")
-                next(self.loop)
-
-    def insertFromMimeData(self, source):
-        """
-        Reimplemented from QPlainTextEdit.insertFromMimeData.
-        """
-        if source.hasText():
-            self.pasteCode(str(source.text()))
-            return
 
 
 class Script:
@@ -304,6 +151,42 @@ out_data = table_from_frame(out_df)
     }]
 
 
+def make_custom_ipython_kernel_manager():
+    """
+    Install Orange IPython kernel,
+    start a kernel manager instance,
+    uninstall Orange IPython kernel
+    """
+    import json
+    import pkg_resources
+    from jupyter_client.kernelspec import KernelSpecManager
+
+    # to run our custom kernel (./utils/ipython_kernel),
+    # we install it to sys.prefix's (venv) jupyter kernels,
+    kernel_json = {
+        "argv": [
+            sys.executable,
+            pkg_resources.resource_filename('Orange', 'widgets/data/utils/ipython_kernel/'),
+            '-f',
+            '{connection_file}'
+        ],
+        'display_name': 'orangeipython',
+        'language': 'python3',
+    }
+    ksm = KernelSpecManager()
+    with TemporaryDirectory() as td:
+        with open(os.path.join(td, 'kernel.json'), 'w') as f:
+            json.dump(kernel_json, f, sort_keys=True)
+        ksm.install_kernel_spec(td, 'orangeipython', prefix=sys.prefix)
+
+    kernel_manager = QtKernelManager(kernel_name='orangeipython')
+    kernel_manager.start_kernel()
+    # and clean up behind ourselves by removing it after the kernel starts
+    ksm.remove_kernel_spec('orangeipython')
+
+    return kernel_manager
+
+
 class OWPythonScript(OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
@@ -343,11 +226,15 @@ class OWPythonScript(OWWidget):
     # of # PythonScript even if they are in different schemata.
     shared_namespaces = defaultdict(dict)
 
+    kernel_manager = None
+
     class Error(OWWidget.Error):
         pass
 
     def __init__(self):
         super().__init__()
+        if self.kernel_manager is None:
+            self.kernel_manager = make_custom_ipython_kernel_manager()
         self.libraryListSource = []
 
         for name in self.signal_names:
@@ -456,11 +343,26 @@ class OWPythonScript(OWWidget):
 
         self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
-        self.console = PythonConsole({}, self)
+
+        kernel_client = self.kernel_manager.client()
+        kernel_client.start_channels()
+        self.run_script_comm = kernel_client.comm_manager.new_comm('run_script', {})
+        self.run_script_comm.on_msg(self.receive_outputs)
+        @self.run_script_comm.on_close
+        def _():
+            # TODO
+            raise Exception()
+
+        jupyter_widget = RichJupyterWidget()
+        jupyter_widget.kernel_manager = self.kernel_manager
+        jupyter_widget.kernel_client = kernel_client
+
+        jupyter_widget.font_family = defaultFont
+        jupyter_widget.reset_font()
+
+        self.console = jupyter_widget
         self.consoleBox.layout().addWidget(self.console)
-        self.console.document().setDefaultFont(QFont(defaultFont))
         self.consoleBox.setAlignment(Qt.AlignBottom)
-        self.console.setTabStopWidth(4)
         self.splitCanvas.setSizes([2, 1])
         self.setAcceptDrops(True)
         self.controlArea.layout().addStretch(10)
@@ -644,24 +546,34 @@ class OWPythonScript(OWWidget):
              if name not in not_saved})
 
     def commit(self):
-        self.Error.clear()
-        lcls = self.initial_locals_state()
-        lcls["_script"] = str(self.editor.text)
-        self.console.updateLocals(lcls)
-        self.console.write("\nRunning script:\n")
-        self.console.push("exec(_script)")
-        self.console.new_prompt(sys.ps1)
-        self.update_namespace(self.console.locals)
+        locals = {
+            # pickle-strings aren't json-serializable,
+            # but with a little bit of magic (and space inefficiency)...
+            k: codecs.encode(pickle.dumps(l), 'base64').decode()
+            for k, l in self.initial_locals_state().items()
+        }
+        script = str(self.editor.text)
+        # TODO fix where it's printing (cursor position?)
+        self.run_script_comm.send({
+            'script': script,
+            'locals': locals
+        })
+
+    def receive_outputs(self, msg):
+        outputs = msg['content']['data']
+
+        signal_objects = {
+            k: pickle.loads(codecs.decode(l.encode(), 'base64'))
+            for k, l in outputs.items()
+        }
+
+        # outputs contains mapping of { out_data: <pickled-in_data>, ... }
         for signal in self.signal_names:
-            out_var = self.console.locals.get("out_" + signal)
-            signal_type = getattr(self.Outputs, signal).type
-            if not isinstance(out_var, signal_type) and out_var is not None:
-                self.Error.add_message(signal,
-                                       "'{}' has to be an instance of '{}'.".
-                                       format(signal, signal_type.__name__))
-                getattr(self.Error, signal)()
-                out_var = None
-            getattr(self.Outputs, signal).send(out_var)
+            out_name = "out_" + signal
+            if out_name not in signal_objects:
+                continue
+
+            getattr(self.Outputs, signal).send(signal_objects[out_name])
 
     def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()
