@@ -30,6 +30,8 @@ def qimage_from_array(arr: np.ndarray) -> QImage:
     channels = arr.transpose((2, 0, 1))
     img = QImage(w, h, QImage.Format_ARGB32)
     img.fill(Qt.white)
+    if img.size().isEmpty():
+        return img
     buffer = img.bits().asarray(w * h * 4)
     view = np.frombuffer(buffer, np.uint32).reshape((h, w))
     if format == QImage.Format_ARGB32:
@@ -57,7 +59,8 @@ def qimage_indexed_from_array(
 
     for i, c in enumerate(colortable):
         img.setColor(i, qrgb_(*c))
-
+    if img.size().isEmpty():
+        return img
     buffer = img.bits().asarray(w * h)
     view = np.frombuffer(buffer, np.uint8).reshape((h, w))
     view[:, :] = arr
