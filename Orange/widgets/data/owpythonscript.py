@@ -13,13 +13,14 @@ from typing import Optional, List, TYPE_CHECKING
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
-    QStyleOptionViewItem, QPlainTextDocumentLayout
-)
+    QStyleOptionViewItem, QPlainTextDocumentLayout,
+    qApp)
 from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
 )
-from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize
+from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize, \
+    QThread, pyqtSignal as Signal, QObject
 
 from Orange.data import Table
 from Orange.base import Learner, Model
@@ -174,12 +175,14 @@ class PythonScriptEditor(QPlainTextEdit):
             cursor.insertText(new)
 
 
-class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
+class QtInteractiveConsole(QObject, code.InteractiveConsole):
     # `locals` is reasonably used as argument name
     # pylint: disable=redefined-builtin
-    def __init__(self, locals=None, parent=None):
-        QPlainTextEdit.__init__(self, parent)
+    def __init__(self, widget, locals=None):
         code.InteractiveConsole.__init__(self, locals)
+        QObject.__init__(self)
+        self.widget = widget
+        widget.new_command.connect(self.push)
         self.newPromptPos = 0
         self.history, self.historyInd = [""], 0
         self.loop = self.interact()
@@ -235,22 +238,19 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
 
     def new_prompt(self, prompt):
         self.write(prompt)
-        self.newPromptPos = self.textCursor().position()
-        self.repaint()
+#        self.newPromptPos = self.textCursor().position()
+ #       self.repaint()
 
     def write(self, data):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
-        cursor.insertText(data)
-        self.setTextCursor(cursor)
-        self.ensureCursorVisible()
+        self.widget.write(data)
+        self.flush()
 
     def writelines(self, lines):
         for line in lines:
             self.write(line)
 
     def flush(self):
-        pass
+        qApp.processEvents()
 
     def push(self, line):
         if self.history[0] != line:
@@ -262,30 +262,6 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
              patch('sys.stdout', self),\
              patch('sys.stderr', self):
             return code.InteractiveConsole.push(self, line)
-
-    def setLine(self, line):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End)
-        cursor.setPosition(self.newPromptPos, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
-        cursor.insertText(line)
-        self.setTextCursor(cursor)
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            self.write("\n")
-            next(self.loop)
-        elif event.key() == Qt.Key_Up:
-            self.historyUp()
-        elif event.key() == Qt.Key_Down:
-            self.historyDown()
-        elif event.key() == Qt.Key_Tab:
-            self.complete()
-        elif event.key() in [Qt.Key_Left, Qt.Key_Backspace]:
-            if self.textCursor().position() > self.newPromptPos:
-                QPlainTextEdit.keyPressEvent(self, event)
-        else:
-            QPlainTextEdit.keyPressEvent(self, event)
 
     def historyUp(self):
         self.setLine(self.history[self.historyInd])
@@ -325,12 +301,72 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
                 self.write("\n")
                 next(self.loop)
 
+
+class PythonConsole(QPlainTextEdit):
+    # `locals` is reasonably used as argument name
+    # pylint: disable=redefined-builtin
+    new_command = Signal(str)
+
+    def __init__(self, locals=None, parent=None):
+        QPlainTextEdit.__init__(self, parent)
+        self.console = QtInteractiveConsole(self, locals)
+        self.console_thread = QThread()
+        self.console.moveToThread(self.console_thread)
+        self.console_thread.start()
+
+    def push(self, command):
+        self.new_command.emit(command)
+
+    def write(self, data):
+        cursor = QTextCursor(self.document())
+        cursor.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
+        cursor.insertText(data)
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
+        self.repaint()
+        self.update()
+
+    def setLine(self, line):
+        cursor = QTextCursor(self.document())
+        cursor.movePosition(QTextCursor.End)
+        cursor.setPosition(self.newPromptPos, QTextCursor.KeepAnchor)
+        cursor.removeSelectedText()
+        cursor.insertText(line)
+        self.setTextCursor(cursor)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Return:
+            self.write("\n")
+            next(self.console.loop)
+        elif event.key() == Qt.Key_Up:
+            self.console.historyUp()
+        elif event.key() == Qt.Key_Down:
+            self.console.historyDown()
+        elif event.key() == Qt.Key_Tab:
+            self.console.complete()
+        elif event.key() in [Qt.Key_Left, Qt.Key_Backspace]:
+            if self.textCursor().position() > self.newPromptPos:
+                QPlainTextEdit.keyPressEvent(self, event)
+        else:
+            QPlainTextEdit.keyPressEvent(self, event)
+
+    def historyUp(self):
+        self.setLine(self.history[self.historyInd])
+        self.historyInd = min(self.historyInd + 1, len(self.history) - 1)
+
+    def historyDown(self):
+        self.setLine(self.history[self.historyInd])
+        self.historyInd = max(self.historyInd - 1, 0)
+
+    def complete(self):
+        pass
+
     def insertFromMimeData(self, source):
         """
         Reimplemented from QPlainTextEdit.insertFromMimeData.
         """
         if source.hasText():
-            self.pasteCode(str(source.text()))
+            self.console.pasteCode(str(source.text()))
             return
 
 
@@ -748,13 +784,13 @@ class OWPythonScript(OWWidget):
         self.Error.clear()
         lcls = self.initial_locals_state()
         lcls["_script"] = str(self.text.toPlainText())
-        self.console.updateLocals(lcls)
+        self.console.console.updateLocals(lcls)
         self.console.write("\nRunning script:\n")
         self.console.push("exec(_script)")
-        self.console.new_prompt(sys.ps1)
-        self.update_namespace(self.console.locals)
+        self.console.console.new_prompt(sys.ps1)
+        self.update_namespace(self.console.console.locals)
         for signal in self.signal_names:
-            out_var = self.console.locals.get("out_" + signal)
+            out_var = self.console.console.locals.get("out_" + signal)
             signal_type = getattr(self.Outputs, signal).type
             if not isinstance(out_var, signal_type) and out_var is not None:
                 self.Error.add_message(signal,
