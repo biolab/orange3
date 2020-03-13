@@ -55,6 +55,12 @@ class Identity(Transformation):
     def transform(self, c):
         return c
 
+    def __eq__(self, other):
+        return type(other) is type(self) and self.variable == other.variable
+
+    def __hash__(self):
+        return hash((type(self), self.variable))
+
 
 class Indicator(Transformation):
     """

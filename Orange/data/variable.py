@@ -347,12 +347,34 @@ class Variable(Reprable, metaclass=VariableMeta):
         return var
 
     def __eq__(self, other):
-        return type(self) is type(other) \
-               and self.name == other.name \
-               and self._compute_value == other._compute_value
+        # pylint: disable=protected-access,import-outside-toplevel
+
+        def to_match(var):
+            if var._compute_value is None:
+                return var
+            elif isinstance(var._compute_value, Identity):
+                return var._compute_value.variable
+            return None
+
+        from Orange.preprocess.transformation import Identity
+        return type(self) is type(other) and (
+            self.name == other.name
+            and self._compute_value == other._compute_value
+            or
+            (self.compute_value or other.compute_value)
+            and to_match(self) == to_match(other) != None)
 
     def __hash__(self):
-        return hash((self.name, type(self), self._compute_value))
+        # Two variables that are not equal can have the same hash.
+        # This happens if one has compute_value == Identity and the other
+        # doesn't have compute_value, or they have a different Identity.
+        # Having the same hash while not being equal is of course allowed.
+        # pylint: disable=import-outside-toplevel
+        from Orange.preprocess.transformation import Identity
+        compute_value = self._compute_value
+        if isinstance(self._compute_value, Identity):
+            compute_value = None
+        return hash((self.name, type(self), compute_value))
 
     @classmethod
     def make(cls, name, *args, **kwargs):
