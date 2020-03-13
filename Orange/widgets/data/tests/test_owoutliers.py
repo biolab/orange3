@@ -8,6 +8,7 @@ from Orange.data import Table
 from Orange.classification import LocalOutlierFactorLearner
 from Orange.widgets.data.owoutliers import OWOutliers, run
 from Orange.widgets.tests.base import WidgetTest, simulate
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestRun(unittest.TestCase):
@@ -130,13 +131,17 @@ class TestOWOutliers(WidgetTest):
 
     def test_in_out_summary(self):
         info = self.widget.info
+        data = self.iris
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.brief, "")
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.wait_until_finished()
-        self.assertEqual(info._StateInfo__input_summary.brief, "150")
-        self.assertIn(info._StateInfo__output_summary.brief, ["135", "136"])
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.inliers)
+        output_sum.assert_called_with(len(output), format_summary_details(output))
 
         self.send_signal(self.widget.Inputs.data, None)
         self.wait_until_finished()
