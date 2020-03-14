@@ -48,9 +48,16 @@ class OWSaveBase(widget.OWWidget, openclass=True):
     want_main_area = False
     resizing_enabled = False
 
-    last_dir = Setting("")
-    filter = Setting("")  # default will be provided in __init__
-    filename = Setting("", schema_only=True)
+    filter = Setting("")  # Default is provided in __init__
+
+    # If the path is in the same directory as the workflow file or its
+    # subdirectory, it is stored as a relative path, otherwise as absolute.
+    # For the sake of security, we do not store relative paths from other
+    # directories, like home or cwd. After loading the widget from a schema,
+    # auto_save is set to off, unless the stored_path is relative (to the
+    # workflow).
+    stored_path = Setting("")
+    stored_name = Setting("", schema_only=True)  # File name, without path
     auto_save = Setting(False)
 
     filters = []
@@ -69,6 +76,8 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         """
         super().__init__()
         self.data = None
+        self._absolute_path = self._abs_path_from_setting()
+
         # This cannot be done outside because `filters` is defined by subclass
         if not self.filter:
             self.filter = next(iter(self.get_filters()))
@@ -81,7 +90,10 @@ class OWSaveBase(widget.OWWidget, openclass=True):
                 callback=self.update_messages),
             start_row, 0, 1, 2)
         grid.setRowMinimumHeight(start_row + 1, 8)
-        self.bt_save = gui.button(None, self, "Save", callback=self.save_file)
+        self.bt_save = gui.button(
+            None, self,
+            label=f"Save as {self.stored_name}" if self.stored_name else "Save",
+            callback=self.save_file)
         grid.addWidget(self.bt_save, start_row + 2, 0)
         grid.addWidget(
             gui.button(None, self, "Save as ...", callback=self.save_file_as),
@@ -89,6 +101,61 @@ class OWSaveBase(widget.OWWidget, openclass=True):
 
         self.adjustSize()
         self.update_messages()
+
+    @property
+    def last_dir(self):
+        # Not the best name, but kept for compatibility
+        return self._absolute_path
+
+    @last_dir.setter
+    def last_dir(self, absolute_path):
+        """Store _absolute_path and update relative path (stored_path)"""
+        self._absolute_path = absolute_path
+
+        workflow_dir = self.workflowEnv().get("basedir", None)
+        if workflow_dir and absolute_path.startswith(workflow_dir.rstrip("/")):
+            self.stored_path = os.path.relpath(absolute_path, workflow_dir)
+        else:
+            self.stored_path = absolute_path
+
+    def _abs_path_from_setting(self):
+        """
+        Compute absolute path from `stored_path` from settings.
+
+        Auto save is disabled unless stored_path is relative and exists.
+        """
+        workflow_dir = self.workflowEnv().get("basedir")
+        if os.path.isabs(self.stored_path):
+            path = self.stored_path
+            self.auto_save = False
+        elif workflow_dir:
+            path = os.path.join(workflow_dir, self.stored_path)
+        else:
+            path = None
+
+        if path and os.path.exists(path):
+            return path
+        else:
+            self.stored_path = workflow_dir or _userhome
+            self.auto_save = False
+            return self.stored_path
+
+    @property
+    def filename(self):
+        if self.stored_name:
+            return os.path.join(self._absolute_path, self.stored_name)
+        else:
+            return ""
+
+    @filename.setter
+    def filename(self, value):
+        self.last_dir, self.stored_name = os.path.split(value)
+
+    # pylint: disable=unused-argument
+    def workflowEnvChanged(self, key, value, oldvalue):
+        # Trigger refresh of relative path, e.g. when saving the scheme
+        if key == "basedir":
+            self.last_dir = self._absolute_path
 
     @classmethod
     def get_filters(cls):
@@ -133,8 +200,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
             return
         self.filename = filename
         self.filter = selected_filter
-        self.last_dir = os.path.split(self.filename)[0]
-        self.bt_save.setText(f"Save as {os.path.split(filename)[1]}")
+        self.bt_save.setText(f"Save as {self.stored_name}")
         self.update_messages()
         self._try_save()
 
@@ -242,6 +308,14 @@ class OWSaveBase(widget.OWWidget, openclass=True):
 
     def default_valid_filter(self):
         return self.filter
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        # We cannot use versions because they are overriden in derived classes
+        if "last_dir" in settings:
+            settings["stored_path"] = settings.pop("last_dir")
+        if "filename" in settings:
+            settings["stored_name"] = os.path.split(settings.pop("filename"))[1]
 
     # As of Qt 5.9, QFileDialog.setDefaultSuffix does not support double
     # suffixes, not even in non-native dialogs. We handle each OS separately.

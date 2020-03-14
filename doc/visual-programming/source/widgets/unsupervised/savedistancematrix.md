@@ -3,6 +3,8 @@ Save Distance Matrix
 
 Saves a distance matrix.
 
+If the file is saved to the same directory as the workflow or in the subtree of that directory, the widget remembers the relative path. Otherwise it will store an absolute path, but disable auto save for security reasons.
+
 **Inputs**
 
 - Distances: distance matrix

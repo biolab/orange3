@@ -11,6 +11,8 @@ The **Save Data** widget considers a dataset provided in the input channel and s
 
 The widget does not save the data every time it receives a new signal in the input as this would constantly (and, mostly, inadvertently) overwrite the file. Instead, the data is saved only after a new file name is set or the user pushes the *Save* button.
 
+If the file is saved to the same directory as the workflow or in the subtree of that directory, the widget remembers the relative path. Otherwise it will store an absolute path, but disable auto save for security reasons.
+
 ![](images/Save-stamped.png)
 
 1. Save by overwriting the existing file.
