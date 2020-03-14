@@ -1,35 +1,28 @@
 import os
 import pickle
 
+from AnyQt.QtWidgets import QSizePolicy, QStyle, QFileDialog
 from AnyQt.QtCore import QTimer
-from AnyQt.QtWidgets import (
-    QSizePolicy, QHBoxLayout, QComboBox, QStyle, QFileDialog
-)
 
 from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.model import owsavemodel
-from Orange.widgets.settings import Setting
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
 from Orange.widgets.utils import stdpaths
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Output
 
 
-class OWLoadModel(widget.OWWidget):
+class OWLoadModel(widget.OWWidget, RecentPathsWComboMixin):
     name = "Load Model"
     description = "Load a model from an input file."
     priority = 3050
     replaces = ["Orange.widgets.classify.owloadclassifier.OWLoadClassifier"]
     icon = "icons/LoadModel.svg"
-    keywords = ["file", "open"]
+    keywords = ["file", "open", "model"]
 
     class Outputs:
         model = Output("Model", Model)
-
-    #: List of recent filenames.
-    history = Setting([])
-    #: Current (last selected) filename or None.
-    filename = Setting(None)
 
     class Error(widget.OWWidget.Error):
         load_error = Msg("An error occured while reading '{}'")
@@ -41,95 +34,57 @@ class OWLoadModel(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.selectedIndex = -1
+        RecentPathsWComboMixin.__init__(self)
+        self.loaded_file = ""
 
-        box = gui.widgetBox(
-            self.controlArea, self.tr("File"), orientation=QHBoxLayout()
-        )
+        vbox = gui.vBox(self.controlArea, "File", addSpace=True)
+        box = gui.hBox(vbox)
+        self.file_combo.setMinimumWidth(300)
+        box.layout().addWidget(self.file_combo)
+        self.file_combo.activated[int].connect(self.select_file)
 
-        self.filesCB = gui.comboBox(
-            box, self, "selectedIndex", callback=self._on_recent)
-        self.filesCB.setMinimumContentsLength(20)
-        self.filesCB.setSizeAdjustPolicy(
-            QComboBox.AdjustToMinimumContentsLength)
+        button = gui.button(box, self, '...', callback=self.browse_file)
+        button.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        button.setSizePolicy(
+            QSizePolicy.Maximum, QSizePolicy.Fixed)
 
-        self.loadbutton = gui.button(box, self, "...", callback=self.browse)
-        self.loadbutton.setIcon(
-            self.style().standardIcon(QStyle.SP_DirOpenIcon))
-        self.loadbutton.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-
-        self.reloadbutton = gui.button(
+        button = gui.button(
             box, self, "Reload", callback=self.reload, default=True)
-        self.reloadbutton.setIcon(
-            self.style().standardIcon(QStyle.SP_BrowserReload))
-        self.reloadbutton.setSizePolicy(QSizePolicy.Maximum,
-                                        QSizePolicy.Fixed)
+        button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
+        button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        # filter valid existing filenames
-        self.history = list(filter(os.path.isfile, self.history))[:20]
-        for filename in self.history:
-            self.filesCB.addItem(os.path.basename(filename), userData=filename)
+        self.set_file_list()
+        QTimer.singleShot(0, self.open_file)
 
-        # restore the current selection if the filename is
-        # in the history list
-        if self.filename in self.history:
-            self.selectedIndex = self.history.index(self.filename)
-        else:
-            self.selectedIndex = -1
-            self.filename = None
-            self.reloadbutton.setEnabled(False)
-
-        if self.filename:
-            QTimer.singleShot(0, lambda: self.load(self.filename))
-
-    def browse(self):
-        """Select a filename using an open file dialog."""
-        if self.filename is None:
-            startdir = stdpaths.Documents
-        else:
-            startdir = os.path.dirname(self.filename)
-
+    def browse_file(self):
+        start_file = self.last_path() or stdpaths.Documents
         filename, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Open"), directory=startdir, filter=self.FILTER)
+            self, 'Open Distance File', start_file, self.FILTER)
+        if not filename:
+            return
+        self.add_path(filename)
+        self.open_file()
 
-        if filename:
-            self.load(filename)
+    def select_file(self, n):
+        super().select_file(n)
+        self.open_file()
 
     def reload(self):
-        """Reload the current file."""
-        self.load(self.filename)
+        self.open_file()
 
-    def load(self, filename):
-        """Load the object from filename and send it to output."""
+    def open_file(self):
+        self.clear_messages()
+        fn = self.last_path()
+        if not fn:
+            return
         try:
-            with open(filename, "rb") as f:
+            with open(fn, "rb") as f:
                 model = pickle.load(f)
         except (pickle.UnpicklingError, OSError, EOFError):
-            self.Error.load_error(os.path.split(filename)[-1])
+            self.Error.load_error(os.path.split(fn)[-1])
+            self.Outputs.model.send(None)
         else:
-            self.Error.load_error.clear()
-            self._remember(filename)
             self.Outputs.model.send(model)
-
-    def _remember(self, filename):
-        """
-        Remember `filename` was accessed.
-        """
-        if filename in self.history:
-            index = self.history.index(filename)
-            del self.history[index]
-            self.filesCB.removeItem(index)
-
-        self.history.insert(0, filename)
-
-        self.filesCB.insertItem(0, os.path.basename(filename),
-                                userData=filename)
-        self.selectedIndex = 0
-        self.filename = filename
-        self.reloadbutton.setEnabled(self.selectedIndex != -1)
-
-    def _on_recent(self):
-        self.load(self.history[self.selectedIndex])
 
 
 if __name__ == "__main__":  # pragma: no cover
