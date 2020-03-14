@@ -74,6 +74,7 @@ def read_file_content(filename, limit=None):
         return None
 
 
+# pylint: disable=pointless-string-statement
 """
 Adapted from jupyter notebook, which was adapted from GitHub.
 
@@ -509,7 +510,7 @@ class OWPythonScript(OWWidget):
     description = "Write a Python script and run it on input data or models."
     icon = "icons/PythonScript.svg"
     priority = 3150
-    keywords = ["file", "program", "function"]
+    keywords = ["program", "function"]
 
     class Inputs:
         data = Input("Data", Table, replaces=["in_data"],
@@ -646,8 +647,7 @@ class OWPythonScript(OWWidget):
         self.controlBox.layout().setSpacing(1)
 
         self.libraryView = QListView(
-            editTriggers=QListView.DoubleClicked |
-                         QListView.EditKeyPressed,
+            editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed,
             sizePolicy=QSizePolicy(QSizePolicy.Ignored,
                                    QSizePolicy.Preferred)
         )
