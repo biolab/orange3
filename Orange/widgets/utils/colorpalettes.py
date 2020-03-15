@@ -7,6 +7,7 @@ import numpy as np
 from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QImage, QPixmap, QColor, QIcon
 
+from Orange.data import Variable, DiscreteVariable, ContinuousVariable
 from Orange.util import Enum, hex_to_color, color_to_hex
 
 NAN_COLOR = (128, 128, 128)
@@ -559,20 +560,23 @@ def get_default_curve_colors(n):
 def patch_variable_colors():
     # This function patches Variable with properties and private attributes:
     # pylint: disable=protected-access
-    from Orange.data import Variable, DiscreteVariable, ContinuousVariable
-
     def get_colors(var):
         return var._colors
 
     def set_colors(var, colors):
         var._colors = colors
+        if isinstance(var._colors, np.ndarray):
+            var._colors.flags.writeable = False
         var._palette = None
+        if "palette" in var.attributes:
+            del var.attributes["palette"]
+
+    def continuous_set_colors(var, colors):
+        set_colors(var, colors)
         var.attributes["colors"] = [
             color_to_hex(color) if isinstance(color, (Sequence, np.ndarray))
             else color
             for color in colors]
-        if "palette" in var.attributes:
-            del var.attributes["palette"]
 
     def get_palette(var):
         return var._palette
@@ -616,28 +620,45 @@ def patch_variable_colors():
         return var._palette
 
     def discrete_get_colors(var):
-        if var._colors is None or len(var._colors) < len(var.values):
+        def retrieve_colors():
             if var._palette is not None or "palette" in var.attributes:
-                var._colors = var.palette.palette[:len(var.values)]
-            else:
-                var._colors = np.empty((0, 3), dtype=object)
+                palette = var.palette.palette
+                if len(palette) >= nvalues:
+                    return palette[:nvalues]
+
             colors = var.attributes.get("colors")
-            if colors:
-                try:
-                    var._colors = np.vstack(
-                        ([hex_to_color(color) for color in colors],
-                         var._colors[len(colors):]))
+            if isinstance(colors, list) and len(colors) == nvalues:
+                try:  # catch errors in hex_to_color due to malformed files
+                    return np.array([hex_to_color(color) for color in colors])
                 except ValueError:
                     pass
-            if len(var._colors) < len(var.values):
-                var._colors = LimitedDiscretePalette(len(var.values)).palette
-            var._colors.flags.writeable = False
+
+            palette = LimitedDiscretePalette(nvalues).palette
+            if isinstance(colors, dict):
+                try:  # catch errors in hex_to_color due to malformed files
+                    proposed = [value in colors and hex_to_color(colors[value])
+                                for value in var.values]
+                except ValueError:
+                    pass
+                else:
+                    used = set(colors.values())
+                    available = (color for color in palette
+                                 if color_to_hex(color) not in used)
+                    return np.array(
+                        [color or next(available) for color in proposed])
+
+            return palette
+
+        nvalues = len(var.values)
+        if var._colors is None or len(var._colors) != nvalues:
+            set_colors(var, retrieve_colors())
         return var._colors
 
     def discrete_set_colors(var, colors):
-        colors = colors.copy()
-        colors.flags.writeable = False
-        set_colors(var, colors)
+        set_colors(var, np.array(colors))
+        var.attributes["colors"] = \
+            {value: color_to_hex(color)
+             for value, color in zip(var.values, colors)}
 
     def discrete_get_palette(var):
         if var._palette is None:
@@ -658,5 +679,5 @@ def patch_variable_colors():
     DiscreteVariable.colors = property(discrete_get_colors, discrete_set_colors)
     DiscreteVariable.palette = property(discrete_get_palette, set_palette)
 
-    ContinuousVariable.colors = property(continuous_get_colors, set_colors)
+    ContinuousVariable.colors = property(continuous_get_colors, continuous_set_colors)
     ContinuousVariable.palette = property(continuous_get_palette, set_palette)
