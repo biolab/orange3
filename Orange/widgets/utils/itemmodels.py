@@ -617,7 +617,7 @@ class ContinuousPalettesModel(QAbstractListModel):
         if isinstance(item, ContinuousPalette):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         else:
-            return Qt.ItemIsEnabled
+            return Qt.NoItemFlags
 
     def indexOf(self, x):
         if isinstance(x, str):
