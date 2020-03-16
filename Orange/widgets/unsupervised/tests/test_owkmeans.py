@@ -205,9 +205,7 @@ class TestOWKMeans(WidgetTest):
         self.send_signal(widget.Inputs.data, self.data)
         self.commit_and_wait()
         widget.clusterings[widget.k].labels = np.array([0] * 100 + [1] * 203).flatten()
-
-        widget.samples_scores = lambda x: np.arctan(
-            np.arange(303) / 303) / np.pi + 0.5
+        widget.clusterings[widget.k].silhouette_samples = np.arange(303) / 303
         widget.send_data()
         out = self.get_output(widget.Outputs.centroids)
         np.testing.assert_array_almost_equal(

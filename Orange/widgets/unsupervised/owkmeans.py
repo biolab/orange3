@@ -283,10 +283,22 @@ class OWKMeans(widget.OWWidget):
         if k > len(data):
             raise NotEnoughData()
 
-        return KMeans(
+        model = KMeans(
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
             random_state=random_state, preprocessors=[]
         ).get_model(data)
+
+        if data.X.shape[0] <= SILHOUETTE_MAX_SAMPLES:
+            model.silhouette_samples = silhouette_samples(data.X, model.labels)
+            model.silhouette = np.mean(model.silhouette_samples)
+        else:
+            model.silhouette_samples = None
+            model.silhouette = \
+                silhouette_score(data.X, model.labels,
+                                 sample_size=SILHOUETTE_MAX_SAMPLES,
+                                 random_state=RANDOM_STATE)
+
+        return model
 
     @Slot(int, int)
     def __progress_changed(self, n, d):
@@ -446,9 +458,8 @@ class OWKMeans(widget.OWWidget):
             self.commit()
 
     def update_results(self):
-        scores = [mk if isinstance(mk, str) else silhouette_score(
-            self.__preprocessed_data.X, mk.labels) for mk in (
-                self.clusterings[k] for k in range(self.k_from, self.k_to + 1))]
+        scores = [mk if isinstance(mk, str) else mk.silhouette for mk in
+                  (self.clusterings[k] for k in range(self.k_from, self.k_to + 1))]
         best_row = max(
             range(len(scores)), default=0,
             key=lambda x: 0 if isinstance(scores[x], str) else scores[x]
@@ -482,11 +493,6 @@ class OWKMeans(widget.OWWidget):
             data = preprocessor(data)
         return data
 
-    def samples_scores(self, clust_ids):
-        d = self.__preprocessed_data
-        return np.arctan(
-            silhouette_samples(d.X, clust_ids)) / np.pi + 0.5
-
     def send_data(self):
         if self.optimize_k:
             row = self.selected_row()
@@ -508,9 +514,9 @@ class OWKMeans(widget.OWWidget):
         clust_ids = km.labels
         silhouette_var = ContinuousVariable(
             get_unique_names(domain, "Silhouette"))
-        if len(self.data) <= SILHOUETTE_MAX_SAMPLES:
+        if km.silhouette_samples is not None:
             self.Warning.no_silhouettes.clear()
-            scores = self.samples_scores(clust_ids)
+            scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
             clust_scores = []
             for i in range(km.k):
                 in_clust = clust_ids == i
