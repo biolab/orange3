@@ -1146,11 +1146,13 @@ class GradientLegendWidget(QGraphicsWidget):
         cmap = self.colormap.replace(span=(low, high))
         qimg = qimage_from_array(cmap.apply(data))
         self.__pixitem.setPixmap(QPixmap.fromImage(qimg))
-
-        if self.colormap.center is not None and low < self.colormap.center < high:
-            ticks = [(low, f"{low:.2f}"), (0, "0"), (high, f"{high:.2f}")]
+        if self.colormap.center is not None \
+                and low < self.colormap.center < high:
+            tick_values = [low, self.colormap.center, high]
         else:
-            ticks = [(low, f"{low:.2f}"), (high, f"{high:.2f}")]
+            tick_values = [low, high]
+        tickformat = "{:.6g}".format
+        ticks = [(val, tickformat(val)) for val in tick_values]
         self.__axis.setTicks([ticks])
 
         self.updateGeometry()
