@@ -531,6 +531,8 @@ class OWPythonScript(OWWidget):
         d = self.shared_namespaces[self.signalManager].copy()
         for name in self.signal_names:
             value = getattr(self, name)
+            if len(value) == 0:
+                continue
             all_values = list(value.values())
             one_value = all_values[0] if len(all_values) == 1 else None
             d["in_" + name + "s"] = all_values

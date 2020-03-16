@@ -30,6 +30,12 @@ class OrangeIPythonKernel(IPythonKernel):
             for k, l in inputs.items()
         }
 
+        # remove old in_vars
+        for v in self.comm_variables[comm]:
+            if v not in variables:
+                del self.shell.user_ns[v]
+                self.shell.user_ns_hidden.pop(v, None)
+
         self.shell.push(variables)
         self.comm_variables[comm] = list(variables)
 
