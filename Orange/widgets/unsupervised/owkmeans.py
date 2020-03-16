@@ -161,6 +161,7 @@ class OWKMeans(widget.OWWidget):
         super().__init__()
 
         self.data = None  # type: Optional[Table]
+        self.__preprocessed_data = None  # type: Optional[Table]
         self.__pending_selection = self.selection  # type: Optional[int]
         self.clusterings = {}
 
@@ -284,7 +285,7 @@ class OWKMeans(widget.OWWidget):
 
         return KMeans(
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
-            random_state=random_state
+            random_state=random_state, preprocessors=[]
         ).get_model(data)
 
     @Slot(int, int)
@@ -338,9 +339,10 @@ class OWKMeans(widget.OWWidget):
     def __launch_tasks(self, ks):
         # type: (List[int]) -> None
         """Execute clustering in separate threads for all given ks."""
+        self.__preprocessed_data = self.preproces(self.data)
         futures = [self.__executor.submit(
             self._compute_clustering,
-            data=Normalize()(self.data) if self.normalize else self.data,
+            data=self.__preprocessed_data,
             k=k,
             init=self.INIT_METHODS[self.smart_init][1],
             n_init=self.n_init,
@@ -433,6 +435,7 @@ class OWKMeans(widget.OWWidget):
     def invalidate(self, unconditional=False):
         self.cancel()
         self.Error.clear()
+        self.__preprocessed_data = None
         self.Warning.clear()
         self.clusterings = {}
         self.table_model.clear_scores()
@@ -444,7 +447,7 @@ class OWKMeans(widget.OWWidget):
 
     def update_results(self):
         scores = [mk if isinstance(mk, str) else silhouette_score(
-            self.preproces(self.data).X, mk.labels) for mk in (
+            self.__preprocessed_data.X, mk.labels) for mk in (
                 self.clusterings[k] for k in range(self.k_from, self.k_to + 1))]
         best_row = max(
             range(len(scores)), default=0,
@@ -480,7 +483,7 @@ class OWKMeans(widget.OWWidget):
         return data
 
     def samples_scores(self, clust_ids):
-        d = self.preproces(self.data)
+        d = self.__preprocessed_data
         return np.arctan(
             silhouette_samples(d.X, clust_ids)) / np.pi + 0.5
 

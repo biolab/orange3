@@ -72,7 +72,7 @@ class Clustering(metaclass=WrapperMeta):
     preprocessors = [Continuize(), SklImpute()]
 
     def __init__(self, preprocessors, parameters):
-        self.preprocessors = tuple(preprocessors or self.preprocessors)
+        self.preprocessors = preprocessors if preprocessors is not None else self.preprocessors
         self.params = {k: v for k, v in parameters.items()
                        if k not in ["self", "preprocessors", "__class__"]}
 

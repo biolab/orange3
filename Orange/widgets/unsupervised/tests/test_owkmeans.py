@@ -323,7 +323,7 @@ class TestOWKMeans(WidgetTest):
         # the best selection is 3 clusters, so row no. 1
         self.assertEqual(widget.selected_row(), 1)
 
-        widget.normalize = True
+        self.widget.controls.normalize.toggle()
         self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
         self.commit_and_wait()
         widget.update_results()
