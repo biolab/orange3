@@ -27,6 +27,7 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize
 
 from ipython_genutils.tempdir import TemporaryDirectory
+import pygments.style
 from qtconsole.manager import QtKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
@@ -45,11 +46,149 @@ if TYPE_CHECKING:
 __all__ = ["OWPythonScript"]
 
 
-def text_format(foreground=Qt.black, weight=QFont.Normal):
-    fmt = QTextCharFormat()
-    fmt.setForeground(QBrush(foreground))
-    fmt.setFontWeight(weight)
-    return fmt
+class Styling(NamedTuple):
+    color: str
+    font_style: str = ''
+
+    def to_fmt(self, fmt_class):
+        return fmt_class(
+            color=self.color,
+            bold='bold' in self.font_style,
+            italic='italic' in self.font_style
+        )
+
+    def to_style_desc(self):
+        return ' '.join([self.font_style, self.color])
+
+
+"""
+Adapted from jupyter notebook, which was adapted from GitHub.
+
+The chosen scheme is transformed into their corresponding forms
+for Qutepart (editor) and pygments (console highlighter).
+
+Striving for an identical highlighting scheme in both editor
+and console, the bottleneck is Qutepart; pygments' token system
+is comprehensive. 
+
+A way to extend the syntax highlighting would be to submit a PR 
+to Qutepart's python.xml syntax spec. Alternatively, as Qutepart
+subclasses QPlainTextEdit, you could override its highlighting and
+use pygments. 
+"""
+SYNTAX_HIGHLIGHTING_SCHEMES = {
+    'Light': {
+        'background': Qt.white,
+        'default': Styling('#000'),
+        'keyword': Styling('#008000', 'bold'),
+        'number': Styling('#080'),
+        'definition': Styling('#00f'),
+        # 'variable': Styling('#212121'),
+        'specialvar': Styling('#05a'),
+        'punctuation': Styling('#05a'),
+        # 'property': Styling('#05a'),
+        'operator': Styling('#aa22ff', 'bold'),
+        'comment': Styling('#408080', 'italic'),
+        'string': Styling('#ba2121'),
+        'decorator': Styling('#aa22ff'),
+        'builtin': Styling('#008000'),
+        'error': Styling('#f00')
+    },
+    'Dark': {
+        # TODO
+    }
+}
+
+
+class EditorColorTheme:
+    """
+    Monkey patched into Qutepart. For this reason,
+    qutepart==3.3.0 (at the time, the latest version) is required.
+    """
+    scheme = None
+
+    @staticmethod
+    def set_higlighting_scheme(scheme_name):
+        EditorColorTheme.scheme = SYNTAX_HIGHLIGHTING_SCHEMES[scheme_name]
+
+    key_map = {
+        'dsNormal': 'default',
+        'dsKeyword': 'keyword',
+        'dsFunction': 'definition',
+        'dsVariable': 'specialvar',
+        'dsControlFlow': 'punctuation',
+        'dsOperator': 'operator',
+        'dsBuiltIn': 'builtin',
+        'dsExtension': 'default',
+        'dsPreprocessor': 'error',
+        'dsAttribute': 'decorator',
+
+        'dsChar': 'string',
+        'dsString': 'string',
+
+        'dsSpecialChar': 'string',
+        'dsVerbatimString': 'string',
+        'dsSpecialString': 'string',
+
+        'dsImport': 'keyword',
+
+        'dsDecVal': 'number',
+        'dsBaseN': 'number',
+        'dsFloat': 'number',
+        'dsOthers': 'number',
+
+        'dsComment': 'comment',
+
+        'dsError': 'error',
+    }
+
+    def __init__(self, fmt_class):
+        self.format = {
+            k: self.scheme[v].to_fmt(fmt_class)
+            for k, v in self.key_map.items()
+        }
+
+    def getFormat(self, styleName):
+        return self.format[styleName]
+
+
+EditorColorTheme.set_higlighting_scheme('Light')
+
+
+from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name, Other
+
+
+def make_pygments_style(scheme_name):
+    """
+    Dynamically create a pygments Style class instance,
+    given a highlighting scheme.
+    """
+    key_map = {
+        Other: 'default',
+        Keyword: 'keyword',
+        Number: 'number',
+        Name.Function.Magic: 'definition',
+        Name.Variable: 'specialvar',
+        Punctuation: 'punctuation',
+        Operator: 'operator',
+        Comment: 'comment',
+        String: 'string',
+        Name.Decorator: 'decorator',
+        Name.Builtin: 'builtin',
+        Error: 'error'
+    }
+
+    attributes = {
+        'styles': {
+            k: SYNTAX_HIGHLIGHTING_SCHEMES[scheme_name][v].to_style_desc()
+            for k, v in key_map.items()
+        }
+    }
+
+    return type('ConsoleStyle', (type(pygments.style.Style()),), attributes)
+
+
+ConsolePygmentsStyle = make_pygments_style('Light')
 
 
 def read_file_content(filename, limit=None):
@@ -59,7 +198,6 @@ def read_file_content(filename, limit=None):
             return text
     except (OSError, UnicodeDecodeError):
         return None
-
 
 
 class Script:
@@ -325,12 +463,25 @@ class OWPythonScript(OWWidget):
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
 
-        self.defaultFont = defaultFont = \
-            "Monaco" if sys.platform == "darwin" else "Courier"
+        self.defaultFont = defaultFont = 'Menlo'
+        self.defaultFontSize = defaultFontSize = 13
 
         self.textBox = gui.vBox(self, 'Python Script')
         self.splitCanvas.addWidget(self.textBox)
-        self.editor = qutepart.Qutepart(self)
+
+        editor = qutepart.Qutepart(self)
+
+        eFont = QFont(defaultFont)
+        eFont.setPointSize(defaultFontSize)
+        editor.setFont(eFont)
+
+        with patch('qutepart.syntax.loader.ColorTheme', EditorColorTheme):
+            editor.detectSyntax(language='Python')
+
+        # TODO should we care about displaying the these warnings?
+        # editor.userWarning.connect()
+
+        self.editor = editor
         self.editor.modificationChanged[bool].connect(self.onModificationChanged)
         self.textBox.layout().addWidget(self.editor)
 
@@ -348,6 +499,7 @@ class OWPythonScript(OWWidget):
         kernel_client.start_channels()
         self.run_script_comm = kernel_client.comm_manager.new_comm('run_script', {})
         self.run_script_comm.on_msg(self.receive_outputs)
+
         @self.run_script_comm.on_close
         def _():
             # TODO
@@ -357,7 +509,9 @@ class OWPythonScript(OWWidget):
         jupyter_widget.kernel_manager = self.kernel_manager
         jupyter_widget.kernel_client = kernel_client
 
+        jupyter_widget._highlighter.set_style(ConsolePygmentsStyle)
         jupyter_widget.font_family = defaultFont
+        jupyter_widget.font_size = defaultFontSize
         jupyter_widget.reset_font()
 
         self.console = jupyter_widget
