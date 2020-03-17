@@ -11,6 +11,8 @@ from unittest.mock import patch
 
 from typing import Optional, List, TYPE_CHECKING
 
+import qutepart
+
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
@@ -51,128 +53,6 @@ def read_file_content(filename, limit=None):
             return text
     except (OSError, UnicodeDecodeError):
         return None
-
-
-class PythonSyntaxHighlighter(QSyntaxHighlighter):
-    def __init__(self, parent=None):
-
-        self.keywordFormat = text_format(Qt.blue, QFont.Bold)
-        self.stringFormat = text_format(Qt.darkGreen)
-        self.defFormat = text_format(Qt.black, QFont.Bold)
-        self.commentFormat = text_format(Qt.lightGray)
-        self.decoratorFormat = text_format(Qt.darkGray)
-
-        self.keywords = list(keyword.kwlist)
-
-        self.rules = [(QRegExp(r"\b%s\b" % kwd), self.keywordFormat)
-                      for kwd in self.keywords] + \
-                     [(QRegExp(r"\bdef\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
-                       self.defFormat),
-                      (QRegExp(r"\bclass\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
-                       self.defFormat),
-                      (QRegExp(r"'.*'"), self.stringFormat),
-                      (QRegExp(r'".*"'), self.stringFormat),
-                      (QRegExp(r"#.*"), self.commentFormat),
-                      (QRegExp(r"@[A-Za-z_]+[A-Za-z0-9_]+"),
-                       self.decoratorFormat)]
-
-        self.multilineStart = QRegExp(r"(''')|" + r'(""")')
-        self.multilineEnd = QRegExp(r"(''')|" + r'(""")')
-
-        super().__init__(parent)
-
-    def highlightBlock(self, text):
-        for pattern, fmt in self.rules:
-            exp = QRegExp(pattern)
-            index = exp.indexIn(text)
-            while index >= 0:
-                length = exp.matchedLength()
-                if exp.captureCount() > 0:
-                    self.setFormat(exp.pos(1), len(str(exp.cap(1))), fmt)
-                else:
-                    self.setFormat(exp.pos(0), len(str(exp.cap(0))), fmt)
-                index = exp.indexIn(text, index + length)
-
-        # Multi line strings
-        start = self.multilineStart
-        end = self.multilineEnd
-
-        self.setCurrentBlockState(0)
-        startIndex, skip = 0, 0
-        if self.previousBlockState() != 1:
-            startIndex, skip = start.indexIn(text), 3
-        while startIndex >= 0:
-            endIndex = end.indexIn(text, startIndex + skip)
-            if endIndex == -1:
-                self.setCurrentBlockState(1)
-                commentLen = len(text) - startIndex
-            else:
-                commentLen = endIndex - startIndex + 3
-            self.setFormat(startIndex, commentLen, self.stringFormat)
-            startIndex, skip = (start.indexIn(text,
-                                              startIndex + commentLen + 3),
-                                3)
-
-
-class PythonScriptEditor(QPlainTextEdit):
-    INDENT = 4
-
-    def __init__(self, widget):
-        super().__init__()
-        self.widget = widget
-
-    def lastLine(self):
-        text = str(self.toPlainText())
-        pos = self.textCursor().position()
-        index = text.rfind("\n", 0, pos)
-        text = text[index: pos].lstrip("\n")
-        return text
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            if event.modifiers() & (
-                    Qt.ShiftModifier | Qt.ControlModifier | Qt.MetaModifier):
-                self.widget.commit()
-                return
-            text = self.lastLine()
-            indent = len(text) - len(text.lstrip())
-            if text.strip() == "pass" or text.strip().startswith("return "):
-                indent = max(0, indent - self.INDENT)
-            elif text.strip().endswith(":"):
-                indent += self.INDENT
-            super().keyPressEvent(event)
-            self.insertPlainText(" " * indent)
-        elif event.key() == Qt.Key_Tab:
-            self.insertPlainText(" " * self.INDENT)
-        elif event.key() == Qt.Key_Backspace:
-            text = self.lastLine()
-            if text and not text.strip():
-                cursor = self.textCursor()
-                for _ in range(min(self.INDENT, len(text))):
-                    cursor.deletePreviousChar()
-            else:
-                super().keyPressEvent(event)
-
-        else:
-            super().keyPressEvent(event)
-
-    def insertFromMimeData(self, source):
-        """
-        Reimplemented from QPlainTextEdit.insertFromMimeData.
-        """
-        urls = source.urls()
-        if urls:
-            self.pasteFile(urls[0])
-        else:
-            super().insertFromMimeData(source)
-
-    def pasteFile(self, url):
-        new = read_file_content(url.toLocalFile())
-        if new:
-            # inserting text like this allows undo
-            cursor = QTextCursor(self.document())
-            cursor.select(QTextCursor.Document)
-            cursor.insertText(new)
 
 
 class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
@@ -563,15 +443,12 @@ class OWPythonScript(OWWidget):
 
         self.textBox = gui.vBox(self, 'Python Script')
         self.splitCanvas.addWidget(self.textBox)
-        self.text = PythonScriptEditor(self)
-        self.textBox.layout().addWidget(self.text)
+        self.editor = qutepart.Qutepart(self)
+        self.editor.modificationChanged[bool].connect(self.onModificationChanged)
+        self.textBox.layout().addWidget(self.editor)
 
         self.textBox.setAlignment(Qt.AlignVCenter)
-        self.text.setTabStopWidth(4)
-
-        self.text.modificationChanged[bool].connect(self.onModificationChanged)
-
-        self.saveAction = action = QAction("&Save", self.text)
+        self.saveAction = action = QAction("&Save", self.editor)
         action.setToolTip("Save script to file")
         action.setShortcut(QKeySequence(QKeySequence.Save))
         action.setShortcutContext(Qt.WidgetWithChildrenShortcut)
@@ -600,17 +477,17 @@ class OWPythonScript(OWWidget):
         select_row(self.libraryView, self.currentScriptIndex)
 
         if self.scriptText is not None:
-            current = self.text.toPlainText()
+            current = self.editor.text
             # do not mark scripts as modified
             if self.scriptText != current:
-                self.text.document().setPlainText(self.scriptText)
+                self.editor.setText(self.scriptText)
 
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
 
     def _saveState(self):
         self.scriptLibrary = [s.asdict() for s in self.libraryListSource]
-        self.scriptText = self.text.toPlainText()
+        self.scriptText = self.editor.text
         self.splitterState = bytes(self.splitCanvas.saveState())
 
     def handle_input(self, obj, sig_id, signal):
@@ -652,7 +529,7 @@ class OWPythonScript(OWWidget):
         select_row(self.libraryView, index)
 
     def onAddScript(self, *_):
-        self.libraryList.append(Script("New script", self.text.toPlainText(), 0))
+        self.libraryList.append(Script("New script", self.editor.text, 0))
         self.setSelectedScript(len(self.libraryList) - 1)
 
     def onAddScriptFromFile(self, *_):
@@ -687,7 +564,7 @@ class OWPythonScript(OWWidget):
                 self.addNewScriptAction.trigger()
                 return
 
-            self.text.setDocument(self.documentForScript(current))
+            self.editor.text = self.documentForScript(current).toPlainText()
             self.currentScriptIndex = current
 
     def documentForScript(self, script=0):
@@ -698,7 +575,6 @@ class OWPythonScript(OWWidget):
             doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
             doc.setPlainText(script.script)
             doc.setDefaultFont(QFont(self.defaultFont))
-            doc.highlighter = PythonSyntaxHighlighter(doc)
             doc.modificationChanged[bool].connect(self.onModificationChanged)
             doc.setModified(False)
             self._cachedDocuments[script] = doc
@@ -707,8 +583,8 @@ class OWPythonScript(OWWidget):
     def commitChangesToLibrary(self, *_):
         index = self.selectedScriptIndex()
         if index is not None:
-            self.libraryList[index].script = self.text.toPlainText()
-            self.text.document().setModified(False)
+            self.libraryList[index].script = self.editor.text
+            self.editor.setModified(False)
             self.libraryList.emitDataChanged(index)
 
     def onModificationChanged(self, modified):
@@ -720,8 +596,8 @@ class OWPythonScript(OWWidget):
     def restoreSaved(self):
         index = self.selectedScriptIndex()
         if index is not None:
-            self.text.document().setPlainText(self.libraryList[index].script)
-            self.text.document().setModified(False)
+            self.editor.text = self.libraryList[index].script
+            self.editor.setModified(False)
 
     def saveScript(self):
         index = self.selectedScriptIndex()
@@ -746,7 +622,7 @@ class OWPythonScript(OWWidget):
                 fn = filename
 
             f = open(fn, 'w')
-            f.write(self.text.toPlainText())
+            f.write(self.editor.text)
             f.close()
 
     def initial_locals_state(self):
@@ -770,7 +646,7 @@ class OWPythonScript(OWWidget):
     def commit(self):
         self.Error.clear()
         lcls = self.initial_locals_state()
-        lcls["_script"] = str(self.text.toPlainText())
+        lcls["_script"] = str(self.editor.text)
         self.console.updateLocals(lcls)
         self.console.write("\nRunning script:\n")
         self.console.push("exec(_script)")
@@ -799,7 +675,8 @@ class OWPythonScript(OWWidget):
         """Handle file drops"""
         urls = event.mimeData().urls()
         if urls:
-            self.text.pasteFile(urls[0])
+            # TODO
+            self.editor.pasteFile(urls[0])
 
     @classmethod
     def migrate_settings(cls, settings, version):
