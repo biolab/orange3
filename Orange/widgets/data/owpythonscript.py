@@ -26,10 +26,12 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize
 
-from ipython_genutils.tempdir import TemporaryDirectory
 import pygments.style
+from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name, Other
+from qtconsole.pygments_highlighter import PygmentsHighlighter
 from qtconsole.manager import QtKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
+from ipython_genutils.tempdir import TemporaryDirectory
 
 from Orange.data import Table
 from Orange.base import Learner, Model
@@ -46,53 +48,37 @@ if TYPE_CHECKING:
 __all__ = ["OWPythonScript"]
 
 
-class Styling(NamedTuple):
-    color: str
-    font_style: str = ''
-
-    def to_fmt(self, fmt_class):
-        return fmt_class(
-            color=self.color,
-            bold='bold' in self.font_style,
-            italic='italic' in self.font_style
-        )
-
-    def to_style_desc(self):
-        return ' '.join([self.font_style, self.color])
-
-
 """
 Adapted from jupyter notebook, which was adapted from GitHub.
 
-The chosen scheme is transformed into their corresponding forms
-for Qutepart (editor) and pygments (console highlighter).
+Highlighting styles are applied with pygments.
 
-Striving for an identical highlighting scheme in both editor
-and console, the bottleneck is Qutepart; pygments' token system
-is comprehensive. 
-
-A way to extend the syntax highlighting would be to submit a PR 
-to Qutepart's python.xml syntax spec. Alternatively, as Qutepart
-subclasses QPlainTextEdit, you could override its highlighting and
-use pygments. 
+pygments does not support partial highlighting; on every character
+typed, it performs a full pass of the code. If performance is ever
+an issue, revert to prior commit, which uses Qutepart's syntax
+highlighting implementation.
 """
-SYNTAX_HIGHLIGHTING_SCHEMES = {
+SYNTAX_HIGHLIGHTING_STYLES = {
     'Light': {
-        'background': Qt.white,
-        'default': Styling('#000'),
-        'keyword': Styling('#008000', 'bold'),
-        'number': Styling('#080'),
-        'definition': Styling('#00f'),
-        # 'variable': Styling('#212121'),
-        'specialvar': Styling('#05a'),
-        'punctuation': Styling('#05a'),
-        # 'property': Styling('#05a'),
-        'operator': Styling('#aa22ff', 'bold'),
-        'comment': Styling('#408080', 'italic'),
-        'string': Styling('#ba2121'),
-        'decorator': Styling('#aa22ff'),
-        'builtin': Styling('#008000'),
-        'error': Styling('#f00')
+        Error: '#f00',
+
+        Keyword: 'bold #008000',
+
+        Name: '#212121',
+        Name.Function: '#00f',
+        Name.Variable: '#05a',
+        Name.Decorator: '#aa22ff',
+        Name.Builtin: '#008000',
+        Name.Builtin.Pseudo: '#05a',
+
+        String: '#ba2121',
+
+        Number: '#080',
+
+        Operator: 'bold #aa22ff',
+        Operator.Word: 'bold #008000',
+
+        Comment: 'italic #408080',
     },
     'Dark': {
         # TODO
@@ -100,95 +86,19 @@ SYNTAX_HIGHLIGHTING_SCHEMES = {
 }
 
 
-class EditorColorTheme:
-    """
-    Monkey patched into Qutepart. For this reason,
-    qutepart==3.3.0 (at the time, the latest version) is required.
-    """
-    scheme = None
-
-    @staticmethod
-    def set_higlighting_scheme(scheme_name):
-        EditorColorTheme.scheme = SYNTAX_HIGHLIGHTING_SCHEMES[scheme_name]
-
-    key_map = {
-        'dsNormal': 'default',
-        'dsKeyword': 'keyword',
-        'dsFunction': 'definition',
-        'dsVariable': 'specialvar',
-        'dsControlFlow': 'punctuation',
-        'dsOperator': 'operator',
-        'dsBuiltIn': 'builtin',
-        'dsExtension': 'default',
-        'dsPreprocessor': 'error',
-        'dsAttribute': 'decorator',
-
-        'dsChar': 'string',
-        'dsString': 'string',
-
-        'dsSpecialChar': 'string',
-        'dsVerbatimString': 'string',
-        'dsSpecialString': 'string',
-
-        'dsImport': 'keyword',
-
-        'dsDecVal': 'number',
-        'dsBaseN': 'number',
-        'dsFloat': 'number',
-        'dsOthers': 'number',
-
-        'dsComment': 'comment',
-
-        'dsError': 'error',
-    }
-
-    def __init__(self, fmt_class):
-        self.format = {
-            k: self.scheme[v].to_fmt(fmt_class)
-            for k, v in self.key_map.items()
-        }
-
-    def getFormat(self, styleName):
-        return self.format[styleName]
-
-
-EditorColorTheme.set_higlighting_scheme('Light')
-
-
-from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name, Other
-
-
 def make_pygments_style(scheme_name):
     """
-    Dynamically create a pygments Style class instance,
-    given a highlighting scheme.
+    Dynamically create a PygmentsStyle class,
+    given the name of one of the above highlighting schemes.
     """
-    key_map = {
-        Other: 'default',
-        Keyword: 'keyword',
-        Number: 'number',
-        Name.Function.Magic: 'definition',
-        Name.Variable: 'specialvar',
-        Punctuation: 'punctuation',
-        Operator: 'operator',
-        Comment: 'comment',
-        String: 'string',
-        Name.Decorator: 'decorator',
-        Name.Builtin: 'builtin',
-        Error: 'error'
-    }
-
-    attributes = {
-        'styles': {
-            k: SYNTAX_HIGHLIGHTING_SCHEMES[scheme_name][v].to_style_desc()
-            for k, v in key_map.items()
-        }
-    }
-
-    return type('ConsoleStyle', (type(pygments.style.Style()),), attributes)
+    return type(
+        'PygmentsStyle',
+        (pygments.style.Style,),
+        {'styles': SYNTAX_HIGHLIGHTING_STYLES[scheme_name]}
+    )
 
 
-ConsolePygmentsStyle = make_pygments_style('Light')
+PygmentsStyle = make_pygments_style('Light')
 
 
 def read_file_content(filename, limit=None):
@@ -475,8 +385,14 @@ class OWPythonScript(OWWidget):
         eFont.setPointSize(defaultFontSize)
         editor.setFont(eFont)
 
-        with patch('qutepart.syntax.loader.ColorTheme', EditorColorTheme):
-            editor.detectSyntax(language='Python')
+        # use python autoindent, autocomplete
+        editor.detectSyntax(language='Python')
+        # but clear the highlighting and use our own
+        editor.clearSyntax()
+        doc = editor.document()
+        highlighter = PygmentsHighlighter(doc)
+        highlighter.set_style(PygmentsStyle)
+        doc.highlighter = highlighter
 
         # TODO should we care about displaying the these warnings?
         # editor.userWarning.connect()
@@ -509,7 +425,7 @@ class OWPythonScript(OWWidget):
         jupyter_widget.kernel_manager = self.kernel_manager
         jupyter_widget.kernel_client = kernel_client
 
-        jupyter_widget._highlighter.set_style(ConsolePygmentsStyle)
+        jupyter_widget._highlighter.set_style(PygmentsStyle)
         jupyter_widget.font_family = defaultFont
         jupyter_widget.font_size = defaultFontSize
         jupyter_widget.reset_font()

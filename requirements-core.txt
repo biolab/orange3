@@ -24,4 +24,4 @@ pandas
 pyyaml
 openpyxl
 httpx~=0.14.0
-qutepart==3.3.0
+qtconsole
