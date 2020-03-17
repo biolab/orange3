@@ -866,6 +866,41 @@ class TestOWScatterPlotBase(WidgetTest):
             self.assertIsNone(graph.density_img)
             self.assertIs(graph.plot_widget.removeItem.call_args[0][0], density)
 
+    @patch("Orange.widgets.utils.classdensity.class_density_image")
+    def test_density_with_missing(self, class_density_image):
+        graph = self.graph
+        graph.reset_graph()
+        graph.plot_widget.addItem = Mock()
+        graph.plot_widget.removeItem = Mock()
+
+        graph.class_density = True
+        d = np.arange(10, dtype=float) % 2
+        self.master.get_color_data = lambda: d
+
+        # All colors known
+        graph.update_colors()
+        x_data0, y_data0, colors0 = class_density_image.call_args[0][5:]
+
+        # Some missing colors
+        d[:3] = np.nan
+        graph.update_colors()
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        np.testing.assert_equal(x_data, x_data0[3:])
+        np.testing.assert_equal(y_data, y_data0[3:])
+        np.testing.assert_equal(colors, colors0[3:])
+
+        # Missing colors + only subsample plotted
+        graph.set_sample_size(8)
+        graph.reset_graph()
+        d_known = np.isfinite(graph._filter_visible(d))
+        x_data0 = graph._filter_visible(x_data0)[d_known]
+        y_data0 = graph._filter_visible(y_data0)[d_known]
+        colors0 = graph._filter_visible(np.array(colors0))[d_known]
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        np.testing.assert_equal(x_data, x_data0)
+        np.testing.assert_equal(y_data, y_data0)
+        np.testing.assert_equal(colors, colors0)
+
     def test_labels(self):
         graph = self.graph
         graph.reset_graph()

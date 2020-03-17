@@ -1144,16 +1144,22 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.plot_widget.removeItem(self.density_img)
             self.density_img = None
         if self.class_density and self.scatterplot_item is not None:
+            c_data = self.master.get_color_data()
+            if c_data is None:
+                return
+            mask = np.isfinite(self._filter_visible(c_data))
+            pens = self.scatterplot_item.data['pen']
             rgb_data = [
                 pen.color().getRgb()[:3] if pen is not None else (255, 255, 255)
-                for pen in self.scatterplot_item.data['pen']]
+                for known, pen in zip(mask, pens)
+                if known]
             if len(set(rgb_data)) <= 1:
                 return
             [min_x, max_x], [min_y, max_y] = self.view_box.viewRange()
             x_data, y_data = self.scatterplot_item.getData()
             self.density_img = classdensity.class_density_image(
                 min_x, max_x, min_y, max_y, self.resolution,
-                x_data, y_data, rgb_data)
+                x_data[mask], y_data[mask], rgb_data)
             self.plot_widget.addItem(self.density_img)
 
     def update_selection_colors(self):
