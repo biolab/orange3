@@ -161,7 +161,6 @@ class OWKMeans(widget.OWWidget):
         super().__init__()
 
         self.data = None  # type: Optional[Table]
-        self.__preprocessed_data = None  # type: Optional[Table]
         self.__pending_selection = self.selection  # type: Optional[int]
         self.clusterings = {}
 
@@ -351,10 +350,10 @@ class OWKMeans(widget.OWWidget):
     def __launch_tasks(self, ks):
         # type: (List[int]) -> None
         """Execute clustering in separate threads for all given ks."""
-        self.__preprocessed_data = self.preproces(self.data)
+        preprocessed_data = self.preproces(self.data)
         futures = [self.__executor.submit(
             self._compute_clustering,
-            data=self.__preprocessed_data,
+            data=preprocessed_data,
             k=k,
             init=self.INIT_METHODS[self.smart_init][1],
             n_init=self.n_init,
@@ -447,7 +446,6 @@ class OWKMeans(widget.OWWidget):
     def invalidate(self, unconditional=False):
         self.cancel()
         self.Error.clear()
-        self.__preprocessed_data = None
         self.Warning.clear()
         self.clusterings = {}
         self.table_model.clear_scores()
