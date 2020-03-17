@@ -533,10 +533,11 @@ class OWKMeans(widget.OWWidget):
         new_table.get_column_view(cluster_var)[0][:] = clust_ids
         new_table.get_column_view(silhouette_var)[0][:] = scores
 
+        domain_attributes = set(domain.attributes)
         centroid_attributes = [
             attr.compute_value.variable
             if isinstance(attr.compute_value, ReplaceUnknowns)
-            and attr.compute_value.variable in domain.attributes
+            and attr.compute_value.variable in domain_attributes
             else attr
             for attr in km.domain.attributes]
         centroid_domain = add_columns(
