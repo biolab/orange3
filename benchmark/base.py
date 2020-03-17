@@ -7,6 +7,14 @@ import numpy as np
 
 from Orange.data import Table
 
+
+try:  # try to disable App Nap on OS X
+    import appnope
+    appnope.nope()
+except ImportError:
+    pass
+
+
 # override method prefix for niceness
 BENCH_METHOD_PREFIX = 'bench'
 unittest.TestLoader.testMethodPrefix = BENCH_METHOD_PREFIX
