@@ -751,6 +751,10 @@ class ProjectionWidgetTestMixin:
         info = self.widget.info
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIn(info._StateInfo__input_summary.details,
+                      ["", "No data on input"])
+        self.assertIn(info._StateInfo__output_summary.details,
+                      ["", "No data on output"])
 
         self.send_signal(self.widget.Inputs.data, self.data)
         self.assertTrue(
@@ -761,10 +765,20 @@ class ProjectionWidgetTestMixin:
         self.assertEqual(info._StateInfo__input_summary.brief,
                          str(len(self.data)))
         self.assertEqual(info._StateInfo__output_summary.brief, str(len(ind)))
+        self.assertGreater(info._StateInfo__input_summary.details, "")
+        self.assertGreater(info._StateInfo__output_summary.details, "")
+        self.assertNotIn(info._StateInfo__input_summary.details,
+                         ["", "No data on input"])
+        self.assertNotIn(info._StateInfo__output_summary.details,
+                         ["", "No data on output"])
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIn(info._StateInfo__input_summary.details,
+                      ["", "No data on input"])
+        self.assertIn(info._StateInfo__output_summary.details,
+                      ["", "No data on output"])
 
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
