@@ -6,7 +6,8 @@ import numpy as np
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
-from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_inputs
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
 
@@ -106,7 +107,8 @@ class TestUtils(unittest.TestCase):
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
                   f'{n_features} variables\n' \
-                  f'Features: {len(data.domain.attributes)} categorical\n' \
+                  f'Features: {len(data.domain.attributes)} categorical ' \
+                  f'(No missing values)\n' \
                   f'Target: categorical\n' \
                   f'Metas: string (not shown)'
         self.assertEqual(details, format_summary_details(data))
@@ -115,7 +117,8 @@ class TestUtils(unittest.TestCase):
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
                   f'{n_features} variables\n' \
-                  f'Features: {len(data.domain.attributes)} numeric\n' \
+                  f'Features: {len(data.domain.attributes)} numeric ' \
+                  f'(No missing values)\n' \
                   f'Target: numeric\n' \
                   f'Metas: —'
         self.assertEqual(details, format_summary_details(data))
@@ -125,7 +128,7 @@ class TestUtils(unittest.TestCase):
         details = f'{len(data)} instances, ' \
                   f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} ' \
-                  f'(7 categorical, 6 numeric)\n' \
+                  f'(7 categorical, 6 numeric) (0.2% missing values)\n' \
                   f'Target: categorical\n' \
                   f'Metas: —'
         self.assertEqual(details, format_summary_details(data))
@@ -137,7 +140,8 @@ class TestUtils(unittest.TestCase):
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = f'{len(data)} instances, ' \
                   f'{n_features} variables\n' \
-                  f'Features: {len(data.domain.attributes)} numeric\n' \
+                  f'Features: {len(data.domain.attributes)} numeric ' \
+                  f'(10.0% missing values)\n' \
                   f'Target: {len(data.domain.class_vars)} categorical\n' \
                   f'Metas: {len(data.domain.metas)} categorical'
         self.assertEqual(details, format_summary_details(data))
@@ -151,7 +155,7 @@ class TestUtils(unittest.TestCase):
         details = f'{len(data)} instances, ' \
                   f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} ' \
-                  f'(2 categorical, 1 numeric, 1 time)\n' \
+                  f'(2 categorical, 1 numeric, 1 time) (5.0% missing values)\n' \
                   f'Target: {len(data.domain.class_vars)} ' \
                   f'(1 categorical, 1 numeric)\n' \
                   f'Metas: {len(data.domain.metas)} string (not shown)'
@@ -161,7 +165,8 @@ class TestUtils(unittest.TestCase):
                           metas=None)
         details = f'{len(data)} instances, ' \
                   f'{len(data.domain.variables)} variables\n' \
-                  f'Features: {len(data.domain.attributes)} time\n' \
+                  f'Features: {len(data.domain.attributes)} time ' \
+                  f'(10.0% missing values)\n' \
                   f'Target: categorical\n' \
                   f'Metas: —'
         self.assertEqual(details, format_summary_details(data))
@@ -169,7 +174,8 @@ class TestUtils(unittest.TestCase):
         data = make_table([rgb_full, ints_full], target=None, metas=None)
         details = f'{len(data)} instances, ' \
                   f'{len(data.domain.variables)} variables\n' \
-                  f'Features: {len(data.domain.variables)} categorical\n' \
+                  f'Features: {len(data.domain.variables)} categorical ' \
+                  f'(No missing values)\n' \
                   f'Target: —\n' \
                   f'Metas: —'
         self.assertEqual(details, format_summary_details(data))
@@ -177,13 +183,63 @@ class TestUtils(unittest.TestCase):
         data = make_table([rgb_full], target=None, metas=None)
         details = f'{len(data)} instances, ' \
                   f'{len(data.domain.variables)} variable\n' \
-                  f'Features: categorical\n' \
+                  f'Features: categorical (No missing values)\n' \
                   f'Target: —\n' \
                   f'Metas: —'
         self.assertEqual(details, format_summary_details(data))
 
         data = None
         self.assertEqual('', format_summary_details(data))
+
+    def test_multiple_entry(self):
+        data = Table('zoo')
+        extra_data = Table('zoo')[20:]
+        n_features_data = len(data.domain.variables) + len(data.domain.metas)
+        n_features_extra_data = len(extra_data.domain.variables) + \
+                           len(extra_data.domain.metas)
+        details = f'Data:<br>{len(data)} instances, ' \
+                  f'{n_features_data} variables<br>' \
+                  f'Features: {len(data.domain.attributes)} categorical ' \
+                  f'(No missing values)<br>' \
+                  f'Target: categorical<br>' \
+                  f'Metas: string (not shown)<hr>'\
+                  f'Extra Data:<br>{len(extra_data)} instances, ' \
+                  f'{n_features_extra_data} variables<br>' \
+                  f'Features: {len(extra_data.domain.attributes)} ' \
+                  f'categorical (No missing values)<br>' \
+                  f'Target: categorical<br>' \
+                  f'Metas: string (not shown)'
+        inputs = [('Data', data), ('Extra Data', extra_data)]
+        self.maxDiff = None
+        self.assertEqual(details, format_multiple_inputs(inputs))
+
+        details = f'{len(data)} instances, ' \
+                  f'{n_features_data} variables<br>' \
+                  f'Features: {len(data.domain.attributes)} categorical ' \
+                  f'(No missing values)<br>' \
+                  f'Target: categorical<br>' \
+                  f'Metas: string (not shown)<hr>'\
+                  f'{len(extra_data)} instances, ' \
+                  f'{n_features_extra_data} variables<br>' \
+                  f'Features: {len(extra_data.domain.attributes)} ' \
+                  f'categorical (No missing values)<br>' \
+                  f'Target: categorical<br>' \
+                  f'Metas: string (not shown)'
+        inputs = [('', data), ('', extra_data)]
+        self.maxDiff = None
+        self.assertEqual(details, format_multiple_inputs(inputs))
+
+        details = f'No data on input<hr>' \
+                  f'{len(extra_data)} instances, ' \
+                  f'{n_features_extra_data} variables<br>' \
+                  f'Features: {len(extra_data.domain.attributes)} ' \
+                  f'categorical (No missing values)<br>' \
+                  f'Target: categorical<br>' \
+                  f'Metas: string (not shown)<hr>'\
+                  f'No data on input'
+        inputs = [('', None), ('', extra_data), ('', None)]
+        self.maxDiff = None
+        self.assertEqual(details, format_multiple_inputs(inputs))
 
 
 if __name__ == "__main__":
