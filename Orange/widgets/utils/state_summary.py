@@ -36,6 +36,7 @@ def format_variables_string(variables):
         var_string = attrs[0]
     else:
         var_string = f'{counts[0]} {attrs[0]}'
+
     return var_string
 
 
@@ -57,10 +58,48 @@ def format_summary_details(data):
         targets = format_variables_string(data.domain.class_vars)
         metas = format_variables_string(data.domain.metas)
 
+        features_missing = missing_values(data.has_missing_attribute()
+                                          and data.get_nan_frequency_attribute())
         n_features = len(data.domain.variables) + len(data.domain.metas)
         details = \
             f'{len(data)} instance{_plural(len(data))}, ' \
             f'{n_features} variable{_plural(n_features)}\n' \
-            f'Features: {features}\nTarget: {targets}\nMetas: {metas}'
+            f'Features: {features} {features_missing}\n' \
+            f'Target: {targets}\nMetas: {metas}'
 
     return details
+
+
+def missing_values(value):
+
+    if value:
+        return f'({value*100:.1f}% missing values)'
+    else:
+        return f'(No missing values)'
+
+
+def format_multiple_input(inputs):
+    """
+    A function that forms the entire descriptive part of the input/output
+    summary for widgets that have more than one input.
+
+    :param inputs: A list of tuples for each input dataset where the first
+    element of the tuple is the name of the dataset and the second is the
+    dataset
+    :type inputs: list(tuple(str, Orange.data.Table))
+
+    :return: A formatted string
+    """
+
+    def new_line(text):
+        return text.replace('\n', '<br>')
+
+    full_details = ''
+    for (name, data) in inputs:
+        details = new_line(format_summary_details(data))
+        if name == '':
+            full_details = f'{full_details}{details}<hr>'
+        else:
+            full_details = f'{full_details}{name}:<br>{details}<hr>'
+    # remove the last occurrence of the line "<hr>"
+    return full_details[:-4]
