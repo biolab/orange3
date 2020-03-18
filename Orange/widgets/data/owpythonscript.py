@@ -13,6 +13,9 @@ from unittest.mock import patch
 
 from typing import Optional, List, TYPE_CHECKING, NamedTuple
 
+from jupyter_client import MultiKernelManager
+from jupyter_client.kernelspec import KernelSpecManager, NoSuchKernel
+
 import qutepart
 
 from AnyQt.QtWidgets import (
@@ -29,10 +32,9 @@ from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize, Si
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name, Other
 from qtconsole import styles
+from qtconsole.jupyter_widget import JupyterWidget
 from qtconsole.pygments_highlighter import PygmentsHighlighter
-from qtconsole.manager import QtKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from ipython_genutils.tempdir import TemporaryDirectory
 
 from Orange.data import Table
 from Orange.base import Learner, Model
@@ -369,7 +371,7 @@ class ConsoleWidget(RichJupyterWidget):
         return super()._event_filter_console_keypress(event)
 
 
-def make_custom_ipython_kernel_manager():
+def install_ipython_kernel_manager(ksm: KernelSpecManager):
     """
     Install Orange IPython kernel,
     start a kernel manager instance,
@@ -377,7 +379,7 @@ def make_custom_ipython_kernel_manager():
     """
     import json
     import pkg_resources
-    from jupyter_client.kernelspec import KernelSpecManager
+    from ipython_genutils.tempdir import TemporaryDirectory
 
     # to run our custom kernel (./utils/ipython_kernel),
     # we install it to sys.prefix's (venv) jupyter kernels,
@@ -391,18 +393,10 @@ def make_custom_ipython_kernel_manager():
         'display_name': 'orangeipython',
         'language': 'python3',
     }
-    ksm = KernelSpecManager()
     with TemporaryDirectory() as td:
         with open(os.path.join(td, 'kernel.json'), 'w') as f:
             json.dump(kernel_json, f, sort_keys=True)
         ksm.install_kernel_spec(td, 'orangeipython', prefix=sys.prefix)
-
-    kernel_manager = QtKernelManager(kernel_name='orangeipython')
-    kernel_manager.start_kernel()
-    # and clean up behind ourselves by removing it after the kernel starts
-    ksm.remove_kernel_spec('orangeipython')
-
-    return kernel_manager
 
 
 class OWPythonScript(OWWidget):
@@ -444,15 +438,16 @@ class OWPythonScript(OWWidget):
     # of # PythonScript even if they are in different schemata.
     shared_namespaces = defaultdict(dict)
 
-    kernel_manager = None
+    multi_kernel_manager = MultiKernelManager()
+    multi_kernel_manager.default_kernel_name = 'orangeipython'
+    multi_kernel_manager.kernel_manager_class = 'qtconsole.manager.QtKernelManager'
+    multi_kernel_manager.kernel_spec_manager = KernelSpecManager()
 
     class Error(OWWidget.Error):
         pass
 
     def __init__(self):
         super().__init__()
-        if self.kernel_manager is None:
-            self.kernel_manager = make_custom_ipython_kernel_manager()
         self.libraryListSource = []
 
         for name in self.signal_names:
@@ -581,7 +576,16 @@ class OWPythonScript(OWWidget):
         self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
 
-        kernel_client = self.kernel_manager.client()
+        ksm = self.multi_kernel_manager.kernel_spec_manager
+        try:
+            ksm.get_kernel_spec('orangeipython')
+        except NoSuchKernel:
+            install_ipython_kernel_manager(ksm)
+
+        kernel_id = self.multi_kernel_manager.start_kernel()
+        kernel_manager = self.multi_kernel_manager.get_kernel(kernel_id)
+
+        kernel_client = kernel_manager.client()
         kernel_client.start_channels()
 
         jupyter_widget = ConsoleWidget()
@@ -817,6 +821,10 @@ class OWPythonScript(OWWidget):
             library = [dict(name=s.name, script=s.script, filename=s.filename)
                        for s in scripts]  # type: List[_ScriptData]
             settings["scriptLibrary"] = library
+
+    def onDeleteWidget(self):
+        super().onDeleteWidget()
+        self.console.kernel_manager.shutdown_kernel()
 
 
 if __name__ == "__main__":  # pragma: no cover
