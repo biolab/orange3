@@ -85,3 +85,7 @@ class TestUtils(unittest.TestCase):
                 s, expected,
                 f"scaled({size}, {const}, Qt.KeepAspectRatioByExpanding)"
             )
+
+        self.assertEqual(
+            scaled(QSizeF(0, 0), QSizeF(100, 100)), QSizeF(0, 0)
+        )

@@ -142,6 +142,8 @@ def scaled(size: QSizeF, constraint: QSizeF, mode=Qt.KeepAspectRatio) -> QSizeF:
     ie. the result is not constrained in that dimension.
     """
     size, constraint = QSizeF(size), QSizeF(constraint)
+    if size.isEmpty():
+        return size
     if constraint.width() < 0 and constraint.height() < 0:
         return size
     if mode == Qt.IgnoreAspectRatio:
