@@ -707,10 +707,18 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     def _get_projection_data(self):
         if self.data is None or self.projection is None:
             return None
+        proposed = [a.name for a in self.projection.domain.attributes]
+        names = get_unique_names(self.data.domain, proposed)
+
+        if proposed != names:
+            attributes = tuple([attr.copy(name=name) for name, attr in
+                                zip(names, self.projection.domain.attributes)])
+        else:
+            attributes = self.projection.domain.attributes
         return self.data.transform(
             Domain(self.data.domain.attributes,
                    self.data.domain.class_vars,
-                   self.data.domain.metas + self.projection.domain.attributes))
+                   self.data.domain.metas + attributes))
 
     def commit(self):
         super().commit()
