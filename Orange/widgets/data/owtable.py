@@ -601,7 +601,12 @@ class OWDataTable(OWWidget):
         selmodel = BlockSelectionModel(
             view.model(), parent=view, selectBlocks=not self.select_rows)
         view.setSelectionModel(selmodel)
-        view.selectionModel().selectionChanged.connect(self.update_selection)
+
+        def click_release_event_handler(_):
+            self.update_selection()
+
+        view.mouseReleaseEvent = click_release_event_handler
+        view.keyReleaseEvent = click_release_event_handler
 
     #noinspection PyBroadException
     def set_corner_text(self, table, text):
@@ -799,6 +804,9 @@ class OWDataTable(OWWidget):
                     )
             view.selectionModel().select(
                 selection, QItemSelectionModel.ClearAndSelect)
+            # widget do not catch selectionChanged anymore it is implemented
+            # through mouseReleaseEvent
+            view.mouseReleaseEvent(None)
 
     @staticmethod
     def get_selection(view):
