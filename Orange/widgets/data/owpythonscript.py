@@ -21,12 +21,12 @@ import qutepart
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
-    QStyleOptionViewItem, QPlainTextDocumentLayout
-)
+    QStyleOptionViewItem, QPlainTextDocumentLayout,
+    QLabel, QWidget, QHBoxLayout)
 from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
-)
+    QFontMetrics)
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize, Signal
 
 import pygments.style
@@ -102,6 +102,144 @@ def make_pygments_style(scheme_name):
 
 
 PygmentsStyle = make_pygments_style('Light')
+
+
+class CodeEditor(qutepart.Qutepart):
+    viewport_margins_updated = Signal(float)
+
+    def setViewportMargins(self, left, top, right, bottom):
+        """
+        Override to align function signature with first character.
+        """
+        super().setViewportMargins(left, top, right, bottom)
+
+        cursor = QTextCursor(self.firstVisibleBlock())
+        qutepart.setPositionInBlock(cursor, 0)
+        cursorRect = self.cursorRect(cursor).translated(0, 0)
+
+        first_char_indent = self._totalMarginWidth + \
+                            self.contentsMargins().left() + \
+                            cursorRect.left()
+
+        self.viewport_margins_updated.emit(first_char_indent)
+
+
+class FakeSignature(QWidget):
+    def __init__(self, parent, highlighting_scheme, font):
+        super().__init__(parent)
+        self.highlighting_scheme = highlighting_scheme
+        self.font = font
+        self.bold_font = QFont(font)
+        self.bold_font.setBold(True)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.setLayout(layout)
+
+        self.indentation_level = 0
+        self.signal_labels = {}
+
+        self._prefix = None
+        self._char_4_width = QFontMetrics(self.font).width('4444')
+
+    def make_signal_labels(self, prefix):
+        self._prefix = prefix
+        # `in_data[, ]`
+        for i, signal in enumerate(OWPythonScript.signal_names):
+            # adding an empty b tag like this adjusts the
+            # line height to match the rest of the labels
+            signal_lbl = QLabel('<b></b>' + prefix + signal, self)
+            signal_lbl.setFont(self.font)
+            signal_lbl.setContentsMargins(0, 0, 0, 0)
+            self.layout().addWidget(signal_lbl)
+
+            self.signal_labels[signal] = signal_lbl
+
+            if i >= len(OWPythonScript.signal_names) - 1:
+                break
+
+            comma_lbl = QLabel(', ')
+            comma_lbl.setFont(self.font)
+            comma_lbl.setContentsMargins(0, 0, 0, 0)
+            comma_lbl.setStyleSheet('.QLabel { color: ' +
+                                    self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                                    '; }')
+            self.layout().addWidget(comma_lbl)
+
+    def setIndent(self, margins_width):
+        fm = QFontMetrics(self.font)
+        self.setContentsMargins(max(0,
+                                    margins_width +
+                                    (self.indentation_level - 1) * self._char_4_width),
+                                0, 0, 0
+                                )
+
+    def update_signal_text(self, signal_name, values_length):
+        if not self._prefix:
+            return
+        lbl = self.signal_labels[signal_name]
+        if values_length == 0:
+            text = '<b></b>' + self._prefix + signal_name
+        elif values_length == 1:
+            text = '<b>' + self._prefix + signal_name + '</b>'
+        else:
+            text = '<b>' + self._prefix + signal_name + 's</b>'
+        if lbl.text() != text:
+            lbl.setText(text)
+            lbl.update()
+
+
+class FunctionSignature(FakeSignature):
+    def __init__(self, *args, function_name="python_script"):
+        super().__init__(*args)
+
+        # `def python_script(`
+        def_lbl = QLabel('<b style="color: ' +
+                         self.highlighting_scheme[Keyword].split(' ')[-1] +
+                         ';">def </b>'
+                         '<span style="color: ' +
+                         self.highlighting_scheme[Name.Function].split(' ')[-1] +
+                         ';">' + function_name + '</span>'
+                                                 '<span style="color: ' +
+                         self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                         ';">(</span>', self)
+        def_lbl.setFont(self.font)
+        def_lbl.setContentsMargins(0, 0, 0, 0)
+        self.layout().addWidget(def_lbl)
+
+        # `in_data[, ]` * 4
+        self.make_signal_labels('in_')
+
+        # `):`
+        rparen_lbl = QLabel('):', self)
+        rparen_lbl.setFont(self.font)
+        rparen_lbl.setContentsMargins(0, 0, 0, 0)
+        rparen_lbl.setStyleSheet('.QLabel { color: ' +
+                                 self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                                 '; }')
+        self.layout().addWidget(rparen_lbl)
+
+        self.layout().addStretch()
+
+
+class ReturnStatement(FakeSignature):
+    def __init__(self, parent, highlighting_scheme, font, function_name="python_script"):
+        super().__init__(parent, highlighting_scheme, font)
+        self.indentation_level = 1
+
+        # `return `
+        ret_lbl = QLabel('<b style="color: ' + \
+                         highlighting_scheme[Keyword].split(' ')[-1] + \
+                         ';">return </b>', self)
+        ret_lbl.setFont(self.font)
+        ret_lbl.setContentsMargins(0, 0, 0, 0)
+        self.layout().addWidget(ret_lbl)
+
+        # `out_data[, ]` * 4
+        self.make_signal_labels('out_')
+
+        self.layout().addStretch()
 
 
 def read_file_content(filename, limit=None):
@@ -228,6 +366,7 @@ class ConsoleWidget(RichJupyterWidget):
         by storing a queued execution payload when the widget's commit
         method is invoked before <In [0]:> appears.
         """
+
         @self.becomes_ready.connect
         def _():
             self.becomes_ready.disconnect(_)  # reset callback
@@ -249,6 +388,7 @@ class ConsoleWidget(RichJupyterWidget):
 
         def err():
             raise ConnectionAbortedError("Kernel closed run_script comm channel.")
+
         self.inject_vars_comm.on_close(err)
         self.collect_vars_comm.on_close(err)
 
@@ -382,7 +522,8 @@ def install_ipython_kernel_manager(ksm: KernelSpecManager):
     from ipython_genutils.tempdir import TemporaryDirectory
 
     # to run our custom kernel (./utils/ipython_kernel),
-    # we install it to sys.prefix's (venv) jupyter kernels,
+    # we install it to sys.prefix's (venv) jupyter kernels
+    # TODO versioning
     kernel_json = {
         "argv": [
             sys.executable,
@@ -454,16 +595,6 @@ class OWPythonScript(OWWidget):
             setattr(self, name, {})
 
         self._cachedDocuments = {}
-
-        self.infoBox = gui.vBox(self.controlArea, 'Info')
-        gui.label(
-            self.infoBox, self,
-            "<p>Execute python script.</p><p>Input variables:<ul><li> " +
-            "<li>".join(map("in_{0}, in_{0}s".format, self.signal_names)) +
-            "</ul></p><p>Output variables:<ul><li>" +
-            "<li>".join(map("out_{0}".format, self.signal_names)) +
-            "</ul></p>"
-        )
 
         self.libraryList = itemmodels.PyListModel(
             [], self,
@@ -541,13 +672,20 @@ class OWPythonScript(OWWidget):
         self.defaultFont = defaultFont = 'Menlo'
         self.defaultFontSize = defaultFontSize = 13
 
-        self.textBox = gui.vBox(self, 'Python Script')
-        self.splitCanvas.addWidget(self.textBox)
+        self.editorBox = gui.vBox(self, box=True)
+        self.splitCanvas.addWidget(self.editorBox)
 
-        editor = qutepart.Qutepart(self)
+        syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES['Light']
 
         eFont = QFont(defaultFont)
         eFont.setPointSize(defaultFontSize)
+
+        func_sig = FunctionSignature(self.editorBox,
+                                     syntax_highlighting_scheme,
+                                     eFont)
+        self.func_sig = func_sig
+
+        editor = CodeEditor(self)
         editor.setFont(eFont)
 
         # use python autoindent, autocomplete
@@ -562,11 +700,32 @@ class OWPythonScript(OWWidget):
         # TODO should we care about displaying the these warnings?
         # editor.userWarning.connect()
 
+        return_stmt = ReturnStatement(self.editorBox,
+                                      syntax_highlighting_scheme,
+                                      eFont)
+        self.return_stmt = return_stmt
+
+        textEditBox = QWidget(self.editorBox)
+        textEditBox.setLayout(QHBoxLayout())
+        char_4_width = QFontMetrics(eFont).width('0000')
+
+        @editor.viewport_margins_updated.connect
+        def _(width):
+            func_sig.setIndent(width)
+            textEditMargin = max(0, char_4_width - width)
+            return_stmt.setIndent(textEditMargin + width)
+            textEditBox.layout().setContentsMargins(
+                textEditMargin, 0, 0, 0
+            )
+
         self.editor = editor
         self.editor.modificationChanged[bool].connect(self.onModificationChanged)
-        self.textBox.layout().addWidget(self.editor)
+        textEditBox.layout().addWidget(self.editor)
 
-        self.textBox.setAlignment(Qt.AlignVCenter)
+        self.editorBox.layout().addWidget(func_sig)
+        self.editorBox.layout().addWidget(textEditBox)
+        self.editorBox.layout().addWidget(return_stmt)
+        self.editorBox.setAlignment(Qt.AlignVCenter)
         self.saveAction = action = QAction("&Save", self.editor)
         action.setToolTip("Save script to file")
         action.setShortcut(QKeySequence(QKeySequence.Save))
@@ -657,7 +816,13 @@ class OWPythonScript(OWWidget):
         self.handle_input(data, sig_id, "object")
 
     def handleNewSignals(self):
+        self.update_fake_function_signature_labels()
         self.commit()
+
+    def update_fake_function_signature_labels(self):
+        for name in self.signal_names:
+            value = getattr(self, name)
+            self.func_sig.update_signal_text(name, len(value))
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()
@@ -795,7 +960,9 @@ class OWPythonScript(OWWidget):
         for signal in self.signal_names:
             out_name = "out_" + signal
             if out_name not in out_vars:
+                self.return_stmt.update_signal_text(signal, 0)
                 continue
+            self.return_stmt.update_signal_text(signal, 1)
 
             getattr(self.Outputs, signal).send(out_vars[out_name])
 
