@@ -108,7 +108,7 @@ class TestUtils(unittest.TestCase):
                   f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} categorical\n' \
                   f'Target: categorical\n' \
-                  f'Metas: string (not shown)'
+                  f'Metas: string'
         self.assertEqual(details, format_summary_details(data))
 
         data = Table('housing')
@@ -154,7 +154,7 @@ class TestUtils(unittest.TestCase):
                   f'(2 categorical, 1 numeric, 1 time)\n' \
                   f'Target: {len(data.domain.class_vars)} ' \
                   f'(1 categorical, 1 numeric)\n' \
-                  f'Metas: {len(data.domain.metas)} string (not shown)'
+                  f'Metas: {len(data.domain.metas)} string'
         self.assertEqual(details, format_summary_details(data))
 
         data = make_table([time_full, time_missing], target=[ints_missing],

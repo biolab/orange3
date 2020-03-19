@@ -24,9 +24,7 @@ def format_variables_string(variables):
         # `isinstance`, which would fail in the above case
         var_type_list = [v for v in variables if type(v) is var_type]  # pylint: disable=unidiomatic-typecheck
         if var_type_list:
-            not_shown = ' (not shown)' if issubclass(var_type, StringVariable)\
-                else ''
-            agg.append((f'{var_type_name}{not_shown}', len(var_type_list)))
+            agg.append((var_type_name, len(var_type_list)))
 
     attrs, counts = list(zip(*agg))
     if len(attrs) > 1:
