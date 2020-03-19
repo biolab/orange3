@@ -43,7 +43,7 @@ from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Input, Output
+from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
@@ -584,6 +584,9 @@ class OWPythonScript(OWWidget):
     multi_kernel_manager.kernel_manager_class = 'qtconsole.manager.QtKernelManager'
     multi_kernel_manager.kernel_spec_manager = KernelSpecManager()
 
+    class Warning(OWWidget.Warning):
+        illegal_var_type = Msg('{} should be of type {}, not {}.')
+
     class Error(OWWidget.Error):
         pass
 
@@ -952,19 +955,34 @@ class OWPythonScript(OWWidget):
              if name not in not_saved})
 
     def commit(self):
-        script = str(self.editor.text)
+        self.Warning.clear()
+        self.Error.clear()
 
+        script = str(self.editor.text)
         self.console.run_script_with_locals(script, self.initial_locals_state())
 
     def receive_outputs(self, out_vars):
         for signal in self.signal_names:
             out_name = "out_" + signal
+            output = getattr(self.Outputs, signal)
             if out_name not in out_vars:
                 self.return_stmt.update_signal_text(signal, 0)
+                output.send(None)
                 continue
-            self.return_stmt.update_signal_text(signal, 1)
+            var = out_vars[out_name]
 
-            getattr(self.Outputs, signal).send(out_vars[out_name])
+            req_type = self.Outputs.__dict__[signal].type
+            if not isinstance(var, req_type):
+                self.return_stmt.update_signal_text(signal, 0)
+                output.send(None)
+                actual_type = type(var)
+                self.Warning.illegal_var_type(out_name,
+                                              req_type.__module__ + '.' + req_type.__name__,
+                                              actual_type.__module__ + '.' + actual_type.__name__)
+                continue
+
+            self.return_stmt.update_signal_text(signal, 1)
+            output.send(var)
 
     def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()

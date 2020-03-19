@@ -35,6 +35,12 @@ class OrangeIPythonKernel(IPythonKernel):
             if v not in input_vars:
                 del self.shell.user_ns[v]
                 self.shell.user_ns_hidden.pop(v, None)
+        # remove old out_ vars
+        for signal in OWPythonScript.signal_names:
+            name = 'out_' + signal
+            if name in self.shell.user_ns:
+                del self.shell.user_ns[name]
+                self.shell.user_ns_hidden.pop(name, None)
 
         self.shell.push(input_vars)
         self.comm_variables[comm] = list(input_vars)
@@ -54,8 +60,11 @@ class OrangeIPythonKernel(IPythonKernel):
             name = 'out_' + signal
             ns = self.shell.user_ns
             out = OWPythonScript.Outputs.__dict__[signal]
-            if name in ns and isinstance(ns[name], out.type):
-                outputs[name] = ns[name]
+            if name in ns:
+                if isinstance(ns[name], out.type):
+                    outputs[name] = ns[name]
+                else:
+                    outputs[name] = type(ns[name])
 
         serialized_vars = {
             k: codecs.encode(pickle.dumps(o), 'base64').decode()
