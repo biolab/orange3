@@ -17,12 +17,12 @@ from AnyQt.QtWidgets import (
     QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
     QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QClipboard
+from AnyQt.QtGui import QColor, QClipboard, QMouseEvent
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
-    QItemSelectionModel, QItemSelection, QItemSelectionRange
-)
+    QItemSelectionModel, QItemSelection, QItemSelectionRange,
+    Signal)
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
@@ -362,6 +362,34 @@ def table_selection_to_list(table):
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
+class TableView(QTableView):
+    #: Signal emitted when selection finished. It is not emitted during
+    #: mouse drag selection updates.
+    selectionFinished = Signal()
+
+    __mouseDown = False
+    __selectionDidChange = False
+
+    def selectionChanged(self, selected, deselected) -> None:
+        super().selectionChanged(selected, deselected)
+        if self.__mouseDown:
+            self.__selectionDidChange = True
+        else:
+            self.selectionFinished.emit()
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        self.__mouseDown = event.button() == Qt.LeftButton
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        super().mouseReleaseEvent(event)
+        if self.__mouseDown and event.button() == Qt.LeftButton:
+            self.__mouseDown = False
+        if self.__selectionDidChange:
+            self.__selectionDidChange = False
+            self.selectionFinished.emit()
+
+
 class OWDataTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
@@ -466,7 +494,7 @@ class OWDataTable(OWWidget):
                 assert self.tabs.indexOf(view) != -1
                 self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
             else:
-                view = QTableView()
+                view = TableView()
                 view.setSortingEnabled(True)
                 view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
 
@@ -601,7 +629,7 @@ class OWDataTable(OWWidget):
         selmodel = BlockSelectionModel(
             view.model(), parent=view, selectBlocks=not self.select_rows)
         view.setSelectionModel(selmodel)
-        view.selectionModel().selectionChanged.connect(self.update_selection)
+        view.selectionFinished.connect(self.update_selection)
 
     #noinspection PyBroadException
     def set_corner_text(self, table, text):
