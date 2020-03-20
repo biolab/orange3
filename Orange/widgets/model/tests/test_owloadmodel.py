@@ -2,33 +2,139 @@
 # pylint: disable=missing-docstring
 import os
 import pickle
-from tempfile import mkstemp
+from tempfile import NamedTemporaryFile
+import unittest
+from unittest.mock import Mock, patch
 
-from Orange.classification.majority import ConstantModel
+import numpy as np
+
+from orangewidget.utils.filedialogs import RecentPath
+from Orange.data import Table
+from Orange.classification.naive_bayes import NaiveBayesLearner
 from Orange.widgets.model.owloadmodel import OWLoadModel
 from Orange.widgets.tests.base import WidgetTest
 
 
 class TestOWLoadModel(WidgetTest):
+    # Attribute used to store event data so it does not get garbage
+    # collected before event is processed.
+    event_data = None
+
     def setUp(self):
-        self.widget = self.create_widget(OWLoadModel)
+        self.widget = self.create_widget(OWLoadModel)  # type: OWLoadModel
+        data = Table("iris")
+        self.model = NaiveBayesLearner()(data)
+        with NamedTemporaryFile(suffix=".pkcls", delete=False) as f:
+            self.filename = f.name
+            pickle.dump(self.model, f)
 
-    def test_show_error(self):
-        self.widget.load("no-such-file.pckls")
-        self.assertTrue(self.widget.Error.load_error.is_shown())
+    def tearDown(self):
+        os.remove(self.filename)
 
-        clsf = ConstantModel([1, 1, 1])
-        fd, fname = mkstemp(suffix='.pkcls')
-        os.close(fd)
+    def test_browse_file_opens_file(self):
+        w = self.widget
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   Mock(return_value=(self.filename, "*.pkcls"))):
+            w.browse_file()
+            model = self.get_output(w.Outputs.model)
+            np.testing.assert_equal(
+                model.log_cont_prob, self.model.log_cont_prob)
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   Mock(return_value=("", "*.pkcls"))):
+            w.browse_file()
+            # Keep the same model on output
+            model2 = self.get_output(w.Outputs.model)
+            self.assertIs(model2, model)
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   Mock(return_value=(self.filename, "*.pkcls"))):
+            w.reload()
+            model2 = self.get_output(w.Outputs.model)
+            self.assertIsNot(model2, model)
+
+    @patch("pickle.load")
+    def test_select_file(self, load):
+        w = self.widget
+        with NamedTemporaryFile(suffix=".pkcls") as f2, \
+                NamedTemporaryFile(suffix=".pkcls", delete=False) as f3:
+            w.add_path(self.filename)
+            w.add_path(f2.name)
+            w.add_path(f3.name)
+            w.open_file()
+            args = load.call_args[0][0]
+            self.assertEqual(args.name, f3.name.replace("\\", "/"))
+            w.select_file(2)
+            args = load.call_args[0][0]
+            self.assertEqual(args.name, self.filename.replace("\\", "/"))
+
+    def test_load_error(self):
+        w = self.widget
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   Mock(return_value=(self.filename, "*.pkcls"))):
+            with patch("pickle.load", side_effect=pickle.UnpicklingError):
+                w.browse_file()
+                self.assertTrue(w.Error.load_error.is_shown())
+                self.assertIsNone(self.get_output(w.Outputs.model))
+
+            w.reload()
+            self.assertFalse(w.Error.load_error.is_shown())
+            model = self.get_output(w.Outputs.model)
+            self.assertIsNotNone(model)
+
+            with patch.object(w, "last_path", Mock(return_value="")), \
+                    patch("pickle.load") as load:
+                w.reload()
+                load.assert_not_called()
+                self.assertFalse(w.Error.load_error.is_shown())
+                self.assertIs(self.get_output(w.Outputs.model), model)
+
+            with patch("pickle.load", side_effect=pickle.UnpicklingError):
+                w.reload()
+                self.assertTrue(w.Error.load_error.is_shown())
+                self.assertIsNone(self.get_output(w.Outputs.model))
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   Mock(return_value=("foo", "*.pkcls"))):
+            w.browse_file()
+            self.assertTrue(w.Error.load_error.is_shown())
+            self.assertIsNone(self.get_output(w.Outputs.model))
+
+    def test_no_last_path(self):
+        self.widget = \
+            self.create_widget(OWLoadModel,
+                               stored_settings={"recent_paths": []})
+        # Doesn't crash and contains a single item, (none).
+        self.assertEqual(self.widget.file_combo.count(), 1)
+
+    @patch("Orange.widgets.widget.OWWidget.workflowEnv",
+           Mock(return_value={"basedir": os.getcwd()}))
+    @patch("pickle.load")
+    def test_open_moved_workflow(self, load):
+        """
+        Test opening workflow that has been moved to another location
+        (i.e. sent by email), considering data file is stored in the same
+        directory as the workflow.
+        """
+        temp_file = NamedTemporaryFile(dir=os.getcwd(), delete=False)
+        file_name = temp_file.name
+        temp_file.close()
+        base_name = os.path.basename(file_name)
         try:
-            with open(fname, 'wb') as f:
-                pickle.dump(clsf, f)
-            self.widget.load(fname)
-            self.assertFalse(self.widget.Error.load_error.is_shown())
-
-            with open(fname, "w") as f:
-                f.write("X")
-            self.widget.load(fname)
-            self.assertTrue(self.widget.Error.load_error.is_shown())
+            recent_path = RecentPath(
+                os.path.join("temp/models", base_name), "",
+                os.path.join("models", base_name)
+            )
+            stored_settings = {"recent_paths": [recent_path]}
+            w = self.create_widget(OWLoadModel,
+                                   stored_settings=stored_settings)
+            w.open_file()
+            self.assertEqual(w.file_combo.count(), 1)
+            args = load.call_args[0][0]
+            self.assertEqual(args.name, file_name.replace("\\", "/"))
         finally:
-            os.remove(fname)
+            os.remove(file_name)
+
+
+if __name__ == "__main__":
+    unittest.main()
