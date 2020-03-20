@@ -1059,6 +1059,8 @@ class OWPaintData(OWWidget):
         else:  # set_dimensions already calls _replot, no need to call it again
             self._replot()
 
+        self.commit()
+
     def add_new_class_label(self, undoable=True):
 
         newlabel = next(label for label in namegen('C', 1)
