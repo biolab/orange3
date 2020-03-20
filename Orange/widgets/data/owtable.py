@@ -397,6 +397,11 @@ class TableView(QTableView):
             self.selectionFinished.emit()
 
 
+class DataTableView(TableView):
+    dataset: Table
+    input_slot: TableSlot
+
+
 class OWDataTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
@@ -501,7 +506,7 @@ class OWDataTable(OWWidget):
                 assert self.tabs.indexOf(view) != -1
                 self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
             else:
-                view = TableView()
+                view = DataTableView()
                 view.setSortingEnabled(True)
                 view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
 
@@ -529,7 +534,7 @@ class OWDataTable(OWWidget):
 
             self._setup_table_view(view, data)
             slot = TableSlot(tid, data, table_summary(data), view)
-            view._input_slot = slot  # pylint: disable=protected-access
+            view.input_slot = slot
             self._inputs[tid] = slot
 
             self.tabs.setCurrentIndex(self.tabs.indexOf(view))
@@ -552,8 +557,7 @@ class OWDataTable(OWWidget):
 
             current = self.tabs.currentWidget()
             if current is not None:
-                # pylint: disable=protected-access
-                self.set_info(current._input_slot.summary)
+                self.set_info(current.input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
         self.openContext(data)
@@ -702,8 +706,7 @@ class OWDataTable(OWWidget):
                 pass
 
     def _on_select_all(self, _):
-        # pylint: disable=protected-access
-        data_info = self.tabs.currentWidget()._input_slot.summary
+        data_info = self.tabs.currentWidget().input_slot.summary
         if len(self.selected_rows) == data_info.len \
                 and len(self.selected_cols) == len(data_info.domain):
             self.tabs.currentWidget().clearSelection()
@@ -714,8 +717,7 @@ class OWDataTable(OWWidget):
         """Update the info box on current tab change"""
         view = self.tabs.widget(index)
         if view is not None and view.model() is not None:
-            # pylint: disable=protected-access
-            self.set_info(view._input_slot.summary)
+            self.set_info(view.input_slot.summary)
         else:
             self.set_info(None)
 
@@ -806,8 +808,7 @@ class OWDataTable(OWWidget):
     def _update_info(self):
         current = self.tabs.currentWidget()
         if current is not None and current.model() is not None:
-            # pylint: disable=protected-access
-            self.set_info(current._input_slot.summary)
+            self.set_info(current.input_slot.summary)
 
     def update_selection(self, *_):
         self.commit()
