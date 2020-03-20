@@ -21,6 +21,7 @@ from Orange.widgets.utils.annotated_data import (
 )
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
@@ -482,12 +483,14 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
                 self.Warning.subset_not_subset()
 
     def set_input_summary(self, data):
-        summary = str(len(data)) if data else self.info.NoInput
-        self.info.set_input_summary(summary)
+        summary = len(data) if data else self.info.NoInput
+        detail = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, detail)
 
     def set_output_summary(self, data):
-        summary = str(len(data)) if data else self.info.NoOutput
-        self.info.set_output_summary(summary)
+        summary = len(data) if data else self.info.NoOutput
+        detail = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, detail)
 
     def get_subset_mask(self):
         if not self.subset_indices:
