@@ -695,7 +695,7 @@ class OWPlotGUI:
             callback=self._get_callback(cb_name, self._master),
             orientation=Qt.Horizontal,
             sendSelectedValue=True, contentsLength=12,
-            labelWidth=50)
+            labelWidth=50, searchable=True)
 
     def color_value_combo(self, widget, label="Color: "):
         """Creates a combo box that controls point color"""
