@@ -565,7 +565,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         )
         legend_container.setLayout(QGraphicsLinearLayout())
         legend_container.layout().setContentsMargins(0, 0, 0, 0)
-        grid.addItem(legend_container, BottomLabelsRow + 1, Col0 + 1, 1, M * 2,
+        grid.addItem(legend_container, BottomLabelsRow + 1, Col0 + 1, 1, M * 2 - 1,
                      alignment=Qt.AlignRight)
 
         self.heatmap_widget_grid = heatmap_widgets
