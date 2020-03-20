@@ -1,0 +1,37 @@
+name: Miscellaneous workflow
+
+on:
+  # Trigger the workflow on push or pull request, but only for the master branch
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    test_future_compatibility:
+      runs-on: ${{ matrix.os }}
+      timeout-minutes: 30
+      strategy:
+        fail-fast: False
+        matrix:
+          python: [3.7]
+          os: [ubuntu-18.04]
+
+      steps:
+        - uses: actions/checkout@v2
+        - name: Setup Python
+          uses: actions/setup-python@v1
+          with:
+            python-version: ${{ matrix.python }}
+
+        - name: Install linux system dependencies
+          run: sudo apt-get install -y libxkbcommon-x11-0
+
+        - name: Install Tox
+          run: pip install tox
+
+        - name: Run Tox
+          run: xvfb-run -a -s "-screen 0 1280x1024x24" tox -e future_compatibility
