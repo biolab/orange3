@@ -79,7 +79,6 @@ class TestOWSave(OWSaveTestBase):
 
     def test_initial_start_dir(self):
         widget = self.widget
-        widget.filename = _w("/usr/foo/bar.csv")
         self.assertEqual(widget.initial_start_dir(),
                          _w(os.path.expanduser("~/")))
 
