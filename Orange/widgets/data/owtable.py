@@ -17,12 +17,12 @@ from AnyQt.QtWidgets import (
     QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
     QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QClipboard
+from AnyQt.QtGui import QColor, QClipboard, QMouseEvent
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
-    QItemSelectionModel, QItemSelection, QItemSelectionRange
-)
+    QItemSelectionModel, QItemSelection, QItemSelectionRange,
+    Signal)
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
@@ -362,6 +362,46 @@ def table_selection_to_list(table):
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
+class TableView(QTableView):
+    #: Signal emitted when selection finished. It is not emitted during
+    #: mouse drag selection updates.
+    selectionFinished = Signal()
+
+    __mouseDown = False
+    __selectionDidChange = False
+
+    def setSelectionModel(self, selectionModel: QItemSelectionModel) -> None:
+        sm = self.selectionModel()
+        if sm is not None:
+            sm.selectionChanged.disconnect(self.__on_selectionChanged)
+        super().setSelectionModel(selectionModel)
+        if selectionModel is not None:
+            selectionModel.selectionChanged.connect(self.__on_selectionChanged)
+
+    def __on_selectionChanged(self):
+        if self.__mouseDown:
+            self.__selectionDidChange = True
+        else:
+            self.selectionFinished.emit()
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        self.__mouseDown = event.button() == Qt.LeftButton
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        super().mouseReleaseEvent(event)
+        if self.__mouseDown and event.button() == Qt.LeftButton:
+            self.__mouseDown = False
+        if self.__selectionDidChange:
+            self.__selectionDidChange = False
+            self.selectionFinished.emit()
+
+
+class DataTableView(TableView):
+    dataset: Table
+    input_slot: TableSlot
+
+
 class OWDataTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
@@ -466,7 +506,7 @@ class OWDataTable(OWWidget):
                 assert self.tabs.indexOf(view) != -1
                 self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
             else:
-                view = QTableView()
+                view = DataTableView()
                 view.setSortingEnabled(True)
                 view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
 
@@ -494,7 +534,7 @@ class OWDataTable(OWWidget):
 
             self._setup_table_view(view, data)
             slot = TableSlot(tid, data, table_summary(data), view)
-            view._input_slot = slot  # pylint: disable=protected-access
+            view.input_slot = slot
             self._inputs[tid] = slot
 
             self.tabs.setCurrentIndex(self.tabs.indexOf(view))
@@ -517,8 +557,7 @@ class OWDataTable(OWWidget):
 
             current = self.tabs.currentWidget()
             if current is not None:
-                # pylint: disable=protected-access
-                self.set_info(current._input_slot.summary)
+                self.set_info(current.input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
         self.openContext(data)
@@ -601,7 +640,7 @@ class OWDataTable(OWWidget):
         selmodel = BlockSelectionModel(
             view.model(), parent=view, selectBlocks=not self.select_rows)
         view.setSelectionModel(selmodel)
-        view.selectionModel().selectionChanged.connect(self.update_selection)
+        view.selectionFinished.connect(self.update_selection)
 
     #noinspection PyBroadException
     def set_corner_text(self, table, text):
@@ -667,8 +706,7 @@ class OWDataTable(OWWidget):
                 pass
 
     def _on_select_all(self, _):
-        # pylint: disable=protected-access
-        data_info = self.tabs.currentWidget()._input_slot.summary
+        data_info = self.tabs.currentWidget().input_slot.summary
         if len(self.selected_rows) == data_info.len \
                 and len(self.selected_cols) == len(data_info.domain):
             self.tabs.currentWidget().clearSelection()
@@ -679,8 +717,7 @@ class OWDataTable(OWWidget):
         """Update the info box on current tab change"""
         view = self.tabs.widget(index)
         if view is not None and view.model() is not None:
-            # pylint: disable=protected-access
-            self.set_info(view._input_slot.summary)
+            self.set_info(view.input_slot.summary)
         else:
             self.set_info(None)
 
@@ -771,8 +808,7 @@ class OWDataTable(OWWidget):
     def _update_info(self):
         current = self.tabs.currentWidget()
         if current is not None and current.model() is not None:
-            # pylint: disable=protected-access
-            self.set_info(current._input_slot.summary)
+            self.set_info(current.input_slot.summary)
 
     def update_selection(self, *_):
         self.commit()
