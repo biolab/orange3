@@ -370,8 +370,15 @@ class TableView(QTableView):
     __mouseDown = False
     __selectionDidChange = False
 
-    def selectionChanged(self, selected, deselected) -> None:
-        super().selectionChanged(selected, deselected)
+    def setSelectionModel(self, selectionModel: QItemSelectionModel) -> None:
+        sm = self.selectionModel()
+        if sm is not None:
+            sm.selectionChanged.disconnect(self.__on_selectionChanged)
+        super().setSelectionModel(selectionModel)
+        if selectionModel is not None:
+            selectionModel.selectionChanged.connect(self.__on_selectionChanged)
+
+    def __on_selectionChanged(self):
         if self.__mouseDown:
             self.__selectionDidChange = True
         else:
