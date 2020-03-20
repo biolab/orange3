@@ -882,7 +882,7 @@ class TimeVariable(ContinuousVariable):
     _all_vars = {}
     TYPE_HEADERS = ('time', 't')
     UNIX_EPOCH = datetime(1970, 1, 1)
-    _ISO_FORMATS = [
+    _ISO_FORMATS = (
         # have_date, have_time, format_str
         # in order of decreased probability
         (1, 1, '%Y-%m-%d %H:%M:%S%z'),
@@ -917,7 +917,10 @@ class TimeVariable(ContinuousVariable):
         # so these two lines must be in this order
         (1, 0, '%Y-%m'),
         (1, 0, '%Y-%j'),
-    ]
+    )
+    # Order in which `_ISO_FORMATS` are tried. Must never change order of
+    # last 2 items. Only modified via assignment in `parse`.
+    __ISO_FORMATS_PROBE_SEQ = list(range(len(_ISO_FORMATS)))
     # The regex that matches all above formats
     REGEX = (r'^('
              r'\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
@@ -1007,17 +1010,20 @@ class TimeVariable(ContinuousVariable):
             except ValueError:
                 raise self.InvalidDateTimeFormatError(datestr)
 
-        for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
+        try_order = self.__ISO_FORMATS_PROBE_SEQ
+        for i, (have_date, have_time, fmt) in enumerate(
+                map(self._ISO_FORMATS.__getitem__, try_order)):
             try:
                 dt = datetime.strptime(datestr, fmt)
             except ValueError:
                 continue
             else:
-                # Pop this most-recently-used format to front
-                if 0 < i < len(self._ISO_FORMATS) - 2:
-                    self._ISO_FORMATS[i], self._ISO_FORMATS[0] = \
-                        self._ISO_FORMATS[0], self._ISO_FORMATS[i]
-
+                # Pop this most-recently-used format index to front,
+                # excluding last 2
+                if 0 < i < len(try_order) - 2:
+                    try_order = try_order.copy()
+                    try_order[i], try_order[0] = try_order[0], try_order[i]
+                    TimeVariable.__ISO_FORMATS_PROBE_SEQ = try_order
                 self.have_date |= have_date
                 self.have_time |= have_time
                 if not have_date:
