@@ -733,7 +733,11 @@ class HeatmapGridWidget(QGraphicsWidget):
             )
             container.addItem(legend)
         elif isinstance(colormap, GradientColorMap):
-            legend = GradientLegendWidget(*colormap.span, colormap)
+            legend = GradientLegendWidget(
+                *colormap.span, colormap,
+                sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+            )
+            legend.setMinimumWidth(100)
             container.addItem(legend)
 
     def headerGeometry(self) -> QRectF:
