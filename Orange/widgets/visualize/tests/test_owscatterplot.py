@@ -851,7 +851,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         line1 = graph.reg_line_items[1]
         self.assertEqual(line1.pos().x(), 0)
         self.assertAlmostEqual(line1.pos().y(), -0.6180339887498949)
-        self.assertEqual(line1.angle, 58.28252558853899)
+        self.assertAlmostEqual(line1.angle, 58.28252558853899)
         self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
 
         line2 = graph.reg_line_items[2]
@@ -868,7 +868,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             np.array([0, 1, 1, 2]), np.array([0, 0, 2, 2]), color, width)
         self.assertEqual(line.pos().x(), 0)
         self.assertAlmostEqual(line.pos().y(), -0.6180339887498949)
-        self.assertEqual(line.angle, 58.28252558853899)
+        self.assertAlmostEqual(line.angle, 58.28252558853899)
         self.assertEqual(line.pen.color(), color)
         self.assertEqual(line.pen.width(), width)
 
