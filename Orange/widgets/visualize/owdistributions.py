@@ -228,8 +228,8 @@ class ElidedAxisNoUnits(ElidedLabelsAxis):
                  maxTickLength=-5, showValues=True):
         self.show_unit = False
         self.tick_dict = {}
-        super().__init__(orientation, pen, linkView, parent, maxTickLength,
-                         showValues)
+        super().__init__(orientation, pen=pen, linkView=linkView, parent=parent,
+                         maxTickLength=maxTickLength, showValues=showValues)
 
     def setShowUnit(self, show_unit):
         self.show_unit = show_unit
