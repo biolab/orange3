@@ -135,7 +135,7 @@ class MDS(SklProjector):
             _X, Y, domain = data.X, data.Y, data.domain
             X = dist_matrix = self._metric(_X)
             dissimilarity = 'precomputed'
-        elif self._metric is 'precomputed':
+        elif self._metric == 'precomputed':
             dist_matrix, Y, domain = data, None, None
             X = dist_matrix
             dissimilarity = 'precomputed'
