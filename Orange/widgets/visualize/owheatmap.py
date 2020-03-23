@@ -306,7 +306,7 @@ class OWHeatMap(widget.OWWidget):
             valid_types=(Orange.data.DiscreteVariable,),
             parent=self,
         )
-        self.row_split_cb = cb = ComboBox(
+        self.row_split_cb = cb = ComboBoxSearch(
             enabled=not self.merge_kmeans,
             sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLengthWithIcon,
             minimumContentsLength=14,
