@@ -66,7 +66,7 @@ class OWTranspose(OWWidget):
             alphabetical=False)
         self.feature_combo = gui.comboBox(
             gui.indentedBox(box, gui.checkButtonOffsetHint(button)), self,
-            "feature_names_column", contentsLength=12,
+            "feature_names_column", contentsLength=12, searchable=True,
             callback=self._feature_combo_changed, model=self.feature_model)
 
         self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
