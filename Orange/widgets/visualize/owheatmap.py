@@ -269,7 +269,7 @@ class OWHeatMap(widget.OWWidget):
 
         cluster_box = gui.vBox(self.controlArea, "Clustering")
         # Row clustering
-        self.row_cluster_cb = cb = ComboBox(maximumContentsLength=14)
+        self.row_cluster_cb = cb = ComboBox()
         cb.setModel(create_list_model(ClusteringModelData, self))
         cbselect(cb, self.row_clustering, ClusteringRole)
         self.connect_control(
@@ -281,7 +281,7 @@ class OWHeatMap(widget.OWWidget):
             self.set_row_clustering(cb.itemData(idx, ClusteringRole))
 
         # Column clustering
-        self.col_cluster_cb = cb = ComboBox(maximumContentsLength=14)
+        self.col_cluster_cb = cb = ComboBox()
         cb.setModel(create_list_model(ClusteringModelData, self))
         cbselect(cb, self.col_clustering, ClusteringRole)
         self.connect_control(
