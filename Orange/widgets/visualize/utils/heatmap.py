@@ -1104,6 +1104,25 @@ def remove_item(item: QGraphicsItem) -> None:
         item.setParentItem(None)
 
 
+class _GradientLegendAxisItem(pg.AxisItem):
+    def boundingRect(self):
+        br = super().boundingRect()
+        if self.orientation in ["top", "bottom"]:
+            # adjust brect (extend in horizontal direction). pg.AxisItem has
+            # only fixed constant adjustment for tick text over-flow.
+            font = self.style.get("tickFont")
+            if font is None:
+                font = self.font()
+            fm = QFontMetrics(font)
+            w = fm.width('0.0000000') / 2  # bad, should use _tickValues
+            geomw = self.geometry().size().width()
+            maxw = max(geomw + 2 * w, br.width())
+            if br.width() < maxw:
+                adjust = (maxw - br.width()) / 2
+                br = br.adjusted(-adjust, 0, adjust, 0)
+        return br
+
+
 class GradientLegendWidget(QGraphicsWidget):
     def __init__(
             self, low, high, colormap: GradientColorMap, parent=None, **kwargs
@@ -1120,7 +1139,8 @@ class GradientLegendWidget(QGraphicsWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
-        self.__axis = axis = pg.AxisItem(orientation="top", maxTickLength=3)
+        self.__axis = axis = _GradientLegendAxisItem(
+            orientation="top", maxTickLength=3)
         axis.setRange(low, high)
         layout.addItem(axis)
         pen = QPen(self.palette().color(QPalette.Text))
