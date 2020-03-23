@@ -219,6 +219,7 @@ class OWPythagoreanForest(OWWidget):
         self.ui_target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
             orientation=Qt.Horizontal, items=[], contentsLength=8,
+            searchable=True
         )  # type: gui.OrangeComboBox
         self.ui_size_calc_combo = gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
