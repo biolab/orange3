@@ -566,7 +566,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         )
         legend_container.setLayout(QGraphicsLinearLayout())
         legend_container.layout().setContentsMargins(0, 0, 0, 0)
-        grid.addItem(legend_container, BottomLabelsRow + 1, Col0 + 1, 1, M * 2,
+        grid.addItem(legend_container, BottomLabelsRow + 1, Col0 + 1, 1, M * 2 - 1,
                      alignment=Qt.AlignRight)
 
         self.heatmap_widget_grid = heatmap_widgets
@@ -736,7 +736,11 @@ class HeatmapGridWidget(QGraphicsWidget):
             )
             container.addItem(legend)
         elif isinstance(colormap, GradientColorMap):
-            legend = GradientLegendWidget(*colormap.span, colormap)
+            legend = GradientLegendWidget(
+                *colormap.span, colormap,
+                sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+            )
+            legend.setMinimumWidth(100)
             container.addItem(legend)
 
     def headerGeometry(self) -> QRectF:
@@ -1103,6 +1107,25 @@ def remove_item(item: QGraphicsItem) -> None:
         item.setParentItem(None)
 
 
+class _GradientLegendAxisItem(pg.AxisItem):
+    def boundingRect(self):
+        br = super().boundingRect()
+        if self.orientation in ["top", "bottom"]:
+            # adjust brect (extend in horizontal direction). pg.AxisItem has
+            # only fixed constant adjustment for tick text over-flow.
+            font = self.style.get("tickFont")
+            if font is None:
+                font = self.font()
+            fm = QFontMetrics(font)
+            w = fm.width('0.0000000') / 2  # bad, should use _tickValues
+            geomw = self.geometry().size().width()
+            maxw = max(geomw + 2 * w, br.width())
+            if br.width() < maxw:
+                adjust = (maxw - br.width()) / 2
+                br = br.adjusted(-adjust, 0, adjust, 0)
+        return br
+
+
 class GradientLegendWidget(QGraphicsWidget):
     def __init__(
             self, low, high, colormap: GradientColorMap, parent=None, **kwargs
@@ -1119,7 +1142,8 @@ class GradientLegendWidget(QGraphicsWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
-        self.__axis = axis = pg.AxisItem(orientation="top", maxTickLength=3)
+        self.__axis = axis = _GradientLegendAxisItem(
+            orientation="top", maxTickLength=3)
         axis.setRange(low, high)
         layout.addItem(axis)
         pen = QPen(self.palette().color(QPalette.Text))
@@ -1149,11 +1173,13 @@ class GradientLegendWidget(QGraphicsWidget):
         cmap = self.colormap.replace(span=(low, high))
         qimg = qimage_from_array(cmap.apply(data))
         self.__pixitem.setPixmap(QPixmap.fromImage(qimg))
-
-        if self.colormap.center is not None and low < self.colormap.center < high:
-            ticks = [(low, f"{low:.2f}"), (0, "0"), (high, f"{high:.2f}")]
+        if self.colormap.center is not None \
+                and low < self.colormap.center < high:
+            tick_values = [low, self.colormap.center, high]
         else:
-            ticks = [(low, f"{low:.2f}"), (high, f"{high:.2f}")]
+            tick_values = [low, high]
+        tickformat = "{:.6g}".format
+        ticks = [(val, tickformat(val)) for val in tick_values]
         self.__axis.setTicks([ticks])
 
         self.updateGeometry()
