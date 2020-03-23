@@ -7,6 +7,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
+from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.base import TreeModel, SklModel
 from Orange.widgets.utils.signals import Input, Output
@@ -18,7 +19,6 @@ from Orange.data import Table
 
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
-from Orange.widgets import gui
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
@@ -190,7 +190,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.tree_adapter = None
 
         self.color_label = QLabel("Target class: ")
-        combo = self.color_combo = gui.OrangeComboBox()
+        combo = self.color_combo = ComboBoxSearch()
         combo.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         combo.setSizeAdjustPolicy(
             QComboBox.AdjustToMinimumContentsLengthWithIcon)
