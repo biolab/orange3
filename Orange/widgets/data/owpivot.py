@@ -696,17 +696,20 @@ class OWPivot(OWWidget):
     def _add_control_area_controls(self):
         box = gui.vBox(self.controlArea, "Rows")
         gui.comboBox(box, self, "row_feature", contentsLength=12,
+                     searchable=True,
                      model=DomainModel(valid_types=DomainModel.PRIMITIVE),
                      callback=self.__feature_changed)
         box = gui.vBox(self.controlArea, "Columns")
         gui.comboBox(box, self, "col_feature", contentsLength=12,
+                     searchable=True,
                      model=DomainModel(placeholder="(Same as rows)",
                                        valid_types=DiscreteVariable),
-                     callback=self.__feature_changed)
+                     callback=self.__feature_changed,)
         box = gui.vBox(self.controlArea, "Values")
         gui.comboBox(box, self, "val_feature", contentsLength=12,
-                     model=DomainModel(placeholder="(None)"),
+                     searchable=True,
                      orientation=Qt.Horizontal,
+                     model=DomainModel(placeholder="(None)"),
                      callback=self.__val_feature_changed)
         self.__add_aggregation_controls()
         gui.rubber(self.controlArea)
