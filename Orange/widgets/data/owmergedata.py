@@ -4,8 +4,10 @@ from itertools import chain, product
 import numpy as np
 
 from AnyQt.QtCore import Qt, QModelIndex, pyqtSignal as Signal
-from AnyQt.QtWidgets import QWidget, QLabel, QComboBox, QPushButton, \
-    QVBoxLayout, QHBoxLayout
+from AnyQt.QtWidgets import (
+    QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout
+)
+from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable, Variable
@@ -69,7 +71,7 @@ class ConditionBox(QWidget):
             self.emit_list()
 
         def get_combo(model):
-            combo = QComboBox(self)
+            combo = ComboBoxSearch(self)
             combo.setModel(model)
             # We use signal activated because it is triggered only on user
             # interaction, not programmatically.
