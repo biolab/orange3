@@ -119,7 +119,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.target_cb = gui.comboBox(
             box, self, "target_index", label="Target:",
             orientation=Qt.Horizontal, callback=self.target_index_changed,
-            contentsLength=8)
+            contentsLength=8, searchable=True)
         gui.checkBox(
             box, self, "display_rug", "Show rug",
             callback=self._on_display_rug_changed)
