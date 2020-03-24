@@ -5,7 +5,7 @@ import numpy as np
 
 from AnyQt.QtCore import QItemSelectionModel
 
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets.settings import Context
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets,
@@ -184,6 +184,17 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.widget.radio_placement.buttons[1].click()
         self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
         self.assertFalse(self.widget.radio_placement.buttons[1].isEnabled())
+
+    def test_unique_name(self):
+        data = Table("iris")
+        new = ContinuousVariable("C-y")
+        d = Table.from_numpy(Domain(list(data.domain.attributes[:3])+[new],
+                                    class_vars=data.domain.class_vars), data.X,
+                             data.Y)
+        self.send_signal(self.widget.Inputs.data, d)
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        metas = ["C-x (1)", "C-y (1)", "Selected"]
+        self.assertEqual([meta.name for meta in output.domain.metas], metas)
 
 
 class LinProjVizRankTests(WidgetTest):
