@@ -120,6 +120,8 @@ class TestOWCSVFileImport(WidgetTest):
             }
         )
         output_sum = widget.info.set_output_summary = mock.Mock()
+        widget.commit()
+        self.wait_until_finished(widget)
         output = self.get_output("Data", widget)
         output_sum.assert_called_with(len(output),
                                       format_summary_details(output))
