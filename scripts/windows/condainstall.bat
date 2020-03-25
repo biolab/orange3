@@ -22,13 +22,20 @@ if not exist "%PREFIX%\python.exe" (
 
     rem # Also install python (msvc runtime and python might be required
     rem # for any post-link scripts).
-    for %%f in ( vs*runtime*.tar.bz2 vc-*.tar.bz2 python-*.tar.bz2 ) do (
+    for %%f in ( ^
+            vs*runtime*.tar.bz2 ^
+            vs*runtime*.conda ^
+            vc-*.tar.bz2 ^
+            vc-*.conda ^
+            python-*.tar.bz2 ^
+            python-*.conda ^
+         ) do (
         "%CONDA%" install --yes --copy --quiet --prefix "%PREFIX%" "%CD%\%%f" ^
             || exit /b !ERRORLEVEL!
     )
 )
 
-for %%f in ( *.tar.bz2 ) do (
+for %%f in ( *.tar.bz2 *.conda) do (
     echo Installing: %%f
     "%CONDA%" install --yes  --copy --quiet --prefix "%PREFIX%" "%CD%\%%f" ^
         || exit /b !ERRORLEVEL!
