@@ -27,8 +27,8 @@ if not exist "%PREFIX%\python.exe" (
             vs*runtime*.conda ^
             vc-*.tar.bz2 ^
             vc-*.conda ^
-            python-*.tar.bz2 ^
-            python-*.conda ^
+            python-3.*.tar.bz2 ^
+            python-3.*.conda ^
          ) do (
         "%CONDA%" install --yes --copy --quiet --prefix "%PREFIX%" "%CD%\%%f" ^
             || exit /b !ERRORLEVEL!
