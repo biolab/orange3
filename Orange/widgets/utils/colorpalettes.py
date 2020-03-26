@@ -651,7 +651,8 @@ def patch_variable_colors():
 
         nvalues = len(var.values)
         if var._colors is None or len(var._colors) != nvalues:
-            set_colors(var, retrieve_colors())
+            var._colors = retrieve_colors()
+            var._colors.flags.writeable = False
         return var._colors
 
     def discrete_set_colors(var, colors):
