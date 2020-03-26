@@ -498,23 +498,42 @@ class TestContinuousVariable(VariableTest):
 
     def test_decimals(self):
         a = ContinuousVariable("a", 4)
-        self.assertEqual(a.str_val(4.654321), "4.6543")
-        self.assertEqual(a.str_val(4.654321654321), "4.6543")
+        self.assertEqual(a.str_val(4.6543), "4.6543")
+        self.assertEqual(a.str_val(4.25), "4.2500")
         self.assertEqual(a.str_val(Unknown), "?")
         a = ContinuousVariable("a", 5)
         self.assertEqual(a.str_val(0.000000000001), "0.00000")
         a = ContinuousVariable("a", 10)
         self.assertEqual(a.str_val(0.000000000001), "1e-12")
 
+    def test_more_decimals(self):
+        a = ContinuousVariable("a", 0)
+        self.assertEqual(a.str_val(4), "4")
+        self.assertEqual(a.str_val(4.1234), "4.12")
+
+        a = ContinuousVariable("a", 2)
+        self.assertEqual(a.str_val(4), "4.00")
+        self.assertEqual(a.str_val(4.25), "4.25")
+        self.assertEqual(a.str_val(4.1234123), "4.1234")
+
+        for cca4 in (4 + 1e-9, 4 - 1e-9):
+            assert cca4 != 4
+            self.assertEqual(a.str_val(cca4), "4.00")
+
     def test_adjust_decimals(self):
+        # Default is 3 decimals, but format is %g
         a = ContinuousVariable("a")
+        self.assertEqual(a.str_val(5), "5")
         self.assertEqual(a.str_val(4.65432), "4.65432")
+
+        # Change to no decimals
         a.val_from_str_add("5")
-        self.assertEqual(a.str_val(4.65432), "5")
+        self.assertEqual(a.str_val(5), "5")
+
+        # Change to two decimals
         a.val_from_str_add("  5.12    ")
-        self.assertEqual(a.str_val(4.65432), "4.65")
-        a.val_from_str_add("5.1234")
-        self.assertEqual(a.str_val(4.65432), "4.6543")
+        self.assertEqual(a.str_val(4.65), "4.65")
+        self.assertEqual(a.str_val(5), "5.00")
 
     def varcls_modified(self, name):
         var = super().varcls_modified(name)

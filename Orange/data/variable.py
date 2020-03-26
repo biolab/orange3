@@ -529,6 +529,7 @@ class ContinuousVariable(Variable):
         three, but adjusted at the first call of :obj:`to_val`.
         """
         super().__init__(name, compute_value, sparse=sparse)
+        self._max_round_diff = 0
         self.number_of_decimals = number_of_decimals
 
     @property
@@ -553,6 +554,7 @@ class ContinuousVariable(Variable):
             return
 
         self._number_of_decimals = x
+        self._max_round_diff = 10 ** (-x - 6)
         self.adjust_decimals = 0
         if self._number_of_decimals <= MAX_NUM_OF_DECIMALS:
             self._format_str = "%.{}f".format(self.number_of_decimals)
@@ -580,6 +582,10 @@ class ContinuousVariable(Variable):
         """
         if isnan(val):
             return "?"
+        if self.format_str != "%g" \
+                and abs(round(val, self._number_of_decimals) - val) \
+                > self._max_round_diff:
+            return f"{val:.{self._number_of_decimals + 2}f}"
         return self._format_str % val
 
     str_val = repr_val
@@ -593,6 +599,7 @@ class ContinuousVariable(Variable):
             var.number_of_decimals = number_of_decimals
         else:
             var._number_of_decimals = self._number_of_decimals
+            var._max_round_diff = self._max_round_diff
             var.adjust_decimals = self.adjust_decimals
             var.format_str = self._format_str
         return var

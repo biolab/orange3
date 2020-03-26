@@ -140,13 +140,17 @@ class TestDiscretizer(TestCase):
 
         dvar = discretize.Discretizer.create_discretized_var(
             self.var, [10.1234])
-        self.assertEqual(dvar.values, ("< 10.1", "≥ 10.1"))
+        self.assertEqual(dvar.values, ("< 10.123", "≥ 10.123"))
 
         self.var.number_of_decimals = 3
 
         dvar = discretize.Discretizer.create_discretized_var(
+            self.var, [5, 10.25])
+        self.assertEqual(dvar.values, ("< 5", "5 - 10.25", "≥ 10.25"))
+
+        dvar = discretize.Discretizer.create_discretized_var(
             self.var, [5, 10.1234])
-        self.assertEqual(dvar.values, ("< 5", "5 - 10.123", "≥ 10.123"))
+        self.assertEqual(dvar.values, ("< 5", "5 - 10.1234", "≥ 10.1234"))
 
     def test_discretizer_computation(self):
         dvar = discretize.Discretizer.create_discretized_var(
