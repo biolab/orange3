@@ -16,13 +16,15 @@ import pkg_resources
 import requests
 
 from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
-from AnyQt.QtCore import Qt, QPoint, QRect
+from AnyQt.QtCore import Qt, QPoint, QRect, QSettings
 
 from orangecanvas import config as occonfig
 from orangecanvas.utils.settings import config_slot
 from orangewidget.workflow import config
+from orangewidget.settings import set_widget_settings_dir_components
 
 import Orange
+from Orange.misc import environ
 
 # generated from biolab/orange3-addons repository
 OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
@@ -68,6 +70,21 @@ class Config(config.Config):
 
     def init(self):
         super().init()
+        widget_settings_dir_cfg = environ.get_path("widget_settings_dir", "")
+        if widget_settings_dir_cfg:
+            # widget_settings_dir is configured via config file
+            set_widget_settings_dir_components(
+                widget_settings_dir_cfg, self.ApplicationVersion
+            )
+
+        canvas_settings_dir_cfg = environ.get_path("canvas_settings_dir", "")
+        if canvas_settings_dir_cfg:
+            # canvas_settings_dir is configured via config file
+            QSettings.setPath(
+                QSettings.IniFormat, QSettings.UserScope,
+                canvas_settings_dir_cfg
+            )
+
         for t in spec:
             occonfig.register_setting(*t)
 
@@ -197,7 +214,6 @@ def data_dir():
     Return the Orange application data directory. If the directory path
     does not yet exists then create it.
     """
-    from Orange.misc import environ
     path = os.path.join(environ.data_dir(), "canvas")
     try:
         os.makedirs(path, exist_ok=True)
@@ -211,7 +227,6 @@ def cache_dir():
     Return the Orange application cache directory. If the directory path
     does not yet exists then create it.
     """
-    from Orange.misc import environ
     path = os.path.join(environ.cache_dir(), "canvas")
     try:
         os.makedirs(path, exist_ok=True)
@@ -229,6 +244,8 @@ def log_dir():
         logdir = os.path.join(os.path.expanduser("~/Library/Logs"), name)
     else:
         logdir = data_dir()
+
+    logdir = environ.get_path("log_dir", logdir)
 
     try:
         os.makedirs(logdir, exist_ok=True)
