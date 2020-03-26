@@ -7,6 +7,7 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QImage, QColor, QIcon
 
 from orangewidget.tests.base import GuiTest
+from Orange.util import color_to_hex
 from Orange.data import DiscreteVariable, ContinuousVariable, Variable
 # pylint: disable=wildcard-import,unused-wildcard-import
 from Orange.widgets.utils.colorpalettes import *
@@ -520,12 +521,16 @@ class PatchedVariableTest(unittest.TestCase):
         colors = [Mock(), Mock()]
         palette = Mock()
         var.colors = colors
+        # set_color for variable does not set this attribute; derived methods do
+        var.attributes["colors"] = colors
         var.palette = palette
         self.assertIsNone(var.colors)
         self.assertTrue("palette" in var.attributes)
         self.assertFalse("colors" in var.attributes)
 
         var.colors = colors
+        # set_color for variable does not set this attribute; derived methods do
+        var.attributes["colors"] = colors
         self.assertIsNone(var.palette)
         self.assertTrue("colors" in var.attributes)
         self.assertFalse("palette" in var.attributes)
@@ -540,13 +545,19 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
 
         var.colors = np.arange(6).reshape((2, 3))
         np.testing.assert_almost_equal(var.colors, [[0, 1, 2], [3, 4, 5]])
-        self.assertEqual(var.attributes["colors"], ["#000102", "#030405"])
+        self.assertEqual(var.attributes["colors"],
+                         {"F": "#000102", "M": "#030405"})
         self.assertFalse(var.colors.flags.writeable)
         with self.assertRaises(ValueError):
             var.colors[0] = [42, 41, 40]
 
         var = DiscreteVariable.make("x", values=("A", "B"))
-        var.attributes["colors"] = ['#0a0b0c', '#0d0e0f']
+        var.attributes["colors"] = {"A": "#0a0b0c", "B": "#0d0e0f"}
+        np.testing.assert_almost_equal(var.colors, [[10, 11, 12], [13, 14, 15]])
+
+        # Backward compatibility with list-like attributes
+        var = DiscreteVariable.make("x", values=("A", "B"))
+        var.attributes["colors"] = ["#0a0b0c", "#0d0e0f"]
         np.testing.assert_almost_equal(var.colors, [[10, 11, 12], [13, 14, 15]])
 
         # Test ncolors adapts to nvalues
@@ -557,6 +568,14 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         var.add_value('k')
         self.assertEqual(len(var.colors), 4)
 
+        # Missing colors are retrieved from palette
+        var = DiscreteVariable.make("x", values=("A", "B", "C"))
+        palette = LimitedDiscretePalette(3).palette
+        var.attributes["colors"] = {"C": color_to_hex(palette[0]),
+                                    "B": "#0D0E0F"}
+        np.testing.assert_almost_equal(var.colors,
+                                       [palette[1], [13, 14, 15], palette[0]])
+
     def test_colors_fallback_to_palette(self):
         var = DiscreteVariable.make("a", values=("F", "M"))
         var.palette = Dark2Colors
@@ -564,6 +583,8 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         self.assertEqual(len(colors), 2)
         for color, palcol in zip(colors, Dark2Colors):
             np.testing.assert_equal(color, palcol.getRgb()[:3])
+        # the palette has to stay specified
+        self.assertEqual(var.attributes["palette"], var.palette.name)
 
         var = DiscreteVariable.make("a", values=[f"{i}" for i in range(40)])
         var.palette = Dark2Colors
@@ -571,6 +592,8 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         self.assertEqual(len(colors), 40)
         for color, palcol in zip(colors, LimitedDiscretePalette(40)):
             np.testing.assert_equal(color, palcol.getRgb()[:3])
+        # the palette has to stay specified
+        self.assertEqual(var.attributes["palette"], var.palette.name)
 
     def test_colors_default(self):
         var = DiscreteVariable.make("a", values=("F", "M"))
@@ -618,6 +641,12 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         palette = var.palette
         np.testing.assert_equal(palette.palette, [[10, 11, 12], [13, 14, 15]])
 
+    def test_ignore_malfformed_atrtibutes(self):
+        var = DiscreteVariable("a", values=("M", "F"))
+        var.attributes["colors"] = {"F": "foo", "M": "bar"}
+        palette = var.palette
+        np.testing.assert_equal(palette.palette,
+                                LimitedDiscretePalette(2).palette)
 
 class PatchedContinuousVariableTest(unittest.TestCase):
     def test_colors(self):
