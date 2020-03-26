@@ -11,7 +11,9 @@ from Orange.data import (
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
 )
-from Orange.widgets.utils.colorpalettes import ContinuousPalettes
+from Orange.widgets.utils.colorpalettes import (
+    ContinuousPalettes, DiscretePalette
+)
 from Orange.widgets.visualize.utils.widget import (
     OWDataProjectionWidget, OWProjectionWidgetBase
 )
@@ -112,6 +114,33 @@ class TestOWProjectionWidget(WidgetTest):
         self.assertTrue("1" in widget.get_tooltip([0, 1])
                         and "3" in widget.get_tooltip([0, 1]))
         self.assertEqual(widget.get_tooltip([]), "")
+
+    def test_get_palette(self):
+        widget = self.widget
+
+        widget.attr_color = None
+        self.assertIsNone(widget.get_palette())
+
+        var = ContinuousVariable("v")
+        var.palette = Mock()
+        widget.attr_color = var
+        self.assertIs(widget.get_palette(), var.palette)
+
+        var = DiscreteVariable("v", values=tuple("abc"))
+        var.palette = Mock()
+        widget.attr_color = var
+        self.assertIs(widget.get_palette(), var.palette)
+
+        values = tuple("abcdefghijklmn")
+        merged = ["a", "c", "d", "h", "n", "Others"]
+        var = DiscreteVariable("v", values=values)
+        var.palette = DiscretePalette(
+            "foo", "bar", [[i] * 3 for i, _ in enumerate(values)])
+        widget.get_color_labels = lambda: merged
+        widget.attr_color = var
+        np.testing.assert_equal(
+            widget.get_palette().palette[:-1],
+            [[var.values.index(label)] * 3 for label in merged[:-1]])
 
 
 class TestableDataProjectionWidget(OWDataProjectionWidget):
