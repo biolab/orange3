@@ -247,11 +247,11 @@ class TestOWPythonScript(WidgetTest):
             "libraryListSource": [Script("A", "1")],
             "__version__": 0
         })
-        self.assertEqual(w.libraryListSource[0].name, "A")
+        self.assertEqual(w.saved_scripts[0].name, "A")
 
     def test_restore(self):
         w = self.create_widget(OWPythonScript, {
             "scriptLibrary": [dict(name="A", script="1", filename=None)],
             "__version__": 2
         })
-        self.assertEqual(w.libraryListSource[0].name, "A")
+        self.assertEqual(w.saved_scripts[0].name, "A")
