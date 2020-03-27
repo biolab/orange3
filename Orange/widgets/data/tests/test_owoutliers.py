@@ -38,9 +38,14 @@ class TestRun(unittest.TestCase):
 
 class TestOWOutliers(WidgetTest):
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWOutliers)
         self.iris = Table("iris")
         self.heart_disease = Table("heart_disease")
+
+    def tearDown(self):
+        self.widget.onDeleteWidget()
+        super().tearDown()
 
     def test_outputs(self):
         """Check widget's data and the output with data on the input"""
