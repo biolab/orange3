@@ -264,7 +264,7 @@ class OWSOM(OWWidget):
 
         box = gui.vBox(self.controlArea, "Color")
         gui.comboBox(
-            box, self, "attr_color", maximumContentsLength=15,
+            box, self, "attr_color",
             callback=self.on_attr_color_change,
             model=DomainModel(placeholder="(Same color)",
                               valid_types=DomainModel.PRIMITIVE))

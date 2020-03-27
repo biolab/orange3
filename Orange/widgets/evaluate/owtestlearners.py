@@ -243,7 +243,7 @@ class OWTestLearners(OWWidget):
         ibox = gui.indentedBox(rbox)
         gui.comboBox(
             ibox, self, "n_folds", label="Number of folds: ",
-            items=[str(x) for x in self.NFolds], maximumContentsLength=3,
+            items=[str(x) for x in self.NFolds],
             orientation=Qt.Horizontal, callback=self.kfold_changed)
         gui.checkBox(
             ibox, self, "cv_stratified", "Stratified",
@@ -260,13 +260,14 @@ class OWTestLearners(OWWidget):
         ibox = gui.indentedBox(rbox)
         gui.comboBox(
             ibox, self, "n_repeats", label="Repeat train/test: ",
-            items=[str(x) for x in self.NRepeats], maximumContentsLength=3,
-            orientation=Qt.Horizontal, callback=self.shuffle_split_changed)
+            items=[str(x) for x in self.NRepeats], orientation=Qt.Horizontal,
+            callback=self.shuffle_split_changed
+        )
         gui.comboBox(
             ibox, self, "sample_size", label="Training set size: ",
             items=["{} %".format(x) for x in self.SampleSizes],
-            maximumContentsLength=5, orientation=Qt.Horizontal,
-            callback=self.shuffle_split_changed)
+            orientation=Qt.Horizontal, callback=self.shuffle_split_changed
+        )
         gui.checkBox(
             ibox, self, "shuffle_stratified", "Stratified",
             callback=self.shuffle_split_changed)
