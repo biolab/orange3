@@ -281,7 +281,7 @@ class PyTableModel(AbstractSortTableModel):
             start, stop, _ = _as_contiguous_range(i, len(self))
             self.removeRows(start, stop - start)
             self.beginInsertRows(QModelIndex(), start, start + len(value) - 1)
-            self._table[start:start + len(value)] = value
+            self._table[start:start] = value
             self._rows = self._table_dim()[0]
             self.endInsertRows()
             self._update_column_count()
