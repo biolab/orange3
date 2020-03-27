@@ -1089,6 +1089,7 @@ class OWTestLearners(OWWidget):
 
     def onDeleteWidget(self):
         self.cancel()
+        self.__executor.shutdown(True)
         super().onDeleteWidget()
 
 

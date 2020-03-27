@@ -55,7 +55,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # Some tests may not wait for the widget to finish, and the patched
         # methods might be unpatched before the widget finishes, resulting in
         # a very confusing crash.
-        self.widget.cancel()
+        self.widget.onDeleteWidget()
         try:
             self.restore_mocked_functions()
         # If `restore_mocked_functions` was called in the test itself, stopping
@@ -150,6 +150,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data, self.data, widget=w)
         self.assertTrue(w.controls.multiscale.isChecked())
         self.assertFalse(w.perplexity_spin.isEnabled())
+        w.onDeleteWidget()
 
     def test_normalize_data(self):
         # Normalization should be checked by default
