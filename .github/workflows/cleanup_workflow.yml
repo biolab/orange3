@@ -19,22 +19,22 @@ jobs:
         uses: styfle/cancel-workflow-action@0.2.0
         with:
           workflow_id: 685155
-          access_token: ${{ secrets.GITHUB_TOKEN }}
+          access_token: ${{ secrets.BIOLAB_HELPE_TOKEN }}
 
       - name: Cleanup macOS workflow
         uses: styfle/cancel-workflow-action@0.2.0
         with:
           workflow_id: 685156
-          access_token: ${{ secrets.GITHUB_TOKEN }}
+          access_token: ${{ secrets.BIOLAB_HELPE_TOKEN }}
 
       - name: Cleanup Windows workflow
         uses: styfle/cancel-workflow-action@0.2.0
         with:
           workflow_id: 685157
-          access_token: ${{ secrets.GITHUB_TOKEN }}
+          access_token: ${{ secrets.BIOLAB_HELPE_TOKEN }}
 
       - name: Cleanup Documentation workflow
         uses: styfle/cancel-workflow-action@0.2.0
         with:
           workflow_id: 685153
-          access_token: ${{ secrets.GITHUB_TOKEN }}
+          access_token: ${{ secrets.BIOLAB_HELPE_TOKEN }}
