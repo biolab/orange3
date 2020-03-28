@@ -102,17 +102,18 @@ class PyTableModel(AbstractSortTableModel):
     # pylint: disable=missing-docstring
     def __init__(self, sequence=None, parent=None, editable=False):
         super().__init__(parent)
+        self._rows = self._cols = 0
         self._headers = {}
         self._editable = editable
         self._table = None
-        self._roleData = None
+        self._roleData = {}
         self.wrap(sequence or [])
 
     def rowCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else len(self)
+        return 0 if parent.isValid() else self._rows
 
     def columnCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else max(map(len, self._table), default=0)
+        return 0 if parent.isValid() else self._cols
 
     def flags(self, index):
         flags = super().flags(index)
@@ -214,6 +215,7 @@ class PyTableModel(AbstractSortTableModel):
             del self[row:row + count]
             for rowidx in range(row, row + count):
                 self._roleData.pop(rowidx, None)
+            self._rows = self._table_dim()[0]
             return True
         return False
 
@@ -225,12 +227,17 @@ class PyTableModel(AbstractSortTableModel):
             for col in range(column, column + count):
                 cols.pop(col, None)
         del self._headers.get(Qt.Horizontal, [])[column:column + count]
+        self._cols = self._table_dim()[1]
         self.endRemoveColumns()
         return True
+
+    def _table_dim(self):
+        return len(self._table), max(map(len, self), default=0)
 
     def insertRows(self, row, count, parent=QModelIndex()):
         self.beginInsertRows(parent, row, row + count - 1)
         self._table[row:row] = [[''] * self.columnCount() for _ in range(count)]
+        self._rows = self._table_dim()[0]
         self.endInsertRows()
         return True
 
@@ -238,6 +245,7 @@ class PyTableModel(AbstractSortTableModel):
         self.beginInsertColumns(parent, column, column + count - 1)
         for row in self._table:
             row[column:column] = [''] * count
+        self._rows = self._table_dim()[0]
         self.endInsertColumns()
         return True
 
@@ -262,18 +270,37 @@ class PyTableModel(AbstractSortTableModel):
         self._check_sort_order()
         self.beginRemoveRows(QModelIndex(), start, stop)
         del self._table[i]
+        rows = self._table_dim()[0]
+        self._rows = rows
         self.endRemoveRows()
+        self._update_column_count()
 
     def __setitem__(self, i, value):
+        self._check_sort_order()
         if isinstance(i, slice):
             start, stop, _ = _as_contiguous_range(i, len(self))
-            stop -= 1
+            self.removeRows(start, stop - start)
+            self.beginInsertRows(QModelIndex(), start, start + len(value) - 1)
+            self._table[start:start] = value
+            self._rows = self._table_dim()[0]
+            self.endInsertRows()
+            self._update_column_count()
         else:
-            start = stop = i = i if i >= 0 else len(self) + i
-        self._check_sort_order()
-        self._table[i] = value
-        self.dataChanged.emit(self.index(start, 0),
-                              self.index(stop, self.columnCount() - 1))
+            self._table[i] = value
+            self.dataChanged.emit(self.index(i, 0),
+                                  self.index(i, self.columnCount() - 1))
+
+    def _update_column_count(self):
+        cols_before = self._cols
+        cols_after = self._table_dim()[1]
+        if cols_before < cols_after:
+            self.beginInsertColumns(QModelIndex(), cols_before, cols_after - 1)
+            self._cols = cols_after
+            self.endInsertColumns()
+        elif cols_before > cols_after:
+            self.beginRemoveColumns(QModelIndex(), cols_after, cols_before - 1)
+            self._cols = cols_after
+            self.endRemoveColumns()
 
     def _check_sort_order(self):
         if self.mapToSourceRows(Ellipsis) is not Ellipsis:
@@ -285,6 +312,7 @@ class PyTableModel(AbstractSortTableModel):
         self.beginResetModel()
         self._table = table
         self._roleData = self._RoleData()
+        self._rows, self._cols = self._table_dim()
         self.resetSorting()
         self.endResetModel()
 
@@ -296,6 +324,7 @@ class PyTableModel(AbstractSortTableModel):
         self._table.clear()
         self.resetSorting()
         self._roleData.clear()
+        self._rows, self._cols = self._table_dim()
         self.endResetModel()
 
     def append(self, row):

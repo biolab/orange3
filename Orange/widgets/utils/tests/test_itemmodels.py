@@ -7,6 +7,7 @@ from unittest.mock import patch
 import numpy as np
 
 from AnyQt.QtCore import Qt, QModelIndex
+from AnyQt.QtTest import QSignalSpy
 
 from Orange.data import \
     Domain, \
@@ -122,6 +123,40 @@ class TestPyTableModel(unittest.TestCase):
         self.assertTrue(Qt.AlignCenter &
                         self.model.data(self.model.index(1, 0),
                                         Qt.TextAlignmentRole))
+
+    def test_set_iten_slice(self):
+        self.model[:1] = [[10, 11], [12, 13], [14, 15]]
+        self.assertEqual(list(self.model), [[10, 11], [12, 13], [14, 15], [2, 3]])
+
+        self.model[1:3] = []
+        self.assertEqual(list(self.model), [[10, 11], [2, 3]])
+
+        self.model[:] = [[20, 21]]
+        self.assertEqual(list(self.model), [[20, 21]])
+
+        self.model[1:] = [[10, 11], [2, 3]]
+        self.assertEqual(list(self.model), [[20, 21], [10, 11], [2, 3]])
+
+    def test_emits_column_changes_on_row_insert(self):
+        inserted = []
+        removed = []
+        model = PyTableModel()
+        model.columnsInserted.connect(inserted.append)
+        model.columnsRemoved.connect(removed.append)
+        inserted = QSignalSpy(model.columnsInserted)
+        removed = QSignalSpy(model.columnsRemoved)
+        model.append([2])
+        self.assertEqual(list(inserted)[-1][1:], [0, 0])
+        model.append([2, 3])
+        self.assertEqual(list(inserted)[-1][1:], [1, 1])
+        del model[:]
+        self.assertEqual(list(removed)[0][1:], [0, 1])
+        model.extend([[0, 1], [0, 2]])
+        self.assertEqual(list(inserted)[-1][1:], [0, 1])
+        model.clear()
+        self.assertEqual(list(removed)[0][1:], [0, 1])
+        model[:] = [[1], [2]]
+        self.assertEqual(list(inserted)[-1][1:], [0, 0])
 
 
 class TestVariableListModel(unittest.TestCase):
