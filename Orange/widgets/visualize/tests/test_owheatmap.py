@@ -122,15 +122,6 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
             self.assertFalse(msg.not_enough_instances.is_shown())
             self.assertFalse(msg.not_enough_instances_k_means.is_shown())
 
-    def test_color_low_high(self):
-        """
-        Prevent horizontal sliders to set Low >= High.
-        GH-2025
-        """
-        self.widget.controls.threshold_low.setValue(4)
-        self.widget.controls.threshold_high.setValue(2)
-        self.assertGreater(self.widget.threshold_high, self.widget.threshold_low)
-
     def test_data_column_nans(self):
         """
         Send data with one column with all values set to NaN.
@@ -245,12 +236,12 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_palette_center(self):
         widget = self.widget
-        model = widget.color_cb.model()
+        model = widget.color_map_widget.model()
         for idx in range(model.rowCount(QModelIndex())):
             palette = model.data(model.index(idx, 0), Qt.UserRole)
             if palette is None:
                 continue
-            widget.color_cb.setCurrentIndex(idx)
+            widget.color_map_widget.setCurrentIndex(idx)
             self.assertEqual(widget.center_palette,
                              bool(palette.flags & palette.Diverging))
 
