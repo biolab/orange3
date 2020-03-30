@@ -848,7 +848,7 @@ class OWNomogram(OWWidget):
         if len(self.domain.class_var.values) == 2:
             self.b0 = np.hstack((self.b0 * (-1), self.b0))
             coeffs = np.vstack((coeffs * (-1), coeffs))
-        self.log_reg_coeffs = [coeffs[:, ranges[i]] for i in range(len(attrs))]
+        self.log_reg_coeffs = [coeffs[:, r] for r in ranges]
         self.log_reg_coeffs_orig = self.log_reg_coeffs.copy()
 
         min_values = nanmin(self.data.X, axis=0)
