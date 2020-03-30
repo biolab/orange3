@@ -860,7 +860,7 @@ class OWNomogram(OWWidget):
                 coef = self.log_reg_coeffs[i]
                 self.log_reg_coeffs[i] = np.hstack((coef * min_t, coef * max_t))
                 self.log_reg_cont_data_extremes.append(
-                    [sorted([min_t, max_t], reverse=(c < 0)) for c in coef])
+                    [sorted([min_t, max_t], reverse=(c < 0)) for c in coef.flat])
             else:
                 self.log_reg_cont_data_extremes.append([None])
 
