@@ -74,8 +74,6 @@ class DistanceMapItem(pg.ImageItem):
 
         if command & self.Select:
             area = area.normalized()
-            intersects = [rect.intersects(area)
-                          for item, rect in self.__selections]
 
             def partition(predicate, iterable):
                 t1, t2 = itertools.tee(iterable)
@@ -308,12 +306,6 @@ class OWDistanceMap(widget.OWWidget):
             labelAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
         )
-#         form.addRow(
-#             "Gamma",
-#             gui.hSlider(box, self, "color_gamma", minValue=0.0, maxValue=1.0,
-#                         step=0.05, ticks=True, intOnly=False,
-#                         createLabel=False, callback=self._update_color)
-#         )
         form.addRow(
             "Low:",
             gui.hSlider(box, self, "color_low", minValue=0.0, maxValue=1.0,
@@ -391,8 +383,6 @@ class OWDistanceMap(widget.OWWidget):
         self.matrix_item = None
         self.dendrogram = None
 
-        self.grid_widget.scene().installEventFilter(self)
-
         self.settingsAboutToBePacked.connect(self.pack_settings)
 
     def pack_settings(self):
@@ -469,7 +459,6 @@ class OWDistanceMap(widget.OWWidget):
 
     def clear(self):
         self.matrix = None
-        self.cluster = None
         self._tree = None
         self._ordered_tree = None
         self._sorted_matrix = None
