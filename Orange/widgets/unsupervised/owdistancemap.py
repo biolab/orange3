@@ -27,6 +27,9 @@ from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils.dendrogram import DendrogramWidget
+from Orange.widgets.visualize.utils.heatmap import (
+    GradientColorMap, GradientLegendWidget,
+)
 
 
 def _remove_item(item):
@@ -285,6 +288,7 @@ class OWDistanceMap(widget.OWWidget):
         super().__init__()
 
         self.matrix = None
+        self._matrix_range = 0.
         self._tree = None
         self._ordered_tree = None
         self._sorted_matrix = None
@@ -336,10 +340,16 @@ class OWDistanceMap(widget.OWWidget):
         self.grid = QGraphicsGridLayout()
         self.grid_widget.setLayout(self.grid)
 
+        self.gradient_legend = GradientLegendWidget(
+            0, 1, self._color_map()
+        )
+        self.gradient_legend.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.gradient_legend.setMaximumWidth(250)
+        self.grid.addItem(self.gradient_legend, 0, 1)
         self.viewbox = pg.ViewBox(enableMouse=False, enableMenu=False)
         self.viewbox.setAcceptedMouseButtons(Qt.NoButton)
         self.viewbox.setAcceptHoverEvents(False)
-        self.grid.addItem(self.viewbox, 1, 1)
+        self.grid.addItem(self.viewbox, 2, 1)
 
         self.left_dendrogram = DendrogramWidget(
             self.grid_widget, orientation=DendrogramWidget.Left,
@@ -357,8 +367,8 @@ class OWDistanceMap(widget.OWWidget):
         self.top_dendrogram.setAcceptedMouseButtons(Qt.NoButton)
         self.top_dendrogram.setAcceptHoverEvents(False)
 
-        self.grid.addItem(self.left_dendrogram, 1, 0)
-        self.grid.addItem(self.top_dendrogram, 0, 1)
+        self.grid.addItem(self.left_dendrogram, 2, 0)
+        self.grid.addItem(self.top_dendrogram, 1, 1)
 
         self.right_labels = TextList(
             alignment=Qt.AlignLeft | Qt.AlignVCenter,
@@ -370,11 +380,12 @@ class OWDistanceMap(widget.OWWidget):
             sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         )
 
-        self.grid.addItem(self.right_labels, 1, 2)
-        self.grid.addItem(self.bottom_labels, 2, 1)
+        self.grid.addItem(self.right_labels, 2, 2)
+        self.grid.addItem(self.bottom_labels, 3, 1)
 
         self.view.setCentralItem(self.grid_widget)
 
+        self.gradient_legend.hide()
         self.left_dendrogram.hide()
         self.top_dendrogram.hide()
         self.right_labels.hide()
@@ -404,8 +415,10 @@ class OWDistanceMap(widget.OWWidget):
 
         self.matrix = matrix
         if matrix is not None:
+            self._matrix_range = numpy.nanmax(matrix)
             self.set_items(matrix.row_items, matrix.axis)
         else:
+            self._matrix_range = 0.
             self.set_items(None)
 
         if matrix is not None:
@@ -488,6 +501,7 @@ class OWDistanceMap(widget.OWWidget):
 
         self._set_displayed_dendrogram(None)
         self._set_labels(None)
+        self.gradient_legend.hide()
 
     def _cluster_tree(self):
         if self._tree is None:
@@ -596,12 +610,22 @@ class OWDistanceMap(widget.OWWidget):
         self.right_labels.setMaximumWidth(constraint)
         self.bottom_labels.setMaximumHeight(constraint)
 
+    def _color_map(self) -> GradientColorMap:
+        palette = self.color_box.currentData()
+        return GradientColorMap(
+            palette.lookup_table(),
+            thresholds=(self.color_low, max(self.color_high, self.color_low)),
+            span=(0., self._matrix_range))
+
     def _update_color(self):
         palette = self.color_box.currentData()
         self.palette_name = palette.name
         if self.matrix_item:
             colors = palette.lookup_table(self.color_low, self.color_high)
             self.matrix_item.setLookupTable(colors)
+            self.gradient_legend.show()
+            self.gradient_legend.setRange(0, self._matrix_range)
+            self.gradient_legend.setColorMap(self._color_map())
 
     def _invalidate_selection(self):
         ranges = self.matrix_item.selections()
