@@ -86,7 +86,7 @@ class GradientColorMap(ColorMap):
     def __init__(self, colortable, thresholds=thresholds, center=None, span=None):
         self.colortable = np.asarray(colortable)
         self.thresholds = thresholds
-        assert thresholds[0] < thresholds[1]
+        assert thresholds[0] <= thresholds[1]
         self.center = center
         self.span = span
 
