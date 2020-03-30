@@ -1,7 +1,10 @@
+# pylint: disable=protected-access
 from Orange.data import Table, Domain
 from Orange.widgets.data.owselectbydataindex import OWSelectByDataIndex
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 
 
 class TestOWSelectSubset(WidgetTest):
@@ -43,3 +46,44 @@ class TestOWSelectSubset(WidgetTest):
         self.assertTrue(self.widget.Warning.instances_not_matching.is_shown())
         self.assertEqual([], list(matching))
         self.assertEqual(list(data), list(non_matching))
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        data = Table("iris")
+        info = self.widget.info
+        NoInput, NoOutput = "No data on input", "No data on output"
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, NoInput)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, NoOutput)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, NoOutput)
+
+        self.send_signal(self.widget.Inputs.data_subset, data)
+        data_list = [("Data", data), ("Data subset", data)]
+        summary = f"{len(data)}, {len(data)}"
+        details = format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.matching_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, NoOutput)
+
+        self.send_signal(self.widget.Inputs.data_subset, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, NoInput)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, NoOutput)
