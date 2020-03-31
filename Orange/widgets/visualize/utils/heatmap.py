@@ -113,7 +113,16 @@ class GradientColorMap(ColorMap):
             low, high = self.span
         low, high = self.adjust_levels(low, high)
         mask = np.isnan(data)
-        normalized = (data - low) / (high - low)
+        normalized = data - low
+        finfo = np.finfo(normalized.dtype)
+        if high - low <= 1 / finfo.max:
+            n_fact = finfo.max
+        else:
+            n_fact = 1. / (high - low)
+        # over/underflow to inf are expected and cliped with the rest in the
+        # next step
+        with np.errstate(over="ignore", under="ignore"):
+            normalized *= n_fact
         normalized = np.clip(normalized, 0, 1, out=normalized)
         table = np.empty_like(normalized, dtype=np.uint8)
         ncolors = len(self.colortable)
