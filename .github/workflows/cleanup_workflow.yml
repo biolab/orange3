@@ -19,4 +19,8 @@ jobs:
         uses: styfle/cancel-workflow-action@0.3.1
         with:
           workflow_id: 685155, 685156, 685157, 685153, 685154
-          access_token: ${{ secrets.GH_ACCESS_TOKEN }}
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: The job has failed
+        run: echo "Cleanup step failed"
+        if: failure()
