@@ -130,7 +130,7 @@ class TreeViewWithReturn(QTreeView):
 
 
 class OWDataSets(OWWidget):
-    name = "Datasets"
+    name = "Data Sets"
     description = "Load a dataset from an online repository"
     icon = "icons/DataSets.svg"
     priority = 20
