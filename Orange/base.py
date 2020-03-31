@@ -320,6 +320,39 @@ class Model(Reprable):
         new_probs = new_probs / tots[:, None]
         return new_probs
 
+    def data_to_model_domain(self, data: Table) -> Table:
+        """
+        Transforms data to the model domain if possible.
+
+        Parameters
+        ----------
+        data
+            Data to be transformed to the model domain
+
+        Returns
+        -------
+        Transformed data table
+
+        Raises
+        ------
+        DomainTransformationError
+            Error indicates that transformation is not possible since domains
+            are not compatible
+        """
+        if data.domain == self.domain:
+            return data
+
+        if self.original_domain.attributes != data.domain.attributes \
+                and data.X.size \
+                and not all_nan(data.X):
+            new_data = data.transform(self.original_domain)
+            if all_nan(new_data.X):
+                raise DomainTransformationError(
+                    "domain transformation produced no defined values")
+            return new_data.transform(self.domain)
+
+        return data.transform(self.domain)
+
     def __call__(self, data, ret=Value):
         multitarget = len(self.domain.class_vars) > 1
 
@@ -335,21 +368,6 @@ class Model(Reprable):
 
         def fix_dim(x):
             return x[0] if one_d else x
-
-        def data_to_model_domain():
-            if data.domain == self.domain:
-                return data
-
-            if self.original_domain.attributes != data.domain.attributes \
-                    and data.X.size \
-                    and not all_nan(data.X):
-                new_data = data.transform(self.original_domain)
-                if all_nan(new_data.X):
-                    raise DomainTransformationError(
-                        "domain transformation produced no defined values")
-                return new_data.transform(self.domain)
-
-            return data.transform(self.domain)
 
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
@@ -368,6 +386,10 @@ class Model(Reprable):
         else:
             one_d = False
 
+        # if sparse convert to csr_matrix
+        if scipy.sparse.issparse(data):
+            data = data.tocsr()
+
         # Call the predictor
         backmappers = None
         n_values = []
@@ -375,7 +397,7 @@ class Model(Reprable):
             prediction = self.predict(data)
         elif isinstance(data, Table):
             backmappers, n_values = self.get_backmappers(data)
-            data = data_to_model_domain()
+            data = self.data_to_model_domain(data)
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
             data = Table.from_list(self.original_domain, data)

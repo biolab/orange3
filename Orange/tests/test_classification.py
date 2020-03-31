@@ -24,7 +24,7 @@ from Orange.classification import (
     SimpleRandomForestLearner, EllipticEnvelopeLearner)
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
-                         Domain, Table, Variable)
+                         Domain, Table)
 from Orange.data.table import DomainTransformationError
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
