@@ -204,6 +204,7 @@ conda-fetch-packages() {
     echo "@EXPLICIT" >"${destdir}/conda-spec.txt"
     (
         cd "${destdir}"
+        shopt -s nullglob
         ls -1 *.tar.bz2 *.conda
     ) >> "${destdir}/conda-spec.txt"
 }
