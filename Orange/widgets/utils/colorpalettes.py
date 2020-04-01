@@ -394,7 +394,7 @@ class BinnedContinuousPalette(IndexedPalette):
 
     def _bin_indices(self, x):
         nans = np.isnan(x)
-        binx = np.digitize(x, self.bins[1:-1], right=True)
+        binx = np.digitize(x, self.bins[1:-1])
         binx.clip(0, len(self.bins) - 1)
         binx[nans] = -1
         return binx, nans

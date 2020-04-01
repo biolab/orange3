@@ -9,6 +9,7 @@ from AnyQt.QtGui import QImage, QColor, QIcon
 from orangewidget.tests.base import GuiTest
 from Orange.util import color_to_hex
 from Orange.data import DiscreteVariable, ContinuousVariable, Variable
+from Orange.preprocess.discretize import decimal_binnings
 # pylint: disable=wildcard-import,unused-wildcard-import
 from Orange.widgets.utils.colorpalettes import *
 
@@ -463,6 +464,14 @@ class BinnedPaletteTest(unittest.TestCase):
         self.assertNotEqual(self.binned.palette[0, 0], copy.palette[0, 0])
         copy.bins[0] += 1
         self.assertNotEqual(self.bins[0], copy.bins[0])
+
+    def test_decimal_binnings(self):
+        """test for consistency with binning from discretize"""
+        data = np.array([1, 2])
+        bins = decimal_binnings(data)[0].thresholds
+        binned = BinnedContinuousPalette.from_palette(self.palette, bins)
+        colors = binned.values_to_colors(data)
+        assert not np.array_equal(colors[0], colors[1])
 
 
 class UtilsTest(GuiTest):
