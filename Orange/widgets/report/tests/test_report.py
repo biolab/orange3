@@ -17,7 +17,7 @@ from Orange.widgets.visualize.owtreeviewer import OWTreeGraph
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
-from Orange.widgets.evaluate.owtestlearners import OWTestLearners
+from Orange.widgets.evaluate.owtestandscore import OWTestAndScore
 from Orange.widgets.unsupervised.owcorrespondence import OWCorrespondenceAnalysis
 from Orange.widgets.unsupervised.owdistancemap import OWDistanceMap
 from Orange.widgets.unsupervised.owdistances import OWDistances
@@ -66,7 +66,7 @@ class TestReportWidgets(WidgetTest):
                     OWMDS, OWPCA]
     dist_widgets = [OWDistanceMap, OWHierarchicalClustering]
     visu_widgets = VISUALIZATION_WIDGETS
-    spec_widgets = [OWTestLearners, OWTreeGraph]
+    spec_widgets = [OWTestAndScore, OWTreeGraph]
 
     def _create_report(self, widgets, rep, data):
         for widget in widgets:
@@ -108,7 +108,7 @@ class TestReportWidgets(WidgetTest):
                                   k=3)
         results.learner_names = ["LR l2"]
 
-        w = self.create_widget(OWTestLearners)
+        w = self.create_widget(OWTestAndScore)
         set_learner = getattr(w, w.Inputs.learner.handler)
         set_train = getattr(w, w.Inputs.train_data.handler)
         set_test = getattr(w, w.Inputs.test_data.handler)
