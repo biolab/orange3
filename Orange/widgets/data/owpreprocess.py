@@ -1143,7 +1143,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         self.flow_view.installEventFilter(self)
 
         box = gui.vBox(self.controlArea, "Output")
-        gui.auto_send(box, self, "autocommit", box=False)
+        gui.auto_apply(box, self, "autocommit", box=False)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
