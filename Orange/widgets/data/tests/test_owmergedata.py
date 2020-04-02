@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 # There are never too many tests, so:
-# pylint: disable=too-many-lines,too-many-public-methods
+# pylint: disable=too-many-lines,too-many-public-methods, protected-access
 from itertools import chain
 import unittest
 from unittest.mock import Mock
@@ -16,6 +16,8 @@ from Orange.data import Table, Domain, DiscreteVariable, StringVariable, \
 from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX, \
     MergeDataContextHandler
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.state_summary import format_multiple_summaries, \
+    format_summary_details
 from Orange.tests import test_filename
 
 
@@ -1019,6 +1021,44 @@ class TestOWMergeData(WidgetTest):
         self.assertListEqual([m.name for m in merged_data.domain.variables],
                              ["A", "B", "C"])
 
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        data = self.dataA
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.send_signal(self.widget.Inputs.data, data)
+        data_list = [("Data", data), ("Extra data", None)]
+        summary, details = f"{len(data)}, 0", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self.send_signal(self.widget.Inputs.extra_data, data)
+        data_list = [("Data", data), ("Extra data", data)]
+        summary = f"{len(data)}, {len(data)}"
+        details = format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        data_list = [("Data", None), ("Extra data", data)]
+        summary, details = f"0, {len(data)}", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self.send_signal(self.widget.Inputs.extra_data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 class MergeDataContextHandlerTest(unittest.TestCase):
     # These units are too small to test individually, so they are tested
