@@ -716,6 +716,7 @@ class OWFeatureStatistics(widget.OWWidget):
         self.cb_color_var = gui.comboBox(
             box, master=self, value='color_var', model=self.color_var_model,
             label='Color:', orientation=Qt.Horizontal, contentsLength=13,
+            searchable=True
         )
         self.cb_color_var.activated.connect(self.__color_var_changed)
 
