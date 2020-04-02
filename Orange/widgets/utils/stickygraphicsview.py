@@ -221,7 +221,7 @@ class StickyGraphicsView(QGraphicsView):
         viewrect = self.mapFromScene(rect).boundingRect()
         viewportrect = self.viewport().rect()
         visible = not (viewrect.top() >= viewportrect.top()
-                       and viewrect.bottom() <= viewportrect.bottom())
+                       and viewrect.bottom() <= viewportrect.y() + viewportrect.height())
         container.setVisible(visible)
         # force immediate layout of the container overlay
         QCoreApplication.sendEvent(container, QEvent(QEvent.LayoutRequest))
