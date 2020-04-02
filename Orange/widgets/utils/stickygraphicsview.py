@@ -2,7 +2,7 @@ import sys
 import math
 
 from PyQt5.QtCore import Qt, QRectF, QEvent, QCoreApplication, QObject, QPointF
-from PyQt5.QtGui import QBrush, QPalette, QTransform
+from PyQt5.QtGui import QBrush, QPalette, QTransform, QPolygonF
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QWidget, QVBoxLayout, QSizePolicy,
     QScrollBar, QGraphicsDropShadowEffect
@@ -218,7 +218,8 @@ class StickyGraphicsView(QGraphicsView):
             container.setVisible(False)
             return
         # map the rect to (main) viewport coordinates
-        viewrect = self.mapFromScene(rect).boundingRect()
+        viewrect = qgraphicsview_map_rect_from_scene(self, rect).boundingRect()
+        viewrect = viewrect.toAlignedRect()
         viewportrect = self.viewport().rect()
         visible = not (viewrect.top() >= viewportrect.top()
                        and viewrect.bottom() <= viewportrect.y() + viewportrect.height())
@@ -246,6 +247,20 @@ class StickyGraphicsView(QGraphicsView):
             self.__updateHeader()
             self.__updateFooter()
         return super().viewportEvent(event)
+
+
+def qgraphicsview_map_rect_from_scene(
+        view: QGraphicsView, rect: QRectF
+) -> QPolygonF:
+    """Like QGraphicsView.mapFromScene(QRectF) but returning a QPolygonF
+    (without rounding).
+    """
+    tr = view.viewportTransform()
+    p1 = tr.map(rect.topLeft())
+    p2 = tr.map(rect.topRight())
+    p3 = tr.map(rect.bottomRight())
+    p4 = tr.map(rect.bottomLeft())
+    return QPolygonF([p1, p2, p3, p4])
 
 
 def main(args):  # pragma: no cover
