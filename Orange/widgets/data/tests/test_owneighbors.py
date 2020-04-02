@@ -7,6 +7,8 @@ import numpy as np
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets.data.owneighbors import OWNeighbors, METRICS
 from Orange.widgets.tests.base import WidgetTest, ParameterMapping
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 
 
 class TestOWNeighbors(WidgetTest):
@@ -122,36 +124,43 @@ class TestOWNeighbors(WidgetTest):
         widget.apply_button.button.click()
         self.assertIsNotNone(self.get_output("Neighbors"))
 
-    def test_input_summary(self):
+    def test_summary(self):
         """Check if status bar is updated when data is received"""
-        widget = self.widget
-        input_sum = widget.info.set_input_summary = Mock()
-        data = Table("iris")
+        info = self.widget.info
+        data, reference = Table("iris"), Table("iris")[:5]
+        no_input, no_output = "No data on input", "No data on output"
 
-        input_sum.reset_mock()
-        self.send_signal(widget.Inputs.reference, data[:5])
-        input_sum.assert_called_with("0 | 5 ", "No data instance(s) on input\n"\
-                                               "5 reference instance(s) on input ")
+        self.send_signal(self.widget.Inputs.data, data)
+        data_list = [("Data", data), ("Reference", None)]
+        summary, details = "150, 0", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
-        input_sum.reset_mock()
-        self.send_signal(widget.Inputs.data, data[:10])
-        input_sum.assert_called_with("10 | 5 ", "10 data instance(s) on input\n"\
-                                                "5 reference instance(s) on input ")
+        self.send_signal(self.widget.Inputs.reference, reference)
+        data_list = [("Data", data), ("Reference", reference)]
+        summary, details = "150, 5", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
 
-        input_sum.reset_mock()
-        self.send_signals([(widget.Inputs.data, None), (widget.Inputs.reference, None)])
-        input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.send_signal(self.widget.Inputs.data, None)
+        data_list = [("Data", None), ("Reference", reference)]
+        summary, details = "0, 5", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
-        input_sum.reset_mock()
-        self.send_signal(widget.Inputs.data, data[:15])
-        input_sum.assert_called_with("15 | 0 ", "15 data instance(s) on input\n" \
-                                                "No reference instance(s) on input ")
-
-        input_sum.reset_mock()
-        self.send_signals([(widget.Inputs.data, data[:12]), (widget.Inputs.reference, data[-1:])])
-        input_sum.assert_called_with("12 | 1 ", "12 data instance(s) on input\n"\
-                                                "1 reference instance(s) on input ")
+        self.send_signal(self.widget.Inputs.reference, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_compute_distances_apply_called(self):
         """Check compute distances and apply are called when receiving signal"""
@@ -329,7 +338,6 @@ class TestOWNeighbors(WidgetTest):
 
     def test_apply(self):
         widget = self.widget
-        output_sum = widget.info.set_output_summary = Mock()
         widget.auto_apply = True
         data = Table("iris")
         indices = np.array([5, 10, 15, 100])
@@ -342,7 +350,6 @@ class TestOWNeighbors(WidgetTest):
         np.testing.assert_almost_equal(neigh.X, data.X[indices])
         np.testing.assert_almost_equal(
             neigh.metas.flatten(), widget.distances[indices])
-        output_sum.assert_called_with(str(len(neigh)))
 
     def test_all_equal_ref(self):
         widget = self.widget
