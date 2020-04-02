@@ -109,7 +109,7 @@ class StickyGraphicsView(QGraphicsView):
             self.__updateFooter()
 
     def footerSceneRect(self) -> QRectF:
-        return QRectF(self.__headerRect)
+        return QRectF(self.__footerRect)
 
     def setScene(self, scene: QGraphicsScene) -> None:
         """Reimplemented"""
