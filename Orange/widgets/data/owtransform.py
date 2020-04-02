@@ -2,7 +2,7 @@ from typing import Optional
 
 from AnyQt.QtCore import Qt
 
-from Orange.data import Table, Domain
+from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.report.report import describe_data
 from Orange.widgets.utils.sql import check_sql_input
@@ -36,7 +36,6 @@ class OWTransform(OWWidget):
         super().__init__()
         self.data = None  # type: Optional[Table]
         self.template_data = None  # type: Optional[Table]
-        self.template_domain = None  # type: Optional[Domain]
         self.transformed_info = describe_data(None)  # type: OrderedDict
 
         info_box = gui.widgetBox(self.controlArea, "Info")
@@ -59,11 +58,11 @@ class OWTransform(OWWidget):
 
     def set_template_label_text(self):
         text = "No template data on input."
-        if self.data and self.template_domain is not None:
+        if self.data and self.template_data:
             text = "Template domain applied."
-        elif self.template_domain is not None:
+        elif self.template_data:
             text = "Template data includes {:,} features.".format(
-                len(self.template_domain.attributes))
+                len(self.template_data.domain.attributes))
         self.template_label.setText(text)
 
     def set_output_label_text(self, data):
@@ -82,7 +81,6 @@ class OWTransform(OWWidget):
     @Inputs.template_data
     @check_sql_input
     def set_template_data(self, data):
-        self.template_domain = data and data.domain
         self.template_data = data
 
     def handleNewSignals(self):
@@ -103,9 +101,9 @@ class OWTransform(OWWidget):
     def apply(self):
         self.clear_messages()
         transformed_data = None
-        if self.data and self.template_domain is not None:
+        if self.data and self.template_data:
             try:
-                transformed_data = self.data.transform(self.template_domain)
+                transformed_data = self.data.transform(self.template_data.domain)
             except Exception as ex:  # pylint: disable=broad-except
                 self.Error.error(ex)
 
@@ -121,8 +119,8 @@ class OWTransform(OWWidget):
     def send_report(self):
         if self.data:
             self.report_data("Data", self.data)
-        if self.template_domain is not None:
-            self.report_domain("Template data", self.template_domain)
+        if self.template_data:
+            self.report_domain("Template data", self.template_data.domain)
         if self.transformed_info:
             self.report_items("Transformed data", self.transformed_info)
 

@@ -41,7 +41,6 @@ class TestOWTransform(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.brief, summary)
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
-
         # remove template data
         self.send_signal(self.widget.Inputs.template_data, None)
         output = self.get_output(self.widget.Outputs.transformed_data)
