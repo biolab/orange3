@@ -718,6 +718,7 @@ class OWDataTable(OWWidget):
         view = self.tabs.widget(index)
         if view is not None and view.model() is not None:
             self.set_info(view.input_slot.summary)
+            self.update_selection()
         else:
             self.set_info(None)
 
