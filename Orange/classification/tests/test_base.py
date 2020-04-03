@@ -186,6 +186,17 @@ class TestModelMapping(unittest.TestCase):
             self.assertTrue(np.all(val <= 2))
             np.testing.assert_array_equal(prob, 1 / 3)
 
+    def test_sparse_matrix(self):
+        iris_sparse = self.iris.to_sparse()
+        for lrn in [LogisticRegressionLearner, TreeLearner]:  # skl and non-skl
+            model = lrn()(iris_sparse)
+            pred = model(iris_sparse.X.tocsc())
+            self.assertTupleEqual((len(self.iris),), pred.shape)
+            pred = model(iris_sparse.X.tolil())
+            self.assertTupleEqual((len(self.iris),), pred.shape)
+            pred = model(iris_sparse.X.tocoo())
+            self.assertTupleEqual((len(self.iris),), pred.shape)
+
 
 if __name__ == '__main__':
     unittest.main()

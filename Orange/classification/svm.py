@@ -8,13 +8,8 @@ __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner"]
 svm_pps = SklLearner.preprocessors + [AdaptiveNormalize()]
 
 
-class SVMClassifier(SklModel):
-    pass
-
-
 class SVMLearner(SklLearner):
     __wraps__ = skl_svm.SVC
-    __returns__ = SVMClassifier
     preprocessors = svm_pps
 
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma="auto",
