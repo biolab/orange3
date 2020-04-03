@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: False
       matrix:
-        python: [3.6, 3.7]
+        python: [3.6, 3.7, 3.8]
         os: [macos-10.15]
 
     steps:

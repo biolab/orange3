@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: False
       matrix:
-        python: [3.6, 3.7]
+        python: [3.6, 3.7, 3.8]
         os: [windows-2016]
 
     steps:
