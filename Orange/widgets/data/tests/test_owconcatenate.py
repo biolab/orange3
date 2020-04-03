@@ -1,6 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
-# pylint: disable=abstract-method
+# pylint: disable=missing-docstring, abstract-method, protected-access
 import unittest
 from unittest.mock import patch
 
@@ -11,7 +10,8 @@ from Orange.data import (
 )
 from Orange.preprocess.transformation import Identity
 from Orange.widgets.data.owconcatenate import OWConcatenate
-
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -377,6 +377,49 @@ class TestOWConcatenate(WidgetTest):
             self.assertEqual(len(out_dom.attributes), 1)
             x = out_dom.attributes[0]
             self.assertEqual(x.number_of_decimals, 4)
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.send_signal(self.widget.Inputs.primary_data, self.iris)
+        data_list = [("Primary data", self.iris), ("", None)]
+        summary, details = "150, 0", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.additional_data, self.titanic, 0)
+        data_list = [("Primary data", self.iris), ("", self.titanic)]
+        summary, details = "150, 2201", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.primary_data, None)
+        self.send_signal(self.widget.Inputs.additional_data, self.iris, 1)
+        data_list = [("Primary data", None), ("", self.titanic), ("", self.iris)]
+        summary, details = "0, 2201, 150", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.additional_data, None, 0)
+        self.send_signal(self.widget.Inputs.additional_data, None, 1)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 
 if __name__ == "__main__":

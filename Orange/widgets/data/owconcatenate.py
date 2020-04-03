@@ -23,6 +23,8 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 from Orange.widgets.widget import Input, Output, Msg
 
 
@@ -135,6 +137,9 @@ class OWConcatenate(widget.OWWidget):
             gui.comboBox(ibox, self, "source_column_role", items=self.id_roles,
                          callback=self._source_changed))
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         ibox.layout().addLayout(form)
         mleft, mtop, mright, _ = ibox.layout().getContentsMargins()
         ibox.layout().setContentsMargins(mleft, mtop, mright, 4)
@@ -159,8 +164,25 @@ class OWConcatenate(widget.OWWidget):
         elif sig_id in self.more_data:
             del self.more_data[sig_id]
 
+    def _set_input_summary(self):
+        more_data = list(self.more_data.values()) if self.more_data else [None]
+        n_primary = len(self.primary_data) if self.primary_data else 0
+        n_more_data = [len(data) if data else 0 for data in more_data]
+
+        summary, details, kwargs = self.info.NoInput, "", {}
+        if self.primary_data or self.more_data:
+            summary = f"{self.info.format_number(n_primary)}, " \
+                    + ", ".join(self.info.format_number(i) for i in n_more_data)
+            details = format_multiple_summaries(
+                [("Primary data", self.primary_data)]
+                + [("", data) for data in more_data]
+            )
+            kwargs = {"format": Qt.RichText}
+        self.info.set_input_summary(summary, details, **kwargs)
+
     def handleNewSignals(self):
         self.mergebox.setDisabled(self.primary_data is not None)
+        self._set_input_summary()
         if self.incompatible_types():
             self.Error.bow_concatenation()
         else:
@@ -211,9 +233,10 @@ class OWConcatenate(widget.OWWidget):
                 source_ids = np.array(list(flatten(
                     [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
                 data[:, source_var] = source_ids
-
+            self.info.set_output_summary(len(data), format_summary_details(data))
         else:
             data = None
+            self.info.set_output_summary(self.info.NoOutput)
 
         self.Outputs.data.send(data)
 
