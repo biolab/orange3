@@ -1,6 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
 import inspect
 import pickle
 import pkgutil
@@ -22,8 +21,7 @@ from Orange.classification import (
     MajorityLearner,
     RandomForestLearner, SimpleTreeLearner, SoftmaxRegressionLearner,
     SVMLearner, LinearSVMLearner, OneClassSVMLearner, TreeLearner, KNNLearner,
-    SimpleRandomForestLearner, EllipticEnvelopeLearner,
-    SGDClassificationLearner)
+    SimpleRandomForestLearner, EllipticEnvelopeLearner)
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table)
@@ -31,6 +29,24 @@ from Orange.data.table import DomainTransformationError
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 from Orange.tests import test_filename
+
+
+def all_learners():
+    classification_modules = pkgutil.walk_packages(
+        path=Orange.classification.__path__,
+        prefix="Orange.classification.",
+        onerror=lambda x: None)
+    for _, modname, _ in classification_modules:
+        try:
+            module = pkgutil.importlib.import_module(modname)
+        except ImportError:
+            continue
+
+        for name, class_ in inspect.getmembers(module, inspect.isclass):
+            if (issubclass(class_, Learner) and
+                    not name.startswith('_') and
+                    'base' not in class_.__module__):
+                yield class_
 
 
 class MultiClassTest(unittest.TestCase):
@@ -194,21 +210,59 @@ class ModelTest(unittest.TestCase):
 
     def test_result_shape(self):
         """
-        This test function will be extended for all models in on of the
-        following pull requests.
+        Test if the results shapes are correct
         """
         iris = Table('iris')
-        learner = SGDClassificationLearner()
+        for learner in all_learners():
+            # TODO: Softmax Regression will be fixed as a separate PR
+            if learner is SoftmaxRegressionLearner:
+                continue
 
-        # model trained on only one value (but three in the domain)
-        model = learner(iris)
+            with self.subTest(learner.__name__):
+                # model trained on only one value (but three in the domain)
+                try:
+                    model = learner()(iris[0:100])
+                except TypeError as e:
+                    # calibration, threshold learners are skipped
+                    # they have some specifics regarding data
+                    continue
 
-        res = model(iris[0:50])
-        self.assertTupleEqual((50,), res.shape)
+                res = model(iris[0:50])
+                self.assertTupleEqual((50,), res.shape)
 
-        # probabilities must still be for three classes
-        res = model(iris[0:50], model.Probs)
-        self.assertTupleEqual((50, 3), res.shape)
+                # probabilities must still be for three classes
+                res = model(iris[0:50], model.Probs)
+                self.assertTupleEqual((50, 3), res.shape)
+
+                # model trained on all classes and predicting with one class
+                try:
+                    model = learner()(iris[0:100])
+                except TypeError:
+                    # calibration, threshold learners are skipped
+                    # they have some specifics regarding data
+                    continue
+                res = model(iris[0:50], model.Probs)
+                self.assertTupleEqual((50, 3), res.shape)
+
+    def test_result_shape_numpy(self):
+        """
+        Test whether results shapes are correct when testing on numpy data
+        """
+        iris = Table('iris')
+        for learner in all_learners():
+            with self.subTest(learner.__name__):
+                try:
+                    model = learner()(iris)
+                except TypeError:
+                    # cannot be tested with default parameters
+                    continue
+                transformed_iris = model.data_to_model_domain(iris)
+
+                res = model(transformed_iris.X[0:5])
+                self.assertTupleEqual((5,), res.shape)
+
+                res = model(transformed_iris.X[0:1], model.Probs)
+                self.assertTupleEqual((1, 3), res.shape)
 
 
 class ExpandProbabilitiesTest(unittest.TestCase):
@@ -309,7 +363,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
 
     def test_missing_class(self):
         table = Table(test_filename("datasets/adult_sample_missing"))
-        for learner in LearnerAccessibility().all_learners():
+        for learner in all_learners():
             try:
                 learner = learner()
                 if isinstance(learner, NuSVMLearner):
@@ -330,33 +384,15 @@ class LearnerAccessibility(unittest.TestCase):
         # Convergence warnings are irrelevant for these tests
         warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
 
-
-    def all_learners(self):
-        classification_modules = pkgutil.walk_packages(
-            path=Orange.classification.__path__,
-            prefix="Orange.classification.",
-            onerror=lambda x: None)
-        for importer, modname, ispkg in classification_modules:
-            try:
-                module = pkgutil.importlib.import_module(modname)
-            except ImportError:
-                continue
-
-            for name, class_ in inspect.getmembers(module, inspect.isclass):
-                if (issubclass(class_, Learner) and
-                        not name.startswith('_') and
-                        'base' not in class_.__module__):
-                    yield class_
-
     def test_all_learners_accessible_in_Orange_classification_namespace(self):
-        for learner in self.all_learners():
+        for learner in all_learners():
             if not hasattr(Orange.classification, learner.__name__):
                 self.fail("%s is not visible in Orange.classification"
                           " namespace" % learner.__name__)
 
     def test_all_models_work_after_unpickling(self):
         datasets = [Table('iris'), Table('titanic')]
-        for learner in list(self.all_learners()):
+        for learner in list(all_learners()):
             try:
                 learner = learner()
             except Exception:
@@ -381,7 +417,7 @@ class LearnerAccessibility(unittest.TestCase):
                     % (learner.__class__.__name__, ds.name))
 
     def test_adequacy_all_learners(self):
-        for learner in self.all_learners():
+        for learner in all_learners():
             try:
                 learner = learner()
                 table = Table("housing")
@@ -391,7 +427,7 @@ class LearnerAccessibility(unittest.TestCase):
                 continue
 
     def test_adequacy_all_learners_multiclass(self):
-        for learner in self.all_learners():
+        for learner in all_learners():
             try:
                 learner = learner()
                 table = Table(test_filename("datasets/test8.tab"))

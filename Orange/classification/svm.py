@@ -1,6 +1,6 @@
 import sklearn.svm as skl_svm
 
-from Orange.classification import SklLearner, SklModel
+from Orange.classification import SklLearner
 from Orange.preprocess import AdaptiveNormalize
 
 __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner"]
@@ -32,19 +32,8 @@ class LinearSVMLearner(SklLearner):
         self.params = vars()
 
 
-class NuSVMClassifier(SklModel):
-
-    def predict(self, X):
-        value = self.skl_model.predict(X)
-        if self.skl_model.probability:
-            prob = self.skl_model.predict_proba(X)
-            return value, prob
-        return value
-
-
 class NuSVMLearner(SklLearner):
     __wraps__ = skl_svm.NuSVC
-    __returns__ = NuSVMClassifier
     preprocessors = svm_pps
 
     def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
@@ -55,10 +44,11 @@ class NuSVMLearner(SklLearner):
 
 
 if __name__ == '__main__':
-    import Orange
+    from Orange.evaluation import CrossValidation, CA
+    from Orange.data import Table
 
-    data = Orange.data.Table('iris')
+    data_ = Table('iris')
     learners = [SVMLearner(), NuSVMLearner(), LinearSVMLearner()]
-    res = Orange.evaluation.CrossValidation(data, learners)
-    for l, ca in zip(learners, Orange.evaluation.CA(res)):
+    res = CrossValidation()(data_, learners)
+    for l, ca in zip(learners, CA()(res)):
         print("learner: {}\nCA: {}\n".format(l, ca))
