@@ -16,6 +16,7 @@ from Orange.widgets import gui, report
 from Orange.widgets.settings import (
     Setting, ContextSetting, DomainContextHandler, SettingProvider
 )
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table
 )
@@ -222,7 +223,17 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         This method must be overridden if the widget offers coloring that is
         not based on attribute values.
         """
-        return self.attr_color and self.attr_color.palette
+        attr = self.attr_color
+        if not attr:
+            return None
+        palette = attr.palette
+        if attr.is_discrete and len(attr.values) >= MAX_COLORS:
+            values = self.get_color_labels()
+            colors = [palette.palette[attr.to_val(value)]
+                      for value in values[:-1]] + [[192, 192, 192]]
+
+            palette = colorpalettes.DiscretePalette.from_colors(colors)
+        return palette
 
     def can_draw_density(self):
         """
