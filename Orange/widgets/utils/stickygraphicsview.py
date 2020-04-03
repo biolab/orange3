@@ -1,7 +1,9 @@
 import sys
 import math
 
-from PyQt5.QtCore import Qt, QRectF, QEvent, QCoreApplication, QObject, QPointF
+from PyQt5.QtCore import (
+    Qt, QRectF, QEvent, QCoreApplication, QObject, QPointF, QRect
+)
 from PyQt5.QtGui import QBrush, QPalette, QTransform, QPolygonF
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QWidget, QVBoxLayout, QSizePolicy,
@@ -219,10 +221,10 @@ class StickyGraphicsView(QGraphicsView):
             return
         # map the rect to (main) viewport coordinates
         viewrect = qgraphicsview_map_rect_from_scene(self, rect).boundingRect()
-        viewrect = viewrect.toAlignedRect()
+        viewrect = qrectf_to_inscribed_rect(viewrect)
         viewportrect = self.viewport().rect()
-        visible = not (viewrect.top() >= viewportrect.top()
-                       and viewrect.bottom() <= viewportrect.y() + viewportrect.height())
+        visible = (viewrect.top() < viewportrect.top() or
+                   viewrect.y() + viewrect.height() > viewportrect.y() + viewportrect.height())
         container.setVisible(visible)
         # force immediate layout of the container overlay
         QCoreApplication.sendEvent(container, QEvent(QEvent.LayoutRequest))
@@ -261,6 +263,18 @@ def qgraphicsview_map_rect_from_scene(
     p3 = tr.map(rect.bottomRight())
     p4 = tr.map(rect.bottomLeft())
     return QPolygonF([p1, p2, p3, p4])
+
+
+def qrectf_to_inscribed_rect(rect: QRectF) -> QRect:
+    """
+    Return the largest integer QRect such that it is completely contained in
+    `rect`.
+    """
+    xmin = int(math.ceil(rect.x()))
+    xmax = int(math.floor(rect.right()))
+    ymin = int(math.ceil(rect.top()))
+    ymax = int(math.floor(rect.bottom()))
+    return QRect(xmin, ymin, max(xmax - xmin, 0), max(ymax - ymin, 0))
 
 
 def main(args):  # pragma: no cover
