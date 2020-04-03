@@ -86,7 +86,7 @@ class GradientColorMap(ColorMap):
     def __init__(self, colortable, thresholds=thresholds, center=None, span=None):
         self.colortable = np.asarray(colortable)
         self.thresholds = thresholds
-        assert thresholds[0] < thresholds[1]
+        assert thresholds[0] <= thresholds[1]
         self.center = center
         self.span = span
 
@@ -1159,6 +1159,12 @@ class GradientLegendWidget(QGraphicsWidget):
         if parent is not None:
             self.setParentItem(parent)
 
+    def setRange(self, low, high):
+        if self.low != low or self.high != high:
+            self.low = low
+            self.high = high
+            self.__update()
+
     def setColorMap(self, colormap: ColorMap) -> None:
         """Set the color map"""
         self.colormap = colormap
@@ -1180,6 +1186,7 @@ class GradientLegendWidget(QGraphicsWidget):
             tick_values = [low, high]
         tickformat = "{:.6g}".format
         ticks = [(val, tickformat(val)) for val in tick_values]
+        self.__axis.setRange(low, high)
         self.__axis.setTicks([ticks])
 
         self.updateGeometry()
