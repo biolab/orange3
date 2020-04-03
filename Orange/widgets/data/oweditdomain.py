@@ -2527,8 +2527,16 @@ def make_dict_mapper(
 def time_parse(values: Sequence[str], name="__"):
     tvar = Orange.data.TimeVariable(name)
     parse_time = ftry(tvar.parse, ValueError, np.nan)
-    values = [parse_time(v) for v in values]
-    return tvar, values
+    _values = [parse_time(v) for v in values]
+    if np.all(np.isnan(_values)):
+        # try parsing it with pandas (like in transform)
+        dti = pd.to_datetime(values, errors="coerce")
+        _values = datetime_to_epoch(dti)
+        date_only = getattr(dti, "_is_dates_only", False)
+        if np.all(dti != pd.NaT):
+            tvar.have_date = True
+            tvar.have_time = not date_only
+    return tvar, _values
 
 
 as_string = np.frompyfunc(str, 1, 1)
@@ -2734,17 +2742,23 @@ class ToContinuousTransform(Transformation):
             raise TypeError
 
 
+def datetime_to_epoch(dti: pd.DatetimeIndex) -> np.ndarray:
+    """Convert datetime to epoch"""
+    data = dti.values.astype("M8[us]")
+    mask = np.isnat(data)
+    data = data.astype(float) / 1e6
+    data[mask] = np.nan
+    return data
+
+
 class ReparseTimeTransform(Transformation):
     """
     Re-parse the column's string repr as datetime.
     """
     def transform(self, c):
         c = column_str_repr(self.variable, c)
-        c = pd.to_datetime(c, errors="coerce").values.astype("M8[us]")
-        mask = np.isnat(c)
-        orangecol = c.astype(float) / 1e6
-        orangecol[mask] = np.nan
-        return orangecol
+        c = pd.to_datetime(c, errors="coerce")
+        return datetime_to_epoch(c)
 
 
 class LookupMappingTransform(Transformation):
