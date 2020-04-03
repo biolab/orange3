@@ -278,10 +278,15 @@ class TestOWTestAndScore(WidgetTest):
 
         self.send_signal(self.widget.Inputs.test_data, setosa, wait=5000)
 
-        self.widget.show()
+        self.widget.adjustSize()
         view = self.widget.score_table.view
         header = view.horizontalHeader()
-        QTest.mouseClick(header.viewport(), Qt.LeftButton)
+        p = header.rect().center()
+        # second visible header section (after 'Model')
+        _, idx, *_ = (i for i in range(header.count())
+                      if not header.isSectionHidden(i))
+        p.setX(header.sectionPosition(idx) + 5)
+        QTest.mouseClick(header.viewport(), Qt.LeftButton, pos=p)
 
         # Ensure that the click on header caused an ascending sort
         # Ascending sort means that wrong model should be listed first
@@ -290,8 +295,6 @@ class TestOWTestAndScore(WidgetTest):
 
         self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
         self.assertEqual(view.model().index(0, 0).data(), "SetosaLearner")
-
-        self.widget.hide()
 
     def _retrieve_scores(self):
         w = self.widget
