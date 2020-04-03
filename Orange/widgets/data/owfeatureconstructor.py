@@ -485,7 +485,7 @@ class OWFeatureConstructor(OWWidget):
         self.featuremodel = DescriptorModel(parent=self)
 
         self.featureview = QListView(
-            minimumWidth=200,
+            minimumWidth=200, minimumHeight=50,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum,
                                    QSizePolicy.MinimumExpanding)
         )
