@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +10,7 @@ from Orange.widgets.data.owcreateclass import (
     OWCreateClass,
     map_by_substring, ValueFromStringSubstring, ValueFromDiscreteSubstring)
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestHelpers(unittest.TestCase):
@@ -405,6 +406,36 @@ class TestOWCreateClass(WidgetTest):
             self.get_output(widget2.Outputs.data, widget=widget2).domain.class_var
         )
 
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        data = self.zoo
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.send_signal(self.widget.Inputs.data, data)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.class_name = ""
+        self.widget.apply()
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self.widget.class_name = "type"
+        self.widget.apply()
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 if __name__ == "__main__":
     unittest.main()

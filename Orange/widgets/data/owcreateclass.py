@@ -15,6 +15,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -225,6 +226,9 @@ class OWCreateClass(widget.OWWidget):
         gui.button(box, self, "Apply", autoDefault=False, width=180,
                    callback=self.apply)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         # TODO: Resizing upon changing the number of rules does not work
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 
@@ -250,12 +254,16 @@ class OWCreateClass(widget.OWWidget):
         self.closeContext()
         self.rules = {}
         self.data = data
+        summary = len(data) if data else self.info.NoInput
+        details = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, details)
         model = self.controls.attribute.model()
         model.set_domain(data and data.domain)
         self.Warning.no_nonnumeric_vars(shown=data is not None and not model)
         if not model:
             self.attribute = None
             self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
         self.attribute = model[0]
         self.openContext(data)
@@ -462,6 +470,7 @@ class OWCreateClass(widget.OWWidget):
         self.class_name = self.class_name.strip()
         if not self.attribute:
             self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
         domain = self.data.domain
         if not self.class_name:
@@ -470,11 +479,15 @@ class OWCreateClass(widget.OWWidget):
             self.Error.class_name_duplicated()
         if not self.class_name or self.class_name in domain:
             self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
         new_class = self._create_variable()
         new_domain = Domain(
             domain.attributes, new_class, domain.metas + domain.class_vars)
         new_data = self.data.transform(new_domain)
+        summary = len(new_data) if new_data is not None else self.info.NoOutput
+        details = format_summary_details(new_data) if new_data is not None else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.data.send(new_data)
 
     def _create_variable(self):
