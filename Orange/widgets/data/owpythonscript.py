@@ -511,35 +511,6 @@ class ConsoleWidget(RichJupyterWidget):
         return super()._event_filter_console_keypress(event)
 
 
-def install_ipython_kernel_manager(ksm: KernelSpecManager):
-    """
-    Install Orange IPython kernel,
-    start a kernel manager instance,
-    uninstall Orange IPython kernel
-    """
-    import json
-    import pkg_resources
-    from ipython_genutils.tempdir import TemporaryDirectory
-
-    # to run our custom kernel (./utils/ipython_kernel),
-    # we install it to sys.prefix's (venv) jupyter kernels
-    # TODO versioning
-    kernel_json = {
-        "argv": [
-            sys.executable,
-            pkg_resources.resource_filename('Orange', 'widgets/data/utils/ipython_kernel/'),
-            '-f',
-            '{connection_file}'
-        ],
-        'display_name': 'orangeipython',
-        'language': 'python3',
-    }
-    with TemporaryDirectory() as td:
-        with open(os.path.join(td, 'kernel.json'), 'w') as f:
-            json.dump(kernel_json, f, sort_keys=True)
-        ksm.install_kernel_spec(td, 'orangeipython', prefix=sys.prefix)
-
-
 class OWPythonScript(OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
@@ -580,9 +551,7 @@ class OWPythonScript(OWWidget):
     shared_namespaces = defaultdict(dict)
 
     multi_kernel_manager = MultiKernelManager()
-    multi_kernel_manager.default_kernel_name = 'orangeipython'
     multi_kernel_manager.kernel_manager_class = 'qtconsole.manager.QtKernelManager'
-    multi_kernel_manager.kernel_spec_manager = KernelSpecManager()
 
     class Warning(OWWidget.Warning):
         illegal_var_type = Msg('{} should be of type {}, not {}.')
@@ -738,13 +707,12 @@ class OWPythonScript(OWWidget):
         self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
 
-        ksm = self.multi_kernel_manager.kernel_spec_manager
-        try:
-            ksm.get_kernel_spec('orangeipython')
-        except NoSuchKernel:
-            install_ipython_kernel_manager(ksm)
-
-        kernel_id = self.multi_kernel_manager.start_kernel()
+        kernel_id = self.multi_kernel_manager.start_kernel(
+            extra_arguments=[
+                '--IPKernelApp.kernel_class='
+                'Orange.widgets.data.utils.kernel.OrangeIPythonKernel'
+            ]
+        )
         kernel_manager = self.multi_kernel_manager.get_kernel(kernel_id)
 
         kernel_client = kernel_manager.client()
