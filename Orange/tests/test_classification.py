@@ -18,10 +18,12 @@ from Orange.base import SklLearner
 import Orange.classification
 from Orange.classification import (
     Learner, Model,
-    NaiveBayesLearner, LogisticRegressionLearner, NuSVMLearner, MajorityLearner,
+    NaiveBayesLearner, LogisticRegressionLearner, NuSVMLearner,
+    MajorityLearner,
     RandomForestLearner, SimpleTreeLearner, SoftmaxRegressionLearner,
     SVMLearner, LinearSVMLearner, OneClassSVMLearner, TreeLearner, KNNLearner,
-    SimpleRandomForestLearner, EllipticEnvelopeLearner)
+    SimpleRandomForestLearner, EllipticEnvelopeLearner,
+    SGDClassificationLearner)
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table)
@@ -189,6 +191,24 @@ class ModelTest(unittest.TestCase):
         clf = DummyLearner()(iris)
         with self.assertRaises(DomainTransformationError):
             clf(titanic)
+
+    def test_result_shape(self):
+        """
+        This test function will be extended for all models in on of the
+        following pull requests.
+        """
+        iris = Table('iris')
+        learner = SGDClassificationLearner()
+
+        # model trained on only one value (but three in the domain)
+        model = learner(iris)
+
+        res = model(iris[0:50])
+        self.assertTupleEqual((50,), res.shape)
+
+        # probabilities must still be for three classes
+        res = model(iris[0:50], model.Probs)
+        self.assertTupleEqual((50, 3), res.shape)
 
 
 class ExpandProbabilitiesTest(unittest.TestCase):

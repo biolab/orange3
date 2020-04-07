@@ -4,7 +4,7 @@ Data-manipulation utilities.
 import re
 from collections import Counter
 from itertools import chain, count
-from typing import Callable
+from typing import Callable, Union, List, Type
 
 import numpy as np
 import bottleneck as bn
@@ -13,22 +13,34 @@ from scipy import sparse as sp
 RE_FIND_INDEX = r"(^{} \()(\d{{1,}})(\)$)"
 
 
-def one_hot(values, dtype=float):
+def one_hot(
+        values: Union[np.ndarray, List], dtype: Type = float, dim: int = None
+) -> np.ndarray:
     """Return a one-hot transform of values
 
     Parameters
     ----------
     values : 1d array
         Integer values (hopefully 0-max).
+    dtype
+        dtype of result array
+    dim
+        Number of columns (attributes) in the one hot encoding. This parameter
+        is used when we need fixed number of columns and values does not
+        reflect that number correctly, e.g. not all values from the discrete
+        variable are present in values parameter.
 
     Returns
     -------
     result
         2d array with ones in respective indicator columns.
     """
-    if len(values) == 0:
-        return np.zeros((0, 0), dtype=dtype)
-    return np.eye(int(np.max(values) + 1), dtype=dtype)[np.asanyarray(values, dtype=int)]
+    dim_values = int(np.max(values) + 1 if len(values) > 0 else 0)
+    if dim is None:
+        dim = dim_values
+    elif dim < dim_values:
+        raise ValueError("dim must be greater than max(values)")
+    return np.eye(dim, dtype=dtype)[np.asanyarray(values, dtype=int)]
 
 
 # pylint: disable=redefined-builtin

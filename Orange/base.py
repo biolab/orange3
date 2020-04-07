@@ -358,7 +358,11 @@ class Model(Reprable):
 
         def one_hot_probs(value):
             if not multitarget:
-                return one_hot(value)
+                return one_hot(
+                    value,
+                    dim=len(self.domain.class_var.values)
+                    if self.domain is not None else None
+                )
 
             max_card = max(len(c.values) for c in self.domain.class_vars)
             probs = np.zeros(value.shape + (max_card,), float)
