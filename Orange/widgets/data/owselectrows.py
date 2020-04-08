@@ -78,7 +78,7 @@ class SelectRowsContextHandler(DomainContextHandler):
             return self.PERFECT_MATCH
 
         conditions = context.values["conditions"]
-        all_vars = attrs
+        all_vars = attrs.copy()
         all_vars.update(metas)
         # Use this after 2022/2/2:
         # if all(all_vars.get(name) == tpe for name, tpe, *_ in conditions):
