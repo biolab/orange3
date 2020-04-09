@@ -179,7 +179,7 @@ class OWSilhouettePlot(widget.OWWidget):
         # Ensure that the controlArea is not narrower than buttonsArea
         self.controlArea.layout().addWidget(self.buttonsArea)
 
-        self.scene = QGraphicsScene()
+        self.scene = QGraphicsScene(self)
         self.view = StickyGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.view.setAlignment(Qt.AlignTop | Qt.AlignLeft)

@@ -263,7 +263,7 @@ class OWBoxPlot(widget.OWWidget):
             stateWhenDisabled=False)
 
         gui.vBox(self.mainArea, addSpace=True)
-        self.box_scene = QGraphicsScene()
+        self.box_scene = QGraphicsScene(self)
         self.box_scene.selectionChanged.connect(self.commit)
         self.box_view = QGraphicsView(self.box_scene)
         self.box_view.setRenderHints(QPainter.Antialiasing |
