@@ -268,15 +268,7 @@ class Histogram(QGraphicsWidget):
             # well as their corresponding `x` values
             y_nan_mask = np.isnan(y)
             y, bin_indices = y[~y_nan_mask], bin_indices[~y_nan_mask]
-
-            y = one_hot(y)
-            # In the event that y does not take up all the values and the
-            # largest discrete value does not appear at all, one hot encoding
-            # will produce too few columns. This causes problems, so we need to
-            # pad y with zeros to properly compute the distribution
-            if y.shape[1] != len(self.target_var.values):
-                n_missing_columns = len(self.target_var.values) - y.shape[1]
-                y = np.hstack((y, np.zeros((y.shape[0], n_missing_columns))))
+            y = one_hot(y, dim=len(self.target_var.values))
 
             bins = np.arange(self.n_bins)[:, np.newaxis]
             mask = bin_indices == bins
