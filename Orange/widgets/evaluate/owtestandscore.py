@@ -255,7 +255,8 @@ class OWTestAndScore(OWWidget):
             order=DomainModel.METAS, valid_types=DiscreteVariable)
         self.features_combo = gui.comboBox(
             ibox, self, "fold_feature", model=self.feature_model,
-            orientation=Qt.Horizontal, callback=self.fold_feature_changed)
+            orientation=Qt.Horizontal, searchable=True,
+            callback=self.fold_feature_changed)
 
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
@@ -281,8 +282,9 @@ class OWTestAndScore(OWWidget):
         self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
             self.cbox, self, "class_selection", items=[],
-            sendSelectedValue=True, callback=self._on_target_class_changed,
-            contentsLength=8)
+            sendSelectedValue=True, contentsLength=8, searchable=True,
+            callback=self._on_target_class_changed
+        )
 
         self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")
         gui.comboBox(
