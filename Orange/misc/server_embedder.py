@@ -273,7 +273,7 @@ class ServerEmbedderCommunicator:
         try:
             response = await client.post(url, headers=headers, data=data)
         except ReadTimeout:
-            log.warning("Read timeout", exc_info=True)
+            log.debug("Read timeout", exc_info=True)
             # it happens when server do not respond in 60 seconds, in
             # this case we return None and items will be resend later
 
@@ -286,7 +286,7 @@ class ServerEmbedderCommunicator:
                 raise EmbeddingConnectionError
             return None
         except (OSError, NetworkError):
-            log.warning("Network error", exc_info=True)
+            log.debug("Network error", exc_info=True)
             # it happens when no connection and items cannot be sent to the
             # server
             # we count number of consecutive errors
@@ -298,7 +298,7 @@ class ServerEmbedderCommunicator:
                 raise EmbeddingConnectionError
             return None
         except Exception as e:
-            log.warning("Embedding error", exc_info=True)
+            log.debug("Embedding error", exc_info=True)
             raise e
         # we reset the counter at successful embedding
         self.count_connection_errors = 0
