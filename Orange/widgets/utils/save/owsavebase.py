@@ -315,7 +315,8 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         if "last_dir" in settings:
             settings["stored_path"] = settings.pop("last_dir")
         if "filename" in settings:
-            settings["stored_name"] = os.path.split(settings.pop("filename"))[1]
+            settings["stored_name"] = os.path.split(
+                settings.pop("filename") or "")[1]
 
     # As of Qt 5.9, QFileDialog.setDefaultSuffix does not support double
     # suffixes, not even in non-native dialogs. We handle each OS separately.
