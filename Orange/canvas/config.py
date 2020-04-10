@@ -32,7 +32,7 @@ OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
 WIDGETS_ENTRY = "orange.widgets"
 
 spec = [
-    ("startup/check-updates", bool, False, "Check for updates"),
+    ("startup/check-updates", bool, True, "Check for updates"),
 
     ("startup/launch-count", int, 0, ""),
 
