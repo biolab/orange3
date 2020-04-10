@@ -235,7 +235,7 @@ class ContinuousFeatureEditor(FeatureEditor):
     def editorData(self):
         return ContinuousDescriptor(
             name=self.nameedit.text(),
-            number_of_decimals=3,
+            number_of_decimals=None,
             expression=self.expressionedit.text()
         )
 
