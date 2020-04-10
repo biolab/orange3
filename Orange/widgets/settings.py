@@ -77,14 +77,6 @@ class DomainContextHandler(ContextHandler):
                 .format(name), OrangeDeprecationWarning
             )
 
-    @staticmethod
-    def _warn_about_str_var_settings(setting):
-        warnings.warn(
-            "Storing variables as strings in settings is deprecated.\n"
-            "Support for this will be dropped in Orange 3.26.\n"
-            f"Change {setting.name} to store an instance of `Variable`.",
-            stacklevel=9)
-
     def encode_domain(self, domain):
         """
         domain: Orange.data.domain to encode
@@ -141,6 +133,9 @@ class DomainContextHandler(ContextHandler):
                 del data[setting.name]
 
     def settings_to_widget(self, widget, domain, *args):
+        # TODO: If https://github.com/biolab/orange-widget-base/pull/56 is:
+        #  - merged, remove this method.
+        #  - rejected, remove this comment.
         context = widget.current_context
         if context is None:
             return
@@ -169,16 +164,12 @@ class DomainContextHandler(ContextHandler):
             else:
                 return copy.copy(value)
 
-        if isinstance(setting, ContextSetting):
-            if isinstance(value, str):
-                variables = {
-                    **({} if setting.exclude_attributes else context.attributes),
-                    **({} if setting.exclude_metas else context.metas)}
-                if value in variables:
-                    cls._warn_about_str_var_settings(setting)
-                    return value, variables[value]
-            elif isinstance(value, Variable):
+        if isinstance(value, Variable):
+            if isinstance(setting, ContextSetting):
                 return cls.encode_variable(value)
+            else:
+                raise ValueError("Variables must be stored as ContextSettings; "
+                                 f"change {setting.name} to ContextSetting.")
 
         return copy.copy(value), -2
 
@@ -200,10 +191,10 @@ class DomainContextHandler(ContextHandler):
             return False
 
         attr_name, attr_type = value
-        if attr_type >= 100:
-            attr_type -= 100
-        else:
-            cls._warn_about_str_var_settings(setting)
+        # attr_type used to be either 1-4 for variables stored as string
+        # settings, and 101-104 for variables stored as variables. The former is
+        # no longer supported, but we play it safe and still handle both here.
+        attr_type %= 100
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
                 not setting.exclude_metas and
@@ -234,7 +225,7 @@ class DomainContextHandler(ContextHandler):
             return self.NO_MATCH
 
         if self.first_match:
-            return 1  # Change to self.MATCH after releasing orange-widget-base
+            return self.MATCH
 
         matches.append((0, 0))
         matched, available = [sum(m) for m in zip(*matches)]
