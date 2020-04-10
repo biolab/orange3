@@ -146,7 +146,7 @@ class OWSilhouettePlot(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Cluster Label")
         self.cluster_var_cb = gui.comboBox(
             box, self, "cluster_var_idx", contentsLength=14, addSpace=4,
-            callback=self._invalidate_scores
+            searchable=True, callback=self._invalidate_scores
         )
         gui.checkBox(
             box, self, "group_by_cluster", "Group by cluster",

@@ -346,6 +346,7 @@ class OWDistributions(OWWidget):
         box = gui.vBox(self.controlArea, "Columns")
         gui.comboBox(
             box, self, "cvar", label="Split by", orientation=Qt.Horizontal,
+            searchable=True,
             model=DomainModel(placeholder="(None)",
                               valid_types=(DiscreteVariable), ),
             callback=self._on_cvar_changed, contentsLength=18)

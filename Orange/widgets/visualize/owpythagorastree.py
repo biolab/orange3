@@ -102,6 +102,7 @@ class OWPythagorasTree(OWWidget):
         self.target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
             orientation=Qt.Horizontal, items=[], contentsLength=8,
+            searchable=True,
             callback=self.update_colors)
         self.size_calc_combo = gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',

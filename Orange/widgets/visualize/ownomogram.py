@@ -644,7 +644,7 @@ class OWNomogram(OWWidget):
         box = gui.vBox(self.controlArea, "Target class")
         self.class_combo = gui.comboBox(
             box, self, "target_class_index", callback=self._class_combo_changed,
-            contentsLength=12)
+            contentsLength=12, searchable=True)
         self.norm_check = gui.checkBox(
             box, self, "normalize_probabilities", "Normalize probabilities",
             hidden=True, callback=self.update_scene,
