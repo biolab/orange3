@@ -324,7 +324,7 @@ class OWMosaicDisplay(OWWidget):
 
         self.areas = []
 
-        self.canvas = QGraphicsScene()
+        self.canvas = QGraphicsScene(self)
         self.canvas_view = ViewWithPress(
             self.canvas, handler=self.clear_selection)
         self.mainArea.layout().addWidget(self.canvas_view)
@@ -342,6 +342,7 @@ class OWMosaicDisplay(OWWidget):
             gui.comboBox(
                 box, self, value="variable{}".format(i),
                 orientation=Qt.Horizontal, contentsLength=12,
+                searchable=True,
                 callback=self.attr_changed,
                 model=self.model_1 if i == 1 else self.model_234)
             for i in range(1, 5)]
@@ -355,6 +356,7 @@ class OWMosaicDisplay(OWWidget):
         self.cb_attr_color = gui.comboBox(
             box2, self, value="variable_color",
             orientation=Qt.Horizontal, contentsLength=12, labelWidth=50,
+            searchable=True,
             callback=self.set_color_data, model=self.color_model)
         self.bar_button = gui.checkBox(
             box2, self, 'use_boxes', label='Compare with total',

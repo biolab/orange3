@@ -1,22 +1,25 @@
 # pylint: disable=missing-docstring
 # pylint: disable=protected-access
 import unittest
+from unittest.mock import Mock, patch
 import warnings
 
 import numpy as np
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
+import baycomp
 
 from Orange.classification import MajorityLearner, LogisticRegressionLearner
 from Orange.classification.majority import ConstantModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
-from Orange.evaluation import Results, TestOnTestData
+from Orange.evaluation import Results, TestOnTestData, scoring
 from Orange.evaluation.scoring import ClassificationScore, RegressionScore, \
     Score
+from Orange.base import Learner
 from Orange.modelling import ConstantLearner
 from Orange.regression import MeanLearner
-from Orange.widgets.evaluate.owtestlearners import (
-    OWTestLearners, results_one_vs_rest)
+from Orange.widgets.evaluate.owtestandscore import (
+    OWTestAndScore, results_one_vs_rest)
 from Orange.widgets.evaluate.utils import BUILTIN_SCORERS_ORDER
 from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
@@ -25,14 +28,19 @@ from Orange.widgets.tests.utils import simulate
 from Orange.tests import test_filename
 
 
-class TestOWTestLearners(WidgetTest):
+class BadLearner(Learner):
+    def fit(self, *_, **_2):  # pylint: disable=arguments-differ
+        return 1 / 0
+
+
+class TestOWTestAndScore(WidgetTest):
     def setUp(self):
         super().setUp()
-        self.widget = self.create_widget(OWTestLearners)  # type: OWTestLearners
+        self.widget = self.create_widget(OWTestAndScore)  # type: OWTestAndScore
 
         self.scores_domain = Domain(
             [ContinuousVariable("a"), ContinuousVariable("b")],
-            [DiscreteVariable("c", values=["y", "n"])])
+            [DiscreteVariable("c", values=("y", "n"))])
 
         self.scores_table_values = [[1, 1, 1.23, 23.8], [1., 2., 3., 4.]]
 
@@ -74,7 +82,7 @@ class TestOWTestLearners(WidgetTest):
     def test_testOnTest(self):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.train_data, data)
-        self.widget.resampling = OWTestLearners.TestOnTest
+        self.widget.resampling = OWTestAndScore.TestOnTest
         self.send_signal(self.widget.Inputs.test_data, data)
 
     def test_testOnTest_incompatible_domain(self):
@@ -83,7 +91,7 @@ class TestOWTestLearners(WidgetTest):
         self.send_signal(self.widget.Inputs.learner, LogisticRegressionLearner(), 0)
         self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
         self.assertFalse(self.widget.Error.test_data_incompatible.is_shown())
-        self.widget.resampling = OWTestLearners.TestOnTest
+        self.widget.resampling = OWTestAndScore.TestOnTest
         # test data with the same class (otherwise the widget shows a different error)
         # and a non-nan X
         iris_test = iris.transform(Domain([ContinuousVariable("x")],
@@ -98,7 +106,7 @@ class TestOWTestLearners(WidgetTest):
         attrs = data.domain.attributes
         domain = Domain(attrs[:-1], attrs[-1], data.domain.class_vars)
         data_with_disc_metas = Table.from_table(domain, data)
-        rb = self.widget.controls.resampling.buttons[OWTestLearners.FeatureFold]
+        rb = self.widget.controls.resampling.buttons[OWTestAndScore.FeatureFold]
 
         self.send_signal(self.widget.Inputs.learner, ConstantLearner(), 0)
         self.send_signal(self.widget.Inputs.train_data, data)
@@ -109,7 +117,7 @@ class TestOWTestLearners(WidgetTest):
         self.send_signal(self.widget.Inputs.train_data, data_with_disc_metas)
         self.assertTrue(rb.isEnabled())
         rb.click()
-        self.assertEqual(self.widget.resampling, OWTestLearners.FeatureFold)
+        self.assertEqual(self.widget.resampling, OWTestAndScore.FeatureFold)
         self.assertTrue(self.widget.features_combo.isEnabled())
         self.assertEqual(self.widget.features_combo.currentText(), "iris")
         self.assertEqual(len(self.widget.features_combo.model()), 1)
@@ -117,7 +125,7 @@ class TestOWTestLearners(WidgetTest):
 
         self.send_signal(self.widget.Inputs.train_data, None)
         self.assertFalse(rb.isEnabled())
-        self.assertEqual(self.widget.resampling, OWTestLearners.KFold)
+        self.assertEqual(self.widget.resampling, OWTestAndScore.KFold)
         self.assertFalse(self.widget.features_combo.isEnabled())
 
     def test_migrate_removes_invalid_contexts(self):
@@ -151,7 +159,7 @@ class TestOWTestLearners(WidgetTest):
         table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b")],
-                [DiscreteVariable("c", values=["y"])]),
+                [DiscreteVariable("c", values=("y", ))]),
             list(zip(
                 [42.48, 16.84, 15.23, 23.8],
                 [1., 2., 3., 4.],
@@ -218,7 +226,7 @@ class TestOWTestLearners(WidgetTest):
 
     def test_target_changing(self):
         data = Table("iris")
-        w = self.widget  #: OWTestLearners
+        w = self.widget  #: OWTestAndScore
         model = w.score_table.model
 
         w.n_folds = 2
@@ -270,10 +278,15 @@ class TestOWTestLearners(WidgetTest):
 
         self.send_signal(self.widget.Inputs.test_data, setosa, wait=5000)
 
-        self.widget.show()
+        self.widget.adjustSize()
         view = self.widget.score_table.view
         header = view.horizontalHeader()
-        QTest.mouseClick(header.viewport(), Qt.LeftButton)
+        p = header.rect().center()
+        # second visible header section (after 'Model')
+        _, idx, *_ = (i for i in range(header.count())
+                      if not header.isSectionHidden(i))
+        p.setX(header.sectionPosition(idx) + 5)
+        QTest.mouseClick(header.viewport(), Qt.LeftButton, pos=p)
 
         # Ensure that the click on header caused an ascending sort
         # Ascending sort means that wrong model should be listed first
@@ -282,8 +295,6 @@ class TestOWTestLearners(WidgetTest):
 
         self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
         self.assertEqual(view.model().index(0, 0).data(), "SetosaLearner")
-
-        self.widget.hide()
 
     def _retrieve_scores(self):
         w = self.widget
@@ -297,7 +308,7 @@ class TestOWTestLearners(WidgetTest):
         return auc, ca, f1, precision, recall
 
     def _test_scores(self, train_data, test_data, learner, sampling, n_folds):
-        w = self.widget  #: OWTestLearners
+        w = self.widget  #: OWTestAndScore
         w.controls.resampling.buttons[sampling].click()
         if n_folds is not None:
             w.n_folds = n_folds
@@ -315,7 +326,7 @@ class TestOWTestLearners(WidgetTest):
         )
 
         self.assertTupleEqual(self._test_scores(
-            table, table, ConstantLearner(), OWTestLearners.TestOnTest, None),
+            table, table, ConstantLearner(), OWTestAndScore.TestOnTest, None),
                               (None, 1, 1, 1, 1))
 
     def test_scores_log_reg_overfitted(self):
@@ -326,7 +337,7 @@ class TestOWTestLearners(WidgetTest):
 
         self.assertTupleEqual(self._test_scores(
             table, table, LogisticRegressionLearner(),
-            OWTestLearners.TestOnTest, None),
+            OWTestAndScore.TestOnTest, None),
                               (1, 1, 1, 1, 1))
 
     def test_scores_log_reg_bad(self):
@@ -341,7 +352,7 @@ class TestOWTestLearners(WidgetTest):
 
         self.assertTupleEqual(self._test_scores(
             table_train, table_test, LogisticRegressionLearner(),
-            OWTestLearners.TestOnTest, None),
+            OWTestAndScore.TestOnTest, None),
                               (0, 0, 0, 0, 0))
 
     def test_scores_log_reg_bad2(self):
@@ -353,7 +364,7 @@ class TestOWTestLearners(WidgetTest):
             list(zip(*(self.scores_table_values + [list("yynn")]))))
         self.assertTupleEqual(self._test_scores(
             table_train, table_test, LogisticRegressionLearner(),
-            OWTestLearners.TestOnTest, None),
+            OWTestAndScore.TestOnTest, None),
                               (0, 0, 0, 0, 0))
 
     def test_scores_log_reg_advanced(self):
@@ -369,7 +380,7 @@ class TestOWTestLearners(WidgetTest):
         np.testing.assert_almost_equal(
             self._test_scores(table_train, table_test,
                               LogisticRegressionLearner(),
-                              OWTestLearners.TestOnTest, None),
+                              OWTestAndScore.TestOnTest, None),
             (2 / 3, 0.8, 0.8, 13 / 15, 0.8))
 
     def test_scores_cross_validation(self):
@@ -380,7 +391,7 @@ class TestOWTestLearners(WidgetTest):
             all(x >= y for x, y in zip(
                 self._test_scores(
                     Table("iris")[::15], None, LogisticRegressionLearner(),
-                    OWTestLearners.KFold, 0),
+                    OWTestAndScore.KFold, 0),
                 (0.8, 0.5, 0.5, 0.5, 0.5))))
 
     def test_no_pregressbar_warning(self):
@@ -390,6 +401,223 @@ class TestOWTestLearners(WidgetTest):
             self.send_signal(self.widget.Inputs.train_data, data)
             self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0)
             assert not w
+
+    def _set_comparison_score(self, score):
+        w = self.widget
+        control = w.controls.comparison_criterion
+        control.setCurrentText(score)
+        w.comparison_criterion = control.findText(score)
+
+    def _set_three_majorities(self):
+        w = self.widget
+        data = Table("iris")[::15]
+        self.send_signal(w.Inputs.train_data, data)
+        for i, name in enumerate(["maja", "majb", "majc"]):
+            learner = MajorityLearner()
+            learner.name = name
+            self.send_signal(w.Inputs.learner, learner, i)
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+
+    @patch("baycomp.two_on_single", Mock(wraps=baycomp.two_on_single))
+    def test_comparison_requires_cv(self):
+        w = self.widget
+        self.send_signal(w.Inputs.train_data, Table("iris")[::15])
+
+        w.comparison_criterion = 1
+        rbs = w.controls.resampling.buttons
+
+        self._set_three_majorities()
+        baycomp.two_on_single.reset_mock()
+
+        rbs[OWTestAndScore.KFold].click()
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertIsNotNone(w.comparison_table.cellWidget(0, 1))
+        self.assertTrue(w.modcompbox.isEnabled())
+        self.assertTrue(w.comparison_table.isEnabled())
+        baycomp.two_on_single.assert_called()
+        baycomp.two_on_single.reset_mock()
+
+        rbs[OWTestAndScore.LeaveOneOut].click()
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertIsNone(w.comparison_table.cellWidget(0, 1))
+        self.assertFalse(w.modcompbox.isEnabled())
+        self.assertFalse(w.comparison_table.isEnabled())
+        baycomp.two_on_single.assert_not_called()
+        baycomp.two_on_single.reset_mock()
+
+        rbs[OWTestAndScore.KFold].click()
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertIsNotNone(w.comparison_table.cellWidget(0, 1))
+        self.assertTrue(w.modcompbox.isEnabled())
+        self.assertTrue(w.comparison_table.isEnabled())
+        baycomp.two_on_single.assert_called()
+        baycomp.two_on_single.reset_mock()
+
+    def test_comparison_requires_multiple_models(self):
+        w = self.widget
+        w.comparison_criterion = 1
+        rbs = w.controls.resampling.buttons
+
+        self._set_three_majorities()
+
+        rbs[OWTestAndScore.KFold].click()
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertTrue(w.comparison_table.isEnabled())
+
+        self.send_signal(w.Inputs.learner, None, 1)
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertTrue(w.comparison_table.isEnabled())
+
+        self.send_signal(w.Inputs.learner, None, 2)
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertFalse(w.comparison_table.isEnabled())
+
+        rbs[OWTestAndScore.LeaveOneOut].click()
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertFalse(w.comparison_table.isEnabled())
+
+        learner = MajorityLearner()
+        learner.name = "majd"
+        self.send_signal(w.Inputs.learner, learner, 1)
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertFalse(w.comparison_table.isEnabled())
+
+        rbs[OWTestAndScore.KFold].click()
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertTrue(w.comparison_table.isEnabled())
+
+    def test_comparison_bad_slots(self):
+        w = self.widget
+        self._set_three_majorities()
+        self._set_comparison_score("Classification accuracy")
+        self.send_signal(w.Inputs.learner, BadLearner(), 2, wait=5000)
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertIsNotNone(w.comparison_table.cellWidget(0, 1))
+        self.assertIsNone(w.comparison_table.cellWidget(0, 2))
+        self.assertEqual(len(w._successful_slots()), 2)
+
+    def test_comparison_bad_scores(self):
+        w = self.widget
+        self._set_three_majorities()
+        self._set_comparison_score("Classification accuracy")
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+
+        score_calls = -1
+
+        def fail_on_first(*_, **_2):
+            nonlocal score_calls
+            score_calls += 1
+            return 1 / score_calls
+
+        with patch.object(scoring.CA, "compute_score", new=fail_on_first):
+            w.update_comparison_table()
+
+            self.assertIsNone(w.comparison_table.cellWidget(0, 1))
+            self.assertIsNone(w.comparison_table.cellWidget(0, 2))
+            self.assertIsNone(w.comparison_table.cellWidget(1, 0))
+            self.assertIsNone(w.comparison_table.cellWidget(2, 0))
+            self.assertIsNotNone(w.comparison_table.cellWidget(1, 2))
+            self.assertIsNotNone(w.comparison_table.cellWidget(2, 1))
+            self.assertTrue(w.Warning.scores_not_computed.is_shown())
+
+        score_calls = -1
+        with patch.object(scoring.CA, "compute_score", new=fail_on_first):
+            slots = w._successful_slots()
+            self.assertEqual(len(slots), 3)
+            scores = w._scores_by_folds(slots)
+            self.assertIsNone(scores[0])
+            self.assertEqual(scores[1][0], 1)
+            self.assertAlmostEqual(scores[2][0], 1 / 11)
+
+    def test_comparison_binary_score(self):
+        # false warning at call_arg.kwargs
+        # pylint: disable=unpacking-non-sequence
+        w = self.widget
+        self._set_three_majorities()
+        self._set_comparison_score("F1")
+        f1mock = Mock(wraps=scoring.F1)
+
+        iris = Table("iris")
+        with patch.object(scoring.F1, "compute_score", f1mock):
+            simulate.combobox_activate_item(w.controls.class_selection,
+                                            iris.domain.class_var.values[1])
+            _, kwargs = f1mock.call_args
+            self.assertEqual(kwargs["target"], 1)
+            self.assertFalse("average" in kwargs)
+
+            simulate.combobox_activate_item(w.controls.class_selection,
+                                            iris.domain.class_var.values[2])
+            _, kwargs = f1mock.call_args
+            self.assertEqual(kwargs["target"], 2)
+            self.assertFalse("average" in kwargs)
+
+            simulate.combobox_activate_item(w.controls.class_selection,
+                                            OWTestAndScore.TARGET_AVERAGE)
+            _, kwargs = f1mock.call_args
+            self.assertEqual(kwargs["average"], "weighted")
+            self.assertFalse("target" in kwargs)
+
+    def test_fill_table(self):
+        w = self.widget
+        self._set_three_majorities()
+        scores = [object(), object(), object()]
+        slots = w._successful_slots()
+
+        def probs(p1, p2, rope):
+            p1 += 1
+            p2 += 1
+            norm = p1 + p2 + rope * (p1 + p2)
+            if rope == 0:
+                return p1 / norm, p2 / norm
+            else:
+                return p1 / norm, rope / norm, p2 / norm
+
+        def two_on_single(res1, res2, rope=0):
+            return probs(scores.index(res1), scores.index(res2), rope)
+
+        with patch("baycomp.two_on_single", new=two_on_single):
+            for w.use_rope, w.rope in ((True, 0), (False, 0.1)):
+                w._fill_table(slots, scores)
+                for row in range(3):
+                    for col in range(3):
+                        if row == col:
+                            continue
+                        label = w.comparison_table.cellWidget(row, col)
+                        self.assertEqual(label.text(),
+                                         f"{(row + 1) / (row + col + 2):.3f}")
+                        self.assertIn(f"{(row + 1) / (row + col + 2):.3f}",
+                                      label.toolTip())
+
+            w.use_rope = True
+            w.rope = 0.25
+            w._fill_table(slots, scores)
+            for row in range(3):
+                for col in range(3):
+                    if row == col:
+                        continue
+                    label = w.comparison_table.cellWidget(row, col)
+                    for text in (label.text(), label.toolTip()):
+                        self.assertIn(f"{probs(row, col, w.rope)[0]:.3f}", text)
+                        self.assertIn(f"{probs(row, col, w.rope)[1]:.3f}", text)
+
+    def test_nan_on_comparison(self):
+        w = self.widget
+        w.use_rope = True
+        self._set_three_majorities()
+        scores = [object(), object(), object()]
+        slots = w._successful_slots()
+
+        def two_on_single(_1, _2, rope=0):
+            if rope:
+                return np.nan, np.nan, np.nan
+            else:
+                return np.nan, np.nan
+
+        with patch("baycomp.two_on_single", new=two_on_single):
+            for w.rope in (0, 0.1):
+                w._fill_table(slots, scores)
+                label = w.comparison_table.cellWidget(1, 0)
+                self.assertEqual(label.text(), "NA")
 
 
 class TestHelpers(unittest.TestCase):

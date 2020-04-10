@@ -1,5 +1,6 @@
 # pylint doesn't understand the Settings magic
 # pylint: disable=invalid-sequence-index
+# pylint: disable=too-many-lines,too-many-instance-attributes
 import abc
 import enum
 import logging
@@ -9,14 +10,17 @@ from functools import partial, reduce
 
 from concurrent.futures import Future
 from collections import OrderedDict, namedtuple
+from itertools import count
 from typing import Any, Optional, List, Dict, Callable
 
 import numpy as np
+import baycomp
 
 from AnyQt import QtGui
-from AnyQt.QtGui import QStandardItem
 from AnyQt.QtCore import Qt, QSize, QThread
 from AnyQt.QtCore import pyqtSlot as Slot
+from AnyQt.QtGui import QStandardItem, QDoubleValidator
+from AnyQt.QtWidgets import QHeaderView, QTableWidget, QLabel, QApplication
 
 from Orange.base import Learner
 import Orange.classification
@@ -35,7 +39,6 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.concurrent import ThreadExecutor, TaskState
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
-
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +114,7 @@ Try.register = lambda cls: raise_(TypeError())
 
 class State(enum.Enum):
     """
-    OWTestLearner's runtime state.
+    OWTestAndScore's runtime state.
     """
     #: No or insufficient input (i.e. no data or no learners)
     Waiting = "Waiting"
@@ -123,12 +126,13 @@ class State(enum.Enum):
     Cancelled = "Cancelled"
 
 
-class OWTestLearners(OWWidget):
+class OWTestAndScore(OWWidget):
     name = "Test and Score"
     description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
     priority = 100
     keywords = ['Cross Validation', 'CV']
+    replaces = ["Orange.widgets.evaluate.owtestlearners.OWTestLearners"]
 
     class Inputs:
         train_data = Input("Data", Table, default=True)
@@ -175,6 +179,10 @@ class OWTestLearners(OWWidget):
     fold_feature = settings.ContextSetting(None)
     fold_feature_selected = settings.ContextSetting(False)
 
+    use_rope = settings.Setting(False)
+    rope = settings.Setting(0.1)
+    comparison_criterion = settings.Setting(0, schema_only=True)
+
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
@@ -216,6 +224,7 @@ class OWTestLearners(OWWidget):
         self.train_data_missing_vals = False
         self.test_data_missing_vals = False
         self.scorers = []
+        self.__pending_comparison_criterion = self.comparison_criterion
 
         #: An Ordered dictionary with current inputs and their testing results.
         self.learners = OrderedDict()  # type: Dict[Any, Input]
@@ -235,7 +244,7 @@ class OWTestLearners(OWWidget):
         ibox = gui.indentedBox(rbox)
         gui.comboBox(
             ibox, self, "n_folds", label="Number of folds: ",
-            items=[str(x) for x in self.NFolds], maximumContentsLength=3,
+            items=[str(x) for x in self.NFolds],
             orientation=Qt.Horizontal, callback=self.kfold_changed)
         gui.checkBox(
             ibox, self, "cv_stratified", "Stratified",
@@ -246,19 +255,21 @@ class OWTestLearners(OWWidget):
             order=DomainModel.METAS, valid_types=DiscreteVariable)
         self.features_combo = gui.comboBox(
             ibox, self, "fold_feature", model=self.feature_model,
-            orientation=Qt.Horizontal, callback=self.fold_feature_changed)
+            orientation=Qt.Horizontal, searchable=True,
+            callback=self.fold_feature_changed)
 
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
         gui.comboBox(
             ibox, self, "n_repeats", label="Repeat train/test: ",
-            items=[str(x) for x in self.NRepeats], maximumContentsLength=3,
-            orientation=Qt.Horizontal, callback=self.shuffle_split_changed)
+            items=[str(x) for x in self.NRepeats], orientation=Qt.Horizontal,
+            callback=self.shuffle_split_changed
+        )
         gui.comboBox(
             ibox, self, "sample_size", label="Training set size: ",
             items=["{} %".format(x) for x in self.SampleSizes],
-            maximumContentsLength=5, orientation=Qt.Horizontal,
-            callback=self.shuffle_split_changed)
+            orientation=Qt.Horizontal, callback=self.shuffle_split_changed
+        )
         gui.checkBox(
             ibox, self, "shuffle_stratified", "Stratified",
             callback=self.shuffle_split_changed)
@@ -271,16 +282,58 @@ class OWTestLearners(OWWidget):
         self.cbox = gui.vBox(self.controlArea, "Target Class")
         self.class_selection_combo = gui.comboBox(
             self.cbox, self, "class_selection", items=[],
-            sendSelectedValue=True, valueType=str,
-            callback=self._on_target_class_changed,
-            contentsLength=8)
+            sendSelectedValue=True, contentsLength=8, searchable=True,
+            callback=self._on_target_class_changed
+        )
+
+        self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")
+        gui.comboBox(
+            box, self, "comparison_criterion",
+            callback=self.update_comparison_table)
+
+        hbox = gui.hBox(box)
+        gui.checkBox(hbox, self, "use_rope",
+                     "Negligible difference: ",
+                     callback=self._on_use_rope_changed)
+        gui.lineEdit(hbox, self, "rope", validator=QDoubleValidator(),
+                     controlWidth=70, callback=self.update_comparison_table,
+                     alignment=Qt.AlignRight)
+        self.controls.rope.setEnabled(self.use_rope)
 
         gui.rubber(self.controlArea)
         self.score_table = ScoreTable(self)
         self.score_table.shownScoresChanged.connect(self.update_stats_model)
+        view = self.score_table.view
+        view.setSizeAdjustPolicy(view.AdjustToContents)
 
         box = gui.vBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.score_table.view)
+
+        self.compbox = box = gui.vBox(self.mainArea, box="Model comparison")
+        table = self.comparison_table = QTableWidget(
+            wordWrap=False, editTriggers=QTableWidget.NoEditTriggers,
+            selectionMode=QTableWidget.NoSelection)
+        table.setSizeAdjustPolicy(table.AdjustToContents)
+        header = table.verticalHeader()
+        header.setSectionResizeMode(QHeaderView.Fixed)
+        header.setSectionsClickable(False)
+
+        header = table.horizontalHeader()
+        header.setTextElideMode(Qt.ElideRight)
+        header.setDefaultAlignment(Qt.AlignCenter)
+        header.setSectionsClickable(False)
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(QHeaderView.ResizeToContents)
+        avg_width = self.fontMetrics().averageCharWidth()
+        header.setMinimumSectionSize(8 * avg_width)
+        header.setMaximumSectionSize(15 * avg_width)
+        header.setDefaultSectionSize(15 * avg_width)
+        box.layout().addWidget(table)
+        box.layout().addWidget(QLabel(
+            "<small>Table shows probabilities that the score for the model in "
+            "the row is higher than that of the model in the column. "
+            "Small numbers show the probability that the difference is "
+            "negligible.</small>", wordWrap=True))
 
     @staticmethod
     def sizeHint():
@@ -295,10 +348,10 @@ class OWTestLearners(OWWidget):
                 self.fold_feature = self.feature_model[0]
         enabled = bool(self.feature_model)
         self.controls.resampling.buttons[
-            OWTestLearners.FeatureFold].setEnabled(enabled)
+            OWTestAndScore.FeatureFold].setEnabled(enabled)
         self.features_combo.setEnabled(enabled)
-        if self.resampling == OWTestLearners.FeatureFold and not enabled:
-            self.resampling = OWTestLearners.KFold
+        if self.resampling == OWTestAndScore.FeatureFold and not enabled:
+            self.resampling = OWTestAndScore.KFold
 
     @Inputs.learner
     def set_learner(self, learner, key):
@@ -378,7 +431,7 @@ class OWTestLearners(OWWidget):
             self._update_class_selection()
             self.openContext(data.domain)
             if self.fold_feature_selected and bool(self.feature_model):
-                self.resampling = OWTestLearners.FeatureFold
+                self.resampling = OWTestAndScore.FeatureFold
         self._invalidate()
 
     @Inputs.test_data
@@ -421,7 +474,7 @@ class OWTestLearners(OWWidget):
             self.Warning.missing_data.clear()
 
         self.test_data = data
-        if self.resampling == OWTestLearners.TestOnTest:
+        if self.resampling == OWTestAndScore.TestOnTest:
             self._invalidate()
 
     def _which_missing_data(self):
@@ -436,10 +489,34 @@ class OWTestLearners(OWWidget):
     # - we don't gain much with it
     # - it complicates the unit tests
     def _update_scorers(self):
-        if self.data is None or self.data.domain.class_var is None:
-            self.scorers = []
-            return
-        self.scorers = usable_scorers(self.data.domain.class_var)
+        if self.data and self.data.domain.class_var:
+            new_scorers = usable_scorers(self.data.domain.class_var)
+        else:
+            new_scorers = []
+        # Don't unnecessarily reset the combo because this would always reset
+        # comparison_criterion; we also set it explicitly, though, for clarity
+        if new_scorers != self.scorers:
+            self.scorers = new_scorers
+            combo = self.controls.comparison_criterion
+            combo.clear()
+            combo.addItems([scorer.long_name or scorer.name
+                            for scorer in self.scorers])
+            self.comparison_criterion = 0
+        if self.__pending_comparison_criterion is not None:
+            # Check for the unlikely case that some scorers have been removed
+            # from modules
+            if self.__pending_comparison_criterion < len(self.scorers):
+                self.comparison_criterion = self.__pending_comparison_criterion
+            self.__pending_comparison_criterion = None
+        self._update_compbox_title()
+
+    def _update_compbox_title(self):
+        criterion = self.comparison_criterion
+        if criterion < len(self.scorers):
+            scorer = self.scorers[criterion]()
+            self.compbox.setTitle(f"Model Comparison by {scorer.name}")
+        else:
+            self.compbox.setTitle(f"Model Comparison")
 
     @Inputs.preprocessor
     def set_preprocessor(self, preproc):
@@ -453,25 +530,36 @@ class OWTestLearners(OWWidget):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
         self.score_table.update_header(self.scorers)
+        self._update_view_enabled()
         self.update_stats_model()
         if self.__needupdate:
             self.__update()
 
     def kfold_changed(self):
-        self.resampling = OWTestLearners.KFold
+        self.resampling = OWTestAndScore.KFold
         self._param_changed()
 
     def fold_feature_changed(self):
-        self.resampling = OWTestLearners.FeatureFold
+        self.resampling = OWTestAndScore.FeatureFold
         self._param_changed()
 
     def shuffle_split_changed(self):
-        self.resampling = OWTestLearners.ShuffleSplit
+        self.resampling = OWTestAndScore.ShuffleSplit
         self._param_changed()
 
     def _param_changed(self):
+        self.modcompbox.setEnabled(self.resampling == OWTestAndScore.KFold)
+        self._update_view_enabled()
         self._invalidate()
         self.__update()
+
+    def _update_view_enabled(self):
+        self.comparison_table.setEnabled(
+            self.resampling == OWTestAndScore.KFold
+            and len(self.learners) > 1
+            and self.data is not None)
+        self.score_table.view.setEnabled(
+            self.data is not None)
 
     def update_stats_model(self):
         # Update the results_model with up to date scores.
@@ -494,8 +582,10 @@ class OWTestLearners(OWWidget):
         errors = []
         has_missing_scores = False
 
+        names = []
         for key, slot in self.learners.items():
             name = learner_name(slot.learner)
+            names.append(name)
             head = QStandardItem(name)
             head.setData(key, Qt.UserRole)
             results = slot.results
@@ -558,9 +648,122 @@ class OWTestLearners(OWWidget):
             header.sortIndicatorSection(),
             header.sortIndicatorOrder()
         )
+        self._set_comparison_headers(names)
 
         self.error("\n".join(errors), shown=bool(errors))
         self.Warning.scores_not_computed(shown=has_missing_scores)
+
+    def _on_use_rope_changed(self):
+        self.controls.rope.setEnabled(self.use_rope)
+        self.update_comparison_table()
+
+    def update_comparison_table(self):
+        self.comparison_table.clearContents()
+        slots = self._successful_slots()
+        if not (slots and self.scorers):
+            return
+        names = [learner_name(slot.learner) for slot in slots]
+        self._set_comparison_headers(names)
+        if self.resampling == OWTestAndScore.KFold:
+            scores = self._scores_by_folds(slots)
+            self._fill_table(names, scores)
+
+    def _successful_slots(self):
+        model = self.score_table.model
+        proxy = self.score_table.sorted_model
+
+        keys = (model.data(proxy.mapToSource(proxy.index(row, 0)), Qt.UserRole)
+                for row in range(proxy.rowCount()))
+        slots = [slot for slot in (self.learners[key] for key in keys)
+                 if slot.results is not None and slot.results.success]
+        return slots
+
+    def _set_comparison_headers(self, names):
+        table = self.comparison_table
+        try:
+            # Prevent glitching during update
+            table.setUpdatesEnabled(False)
+            header = table.horizontalHeader()
+            if len(names) > 2:
+                header.setSectionResizeMode(QHeaderView.Stretch)
+            else:
+                header.setSectionResizeMode(QHeaderView.Fixed)
+            table.setRowCount(len(names))
+            table.setColumnCount(len(names))
+            table.setVerticalHeaderLabels(names)
+            table.setHorizontalHeaderLabels(names)
+        finally:
+            table.setUpdatesEnabled(True)
+
+    def _scores_by_folds(self, slots):
+        scorer = self.scorers[self.comparison_criterion]()
+        self._update_compbox_title()
+        if scorer.is_binary:
+            if self.class_selection != self.TARGET_AVERAGE:
+                class_var = self.data.domain.class_var
+                target_index = class_var.values.index(self.class_selection)
+                kw = dict(target=target_index)
+            else:
+                kw = dict(average='weighted')
+        else:
+            kw = {}
+
+        def call_scorer(results):
+            def thunked():
+                return scorer.scores_by_folds(results.value, **kw).flatten()
+
+            return thunked
+
+        scores = [Try(call_scorer(slot.results)) for slot in slots]
+        scores = [score.value if score.success else None for score in scores]
+        # `None in scores doesn't work -- these are np.arrays)
+        if any(score is None for score in scores):
+            self.Warning.scores_not_computed()
+        return scores
+
+    def _fill_table(self, names, scores):
+        table = self.comparison_table
+        for row, row_name, row_scores in zip(count(), names, scores):
+            for col, col_name, col_scores in zip(range(row), names, scores):
+                if row_scores is None or col_scores is None:
+                    continue
+                if self.use_rope and self.rope:
+                    p0, rope, p1 = baycomp.two_on_single(
+                        row_scores, col_scores, self.rope)
+                    if np.isnan(p0) or np.isnan(rope) or np.isnan(p1):
+                        self._set_cells_na(table, row, col)
+                        continue
+                    self._set_cell(table, row, col,
+                                   f"{p0:.3f}<br/><small>{rope:.3f}</small>",
+                                   f"p({row_name} > {col_name}) = {p0:.3f}\n"
+                                   f"p({row_name} = {col_name}) = {rope:.3f}")
+                    self._set_cell(table, col, row,
+                                   f"{p1:.3f}<br/><small>{rope:.3f}</small>",
+                                   f"p({col_name} > {row_name}) = {p1:.3f}\n"
+                                   f"p({col_name} = {row_name}) = {rope:.3f}")
+                else:
+                    p0, p1 = baycomp.two_on_single(row_scores, col_scores)
+                    if np.isnan(p0) or np.isnan(p1):
+                        self._set_cells_na(table, row, col)
+                        continue
+                    self._set_cell(table, row, col,
+                                   f"{p0:.3f}",
+                                   f"p({row_name} > {col_name}) = {p0:.3f}")
+                    self._set_cell(table, col, row,
+                                   f"{p1:.3f}",
+                                   f"p({col_name} > {row_name}) = {p1:.3f}")
+
+    @classmethod
+    def _set_cells_na(cls, table, row, col):
+        cls._set_cell(table, row, col, "NA", "comparison cannot be computed")
+        cls._set_cell(table, col, row, "NA", "comparison cannot be computed")
+
+    @staticmethod
+    def _set_cell(table, row, col, label, tooltip):
+        item = QLabel(label)
+        item.setToolTip(tooltip)
+        item.setAlignment(Qt.AlignCenter)
+        table.setCellWidget(row, col, item)
 
     def _update_class_selection(self):
         self.class_selection_combo.setCurrentIndex(-1)
@@ -571,7 +774,7 @@ class OWTestLearners(OWWidget):
         if self.data.domain.has_discrete_class:
             self.cbox.setVisible(True)
             class_var = self.data.domain.class_var
-            items = [self.TARGET_AVERAGE] + class_var.values
+            items = (self.TARGET_AVERAGE, ) + class_var.values
             self.class_selection_combo.addItems(items)
 
             class_index = 0
@@ -585,11 +788,12 @@ class OWTestLearners(OWWidget):
 
     def _on_target_class_changed(self):
         self.update_stats_model()
+        self.update_comparison_table()
 
     def _invalidate(self, which=None):
         self.cancel()
         self.fold_feature_selected = \
-            self.resampling == OWTestLearners.FeatureFold
+            self.resampling == OWTestAndScore.FeatureFold
         # Invalidate learner results for `which` input keys
         # (if None then all learner results are invalidated)
         if which is None:
@@ -610,6 +814,8 @@ class OWTestLearners(OWWidget):
                     if item is not None:
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
+
+        self.comparison_table.clearContents()
 
         self.__needupdate = True
 
@@ -709,14 +915,14 @@ class OWTestLearners(OWWidget):
             self.__state = State.Waiting
             self.commit()
             return
-        if self.resampling == OWTestLearners.KFold and \
+        if self.resampling == OWTestAndScore.KFold and \
                 len(self.data) < self.NFolds[self.n_folds]:
             self.Error.too_many_folds()
             self.__state = State.Waiting
             self.commit()
             return
 
-        elif self.resampling == OWTestLearners.TestOnTest:
+        elif self.resampling == OWTestAndScore.TestOnTest:
             if self.test_data is None:
                 if not self.Error.test_data_empty.is_shown():
                     self.Warning.test_data_missing()
@@ -744,30 +950,30 @@ class OWTestLearners(OWWidget):
         # learners bellow)
         learners_c = [copy.deepcopy(learner) for learner in learners]
 
-        if self.resampling == OWTestLearners.TestOnTest:
+        if self.resampling == OWTestAndScore.TestOnTest:
             test_f = partial(
                 Orange.evaluation.TestOnTestData(
                     store_data=True, store_models=True),
                 self.data, self.test_data, learners_c, self.preprocessor
             )
         else:
-            if self.resampling == OWTestLearners.KFold:
+            if self.resampling == OWTestAndScore.KFold:
                 sampler = Orange.evaluation.CrossValidation(
                     k=self.NFolds[self.n_folds],
                     random_state=rstate)
-            elif self.resampling == OWTestLearners.FeatureFold:
+            elif self.resampling == OWTestAndScore.FeatureFold:
                 sampler = Orange.evaluation.CrossValidationFeature(
                     feature=self.fold_feature)
-            elif self.resampling == OWTestLearners.LeaveOneOut:
+            elif self.resampling == OWTestAndScore.LeaveOneOut:
                 sampler = Orange.evaluation.LeaveOneOut()
-            elif self.resampling == OWTestLearners.ShuffleSplit:
+            elif self.resampling == OWTestAndScore.ShuffleSplit:
                 sampler = Orange.evaluation.ShuffleSplit(
                     n_resamples=self.NRepeats[self.n_repeats],
                     train_size=self.SampleSizes[self.sample_size] / 100,
                     test_size=None,
                     stratified=self.shuffle_stratified,
                     random_state=rstate)
-            elif self.resampling == OWTestLearners.TestOnTrain:
+            elif self.resampling == OWTestAndScore.TestOnTrain:
                 sampler = Orange.evaluation.TestOnTrainingData(
                     store_models=True)
             else:
@@ -866,6 +1072,7 @@ class OWTestLearners(OWWidget):
 
         self.score_table.update_header(self.scorers)
         self.update_stats_model()
+        self.update_comparison_table()
 
         self.commit()
 
@@ -880,12 +1087,24 @@ class OWTestLearners(OWWidget):
             task.cancel()
             task.progress_changed.disconnect(self.setProgressValue)
             task.watcher.finished.disconnect(self.__task_complete)
+            add_task_to_dispose_queue(task)
+
             self.progressBarFinished()
             self.setStatusMessage("")
 
     def onDeleteWidget(self):
         self.cancel()
+        self.__executor.shutdown(True)
         super().onDeleteWidget()
+
+
+def add_task_to_dispose_queue(task: TaskState):
+    # transfer ownership of task to Qt, and delete it after completion
+    # all other signals from task should be disconnected.
+    assert task.parent() is None
+    app = QApplication.instance()
+    task.setParent(app)
+    task.watcher.finished.connect(task.deleteLater)
 
 
 class UserInterrupt(BaseException):
@@ -952,7 +1171,7 @@ def results_one_vs_rest(results, pos_index):
     value = results.domain.class_var.values[pos_index]
     class_var = Orange.data.DiscreteVariable(
         "I({}=={})".format(results.domain.class_var.name, value),
-        values=["False", "True"],
+        values=("False", "True"),
         compute_value=Indicator(results.domain.class_var, pos_index)
     )
     domain = Orange.data.Domain(
@@ -979,7 +1198,7 @@ if __name__ == "__main__":  # pragma: no cover
                          Orange.regression.KNNRegressionLearner(),
                          Orange.regression.RidgeRegressionLearner()]
 
-    WidgetPreview(OWTestLearners).run(
+    WidgetPreview(OWTestAndScore).run(
         set_train_data=preview_data,
         set_test_data=preview_data,
         set_learner=[(learner, i) for i, learner in enumerate(prev_learners)]

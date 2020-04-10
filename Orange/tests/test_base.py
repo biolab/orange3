@@ -4,13 +4,19 @@ import pickle
 import unittest
 
 from Orange.base import SklLearner, Learner, Model
-from Orange.data import Domain
-from Orange.preprocess import Discretize, Randomize
+from Orange.data import Domain, Table
+from Orange.preprocess import Discretize, Randomize, Continuize
 from Orange.regression import LinearRegressionLearner
 
 
 class DummyLearner(Learner):
-    pass
+    def fit(self, *_, **__):
+        return unittest.mock.Mock()
+
+
+class DummySklLearner(SklLearner):
+    def fit(self, *_, **__):
+        return unittest.mock.Mock()
 
 
 class DummyLearnerPP(Learner):
@@ -71,6 +77,15 @@ class TestLearner(unittest.TestCase):
             'Preprocessors should be able to be passed in as single object '
             'as well as an iterable object')
 
+    def test_callback(self):
+        callback = unittest.mock.Mock()
+        learner = DummyLearner(preprocessors=[Discretize(), Randomize()])
+        learner(Table("iris"), callback)
+        args = [x[0][0] for x in callback.call_args_list]
+        self.assertEqual(min(args), 0)
+        self.assertEqual(max(args), 1)
+        self.assertListEqual(args, sorted(args))
+
 
 class TestSklLearner(unittest.TestCase):
     def test_sklearn_supports_weights(self):
@@ -101,6 +116,15 @@ class TestSklLearner(unittest.TestCase):
             "Either LinearRegression no longer supports weighted tables or "
             "SklLearner.supports_weights is out-of-date.")
 
+    def test_callback(self):
+        callback = unittest.mock.Mock()
+        learner = DummySklLearner(preprocessors=[Continuize(), Randomize()])
+        learner(Table("iris"), callback)
+        args = [x[0][0] for x in callback.call_args_list]
+        self.assertEqual(min(args), 0)
+        self.assertEqual(max(args), 1)
+        self.assertListEqual(args, sorted(args))
+
 
 class TestModel(unittest.TestCase):
     def test_pickle(self):
@@ -111,3 +135,7 @@ class TestModel(unittest.TestCase):
         self.assertEqual(model.domain, model2.domain)
         self.assertEqual(model.original_data, [1, 2, 3])
         self.assertEqual(model2.original_data, None)
+
+
+if __name__ == "__main__":
+    unittest.main()

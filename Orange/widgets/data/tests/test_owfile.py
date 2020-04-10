@@ -24,6 +24,7 @@ from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
@@ -141,6 +142,22 @@ class TestOWFile(WidgetTest):
         data = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(data.domain["iris"], StringVariable)
 
+    def test_rename_duplicates(self):
+        self.open_dataset("iris")
+
+        idx = self.widget.domain_editor.model().createIndex(3, 0)
+        self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+        self.widget.domain_editor.model().setData(idx, "iris", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("iris (1)", data.domain)
+        self.assertIn("iris (2)", data.domain)
+        self.assertTrue(self.widget.Warning.renamed_vars.is_shown())
+
+        self.widget.domain_editor.model().setData(idx, "different iris", Qt.EditRole)
+        self.widget.apply_button.click()
+        self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+
     def test_variable_name_change(self):
         """
         Test whether the name of the variable is changed correctly by
@@ -154,6 +171,12 @@ class TestOWFile(WidgetTest):
         self.widget.apply_button.click()
         data = self.get_output(self.widget.Outputs.data)
         self.assertIn("a", data.domain)
+
+        idx = self.widget.domain_editor.model().createIndex(3, 0)
+        self.widget.domain_editor.model().setData(idx, "d", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output(self.widget.Outputs.data)
+        self.assertIn("d", data.domain)
 
         # rename and change to text
         idx = self.widget.domain_editor.model().createIndex(4, 0)
@@ -249,6 +272,13 @@ class TestOWFile(WidgetTest):
         self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)
         self.widget.domain_editor.model().setData(idx, "", Qt.EditRole)
         self.assertEqual(self.widget.domain_editor.model().data(idx, Qt.DisplayRole), temp)
+
+    def test_invalid_role_mode(self):
+        self.open_dataset("iris")
+        model = self.widget.domain_editor.model()
+        idx = model.createIndex(1, 0)
+        self.assertFalse(model.setData(idx, Qt.StatusTipRole, ""))
+        self.assertIsNone(model.data(idx, Qt.StatusTipRole))
 
     def test_context_match_includes_variable_values(self):
         file1 = """\
@@ -513,6 +543,14 @@ a
         attrs = data1.domain["image"].attributes
         self.assertIn("origin", attrs)
         self.assertIn("origin1", attrs["origin"])
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        output_sum = self.widget.info.set_output_summary = Mock()
+        self.open_dataset("iris")
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
 
     @patch("Orange.widgets.widget.OWWidget.workflowEnv",
            Mock(return_value={"basedir": getcwd()}))

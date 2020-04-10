@@ -214,7 +214,7 @@ class TestOWCreateClass(WidgetTest):
 
         widget.apply()
         outdata = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(outdata.domain.class_var.values, ["Cls1", "Cls2"])
+        self.assertEqual(outdata.domain.class_var.values, ("Cls1", "Cls2"))
         classes = outdata.get_column_view("class")[0]
         attr = outdata.get_column_view("thal")[0]
         thal = self.heart.domain["thal"]
@@ -231,7 +231,7 @@ class TestOWCreateClass(WidgetTest):
 
         widget.apply()
         outdata = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(outdata.domain.class_var.values, ["C1"])
+        self.assertEqual(outdata.domain.class_var.values, ("C1", ))
         classes = outdata.get_column_view("class")[0]
         np.testing.assert_equal(classes, 0)
 
@@ -255,7 +255,7 @@ class TestOWCreateClass(WidgetTest):
 
         widget.apply()
         outdata = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(outdata.domain.class_var.values, ["C1", "C2"])
+        self.assertEqual(outdata.domain.class_var.values, ("C1", "C2"))
         classes = outdata.get_column_view("class")[0]
         attr = outdata.get_column_view("gender")[0]
         female = np.equal(attr, gender.values.index("female"))
@@ -308,7 +308,7 @@ class TestOWCreateClass(WidgetTest):
         self._check_counts([["117", ""], ["18", "+ 117"], ["166", "+ 117"],
                             ["", ""], ["", ""]])
         self.assertEqual(outdata.domain.class_var.values,
-                         ["Cls1", "Cls2", "Cls3"])
+                         ("Cls1", "Cls2", "Cls3"))
 
         widget.remove_buttons[1].click()
         self._check_counts([["117", ""], ["166", "+ 117"], ["18", "+ 117"],

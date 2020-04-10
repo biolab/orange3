@@ -1,4 +1,3 @@
-from math import isnan
 import itertools
 
 import numpy as np
@@ -8,13 +7,12 @@ from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, \
     QItemSelectionModel, QItemSelection, QSize
 
-from Orange.data import Table, Variable, ContinuousVariable, DiscreteVariable
+from Orange.data import Table, Variable
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owtable import ranges
 from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
-from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
@@ -48,15 +46,10 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.labels = labels
         self.variable = variable
         self.values = values
-        if isinstance(variable, ContinuousVariable):
-            palette = ContinuousPaletteGenerator(*variable.colors)
-            off, m = values.min(), values.max()
-            fact = off != m and 1 / (m - off)
-            self.label_colors = [palette[x] if not isnan(x) else Qt.lightGray
-                                 for x in (values - off) * fact]
+        if self.values is not None:
+            self.label_colors = variable.palette.values_to_qcolors(values)
         else:
             self.label_colors = None
-
         self.endResetModel()
 
     def dimension(self, parent=None):
@@ -67,14 +60,9 @@ class DistanceMatrixModel(QAbstractTableModel):
     columnCount = rowCount = dimension
 
     def color_for_label(self, ind, light=100):
-        color = Qt.lightGray
-        if isinstance(self.variable, ContinuousVariable):
-            color = self.label_colors[ind].lighter(light)
-        elif isinstance(self.variable, DiscreteVariable):
-            value = self.values[ind]
-            if not isnan(value):
-                color = QColor(*self.variable.colors[int(value)])
-        return QBrush(color)
+        if self.label_colors is None:
+            return Qt.lightGray
+        return QBrush(self.label_colors[ind].lighter(light))
 
     def color_for_cell(self, row, col):
         return QBrush(QColor.fromHsv(120, self.colors[row, col], 255))
@@ -103,7 +91,7 @@ class DistanceMatrixModel(QAbstractTableModel):
             return self.labels[ind]
         # On some systems, Qt doesn't respect the following role in the header
         if role == Qt.BackgroundRole:
-            return self.color_for_label(ind, 200)
+            return self.color_for_label(ind, 150)
 
 
 class TableBorderItem(QItemDelegate):
@@ -380,5 +368,5 @@ class OWDistanceMatrix(widget.OWWidget):
 if __name__ == "__main__":  # pragma: no cover
     import Orange.distance
     data = Orange.data.Table("iris")
-    dist = Orange.distance.Euclidean(data[:50])
+    dist = Orange.distance.Euclidean(data[::5])
     WidgetPreview(OWDistanceMatrix).run(dist)

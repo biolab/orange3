@@ -25,7 +25,7 @@ import Orange.data
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils import itemmodels, colorpalettes
 
 from Orange.util import scale, namegen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -710,13 +710,12 @@ class ColoredListModel(itemmodels.PyListModel):
 
         super().__init__(iterable, parent, flags, list_item_role,
                          supportedDropActions)
-        self.colors = colorpalette.ColorPaletteGenerator(
-            len(colorpalette.DefaultRGBColors))
+        self.colors = colorpalettes.DefaultRGBColors
 
     def data(self, index, role=Qt.DisplayRole):
         if self._is_index_valid(index) and \
                 role == Qt.DecorationRole and \
-                0 <= index.row() < self.colors.number_of_colors:
+                0 <= index.row() < len(self):
             return gui.createAttributePixmap("", self.colors[index.row()])
         return super().data(index, role)
 
@@ -809,8 +808,7 @@ class OWPaintData(OWWidget):
         else:
             self.__buffer = np.array(self.data)
 
-        self.colors = colorpalette.ColorPaletteGenerator(
-            len(colorpalette.DefaultRGBColors))
+        self.colors = colorpalettes.DefaultRGBColors
         self.tools_cache = {}
 
         self._init_ui()
@@ -1021,7 +1019,7 @@ class OWPaintData(OWWidget):
             y = np.zeros(len(data))
         else:
             self.input_classes = y.values
-            self.input_colors = y.colors
+            self.input_colors = y.palette
 
             y = data[:, y].Y
 
@@ -1041,11 +1039,9 @@ class OWPaintData(OWWidget):
 
         index = self.selected_class_label()
         if self.input_colors is not None:
-            colors = self.input_colors
+            palette = self.input_colors
         else:
-            colors = colorpalette.DefaultRGBColors
-        palette = colorpalette.ColorPaletteGenerator(
-            number_of_colors=len(colors), rgb_colors=colors)
+            palette = colorpalettes.DefaultRGBColors
         self.colors = palette
         self.class_model.colors = palette
         self.class_model[:] = self.input_classes
@@ -1062,6 +1058,8 @@ class OWPaintData(OWWidget):
             self.set_dimensions()
         else:  # set_dimensions already calls _replot, no need to call it again
             self._replot()
+
+        self.commit()
 
     def add_new_class_label(self, undoable=True):
 
@@ -1102,7 +1100,7 @@ class OWPaintData(OWWidget):
         self.labels = list(self.class_model)
         self.removeClassLabel.setEnabled(len(self.class_model) > 1)
         self.addClassLabel.setEnabled(
-            len(self.class_model) < self.colors.number_of_colors)
+            len(self.class_model) < len(self.colors))
         if self.selected_class_label() is None:
             itemmodels.select_row(self.classValuesView, 0)
 
@@ -1278,7 +1276,7 @@ class OWPaintData(OWWidget):
             domain = Orange.data.Domain(
                 attrs,
                 Orange.data.DiscreteVariable(
-                    "Class", values=list(self.class_model))
+                    "Class", values=tuple(self.class_model))
             )
             data = Orange.data.Table.from_numpy(domain, X, Y)
         else:

@@ -86,7 +86,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
             Domain(
                 [ContinuousVariable("a"),
                  ContinuousVariable("b")],
-                [DiscreteVariable("c", values=["yes", "no"])]
+                [DiscreteVariable("c", values=("yes", "no"))]
             ),
             list(zip(
                 [1., 0.],

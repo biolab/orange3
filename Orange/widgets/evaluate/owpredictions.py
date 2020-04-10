@@ -1,5 +1,6 @@
 from collections import namedtuple
 from functools import partial
+from operator import itemgetter
 
 import numpy
 from AnyQt.QtWidgets import (
@@ -8,7 +9,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
-    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal)
+    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer)
 
 import Orange
 from Orange.evaluation import Results
@@ -18,6 +19,7 @@ from Orange.data.table import DomainTransformationError
 from Orange.widgets import gui, settings
 from Orange.widgets.evaluate.utils import (
     ScoreTable, usable_scorers, learner_name, scorer_caller)
+from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
@@ -70,11 +72,12 @@ class OWPredictions(OWWidget):
         self.predictors = {}  # type: Dict[object, PredictorSlot]
         self.class_values = []  # type: List[str]
         self._delegates = []
+        self.left_width = 10
 
         gui.listBox(self.controlArea, self, "selected_classes", "class_values",
                     box="Show probabibilities for",
                     callback=self._update_prediction_delegate,
-                    selectionMode=QListWidget.MultiSelection,
+                    selectionMode=QListWidget.ExtendedSelection,
                     addSpace=False,
                     sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred))
         gui.rubber(self.controlArea)
@@ -109,6 +112,7 @@ class OWPredictions(OWWidget):
 
         self.splitter = QSplitter(
             orientation=Qt.Horizontal, childrenCollapsible=False, handleWidth=2)
+        self.splitter.splitterMoved.connect(self.splitter_resized)
         self.splitter.addWidget(self.predictionsview)
         self.splitter.addWidget(self.dataview)
 
@@ -132,6 +136,11 @@ class OWPredictions(OWWidget):
             modelproxy = SortProxyModel()
             modelproxy.setSourceModel(model)
             self.dataview.setModel(modelproxy)
+
+            self.dataview.model().list_sorted.connect(
+                partial(
+                    self._update_data_sort_order, self.dataview,
+                    self.predictionsview))
 
         self._invalidate_predictions()
 
@@ -305,6 +314,15 @@ class OWPredictions(OWWidget):
         return [p for p in self.predictors.values()
                 if isinstance(p.results, Results)]
 
+    def _reordered_probabilities(self, prediction):
+        cur_values = prediction.predictor.domain.class_var.values
+        new_ind = [self.class_values.index(x) for x in cur_values]
+        probs = prediction.results.unmapped_probabilities
+        new_probs = numpy.full(
+            (probs.shape[0], len(self.class_values)), numpy.nan)
+        new_probs[:, new_ind] = probs
+        return new_probs
+
     def _update_predictions_model(self):
         results = []
         headers = []
@@ -312,7 +330,8 @@ class OWPredictions(OWWidget):
             values = p.results.unmapped_predicted
             target = p.predictor.domain.class_var
             if target.is_discrete:
-                prob = p.results.unmapped_probabilities
+                # order probabilities in order from Show prob. for
+                prob = self._reordered_probabilities(p)
                 values = [Value(target, v) for v in values]
             else:
                 prob = numpy.zeros((len(values), 0))
@@ -336,11 +355,7 @@ class OWPredictions(OWWidget):
         # model.rowCount(...), `model.parent`, ... calls)
         hheader.setSectionsClickable(predmodel.rowCount() < 20000)
 
-        self.dataview.horizontalHeader().sectionClicked.connect(
-            partial(
-                self._update_data_sort_order, self.dataview,
-                self.predictionsview))
-        self.predictionsview.horizontalHeader().sectionClicked.connect(
+        self.predictionsview.model().list_sorted.connect(
             partial(
                 self._update_data_sort_order, self.predictionsview,
                 self.dataview))
@@ -364,7 +379,6 @@ class OWPredictions(OWWidget):
             else:
                 sortind = None
 
-            sort_source.setSortIndices(None)
             sort_dest.setSortIndices(sortind)
 
         sort_dest_view.horizontalHeader().setSortIndicatorShown(
@@ -384,34 +398,98 @@ class OWPredictions(OWWidget):
         self.predictionsview.horizontalHeader().setSortIndicatorShown(False)
         self.dataview.horizontalHeader().setSortIndicatorShown(False)
 
+    def _all_color_values(self):
+        """
+        Return list of colors together with their values from all predictors
+        classes. Colors and values are sorted according to the values order
+        for simpler comparison.
+        """
+        predictors = self._non_errored_predictors()
+        color_values = [
+            list(zip(*sorted(zip(
+                p.predictor.domain.class_var.colors,
+                p.predictor.domain.class_var.values
+            ), key=itemgetter(1))))
+            for p in predictors if p.predictor.domain.class_var.is_discrete
+        ]
+        return color_values if color_values else [([], [])]
+
+    @staticmethod
+    def _colors_match(colors1, values1, color2, values2):
+        """
+        Test whether colors for values match. Colors matches when all
+        values match for shorter list and colors match for shorter list.
+        It is assumed that values will be sorted together with their colors.
+        """
+        shorter_length = min(len(colors1), len(color2))
+        return (values1[:shorter_length] == values2[:shorter_length]
+                and (numpy.array(colors1[:shorter_length]) ==
+                     numpy.array(color2[:shorter_length])).all())
+
+    def _get_colors(self):
+        """
+        Defines colors for values. If colors match in all models use the union
+        otherwise use standard colors.
+        """
+        all_colors_values = self._all_color_values()
+        base_color, base_values = all_colors_values[0]
+        for c, v in all_colors_values[1:]:
+            if not self._colors_match(base_color, base_values, c, v):
+                base_color = []
+                break
+            # replace base_color if longer
+            if len(v) > len(base_color):
+                base_color = c
+                base_values = v
+
+        if len(base_color) != len(self.class_values):
+            return ColorPaletteGenerator.palette(len(self.class_values))
+        # reorder colors to widgets order
+        colors = [None] * len(self.class_values)
+        for c, v in zip(base_color, base_values):
+            colors[self.class_values.index(v)] = c
+        return colors
+
     def _update_prediction_delegate(self):
-        selected = {self.class_values[i] for i in self.selected_classes}
         self._delegates.clear()
+        colors = self._get_colors()
         for col, slot in enumerate(self.predictors.values()):
             target = slot.predictor.domain.class_var
-            shown_probs = () if target.is_continuous else \
-                [i for i, name in enumerate(target.values) if name in selected]
-            delegate = PredictionsItemDelegate(target, shown_probs)
+            shown_probs = (
+                () if target.is_continuous else
+                [val if self.class_values[val] in target.values else None
+                 for val in self.selected_classes]
+            )
+            delegate = PredictionsItemDelegate(
+                None if target.is_continuous else self.class_values,
+                colors,
+                shown_probs,
+                target.format_str if target.is_continuous else None
+            )
             # QAbstractItemView does not take ownership of delegates, so we must
             self._delegates.append(delegate)
             self.predictionsview.setItemDelegateForColumn(col, delegate)
             self.predictionsview.setColumnHidden(col, False)
 
         self.predictionsview.resizeColumnsToContents()
-        self._update_spliter()
+        self._recompute_splitter_sizes()
+        if self.predictionsview.model() is not None:
+            self.predictionsview.model().setProbInd(self.selected_classes)
 
-    def _update_spliter(self):
+    def _recompute_splitter_sizes(self):
         if not self.data:
             return
+        view = self.predictionsview
+        self.left_width = \
+            view.horizontalHeader().length() + view.verticalHeader().width()
+        self._update_splitter()
 
-        def width(view):
-            h_header = view.horizontalHeader()
-            v_header = view.verticalHeader()
-            return h_header.length() + v_header.width()
-
-        w = width(self.predictionsview) + 4
+    def _update_splitter(self):
         w1, w2 = self.splitter.sizes()
-        self.splitter.setSizes([w, w1 + w2 - w])
+        self.splitter.setSizes([self.left_width, w1 + w2 - self.left_width])
+
+    def splitter_resized(self):
+        self.left_width = self.splitter.sizes()[0]
 
     def commit(self):
         self._commit_predictions()
@@ -516,31 +594,48 @@ class OWPredictions(OWWidget):
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_splitter()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(0, self._update_splitter)
+
 
 class PredictionsItemDelegate(QStyledItemDelegate):
     """
     A Item Delegate for custom formatting of predictions/probabilities
     """
-    def __init__(self, target, shown_probabilities=(), parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
-        self.target = target
-        self.colors = None if target.is_continuous else \
-                [QColor(*color) for color in target.colors]
+    def __init__(
+            self, class_values, colors, shown_probabilities=(),
+            target_format=None, parent=None,
+    ):
+        super().__init__(parent)
+        self.class_values = class_values  # will be None for continuous
+        self.colors = [QColor(*c) for c in colors]
+        self.target_format = target_format  # target format for cont. vars
         self.shown_probabilities = self.fmt = self.tooltip = None  # set below
         self.setFormat(shown_probabilities)
 
     def setFormat(self, shown_probabilities=()):
         self.shown_probabilities = shown_probabilities
-        target = self.target
-        if target.is_continuous:
-            self.fmt = f"{{value:{target.format_str[1:]}}}"
+        if self.class_values is None:
+            # is continuous class
+            self.fmt = f"{{value:{self.target_format[1:]}}}"
         else:
             self.fmt = " \N{RIGHTWARDS ARROW} ".join(
-                [" : ".join(f"{{dist[{i}]:.2f}}" for i in shown_probabilities)]
+                [" : ".join(f"{{dist[{i}]:.2f}}" if i is not None else "-"
+                            for i in shown_probabilities)]
                 * bool(shown_probabilities)
                 + ["{value!s}"])
-        self.tooltip = "" if not shown_probabilities else \
-            f"p({', '.join(target.values[i] for i in shown_probabilities)})"
+        self.tooltip = ""
+        if shown_probabilities:
+            val = ', '.join(
+                self.class_values[i] if i is not None else "-"
+                for i in shown_probabilities if i is not None
+            )
+            self.tooltip = f"p({val})"
 
     def displayText(self, value, _locale):
         try:
@@ -560,7 +655,7 @@ class PredictionsItemDelegate(QStyledItemDelegate):
 
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
-        if self.target.is_continuous:
+        if self.class_values is None:
             option.displayAlignment = \
                 (option.displayAlignment & Qt.AlignVertical_Mask) | \
                 Qt.AlignRight
@@ -590,9 +685,6 @@ class PredictionsItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         dist = self.distribution(index)
         if dist is None or self.colors is None:
-            super().paint(painter, option, index)
-            return
-        if not numpy.isfinite(numpy.sum(dist)):
             super().paint(painter, option, index)
             return
 
@@ -656,6 +748,8 @@ class PredictionsItemDelegate(QStyledItemDelegate):
         painter.save()
         painter.translate(rect.topLeft())
         for i in self.shown_probabilities:
+            if i is None:
+                continue
             dvalue = distribution[i]
             if not dvalue > 0:  # This also skips nans
                 continue
@@ -670,7 +764,7 @@ class SortProxyModel(QSortFilterProxyModel):
     """
     QSortFilter model used in both TableView and PredictionsView
     """
-    sort_demanded = pyqtSignal()
+    list_sorted = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -686,10 +780,7 @@ class SortProxyModel(QSortFilterProxyModel):
         self.__sortInd = indices
 
         if self.__sortInd is not None:
-            if self.sortColumn() < 0:
-                self.sort(0)  # need some valid sort column
-            else:
-                self.invalidate()
+            self.custom_sort(0)  # need valid order to call lessThan
 
     def lessThan(self, left, right):
         if self.__sortInd is None:
@@ -709,6 +800,27 @@ class SortProxyModel(QSortFilterProxyModel):
     def isSorted(self):
         return self.__sortInd is not None
 
+    def sort(self, n, order=Qt.AscendingOrder):
+        """
+        This sort is called only on click, in other cases we manually call
+        custom_sort
+        """
+        # reset sort - otherwise when same parameters set by lessThan function
+        # clicking on header would not trigger resort
+        self.__sortInd = None
+        self.custom_sort(n, order=order)
+        self.list_sorted.emit()
+
+    def custom_sort(self, n, order=Qt.AscendingOrder):
+        """
+        When sorting is dmanded because of sort change in the other view
+        this sorting is called. It will not reset __sortInd to None.
+        """
+        if self.sortColumn() == n and self.sortOrder() == order:
+            self.invalidate()
+        else:
+            super().sort(n, order)  # need some valid sort column
+
 
 class PredictionsSortProxyModel(SortProxyModel):
     def __init__(self, parent=None):
@@ -718,6 +830,7 @@ class PredictionsSortProxyModel(SortProxyModel):
     def setProbInd(self, indices):
         self.__probInd = indices
         self.invalidate()
+        self.list_sorted.emit()
 
     def lessThan(self, left, right):
         if self.isSorted():
@@ -832,7 +945,10 @@ if __name__ == "__main__":  # pragma: no cover
     filename = "iris.tab"
     iris = Orange.data.Table(filename)
     idom = iris.domain
-    dom = Domain(idom.attributes, DiscreteVariable(idom.class_var.name, idom.class_var.values[:2]))
+    dom = Domain(
+        idom.attributes,
+        DiscreteVariable(idom.class_var.name, idom.class_var.values[1::-1])
+    )
     iris2 = iris[:100].transform(dom)
 
     def pred_error(data, *args, **kwargs):
@@ -842,20 +958,20 @@ if __name__ == "__main__":  # pragma: no cover
     pred_error.name = "To err is human"
 
     if iris.domain.has_discrete_class:
-        predictors = [
+        predictors_ = [
             Orange.classification.SVMLearner(probability=True)(iris2),
             Orange.classification.LogisticRegressionLearner()(iris),
             pred_error
         ]
     elif iris.domain.has_continuous_class:
-        predictors = [
+        predictors_ = [
             Orange.regression.RidgeRegressionLearner(alpha=1.0)(iris),
             Orange.regression.LinearRegressionLearner()(iris),
             pred_error
         ]
     else:
-        predictors = [pred_error]
+        predictors_ = [pred_error]
 
     WidgetPreview(OWPredictions).run(
         set_data=iris2,
-        set_predictor=[(pred, i) for i, pred in enumerate(predictors)])
+        set_predictor=[(pred, i) for i, pred in enumerate(predictors_)])

@@ -29,3 +29,6 @@ Thumbs.db
 htmlcov/*
 .coverage
 .coverage.*
+
+.tox
+pip-wheel-metadata/

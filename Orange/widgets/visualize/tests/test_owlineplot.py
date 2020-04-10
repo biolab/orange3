@@ -9,6 +9,7 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt
 
+from pyqtgraph import PlotCurveItem
 from pyqtgraph.Point import Point
 
 from Orange.data import Table
@@ -137,8 +138,8 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
     def test_selection_line(self):
         event = Mock()
         event.button.return_value = Qt.LeftButton
-        event.buttonDownPos.return_value = Point(2.5, 5.8)
-        event.pos.return_value = Point(3, 4.7)
+        event.buttonDownPos.return_value = Point(0, 0)
+        event.pos.return_value = Point(1, 1)
         event.isFinish.return_value = True
 
         # drag a line before data is sent
@@ -147,6 +148,12 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
 
         # drag a line after data is sent
         self.send_signal(self.widget.Inputs.data, self.data)
+
+        # set view-dependent click coordinates
+        vb = self.widget.graph.view_box
+        event.buttonDownPos.return_value = vb.mapFromView(Point(2.49, 5.79))
+        event.pos.return_value = vb.mapFromView(Point(2.99, 4.69))
+
         self.widget.graph.view_box.mouseDragEvent(event)
         line = self.widget.graph.view_box.selection_line
         self.assertFalse(line.line().isNull())
@@ -249,7 +256,8 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         settings["show_range"] = False
         w = self.create_widget(OWLinePlot, stored_settings=settings)
         self.send_signal(w.Inputs.data, self.data, widget=w)
-        self.assertEqual(len(w.graph.items()), 31)
+        curves = [i for i in w.graph.items() if isinstance(i, PlotCurveItem)]
+        self.assertEqual(len(curves), 3)
 
     def test_sparse_data(self):
         table = Table("iris").to_sparse()

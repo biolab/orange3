@@ -14,6 +14,7 @@ from Orange.widgets.data.contexthandlers import \
 from Orange.widgets.settings import ContextSetting, Setting
 from Orange.widgets.utils.listfilter import VariablesListItemView, slices, variables_filter
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output, AttributeList, Msg
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
@@ -105,7 +106,7 @@ class OWSelectAttributes(widget.OWWidget):
                   "data features, classes or meta variables."
     icon = "icons/SelectColumns.svg"
     priority = 100
-    keywords = ["filter"]
+    keywords = ["filter", "attributes", "target", "variable"]
 
     class Inputs:
         data = Input("Data", Table, default=True)
@@ -118,7 +119,7 @@ class OWSelectAttributes(widget.OWWidget):
     want_main_area = False
     want_control_area = True
 
-    settingsHandler = SelectAttributesDomainContextHandler()
+    settingsHandler = SelectAttributesDomainContextHandler(first_match=False)
     domain_role_hints = ContextSetting({})
     use_input_features = Setting(False)
     auto_commit = Setting(True)
@@ -266,6 +267,9 @@ class OWSelectAttributes(widget.OWWidget):
         self.output_data = None
         self.original_completer_items = []
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         self.resize(600, 600)
 
     @property
@@ -343,11 +347,13 @@ class OWSelectAttributes(widget.OWWidget):
             self.class_attrs[:] = classes
             self.meta_attrs[:] = metas
             self.available_attrs[:] = available
+            self.info.set_input_summary(len(data), format_summary_details(data))
         else:
             self.used_attrs[:] = []
             self.class_attrs[:] = []
             self.meta_attrs[:] = []
             self.available_attrs[:] = []
+            self.info.set_input_summary(self.info.NoInput)
 
     def update_domain_role_hints(self):
         """ Update the domain hints to be stored in the widgets settings.
@@ -522,10 +528,13 @@ class OWSelectAttributes(widget.OWWidget):
             self.output_data = newdata
             self.Outputs.data.send(newdata)
             self.Outputs.features.send(AttributeList(attributes))
+            self.info.set_output_summary(len(newdata),
+                                         format_summary_details(newdata))
         else:
             self.output_data = None
             self.Outputs.data.send(None)
             self.Outputs.features.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
 
     def reset(self):
         self.enable_used_attrs()

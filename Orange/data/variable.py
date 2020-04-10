@@ -11,8 +11,8 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import _variable
-from Orange.util import Registry, hex_to_color, Reprable,\
-    OrangeDeprecationWarning
+from Orange.util import Registry, Reprable, OrangeDeprecationWarning
+
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
            "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
@@ -47,7 +47,7 @@ def is_discrete_values(values):
     ----
     Assumes consistent type of items of `values`.
     """
-    if not len(values):
+    if len(values) == 0:
         return None
     # If the first few values are, or can be converted to, floats,
     # the type is numeric
@@ -165,6 +165,7 @@ class Value(float):
         return self
 
     def __init__(self, _, __=Unknown):
+        # __new__ does the job, pylint: disable=super-init-not-called
         pass
 
     def __repr__(self):
@@ -176,8 +177,10 @@ class Value(float):
 
     def __eq__(self, other):
         if isinstance(self, Real) and isnan(self):
-            return (isinstance(other, Real) and isnan(other)
-                    or other in self.variable.unknown_str)
+            if isinstance(other, Real):
+                return isnan(other)
+            else:
+                return other in self.variable.unknown_str
         if isinstance(other, str):
             return self.variable.str_val(self) == other
         if isinstance(other, Value):
@@ -219,7 +222,9 @@ class Value(float):
         if self.variable.is_discrete:
             # It is not possible to hash the id and the domain value to the
             # same number as required by __eq__.
-            # hash(1) == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1)) == hash("green")
+            # hash(1)
+            # == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1))
+            # == hash("green")
             # User should hash directly ids or domain values instead.
             raise TypeError("unhashable type - cannot hash values of discrete variables!")
         if self._value is None:
@@ -242,6 +247,7 @@ class Value(float):
         return dict(value=getattr(self, '_value', None))
 
     def __setstate__(self, state):
+        # defined in __new__, pylint: disable=attribute-defined-outside-init
         self._value = state.get('value', None)
 
 
@@ -323,19 +329,10 @@ class Variable(Reprable, metaclass=VariableMeta):
         self.source_variable = None
         self.sparse = sparse
         self.attributes = {}
-        self._colors = None
 
     @property
     def name(self):
         return self._name
-
-    @property
-    def colors(self):  # unreachable; pragma: no cover
-        return self._colors
-
-    @colors.setter
-    def colors(self, value):
-        self._colors = value
 
     def make_proxy(self):
         """
@@ -350,12 +347,34 @@ class Variable(Reprable, metaclass=VariableMeta):
         return var
 
     def __eq__(self, other):
-        return type(self) is type(other) \
-               and self.name == other.name \
-               and self._compute_value == other._compute_value
+        # pylint: disable=protected-access,import-outside-toplevel
+
+        def to_match(var):
+            if var._compute_value is None:
+                return var
+            elif isinstance(var._compute_value, Identity):
+                return var._compute_value.variable
+            return None
+
+        from Orange.preprocess.transformation import Identity
+        return type(self) is type(other) and (
+            self.name == other.name
+            and self._compute_value == other._compute_value
+            or
+            (self.compute_value or other.compute_value)
+            and to_match(self) == to_match(other) != None)
 
     def __hash__(self):
-        return hash((self.name, type(self), self._compute_value))
+        # Two variables that are not equal can have the same hash.
+        # This happens if one has compute_value == Identity and the other
+        # doesn't have compute_value, or they have a different Identity.
+        # Having the same hash while not being equal is of course allowed.
+        # pylint: disable=import-outside-toplevel
+        from Orange.preprocess.transformation import Identity
+        compute_value = self._compute_value
+        if isinstance(self._compute_value, Identity):
+            compute_value = None
+        return hash((self.name, type(self), compute_value))
 
     @classmethod
     def make(cls, name, *args, **kwargs):
@@ -400,7 +419,8 @@ class Variable(Reprable, metaclass=VariableMeta):
     def is_time(self):
         return isinstance(self, TimeVariable)
 
-    def repr_val(self, val):
+    @staticmethod
+    def repr_val(val):
         """
         Return a textual representation of variable's value `val`. Argument
         `val` must be a float (for primitive variables) or an arbitrary
@@ -469,6 +489,10 @@ class Variable(Reprable, metaclass=VariableMeta):
         var.attributes = dict(self.attributes)
         return var
 
+    def renamed(self, new_name):
+        # prevent cyclic import, pylint: disable=import-outside-toplevel
+        from Orange.preprocess.transformation import Identity
+        return self.copy(name=new_name, compute_value=Identity(variable=self))
 
 del _predicatedescriptor
 
@@ -505,12 +529,8 @@ class ContinuousVariable(Variable):
         three, but adjusted at the first call of :obj:`to_val`.
         """
         super().__init__(name, compute_value, sparse=sparse)
-        if number_of_decimals is None:
-            self._number_of_decimals = 3
-            self.adjust_decimals = 2
-            self._format_str = "%g"
-        else:
-            self.number_of_decimals = number_of_decimals
+        self._max_round_diff = 0
+        self.number_of_decimals = number_of_decimals
 
     @property
     def number_of_decimals(self):
@@ -524,21 +544,17 @@ class ContinuousVariable(Variable):
     def format_str(self, value):
         self._format_str = value
 
-    @Variable.colors.getter
-    def colors(self):
-        if self._colors is not None:
-            return self._colors
-        try:
-            col1, col2, black = self.attributes["colors"]
-            return (hex_to_color(col1), hex_to_color(col2), black)
-        except (KeyError, ValueError):
-            # User-provided colors were not available or invalid
-            return ((0, 0, 255), (255, 255, 0), False)
-
     # noinspection PyAttributeOutsideInit
     @number_of_decimals.setter
     def number_of_decimals(self, x):
+        if x is None:
+            self._number_of_decimals = 3
+            self.adjust_decimals = 2
+            self._format_str = "%g"
+            return
+
         self._number_of_decimals = x
+        self._max_round_diff = 10 ** (-x - 6)
         self.adjust_decimals = 0
         if self._number_of_decimals <= MAX_NUM_OF_DECIMALS:
             self._format_str = "%.{}f".format(self.number_of_decimals)
@@ -566,17 +582,45 @@ class ContinuousVariable(Variable):
         """
         if isnan(val):
             return "?"
+        if self.format_str != "%g" \
+                and abs(round(val, self._number_of_decimals) - val) \
+                > self._max_round_diff:
+            return f"{val:.{self._number_of_decimals + 2}f}"
         return self._format_str % val
 
     str_val = repr_val
 
     def copy(self, compute_value=None, *, name=None, **kwargs):
-        var = super().copy(compute_value=compute_value, name=name,
-                           number_of_decimals=self.number_of_decimals,
-                           **kwargs)
-        var.adjust_decimals = self.adjust_decimals
-        var.format_str = self._format_str
+        # pylint understand not that `var` is `DiscreteVariable`:
+        # pylint: disable=protected-access
+        number_of_decimals = kwargs.pop("number_of_decimals", None)
+        var = super().copy(compute_value=compute_value, name=name, **kwargs)
+        if number_of_decimals is not None:
+            var.number_of_decimals = number_of_decimals
+        else:
+            var._number_of_decimals = self._number_of_decimals
+            var._max_round_diff = self._max_round_diff
+            var.adjust_decimals = self.adjust_decimals
+            var.format_str = self._format_str
         return var
+
+
+class TupleList(tuple):
+    def __add__(self, other):
+        if isinstance(other, list):
+            warnings.warn(
+                "DiscreteVariable.values is a tuple; "
+                "support for adding a list will be dropped in Orange 3.27",
+                DeprecationWarning)
+            return list(self) + other
+        return super().__add__(other)
+
+    def copy(self):
+        warnings.warn(
+            "DiscreteVariable.values is a tuple;"
+            "method copy will be dropped in Orange 3.27",
+            DeprecationWarning)
+        return list(self)
 
 
 class DiscreteVariable(Variable):
@@ -604,16 +648,23 @@ class DiscreteVariable(Variable):
     def __init__(self, name="", values=(), ordered=False, compute_value=None,
                  *, sparse=False):
         """ Construct a discrete variable descriptor with the given values. """
-        self.values = list(values)
-        if not all(isinstance(value, str) for value in self.values):
+        values = TupleList(values)  # some people (including me) pass a generator
+        if not all(isinstance(value, str) for value in values):
             raise TypeError("values of DiscreteVariables must be strings")
+
         super().__init__(name, compute_value, sparse=sparse)
+        self._values = values
+        self._value_index = {value: i for i, value in enumerate(values)}
         self.ordered = ordered
+
+    @property
+    def values(self):
+        return self._values
 
     def get_mapping_from(self, other):
         return np.array(
-            [self.values.index(value) if value in self.values else np.nan
-             for value in other.values], dtype=float)
+            [self._value_index.get(value, np.nan) for value in other.values],
+            dtype=float)
 
     def get_mapper_from(self, other):
         mapping = self.get_mapping_from(other)
@@ -637,7 +688,7 @@ class DiscreteVariable(Variable):
                     value.data[nans] = 0
                     value.data[col] = mapping[value.data[col].astype(int)]
                     value.data[nans] = np.nan
-                    return
+                    return None
 
                 # Dense and CSC map a contiguous area
                 if isinstance(value, np.ndarray) and value.ndim == 2:
@@ -654,11 +705,11 @@ class DiscreteVariable(Variable):
                 col[nans] = 0
                 col[:] = mapping[col.astype(int)]
                 col[nans] = np.nan
-                return
+                return None
 
             # Mapping into a copy
             if isinstance(value, (int, float)):
-                return mapping[int(value)] if value == value else value
+                return value if np.isnan(value) else mapping[int(value)]
             if isinstance(value, str):
                 return mapping[other.values.index(value)]
             if isinstance(value, np.ndarray):
@@ -688,28 +739,12 @@ class DiscreteVariable(Variable):
                 value.data = mapper(value.data)
                 return value
             if isinstance(value, Iterable):
-                return type(value)(mapping[int(val)] if val == val else val
+                return type(value)(val if np.isnan(val) else mapping[int(val)]
                                    for val in value)
             raise ValueError(
                 f"invalid type for value(s): {type(value).__name__}")
 
         return mapper
-
-    @Variable.colors.getter
-    def colors(self):
-        if self._colors is not None:
-            colors = np.array(self._colors)
-        elif not self.values:
-            colors = np.zeros((0, 3))  # to match additional colors in vstacks
-        else:
-            from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
-            default = tuple(ColorPaletteGenerator.palette(self))
-            colors = self.attributes.get('colors', ())
-            colors = tuple(hex_to_color(color) for color in colors) \
-                    + default[len(colors):]
-            colors = np.array(colors)
-        colors.flags.writeable = False
-        return colors
 
     def to_val(self, s):
         """
@@ -735,15 +770,19 @@ class DiscreteVariable(Variable):
         if not isinstance(s, str):
             raise TypeError('Cannot convert {} to value of "{}"'.format(
                 type(s).__name__, self.name))
-        return self.values.index(s)
+        if s not in self._value_index:
+            raise ValueError(f"Value {s} does not exist")
+        return self._value_index[s]
 
     def add_value(self, s):
         """ Add a value `s` to the list of values.
         """
         if not isinstance(s, str):
             raise TypeError("values of DiscreteVariables must be strings")
-        self.values.append(s)
-        self._colors = None
+        if s in self._value_index:
+            return
+        self._value_index[s] = len(self.values)
+        self._values += (s, )
 
     def val_from_str_add(self, s):
         """
@@ -755,12 +794,13 @@ class DiscreteVariable(Variable):
         :rtype: float
         """
         s = str(s) if s is not None else s
-        try:
-            return ValueUnknown if s in self.unknown_str \
-                else self.values.index(s)
-        except ValueError:
+        if s in self.unknown_str:
+            return ValueUnknown
+        val = self._value_index.get(s)
+        if val is None:
             self.add_value(s)
-            return len(self.values) - 1
+            val = len(self.values) - 1
+        return val
 
     def repr_val(self, val):
         """
@@ -781,14 +821,18 @@ class DiscreteVariable(Variable):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
         __dict__ = dict(self.__dict__)
-        __dict__.pop("values")
+        __dict__.pop("_values")
         return make_variable, (self.__class__, self._compute_value, self.name,
                                self.values, self.ordered), \
             __dict__
 
-    def copy(self, compute_value=None, *, name=None, **_):
+    def copy(self, compute_value=None, *, name=None, values=None, **_):
+        # pylint: disable=arguments-differ
+        if values is not None and len(values) != len(self.values):
+            raise ValueError(
+                "number of values must match the number of original values")
         return super().copy(compute_value=compute_value, name=name,
-                            values=self.values, ordered=self.ordered)
+                            values=values or self.values, ordered=self.ordered)
 
 
 class StringVariable(Variable):
@@ -815,10 +859,10 @@ class StringVariable(Variable):
     @staticmethod
     def str_val(val):
         """Return a string representation of the value."""
-        if val is "":
+        if isinstance(val, str) and val == "":
             return "?"
         if isinstance(val, Value):
-            if val.value is "":
+            if not val.value:
                 return "?"
             val = val.value
         return str(val)
@@ -845,7 +889,7 @@ class TimeVariable(ContinuousVariable):
     _all_vars = {}
     TYPE_HEADERS = ('time', 't')
     UNIX_EPOCH = datetime(1970, 1, 1)
-    _ISO_FORMATS = [
+    _ISO_FORMATS = (
         # have_date, have_time, format_str
         # in order of decreased probability
         (1, 1, '%Y-%m-%d %H:%M:%S%z'),
@@ -880,7 +924,10 @@ class TimeVariable(ContinuousVariable):
         # so these two lines must be in this order
         (1, 0, '%Y-%m'),
         (1, 0, '%Y-%j'),
-    ]
+    )
+    # Order in which `_ISO_FORMATS` are tried. Must never change order of
+    # last 2 items. Only modified via assignment in `parse`.
+    __ISO_FORMATS_PROBE_SEQ = list(range(len(_ISO_FORMATS)))
     # The regex that matches all above formats
     REGEX = (r'^('
              r'\d{1,4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?([+-]\d{4})?)?)?|'
@@ -970,17 +1017,20 @@ class TimeVariable(ContinuousVariable):
             except ValueError:
                 raise self.InvalidDateTimeFormatError(datestr)
 
-        for i, (have_date, have_time, fmt) in enumerate(self._ISO_FORMATS):
+        try_order = self.__ISO_FORMATS_PROBE_SEQ
+        for i, (have_date, have_time, fmt) in enumerate(
+                map(self._ISO_FORMATS.__getitem__, try_order)):
             try:
                 dt = datetime.strptime(datestr, fmt)
             except ValueError:
                 continue
             else:
-                # Pop this most-recently-used format to front
-                if 0 < i < len(self._ISO_FORMATS) - 2:
-                    self._ISO_FORMATS[i], self._ISO_FORMATS[0] = \
-                        self._ISO_FORMATS[0], self._ISO_FORMATS[i]
-
+                # Pop this most-recently-used format index to front,
+                # excluding last 2
+                if 0 < i < len(try_order) - 2:
+                    try_order = try_order.copy()
+                    try_order[i], try_order[0] = try_order[0], try_order[i]
+                    TimeVariable.__ISO_FORMATS_PROBE_SEQ = try_order
                 self.have_date |= have_date
                 self.have_time |= have_time
                 if not have_date:

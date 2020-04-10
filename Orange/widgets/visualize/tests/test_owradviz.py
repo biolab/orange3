@@ -128,4 +128,4 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
 
         self.widget.setup_plot.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.setup_plot.assert_called_once()
+        self.widget.setup_plot.assert_not_called()

@@ -358,16 +358,15 @@ def time_binnings(data, *, min_bins=2, max_bins=50, min_unique=5, add_unique=0):
 
 
 def _time_binnings(mn, mx, min_pts, max_pts):
-    yfmt = "%y " if mn.tm_year >= 1950 else "%Y "
     bins = []
     for place, step, fmt, unit in (
             [(5, x, "%H:%M:%S", "second") for x in (1, 5, 10, 15, 30)] +
             [(4, x, "%b %d %H:%M", "minute") for x in (1, 5, 10, 15, 30)] +
-            [(3, x, yfmt + "%b %d %H:%M", "hour") for x in (1, 2, 3, 6, 12)] +
-            [(2, 1, yfmt + "%b %d", "day")] +
-            [(2, x, yfmt + "%b %d", "week") for x in (7, 14)] +
-            [(1, x, yfmt + "%b", "month") for x in (1, 2, 3, 6)] +
-            [(0, x, yfmt.strip(), "year") for x in (1, 2, 5, 10, 25, 50, 100)]):
+            [(3, x, "%y %b %d %H:%M", "hour") for x in (1, 2, 3, 6, 12)] +
+            [(2, 1, "%y %b %d", "day")] +
+            [(2, x, "%y %b %d", "week") for x in (7, 14)] +
+            [(1, x, "%y %b", "month") for x in (1, 2, 3, 6)] +
+            [(0, x, "%Y", "year") for x in (1, 2, 5, 10, 25, 50, 100)]):
         times = _time_range(mn, mx, place, step, min_pts, max_pts)
         if not times:
             continue
@@ -437,10 +436,10 @@ def _simplified_labels(labels):
         if len(firsts) > 1:
             break
         to_remove = firsts.pop()
-        flen = len(to_remove) + 1
+        flen = len(to_remove)
         if any(len(lab) == flen for lab in labels):
             break
-        labels = [lab[flen:] for lab in labels]
+        labels = [lab[flen+1:] for lab in labels]
     for i in range(len(labels) - 1, 0, -1):
         for k, c, d in zip(count(), labels[i].split(), labels[i - 1].split()):
             if c != d:
@@ -455,7 +454,7 @@ def _simplified_labels(labels):
 
 def _unique_time_bins(unique):
     times = [time.gmtime(x) for x in unique]
-    fmt = f'{"%y " if times[0][0] >= 1950 else "%Y "} %b %d'
+    fmt = f'%y %b %d'
     fmt += " %H:%M" * (len({t[2:] for t in times}) > 1)
     fmt += ":%S" * bool(np.all(unique % 60 == 0))
     labels = [time.strftime(fmt, x) for x in times]

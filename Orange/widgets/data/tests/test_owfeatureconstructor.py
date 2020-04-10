@@ -1,3 +1,4 @@
+# pylint: disable=unsubscriptable-object
 import unittest
 import ast
 import sys
@@ -5,6 +6,7 @@ import math
 import pickle
 import copy
 
+from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import (Table, Domain, StringVariable,
@@ -12,6 +14,7 @@ from Orange.data import (Table, Domain, StringVariable,
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import PyListModel
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
@@ -39,7 +42,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
-        self.assertEqual(data.domain[name].values, list(values))
+        self.assertEqual(data.domain[name].values, values)
         for i in range(3):
             self.assertEqual(data[i * 50, name], values[i])
 
@@ -274,10 +277,39 @@ class FeatureFuncTest(unittest.TestCase):
         self.assertEqual(r, [x[0] for x in zoo.metas[:, 0]])
         self.assertEqual(f(zoo[0]), str(zoo[0, "name"])[0])
 
+    def test_missing_variable(self):
+        zoo = Table("zoo")
+        assert zoo.domain.class_var.name == "type"
+        f = FeatureFunc("type[0]",
+                        [("type", zoo.domain["type"])])
+        no_class = Domain(zoo.domain.attributes, None, zoo.domain.metas)
+        data2 = zoo.transform(no_class)
+        r = f(data2)
+        self.assertTrue(np.all(np.isnan(r)))
+        self.assertTrue(np.isnan(f(data2[0])))
+
+    def test_invalid_expression_variable(self):
+        iris = Table("iris")
+        f = FeatureFunc("1 / petal_length",
+                        [("petal_length", iris.domain["petal length"])])
+        iris[0]["petal length"] = 0
+
+        f.mask_exceptions = False
+        self.assertRaises(Exception, f, iris)
+        self.assertRaises(Exception, f, iris[0])
+        _ = f(iris[1])
+
+        f.mask_exceptions = True
+        r = f(iris)
+        self.assertTrue(np.isnan(r[0]))
+        self.assertFalse(np.isnan(r[1]))
+        self.assertTrue(np.isnan(f(iris[0])))
+        self.assertFalse(np.isnan(f(iris[1])))
+
 
 class OWFeatureConstructorTests(WidgetTest):
     def setUp(self):
-        self.widget = OWFeatureConstructor()
+        self.widget = self.create_widget(OWFeatureConstructor)
 
     def test_create_variable_with_no_data(self):
         self.widget.addFeature(
@@ -315,6 +347,26 @@ class OWFeatureConstructorTests(WidgetTest):
         self.assertFalse(self.widget.Error.more_values_needed.is_shown())
         self.widget.apply()
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        data = Table("iris")
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 
 class TestFeatureEditor(unittest.TestCase):
@@ -363,3 +415,7 @@ class FeatureConstructorHandlerTests(unittest.TestCase):
                 {}
             )
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

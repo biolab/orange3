@@ -112,9 +112,9 @@ class FittedDistanceTest(unittest.TestCase):
             ContinuousVariable("c1"),
             ContinuousVariable("c2"),
             ContinuousVariable("c3"),
-            DiscreteVariable("d1", values=["a", "b"]),
-            DiscreteVariable("d2", values=["a", "b", "c", "d"]),
-            DiscreteVariable("d3", values=["a", "b", "c"]))
+            DiscreteVariable("d1", values=("a", "b")),
+            DiscreteVariable("d2", values=("a", "b", "c", "d")),
+            DiscreteVariable("d3", values=("a", "b", "c")))
         cls.domain = Domain(cls.attributes)
         cls.cont_domain = Domain(cls.attributes[:3])
         cls.disc_domain = Domain(cls.attributes[3:])

@@ -46,7 +46,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
         self.widget = self.create_widget(OWtSNE, stored_settings={"multiscale": False})
 
-        self.class_var = DiscreteVariable("Stage name", values=["STG1", "STG2"])
+        self.class_var = DiscreteVariable("Stage name", values=("STG1", "STG2"))
         self.attributes = [ContinuousVariable("GeneName" + str(i)) for i in range(5)]
         self.domain = Domain(self.attributes, class_vars=self.class_var)
         self.empty_domain = Domain([], class_vars=self.class_var)
@@ -55,7 +55,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # Some tests may not wait for the widget to finish, and the patched
         # methods might be unpatched before the widget finishes, resulting in
         # a very confusing crash.
-        self.widget.cancel()
+        self.widget.onDeleteWidget()
         try:
             self.restore_mocked_functions()
         # If `restore_mocked_functions` was called in the test itself, stopping
@@ -70,49 +70,57 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
     def test_wrong_input(self):
         # no data
-        self.data = None
-        self.send_signal(self.widget.Inputs.data, self.data)
+        data = None
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
 
         # <2 rows
-        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
-        self.send_signal(self.widget.Inputs.data, self.data)
+        data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']])
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.not_enough_rows.is_shown())
 
         # no attributes
-        self.data = Table.from_list(self.empty_domain, [['STG1']] * 2)
-        self.send_signal(self.widget.Inputs.data, self.data)
+        data = Table.from_list(self.empty_domain, [['STG1']] * 2)
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
-        self.assertTrue(self.widget.Error.no_attributes.is_shown())
+        self.assertTrue(self.widget.Error.not_enough_cols.is_shown())
+
+        # one attributes
+        data = Table.from_list(self.empty_domain, [[1, 'STG1'],
+                                                   [2, 'STG1']])
+        self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_stop_blocking()
+        self.assertIsNone(self.widget.data)
+        self.assertTrue(self.widget.Error.not_enough_cols.is_shown())
 
         # constant data
-        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
-        self.send_signal(self.widget.Inputs.data, self.data)
+        data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1']] * 2)
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.data)
         self.assertTrue(self.widget.Error.constant_data.is_shown())
 
         # correct input
-        self.data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
-                                                  [5, 4, 3, 2, 1, 'STG1']])
-        self.send_signal(self.widget.Inputs.data, self.data)
+        data = Table.from_list(self.domain, [[1, 2, 3, 4, 5, 'STG1'],
+                                             [5, 4, 3, 2, 1, 'STG1']])
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_stop_blocking()
         self.assertIsNotNone(self.widget.data)
         self.assertFalse(self.widget.Error.not_enough_rows.is_shown())
-        self.assertFalse(self.widget.Error.no_attributes.is_shown())
+        self.assertFalse(self.widget.Error.not_enough_cols.is_shown())
         self.assertFalse(self.widget.Error.constant_data.is_shown())
 
     def test_input(self):
-        self.data = Table.from_list(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
-                                                  [2, 2, 2, 2, 2, 'STG1'],
-                                                  [4, 4, 4, 4, 4, 'STG2'],
-                                                  [5, 5, 5, 5, 5, 'STG2']])
+        data = Table.from_list(self.domain, [[1, 1, 1, 1, 1, 'STG1'],
+                                             [2, 2, 2, 2, 2, 'STG1'],
+                                             [4, 4, 4, 4, 4, 'STG2'],
+                                             [5, 5, 5, 5, 5, 'STG2']])
 
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_stop_blocking()
 
     def test_attr_models(self):
@@ -142,6 +150,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data, self.data, widget=w)
         self.assertTrue(w.controls.multiscale.isChecked())
         self.assertFalse(w.perplexity_spin.isEnabled())
+        w.onDeleteWidget()
 
     def test_normalize_data(self):
         # Normalization should be checked by default

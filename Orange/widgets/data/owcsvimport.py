@@ -56,6 +56,7 @@ from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
 )
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 if typing.TYPE_CHECKING:
@@ -489,6 +490,7 @@ class OWCSVFileImport(widget.OWWidget):
 
     want_main_area = False
     buttons_area_orientation = None
+    resizing_enabled = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
@@ -536,6 +538,8 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.setMinimumHeight(self.fontMetrics().ascent() * 2 + 4)
         self.summary_text.viewport().setAutoFillBackground(False)
         box.layout().addWidget(self.summary_text)
+
+        self.info.set_output_summary(self.info.NoOutput)
 
         button_box = QDialogButtonBox(
             orientation=Qt.Horizontal,
@@ -964,6 +968,9 @@ class OWCSVFileImport(widget.OWWidget):
         self._update_status_messages(table)
 
     def _update_status_messages(self, data):
+        summary = len(data) if data else self.info.NoOutput
+        details = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, details)
         if data is None:
             return
 

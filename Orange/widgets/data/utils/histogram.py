@@ -12,7 +12,6 @@ from AnyQt.QtWidgets import (
 
 import Orange.statistics.util as ut
 from Orange.data.util import one_hot
-from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 
 
 class BarItem(QGraphicsWidget):
@@ -269,15 +268,7 @@ class Histogram(QGraphicsWidget):
             # well as their corresponding `x` values
             y_nan_mask = np.isnan(y)
             y, bin_indices = y[~y_nan_mask], bin_indices[~y_nan_mask]
-
-            y = one_hot(y)
-            # In the event that y does not take up all the values and the
-            # largest discrete value does not appear at all, one hot encoding
-            # will produce too few columns. This causes problems, so we need to
-            # pad y with zeros to properly compute the distribution
-            if y.shape[1] != len(self.target_var.values):
-                n_missing_columns = len(self.target_var.values) - y.shape[1]
-                y = np.hstack((y, np.zeros((y.shape[0], n_missing_columns))))
+            y = one_hot(y, dim=len(self.target_var.values))
 
             bins = np.arange(self.n_bins)[:, np.newaxis]
             mask = bin_indices == bins
@@ -351,11 +342,12 @@ class Histogram(QGraphicsWidget):
 
     def _get_colors(self):
         """Compute colors for different kinds of histograms."""
-        if self.target_var and self.target_var.is_discrete:
-            colors = [[QColor(*color) for color in self.target_var.colors]] * self.n_bins
+        target = self.target_var
+        if target and target.is_discrete:
+            colors = [list(target.palette)[:len(target.values)]] * self.n_bins
 
         elif self.target_var and self.target_var.is_continuous:
-            palette = ContinuousPaletteGenerator(*self.target_var.colors)
+            palette = self.target_var.palette
 
             bins = np.arange(self.n_bins)[:, np.newaxis]
             edges = self.edges if self.attribute.is_discrete else self.edges[1:-1]
@@ -369,7 +361,7 @@ class Histogram(QGraphicsWidget):
                     mean = ut.nanmean(biny) / ut.nanmax(self.y)
                 else:
                     mean = 0  # bin is empty, color does not matter
-                colors.append([palette[mean]])
+                colors.append([palette.value_to_qcolor(mean)])
 
         else:
             colors = [[QColor('#ccc')]] * self.n_bins

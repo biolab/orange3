@@ -25,6 +25,7 @@ from Orange.widgets.settings import (Setting, ContextSetting,
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -95,7 +96,7 @@ class Pivot:
         self._row_var_groups = nanunique(self._row_var_col)
         self._col_var_groups = nanunique(self._col_var_col)
 
-        self._total_var = DiscreteVariable("Total", values=["total"])
+        self._total_var = DiscreteVariable("Total", values=("total", ))
         self._current_agg_functions = sorted(agg_funs)
         self._indepen_agg_done = {}  # type: Dict[Functions, int]
         self._depen_agg_done = {}  # type: Dict[Functions, Dict[Variable, int]]
@@ -292,7 +293,7 @@ class Pivot:
                               for i, v in enumerate(vals, 2)])
             for x in (X_v, X_t):
                 attrs.append([DiscreteVariable("Total", map_values(0, x))])
-        row_var_h = DiscreteVariable(self._row_var.name, values=["Total"])
+        row_var_h = DiscreteVariable(self._row_var.name, values=("Total", ))
         aggr_attr = DiscreteVariable("Aggregate", [str(f) for f in agg_funs])
         return (Domain([self._row_var, aggr_attr] + attrs[0]),
                 Domain([row_var_h, aggr_attr] + attrs[1]),
@@ -695,21 +696,27 @@ class OWPivot(OWWidget):
     def _add_control_area_controls(self):
         box = gui.vBox(self.controlArea, "Rows")
         gui.comboBox(box, self, "row_feature", contentsLength=12,
+                     searchable=True,
                      model=DomainModel(valid_types=DomainModel.PRIMITIVE),
                      callback=self.__feature_changed)
         box = gui.vBox(self.controlArea, "Columns")
         gui.comboBox(box, self, "col_feature", contentsLength=12,
+                     searchable=True,
                      model=DomainModel(placeholder="(Same as rows)",
                                        valid_types=DiscreteVariable),
-                     callback=self.__feature_changed)
+                     callback=self.__feature_changed,)
         box = gui.vBox(self.controlArea, "Values")
         gui.comboBox(box, self, "val_feature", contentsLength=12,
-                     model=DomainModel(placeholder="(None)"),
+                     searchable=True,
                      orientation=Qt.Horizontal,
+                     model=DomainModel(placeholder="(None)"),
                      callback=self.__val_feature_changed)
         self.__add_aggregation_controls()
         gui.rubber(self.controlArea)
         gui.auto_apply(self.controlArea, self, "auto_commit")
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
     def __add_aggregation_controls(self):
         box = gui.vBox(self.controlArea, "Aggregations")
@@ -790,6 +797,10 @@ class OWPivot(OWWidget):
         self.clear_messages()
         if not self.data:
             self.table_view.clear()
+            self.info.set_input_summary(self.info.NoInput)
+        else:
+            self.info.set_input_summary(len(self.data),
+                                        format_summary_details(self.data))
 
     def init_attr_values(self):
         domain = self.data.domain if self.data and len(self.data) else None
@@ -817,9 +828,14 @@ class OWPivot(OWWidget):
         if self.skipped_aggs:
             self.Warning.cannot_aggregate(self.skipped_aggs)
         self._update_graph()
+        filtered_data = self.get_filtered_data()
         self.Outputs.grouped_data.send(self.pivot.group_table)
         self.Outputs.pivot_table.send(self.pivot.pivot_table)
-        self.Outputs.filtered_data.send(self.get_filtered_data())
+        self.Outputs.filtered_data.send(filtered_data)
+
+        summary = len(filtered_data) if filtered_data else self.info.NoOutput
+        details = format_summary_details(filtered_data) if filtered_data else ""
+        self.info.set_output_summary(summary, details)
 
     def _update_graph(self):
         self.table_view.clear()

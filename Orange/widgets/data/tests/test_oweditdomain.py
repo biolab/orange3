@@ -1,16 +1,21 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=all
 import pickle
+import unittest
 from itertools import product
 from unittest import TestCase
+from unittest.mock import Mock, patch
 
 import numpy as np
 from numpy.testing import assert_array_equal
+import pandas as pd
 
-from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt, QItemSelection
-from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, QStyleOptionViewItem
+from AnyQt.QtCore import QItemSelectionModel, Qt, QItemSelection
+from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
+    QStyleOptionViewItem, QDialog
 from AnyQt.QtTest import QTest, QSignalSpy
 
+from Orange.widgets.utils import colorpalettes
 from orangewidget.tests.utils import simulate
 from orangewidget.utils.itemmodels import PyListModel
 
@@ -29,11 +34,12 @@ from Orange.widgets.data.oweditdomain import (
     table_column_data, ReinterpretVariableEditor, CategoricalVector,
     VariableEditDelegate, TransformRole,
     RealVector, TimeVector, StringVector, make_dict_mapper, DictMissingConst,
-    LookupMappingTransform, as_float_or_nan, column_str_repr
-)
+    LookupMappingTransform, as_float_or_nan, column_str_repr, time_parse,
+    GroupItemsDialog)
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.tests import test_filename, assert_array_nanequal
+from Orange.widgets.utils.state_summary import format_summary_details
 
 MArray = np.ma.MaskedArray
 
@@ -109,6 +115,54 @@ class TestOWEditDomain(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
 
+    def test_widget_state(self):
+        """Check if widget clears its state when the input is disconnected"""
+        editor = self.widget.findChild(ContinuousVariableEditor)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertEqual(editor.name_edit.text(), "sepal length")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.name_edit.text(), "")
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
+        editor = self.widget.findChild(DiscreteVariableEditor)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        index = self.widget.domain_view.model().index(4)
+        self.widget.variables_view.setCurrentIndex(index)
+        self.assertEqual(editor.name_edit.text(), "iris")
+        self.assertEqual(editor.labels_model.get_dict(), {})
+        self.assertNotEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+        model = editor.values_edit.selectionModel().model()
+        self.assertEqual(model.index(0).data(Qt.EditRole), "Iris-setosa")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.name_edit.text(), "")
+        self.assertEqual(editor.labels_model.get_dict(), {})
+        self.assertEqual(model.index(0).data(Qt.EditRole), None)
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
+        editor = self.widget.findChild(TimeVariableEditor)
+        table = Table(test_filename("datasets/cyber-security-breaches.tab"))
+        self.send_signal(self.widget.Inputs.data, table)
+        index = self.widget.domain_view.model().index(4)
+        self.widget.variables_view.setCurrentIndex(index)
+        self.assertEqual(editor.name_edit.text(), "Date_Posted_or_Updated")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.name_edit.text(), "")
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
+        editor = self.widget.findChild(VariableEditor)
+        self.send_signal(self.widget.Inputs.data, table)
+        index = self.widget.domain_view.model().index(8)
+        self.widget.variables_view.setCurrentIndex(index)
+        self.assertEqual(editor.var.name, "Business_Associate_Involved")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(editor.var, None)
+        self.assertEqual(
+            self.widget.variables_model.index(0).data(Qt.EditRole), None)
+
     def test_output_data(self):
         """Check data on the output after apply"""
         self.send_signal(self.widget.Inputs.data, self.iris)
@@ -121,14 +175,17 @@ class TestOWEditDomain(WidgetTest):
         """Check widget's data sent from OWColor widget"""
         owcolor = self.create_widget(OWColor)
         self.send_signal("Data", self.iris, widget=owcolor)
-        owcolor.disc_model.setData(QModelIndex(), (250, 97, 70, 255), ColorRole)
-        owcolor.cont_model.setData(
-            QModelIndex(), ((255, 80, 114, 255), (255, 255, 0, 255), False),
-            ColorRole)
+        disc_model = owcolor.disc_model
+        disc_model.setData(disc_model.index(0, 1), (1, 2, 3), ColorRole)
+        cont_model = owcolor.cont_model
+        palette = list(colorpalettes.ContinuousPalettes.values())[-1]
+        cont_model.setData(cont_model.index(1, 1), palette, ColorRole)
         owcolor_output = self.get_output("Data", owcolor)
         self.send_signal("Data", owcolor_output)
         self.assertEqual(self.widget.data, owcolor_output)
-        self.assertIsNotNone(self.widget.data.domain.class_vars[-1].colors)
+        np.testing.assert_equal(self.widget.data.domain.class_var.colors[0],
+                                (1, 2, 3))
+        self.assertIs(self.widget.data.domain.attributes[1].palette, palette)
 
     def test_list_attributes_remain_lists(self):
         a = ContinuousVariable("a")
@@ -206,7 +263,7 @@ class TestOWEditDomain(WidgetTest):
     def test_change_ordered(self):
         """Test categorical ordered flag change"""
         table = Table.from_domain(Domain(
-            [DiscreteVariable("A", values=["a", "b"], ordered=True)]))
+            [DiscreteVariable("A", values=("a", "b"), ordered=True)]))
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)
         self.assertTrue(output.domain[0].ordered)
@@ -239,6 +296,45 @@ class TestOWEditDomain(WidgetTest):
         restore({viris: [("AsString", ()), ("Rename", ("Z",))]})
         tr = model.data(model.index(4), TransformRole)
         self.assertEqual(tr, [AsString(), Rename("Z")])
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        data = Table("iris")
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+
+        def enter_text(widget, text):
+            # type: (QLineEdit, str) -> None
+            widget.selectAll()
+            QTest.keyClick(widget, Qt.Key_Delete)
+            QTest.keyClicks(widget, text)
+            QTest.keyClick(widget, Qt.Key_Return)
+
+        editor = self.widget.findChild(ContinuousVariableEditor)
+        enter_text(editor.name_edit, "sepal height")
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+        output_sum.reset_mock()
+        enter_text(editor.name_edit, "sepal width")
+        self.widget.commit()
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 
 class TestEditors(GuiTest):
@@ -287,13 +383,14 @@ class TestEditors(GuiTest):
         self.assertEqual(w.get_data(), (None, []))
 
         v = Categorical("C", ("a", "b", "c"), (("A", "1"), ("B", "b")))
-        w.set_data(v)
+        values = [0, 0, 0, 1, 1, 2]
+        w.set_data_categorical(v, values)
 
         self.assertEqual(w.name_edit.text(), v.name)
         self.assertFalse(w.ordered_cb.isChecked())
         self.assertEqual(w.labels_model.get_dict(), dict(v.annotations))
         self.assertEqual(w.get_data(), (v, []))
-        w.set_data(None)
+        w.set_data_categorical(None, None)
         self.assertEqual(w.name_edit.text(), "")
         self.assertEqual(w.labels_model.get_dict(), {})
         self.assertEqual(w.get_data(), (None, []))
@@ -303,17 +400,19 @@ class TestEditors(GuiTest):
             ("b", None),
             (None, "b")
         ]
-        w.set_data(v, [CategoriesMapping(mapping)])
+        w.set_data_categorical(v, values, [CategoriesMapping(mapping)])
         w.grab()  # run delegate paint method
         self.assertEqual(w.get_data(), (v, [CategoriesMapping(mapping)]))
 
-        w.set_data(v, [CategoriesMapping(mapping), ChangeOrdered(True)])
+        w.set_data_categorical(
+            v, values, [CategoriesMapping(mapping), ChangeOrdered(True)]
+        )
         self.assertTrue(w.ordered_cb.isChecked())
         self.assertEqual(
             w.get_data()[1], [CategoriesMapping(mapping), ChangeOrdered(True)]
         )
         # test selection/deselection in the view
-        w.set_data(v)
+        w.set_data_categorical(v, values)
         view = w.values_edit
         model = view.model()
         assert model.rowCount()
@@ -328,7 +427,7 @@ class TestEditors(GuiTest):
             ("b", "b"),
             ("c", "b")
         ]
-        w.set_data(v, [CategoriesMapping(mapping)])
+        w.set_data_categorical(v, values, [CategoriesMapping(mapping)])
         self.assertEqual(w.get_data()[1], [CategoriesMapping(mapping)])
         self.assertEqual(model.data(model.index(0, 0), MultiplicityRole), 1)
         self.assertEqual(model.data(model.index(1, 0), MultiplicityRole), 2)
@@ -344,7 +443,8 @@ class TestEditors(GuiTest):
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
                         (("A", "1"), ("B", "b")))
-        w.set_data(v)
+        values = [0, 0, 0, 1, 1, 2]
+        w.set_data_categorical(v, values)
         action_add = w.add_new_item
         action_remove = w.remove_item
         view = w.values_edit
@@ -378,13 +478,21 @@ class TestEditors(GuiTest):
         self.assertGreaterEqual(len(changedspy), 1, "Did not change data")
         w.grab()
 
+    # mocking exec_ make dialog never show - dialog blocks running until closed
+    @patch(
+        "Orange.widgets.data.oweditdomain.GroupItemsDialog.exec_",
+        Mock(side_effect=lambda: QDialog.Accepted)
+    )
     def test_discrete_editor_merge_action(self):
+        """
+        This function check whether results of dialog have effect on
+        merging the attributes. The dialog itself is tested separately.
+        """
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
                         (("A", "1"), ("B", "b")))
-        w.set_data(v)
-        action = w.merge_items
-        self.assertFalse(action.isEnabled())
+        w.set_data_categorical(v, [0, 0, 0, 1, 1, 2])
+
         view = w.values_edit
         model = view.model()
         selmodel = view.selectionModel()  # type: QItemSelectionModel
@@ -392,20 +500,12 @@ class TestEditors(GuiTest):
             QItemSelection(model.index(0, 0), model.index(1, 0)),
             QItemSelectionModel.ClearAndSelect
         )
-        self.assertTrue(action.isEnabled())
-        # trigger the action, then find the active popup, and simulate entry
-        spy = QSignalSpy(w.variable_changed)
-        w.merge_items.trigger()
-        cb = w.findChild(QComboBox)
-        cb.setCurrentText("BA")
-        cb.activated[str].emit("BA")
-        cb.close()
-        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "BA")
-        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "BA")
 
-        self.assertSequenceEqual(
-            list(spy), [[]], 'variable_changed should emit exactly once'
-        )
+        # trigger the action, then find the active popup, and simulate entry
+        w.merge_items.trigger()
+
+        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "other")
+        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "other")
 
     def test_time_editor(self):
         w = TimeVariableEditor()
@@ -596,8 +696,8 @@ class TestReinterpretTransforms(TestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         domain = Domain([
-            DiscreteVariable("A", values=["a", "b", "c"]),
-            DiscreteVariable("B", values=["0", "1", "2"]),
+            DiscreteVariable("A", values=("a", "b", "c")),
+            DiscreteVariable("B", values=("0", "1", "2")),
             ContinuousVariable("C"),
             TimeVariable("D", have_time=True),
         ],
@@ -661,13 +761,13 @@ class TestReinterpretTransforms(TestCase):
                 [1, 0, 0, 0],
             ], dtype=float)
         )
-        self.assertEqual(tdomain["A"].values, ["a", "b", "c"])
-        self.assertEqual(tdomain["B"].values, ["0", "1", "2"])
-        self.assertEqual(tdomain["C"].values, ["0.0", "0.2", "0.25", "1.25"])
+        self.assertEqual(tdomain["A"].values, ("a", "b", "c"))
+        self.assertEqual(tdomain["B"].values, ("0", "1", "2"))
+        self.assertEqual(tdomain["C"].values, ("0.0", "0.2", "0.25", "1.25"))
         self.assertEqual(
             tdomain["D"].values,
-            ["1970-01-01 00:00:00", "1970-01-01 00:03:00",
-             "1970-01-01 00:06:00", "1970-01-01 00:12:00"]
+            ("1970-01-01 00:00:00", "1970-01-01 00:03:00",
+             "1970-01-01 00:06:00", "1970-01-01 00:12:00")
         )
 
     def test_as_continuous(self):
@@ -818,6 +918,19 @@ class TestUtils(TestCase):
         d = column_str_repr(v, np.array([0., np.nan, 1.0]))
         assert_array_equal(d, ["00:00:00", "?", "00:00:01"])
 
+    def test_time_parse(self):
+        """parsing additional datetimes by pandas"""
+        date = ["1/22/20", "1/23/20", "1/24/20"]
+        # we use privet method, check if still exists
+        assert hasattr(pd.DatetimeIndex, '_is_dates_only')
+
+        tval, values = time_parse(date)
+
+        self.assertTrue(tval.have_date)
+        self.assertFalse(tval.have_time)
+        self.assertListEqual(list(values),
+                             [1579651200.0, 1579737600.0, 1579824000.0])
+
 
 class TestLookupMappingTransform(TestCase):
     def setUp(self) -> None:
@@ -839,3 +952,115 @@ class TestLookupMappingTransform(TestCase):
         assert_array_equal(r, [np.nan, 0, 1, np.nan])
         r_ = lookup_.transform(c)
         assert_array_equal(r_, [np.nan, 0, 1, np.nan])
+
+
+class TestGroupLessFrequentItemsDialog(GuiTest):
+    def setUp(self) -> None:
+        self.v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")))
+        self.data = [0, 0, 0, 1, 1, 2]
+
+    def test_dialog_open(self):
+        dialog = GroupItemsDialog(self.v, self.data, ["a", "b"], {})
+        self.assertTrue(dialog.selected_radio.isChecked())
+        self.assertFalse(dialog.frequent_abs_radio.isChecked())
+        self.assertFalse(dialog.frequent_rel_radio.isChecked())
+        self.assertFalse(dialog.n_values_radio.isChecked())
+
+        dialog = GroupItemsDialog(self.v, self.data, [], {})
+        self.assertFalse(dialog.selected_radio.isChecked())
+        self.assertTrue(dialog.frequent_abs_radio.isChecked())
+        self.assertFalse(dialog.frequent_rel_radio.isChecked())
+        self.assertFalse(dialog.n_values_radio.isChecked())
+
+    def test_group_selected(self):
+        dialog = GroupItemsDialog(self.v, self.data, ["a", "b"], {})
+        dialog.selected_radio.setChecked(True)
+        dialog.new_name_line_edit.setText("BA")
+
+        self.assertListEqual(dialog.get_merge_attributes(), ["a", "b"])
+        self.assertEqual(dialog.get_merged_value_name(), "BA")
+
+    def test_group_less_frequent_abs(self):
+        dialog = GroupItemsDialog(self.v, self.data, ["a", "b"], {})
+        dialog.frequent_abs_radio.setChecked(True)
+        dialog.frequent_abs_spin.setValue(3)
+        dialog.new_name_line_edit.setText("BA")
+
+        self.assertListEqual(dialog.get_merge_attributes(), ["b", "c"])
+        self.assertEqual(dialog.get_merged_value_name(), "BA")
+
+        dialog.frequent_abs_spin.setValue(2)
+        self.assertListEqual(dialog.get_merge_attributes(), ["c"])
+
+        dialog.frequent_abs_spin.setValue(1)
+        self.assertListEqual(dialog.get_merge_attributes(), [])
+
+    def test_group_less_frequent_rel(self):
+        dialog = GroupItemsDialog(self.v, self.data, ["a", "b"], {})
+        dialog.frequent_rel_radio.setChecked(True)
+        dialog.frequent_rel_spin.setValue(50)
+        dialog.new_name_line_edit.setText("BA")
+
+        self.assertListEqual(dialog.get_merge_attributes(), ["b", "c"])
+        self.assertEqual(dialog.get_merged_value_name(), "BA")
+
+        dialog.frequent_rel_spin.setValue(20)
+        self.assertListEqual(dialog.get_merge_attributes(), ["c"])
+
+        dialog.frequent_rel_spin.setValue(15)
+        self.assertListEqual(dialog.get_merge_attributes(), [])
+
+    def test_group_keep_n(self):
+        dialog = GroupItemsDialog(self.v, self.data, ["a", "b"], {})
+        dialog.n_values_radio.setChecked(True)
+        dialog.n_values_spin.setValue(1)
+        dialog.new_name_line_edit.setText("BA")
+
+        self.assertListEqual(dialog.get_merge_attributes(), ["b", "c"])
+        self.assertEqual(dialog.get_merged_value_name(), "BA")
+
+        dialog.n_values_spin.setValue(2)
+        self.assertListEqual(dialog.get_merge_attributes(), ["c"])
+
+        dialog.n_values_spin.setValue(3)
+        self.assertListEqual(dialog.get_merge_attributes(), [])
+
+    def test_group_less_frequent_missing(self):
+        """
+        Widget gives MaskedArray to GroupItemsDialog which can have missing
+        values.
+        gh-4599
+        """
+        def _test_correctness():
+            dialog.frequent_abs_radio.setChecked(True)
+            dialog.frequent_abs_spin.setValue(3)
+            self.assertListEqual(dialog.get_merge_attributes(), ["b", "c"])
+
+            dialog.frequent_rel_radio.setChecked(True)
+            dialog.frequent_rel_spin.setValue(50)
+            self.assertListEqual(dialog.get_merge_attributes(), ["b", "c"])
+
+            dialog.n_values_radio.setChecked(True)
+            dialog.n_values_spin.setValue(1)
+            self.assertListEqual(dialog.get_merge_attributes(), ["b", "c"])
+
+        # masked array
+        data_masked = np.ma.array(
+            [0, 0, np.nan, 0, 1, 1, 2], mask=[0, 0, 1, 0, 0, 0, 0]
+        )
+        dialog = GroupItemsDialog(self.v, data_masked, [], {})
+        _test_correctness()
+
+        data_array = np.array([0, 0, np.nan, 0, 1, 1, 2])
+        dialog = GroupItemsDialog(self.v, data_array, [], {})
+        _test_correctness()
+
+        data_list = [0, 0, None, 0, 1, 1, 2]
+        dialog = GroupItemsDialog(self.v, data_list, [], {})
+        _test_correctness()
+
+
+if __name__ == '__main__':
+    unittest.main()
+

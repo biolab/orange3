@@ -43,9 +43,11 @@ class TestTransformation(unittest.TestCase):
         trans = Transformation(self.data.domain[2])
         self.assertRaises(NotImplementedError, trans, self.data)
 
+
+class IdentityTest(unittest.TestCase):
     def test_identity(self):
         domain = Domain([ContinuousVariable("X")],
-                        [DiscreteVariable("C", values=["0", "1", "2"])],
+                        [DiscreteVariable("C", values=("0", "1", "2"))],
                         [StringVariable("S")])
         X = np.random.normal(size=(4, 1))
         Y = np.random.randint(3, size=(4, 1))
@@ -61,6 +63,20 @@ class TestTransformation(unittest.TestCase):
         np.testing.assert_equal(D1.X, D.X)
         np.testing.assert_equal(D1.Y, D.Y)
         np.testing.assert_equal(D1.metas, D.metas)
+
+    def test_eq_and_hash(self):
+        x = ContinuousVariable("x")
+        id_x1 = Identity(x)
+        id_x1b = Identity(x)
+        id_x2 = Identity(ContinuousVariable("x"))
+        self.assertEqual(id_x1, id_x1b)
+        self.assertEqual(hash(id_x1), hash(id_x1b))
+        self.assertEqual(id_x1, id_x2)
+        self.assertEqual(hash(id_x1), hash(id_x2))
+
+        id_y = Identity(ContinuousVariable("y"))
+        self.assertNotEqual(id_x1, id_y)
+        self.assertNotEqual(hash(id_x1), hash(id_y))
 
 
 class LookupTest(unittest.TestCase):

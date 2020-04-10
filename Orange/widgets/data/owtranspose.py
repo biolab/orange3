@@ -3,6 +3,7 @@ from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets import gui
 from Orange.widgets.widget import Input, Output
@@ -38,6 +39,7 @@ class OWTranspose(OWWidget):
         duplicate_names = Msg("Values are not unique.\nTo avoid multiple "
                               "features with the same name, values \nof "
                               "'{}' have been augmented with indices.")
+        discrete_attrs = Msg("Categorical features have been encoded as numbers.")
 
     class Error(OWWidget.Error):
         value_error = Msg("{}")
@@ -64,14 +66,14 @@ class OWTranspose(OWWidget):
             alphabetical=False)
         self.feature_combo = gui.comboBox(
             gui.indentedBox(box, gui.checkButtonOffsetHint(button)), self,
-            "feature_names_column", contentsLength=12,
+            "feature_names_column", contentsLength=12, searchable=True,
             callback=self._feature_combo_changed, model=self.feature_model)
 
         self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
         self.apply_button.button.setAutoDefault(False)
 
-        self.info.set_output_summary(self.info.NoInput)
         self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         self.set_controls()
 
@@ -92,7 +94,7 @@ class OWTranspose(OWWidget):
             self.closeContext()
         self.data = data
         if data:
-            self.info.set_input_summary(len(data))
+            self.info.set_input_summary(len(data), format_summary_details(data))
         else:
             self.info.set_input_summary(self.info.NoInput)
         self.set_controls()
@@ -123,11 +125,14 @@ class OWTranspose(OWWidget):
                     names = self.data.get_column_view(variable)[0]
                     if len(names) != len(set(names)):
                         self.Warning.duplicate_names(variable)
-                self.info.set_output_summary(len(transposed))
+                if self.data.domain.has_discrete_attributes():
+                    self.Warning.discrete_attrs()
+                self.info.set_output_summary(len(transposed),
+                                             format_summary_details(transposed))
             except ValueError as e:
                 self.Error.value_error(e)
         else:
-            self.info.set_output_summary(self.info.NoInput)
+            self.info.set_output_summary(self.info.NoOutput)
         self.Outputs.data.send(transposed)
 
     def send_report(self):

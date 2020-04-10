@@ -119,6 +119,8 @@ class OWScatterPlotGraph(OWScatterPlotBase):
 
     def update_axes(self):
         for axis, title in self.master.get_axes().items():
+            use_time = title is not None and title.is_time
+            self.plot_widget.plotItem.getAxis(axis).use_time(use_time)
             self.plot_widget.setLabel(axis=axis, text=title or "")
             if title is None:
                 self.plot_widget.hideAxis(axis)
@@ -272,7 +274,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     def _add_controls_axis(self):
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
-            valueType=str, contentsLength=14
+            contentsLength=14
         )
         self.attr_box = gui.vBox(self.controlArea, True)
         dmod = DomainModel
@@ -280,11 +282,13 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.cb_attr_x = gui.comboBox(
             self.attr_box, self, "attr_x", label="Axis x:",
             callback=self.set_attr_from_combo,
-            model=self.xy_model, **common_options)
+            model=self.xy_model, **common_options,
+            searchable=True)
         self.cb_attr_y = gui.comboBox(
             self.attr_box, self, "attr_y", label="Axis y:",
             callback=self.set_attr_from_combo,
-            model=self.xy_model, **common_options)
+            model=self.xy_model, **common_options,
+            searchable=True)
         vizrank_box = gui.hBox(self.attr_box)
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
             vizrank_box, self, "Find Informative Projections", self.set_attr)

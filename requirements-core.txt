@@ -19,6 +19,8 @@ networkx
 python-louvain>=0.13
 requests
 openTSNE>=0.3.11
+baycomp>=1.0.2
 pandas
 pyyaml
 openpyxl
+httpx~=0.12

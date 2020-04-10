@@ -28,9 +28,9 @@ class TestOWCorrespondence(WidgetTest):
         table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"),
-                 DiscreteVariable("b", values=["t", "f"]),
-                 DiscreteVariable("c", values=["y", "n"]),
-                 DiscreteVariable("d", values=["k", "l", "z"])]
+                 DiscreteVariable("b", values=("t", "f")),
+                 DiscreteVariable("c", values=("y", "n")),
+                 DiscreteVariable("d", values=("k", "l", "z"))]
             ),
             list(zip(
                 [42.48, 16.84, 15.23, 23.8],
@@ -48,7 +48,7 @@ class TestOWCorrespondence(WidgetTest):
         """
         table = Table.from_list(
             Domain(
-                [DiscreteVariable("a", values=["0"])]
+                [DiscreteVariable("a", values=("0", ))]
             ),
             [(0,), (0,), (0,)]
         )

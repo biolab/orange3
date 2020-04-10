@@ -30,7 +30,6 @@ class OWSGD(OWBaseLearner):
 
     LEARNER = SGDLearner
 
-    resizing_enabled = False
     left_side_scrolling = True
 
     class Outputs(OWBaseLearner.Outputs):

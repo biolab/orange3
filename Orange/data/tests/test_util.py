@@ -1,7 +1,9 @@
 import unittest
+import numpy as np
 
 from Orange.data import Domain, ContinuousVariable
-from Orange.data.util import get_unique_names, get_unique_names_duplicates
+from Orange.data.util import get_unique_names, get_unique_names_duplicates, \
+    get_unique_names_domain, one_hot
 
 
 class TestGetUniqueNames(unittest.TestCase):
@@ -53,6 +55,137 @@ class TestGetUniqueNames(unittest.TestCase):
         self.assertEqual(
             get_unique_names_duplicates(["foo", "bar", "baz", "bar"]),
             ["foo", "bar (1)", "baz", "bar (2)"])
+        self.assertEqual(
+            get_unique_names_duplicates(["x", "x", "x (1)"]),
+            ["x (2)", "x (3)", "x (1)"])
+        self.assertEqual(
+            get_unique_names_duplicates(["x (2)", "x", "x", "x (2)", "x (3)"]),
+            ["x (2) (1)", "x (4)", "x (5)", "x (2) (2)", "x (3)"])
+        self.assertEqual(
+                        get_unique_names_duplicates(["iris", "iris", "iris (1)"]),
+                        ["iris (2)", "iris (3)", "iris (1)"])
+
+        self.assertEqual(
+            get_unique_names_duplicates(["foo", "bar", "baz"], return_duplicated=True),
+            (["foo", "bar", "baz"], []))
+        self.assertEqual(
+            get_unique_names_duplicates(["foo", "bar", "baz", "bar"], return_duplicated=True),
+            (["foo", "bar (1)", "baz", "bar (2)"], ["bar"]))
+        self.assertEqual(
+            get_unique_names_duplicates(["x", "x", "x (1)"], return_duplicated=True),
+            (["x (2)", "x (3)", "x (1)"], ["x"]))
+        self.assertEqual(
+            get_unique_names_duplicates(["x (2)", "x", "x", "x (2)", "x (3)"], return_duplicated=True),
+            (["x (2) (1)", "x (4)", "x (5)", "x (2) (2)", "x (3)"], ["x (2)", "x"]))
+        self.assertEqual(
+            get_unique_names_duplicates(["x", "", "", None, None, "x"]),
+            ["x (1)", "", "", None, None, "x (2)"])
+        self.assertEqual(
+            get_unique_names_duplicates(["iris", "iris", "iris (1)", "iris (2)"], return_duplicated=True),
+            (["iris (3)", "iris (4)", "iris (1)", "iris (2)"], ["iris"]))
+
+        self.assertEqual(
+            get_unique_names_duplicates(["iris (1) (1)", "iris (1)", "iris (1)"]),
+            ["iris (1) (1)", "iris (1) (2)", "iris (1) (3)"]
+        )
+
+        self.assertEqual(
+            get_unique_names_duplicates(["iris (1) (1)", "iris (1)", "iris (1)", "iris", "iris"]),
+            ["iris (1) (1)", "iris (1) (2)", "iris (1) (3)", "iris (2)", "iris (3)"]
+        )
+
+    def test_get_unique_names_domain(self):
+        (attrs, classes, metas), renamed = \
+            get_unique_names_domain(["a", "t", "c", "t"], ["t", "d"], ["d", "e"])
+        self.assertEqual(attrs, ["a", "t (1)", "c", "t (2)"])
+        self.assertEqual(classes, ["t (3)", "d (1)"])
+        self.assertEqual(metas, ["d (2)", "e"])
+        self.assertEqual(renamed, ["t", "d"])
+
+        (attrs, classes, metas), renamed = \
+            get_unique_names_domain(["a", "t", "c", "t"], ["t", "d"])
+        self.assertEqual(attrs, ["a", "t (1)", "c", "t (2)"])
+        self.assertEqual(classes, ["t (3)", "d"])
+        self.assertEqual(metas, [])
+        self.assertEqual(renamed, ["t"])
+
+        (attrs, classes, metas), renamed = \
+            get_unique_names_domain(["a", "t", "c"])
+        self.assertEqual(attrs, ["a", "t", "c"])
+        self.assertEqual(classes, [])
+        self.assertEqual(metas, [])
+        self.assertEqual(renamed, [])
+
+        (attrs, classes, metas), renamed = \
+            get_unique_names_domain(["a", "t", "d", "t"], [], ["d", "e"])
+        self.assertEqual(attrs, ["a", "t (1)", "d (1)", "t (2)"])
+        self.assertEqual(classes, [])
+        self.assertEqual(metas, ["d (2)", "e"])
+        self.assertEqual(renamed, ["t", "d"])
+
+        (attrs, classes, metas), renamed = \
+            get_unique_names_domain([], ["t", "d"], ["d", "e"])
+        self.assertEqual(attrs, [])
+        self.assertEqual(classes, ["t", "d (1)"])
+        self.assertEqual(metas, ["d (2)", "e"])
+        self.assertEqual(renamed, ["d"])
+
+        (attrs, classes, metas), renamed = \
+            get_unique_names_domain([], ["t", "t", "d"], [])
+        self.assertEqual(attrs, [])
+        self.assertEqual(classes, ["t (1)", "t (2)", "d"])
+        self.assertEqual(metas, [])
+        self.assertEqual(renamed, ["t"])
+
+        (attrs, classes, metas), renamed = \
+            get_unique_names_domain([], [], [])
+        self.assertEqual(attrs, [])
+        self.assertEqual(classes, [])
+        self.assertEqual(metas, [])
+        self.assertEqual(renamed, [])
+
+
+class TestOneHot(unittest.TestCase):
+
+    def setUp(self):
+        self.values = np.array([0, 1, 2, 1])
+
+    @staticmethod
+    def test_empty():
+        np.testing.assert_array_equal(
+            one_hot([]), np.zeros((0, 0))
+        )
+        np.testing.assert_array_equal(
+            one_hot([], dim=2), np.zeros((0, 2))
+        )
+
+    def test_one_hot(self):
+        np.testing.assert_array_equal(
+            one_hot(self.values),
+            [[1, 0, 0],
+             [0, 1, 0],
+             [0, 0, 1],
+             [0, 1, 0]]
+        )
+
+    def test_dtype(self):
+        res = one_hot(self.values)
+        self.assertEqual(res.dtype, float)
+        res = one_hot(self.values, dtype=int)
+        self.assertEqual(res.dtype, int)
+
+    def test_dim(self):
+        np.testing.assert_array_equal(
+            one_hot(self.values, dim=4),
+            [[1, 0, 0, 0],
+             [0, 1, 0, 0],
+             [0, 0, 1, 0],
+             [0, 1, 0, 0]]
+        )
+
+    def test_dim_too_low(self):
+        with self.assertRaises(ValueError):
+            one_hot(self.values, dim=2)
 
 
 if __name__ == "__main__":

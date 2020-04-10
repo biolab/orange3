@@ -644,7 +644,7 @@ class OWNomogram(OWWidget):
         box = gui.vBox(self.controlArea, "Target class")
         self.class_combo = gui.comboBox(
             box, self, "target_class_index", callback=self._class_combo_changed,
-            contentsLength=12)
+            contentsLength=12, searchable=True)
         self.norm_check = gui.checkBox(
             box, self, "normalize_probabilities", "Normalize probabilities",
             hidden=True, callback=self.update_scene,
@@ -848,7 +848,7 @@ class OWNomogram(OWWidget):
         if len(self.domain.class_var.values) == 2:
             self.b0 = np.hstack((self.b0 * (-1), self.b0))
             coeffs = np.vstack((coeffs * (-1), coeffs))
-        self.log_reg_coeffs = [coeffs[:, ranges[i]] for i in range(len(attrs))]
+        self.log_reg_coeffs = [coeffs[:, r] for r in ranges]
         self.log_reg_coeffs_orig = self.log_reg_coeffs.copy()
 
         min_values = nanmin(self.data.X, axis=0)
@@ -860,7 +860,7 @@ class OWNomogram(OWWidget):
                 coef = self.log_reg_coeffs[i]
                 self.log_reg_coeffs[i] = np.hstack((coef * min_t, coef * max_t))
                 self.log_reg_cont_data_extremes.append(
-                    [sorted([min_t, max_t], reverse=(c < 0)) for c in coef])
+                    [sorted([min_t, max_t], reverse=(c < 0)) for c in coef.flat])
             else:
                 self.log_reg_cont_data_extremes.append([None])
 

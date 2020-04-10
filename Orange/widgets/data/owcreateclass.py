@@ -180,7 +180,8 @@ class OWCreateClass(widget.OWWidget):
 
         combo = gui.comboBox(
             self.controlArea, self, "attribute", label="From column: ",
-            box=True, orientation=Qt.Horizontal, callback=self.update_rules,
+            box=True, orientation=Qt.Horizontal, searchable=True,
+            callback=self.update_rules,
             model=DomainModel(valid_types=(StringVariable, DiscreteVariable)))
         # Don't use setSizePolicy keyword argument here: it applies to box,
         # not the combo

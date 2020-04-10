@@ -6,20 +6,25 @@ Concatenate (append) two or more datasets.
 
 """
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from functools import reduce
+from itertools import chain, count
+from typing import List
 
 import numpy as np
 from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 import Orange.data
+from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.util import flatten
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 from Orange.widgets.widget import Input, Output, Msg
 
 
@@ -42,6 +47,10 @@ class OWConcatenate(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         bow_concatenation = Msg("Inputs must be of the same type.")
+
+    class Warning(widget.OWWidget.Warning):
+        renamed_variables = Msg(
+            "Variables with duplicated names have been renamed.")
 
     merge_type: int
     append_source_column: bool
@@ -128,6 +137,9 @@ class OWConcatenate(widget.OWWidget):
             gui.comboBox(ibox, self, "source_column_role", items=self.id_roles,
                          callback=self._source_changed))
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         ibox.layout().addLayout(form)
         mleft, mtop, mright, _ = ibox.layout().getContentsMargins()
         ibox.layout().setContentsMargins(mleft, mtop, mright, 4)
@@ -152,8 +164,25 @@ class OWConcatenate(widget.OWWidget):
         elif sig_id in self.more_data:
             del self.more_data[sig_id]
 
+    def _set_input_summary(self):
+        more_data = list(self.more_data.values()) if self.more_data else [None]
+        n_primary = len(self.primary_data) if self.primary_data else 0
+        n_more_data = [len(data) if data else 0 for data in more_data]
+
+        summary, details, kwargs = self.info.NoInput, "", {}
+        if self.primary_data or self.more_data:
+            summary = f"{self.info.format_number(n_primary)}, " \
+                    + ", ".join(self.info.format_number(i) for i in n_more_data)
+            details = format_multiple_summaries(
+                [("Primary data", self.primary_data)]
+                + [("", data) for data in more_data]
+            )
+            kwargs = {"format": Qt.RichText}
+        self.info.set_input_summary(summary, details, **kwargs)
+
     def handleNewSignals(self):
         self.mergebox.setDisabled(self.primary_data is not None)
+        self._set_input_summary()
         if self.incompatible_types():
             self.Error.bow_concatenation()
         else:
@@ -172,18 +201,15 @@ class OWConcatenate(widget.OWWidget):
         return False
 
     def apply(self):
+        self.Warning.renamed_variables.clear()
         tables, domain, source_var = [], None, None
         if self.primary_data is not None:
             tables = [self.primary_data] + list(self.more_data.values())
             domain = self.primary_data.domain
         elif self.more_data:
             tables = self.more_data.values()
-            if self.merge_type == OWConcatenate.MergeUnion:
-                domain = reduce(domain_union,
-                                (table.domain for table in tables))
-            else:
-                domain = reduce(domain_intersection,
-                                (table.domain for table in tables))
+            domains = [table.domain for table in tables]
+            domain = self.merge_domains(domains)
 
         if tables and self.append_source_column:
             assert domain is not None
@@ -192,7 +218,7 @@ class OWConcatenate(widget.OWWidget):
                 names = ['{} ({})'.format(name, i)
                          for i, name in enumerate(names)]
             source_var = Orange.data.DiscreteVariable(
-                self.source_attr_name,
+                get_unique_names(domain, self.source_attr_name),
                 values=names
             )
             places = ["class_vars", "attributes", "metas"]
@@ -207,9 +233,10 @@ class OWConcatenate(widget.OWWidget):
                 source_ids = np.array(list(flatten(
                     [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
                 data[:, source_var] = source_ids
-
+            self.info.set_output_summary(len(data), format_summary_details(data))
         else:
             data = None
+            self.info.set_output_summary(self.info.NoOutput)
 
         self.Outputs.data.send(data)
 
@@ -236,36 +263,76 @@ class OWConcatenate(widget.OWWidget):
                 self.id_roles[self.source_column_role].lower())
         self.report_items(items)
 
+    def merge_domains(self, domains):
+        def fix_names(part):
+            for i, attr, name in zip(count(), part, name_iter):
+                if attr.name != name:
+                    part[i] = attr.renamed(name)
+                    self.Warning.renamed_variables()
 
-def unique(seq):
-    seen_set = set()
-    for el in seq:
-        if el not in seen_set:
-            yield el
-            seen_set.add(el)
+        oper = set.union if self.merge_type == OWConcatenate.MergeUnion \
+            else set.intersection
+        parts = [self._get_part(domains, oper, part)
+                 for part in ("attributes", "class_vars", "metas")]
+        all_names = [var.name for var in chain(*parts)]
+        name_iter = iter(get_unique_names_duplicates(all_names))
+        for part in parts:
+            fix_names(part)
+        domain = Orange.data.Domain(*parts)
+        return domain
 
+    @classmethod
+    def _get_part(cls, domains, oper, part):
+        # keep the order of variables: first compute union or intersections as
+        # sets, then iterate through chained parts
+        vars_by_domain = [getattr(domain, part) for domain in domains]
+        valid = reduce(oper, map(set, vars_by_domain))
+        valid_vars = [var for var in chain(*vars_by_domain) if var in valid]
+        return cls._unique_vars(valid_vars)
 
-def domain_union(a, b):
-    union = Orange.data.Domain(
-        tuple(unique(a.attributes + b.attributes)),
-        tuple(unique(a.class_vars + b.class_vars)),
-        tuple(unique(a.metas + b.metas))
-    )
-    return union
+    @staticmethod
+    def _unique_vars(seq: List[Orange.data.Variable]):
+        AttrDesc = namedtuple(
+            "AttrDesc",
+            ("template", "original", "values", "number_of_decimals"))
 
+        attrs = {}
+        for el in seq:
+            desc = attrs.get(el)
+            if desc is None:
+                attrs[el] = AttrDesc(el, True,
+                                     el.is_discrete and el.values,
+                                     el.is_continuous and el.number_of_decimals)
+                continue
+            if desc.template.is_discrete:
+                sattr_values = set(desc.values)
+                # don't use sets: keep the order
+                missing_values = [val for val in el.values
+                                  if val not in sattr_values]
+                if missing_values:
+                    attrs[el] = attrs[el]._replace(
+                        original=False,
+                        values=desc.values + missing_values)
+            elif desc.template.is_continuous:
+                if el.number_of_decimals > desc.number_of_decimals:
+                    attrs[el] = attrs[el]._replace(
+                        original=False,
+                        number_of_decimals=el.number_of_decimals)
 
-def domain_intersection(a, b):
-    def tuple_intersection(t1, t2):
-        inters = set(t1) & set(t2)
-        return tuple(unique(el for el in t1 + t2 if el in inters))
-
-    intersection = Orange.data.Domain(
-        tuple_intersection(a.attributes, b.attributes),
-        tuple_intersection(a.class_vars, b.class_vars),
-        tuple_intersection(a.metas, b.metas),
-    )
-
-    return intersection
+        new_attrs = []
+        for desc in attrs.values():
+            attr = desc.template
+            if desc.original:
+                new_attr = attr
+            elif desc.template.is_discrete:
+                new_attr = attr.copy()
+                for val in desc.values[len(attr.values):]:
+                    new_attr.add_value(val)
+            else:
+                assert desc.template.is_continuous
+                new_attr = attr.copy(number_of_decimals=desc.number_of_decimals)
+            new_attrs.append(new_attr)
+        return new_attrs
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -4,7 +4,8 @@
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QRectF, QPointF
+from AnyQt.QtCore import QRectF, QPointF, QEvent, Qt
+from AnyQt.QtGui import QMouseEvent
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.widgets.data import owpaintdata
@@ -79,3 +80,31 @@ class TestOWPaintData(WidgetTest):
         GH-2399
         """
         self.create_widget(OWPaintData, stored_settings={"data": []})
+
+    def test_reset_to_input(self):
+        """Checks if the data resets to input when Reset to Input is pressed"""
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), len(data))
+        self.widget.set_current_tool(self.widget.TOOLS[1][2]) # PutInstanceTool
+        tool = self.widget.current_tool
+        event = QMouseEvent(QEvent.MouseButtonPress, QPointF(0.17, 0.17),
+                            Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+        tool.mousePressEvent(event)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertNotEqual(len(output), len(data))
+        self.assertEqual(len(output), 151)
+        self.widget.reset_to_input()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), len(data))
+
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), len(data))
+        self.widget.set_current_tool(self.widget.TOOLS[5][2])  # ClearTool
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertIsNone(output)
+        self.widget.reset_to_input()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), len(data))

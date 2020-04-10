@@ -102,6 +102,7 @@ class OWPythagorasTree(OWWidget):
         self.target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
             orientation=Qt.Horizontal, items=[], contentsLength=8,
+            searchable=True,
             callback=self.update_colors)
         self.size_calc_combo = gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
@@ -365,30 +366,13 @@ class OWPythagorasTree(OWWidget):
         self.scene.addItem(self.legend)
 
     def _regression_update_legend_colors(self):
-        def _get_colors_domain(domain):
-            class_var = domain.class_var
-            start, end, pass_through_black = class_var.colors
-            if pass_through_black:
-                lst_colors = [QColor(*c) for c
-                              in [start, (0, 0, 0), end]]
-            else:
-                lst_colors = [QColor(*c) for c in [start, end]]
-            return lst_colors
-
         # The colors are the class mean
+        palette = self.model.domain.class_var.palette
         if self.target_class_index == 1:
-            values = (np.min(self.data.Y), np.max(self.data.Y))
-            colors = _get_colors_domain(self.model.domain)
-            while len(values) != len(colors):
-                values.insert(1, -1)
-            items = list(zip(values, colors))
+            items = ((np.min(self.data.Y), np.max(self.data.Y)), palette)
         # Colors are the stddev
         elif self.target_class_index == 2:
-            values = (0, np.std(self.data.Y))
-            colors = _get_colors_domain(self.model.domain)
-            while len(values) != len(colors):
-                values.insert(1, -1)
-            items = list(zip(values, colors))
+            items = ((0, np.std(self.data.Y)), palette)
         else:
             items = None
 
@@ -414,6 +398,7 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
 if __name__ == "__main__":  # pragma: no cover
     from Orange.modelling import TreeLearner
     data = Table('iris')
+    # data = Table('housing')
     model = TreeLearner(max_depth=1000)(data)
     model.instances = data
     WidgetPreview(OWPythagorasTree).run(model)

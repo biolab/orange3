@@ -10,6 +10,7 @@ from Orange.widgets import gui, report
 from Orange.widgets.credentials import CredentialManager
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg
 
 
@@ -157,8 +158,9 @@ class OWBaseSql(OWWidget, openclass=True):
         data = self.get_table()
         self.data_desc_table = data
         self.Outputs.data.send(data)
-        info = str(len(data)) if data else self.info.NoOutput
-        self.info.set_output_summary(info)
+        info = len(data) if data else self.info.NoOutput
+        detail = format_summary_details(data) if data else ""
+        self.info.set_output_summary(info, detail)
 
     def get_table(self) -> Table:
         """

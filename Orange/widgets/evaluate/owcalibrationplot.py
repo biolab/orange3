@@ -15,7 +15,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
 from Orange.widgets.evaluate.utils import results_for_preview
-from Orange.widgets.utils import colorpalette, colorbrewer
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
@@ -119,7 +119,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.target_cb = gui.comboBox(
             box, self, "target_index", label="Target:",
             orientation=Qt.Horizontal, callback=self.target_index_changed,
-            contentsLength=8)
+            contentsLength=8, searchable=True)
         gui.checkBox(
             box, self, "display_rug", "Show rug",
             callback=self._on_display_rug_changed)
@@ -254,14 +254,11 @@ class OWCalibrationPlot(widget.OWWidget):
             names = ["#{}".format(i + 1) for i in range(n)]
 
         self.classifier_names = names
-        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
-        if n > len(scheme):
-            scheme = colorpalette.DefaultRGBColors
-        self.colors = colorpalette.ColorPaletteGenerator(n, scheme)
+        self.colors = colorpalettes.get_default_curve_colors(n)
 
         for i in range(n):
             item = self.classifiers_list_box.item(i)
-            item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
+            item.setIcon(colorpalettes.ColorIcon(self.colors[i]))
 
         self.selected_classifiers = list(range(n))
         self.target_cb.addItems(results.domain.class_var.values)

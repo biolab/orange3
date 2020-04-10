@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 from Orange.data import Table
-from Orange.preprocess import Remove
+from Orange.preprocess import Remove, discretize
 from Orange.tests import test_filename
 
 
@@ -50,9 +50,9 @@ class TestRemover(unittest.TestCase):
         self.assertEqual([c.name for c in new_data.domain.class_vars],
                          ["cl1", "cl0", "cl3", "cl4"])
         self.assertEqual([a.values for a in new_data.domain.attributes
-                          if a.is_discrete], [['4', '6']])
+                          if a.is_discrete], [('4', '6')])
         self.assertEqual([c.values for c in new_data.domain.class_vars
-                          if c.is_discrete], [['1', '2', '3'], ['2']])
+                          if c.is_discrete], [('1', '2', '3'), ('2', )])
         self.assertDictEqual(attr_res,
                              {'removed': 2, 'reduced': 0, 'sorted': 0})
         self.assertDictEqual(class_res,
@@ -72,9 +72,9 @@ class TestRemover(unittest.TestCase):
         self.assertEqual([c.name for c in new_data.domain.class_vars],
                          ["cl1", "cl0"])
         self.assertEqual([a.values for a in new_data.domain.attributes
-                          if a.is_discrete], [['1'], ['4', '6']])
+                          if a.is_discrete], [('1', ), ('4', '6')])
         self.assertEqual([c.values for c in new_data.domain.class_vars
-                          if c.is_discrete], [['1', '2', '3']])
+                          if c.is_discrete], [('1', '2', '3')])
         self.assertDictEqual(attr_res,
                              {'removed': 0, 'reduced': 0, 'sorted': 0})
         self.assertDictEqual(class_res,
@@ -94,9 +94,9 @@ class TestRemover(unittest.TestCase):
         self.assertEqual([c.name for c in new_data.domain.class_vars],
                          ["cl1", "cl0", "cl3", "cl4"])
         self.assertEqual([a.values for a in new_data.domain.attributes
-                          if a.is_discrete], [['1'], ['4']])
+                          if a.is_discrete], [('1', ), ('4', )])
         self.assertEqual([c.values for c in new_data.domain.class_vars
-                          if c.is_discrete], [['1', '2', '3'], ['2']])
+                          if c.is_discrete], [('1', '2', '3'), ('2', )])
         self.assertDictEqual(attr_res,
                              {'removed': 0, 'reduced': 1, 'sorted': 0})
         self.assertDictEqual(class_res,
@@ -118,9 +118,9 @@ class TestRemover(unittest.TestCase):
         self.assertEqual([c.name for c in new_data.domain.class_vars],
                          ["cl1", "cl0", "cl3", "cl4"])
         self.assertEqual([a.values for a in new_data.domain.attributes
-                          if a.is_discrete], [['1'], ['4', '6']])
+                          if a.is_discrete], [('1', ), ('4', '6')])
         self.assertEqual([c.values for c in new_data.domain.class_vars
-                          if c.is_discrete], [['2', '3'], ['2']])
+                          if c.is_discrete], [('2', '3'), ('2', )])
         self.assertDictEqual(attr_res,
                              {'removed': 0, 'reduced': 0, 'sorted': 0})
         self.assertDictEqual(class_res,
@@ -133,8 +133,8 @@ class TestRemover(unittest.TestCase):
                      meta_flags=Remove.RemoveUnusedValues)(subset)
 
         self.assertEqual(res.domain["b"].values, res.domain["c"].values)
-        self.assertEqual(res.domain["d"].values, ["1", "2"])
-        self.assertEqual(res.domain["f"].values, ['1', 'hey'])
+        self.assertEqual(res.domain["d"].values, ("1", "2"))
+        self.assertEqual(res.domain["f"].values, ('1', 'hey'))
 
     def test_remove_unused_values_attr_sparse(self):
         data = self.test8
@@ -145,9 +145,9 @@ class TestRemover(unittest.TestCase):
 
         self.assertEqual((new_data.X != data.X).nnz, 0)
         self.assertEqual([a.values for a in new_data.domain.attributes
-                          if a.is_discrete], [['1'], ['4']])
+                          if a.is_discrete], [('1', ), ('4', )])
         self.assertEqual([c.values for c in new_data.domain.class_vars
-                          if c.is_discrete], [['1', '2', '3'], ['2']])
+                          if c.is_discrete], [('1', '2', '3'), ('2', )])
         self.assertDictEqual(attr_res,
                              {'removed': 0, 'reduced': 1, 'sorted': 0})
 
@@ -160,3 +160,16 @@ class TestRemover(unittest.TestCase):
         cleaned = remover(data)
         np.testing.assert_array_equal(cleaned.Y[:50], 0)
         np.testing.assert_array_equal(cleaned.Y[50:], 1)
+
+    def test_remove_mapping_after_compute_value(self):
+        housing = Table("housing")
+        method = discretize.EqualFreq(n=3)
+        discretizer = discretize.DomainDiscretizer(
+            discretize_class=True, method=method)
+        domain = discretizer(housing)
+        data = housing.transform(domain)
+        val12 = np.nonzero(data.Y > 0)[0]
+        data = data[val12]
+        remover = Remove(class_flags=Remove.RemoveUnusedValues)
+        cleaned = remover(data)
+        np.testing.assert_equal(cleaned.Y, data.Y - 1)

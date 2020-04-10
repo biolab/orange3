@@ -13,6 +13,7 @@ from Orange.tests import named_file
 from Orange.widgets.data.owsave import OWSave, OWSaveBase
 from Orange.widgets.utils.save.tests.test_owsavebase import \
     SaveWidgetsTestBaseMixin
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest, open_widget_classes
 
 
@@ -55,7 +56,7 @@ class TestOWSave(OWSaveTestBase):
 
         datasig = widget.Inputs.data
         self.send_signal(datasig, self.iris)
-        self.assertEqual(insum.call_args[0][0], "150")
+        insum.assert_called_with(len(self.iris), format_summary_details(self.iris))
         insum.reset_mock()
         savefile.reset_mock()
 
@@ -63,20 +64,21 @@ class TestOWSave(OWSaveTestBase):
         widget.writer = TabReader
         widget.auto_save = False
         self.send_signal(datasig, self.iris)
-        self.assertEqual(insum.call_args[0][0], "150")
+        insum.assert_called_with(len(self.iris), format_summary_details(self.iris))
         savefile.assert_not_called()
 
         widget.auto_save = True
         self.send_signal(datasig, self.iris)
-        self.assertEqual(insum.call_args[0][0], "150")
+        insum.assert_called_with(len(self.iris), format_summary_details(self.iris))
         savefile.assert_called()
 
+        insum.reset_mock()
         self.send_signal(datasig, None)
-        insum.assert_called_with(widget.info.NoInput)
+        insum.assert_called_once()
+        self.assertEqual(insum.call_args[0][0].brief, "")
 
     def test_initial_start_dir(self):
         widget = self.widget
-        widget.filename = _w("/usr/foo/bar.csv")
         self.assertEqual(widget.initial_start_dir(),
                          _w(os.path.expanduser("~/")))
 

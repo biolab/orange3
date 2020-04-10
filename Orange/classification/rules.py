@@ -905,8 +905,8 @@ class _RuleLearner(Learner):
 
     References
     ----------
-    .. [1] "Separate-and-Conquer Rule Learning", Johannes Fürnkranz,
-           Artificial Intelligence Review 13, 3-54, 1999
+    "Separate-and-Conquer Rule Learning", Johannes Fürnkranz, Artificial
+    Intelligence Review 13, 3-54, 1999
     """
     preprocessors = [RemoveNaNColumns(), HasClass(), Impute()]
 
@@ -1265,8 +1265,8 @@ class CN2Learner(_RuleLearner):
 
     References
     ----------
-    .. [1] "The CN2 Induction Algorithm", Peter Clark and Tim Niblett,
-           Machine Learning Journal, 3 (4), pp261-283, (1989)
+    "The CN2 Induction Algorithm", Peter Clark and Tim Niblett, Machine
+    Learning Journal, 3 (4), pp261-283, (1989)
     """
     def __init__(self, preprocessors=None, base_rules=None):
         super().__init__(preprocessors, base_rules)
@@ -1316,9 +1316,9 @@ class CN2UnorderedLearner(_RuleLearner):
 
     References
     ----------
-    .. [1] "Rule Induction with CN2: Some Recent Improvements", Peter
-           Clark and Robin Boswell, Machine Learning - Proceedings of
-           the 5th European Conference (EWSL-91), pp151-163, 1991
+    "Rule Induction with CN2: Some Recent Improvements", Peter Clark and
+    Robin Boswell, Machine Learning - Proceedings of the 5th European
+    Conference (EWSL-91), pp151-163, 1991
     """
     name = 'CN2 unordered inducer'
 
@@ -1383,8 +1383,8 @@ class CN2SDLearner(_RuleLearner):
 
     References
     ----------
-    .. [1] "Subgroup Discovery with CN2-SD", Nada Lavrač et al., Journal
-           of Machine Learning Research 5 (2004), 153-188, 2004
+    "Subgroup Discovery with CN2-SD", Nada Lavrač et al., Journal of Machine
+    Learning Research 5 (2004), 153-188, 2004
     """
     name = 'CN2-SD inducer'
 
@@ -1452,8 +1452,8 @@ class CN2SDUnorderedLearner(_RuleLearner):
 
     References
     ----------
-    .. [1] "Subgroup Discovery with CN2-SD", Nada Lavrač et al., Journal
-           of Machine Learning Research 5 (2004), 153-188, 2004
+    "Subgroup Discovery with CN2-SD", Nada Lavrač et al., Journal of Machine
+    Learning Research 5 (2004), 153-188, 2004
     """
     name = 'CN2-SD unordered inducer'
 
@@ -1519,6 +1519,7 @@ def main():
     for rule in classifier.rule_list:
         print(rule, rule.curr_class_dist.tolist())
     print()
+
 
 if __name__ == "__main__":
     main()

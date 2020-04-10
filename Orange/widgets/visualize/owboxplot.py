@@ -252,16 +252,18 @@ class OWBoxPlot(widget.OWWidget):
         self.stretching_box.sizeHint = self.display_box.sizeHint
         gui.checkBox(
             box, self, 'stretched', "Stretch bars",
-            callback=self.display_changed)
+            callback=self.display_changed,
+            stateWhenDisabled=False)
         gui.checkBox(
             box, self, 'show_labels', "Show box labels",
             callback=self.display_changed)
         self.sort_cb = gui.checkBox(
             box, self, 'sort_freqs', "Sort by subgroup frequencies",
-            callback=self.display_changed)
+            callback=self.display_changed,
+            stateWhenDisabled=False)
 
         gui.vBox(self.mainArea, addSpace=True)
-        self.box_scene = QGraphicsScene()
+        self.box_scene = QGraphicsScene(self)
         self.box_scene.selectionChanged.connect(self.commit)
         self.box_view = QGraphicsView(self.box_scene)
         self.box_view.setRenderHints(QPainter.Antialiasing |
@@ -451,9 +453,9 @@ class OWBoxPlot(widget.OWWidget):
         self.update_display_box()
 
     def grouping_changed(self):
-        self.controls.stretched.setDisabled(self.group_var is self.attribute)
         self.apply_attr_sorting()
         self.update_graph()
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
 
     def select_box_items(self):
         temp_cond = self.conditions.copy()
@@ -463,9 +465,9 @@ class OWBoxPlot(widget.OWWidget):
                                 [c.conditions for c in temp_cond])
 
     def attr_changed(self):
-        self.controls.stretched.setDisabled(self.group_var is self.attribute)
         self.apply_group_sorting()
         self.update_graph()
+        self.controls.stretched.setDisabled(self.group_var is self.attribute)
 
     def update_graph(self):
         self.compute_box_data()
@@ -494,8 +496,8 @@ class OWBoxPlot(widget.OWWidget):
             self.dist = []
             self.conts = contingency.get_contingency(
                 dataset, attr, self.group_var)
-            group_var_labels = self.group_var.values + [
-                f"missing '{self.group_var.name}'"]
+            group_var_labels = self.group_var.values + (
+                f"missing '{self.group_var.name}'", )
             if self.is_continuous:
                 stats, label_texts = [], []
                 for i, cont in enumerate(self.conts.array_with_unknowns):
@@ -1072,7 +1074,7 @@ class OWBoxPlot(widget.OWWidget):
                 cond.append(FilterDiscrete(self.group_var, [group_val_index]))
             box.append(FilterGraphicsRectItem(cond, 0, -10, 1, 10))
         cum = 0
-        values = attr.values + [f"missing '{attr.name}'"]
+        values = attr.values + (f"missing '{attr.name}'", )
         colors = np.vstack((attr.colors, [128, 128, 128]))
         for i, v in enumerate(dist):
             if v < 1e-6:

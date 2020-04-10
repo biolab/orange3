@@ -21,12 +21,12 @@ class DomainTest(unittest.TestCase):
         self.assertFalse(Domain([], [], [var]).empty())
 
     def test_conversion(self):
-        a1 = DiscreteVariable("a", values=list("abc"))
-        a2 = DiscreteVariable("a", values=list("cab"))
-        b1 = DiscreteVariable("b", values=list("def"))
-        b2 = DiscreteVariable("b", values=list("efg"))
+        a1 = DiscreteVariable("a", values=tuple("abc"))
+        a2 = DiscreteVariable("a", values=tuple("cab"))
+        b1 = DiscreteVariable("b", values=tuple("def"))
+        b2 = DiscreteVariable("b", values=tuple("efg"))
         c1 = ContinuousVariable("c")
-        c2 = DiscreteVariable("c", values=list("efg"))
+        c2 = DiscreteVariable("c", values=tuple("efg"))
         dom1 = Domain([a1, b1, c1])
         dom2 = Domain([a2, b2, c2])
 

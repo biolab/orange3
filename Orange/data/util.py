@@ -3,7 +3,8 @@ Data-manipulation utilities.
 """
 import re
 from collections import Counter
-from itertools import chain
+from itertools import chain, count
+from typing import Callable, Union, List, Type
 
 import numpy as np
 import bottleneck as bn
@@ -12,27 +13,40 @@ from scipy import sparse as sp
 RE_FIND_INDEX = r"(^{} \()(\d{{1,}})(\)$)"
 
 
-def one_hot(values, dtype=float):
+def one_hot(
+        values: Union[np.ndarray, List], dtype: Type = float, dim: int = None
+) -> np.ndarray:
     """Return a one-hot transform of values
 
     Parameters
     ----------
     values : 1d array
         Integer values (hopefully 0-max).
+    dtype
+        dtype of result array
+    dim
+        Number of columns (attributes) in the one hot encoding. This parameter
+        is used when we need fixed number of columns and values does not
+        reflect that number correctly, e.g. not all values from the discrete
+        variable are present in values parameter.
 
     Returns
     -------
     result
         2d array with ones in respective indicator columns.
     """
-    if not len(values):
-        return np.zeros((0, 0), dtype=dtype)
-    return np.eye(int(np.max(values) + 1), dtype=dtype)[np.asanyarray(values, dtype=int)]
+    dim_values = int(np.max(values) + 1 if len(values) > 0 else 0)
+    if dim is None:
+        dim = dim_values
+    elif dim < dim_values:
+        raise ValueError("dim must be greater than max(values)")
+    return np.eye(dim, dtype=dtype)[np.asanyarray(values, dtype=int)]
 
 
+# pylint: disable=redefined-builtin
 def scale(values, min=0, max=1):
     """Return values scaled to [min, max]"""
-    if not len(values):
+    if len(values) == 0:
         return np.array([])
     minval = np.float_(bn.nanmin(values))
     ptp = bn.nanmax(values) - minval
@@ -117,32 +131,33 @@ def array_equal(a1, a2):
 def assure_array_dense(a):
     if sp.issparse(a):
         a = a.toarray()
-    return a
+    return np.asarray(a)
 
 
-def assure_array_sparse(a):
+def assure_array_sparse(a, sparse_class: Callable = sp.csc_matrix):
     if not sp.issparse(a):
         # since x can be a list, cast to np.array
         # since x can come from metas with string, cast to float
         a = np.asarray(a).astype(np.float)
-        return sp.csc_matrix(a)
-    return a
+    return sparse_class(a)
 
 
 def assure_column_sparse(a):
-    a = assure_array_sparse(a)
-    # if x of shape (n, ) is passed to csc_matrix constructor,
+    # if x of shape (n, ) is passed to csc_matrix constructor or
+    # sparse matrix with shape (1, n) is passed,
     # the resulting matrix is of shape (1, n) and hence we
     # need to transpose it to make it a column
-    if a.shape[0] == 1:
-        a = a.T
-    return a
+    if a.ndim == 1 or a.shape[0] == 1:
+        # csr matrix becomes csc when transposed
+        return assure_array_sparse(a, sparse_class=sp.csr_matrix).T
+    else:
+        return assure_array_sparse(a, sparse_class=sp.csc_matrix)
 
 
 def assure_column_dense(a):
     a = assure_array_dense(a)
-    # column assignments must be of shape (n,) and not (n, 1)
-    return np.ravel(a)
+    # column assignments must be (n, )
+    return a.reshape(-1)
 
 
 def get_indices(names, name):
@@ -152,8 +167,8 @@ def get_indices(names, name):
     :param name: str
     :return: list of indices
     """
-    return [int(a.group(2)) for x in names
-            for a in re.finditer(RE_FIND_INDEX.format(name), x)]
+    return [int(a.group(2)) for x in filter(None, names)
+            for a in re.finditer(RE_FIND_INDEX.format(re.escape(name)), x)]
 
 
 def get_unique_names(names, proposed):
@@ -185,7 +200,8 @@ def get_unique_names(names, proposed):
     Return:
         str or list of str
     """
-    from Orange.data import Domain  # prevent cyclic import
+    # prevent cyclic import: pylint: disable=import-outside-toplevel
+    from Orange.data import Domain
     if isinstance(names, Domain):
         names = [var.name for var in chain(names.variables, names.metas)]
     if isinstance(proposed, str):
@@ -199,17 +215,48 @@ def get_unique_names(names, proposed):
     return [f"{name} ({max_index})" for name in proposed]
 
 
-def get_unique_names_duplicates(proposed: list) -> list:
+def get_unique_names_duplicates(proposed: list, return_duplicated=False) -> list:
     """
     Returns list of unique names. If a name is duplicated, the
-    function appends an index in parentheses.
+    function appends the next available index in parentheses.
+
+    For example, a proposed list of names `x`, `x` and `x (2)`
+    results in `x (3)`, `x (4)`, `x (2)`.
     """
-    counter = Counter(proposed)
-    temp_counter = Counter()
-    names = []
-    for name in proposed:
-        if counter[name] > 1:
-            temp_counter.update([name])
-            name = f"{name} ({temp_counter[name]})"
-        names.append(name)
-    return names
+    indices = {name: count(max(get_indices(proposed, name), default=0) + 1)
+               for name, cnt in Counter(proposed).items()
+               if name and cnt > 1}
+    new_names = [f"{name} ({next(indices[name])})" if name in indices else name
+                 for name in proposed]
+    if return_duplicated:
+        return new_names, list(indices)
+    return new_names
+
+
+def get_unique_names_domain(attributes, class_vars=(), metas=()):
+    """
+    Return de-duplicated names for variables for attributes, class_vars
+    and metas. If a name appears more than once, the function appends
+    indices in parentheses.
+
+    Args:
+        attributes (list of str): proposed names for attributes
+        class_vars (list of str): proposed names for class_vars
+        metas (list of str): proposed names for metas
+
+    Returns:
+        (attributes, class_vars, metas): new names
+        renamed: list of names renamed variables; names appear in order of
+            appearance in original lists; every name appears only once
+    """
+    all_names = list(chain(attributes, class_vars, metas))
+    unique_names = get_unique_names_duplicates(all_names)
+    # don't be smart with negative indices: they won't work for empty lists
+    attributes = unique_names[:len(attributes)]
+    class_vars = unique_names[len(attributes):len(attributes) + len(class_vars)]
+    metas = unique_names[len(attributes) + len(class_vars):]
+    # use dict, not set, to keep the order
+    renamed = list(dict.fromkeys(old
+                                 for old, new in zip(all_names, unique_names)
+                                 if new != old))
+    return (attributes, class_vars, metas), renamed

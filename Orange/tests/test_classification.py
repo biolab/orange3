@@ -18,13 +18,15 @@ from Orange.base import SklLearner
 import Orange.classification
 from Orange.classification import (
     Learner, Model,
-    NaiveBayesLearner, LogisticRegressionLearner, NuSVMLearner, MajorityLearner,
+    NaiveBayesLearner, LogisticRegressionLearner, NuSVMLearner,
+    MajorityLearner,
     RandomForestLearner, SimpleTreeLearner, SoftmaxRegressionLearner,
     SVMLearner, LinearSVMLearner, OneClassSVMLearner, TreeLearner, KNNLearner,
-    SimpleRandomForestLearner, EllipticEnvelopeLearner)
+    SimpleRandomForestLearner, EllipticEnvelopeLearner,
+    SGDClassificationLearner)
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
-                         Domain, Table, Variable)
+                         Domain, Table)
 from Orange.data.table import DomainTransformationError
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
@@ -82,7 +84,7 @@ class ModelTest(unittest.TestCase):
         x = np.zeros((42, 5))
         y = np.zeros(42)
         domain = Domain([ContinuousVariable(n) for n in "abcde"],
-                        DiscreteVariable("y", values=["a", "b"]))
+                        DiscreteVariable("y", values=("a", "b")))
         data = Table.from_numpy(domain, x, y)
         a_list = [[0] * 5] * 42
         a_tuple = ((0, ) * 5,) * 42
@@ -189,6 +191,24 @@ class ModelTest(unittest.TestCase):
         clf = DummyLearner()(iris)
         with self.assertRaises(DomainTransformationError):
             clf(titanic)
+
+    def test_result_shape(self):
+        """
+        This test function will be extended for all models in on of the
+        following pull requests.
+        """
+        iris = Table('iris')
+        learner = SGDClassificationLearner()
+
+        # model trained on only one value (but three in the domain)
+        model = learner(iris)
+
+        res = model(iris[0:50])
+        self.assertTupleEqual((50,), res.shape)
+
+        # probabilities must still be for three classes
+        res = model(iris[0:50], model.Probs)
+        self.assertTupleEqual((50, 3), res.shape)
 
 
 class ExpandProbabilitiesTest(unittest.TestCase):

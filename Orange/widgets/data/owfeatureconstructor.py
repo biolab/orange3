@@ -28,6 +28,7 @@ from AnyQt.QtWidgets import (
     QPushButton, QMenu, QListView, QFrame, QLabel)
 from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
+from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
 from Orange.widgets import gui
@@ -36,6 +37,7 @@ from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets import report
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 FeatureDescriptor = \
@@ -126,7 +128,7 @@ class FeatureEditor(QFrame):
 
         self.attrs_model = itemmodels.VariableListModel(
             ["Select Feature"], parent=self)
-        self.attributescb = gui.OrangeComboBox(
+        self.attributescb = ComboBoxSearch(
             minimumContentsLength=16,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -142,7 +144,7 @@ class FeatureEditor(QFrame):
             [''],
             [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
 
-        self.functionscb = gui.OrangeComboBox(
+        self.functionscb = ComboBoxSearch(
             minimumContentsLength=16,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
@@ -483,7 +485,7 @@ class OWFeatureConstructor(OWWidget):
         self.featuremodel = DescriptorModel(parent=self)
 
         self.featureview = QListView(
-            minimumWidth=200,
+            minimumWidth=200, minimumHeight=50,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum,
                                    QSizePolicy.MinimumExpanding)
         )
@@ -493,6 +495,9 @@ class OWFeatureConstructor(OWWidget):
         self.featureview.selectionModel().selectionChanged.connect(
             self._on_selectedVariableChanged
         )
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         layout.addWidget(self.featureview)
 
@@ -545,12 +550,14 @@ class OWFeatureConstructor(OWWidget):
 
         self.data = data
 
+        self.info.set_input_summary(self.info.NoInput)
         if self.data is not None:
             descriptors = list(self.descriptors)
             currindex = self.currentIndex
             self.descriptors = []
             self.currentIndex = -1
             self.openContext(data)
+            self.info.set_input_summary(len(data), format_summary_details(data))
 
             if descriptors != self.descriptors or \
                     self.currentIndex != currindex:
@@ -571,6 +578,7 @@ class OWFeatureConstructor(OWWidget):
         if self.data is not None:
             self.apply()
         else:
+            self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.data.send(None)
 
     def addFeature(self, descriptor):
@@ -659,18 +667,25 @@ class OWFeatureConstructor(OWWidget):
         )
 
         try:
+            for variable in new_variables:
+                variable.compute_value.mask_exceptions = False
             data = self.data.transform(new_domain)
         # user's expression can contain arbitrary errors
         # pylint: disable=broad-except
         except Exception as err:
             report_error(err)
             return
+        finally:
+            for variable in new_variables:
+                variable.compute_value.mask_exceptions = True
+
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
         if disc_attrs_not_ok:
             self.Error.more_values_needed(disc_attrs_not_ok)
             return
 
+        self.info.set_output_summary(len(data), format_summary_details(data))
         self.Outputs.data.send(data)
 
     def send_report(self):
@@ -1064,15 +1079,23 @@ class FeatureFunc:
         self.func = make_lambda(ast.parse(expression, mode="eval"),
                                 [name for name, _ in args], self.extra_env)
         self.cast = cast
+        self.mask_exceptions = True
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
             return [self(inst) for inst in instance]
         else:
-            args = [str(instance[var])
-                    if instance.domain[var].is_string else instance[var]
-                    for _, var in self.args]
-            y = self.func(*args)
+            try:
+                args = [str(instance[var])
+                        if instance.domain[var].is_string else instance[var]
+                        for _, var in self.args]
+                y = self.func(*args)
+            # user's expression can contain arbitrary errors
+            # this also covers missing attributes
+            except:  # pylint: disable=bare-except
+                if not self.mask_exceptions:
+                    raise
+                return np.nan
             if self.cast:
                 y = self.cast(y)
             return y

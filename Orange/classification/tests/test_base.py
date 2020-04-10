@@ -174,7 +174,7 @@ class TestModelMapping(unittest.TestCase):
             test_val_prob(val1, prob1)
 
     def test_no_common_values(self):
-        abc = DiscreteVariable("iris", values=list("abc"))
+        abc = DiscreteVariable("iris", values=tuple("abc"))
         iris_abc = Table.from_numpy(
             Domain(self.iris.domain.attributes, abc),
             self.iris.X, self.iris.Y)
@@ -185,6 +185,17 @@ class TestModelMapping(unittest.TestCase):
             self.assertTrue(np.all(val >= 0))
             self.assertTrue(np.all(val <= 2))
             np.testing.assert_array_equal(prob, 1 / 3)
+
+    def test_sparse_matrix(self):
+        iris_sparse = self.iris.to_sparse()
+        for lrn in [LogisticRegressionLearner, TreeLearner]:  # skl and non-skl
+            model = lrn()(iris_sparse)
+            pred = model(iris_sparse.X.tocsc())
+            self.assertTupleEqual((len(self.iris),), pred.shape)
+            pred = model(iris_sparse.X.tolil())
+            self.assertTupleEqual((len(self.iris),), pred.shape)
+            pred = model(iris_sparse.X.tocoo())
+            self.assertTupleEqual((len(self.iris),), pred.shape)
 
 
 if __name__ == '__main__':

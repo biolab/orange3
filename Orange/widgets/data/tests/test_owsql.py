@@ -98,10 +98,11 @@ class TestOWSql(WidgetTest):
         self.assertTrue(widget.download)
         self.assertFalse(widget.downloadcb.isEnabled())
 
-    @mock.patch('Orange.widgets.data.owsql.Table')
+    @mock.patch('Orange.widgets.data.owsql.Table',
+                mock.PropertyMock(return_value=Table('iris')))
     @mock.patch('Orange.widgets.data.owsql.SqlTable')
     @mock.patch('Orange.widgets.data.owsql.Backend')
-    def test_restore_table(self, mock_backends, mock_sqltable, mock_table):
+    def test_restore_table(self, mock_backends, mock_sqltable):
         """Test if selected table is restored from settings"""
         backend = mock.Mock()
         backend().display_name = "database"

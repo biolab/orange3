@@ -1,8 +1,11 @@
+#pylint: disable=unsubscriptable-object
 import datetime
+import unittest
 from collections import namedtuple
 from functools import partial
 from itertools import chain
 from typing import List
+from unittest.mock import Mock
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
@@ -14,6 +17,7 @@ from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.tests.utils import simulate, table_dense_sparse
 from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
+from Orange.widgets.utils.state_summary import format_summary_details
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
 
@@ -41,23 +45,23 @@ continuous = [
 
 # Unordered discrete variable variations
 rgb_full = VarDataPair(
-    DiscreteVariable('rgb_full', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_full', values=('r', 'g', 'b')),
     np.array([0, 1, 1, 1, 2], dtype=float),
 )
 rgb_missing = VarDataPair(
-    DiscreteVariable('rgb_missing', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_missing', values=('r', 'g', 'b')),
     np.array([0, 1, 1, np.nan, 2], dtype=float),
 )
 rgb_all_missing = VarDataPair(
-    DiscreteVariable('rgb_all_missing', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_all_missing', values=('r', 'g', 'b')),
     np.array([np.nan] * 5, dtype=float),
 )
 rgb_bins_missing = VarDataPair(
-    DiscreteVariable('rgb_bins_missing', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_bins_missing', values=('r', 'g', 'b')),
     np.array([np.nan, 1, 1, 1, np.nan], dtype=float),
 )
 rgb_same = VarDataPair(
-    DiscreteVariable('rgb_same', values=['r', 'g', 'b']),
+    DiscreteVariable('rgb_same', values=('r', 'g', 'b')),
     np.array([2] * 5, dtype=float),
 )
 rgb = [
@@ -66,23 +70,23 @@ rgb = [
 
 # Ordered discrete variable variations
 ints_full = VarDataPair(
-    DiscreteVariable('ints_full', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_full', values=('2', '3', '4'), ordered=True),
     np.array([0, 1, 1, 1, 2], dtype=float),
 )
 ints_missing = VarDataPair(
-    DiscreteVariable('ints_missing', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_missing', values=('2', '3', '4'), ordered=True),
     np.array([0, 1, 1, np.nan, 2], dtype=float),
 )
 ints_all_missing = VarDataPair(
-    DiscreteVariable('ints_all_missing', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_all_missing', values=('2', '3', '4'), ordered=True),
     np.array([np.nan] * 5, dtype=float),
 )
 ints_bins_missing = VarDataPair(
-    DiscreteVariable('ints_bins_missing', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_bins_missing', values=('2', '3', '4'), ordered=True),
     np.array([np.nan, 1, 1, 1, np.nan], dtype=float),
 )
 ints_same = VarDataPair(
-    DiscreteVariable('ints_same', values=['2', '3', '4'], ordered=True),
+    DiscreteVariable('ints_same', values=('2', '3', '4'), ordered=True),
     np.array([0] * 5, dtype=float),
 )
 ints = [
@@ -461,3 +465,38 @@ class TestFeatureStatisticsUI(WidgetTest):
         # Sending back the old data restores the selection
         self.send_signal(self.widget.Inputs.data, self.data1)
         self.assertEqual(len(self.widget.selected_rows), 2)
+
+class TestSummary(WidgetTest):
+    def setUp(self):
+        self.widget = self.create_widget(OWFeatureStatistics)
+        self.data = make_table(
+            [continuous_full, continuous_missing],
+            target=[rgb_full, rgb_missing], metas=[ints_full, ints_missing]
+        )
+        self.select_rows = partial(select_rows, widget=self.widget)
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        data = self.data
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+
+        self.select_rows([0, 2])
+        self.widget.unconditional_commit()
+        output = self.get_output(self.widget.Outputs.reduced_data)
+        output_sum.assert_called_with(len(output), format_summary_details(output))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -132,7 +132,7 @@ class TestDefault(unittest.TestCase):
              [nan, nan]
         ]
         domain = data.Domain(
-            (data.DiscreteVariable("B", values=["a", "b", "c"]),
+            (data.DiscreteVariable("B", values=("a", "b", "c")),
              data.ContinuousVariable("C"))
         )
         table = data.Table.from_numpy(domain, np.array(X))
@@ -163,7 +163,7 @@ class TestAsValue(unittest.TestCase):
             [nan, nan, nan]
         ]
         domain = data.Domain(
-            (data.DiscreteVariable("A", values=["0", "1", "2"]),
+            (data.DiscreteVariable("A", values=("0", "1", "2")),
              data.ContinuousVariable("B"),
              data.ContinuousVariable("C"))
         )
@@ -227,7 +227,7 @@ class TestModel(unittest.TestCase):
         unknowns = np.isnan(X)
 
         domain = data.Domain(
-            (data.DiscreteVariable("A", values=["0", "1", "2"]),
+            (data.DiscreteVariable("A", values=("0", "1", "2")),
              data.ContinuousVariable("B"),
              data.ContinuousVariable("C"))
         )
@@ -301,7 +301,7 @@ class TestRandom(unittest.TestCase):
         unknowns = np.isnan(X)
 
         domain = data.Domain(
-            (data.DiscreteVariable("A", values=["0", "1", "2"]),
+            (data.DiscreteVariable("A", values=("0", "1", "2")),
              data.ContinuousVariable("B"),
              data.ContinuousVariable("C"))
         )

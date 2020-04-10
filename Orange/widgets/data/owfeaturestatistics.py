@@ -7,14 +7,13 @@ TODO:
 """
 
 import datetime
-import locale
 from enum import IntEnum
 from typing import Any, Optional, Tuple, List
 
 import numpy as np
 import scipy.stats as ss
 import scipy.sparse as sp
-from AnyQt.QtCore import Qt, QSize, QRectF, QVariant, QModelIndex, pyqtSlot, \
+from AnyQt.QtCore import Qt, QSize, QRectF, QModelIndex, pyqtSlot, \
     QRegExp, QItemSelection, QItemSelectionRange, QItemSelectionModel
 from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
@@ -25,11 +24,11 @@ from Orange.data import Table, StringVariable, DiscreteVariable, \
     ContinuousVariable, TimeVariable, Domain, Variable
 from Orange.widgets import widget, gui
 from Orange.widgets.data.utils.histogram import Histogram
-from Orange.widgets.report import plural
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 def _categorical_entropy(x):
@@ -465,44 +464,35 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
     def data(self, index, role):
         # type: (QModelIndex, Qt.ItemDataRole) -> Any
-        # Text formatting for various data simply requires a lot of branches.
-        # This is much better than overengineering various formatters...
-        # pylint: disable=too-many-branches
-
-        if not index.isValid():
-            return None
-
-        row, column = self.mapToSourceRows(index.row()), index.column()
-        # Make sure we're not out of range
-        if not 0 <= row <= self.n_attributes:
-            return QVariant()
-
-        attribute = self.variables[row]
-
-        if role == Qt.BackgroundRole:
+        def background():
             if attribute in self.domain.attributes:
                 return self.COLOR_FOR_ROLE[self.ATTRIBUTE]
-            elif attribute in self.domain.metas:
+            if attribute in self.domain.metas:
                 return self.COLOR_FOR_ROLE[self.META]
-            elif attribute in self.domain.class_vars:
+            if attribute in self.domain.class_vars:
                 return self.COLOR_FOR_ROLE[self.CLASS_VAR]
+            return None
 
-        elif role == Qt.TextAlignmentRole:
+        def text_alignment():
             if column == self.Columns.NAME:
                 return Qt.AlignLeft | Qt.AlignVCenter
             return Qt.AlignRight | Qt.AlignVCenter
 
-        output = None
-
-        if column == self.Columns.ICON:
-            if role == Qt.DecorationRole:
+        def decoration():
+            if column == self.Columns.ICON:
                 return gui.attributeIconDict[attribute]
-        elif column == self.Columns.NAME:
-            if role == Qt.DisplayRole:
-                output = attribute.name
-        elif column == self.Columns.DISTRIBUTION:
-            if role == Qt.DisplayRole:
-                if isinstance(attribute, (DiscreteVariable, ContinuousVariable)):
+            return None
+
+        def display():
+            # pylint: disable=too-many-branches
+            def render_value(value):
+                return "" if np.isnan(value) else attribute.str_val(value)
+
+            if column == self.Columns.NAME:
+                return attribute.name
+            elif column == self.Columns.DISTRIBUTION:
+                if isinstance(attribute,
+                              (DiscreteVariable, ContinuousVariable)):
                     if row not in self.__distributions_cache:
                         scene = QGraphicsScene(parent=self)
                         histogram = Histogram(
@@ -515,60 +505,45 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                         scene.addItem(histogram)
                         self.__distributions_cache[row] = scene
                     return self.__distributions_cache[row]
-        elif column == self.Columns.CENTER:
-            if role == Qt.DisplayRole:
-                if isinstance(attribute, DiscreteVariable):
-                    output = self._center[row]
-                    if not np.isnan(output):
-                        output = attribute.str_val(self._center[row])
-                elif isinstance(attribute, TimeVariable):
-                    output = attribute.str_val(self._center[row])
-                else:
-                    output = self._center[row]
-        elif column == self.Columns.DISPERSION:
-            if role == Qt.DisplayRole:
+            elif column == self.Columns.CENTER:
+                return render_value(self._center[row])
+            elif column == self.Columns.DISPERSION:
                 if isinstance(attribute, TimeVariable):
-                    output = format_time_diff(self._min[row], self._max[row])
+                    return format_time_diff(self._min[row], self._max[row])
+                elif isinstance(attribute, DiscreteVariable):
+                    return "%.3g" % self._dispersion[row]
                 else:
-                    output = self._dispersion[row]
-        elif column == self.Columns.MIN:
-            if role == Qt.DisplayRole:
-                if isinstance(attribute, DiscreteVariable):
-                    if attribute.ordered:
-                        output = attribute.str_val(self._min[row])
-                elif isinstance(attribute, TimeVariable):
-                    output = attribute.str_val(self._min[row])
-                else:
-                    output = self._min[row]
-        elif column == self.Columns.MAX:
-            if role == Qt.DisplayRole:
-                if isinstance(attribute, DiscreteVariable):
-                    if attribute.ordered:
-                        output = attribute.str_val(self._max[row])
-                elif isinstance(attribute, TimeVariable):
-                    output = attribute.str_val(self._max[row])
-                else:
-                    output = self._max[row]
-        elif column == self.Columns.MISSING:
-            if role == Qt.DisplayRole:
-                output = '%d (%d%%)' % (
+                    return render_value(self._dispersion[row])
+            elif column == self.Columns.MIN:
+                if not isinstance(attribute, DiscreteVariable) \
+                        or attribute.ordered:
+                    return render_value(self._min[row])
+            elif column == self.Columns.MAX:
+                if not isinstance(attribute, DiscreteVariable) \
+                        or attribute.ordered:
+                    return render_value(self._max[row])
+            elif column == self.Columns.MISSING:
+                return '%d (%d%%)' % (
                     self._missing[row],
                     100 * self._missing[row] / self.n_instances
                 )
+            return None
 
-        # Consistently format the text inside the table cells
-        # The easiest way to check for NaN is to compare with itself
-        if output != output:  # pylint: disable=comparison-with-itself
-            output = ''
-        # Format ∞ properly
-        elif output in (np.inf, -np.inf):
-            output = '%s∞' % ['', '-'][output < 0]
-        elif isinstance(output, int):
-            output = locale.format_string('%d', output, grouping=True)
-        elif isinstance(output, float):
-            output = locale.format_string('%.2f', output, grouping=True)
+        roles = {Qt.BackgroundRole: background,
+                 Qt.TextAlignmentRole: text_alignment,
+                 Qt.DecorationRole: decoration,
+                 Qt.DisplayRole: display}
 
-        return output
+        if not index.isValid() or role not in roles:
+            return None
+
+        row, column = self.mapToSourceRows(index.row()), index.column()
+        # Make sure we're not out of range
+        if not 0 <= row <= self.n_attributes:
+            return None
+
+        attribute = self.variables[row]
+        return roles[role]()
 
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else self.n_attributes
@@ -723,15 +698,6 @@ class OWFeatureStatistics(widget.OWWidget):
 
         self.data = None  # type: Optional[Table]
 
-        # Information panel
-        info_box = gui.vBox(self.controlArea, 'Info')
-        info_box.setMinimumWidth(200)
-        self.info_summary = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_attr = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_class = gui.widgetLabel(info_box, wordWrap=True)
-        self.info_meta = gui.widgetLabel(info_box, wordWrap=True)
-        self.set_info()
-
         # TODO: Implement filtering on the model
         # filter_box = gui.vBox(self.controlArea, 'Filter')
         # self.filter_text = gui.lineEdit(
@@ -749,12 +715,16 @@ class OWFeatureStatistics(widget.OWWidget):
         box = gui.vBox(self.controlArea, 'Histogram')
         self.cb_color_var = gui.comboBox(
             box, master=self, value='color_var', model=self.color_var_model,
-            label='Color:', orientation=Qt.Horizontal,
+            label='Color:', orientation=Qt.Horizontal, contentsLength=13,
+            searchable=True
         )
         self.cb_color_var.activated.connect(self.__color_var_changed)
 
         gui.rubber(self.controlArea)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         # Main area
         self.model = FeatureStatisticsTableModel(parent=self)
@@ -792,11 +762,14 @@ class OWFeatureStatistics(widget.OWWidget):
         self.data = data
 
         if data is not None:
+            self.info.set_input_summary(len(data),
+                                        format_summary_details(data))
             self.color_var_model.set_domain(data.domain)
             self.color_var = None
             if self.data.domain.class_vars:
                 self.color_var = self.data.domain.class_vars[0]
         else:
+            self.info.set_input_summary(self.info.NoInput)
             self.color_var_model.set_domain(None)
             self.color_var = None
         self.model.set_data(data)
@@ -807,7 +780,6 @@ class OWFeatureStatistics(widget.OWWidget):
         # self._filter_table_variables()
         self.__color_var_changed()
 
-        self.set_info()
         self.commit()
 
     def __restore_selection(self):
@@ -843,78 +815,25 @@ class OWFeatureStatistics(widget.OWWidget):
         if self.model is not None:
             self.model.set_target_var(self.color_var)
 
-    def _format_variables_string(self, variables):
-        agg = []
-        for var_type_name, var_type in [
-                ('categorical', DiscreteVariable),
-                ('numeric', ContinuousVariable),
-                ('time', TimeVariable),
-                ('string', StringVariable)
-        ]:
-            # Disable pylint here because a `TimeVariable` is also a
-            # `ContinuousVariable`, and should be labelled as such. That is why
-            # it is necessary to check the type this way instead of using
-            # `isinstance`, which would fail in the above case
-            var_type_list = [v for v in variables if type(v) is var_type]  # pylint: disable=unidiomatic-typecheck
-            if var_type_list:
-                shown = var_type in self.model.HIDDEN_VAR_TYPES
-                agg.append((
-                    '%d %s%s' % (len(var_type_list), var_type_name, ['', ' (not shown)'][shown]),
-                    len(var_type_list)
-                ))
-
-        if not agg:
-            return 'No variables'
-
-        attrs, counts = list(zip(*agg))
-        if len(attrs) > 1:
-            var_string = ', '.join(attrs[:-1]) + ' and ' + attrs[-1]
-        else:
-            var_string = attrs[0]
-        return plural('%s variable{s}' % var_string, sum(counts))
-
-    def set_info(self):
-        if self.data is not None:
-            self.info_summary.setText('<b>%s</b> contains %s with %s' % (
-                self.data.name,
-                plural('{number} instance{s}', self.model.n_instances),
-                plural('{number} feature{s}', self.model.n_attributes)
-            ))
-
-            self.info_attr.setText(
-                '<b>Attributes:</b><br>%s' %
-                self._format_variables_string(self.data.domain.attributes)
-            )
-            self.info_class.setText(
-                '<b>Class variables:</b><br>%s' %
-                self._format_variables_string(self.data.domain.class_vars)
-            )
-            self.info_meta.setText(
-                '<b>Metas:</b><br>%s' %
-                self._format_variables_string(self.data.domain.metas)
-            )
-        else:
-            self.info_summary.setText('No data on input.')
-            self.info_attr.setText('')
-            self.info_class.setText('')
-            self.info_meta.setText('')
-
     def on_select(self):
-        self.selected_rows = self.model.mapToSourceRows([
+        self.selected_rows = list(self.model.mapToSourceRows([
             i.row() for i in self.table_view.selectionModel().selectedRows()
-        ])
+        ]))
         self.commit()
 
     def commit(self):
         # self.selected_rows can be list or numpy.array, thus
         # pylint: disable=len-as-condition
         if not len(self.selected_rows):
+            self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.reduced_data.send(None)
             self.Outputs.statistics.send(None)
             return
 
         # Send a table with only selected columns to output
         variables = self.model.variables[self.selected_rows]
+        self.info.set_output_summary(len(self.data[:, variables]),
+                                     format_summary_details(self.data[:, variables]))
         self.Outputs.reduced_data.send(self.data[:, variables])
 
         # Send the statistics of the selected variables to ouput

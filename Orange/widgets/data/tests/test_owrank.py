@@ -1,6 +1,7 @@
+# pylint: disable=unsubscriptable-object
 import warnings
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
@@ -17,6 +18,7 @@ from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWRank(WidgetTest):
@@ -247,6 +249,24 @@ class TestOWRank(WidgetTest):
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 8))
 
+    def test_no_class_data_learner_class_reg(self):
+        """
+        Check workflow with learners that can be both classifier
+        or regressor and data have no class variable. This test should not
+        fail.
+        """
+        data = Table.from_table(Domain(self.iris.domain.variables), self.iris)
+        random_forest = RandomForestLearner()
+        self.assertIsNone(data.domain.class_var)
+        self.send_signal(self.widget.Inputs.data, data)
+
+        with patch("Orange.widgets.data.owrank.log.error") as log:
+            self.send_signal(self.widget.Inputs.scorer, random_forest, 1)
+            log.assert_called()
+
+        self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
+                         (len(self.iris.domain.variables), 1))
+
     def test_scores_sorting(self):
         """Check clicking on header column orders scores in a different way"""
         self.send_signal(self.widget.Inputs.data, self.iris)
@@ -386,6 +406,26 @@ class TestOWRank(WidgetTest):
         output = self.get_output(w.Outputs.reduced_data)
 
         self.assertEqual(len(output), len(self.iris))
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        data = self.iris
+        input_sum = self.widget.info.set_input_summary = Mock()
+        output_sum = self.widget.info.set_output_summary = Mock()
+
+        self.send_signal(self.widget.Inputs.data, data)
+        input_sum.assert_called_with(len(data), format_summary_details(data))
+        output = self.get_output(self.widget.Outputs.reduced_data)
+        output_sum.assert_called_with(len(output),
+                                      format_summary_details(output))
+
+        input_sum.reset_mock()
+        output_sum.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+        input_sum.assert_called_once()
+        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        output_sum.assert_called_once()
+        self.assertEqual(output_sum.call_args[0][0].brief, "")
 
 
 if __name__ == "__main__":

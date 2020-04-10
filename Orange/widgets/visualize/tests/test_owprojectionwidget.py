@@ -11,6 +11,9 @@ from Orange.data import (
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
 )
+from Orange.widgets.utils.colorpalettes import (
+    ContinuousPalettes, DiscretePalette
+)
 from Orange.widgets.visualize.utils.widget import (
     OWDataProjectionWidget, OWProjectionWidgetBase
 )
@@ -112,6 +115,33 @@ class TestOWProjectionWidget(WidgetTest):
                         and "3" in widget.get_tooltip([0, 1]))
         self.assertEqual(widget.get_tooltip([]), "")
 
+    def test_get_palette(self):
+        widget = self.widget
+
+        widget.attr_color = None
+        self.assertIsNone(widget.get_palette())
+
+        var = ContinuousVariable("v")
+        var.palette = Mock()
+        widget.attr_color = var
+        self.assertIs(widget.get_palette(), var.palette)
+
+        var = DiscreteVariable("v", values=tuple("abc"))
+        var.palette = Mock()
+        widget.attr_color = var
+        self.assertIs(widget.get_palette(), var.palette)
+
+        values = tuple("abcdefghijklmn")
+        merged = ["a", "c", "d", "h", "n", "Others"]
+        var = DiscreteVariable("v", values=values)
+        var.palette = DiscretePalette(
+            "foo", "bar", [[i] * 3 for i, _ in enumerate(values)])
+        widget.get_color_labels = lambda: merged
+        widget.attr_color = var
+        np.testing.assert_equal(
+            widget.get_palette().palette[:-1],
+            [[var.values.index(label)] * 3 for label in merged[:-1]])
+
 
 class TestableDataProjectionWidget(OWDataProjectionWidget):
     def get_embedding(self):
@@ -126,9 +156,9 @@ class TestableDataProjectionWidget(OWDataProjectionWidget):
             return None
 
         x_data[x_data == np.inf] = np.nan
-        x_data = np.nanmean(x_data[self.valid_data], 1)
+        x_data_ = np.ones(len(x_data))
         y_data = np.ones(len(x_data))
-        return np.vstack((x_data, y_data)).T
+        return np.vstack((x_data_, y_data)).T
 
 
 class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
@@ -144,6 +174,15 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
 
     def setUp(self):
         self.widget = self.create_widget(TestableDataProjectionWidget)
+
+    def test_annotation_with_nans(self):
+        data = Table.from_table_rows(self.data, [0, 1, 2])
+        data.X[1, :] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        points = self.widget.graph.scatterplot_item.points()
+        self.widget.graph.select_by_click(None, [points[1]])
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_equal(annotated.get_column_view('Selected')[0], np.array([0, 0, 1]))
 
     def test_saved_selection(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -220,6 +259,23 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
             commit.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.data)
             commit.assert_called()
+
+    def test_model_update(self):
+        widget = self.widget
+
+        data = Table("iris")
+        domain = data.domain
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertIs(widget.controls.attr_color.model()[4], domain[0])
+
+        copy0 = domain[0].copy()
+        assert copy0.palette.name != "diverging_tritanopic_cwr_75_98_c20"
+        copy0.palette = ContinuousPalettes["diverging_tritanopic_cwr_75_98_c20"]
+        domain = Domain((copy0, ) + domain.attributes[1:], domain.class_var)
+        data0 = data.transform(domain)
+        self.send_signal(widget.Inputs.data, data0)
+        self.assertIs(widget.controls.attr_color.model()[4], copy0)
 
 
 if __name__ == "__main__":

@@ -11,6 +11,8 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details,\
+    format_multiple_summaries
 
 METRICS = [
     ("Euclidean", distance.Euclidean),
@@ -55,6 +57,7 @@ class OWNeighbors(OWWidget):
     auto_apply = Setting(True)
 
     want_main_area = False
+    resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
 
     def __init__(self):
@@ -87,14 +90,17 @@ class OWNeighbors(OWWidget):
     def _set_input_summary(self):
         n_data = len(self.data) if self.data else 0
         n_refs = len(self.reference) if self.reference else 0
+        summary, details, kwargs = self.info.NoInput, "", {}
 
-        if n_data or n_refs:
-            details = \
-                f"{n_data if n_data else 'No'} data instance(s) on input\n" \
-                f"{n_refs if n_refs else 'No'} reference instance(s) on input "
-            self.info.set_input_summary(f"{n_data} | {n_refs} ", details)
-        else:
-            self.info.set_input_summary(self.info.NoInput)
+        if self.data or self.reference:
+            summary = f"{self.info.format_number(n_data)}, " \
+                      f"{self.info.format_number(n_refs)}"
+            details = format_multiple_summaries([
+                ("Data", self.data),
+                ("Reference", self.reference)
+            ])
+            kwargs = {"format": Qt.RichText}
+        self.info.set_input_summary(summary, details, **kwargs)
 
     @Inputs.data
     def set_data(self, data):
@@ -106,8 +112,8 @@ class OWNeighbors(OWWidget):
 
     def handleNewSignals(self):
         self.compute_distances()
-        self.unconditional_apply()
         self._set_input_summary()
+        self.unconditional_apply()
 
     def recompute(self):
         self.compute_distances()
@@ -145,7 +151,8 @@ class OWNeighbors(OWWidget):
             self.info.set_output_summary(self.info.NoOutput)
         else:
             neighbors = self._data_with_similarity(indices)
-            self.info.set_output_summary(str(len(neighbors)))
+            summary, details = len(neighbors), format_summary_details(neighbors)
+            self.info.set_output_summary(summary, details)
         self.Outputs.data.send(neighbors)
 
     def _compute_indices(self):

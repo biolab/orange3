@@ -4,7 +4,7 @@ import numpy as np
 
 from AnyQt.QtWidgets import QListView, QApplication
 from AnyQt.QtGui import QBrush, QColor, QPainter
-from AnyQt.QtCore import QEvent, QItemSelectionModel, QItemSelection
+from AnyQt.QtCore import QEvent
 
 import pyqtgraph as pg
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
@@ -12,6 +12,7 @@ from Orange.statistics import contingency
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils.itemmodels import select_rows
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
@@ -24,23 +25,6 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
         painter.setRenderHint(QPainter.Antialiasing, True)
         super().paint(painter, option, widget)
-
-
-def select_rows(view, row_indices, command=QItemSelectionModel.ClearAndSelect):
-    """
-    Select rows in view.
-
-    :param QAbstractItemView view:
-    :param row_indices: Integer indices of rows to select.
-    :param command: QItemSelectionModel.SelectionFlags
-    """
-    selmodel = view.selectionModel()
-    model = view.model()
-    selection = QItemSelection()
-    for row in row_indices:
-        index = model.index(row, 0)
-        selection.select(index, index)
-    selmodel.select(selection, command | QItemSelectionModel.Rows)
 
 
 class OWCorrespondenceAnalysis(widget.OWWidget):

@@ -7,9 +7,12 @@ from unittest.mock import patch
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
+from AnyQt.QtCore import Qt, QModelIndex
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.preprocess import Continuize
-from Orange.widgets.visualize.owheatmap import OWHeatMap
+from Orange.widgets.utils import colorpalettes
+from Orange.widgets.visualize.owheatmap import OWHeatMap, Clustering
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 
 
@@ -56,9 +59,10 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.Error.active)
 
     def test_information_message(self):
-        self.widget.controls.row_clustering.setChecked(True)
+        self.widget.set_row_clustering(Clustering.OrderedClustering)
         continuizer = Continuize()
         cont_titanic = continuizer(self.titanic)
+        self.widget.MaxClustering = 1000
         self.send_signal(self.widget.Inputs.data, cont_titanic)
         self.assertTrue(self.widget.Information.active)
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -69,12 +73,12 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         # check output when "Sorting Column" setting changes
         self._select_data()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
-        self.widget.controls.col_clustering.setChecked(True)
+        self.widget.set_col_clustering(Clustering.OrderedClustering)
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         # check output when "Sorting Row" setting changes
         self._select_data()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
-        self.widget.controls.row_clustering.setChecked(True)
+        self.widget.set_row_clustering(Clustering.OrderedClustering)
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         # check output when "Merge by k-means" setting changes
         self._select_data()
@@ -84,7 +88,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def _select_data(self):
         selected_indices = list(range(10, 31))
-        self.widget.selection_manager.select_rows(selected_indices)
+        self.widget.scene.widget.selectRows(selected_indices)
         self.widget.on_selection_finished()
         return selected_indices
 
@@ -95,21 +99,23 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                                 ConvergenceWarning)
 
         msg = self.widget.Error
+        clusterings = (Clustering.None_, Clustering.Clustering,
+                       Clustering.OrderedClustering)
         for kmeans_checked in (False, True):
             self.widget.controls.merge_kmeans.setChecked(kmeans_checked)
-            for col_checked in (False, True):
-                self.widget.controls.col_clustering.setChecked(col_checked)
+            for col_clust in clusterings:
+                self.widget.set_col_clustering(col_clust)
                 self.send_signal(self.widget.Inputs.data, None)
                 self.send_signal(self.widget.Inputs.data, self.data[:, 0])
-                if col_checked:
+                if col_clust != Clustering.None_:
                     self.assertTrue(msg.not_enough_features.is_shown())
-                for row_checked in (False, True):
-                    self.widget.controls.row_clustering.setChecked(row_checked)
+                for row_clust in clusterings:
+                    self.widget.set_row_clustering(row_clust)
                     self.send_signal(self.widget.Inputs.data, None)
                     self.send_signal(self.widget.Inputs.data, self.data[0:1])
-                    if row_checked:
+                    if row_clust != Clustering.None_:
                         self.assertTrue(msg.not_enough_instances.is_shown())
-                    elif kmeans_checked and row_checked:
+                    elif kmeans_checked and row_clust != Clustering.None_:
                         self.assertTrue(msg.not_enough_instances_k_means.is_shown())
             self.send_signal(self.widget.Inputs.data, None)
             self.assertFalse(msg.not_enough_features.is_shown())
@@ -170,18 +176,18 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.threshold_high = 0.05
         self.widget.update_color_schema()
-        heatmap_widget = self.widget.heatmap_widget_grid[0][0]
-        image = heatmap_widget.heatmap_item.pixmap().toImage()
+        heatmap_widget = self.widget.scene.widget.heatmap_widget_grid[0][0]
+        image = heatmap_widget.pixmap().toImage()
         colors = image_row_colors(image)
         unique_colors = len(np.unique(colors, axis=0))
         self.assertLessEqual(len(data)*self.widget.threshold_low, unique_colors)
 
     def test_cls_with_single_instance(self):
         table = Table(Domain([ContinuousVariable("c1")],
-                             [DiscreteVariable("c2", values=["a", "b"])]),
+                             [DiscreteVariable("c2", values=("a", "b"))]),
                       np.array([[1], [2], [3]]), np.array([[0], [0], [1]]))
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.row_check.setChecked(True)
+        self.widget.set_row_clustering(Clustering.Clustering)
 
     def test_unconditional_commit_on_new_signal(self):
         with patch.object(self.widget, 'unconditional_commit') as commit:
@@ -195,7 +201,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
         self.send_signal(self.widget.Inputs.data, iris)
         selected_indices = list(range(10, 31))
-        self.widget.selection_manager.select_rows(selected_indices)
+        self.widget.scene.widget.selectRows(selected_indices)
         self.widget.on_selection_finished()
         settings = self.widget.settingsHandler.pack_data(self.widget)
 
@@ -208,20 +214,20 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         w = self.widget
         self.send_signal(self.widget.Inputs.data, data, widget=w)
         self.assertIs(w.split_by_var, data.domain.class_var)
-        self.assertEqual(len(w.heatmapparts.rows),
+        self.assertEqual(len(w.parts.rows),
                          len(data.domain.class_var.values))
         w.set_split_variable(None)
         self.assertIs(w.split_by_var, None)
-        self.assertEqual(len(w.heatmapparts.rows), 1)
+        self.assertEqual(len(w.parts.rows), 1)
 
-    def test_center_palette(self):
+    def test_palette_centering(self):
         data = np.arange(2).reshape(-1, 1)
         table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
         self.send_signal(self.widget.Inputs.data, table)
 
-        cb_model = self.widget.color_cb.model()
-        ind = cb_model.indexFromItem(cb_model.findItems("Green-Black-Red")[0]).row()
-        self.widget.palette_index = ind
+        self.widget.color_palette = lambda: \
+            colorpalettes.ContinuousPalette.from_colors(
+                (0, 255, 0), (255, 0, 0), (0, 0, 0)).lookup_table()
 
         desired_uncentered = [[0, 255, 0],
                               [255, 0, 0]]
@@ -230,12 +236,42 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                             [255, 0, 0]]
 
         for center, desired in [(False, desired_uncentered), (True, desired_centered)]:
-            self.widget.center_palette = center
-            self.widget.update_color_schema()
-            heatmap_widget = self.widget.heatmap_widget_grid[0][0]
-            image = heatmap_widget.heatmap_item.pixmap().toImage()
-            colors = image_row_colors(image)
-            np.testing.assert_almost_equal(colors, desired)
+            with patch.object(OWHeatMap, "center_palette", center):
+                self.widget.update_color_schema()
+                heatmap_widget = self.widget.scene.widget.heatmap_widget_grid[0][0]
+                image = heatmap_widget.pixmap().toImage()
+                colors = image_row_colors(image)
+                np.testing.assert_almost_equal(colors, desired)
+
+    def test_palette_center(self):
+        widget = self.widget
+        model = widget.color_cb.model()
+        for idx in range(model.rowCount(QModelIndex())):
+            palette = model.data(model.index(idx, 0), Qt.UserRole)
+            if palette is None:
+                continue
+            widget.color_cb.setCurrentIndex(idx)
+            self.assertEqual(widget.center_palette,
+                             bool(palette.flags & palette.Diverging))
+
+    def test_migrate_settings_v3(self):
+        w = self.create_widget(
+            OWHeatMap, stored_settings={
+                "row_clustering": False,
+                "col_clustering": True,
+            }
+        )
+        self.assertEqual(w.row_clustering, Clustering.None_)
+        self.assertEqual(w.col_clustering, Clustering.OrderedClustering)
+
+    def test_row_color_annotations(self):
+        widget = self.widget
+        data = Table("brown-selected")[::5]
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        widget.set_annotation_color_var(data.domain["function"])
+        self.assertTrue(widget.scene.widget.right_side_colors[0].isVisible())
+        widget.set_annotation_color_var(None)
+        self.assertFalse(widget.scene.widget.right_side_colors[0].isVisible())
 
 
 if __name__ == "__main__":

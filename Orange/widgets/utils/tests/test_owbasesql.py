@@ -1,4 +1,4 @@
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 import unittest
 from unittest.mock import Mock
 from collections import OrderedDict
@@ -90,6 +90,11 @@ class TestOWBaseSql(WidgetTest):
         self.widget.databasetext.setText("")
         self.widget.connectbutton.click()
         self.widget.report_button.click()  # empty
+
+    def test_out_summary(self):
+        self.widget.open_table()
+        info = self.widget.info
+        self.assertEqual(info._StateInfo__output_summary.brief, "150")
 
 
 if __name__ == "__main__":

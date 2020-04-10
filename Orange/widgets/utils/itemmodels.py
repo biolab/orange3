@@ -10,9 +10,8 @@ from warnings import warn
 from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
-    Qt, QObject, QAbstractListModel, QAbstractTableModel, QModelIndex,
-    QItemSelectionModel, QMimeData, QT_VERSION
-)
+    Qt, QObject, QAbstractListModel, QModelIndex,
+    QItemSelectionModel, QItemSelection)
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import (
@@ -25,6 +24,7 @@ from orangewidget.utils.itemmodels import (
     PyListModel, AbstractSortTableModel as _AbstractSortTableModel
 )
 
+from Orange.widgets.utils.colorpalettes import ContinuousPalettes, ContinuousPalette
 from Orange.data import Variable, Storage, DiscreteVariable, ContinuousVariable
 from Orange.data.domain import filter_visible
 from Orange.widgets import gui
@@ -102,17 +102,20 @@ class PyTableModel(AbstractSortTableModel):
     # pylint: disable=missing-docstring
     def __init__(self, sequence=None, parent=None, editable=False):
         super().__init__(parent)
+        self._rows = self._cols = 0
         self._headers = {}
         self._editable = editable
         self._table = None
-        self._roleData = None
-        self.wrap(sequence or [])
+        self._roleData = {}
+        if sequence is None:
+            sequence = []
+        self.wrap(sequence)
 
     def rowCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else len(self)
+        return 0 if parent.isValid() else self._rows
 
     def columnCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else max(map(len, self._table), default=0)
+        return 0 if parent.isValid() else self._cols
 
     def flags(self, index):
         flags = super().flags(index)
@@ -214,6 +217,7 @@ class PyTableModel(AbstractSortTableModel):
             del self[row:row + count]
             for rowidx in range(row, row + count):
                 self._roleData.pop(rowidx, None)
+            self._rows = self._table_dim()[0]
             return True
         return False
 
@@ -225,12 +229,17 @@ class PyTableModel(AbstractSortTableModel):
             for col in range(column, column + count):
                 cols.pop(col, None)
         del self._headers.get(Qt.Horizontal, [])[column:column + count]
+        self._cols = self._table_dim()[1]
         self.endRemoveColumns()
         return True
+
+    def _table_dim(self):
+        return len(self._table), max(map(len, self), default=0)
 
     def insertRows(self, row, count, parent=QModelIndex()):
         self.beginInsertRows(parent, row, row + count - 1)
         self._table[row:row] = [[''] * self.columnCount() for _ in range(count)]
+        self._rows = self._table_dim()[0]
         self.endInsertRows()
         return True
 
@@ -238,6 +247,7 @@ class PyTableModel(AbstractSortTableModel):
         self.beginInsertColumns(parent, column, column + count - 1)
         for row in self._table:
             row[column:column] = [''] * count
+        self._rows = self._table_dim()[0]
         self.endInsertColumns()
         return True
 
@@ -262,18 +272,37 @@ class PyTableModel(AbstractSortTableModel):
         self._check_sort_order()
         self.beginRemoveRows(QModelIndex(), start, stop)
         del self._table[i]
+        rows = self._table_dim()[0]
+        self._rows = rows
         self.endRemoveRows()
+        self._update_column_count()
 
     def __setitem__(self, i, value):
+        self._check_sort_order()
         if isinstance(i, slice):
             start, stop, _ = _as_contiguous_range(i, len(self))
-            stop -= 1
+            self.removeRows(start, stop - start)
+            self.beginInsertRows(QModelIndex(), start, start + len(value) - 1)
+            self._table[start:start] = value
+            self._rows = self._table_dim()[0]
+            self.endInsertRows()
+            self._update_column_count()
         else:
-            start = stop = i = i if i >= 0 else len(self) + i
-        self._check_sort_order()
-        self._table[i] = value
-        self.dataChanged.emit(self.index(start, 0),
-                              self.index(stop, self.columnCount() - 1))
+            self._table[i] = value
+            self.dataChanged.emit(self.index(i, 0),
+                                  self.index(i, self.columnCount() - 1))
+
+    def _update_column_count(self):
+        cols_before = self._cols
+        cols_after = self._table_dim()[1]
+        if cols_before < cols_after:
+            self.beginInsertColumns(QModelIndex(), cols_before, cols_after - 1)
+            self._cols = cols_after
+            self.endInsertColumns()
+        elif cols_before > cols_after:
+            self.beginRemoveColumns(QModelIndex(), cols_after, cols_before - 1)
+            self._cols = cols_after
+            self.endRemoveColumns()
 
     def _check_sort_order(self):
         if self.mapToSourceRows(Ellipsis) is not Ellipsis:
@@ -285,6 +314,7 @@ class PyTableModel(AbstractSortTableModel):
         self.beginResetModel()
         self._table = table
         self._roleData = self._RoleData()
+        self._rows, self._cols = self._table_dim()
         self.resetSorting()
         self.endResetModel()
 
@@ -296,6 +326,7 @@ class PyTableModel(AbstractSortTableModel):
         self._table.clear()
         self.resetSorting()
         self._roleData.clear()
+        self._rows, self._cols = self._table_dim()
         self.endResetModel()
 
     def append(self, row):
@@ -570,6 +601,66 @@ def safe_text(text):
     return text
 
 
+class ContinuousPalettesModel(QAbstractListModel):
+    """
+    Model for combo boxes
+    """
+    def __init__(self, parent=None, categories=None, icon_width=64):
+        super().__init__(parent)
+        self.icon_width = icon_width
+
+        palettes = list(ContinuousPalettes.values())
+        if categories is None:
+            # Use dict, not set, to keep order of categories
+            categories = dict.fromkeys(palette.category for palette in palettes)
+
+        self.items = []
+        for category in categories:
+            self.items.append(category)
+            self.items += [palette for palette in palettes
+                           if palette.category == category]
+        if len(categories) == 1:
+            del self.items[0]
+
+    def rowCount(self, parent):
+        return 0 if parent.isValid() else len(self.items)
+
+    @staticmethod
+    def columnCount(parent):
+        return 0 if parent.isValid() else 1
+
+    def data(self, index, role):
+        item = self.items[index.row()]
+        if isinstance(item, str):
+            if role in [Qt.EditRole, Qt.DisplayRole]:
+                return item
+        else:
+            if role in [Qt.EditRole, Qt.DisplayRole]:
+                return item.friendly_name
+            if role == Qt.DecorationRole:
+                return item.color_strip(self.icon_width, 16)
+            if role == Qt.UserRole:
+                return item
+        return None
+
+    def flags(self, index):
+        item = self.items[index.row()]
+        if isinstance(item, ContinuousPalette):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        else:
+            return Qt.NoItemFlags
+
+    def indexOf(self, x):
+        if isinstance(x, str):
+            for i, item in enumerate(self.items):
+                if not isinstance(item, str) \
+                        and x in (item.name, item.friendly_name):
+                    return i
+        elif isinstance(x, ContinuousPalette):
+            return self.items.index(x)
+        return None
+
+
 class ListSingleSelectionModel(QItemSelectionModel):
     """ Item selection model for list item models with single selection.
 
@@ -615,6 +706,23 @@ def select_row(view, row):
     selmodel.select(view.model().index(row, 0),
                     QItemSelectionModel.ClearAndSelect |
                     QItemSelectionModel.Rows)
+
+
+def select_rows(view, row_indices, command=QItemSelectionModel.ClearAndSelect):
+    """
+    Select several rows in view.
+
+    :param QAbstractItemView view:
+    :param row_indices: Integer indices of rows to select.
+    :param command: QItemSelectionModel.SelectionFlags
+    """
+    selmodel = view.selectionModel()
+    model = view.model()
+    selection = QItemSelection()
+    for row in row_indices:
+        index = model.index(row, 0)
+        selection.select(index, index)
+    selmodel.select(selection, command | QItemSelectionModel.Rows)
 
 
 class ModelActionsWidget(QWidget):

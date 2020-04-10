@@ -488,9 +488,10 @@ class WidgetOutputsTestMixin:
     _compare_selected_annotated_domains.
     """
 
-    def init(self):
+    def init(self, same_table_attributes=True):
         self.data = Table("iris")
         self.same_input_output_domain = True
+        self.same_table_attributes = same_table_attributes
 
     def test_outputs(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.signal_name, self.signal_data)
@@ -516,12 +517,14 @@ class WidgetOutputsTestMixin:
                          self.same_input_output_domain)
         np.testing.assert_array_equal(selected.X[:, :n_attr],
                                       self.data.X[selected_indices])
-        self.assertEqual(selected.attributes, self.data.attributes)
+        if self.same_table_attributes:
+            self.assertEqual(selected.attributes, self.data.attributes)
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
-        self.assertEqual(annotated.attributes, self.data.attributes)
+        if self.same_table_attributes:
+            self.assertEqual(annotated.attributes, self.data.attributes)
 
         # compare selected and annotated data domains
         self._compare_selected_annotated_domains(selected, annotated)
@@ -736,7 +739,7 @@ class ProjectionWidgetTestMixin:
         hidden_var1.attributes["hidden"] = True
         hidden_var2 = ContinuousVariable("c2")
         hidden_var2.attributes["hidden"] = True
-        class_vars = [DiscreteVariable("cls", values=["a", "b"])]
+        class_vars = [DiscreteVariable("cls", values=("a", "b"))]
         table = Table(Domain([hidden_var1, hidden_var2], class_vars),
                       np.array([[0., 1.], [2., 3.]]),
                       np.array([[0.], [1.]]))
@@ -748,6 +751,10 @@ class ProjectionWidgetTestMixin:
         info = self.widget.info
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIn(info._StateInfo__input_summary.details,
+                      ["", "No data on input"])
+        self.assertIn(info._StateInfo__output_summary.details,
+                      ["", "No data on output"])
 
         self.send_signal(self.widget.Inputs.data, self.data)
         self.assertTrue(
@@ -758,10 +765,20 @@ class ProjectionWidgetTestMixin:
         self.assertEqual(info._StateInfo__input_summary.brief,
                          str(len(self.data)))
         self.assertEqual(info._StateInfo__output_summary.brief, str(len(ind)))
+        self.assertGreater(info._StateInfo__input_summary.details, "")
+        self.assertGreater(info._StateInfo__output_summary.details, "")
+        self.assertNotIn(info._StateInfo__input_summary.details,
+                         ["", "No data on input"])
+        self.assertNotIn(info._StateInfo__output_summary.details,
+                         ["", "No data on output"])
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIn(info._StateInfo__input_summary.details,
+                      ["", "No data on input"])
+        self.assertIn(info._StateInfo__output_summary.details,
+                      ["", "No data on output"])
 
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
@@ -873,7 +890,7 @@ class datasets:
             Domain(
                 [ContinuousVariable("a"),
                  ContinuousVariable("b"),
-                 DiscreteVariable("c", values=["y", "n"])]
+                 DiscreteVariable("c", values=("y", "n"))]
             ),
             list(zip(
                 [42.48, 16.84, 15.23, 23.8],

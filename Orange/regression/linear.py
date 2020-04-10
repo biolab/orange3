@@ -134,16 +134,6 @@ class LinearModel(SklModel):
     def coefficients(self):
         return self.skl_model.coef_
 
-    def predict(self, X):
-        vals = self.skl_model.predict(X)
-        if len(vals.shape) == 1:
-            # Prevent IndexError for 1D array
-            return vals
-        elif vals.shape[1] == 1:
-            return vals.ravel()
-        else:
-            return vals
-
     def __str__(self):
         return 'LinearModel {}'.format(self.skl_model)
 

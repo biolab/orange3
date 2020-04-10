@@ -75,6 +75,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     autocommit = Setting(True)       # type: bool
 
     want_main_area = False
+    resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
 
     class Error(OWWidget.Error):
@@ -111,13 +112,13 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             box, self, "normalized_dist", "Normalized",
             callback=self._invalidate,
             tooltip=("All dimensions are (implicitly) scaled to a common"
-                     "scale to normalize the influence across the domain.")
+                     "scale to normalize the influence across the domain."),
+            stateWhenDisabled=False
         )
         _, metric = METRICS[self.metric_idx]
         self.normalization_check.setEnabled(metric.supports_normalization)
 
         gui.auto_apply(self.controlArea, self, "autocommit")
-        self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
     @Inputs.data
     @check_sql_input

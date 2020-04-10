@@ -21,7 +21,8 @@ from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Output
+from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.widget import Output, Msg
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -121,17 +122,19 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     domain_editor = SettingProvider(DomainEditor)
 
     class Warning(widget.OWWidget.Warning):
-        file_too_big = widget.Msg("The file is too large to load automatically."
-                                  " Press Reload to load.")
-        load_warning = widget.Msg("Read warning:\n{}")
-        performance_warning = widget.Msg(
+        file_too_big = Msg("The file is too large to load automatically."
+                           " Press Reload to load.")
+        load_warning = Msg("Read warning:\n{}")
+        performance_warning = Msg(
             "Categorical variables with >100 values may decrease performance.")
+        renamed_vars = Msg("Some variables have been renamed "
+                           "to avoid duplicates.\n{}")
 
     class Error(widget.OWWidget.Error):
-        file_not_found = widget.Msg("File not found.")
-        missing_reader = widget.Msg("Missing reader.")
-        sheet_error = widget.Msg("Error listing available sheets.")
-        unknown = widget.Msg("Read error:\n{}")
+        file_not_found = Msg("File not found.")
+        missing_reader = Msg("Missing reader.")
+        sheet_error = Msg("Error listing available sheets.")
+        unknown = Msg("Read error:\n{}")
 
     class NoFileSelected:
         pass
@@ -247,6 +250,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.editor_model.dataChanged.connect(
             lambda: self.apply_button.setEnabled(True))
 
+        self.info.set_output_summary(self.info.NoOutput)
+
         self.set_file_list()
         # Must not call open_file from within __init__. open_file
         # explicitly re-enters the event loop (by a progress bar)
@@ -332,6 +337,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.sheet_box.hide()
             self.Outputs.data.send(None)
             self.infolabel.setText("No data.")
+            self.info.set_output_summary(self.info.NoOutput)
 
     def _try_load(self):
         # pylint: disable=broad-except
@@ -346,6 +352,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         if self.reader is self.NoFileSelected:
             self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return None
 
         try:
@@ -478,10 +485,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def apply_domain_edit(self):
         self.Warning.performance_warning.clear()
+        self.Warning.renamed_vars.clear()
         if self.data is None:
             table = None
         else:
-            domain, cols = self.domain_editor.get_domain(self.data.domain, self.data)
+            domain, cols, renamed = \
+                self.domain_editor.get_domain(self.data.domain, self.data,
+                                              deduplicate=True)
             if not (domain.variables or domain.metas):
                 table = None
             elif domain is self.data.domain:
@@ -493,7 +503,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 table.ids = np.array(self.data.ids)
                 table.attributes = getattr(self.data, 'attributes', {})
                 self._inspect_discrete_variables(domain)
+            if renamed:
+                self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
 
+        summary = len(table) if table else self.info.NoOutput
+        details = format_summary_details(table) if table else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.data.send(table)
         self.apply_button.setEnabled(False)
 

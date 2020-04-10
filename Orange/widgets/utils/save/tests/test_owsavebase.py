@@ -5,14 +5,15 @@
 
 # pylint: disable=missing-docstring, protected-access, unsubscriptable-object
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+import sys
 import os
 import collections
 
+from orangewidget.widget import Input
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils import getmembers
-from Orange.widgets.utils.save.owsavebase import OWSaveBase
-from orangewidget.widget import Input
+from Orange.widgets.utils.save.owsavebase import OWSaveBase, _userhome
 
 
 class SaveWidgetsTestBaseMixin:
@@ -46,18 +47,18 @@ class SaveWidgetsTestBaseMixin:
 class TestOWSaveBaseWithWriters(WidgetTest):
     # Tests for OWSaveBase methods that require filters to be dictionaries
     # with with writers as keys in `filters`.
-    def setUp(self):
-        class OWSaveMockWriter(OWSaveBase):
-            name = "Mock save"
-            writer = Mock()
-            writer.EXTENSIONS = [".csv"]
-            writer.SUPPORT_COMPRESSED = True
-            writer.SUPPORT_SPARSE_DATA = False
-            writer.OPTIONAL_TYPE_ANNOTATIONS = False
-            writers = [writer]
-            filters = {"csv (*.csv)": writer}
+    class OWSaveMockWriter(OWSaveBase):
+        name = "Mock save"
+        writer = Mock()
+        writer.EXTENSIONS = [".csv"]
+        writer.SUPPORT_COMPRESSED = True
+        writer.SUPPORT_SPARSE_DATA = False
+        writer.OPTIONAL_TYPE_ANNOTATIONS = False
+        writers = [writer]
+        filters = {"csv (*.csv)": writer}
 
-        self.widget = self.create_widget(OWSaveMockWriter)
+    def setUp(self):
+        self.widget = self.create_widget(self.OWSaveMockWriter)
 
     def test_no_data_no_save(self):
         widget = self.widget
@@ -95,6 +96,175 @@ class TestOWSaveBaseWithWriters(WidgetTest):
         self.assertEqual(widget.suggested_name(), "")
         self.assertIs(widget.valid_filters(), widget.get_filters())
         self.assertIs(widget.default_valid_filter(), widget.filter)
+
+    def assertPathEqual(self, a, b):
+        if sys.platform == "win32":
+            a = a.replace("\\", "/")
+            b = b.replace("\\", "/")
+        self.assertEqual(a.rstrip("/"), b.rstrip("/"))
+
+    @patch("os.path.exists", lambda name: name == "/home/u/orange/a/b")
+    def test_open_moved_workflow(self):
+        """Stored relative paths are properly changed on load"""
+        home = _userhome
+        home_c_foo = os.path.join(_userhome, "c.foo")
+        with patch("Orange.widgets.widget.OWWidget.workflowEnv",
+                   Mock(return_value={})):
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="a/b",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, home)
+            self.assertPathEqual(w.filename, home_c_foo)
+            self.assertFalse(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="/a/d",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, home)
+            self.assertPathEqual(w.filename, home_c_foo)
+            self.assertFalse(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path=".",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, home)
+            self.assertPathEqual(w.filename, home_c_foo)
+            self.assertFalse(w.auto_save)
+
+        with patch("Orange.widgets.widget.OWWidget.workflowEnv",
+                   Mock(return_value={"basedir": "/home/u/orange/"})):
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="a/b",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, "/home/u/orange/a/b")
+            self.assertPathEqual(w.filename, "/home/u/orange/a/b/c.foo")
+            self.assertTrue(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="a/b",
+                                     stored_name="c.foo",
+                                     auto_save=False))
+            self.assertPathEqual(w.last_dir, "/home/u/orange/a/b")
+            self.assertPathEqual(w.filename, "/home/u/orange/a/b/c.foo")
+            self.assertFalse(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="a/d",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, "/home/u/orange/")
+            self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
+            self.assertFalse(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="/a/d",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, "/home/u/orange/")
+            self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
+            self.assertFalse(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path=".",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, "/home/u/orange/")
+            self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
+            self.assertFalse(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, "/home/u/orange/")
+            self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
+            self.assertFalse(w.auto_save)
+
+    def test_move_workflow(self):
+        """Widget correctly stores relative paths"""
+        w = self.widget
+        w._try_save = Mock()
+        w.update_messages = Mock()
+        env = {}
+
+        with patch("Orange.widgets.widget.OWWidget.workflowEnv",
+                   Mock(return_value=env)):
+            # File is save to subdirectory of workflow path
+            env["basedir"] = "/home/u/orange/"
+
+            w.get_save_filename = \
+                Mock(return_value=("/home/u/orange/a/b/c.foo", ""))
+            w.save_file_as()
+            self.assertPathEqual(w.last_dir, "/home/u/orange/a/b")
+            self.assertPathEqual(w.stored_path, "a/b/")
+            self.assertEqual(w.stored_name, "c.foo")
+
+            # Workflow path changes: relative path is changed to absolute
+            env["basedir"] = "/tmp/u/work/"
+            w.workflowEnvChanged("basedir", "/tmp/u/work", "/home/u/orange")
+            self.assertPathEqual(w.last_dir, "/home/u/orange/a/b/")
+            self.assertPathEqual(w.stored_path, "/home/u/orange/a/b/")
+            self.assertEqual(w.stored_name, "c.foo")
+
+            # Workflow path changes back: absolute path is again relative
+            env["basedir"] = "/home/u/orange/"
+            w.workflowEnvChanged("basedir", "/home/u/orange", "/tmp/u/work")
+            self.assertPathEqual(w.last_dir, "/home/u/orange/a/b")
+            self.assertPathEqual(w.stored_path, "a/b/")
+            self.assertEqual(w.stored_name, "c.foo")
+
+            # File is saved to an unrelated directory: path is absolute
+            w.get_save_filename = \
+                Mock(return_value=("/tmp/u/work/a/b/c.foo", ""))
+            w.save_file_as()
+            self.assertPathEqual(w.last_dir, "/tmp/u/work/a/b/")
+            self.assertPathEqual(w.stored_path, "/tmp/u/work/a/b/")
+            self.assertEqual(w.stored_name, "c.foo")
+
+            # File is saved to the workflow's directory: path is relative
+            w.get_save_filename = \
+                Mock(return_value=("/home/u/orange/c.foo", ""))
+            w.save_file_as()
+            self.assertPathEqual(w.last_dir, "/home/u/orange/")
+            self.assertPathEqual(w.stored_path, ".")
+            self.assertEqual(w.stored_name, "c.foo")
+
+    def test_migrate_pre_relative_settings(self):
+        with patch("os.path.exists", lambda name: name == "/a/b"):
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(last_dir="/a/b", filename="/a/b/c.foo"))
+            self.assertPathEqual(w.last_dir, "/a/b")
+            self.assertPathEqual(w.filename, "/a/b/c.foo")
+            self.assertPathEqual(w.stored_path, "/a/b")
+            self.assertPathEqual(w.stored_name, "c.foo")
+
+        w = self.create_widget(
+            self.OWSaveMockWriter,
+            stored_settings=dict(last_dir="/a/b", filename="/a/b/c.foo"))
+        self.assertPathEqual(w.last_dir, _userhome)
+        self.assertPathEqual(w.filename, os.path.join(_userhome, "c.foo"))
+        self.assertPathEqual(w.stored_path, _userhome)
+        self.assertPathEqual(w.stored_name, "c.foo")
+
+    def test_save_button_label(self):
+        w = self.create_widget(
+            self.OWSaveMockWriter,
+            stored_settings=dict(stored_path="", stored_name="c.foo"))
+        self.assertTrue(w.bt_save.text().endswith(" c.foo"))
 
 
 class TestOWSaveBase(WidgetTest):
@@ -142,7 +312,7 @@ class TestOWSaveUtils(unittest.TestCase):
     def test_replace_extension(self):
         class OWMockSaveBase(OWSaveBase):
             filters = ["Tab delimited (*.tab)",
-                       "Compressed tab delimitd (*.gz.tab)",
+                       "Compressed tab delimited (*.gz.tab)",
                        "Comma separated (*.csv)",
                        "Compressed comma separated (*.csv.gz)",
                        "Excel File (*.xlsx)"]

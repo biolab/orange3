@@ -3,6 +3,8 @@ import itertools
 import warnings
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
+from datetime import datetime, timezone
+from time import gmtime
 
 import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
@@ -22,11 +24,12 @@ from pyqtgraph.graphicsItems.LegendItem import (
 )
 from pyqtgraph.graphicsItems.TextItem import TextItem
 
+from Orange.preprocess.discretize import _time_binnings
+from Orange.widgets.utils import colorpalettes
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import classdensity
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
 from Orange.widgets.utils.plot import OWPalette
 from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
     OWScatterPlotGraph as OWScatterPlotGraphObs
@@ -47,7 +50,7 @@ class PaletteItemSample(ItemSample):
     def __init__(self, palette, scale, label_formatter=None):
         """
         :param palette: palette used for showing continuous values
-        :type palette: ContinuousPaletteGenerator
+        :type palette: BinnedContinuousPalette
         :param scale: an instance of DiscretizedScale that defines the
                       conversion of values into bins
         :type scale: DiscretizedScale
@@ -73,12 +76,11 @@ class PaletteItemSample(ItemSample):
     def paint(self, p, *args):
         p.setRenderHint(p.Antialiasing)
         p.translate(5, 5)
-        scale = self.scale
         font = p.font()
         font.setPixelSize(11)
         p.setFont(font)
-        for i, label in enumerate(self.labels):
-            color = QColor(*self.palette.getRGB((i + 0.5) / scale.bins))
+        colors = self.palette.qcolors
+        for i, color, label in zip(itertools.count(), colors, self.labels):
             p.setPen(Qt.NoPen)
             p.setBrush(QBrush(color))
             p.drawRect(0, i * 15, 15, 15)
@@ -126,7 +128,8 @@ class LegendItem(PgLegendItem):
         anchor, parentanchor = anchors
         self.anchor(*bound_anchor_pos(anchor, parentanchor))
 
-    def paint(self, painter, option, widget=None):
+    # pylint: disable=arguments-differ
+    def paint(self, painter, _option, _widget=None):
         painter.setPen(self.__pen)
         painter.setBrush(self.__brush)
         rect = self.contentsRect()
@@ -221,6 +224,9 @@ class DiscretizedScale:
         self.decimals = max(decimals, 0)
         self.width = resolution
 
+    def get_bins(self):
+        return self.offset + self.width * np.arange(self.bins + 1)
+
 
 class InteractiveViewBox(ViewBox):
     def __init__(self, graph, enable_menu=False):
@@ -239,22 +245,60 @@ class OWScatterPlotGraph(OWScatterPlotGraphObs):
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
-    """PyQtGraph's ScatterPlotItem calls updateSpots at any change of sizes/colors/symbols,
-    which then rebuilds the stored pixmaps for each symbol. Because Orange calls
-    set* function in succession, we postpone updateSpots() to paint()."""
+    """
+    Modifies the behaviour of ScatterPlotItem as follows:
 
-    _update_spots_in_paint = False
+    - Add z-index. ScatterPlotItem paints points in order of appearance in
+      self.data. Plotting by z-index is achieved by sorting before calling
+      super().paint() and re-sorting afterwards. Re-sorting (instead of
+      storing the original data) is needed because the inherited paint
+      may modify the data.
+
+    - Prevent multiple calls to updateSpots. ScatterPlotItem calls updateSpots
+      at any change of sizes/colors/symbols, which then rebuilds the stored
+      pixmaps for each symbol. Orange calls set* functions in succession,
+      so we postpone updateSpots() to paint()."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._update_spots_in_paint = False
+        self._z_mapping = None
+        self._inv_mapping = None
+
+    def setZ(self, z):
+        """
+        Set z values for all points.
+
+        Points with higher values are plotted on top of those with lower.
+
+        Args:
+            z (np.ndarray or None): a vector of z values
+        """
+        if z is None:
+            self._z_mapping = self._inv_mapping = None
+        else:
+            assert len(z) == len(self.data)
+            self._z_mapping = np.argsort(z)
+            self._inv_mapping = np.argsort(self._z_mapping)
 
     def updateSpots(self, dataSet=None):  # pylint: disable=unused-argument
         self._update_spots_in_paint = True
         self.update()
 
+    # pylint: disable=arguments-differ
     def paint(self, painter, option, widget=None):
-        if self._update_spots_in_paint:
-            self._update_spots_in_paint = False
-            super().updateSpots()
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-        super().paint(painter, option, widget)
+        try:
+            if self._z_mapping is not None:
+                assert len(self._z_mapping) == len(self.data)
+                self.data = self.data[self._z_mapping]
+            if self._update_spots_in_paint:
+                self._update_spots_in_paint = False
+                super().updateSpots()
+            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+            super().paint(painter, option, widget)
+        finally:
+            if self._inv_mapping is not None:
+                self.data = self.data[self._inv_mapping]
 
 
 def _define_symbols():
@@ -282,6 +326,77 @@ def _make_pen(color, width):
     p = QPen(color, width)
     p.setCosmetic(True)
     return p
+
+
+class AxisItem(pg.AxisItem):
+    """
+    Axis that if needed displays ticks appropriate for time data.
+    """
+
+    _label_width = 80
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._use_time = False
+
+    def use_time(self, enable):
+        """Enables axes to display ticks for time data."""
+        self._use_time = enable
+        self.enableAutoSIPrefix(not enable)
+
+    def tickValues(self, minVal, maxVal, size):
+        """Find appropriate tick locations."""
+        if not self._use_time:
+            return super().tickValues(minVal, maxVal, size)
+
+        # if timezone is not set, then local is used which cause exceptions
+        minVal = max(minVal,
+                     datetime.min.replace(tzinfo=timezone.utc).timestamp() + 1)
+        maxVal = min(maxVal,
+                     datetime.max.replace(tzinfo=timezone.utc).timestamp() - 1)
+        mn, mx = gmtime(minVal), gmtime(maxVal)
+
+        try:
+            bins = _time_binnings(mn, mx, 6, 30)[-1]
+        except (IndexError, ValueError):
+            # cannot handle very large and very small time intervals
+            return super().tickValues(minVal, maxVal, size)
+
+        ticks = bins.thresholds
+
+        max_steps = max(int(size / self._label_width), 1)
+        if len(ticks) > max_steps:
+            # remove some of ticks so that they don't overlap
+            step = int(np.ceil(float(len(ticks)) / max_steps))
+            ticks = ticks[::step]
+
+        spacing = min(b - a for a, b in zip(ticks[:-1], ticks[1:]))
+        return [(spacing, ticks)]
+
+    def tickStrings(self, values, scale, spacing):
+        """Format tick values according to space between them."""
+        if not self._use_time:
+            return super().tickStrings(values, scale, spacing)
+
+        if spacing >= 3600 * 24 * 365:
+            fmt = "%Y"
+        elif spacing >= 3600 * 24 * 28:
+            fmt = "%Y %b"
+        elif spacing >= 3600 * 24:
+            fmt = "%Y %b %d"
+        elif spacing >= 3600:
+            fmt = "%d %Hh"
+        elif spacing >= 60:
+            fmt = "%H:%M"
+        elif spacing >= 1:
+            fmt = "%H:%M:%S"
+        else:
+            fmt = '%S.%f'
+
+        # if timezone is not set, then local timezone is used
+        # which cause exceptions for edge cases
+        return [datetime.fromtimestamp(x, tz=timezone.utc).strftime(fmt)
+                for x in values]
 
 
 class OWScatterPlotBase(gui.OWComponent, QObject):
@@ -406,8 +521,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.subset_is_shown = False
 
         self.view_box = view_box(self)
+        _axis = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
-                                         background="w")
+                                         background="w", axisItems=_axis)
         self.plot_widget.hideAxis("left")
         self.plot_widget.hideAxis("bottom")
         self.plot_widget.getPlotItem().buttonsHidden = True
@@ -504,7 +620,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     def update_jittering(self):
         self.update_tooltip()
         x, y = self.get_coordinates()
-        if x is None or not len(x) or self.scatterplot_item is None:
+        if x is None or len(x) == 0 or self.scatterplot_item is None:
             return
         self._update_plot_coordinates(self.scatterplot_item, x, y)
         self._update_plot_coordinates(self.scatterplot_item_sel, x, y)
@@ -689,7 +805,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
     def _update_plot_coordinates(self, plot, x, y):
         """
-        Change the coordinates of points while keeping other properites
+        Change the coordinates of points while keeping other properites.
+
+        Asserts that the number of points stays the same.
 
         Note. Pyqtgraph does not offer a method for this: setting coordinates
         invalidates other data. We therefore retrieve the data to set it
@@ -699,6 +817,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         update for every property would essentially reset the graph, which
         can be time consuming.
         """
+        assert self.n_shown == len(x) == len(y)
         data = dict(x=x, y=y)
         for prop in ('pen', 'brush', 'size', 'symbol', 'data',
                      'sourceRect', 'targetRect'):
@@ -716,7 +835,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         the complete update by calling `reset_graph` instead of this method.
         """
         x, y = self.get_coordinates()
-        if x is None or not len(x):
+        if x is None or len(x) == 0:
             return
         if self.scatterplot_item is None:
             if self.sample_indices is None:
@@ -869,13 +988,13 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         Returns:
             (tuple): a list of pens and list of brushes
         """
-        self.palette = self.master.get_palette()
         c_data = self.master.get_color_data()
         c_data = self._filter_visible(c_data)
         subset = self.master.get_subset_mask()
         subset = self._filter_visible(subset)
         self.subset_is_shown = subset is not None
         if c_data is None:  # same color
+            self.palette = None
             return self._get_same_colors(subset)
         elif self.master.is_continuous_color():
             return self._get_continuous_colors(c_data, subset)
@@ -915,27 +1034,29 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         except the former is darker. If the data has a subset, the brush
         is transparent for points that are not in the subset.
         """
+        palette = self.master.get_palette()
+
         if np.isnan(c_data).all():
-            self.scale = None
-        else:
-            self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
-            c_data -= self.scale.offset
-            c_data /= self.scale.width
-            c_data = np.floor(c_data) + 0.5
-            c_data /= self.scale.bins
-            c_data = np.clip(c_data, 0, 1)
-        pen = self.palette.getRGB(c_data)
+            self.palette = palette
+            return self._get_continuous_nan_colors(len(c_data))
+
+        self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
+        bins = self.scale.get_bins()
+        self.palette = \
+            colorpalettes.BinnedContinuousPalette.from_palette(palette, bins)
+        colors = self.palette.values_to_colors(c_data)
         brush = np.hstack(
-            [pen, np.full((len(pen), 1), self.alpha_value, dtype=int)])
-        pen *= 100
-        pen //= self.DarkerValue
+            (colors,
+             np.full((len(c_data), 1), self.alpha_value, dtype=np.ubyte)))
+        pen = (colors.astype(dtype=float) * 100 / self.DarkerValue
+               ).astype(np.ubyte)
 
-        # Reuse pens and brushes with the same colors because PyQtGraph then builds
-        # smaller pixmap atlas, which makes the drawing faster
+        # Reuse pens and brushes with the same colors because PyQtGraph then
+        # builds smaller pixmap atlas, which makes the drawing faster
 
-        def reuse(cache, fn, *args):
+        def reuse(cache, fun, *args):
             if args not in cache:
-                cache[args] = fn(args)
+                cache[args] = fun(args)
             return cache[args]
 
         def create_pen(col):
@@ -952,8 +1073,17 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             brush[subset, 3] = 255
 
         cached_brushes = {}
-        brush = np.array([reuse(cached_brushes, create_brush, *col) for col in brush.tolist()])
+        brush = np.array([reuse(cached_brushes, create_brush, *col)
+                          for col in brush.tolist()])
 
+        return pen, brush
+
+    def _get_continuous_nan_colors(self, n):
+        nan_color = QColor(*self.palette.nan_color)
+        nan_pen = _make_pen(nan_color.darker(1.2), 1.5)
+        pen = np.full(n, nan_pen)
+        nan_brush = QBrush(nan_color)
+        brush = np.full(n, nan_brush)
         return pen, brush
 
     def _get_discrete_colors(self, c_data, subset):
@@ -963,32 +1093,28 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         except the former is darker. If the data has a subset, the brush
         is transparent for points that are not in the subset.
         """
-        n_colors = self.palette.number_of_colors
+        self.palette = self.master.get_palette()
         c_data = c_data.copy()
-        c_data[np.isnan(c_data)] = n_colors
+        c_data[np.isnan(c_data)] = len(self.palette)
         c_data = c_data.astype(int)
-        colors = np.r_[self.palette.getRGB(np.arange(n_colors)),
-                       [[128, 128, 128]]]
+        colors = self.palette.qcolors_w_nan
         pens = np.array(
-            [_make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
-             for col in colors])
+            [_make_pen(col.darker(self.DarkerValue), 1.5) for col in colors])
         pen = pens[c_data]
-        alpha = self.alpha_value if subset is None else 255
-        brushes = np.array([
-            [QBrush(QColor(0, 0, 0, 0)),
-             QBrush(QColor(col[0], col[1], col[2], alpha))]
-            for col in colors])
+        if subset is None and self.alpha_value < 255:
+            for col in colors:
+                col.setAlpha(self.alpha_value)
+        brushes = np.array([QBrush(col) for col in colors])
         brush = brushes[c_data]
 
         if subset is not None:
-            brush = np.where(subset, brush[:, 1], brush[:, 0])
-        else:
-            brush = brush[:, 1]
+            black = np.full(len(brush), QBrush(QColor(0, 0, 0, 0)))
+            brush = np.where(subset, brush, black)
         return pen, brush
 
     def update_colors(self):
         """
-        Trigger an update of point sizes
+        Trigger an update of point colors
 
         The method calls `self.get_colors`, which in turn calls the widget's
         `get_color_data` to get the indices in the pallette. `get_colors`
@@ -1000,6 +1126,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             pen_data, brush_data = self.get_colors()
             self.scatterplot_item.setPen(pen_data, update=False, mask=None)
             self.scatterplot_item.setBrush(brush_data, mask=None)
+        self.update_z_values()
         self.update_legends()
         self.update_density()
 
@@ -1017,16 +1144,22 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.plot_widget.removeItem(self.density_img)
             self.density_img = None
         if self.class_density and self.scatterplot_item is not None:
+            c_data = self.master.get_color_data()
+            if c_data is None:
+                return
+            mask = np.isfinite(self._filter_visible(c_data))
+            pens = self.scatterplot_item.data['pen']
             rgb_data = [
                 pen.color().getRgb()[:3] if pen is not None else (255, 255, 255)
-                for pen in self.scatterplot_item.data['pen']]
+                for known, pen in zip(mask, pens)
+                if known]
             if len(set(rgb_data)) <= 1:
                 return
             [min_x, max_x], [min_y, max_y] = self.view_box.viewRange()
             x_data, y_data = self.scatterplot_item.getData()
             self.density_img = classdensity.class_density_image(
                 min_x, max_x, min_y, max_y, self.resolution,
-                x_data, y_data, rgb_data)
+                x_data[mask], y_data[mask], rgb_data)
             self.plot_widget.addItem(self.density_img)
 
     def update_selection_colors(self):
@@ -1044,6 +1177,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         pen, brush = self.get_colors_sel()
         self.scatterplot_item_sel.setPen(pen, update=False, mask=None)
         self.scatterplot_item_sel.setBrush(brush, mask=None)
+        self.update_z_values()
 
     def get_colors_sel(self):
         """
@@ -1067,7 +1201,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                     _make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1),
                     nopen)
             else:
-                palette = ColorPaletteGenerator(number_of_colors=sels + 1)
+                palette = colorpalettes.LimitedDiscretePalette(
+                    number_of_colors=sels + 1)
                 pen = np.choose(
                     self._filter_visible(self.selection),
                     [nopen] + [_make_pen(palette[i], SELECTION_WIDTH + 1)
@@ -1207,6 +1342,52 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.scatterplot_item.setSymbol(shape_data)
         self.update_legends()
 
+    def update_z_values(self):
+        """
+        Set z-values for point in the plot
+
+        The order is as follows:
+        - selected points that are also in the subset on top,
+        - followed by selected points,
+        - followed by points from the subset,
+        - followed by the rest.
+        Within each of these four groups, points are ordered by their colors.
+
+        Points with less frequent colors are above those with more frequent.
+        The points for which the value for the color is missing are at the
+        bottom of their respective group.
+        """
+        if not self.scatterplot_item:
+            return
+
+        subset = self.master.get_subset_mask()
+        c_data = self.master.get_color_data()
+        if subset is None and self.selection is None and c_data is None:
+            self.scatterplot_item.setZ(None)
+            return
+
+        z = np.zeros(self.n_shown)
+
+        if subset is not None:
+            subset = self._filter_visible(subset)
+            z[subset] += 1000
+
+        if self.selection is not None:
+            z[self._filter_visible(self.selection) != 0] += 2000
+
+        if c_data is not None:
+            c_nan = np.isnan(c_data)
+            vis_data = self._filter_visible(c_data)
+            vis_nan = np.isnan(vis_data)
+            z[vis_nan] -= 999
+            if not self.master.is_continuous_color():
+                dist = np.bincount(c_data[~c_nan].astype(int))
+                vis_knowns = vis_data[~vis_nan].astype(int)
+                argdist = np.argsort(dist)
+                z[~vis_nan] -= argdist[vis_knowns]
+
+        self.scatterplot_item.setZ(z)
+
     def update_grid_visibility(self):
         """Show or hide the grid"""
         self.plot_widget.showGrid(x=self.show_grid, y=self.show_grid)
@@ -1282,8 +1463,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             return
         if isinstance(symbols, str):
             symbols = itertools.repeat(symbols, times=len(labels))
-        for i, (label, symbol) in enumerate(zip(labels, symbols)):
-            color = QColor(*self.palette.getRGB(i))
+        colors = self.palette.values_to_colors(np.arange(len(labels)))
+        for color, label, symbol in zip(colors, labels, symbols):
+            color = QColor(*color)
             pen = _make_pen(color.darker(self.DarkerValue), 1.5)
             color.setAlpha(255 if self.subset_is_shown else self.alpha_value)
             brush = QBrush(color)

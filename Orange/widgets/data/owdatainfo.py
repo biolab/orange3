@@ -2,10 +2,9 @@ from collections import OrderedDict
 import threading
 import textwrap
 
-from AnyQt.QtWidgets import QLayout
-
 from Orange.widgets import widget, gui
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input
 from Orange.data.table import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
@@ -30,6 +29,7 @@ class OWDataInfo(widget.OWWidget):
         data = Input("Data", Table)
 
     want_main_area = False
+    resizing_enabled = False
 
     def __init__(self):
         super().__init__()
@@ -43,6 +43,8 @@ class OWDataInfo(widget.OWWidget):
                           addSpace=False and box != "Meta Attributes")
             gui.label(bo, self, "%%(%s)s" % name)
 
+        self.info.set_input_summary(self.info.NoInput)
+
         # ensure the widget has some decent minimum width.
         self.targets = "Categorical outcome with 123 values"
         self.layout().activate()
@@ -52,14 +54,14 @@ class OWDataInfo(widget.OWWidget):
         # override any minimum/fixed size set on `self`).
         self.targets = ""
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
-        self.layout().setSizeConstraint(QLayout.SetFixedSize)
-
 
     @Inputs.data
     def data(self, data):
         if data is None:
             self._clear_fields()
+            self.info.set_input_summary(self.info.NoInput)
         else:
+            self.info.set_input_summary(len(data), format_summary_details(data))
             self._set_fields(data)
             self._set_report(data)
 

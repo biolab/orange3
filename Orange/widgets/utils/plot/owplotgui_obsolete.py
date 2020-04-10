@@ -663,7 +663,7 @@ class OWPlotGUI:
     def _combo(self, widget, value, label, cb_name, items=(), model=None):
         gui.comboBox(widget, self._plot, value, label=label, items=items,
                      model=model, callback=self._get_callback(cb_name),
-                     labelWidth=50, orientation=Qt.Horizontal, valueType=str,
+                     labelWidth=50, orientation=Qt.Horizontal,
                      sendSelectedValue=True, contentsLength=12)
 
     def color_value_combo(self, widget):
@@ -857,7 +857,7 @@ class OWPlotGUI:
 
     def theme_combo_box(self, widget):
         c = gui.comboBox(widget, self._plot, "theme_name", "Theme",
-                         callback=self._plot.update_theme, sendSelectedValue=1, valueType=str)
+                         callback=self._plot.update_theme, sendSelectedValue=1)
         c.addItem('Default')
         c.addItem('Light')
         c.addItem('Dark')

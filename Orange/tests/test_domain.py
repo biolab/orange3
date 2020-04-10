@@ -22,13 +22,13 @@ from Orange.util import OrangeDeprecationWarning
 def create_domain(*ss):
     vars = dict(
         age=ContinuousVariable(name="AGE"),
-        gender=DiscreteVariable(name="Gender", values=["M", "F"]),
+        gender=DiscreteVariable(name="Gender", values=("M", "F")),
         incomeA=ContinuousVariable(name="incomeA"),
         income=ContinuousVariable(name="income"),
-        education=DiscreteVariable(name="education", values=["GS", "HS", "C"]),
+        education=DiscreteVariable(name="education", values=("GS", "HS", "C")),
         ssn=StringVariable(name="SSN"),
         race=DiscreteVariable(name="race",
-                              values=["White", "Hypsanic", "African", "Other"]),
+                              values=("White", "Hypsanic", "African", "Other")),
         arrival=TimeVariable("arrival"))
 
     def map_vars(s):
@@ -390,7 +390,7 @@ class TestDomainInit(unittest.TestCase):
                 (d, f, [1], [-2, 2], [0, 2, -1]),
                 (f, g, [], [], [-1, 0, -3]),
                 (g, h, [-2], [None, compute_value], [-1, compute_value, -3])):
-            to_domain = domain.get_conversion(conver)
+            to_domain = DomainConversion(conver, domain)
             self.assertIs(to_domain.source, conver)
             self.assertEqual(to_domain.attributes, attr)
             self.assertEqual(to_domain.class_vars, class_vars)
@@ -511,7 +511,7 @@ class TestDomainInit(unittest.TestCase):
                 ContinuousVariable(name='b'),
                 ContinuousVariable(name='c'),
             ],
-            class_vars=[DiscreteVariable('d', values=['e'])],
+            class_vars=[DiscreteVariable('d', values=('e', ))],
             metas=[StringVariable('f')]
         )
 

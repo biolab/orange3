@@ -7,7 +7,7 @@ source =
     Orange
 omit =
     Orange/canvas/*
-    Orange/tests/*
+    */tests/*
     */setup.py
     */*/setup.py
 
@@ -19,3 +19,4 @@ exclude_lines =
     except MemoryError
     assert False
     raise AssertionError
+    if (typing\.)?TYPE_CHECKING:

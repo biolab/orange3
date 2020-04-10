@@ -1,29 +1,15 @@
 import sklearn.svm as skl_svm
 
-from Orange.base import SklLearner as SklLearnerBase
 from Orange.classification import SklLearner, SklModel
-from Orange.data import Domain
 from Orange.preprocess import AdaptiveNormalize
 
-__all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner",
-           "OneClassSVMLearner"]
+__all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner"]
 
 svm_pps = SklLearner.preprocessors + [AdaptiveNormalize()]
 
 
-class SVMClassifier(SklModel):
-
-    def predict(self, X):
-        value = self.skl_model.predict(X)
-        if self.skl_model.probability:
-            prob = self.skl_model.predict_proba(X)
-            return value, prob
-        return value
-
-
 class SVMLearner(SklLearner):
     __wraps__ = skl_svm.SVC
-    __returns__ = SVMClassifier
     preprocessors = svm_pps
 
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma="auto",
@@ -66,27 +52,6 @@ class NuSVMLearner(SklLearner):
                  max_iter=-1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-
-
-class OneClassSVMLearner(SklLearnerBase):
-    __wraps__ = skl_svm.OneClassSVM
-    preprocessors = svm_pps
-
-    def __init__(self, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
-                 tol=0.001, nu=0.5, shrinking=True, cache_size=200,
-                 max_iter=-1, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.params = vars()
-
-    def __call__(self, data):
-        classless_data = data.transform(Domain(data.domain.attributes))
-        return super().__call__(classless_data)
-
-    def fit(self, X, Y=None, W=None):
-        clf = self.__wraps__(**self.params)
-        if W is not None:
-            return self.__returns__(clf.fit(X, W.reshape(-1)))
-        return self.__returns__(clf.fit(X))
 
 
 if __name__ == '__main__':

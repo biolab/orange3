@@ -397,27 +397,6 @@ class Domain:
     def has_time_class(self):
         return bool(self.class_var and self.class_var.is_time)
 
-    def get_conversion(self, source):
-        """
-        Return an instance of :class:`DomainConversion` for conversion from the
-        given source domain to this domain. Domain conversions are cached to
-        speed-up the conversion in the common case in which the domain
-        is based on another domain, for instance, when the domain contains
-        discretized variables from another domain.
-
-        :param source: the source domain
-        :type source: Orange.data.Domain
-        """
-        # the method is thread-safe
-        c = self._last_conversion
-        if c and c.source is source:
-            return c
-        c = self._known_domains.get(source, None)
-        if not c:
-            c = DomainConversion(source, self)
-            self._known_domains[source] = self._last_conversion = c
-        return c
-
     # noinspection PyProtectedMember
     def convert(self, inst):
         """
@@ -431,7 +410,7 @@ class Domain:
         if isinstance(inst, Instance):
             if inst.domain == self:
                 return inst._x, inst._y, inst._metas
-            c = self.get_conversion(inst.domain)
+            c = DomainConversion(inst.domain, self)
             l = len(inst.domain.attributes)
             values = [(inst._x[i] if 0 <= i < l
                        else inst._y[i - l] if i >= l

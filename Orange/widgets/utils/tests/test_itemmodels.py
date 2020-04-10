@@ -7,15 +7,18 @@ from unittest.mock import patch
 import numpy as np
 
 from AnyQt.QtCore import Qt, QModelIndex
+from AnyQt.QtTest import QSignalSpy
 
 from Orange.data import \
     Domain, \
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.itemmodels import \
     AbstractSortTableModel, PyTableModel,\
-    PyListModel, VariableListModel, DomainModel,\
+    PyListModel, VariableListModel, DomainModel, ContinuousPalettesModel, \
     _as_contiguous_range
 from Orange.widgets.gui import TableVariable
+from orangewidget.tests.base import GuiTest
 
 
 class TestUtils(unittest.TestCase):
@@ -38,6 +41,14 @@ class TestPyTableModel(unittest.TestCase):
     def test_init(self):
         self.model = PyTableModel()
         self.assertEqual(self.model.rowCount(), 0)
+
+    def test_init_wrap_empty(self):
+        # pylint: disable=protected-access
+        t = []
+        model = PyTableModel(t)
+        self.assertIs(model._table, t)
+        t.append([1, 2, 3])
+        self.assertEqual(list(model), [[1, 2, 3]])
 
     def test_rowCount(self):
         self.assertEqual(self.model.rowCount(), 2)
@@ -120,6 +131,40 @@ class TestPyTableModel(unittest.TestCase):
         self.assertTrue(Qt.AlignCenter &
                         self.model.data(self.model.index(1, 0),
                                         Qt.TextAlignmentRole))
+
+    def test_set_iten_slice(self):
+        self.model[:1] = [[10, 11], [12, 13], [14, 15]]
+        self.assertEqual(list(self.model), [[10, 11], [12, 13], [14, 15], [2, 3]])
+
+        self.model[1:3] = []
+        self.assertEqual(list(self.model), [[10, 11], [2, 3]])
+
+        self.model[:] = [[20, 21]]
+        self.assertEqual(list(self.model), [[20, 21]])
+
+        self.model[1:] = [[10, 11], [2, 3]]
+        self.assertEqual(list(self.model), [[20, 21], [10, 11], [2, 3]])
+
+    def test_emits_column_changes_on_row_insert(self):
+        inserted = []
+        removed = []
+        model = PyTableModel()
+        model.columnsInserted.connect(inserted.append)
+        model.columnsRemoved.connect(removed.append)
+        inserted = QSignalSpy(model.columnsInserted)
+        removed = QSignalSpy(model.columnsRemoved)
+        model.append([2])
+        self.assertEqual(list(inserted)[-1][1:], [0, 0])
+        model.append([2, 3])
+        self.assertEqual(list(inserted)[-1][1:], [1, 1])
+        del model[:]
+        self.assertEqual(list(removed)[0][1:], [0, 1])
+        model.extend([[0, 1], [0, 2]])
+        self.assertEqual(list(inserted)[-1][1:], [0, 1])
+        model.clear()
+        self.assertEqual(list(removed)[0][1:], [0, 1])
+        model[:] = [[1], [2]]
+        self.assertEqual(list(inserted)[-1][1:], [0, 0])
 
 
 class TestVariableListModel(unittest.TestCase):
@@ -334,6 +379,106 @@ class TestDomainModel(unittest.TestCase):
         self.assertSequenceEqual(model, domain)
         self.assertFalse(model.removeRows(0, 1))
         self.assertSequenceEqual(model, domain)
+
+
+class TestContinuousPalettesModel(GuiTest):
+    def setUp(self):
+        self.palette1, self.palette2 = \
+            list(colorpalettes.ContinuousPalettes.values())[:2]
+
+    def test_all_categories(self):
+        model = ContinuousPalettesModel()
+        shown = {palette.name for palette in model.items
+                 if isinstance(palette, colorpalettes.Palette)}
+        expected = {palette.name
+                    for palette in colorpalettes.ContinuousPalettes.values()}
+        self.assertEqual(expected, shown)
+
+        shown = {name for name in model.items if isinstance(name, str)}
+        expected = {palette.category
+                    for palette in colorpalettes.ContinuousPalettes.values()}
+        self.assertEqual(expected, shown)
+
+    def test_category_selection(self):
+        categories = ('Diverging', 'Linear')
+        model = ContinuousPalettesModel(categories=categories)
+        shown = {palette.name
+                 for palette in model.items
+                 if isinstance(palette, colorpalettes.Palette)}
+        expected = {palette.name
+                    for palette in colorpalettes.ContinuousPalettes.values()
+                    if palette.category in categories}
+        self.assertEqual(expected, shown)
+        self.assertIn("Diverging", model.items)
+        self.assertIn("Linear", model.items)
+
+    def test_single_category(self):
+        category = 'Diverging'
+        model = ContinuousPalettesModel(categories=(category, ))
+        shown = {palette.name
+                 for palette in model.items
+                 if isinstance(palette, colorpalettes.Palette)}
+        expected = {palette.name
+                    for palette in colorpalettes.ContinuousPalettes.values()
+                    if palette.category == category}
+        self.assertEqual(expected, shown)
+        self.assertEqual(len(model.items), len(shown))
+
+    def test_count(self):
+        model = ContinuousPalettesModel()
+        model.items = [self.palette1, self.palette1]
+        self.assertEqual(model.rowCount(QModelIndex()), 2)
+        self.assertEqual(model.columnCount(QModelIndex()), 1)
+
+    def test_data(self):
+        model = ContinuousPalettesModel()
+        model.items = ["Palettes", self.palette1, self.palette2]
+        data = model.data
+        index = model.index
+
+        self.assertEqual(data(index(0, 0), Qt.EditRole), "Palettes")
+        self.assertEqual(data(index(1, 0), Qt.EditRole),
+                         self.palette1.friendly_name)
+        self.assertEqual(data(index(2, 0), Qt.EditRole),
+                         self.palette2.friendly_name)
+
+        self.assertEqual(data(index(0, 0), Qt.DisplayRole), "Palettes")
+        self.assertEqual(data(index(1, 0), Qt.DisplayRole),
+                         self.palette1.friendly_name)
+        self.assertEqual(data(index(2, 0), Qt.DisplayRole),
+                         self.palette2.friendly_name)
+
+        self.assertIsNone(data(index(0, 0), Qt.DecorationRole))
+        with patch.object(self.palette1, "color_strip") as color_strip:
+            self.assertIs(data(index(1, 0), Qt.DecorationRole),
+                          color_strip.return_value)
+        with patch.object(self.palette2, "color_strip") as color_strip:
+            self.assertIs(data(index(2, 0), Qt.DecorationRole),
+                          color_strip.return_value)
+
+        self.assertIsNone(data(index(0, 0), Qt.UserRole))
+        self.assertIs(data(index(1, 0), Qt.UserRole), self.palette1)
+        self.assertIs(data(index(2, 0), Qt.UserRole), self.palette2)
+
+        self.assertIsNone(data(index(2, 0), Qt.FontRole))
+
+    def test_select_flags(self):
+        model = ContinuousPalettesModel()
+        model.items = ["Palettes", self.palette1, self.palette2]
+        self.assertFalse(model.flags(model.index(0, 0)) & Qt.ItemIsSelectable)
+        self.assertTrue(model.flags(model.index(1, 0)) & Qt.ItemIsSelectable)
+        self.assertTrue(model.flags(model.index(2, 0)) & Qt.ItemIsSelectable)
+
+    def testIndexOf(self):
+        model = ContinuousPalettesModel()
+        model.items = ["Palettes", self.palette1, self.palette2]
+        self.assertEqual(model.indexOf(self.palette1), 1)
+        self.assertEqual(model.indexOf(self.palette1.name), 1)
+        self.assertEqual(model.indexOf(self.palette1.friendly_name), 1)
+        self.assertEqual(model.indexOf(self.palette2), 2)
+        self.assertEqual(model.indexOf(self.palette2.name), 2)
+        self.assertEqual(model.indexOf(self.palette2.friendly_name), 2)
+        self.assertIsNone(model.indexOf(42))
 
 
 if __name__ == "__main__":

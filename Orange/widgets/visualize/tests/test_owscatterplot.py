@@ -8,12 +8,14 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 from AnyQt.QtGui import QColor
 
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import (
+    Table, Domain, ContinuousVariable, DiscreteVariable, TimeVariable
+)
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.utils.colorpalette import DefaultRGBColors
+from Orange.widgets.utils.colorpalettes import DefaultRGBColors
 from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
 from Orange.widgets.visualize.utils.widget import MAX_COLORS
@@ -196,7 +198,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         np.testing.assert_equal(selected_groups(), np.zeros(5))
         sel_column[:5] = 1
         np.testing.assert_equal(annotated(), sel_column)
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes", ))
 
         # Shift-select 5:10; now we have groups 0:5 and 5:10
         with self.modifiers(Qt.ShiftModifier):
@@ -215,7 +217,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         sel_column[15:20] = 1
         np.testing.assert_equal(selectedx(), x[15:20])
         np.testing.assert_equal(selected_groups(), np.zeros(5))
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes"))
 
         # Alt-select (remove) 10:17; we have 17:20
         with self.modifiers(Qt.AltModifier):
@@ -224,7 +226,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         np.testing.assert_equal(selected_groups(), np.zeros(3))
         sel_column[15:17] = 0
         np.testing.assert_equal(annotated(), sel_column)
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes"))
 
         # Ctrl-Shift-select (add-to-last) 10:17; we have 17:25
         with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
@@ -233,7 +235,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         np.testing.assert_equal(selected_groups(), np.zeros(8))
         sel_column[20:25] = 1
         np.testing.assert_equal(annotated(), sel_column)
-        self.assertEqual(annotations(), ["No", "Yes"])
+        self.assertEqual(annotations(), ("No", "Yes"))
 
         # Shift-select (add) 30:35; we have 17:25, 30:35
         with self.modifiers(Qt.ShiftModifier):
@@ -393,7 +395,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data2 = Table("iris")[::30]
         data2.Y[:] = np.nan
         domain = Domain(
-            attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=[]))
+            attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=()))
         data2 = Table(domain, data2.X, Y=data2.Y)
         data3 = Table("iris")[::30]
         data3.Y[:] = np.nan
@@ -432,7 +434,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                          ContinuousVariable("c2"),
                          ContinuousVariable("c3"),
                          ContinuousVariable("c4")],
-                        DiscreteVariable("cls", values=["a", "b"]))
+                        DiscreteVariable("cls", values=("a", "b")))
         X = np.zeros((10, 4))
         table = Table(domain, X, np.random.randint(2, size=10))
         self.send_signal(self.widget.Inputs.data, table)
@@ -458,7 +460,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                          ContinuousVariable("c2"),
                          ContinuousVariable("c3"),
                          ContinuousVariable("c4")],
-                        DiscreteVariable("cls", values=["a", "b"]))
+                        DiscreteVariable("cls", values=("a", "b")))
         table = Table(domain, np.random.random((10, 4)), np.full(10, np.nan))
         self.send_signal(self.widget.Inputs.data, table)
         self.assertFalse(self.widget.vizrank_button.isEnabled())
@@ -835,13 +837,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertEqual(line1.pos().y(), 0)
         self.assertEqual(line1.angle, 45)
-        self.assertEqual(line1.pen.color().getRgb()[:3], graph.palette[0])
+        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb()[:3], graph.palette[1])
+        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
 
         graph.orthonormal_regression = True
         graph.update_regression_line()
@@ -849,14 +851,14 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         line1 = graph.reg_line_items[1]
         self.assertEqual(line1.pos().x(), 0)
         self.assertAlmostEqual(line1.pos().y(), -0.6180339887498949)
-        self.assertEqual(line1.angle, 58.28252558853899)
-        self.assertEqual(line1.pen.color().getRgb()[:3], graph.palette[0])
+        self.assertAlmostEqual(line1.angle, 58.28252558853899)
+        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb()[:3], graph.palette[1])
+        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
 
     def test_orthonormal_line(self):
         color = QColor(1, 2, 3)
@@ -866,7 +868,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             np.array([0, 1, 1, 2]), np.array([0, 0, 2, 2]), color, width)
         self.assertEqual(line.pos().x(), 0)
         self.assertAlmostEqual(line.pos().y(), -0.6180339887498949)
-        self.assertEqual(line.angle, 58.28252558853899)
+        self.assertAlmostEqual(line.angle, 58.28252558853899)
         self.assertEqual(line.pen.color(), color)
         self.assertEqual(line.pen.width(), width)
 
@@ -1073,6 +1075,31 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         simulate.combobox_activate_index(self.widget.controls.attr_x, 3)
         urline.assert_called_once()
         urline.reset_mock()
+
+    def test_time_axis(self):
+        a = np.array([[1581953776, 1], [1581963776, 2], [1582953776, 3]])
+        d1 = Domain([ContinuousVariable("time"), ContinuousVariable("value")])
+        data = Table.from_numpy(d1, a)
+        d2 = Domain([TimeVariable("time"), ContinuousVariable("value")])
+        data_time = Table.from_numpy(d2, a)
+
+        x_axis = self.widget.graph.plot_widget.plotItem.getAxis("bottom")
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(x_axis._use_time)
+        _ticks = x_axis.tickValues(1581953776, 1582953776, 1000)
+        ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
+        try:
+            float(ticks[0])
+        except ValueError:
+            self.fail("axis should display floats")
+
+        self.send_signal(self.widget.Inputs.data, data_time)
+        self.assertTrue(x_axis._use_time)
+        _ticks = x_axis.tickValues(1581953776, 1582953776, 1000)
+        ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
+        with self.assertRaises(ValueError):
+            float(ticks[0])
 
 
 if __name__ == "__main__":

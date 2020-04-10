@@ -1,0 +1,32 @@
+name: Windows workflow
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: False
+      matrix:
+        python: [3.6, 3.7]
+        os: [windows-2016]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install Tox
+        run: pip install tox
+
+      - name: Run Tox
+        run: tox -e py

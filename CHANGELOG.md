@@ -6,6 +6,113 @@ Change Log
 * ...
 
 
+[3.25.0] - 2020-04-10
+--------------------
+##### Enhancements
+* Searchable combo boxes in all evaluate widgets ([#4564](../../pull/4564))
+* Searchable combo boxes in all visualize widgets ([#4563](../../pull/4563))
+* Searchable combo boxes in all unsupervised widgets ([#4565](../../pull/4565))
+* Projections keep colors after merging values ([#4577](../../pull/4577))
+* Distance Map: Add a color map legend ([#4593](../../pull/4593))
+* Orange.misc.environ config ([#4576](../../pull/4576))
+* Searchable combo boxes in all data widgets ([#4562](../../pull/4562))
+* Fix printing values with too few decimals ([#4575](../../pull/4575))
+* Scatter Plot: Replace combo box with search combo box ([#4447](../../pull/4447))
+* Save widgets: Store paths relative to workflow directory ([#4532](../../pull/4532))
+* Edit Domain: Option to merge less frequent values ([#4477](../../pull/4477))
+* Load Model: Use paths relative to workflow file ([#4534](../../pull/4534))
+* Ignore missing values in density plots of projections ([#4525](../../pull/4525))
+* Impose a sensible z-order to points in projections  ([#4504](../../pull/4504))
+* Use Github actions as a new CI system. ([#4482](../../pull/4482))
+* Testing with Tox ([#4481](../../pull/4481))
+* Add row side color annotations ([#4443](../../pull/4443))
+* Outliers: Offload work onto separate thread ([#4412](../../pull/4412))
+* OWScatterPlot: axis displays time specific labels for time variable ([#4434](../../pull/4434))
+* Predictions: Update splitter on resize ([#4433](../../pull/4433))
+* Import openTSNE lazily for faster loading of Orange ([#4424](../../pull/4424))
+* Silhouette Plot: Always output scores ([#4423](../../pull/4423))
+* Heatmap: Tighter layout ([#4390](../../pull/4390))
+* Reorganize continuous palettes ([#4305](../../pull/4305))
+* Outliers: Save model into compute_value ([#4372](../../pull/4372))
+* Allow concurrent transformation of tables into new domains ([#4363](../../pull/4363))
+* Test & Score: Add comparison of models ([#4261](../../pull/4261))
+* Outliers: Widget upgrade ([#4338](../../pull/4338))
+* Concatenate: data info displayed in the status bar ([#4617](../../pull/4617))
+* Distributions: data info displayed in the status bar ([#4627](../../pull/4627))
+* MergeData: data info displayed in the status bar ([#4592](../../pull/4592))
+* Neighbors: data info displayed in the status bar ([#4612](../../pull/4612))
+* SelectByDataIndex: data info displayed in the status bar ([#4595](../../pull/4595))
+* OWOutliers: Data info displayed in the status bar ([#4547](../../pull/4547))
+* OWDataProjectionWidget: Upgrade status bar data info ([#4544](../../pull/4544))
+* Heatmap: Restore ability to cluster larger datasets ([#4290](../../pull/4290))
+* OWImpute: Data info displayed in the status bar ([#4499](../../pull/4499))
+* OWFile: Data info displayed in the status bar ([#4506](../../pull/4506))
+* OWCSVImport: Data info displayed in the status bar ([#4509](../../pull/4509))
+* OWDatasets: Data info displayed in the status bar ([#4512](../../pull/4512))
+* OWDataInfo: Data info displayed in the status bar ([#4513](../../pull/4513))
+* OWSave: Data info displayed in the status bar ([#4505](../../pull/4505))
+* OWPurgeDomain: Data info displayed in the status bar ([#4502](../../pull/4502))
+* OWColor: Data info displayed in the status bar ([#4501](../../pull/4501))
+* OWRandomize: Data info displayed in the status bar ([#4498](../../pull/4498))
+* OWPivotTable: Data info displayed in the status bar ([#4472](../../pull/4472))
+* OWContinuize: Data info displayed in the status bar ([#4494](../../pull/4494))
+* OWFeatureConstructor: Data info displayed in the status bar ([#4496](../../pull/4496))
+* OWSelectRows: Data info displayed in the status bar ([#4471](../../pull/4471))
+* OWDiscretize: Data info displayed in the status bar ([#4495](../../pull/4495))
+* OWDataSampler: Data info displayed in the status bar ([#4492](../../pull/4492))
+* OWRank: Data info displayed in the status bar ([#4473](../../pull/4473))
+* OWContinuize: Provide the same options as in Preprocess/Normalize ([#4466](../../pull/4466))
+* OWCorrelations: Data info displayed in the status bar ([#4455](../../pull/4455))
+* OWEditDomain: Data info displayed in the status bar ([#4456](../../pull/4456))
+* OWSelectColumns: Data info displayed in the status bar ([#4454](../../pull/4454))
+* OWTranspose: Data info displayed in the status bar ([#4413](../../pull/4413))
+* OWFeatureStatistics: data info displayed in the status bar ([#4409](../../pull/4409))
+* OWPreporcess: Data info displayed in the status bar ([#4414](../../pull/4414))
+
+##### Bugfixes
+* Edit Domain: Fix merge values when missing data ([#4636](../../pull/4636))
+* Table: Send correct output when switching between tabs ([#4619](../../pull/4619))
+* Give created QGraphicsScenes a parent ([#4352](../../pull/4352))
+* Fix dimensionality of probabilities from values ([#4629](../../pull/4629))
+* PyTableModel: Allow wrapping empty lists ([#4631](../../pull/4631))
+* Edit Domain: Improve Text/Categorical to Time conversion ([#4601](../../pull/4601))
+* colorpalettes: fix BinnedContinuousPalette color assignments ([#4609](../../pull/4609))
+* Classification models output correct shapes ([#4602](../../pull/4602))
+* owtestandscore: Add cancelled tasks to dispose queue ([#4615](../../pull/4615))
+* Nomogram: Fix crash on Python 3.8 ([#4591](../../pull/4591))
+* K-means slowness ([#4541](../../pull/4541))
+* Use new access token in cleanup workflow ([#4590](../../pull/4590))
+* Detect duplicate names of variables in projections. ([#4550](../../pull/4550))
+* Paint Data: Send correct output after clicking Reset to Input ([#4551](../../pull/4551))
+* TimeVariable.parse: Do not modify _ISO_FORMATS ([#4539](../../pull/4539))
+* heatmap: Ensure minimim size for color annotations ([#4519](../../pull/4519))
+* OWEditDomain: Clear editor when data is disconnected ([#4484](../../pull/4484))
+* ContinuousPalettesModel: Disable 'category' items via `flags` ([#4538](../../pull/4538))
+* utils/image: Return early when image is empty ([#4520](../../pull/4520))
+* graphicstextlist: Use integer font metrics again ([#4524](../../pull/4524))
+* Concatenate: Fix wrong merging of categorical features ([#4425](../../pull/4425))
+* Ensure unique var names in file ([#4431](../../pull/4431))
+* Rank: Fix error with Random forest ([#4457](../../pull/4457))
+* owhierclustering: Update the scene's sceneRect ([#4459](../../pull/4459))
+* Venn Diagram is slow for big datasets ([#4400](../../pull/4400))
+* Fix missing values after purging unused values ([#4432](../../pull/4432))
+* File: Construct unique column names. ([#4420](../../pull/4420))
+* format_summary_details: Replace 'features' with 'variables' ([#4419](../../pull/4419))
+* Feature Constructor: Catch exceptions ([#4401](../../pull/4401))
+* Continuize: Disable normalizing sparse data ([#4379](../../pull/4379))
+* Python script serialization state ([#4345](../../pull/4345))
+* DataProjectionWidget: Update combos on new data ([#4405](../../pull/4405))
+* DataProjectionWidget: attribute Selected ([#4393](../../pull/4393))
+* Fix slow clear/delete in 'Heat Map' 'Hier. Clustering', 'Distance Map' ([#4365](../../pull/4365))
+* Explicitly define the protocol version for pickling ([#4388](../../pull/4388))
+* Table.from_table: fix caching with reused ids  ([#4370](../../pull/4370))
+* FeatureStatistics: Convert selected rows to list ([#4375](../../pull/4375))
+* Error message on tSNE with one variable ([#4364](../../pull/4364))
+* Normalize: Integer variable representation ([#4350](../../pull/4350))
+* DendrogramWidget: Remove event filters before removing items ([#4361](../../pull/4361))
+* Round bhattacharayya ([#4340](../../pull/4340))
+
+
 [3.24.1] - 2020-01-17
 --------------------
 ##### Enhancements
@@ -1269,10 +1376,11 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.24.1...HEAD
-[3.24.1]: https://github.com/biolab/orange3/compare/3.24.1...3.24.0
-[3.24.0]: https://github.com/biolab/orange3/compare/3.24.0...3.23.1
-[3.23.1]: https://github.com/biolab/orange3/compare/3.23.1...3.23.0
+[next]: https://github.com/biolab/orange3/compare/3.25.0...HEAD
+[3.25.0]: https://github.com/biolab/orange3/compare/3.24.1...3.25.0
+[3.24.1]: https://github.com/biolab/orange3/compare/3.24.0...3.24.1
+[3.24.0]: https://github.com/biolab/orange3/compare/3.23.1...3.24.0
+[3.23.1]: https://github.com/biolab/orange3/compare/3.23.0...3.23.1
 [3.23.0]: https://github.com/biolab/orange3/compare/3.22.0...3.23.0
 [3.22.0]: https://github.com/biolab/orange3/compare/3.21.0...3.22.0
 [3.21.0]: https://github.com/biolab/orange3/compare/3.20.1...3.21.0

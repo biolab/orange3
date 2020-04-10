@@ -8,6 +8,8 @@ from functools import reduce
 from collections import defaultdict
 from unittest.mock import patch
 
+from typing import Optional, List, TYPE_CHECKING
+
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
@@ -17,7 +19,7 @@ from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
 )
-from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel
+from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize
 
 from Orange.data import Table
 from Orange.base import Learner, Model
@@ -27,6 +29,9 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
+
+if TYPE_CHECKING:
+    from typing_extensions import TypedDict
 
 __all__ = ["OWPythonScript"]
 
@@ -339,10 +344,17 @@ class Script:
         self.flags = flags
         self.filename = filename
 
+    def asdict(self) -> '_ScriptData':
+        return dict(name=self.name, script=self.script, filename=self.filename)
+
+    @classmethod
+    def fromdict(cls, state: '_ScriptData') -> 'Script':
+        return Script(state["name"], state["script"], filename=state["filename"])
+
 
 class ScriptItemDelegate(QStyledItemDelegate):
-    @staticmethod
-    def displayText(script, _locale):
+    # pylint: disable=no-self-use
+    def displayText(self, script, _locale):
         if script.flags & Script.Modified:
             return "*" + script.name
         else:
@@ -357,17 +369,14 @@ class ScriptItemDelegate(QStyledItemDelegate):
             option.palette.setColor(QPalette.Highlight, QColor(Qt.darkRed))
         super().paint(painter, option, index)
 
-    @staticmethod
-    def createEditor(parent, _option, _index):
+    def createEditor(self, parent, _option, _index):
         return QLineEdit(parent)
 
-    @staticmethod
-    def setEditorData(editor, index):
+    def setEditorData(self, editor, index):
         script = index.data(Qt.DisplayRole)
         editor.setText(script.name)
 
-    @staticmethod
-    def setModelData(editor, model, index):
+    def setModelData(self, editor, model, index):
         model[index.row()].name = str(editor.text())
 
 
@@ -378,6 +387,13 @@ def select_row(view, row):
     selmodel = view.selectionModel()
     selmodel.select(view.model().index(row, 0),
                     QItemSelectionModel.ClearAndSelect)
+
+
+if TYPE_CHECKING:
+    # pylint: disable=used-before-assignment
+    _ScriptData = TypedDict("_ScriptData", {
+        "name": str, "script": str, "filename": Optional[str]
+    })
 
 
 class OWPythonScript(OWWidget):
@@ -405,13 +421,15 @@ class OWPythonScript(OWWidget):
 
     signal_names = ("data", "learner", "classifier", "object")
 
-    libraryListSource: list
-
-    libraryListSource = \
-        Setting([Script("Hello world", "print('Hello world')\n")])
+    settings_version = 2
+    scriptLibrary: 'List[_ScriptData]' = Setting([{
+        "name": "Hello world",
+        "script": "print('Hello world')\n",
+        "filename": None
+    }])
     currentScriptIndex = Setting(0)
-    scriptText = Setting(None, schema_only=True)
-    splitterState = Setting(None)
+    scriptText: Optional[str] = Setting(None, schema_only=True)
+    splitterState: Optional[bytes] = Setting(None)
 
     # Widgets in the same schema share namespace through a dictionary whose
     # key is self.signalManager. ales-erjavec expressed concern (and I fully
@@ -426,12 +444,10 @@ class OWPythonScript(OWWidget):
 
     def __init__(self):
         super().__init__()
+        self.libraryListSource = []
 
         for name in self.signal_names:
             setattr(self, name, {})
-
-        for s in self.libraryListSource:
-            s.flags = 0
 
         self._cachedDocuments = {}
 
@@ -544,31 +560,34 @@ class OWPythonScript(OWWidget):
         self.console.document().setDefaultFont(QFont(defaultFont))
         self.consoleBox.setAlignment(Qt.AlignBottom)
         self.console.setTabStopWidth(4)
+        self.splitCanvas.setSizes([2, 1])
+        self.setAcceptDrops(True)
+        self.controlArea.layout().addStretch(10)
 
+        self._restoreState()
+        self.settingsAboutToBePacked.connect(self._saveState)
+
+    def sizeHint(self) -> QSize:
+        return super().sizeHint().expandedTo(QSize(800, 600))
+
+    def _restoreState(self):
+        self.libraryListSource = [Script.fromdict(s) for s in self.scriptLibrary]
+        self.libraryList.wrap(self.libraryListSource)
         select_row(self.libraryView, self.currentScriptIndex)
 
-        self.restoreScriptText()
-        self.settingsAboutToBePacked.connect(self.saveScriptText)
-
-        self.splitCanvas.setSizes([2, 1])
-        if self.splitterState is not None:
-            self.splitCanvas.restoreState(QByteArray(self.splitterState))
-
-        self.setAcceptDrops(True)
-
-        self.splitCanvas.splitterMoved[int, int].connect(self.onSpliterMoved)
-        self.controlArea.layout().addStretch(1)
-        self.resize(800, 600)
-
-    def restoreScriptText(self):
         if self.scriptText is not None:
             current = self.text.toPlainText()
             # do not mark scripts as modified
             if self.scriptText != current:
                 self.text.document().setPlainText(self.scriptText)
 
-    def saveScriptText(self):
+        if self.splitterState is not None:
+            self.splitCanvas.restoreState(QByteArray(self.splitterState))
+
+    def _saveState(self):
+        self.scriptLibrary = [s.asdict() for s in self.libraryListSource]
         self.scriptText = self.text.toPlainText()
+        self.splitterState = bytes(self.splitCanvas.saveState())
 
     def handle_input(self, obj, sig_id, signal):
         sig_id = sig_id[0]
@@ -675,9 +694,6 @@ class OWPythonScript(OWWidget):
             self.libraryList[index].flags = Script.Modified if modified else 0
             self.libraryList.emitDataChanged(index)
 
-    def onSpliterMoved(self, _pos, _ind):
-        self.splitterState = bytes(self.splitCanvas.saveState())
-
     def restoreSaved(self):
         index = self.selectedScriptIndex()
         if index is not None:
@@ -748,8 +764,7 @@ class OWPythonScript(OWWidget):
                 out_var = None
             getattr(self.Outputs, signal).send(out_var)
 
-    @staticmethod
-    def dragEnterEvent(event):
+    def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()
         if urls:
             # try reading the file as text
@@ -762,6 +777,14 @@ class OWPythonScript(OWWidget):
         urls = event.mimeData().urls()
         if urls:
             self.text.pasteFile(urls[0])
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version is not None and version < 2:
+            scripts = settings.pop("libraryListSource")  # type: List[Script]
+            library = [dict(name=s.name, script=s.script, filename=s.filename)
+                       for s in scripts]  # type: List[_ScriptData]
+            settings["scriptLibrary"] = library
 
 
 if __name__ == "__main__":  # pragma: no cover

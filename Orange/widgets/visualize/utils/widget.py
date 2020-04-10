@@ -16,14 +16,13 @@ from Orange.widgets import gui, report
 from Orange.widgets.settings import (
     Setting, ContextSetting, DomainContextHandler, SettingProvider
 )
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table
 )
-from Orange.widgets.utils.colorpalette import (
-    ColorPaletteGenerator, ContinuousPaletteGenerator, DefaultRGBColors
-)
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
@@ -224,16 +223,17 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         This method must be overridden if the widget offers coloring that is
         not based on attribute values.
         """
-        if self.attr_color is None:
+        attr = self.attr_color
+        if not attr:
             return None
-        colors = self.attr_color.colors
-        if self.attr_color.is_discrete:
-            return ColorPaletteGenerator(
-                number_of_colors=min(len(colors), MAX_COLORS),
-                rgb_colors=colors if len(colors) <= MAX_COLORS
-                else DefaultRGBColors)
-        else:
-            return ContinuousPaletteGenerator(*colors)
+        palette = attr.palette
+        if attr.is_discrete and len(attr.values) >= MAX_COLORS:
+            values = self.get_color_labels()
+            colors = [palette.palette[attr.to_val(value)]
+                      for value in values[:-1]] + [[192, 192, 192]]
+
+            palette = colorpalettes.DiscretePalette.from_colors(colors)
+        return palette
 
     def can_draw_density(self):
         """
@@ -442,13 +442,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     def set_data(self, data):
         data_existed = self.data is not None
         effective_data = self.effective_data if data_existed else None
-        same_domain = (data_existed and data is not None and
-                       data.domain.checksum() == self.data.domain.checksum())
         self.closeContext()
         self.data = data
         self.check_data()
-        if not same_domain:
-            self.init_attr_values()
+        self.init_attr_values()
         self.openContext(self.data)
         self._invalidated = not (
             data_existed and self.data is not None and
@@ -497,12 +494,14 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
                 self.Warning.subset_not_subset()
 
     def set_input_summary(self, data):
-        summary = str(len(data)) if data else self.info.NoInput
-        self.info.set_input_summary(summary)
+        summary = len(data) if data else self.info.NoInput
+        detail = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, detail)
 
     def set_output_summary(self, data):
-        summary = str(len(data)) if data else self.info.NoOutput
-        self.info.set_output_summary(summary)
+        summary = len(data) if data else self.info.NoOutput
+        detail = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, detail)
 
     def get_subset_mask(self):
         if not self.subset_indices:
@@ -573,7 +572,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.output_changed.emit(selected)
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(
-            self._get_annotated_data(data, graph.get_selection(), group_sel,
+            self._get_annotated_data(data, group_sel,
                                      graph.selection))
 
     def _get_projection_data(self):
@@ -597,11 +596,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             if len(selection) else None
 
     @staticmethod
-    def _get_annotated_data(data, selection, group_sel, graph_sel):
+    def _get_annotated_data(data, group_sel, graph_sel):
         if graph_sel is not None and np.max(graph_sel) > 1:
             return create_groups_table(data, group_sel)
         else:
-            return create_annotated_table(data, selection)
+            return create_annotated_table(data, np.nonzero(group_sel)[0])
 
     # Report
     def send_report(self):
@@ -719,10 +718,18 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     def _get_projection_data(self):
         if self.data is None or self.projection is None:
             return None
+        proposed = [a.name for a in self.projection.domain.attributes]
+        names = get_unique_names(self.data.domain, proposed)
+
+        if proposed != names:
+            attributes = tuple([attr.copy(name=name) for name, attr in
+                                zip(names, self.projection.domain.attributes)])
+        else:
+            attributes = self.projection.domain.attributes
         return self.data.transform(
             Domain(self.data.domain.attributes,
                    self.data.domain.class_vars,
-                   self.data.domain.metas + self.projection.domain.attributes))
+                   self.data.domain.metas + attributes))
 
     def commit(self):
         super().commit()

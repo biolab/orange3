@@ -19,7 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
 from Orange.widgets.evaluate.utils import check_results_adequacy
-from Orange.widgets.utils import colorpalette, colorbrewer
+from Orange.widgets.utils import colorpalettes
 from Orange.widgets.evaluate.owrocanalysis import convex_hull
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
@@ -93,7 +93,7 @@ class OWLiftCurve(widget.OWWidget):
 
         self.target_cb = gui.comboBox(
             tbox, self, "target_index", callback=self._on_target_changed,
-            contentsLength=8)
+            contentsLength=8, searchable=True)
 
         cbox = gui.vBox(box, "Classifiers")
         cbox.setFlat(True)
@@ -162,16 +162,13 @@ class OWLiftCurve(widget.OWWidget):
         if names is None:
             names = ["#{}".format(i + 1) for i in range(N)]
 
-        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
-        if N > len(scheme):
-            scheme = colorpalette.DefaultRGBColors
-        self.colors = colorpalette.ColorPaletteGenerator(N, scheme)
+        self.colors = colorpalettes.get_default_curve_colors(N)
 
         self.classifier_names = names
         self.selected_classifiers = list(range(N))
         for i in range(N):
             item = self.classifiers_list_box.item(i)
-            item.setIcon(colorpalette.ColorPixmap(self.colors[i]))
+            item.setIcon(colorpalettes.ColorIcon(self.colors[i]))
 
         self.target_cb.addItems(results.data.domain.class_var.values)
 
