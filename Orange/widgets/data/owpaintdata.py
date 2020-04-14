@@ -899,7 +899,7 @@ class OWPaintData(OWWidget):
         redo.setShortcut(QKeySequence.Redo)
 
         self.addActions([undo, redo])
-        self.undo_stack.indexChanged.connect(lambda _: self.invalidate())
+        self.undo_stack.indexChanged.connect(self.invalidate)
 
         gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
@@ -1298,6 +1298,7 @@ class OWPaintData(OWWidget):
         return sh.expandedTo(QSize(570, 690))
 
     def onDeleteWidget(self):
+        self.undo_stack.indexChanged.disconnect(self.invalidate)
         self.plot.clear()
 
     def send_report(self):
