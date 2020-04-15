@@ -3,6 +3,7 @@ import itertools
 from collections import Iterable
 import re
 import warnings
+from typing import Callable
 
 import numpy as np
 import scipy
@@ -320,7 +321,9 @@ class Model(Reprable):
         new_probs = new_probs / tots[:, None]
         return new_probs
 
-    def data_to_model_domain(self, data: Table) -> Table:
+    def data_to_model_domain(
+            self, data: Table, progress_callback: Callable = dummy_callback
+    ) -> Table:
         """
         Transforms data to the model domain if possible.
 
@@ -328,6 +331,8 @@ class Model(Reprable):
         ----------
         data
             Data to be transformed to the model domain
+        progress_callback
+            Callback - callable - to report the progress
 
         Returns
         -------
@@ -342,16 +347,24 @@ class Model(Reprable):
         if data.domain == self.domain:
             return data
 
+        progress_callback(0)
         if self.original_domain.attributes != data.domain.attributes \
                 and data.X.size \
                 and not all_nan(data.X):
+            progress_callback(0.5)
             new_data = data.transform(self.original_domain)
             if all_nan(new_data.X):
                 raise DomainTransformationError(
                     "domain transformation produced no defined values")
-            return new_data.transform(self.domain)
+            progress_callback(0.75)
+            data = new_data.transform(self.domain)
+            progress_callback(1)
+            return data
 
-        return data.transform(self.domain)
+        progress_callback(0.5)
+        data = data.transform(self.domain)
+        progress_callback(1)
+        return data
 
     def __call__(self, data, ret=Value):
         multitarget = len(self.domain.class_vars) > 1
