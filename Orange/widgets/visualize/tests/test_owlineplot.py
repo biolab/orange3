@@ -19,6 +19,7 @@ from Orange.widgets.tests.base import (
 from Orange.widgets.visualize.owlineplot import (
     OWLinePlot, ccw, intersects, line_intersects_profiles
 )
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
@@ -42,13 +43,13 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         return self.widget.selection
 
     def test_input_data(self):
-        no_data_info = "No data on input."
-        self.assertEqual(self.widget.infoLabel.text(), no_data_info)
+        no_data = "No data on input"
+        self.assertEqual(self.widget.info._StateInfo__input_summary.details, no_data)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.assertEqual(self.widget.group_view.model().rowCount(), 2)
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.group_view.model().rowCount(), 1)
-        self.assertEqual(self.widget.infoLabel.text(), no_data_info)
+        self.assertEqual(self.widget.info._StateInfo__input_summary.details, no_data)
 
     def test_input_continuous_class(self):
         self.send_signal(self.widget.Inputs.data, self.housing)
@@ -278,6 +279,32 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
             commit.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.titanic)
             commit.assert_called()
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        data = self.housing
+        self.send_signal(self.widget.Inputs.data, data)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        sel_indices = list(range(5))
+        self.widget.selection_changed(sel_indices)
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 
 class TestSegmentsIntersection(unittest.TestCase):

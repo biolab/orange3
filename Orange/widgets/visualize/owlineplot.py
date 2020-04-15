@@ -25,6 +25,7 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.plot import OWPlotGUI, SELECT, PANNING, ZOOMING
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owdistributions import LegendItem
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
@@ -475,8 +476,6 @@ class OWLinePlot(OWWidget):
         box.layout().addWidget(self.graph)
 
     def _add_controls(self):
-        infobox = gui.widgetBox(self.controlArea, "Info")
-        self.infoLabel = gui.widgetLabel(infobox, "No data on input.")
         displaybox = gui.widgetBox(self.controlArea, "Display")
         gui.checkBox(displaybox, self, "show_profiles", "Lines",
                      callback=self.__show_profiles_changed,
@@ -504,6 +503,9 @@ class OWLinePlot(OWWidget):
 
         gui.rubber(self.controlArea)
         gui.auto_send(self.controlArea, self, "auto_commit")
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
     def __show_profiles_changed(self):
         self.check_display_options()
@@ -534,6 +536,7 @@ class OWLinePlot(OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.data = data
+        self._set_input_summary()
         self.clear()
         self.check_data()
         self.check_display_options()
@@ -555,8 +558,6 @@ class OWLinePlot(OWWidget):
 
         self.clear_messages()
         if self.data is not None:
-            self.infoLabel.setText("%i instances on input\n%i features" % (
-                len(self.data), len(self.data.domain.attributes)))
             self.graph_variables = [var for var in self.data.domain.attributes
                                     if var.is_continuous]
             self.valid_data = ~countnans(self.data.X, axis=1).astype(bool)
@@ -579,6 +580,11 @@ class OWLinePlot(OWWidget):
             enable = (self.show_profiles or self.show_range) and \
                 len(self.data[self.valid_data]) < SEL_MAX_INSTANCES
             self.enable_selection.emit(enable)
+
+    def _set_input_summary(self):
+        summary = len(self.data) if self.data else self.info.NoInput
+        details = format_summary_details(self.data) if self.data else ""
+        self.info.set_input_summary(summary, details)
 
     @Inputs.data_subset
     @check_sql_input
@@ -733,6 +739,10 @@ class OWLinePlot(OWWidget):
         selected = self.data[self.selection] \
             if self.data is not None and bool(self.selection) else None
         annotated = create_annotated_table(self.data, self.selection)
+
+        summary = len(selected) if selected else self.info.NoOutput
+        details = format_summary_details(selected) if selected else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(annotated)
 
@@ -754,7 +764,6 @@ class OWLinePlot(OWWidget):
         self.__groups = []
         self.graph_variables = []
         self.graph.reset()
-        self.infoLabel.setText("No data on input.")
         self.group_vars.set_domain(None)
         self.group_view.setEnabled(False)
 
