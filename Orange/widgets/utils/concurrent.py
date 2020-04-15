@@ -21,12 +21,12 @@ from AnyQt.QtCore import (
 )
 
 from orangewidget.utils.concurrent import (
-    FutureWatcher, FutureSetWatcher, methodinvoke
+    FutureWatcher, FutureSetWatcher, methodinvoke, PyOwned
 )
 
 __all__ = [
     "FutureWatcher", "FutureSetWatcher", "methodinvoke",
-    "TaskState", "ConcurrentMixin", "ConcurrentWidgetMixin"
+    "TaskState", "ConcurrentMixin", "ConcurrentWidgetMixin", "PyOwned"
 ]
 
 _log = logging.getLogger(__name__)
@@ -384,7 +384,7 @@ class Task(QObject):
             super().customEvent(event)
 
 
-class TaskState(QObject):
+class TaskState(QObject, PyOwned):
 
     status_changed = Signal(str)
     _p_status_changed = Signal(str)
