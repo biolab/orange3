@@ -22,7 +22,6 @@ import zipfile
 
 from xml.sax.saxutils import escape
 from functools import singledispatch
-from concurrent import futures
 from contextlib import ExitStack
 
 import typing
@@ -51,6 +50,7 @@ from pandas.api import types as pdtypes
 import Orange.data
 
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import textimport, concurrent as qconcurrent
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
@@ -866,9 +866,6 @@ class OWCSVFileImport(widget.OWWidget):
         w.progress.cancel = True
         w.done.disconnect(self.__handle_result)
         w.progress.progressChanged.disconnect(self.__set_read_progress)
-        w.progress.deleteLater()
-        # wait until completion
-        futures.wait([w.future()])
         self.__watcher = None
 
     def cancel(self):
@@ -1383,7 +1380,7 @@ def clear_stack_on_cancel(f):
     return wrapper
 
 
-class TaskState(QObject):
+class TaskState(QObject, PyOwned):
     class UserCancelException(BaseException):
         """User interrupt exception."""
 
