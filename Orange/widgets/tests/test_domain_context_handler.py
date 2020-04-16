@@ -1,9 +1,7 @@
 import warnings
-from distutils.version import LooseVersion
 from unittest import TestCase
 from unittest.mock import Mock
 
-import Orange
 from Orange.data import Domain, DiscreteVariable
 from Orange.data import ContinuousVariable
 from Orange.util import OrangeDeprecationWarning
@@ -300,23 +298,6 @@ class TestDomainContextHandler(TestCase):
             DomainContextHandler(metas_in_res=True)
             self.assertIn(OrangeDeprecationWarning,
                           [x.category for x in w])
-
-    def test_deprecated_str_as_var(self):
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.26"):
-            # pragma: no cover
-            self.fail("Remove support for variables stored as string settings "
-                      "and this test.")
-
-        context = Mock()
-        context.attributes = {"foo": 2}
-        context.metas = {}
-        setting = ContextSetting("")
-        setting.name = "setting_name"
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            DomainContextHandler.encode_setting(context, setting, "foo")
-            self.assertIn("setting_name", w[0].message.args[0])
-
 
     def create_context(self, domain, values):
         if domain is None:
