@@ -15,7 +15,7 @@ from AnyQt.QtWidgets import (QTableView, QSizePolicy, QHeaderView,
 from Orange.data import (Table, DiscreteVariable, Variable, Domain,
                          ContinuousVariable)
 from Orange.data.domain import filter_visible
-from Orange.data.util import get_unique_names_duplicates
+from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
 from Orange.statistics.util import (nanmin, nanmax, nanunique, nansum, nanvar,
                                     nanmean, nanmedian, nanmode, bincount)
@@ -254,7 +254,19 @@ class Pivot:
                     X[:, k] = group_tab.X[:, self._depen_agg_done[fun][v] - offset]
                 else:
                     X[i, k] = fun(sub_table.get_column_view(v)[0])
-        return Table(Domain(leading_vars + attrs), np.hstack((combs, X)))
+
+        #rename leading vars (seems the easiest) if needed
+        current = [var.name for var in attrs]
+        uniq_leading_vars = []
+        for var in leading_vars:
+            uniq = get_unique_names(current, var.name)
+            if uniq != var.name:
+                self.renamed.append(var.name)
+                var = var.copy(name=uniq)
+            uniq_leading_vars.append(var)
+            current.append(uniq)
+
+        return Table(Domain(uniq_leading_vars + attrs), np.hstack((combs, X)))
 
     def update_pivot_table(self, val_var: Variable):
         self._create_pivot_tables(val_var)
@@ -693,7 +705,7 @@ class OWPivot(OWWidget):
         # TODO - inconsistent for different variable types
         no_col_feature = Msg("Column feature should be selected.")
         cannot_aggregate = Msg("Some aggregations ({}) cannot be performed.")
-        renamed_vars = Msg("Some variables have been renamed "
+        renamed_vars = Msg("Some variables have been renamed in some tables"
                            "to avoid duplicates.\n{}")
 
     settingsHandler = DomainContextHandler()
