@@ -21,7 +21,7 @@ from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
 
-import Orange.data
+from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
 from Orange.data.util import get_unique_names_duplicates
 
 from Orange.widgets import gui
@@ -744,16 +744,15 @@ class OWPaintData(OWWidget):
     keywords = ["create", "draw"]
 
     class Inputs:
-        data = Input("Data", Orange.data.Table)
+        data = Input("Data", Table)
 
     class Outputs:
-        data = Output("Data", Orange.data.Table)
+        data = Output("Data", Table)
 
     autocommit = Setting(True)
     table_name = Setting("Painted data")
     attr1 = Setting("x")
     attr2 = Setting("y")
-    unique_names = [attr1, attr2]
     hasAttr2 = Setting(True)
 
     brushRadius = Setting(75)
@@ -1264,14 +1263,6 @@ class OWPaintData(OWWidget):
 
     def commit(self):
         self.Warning.renamed_vars.clear()
-        self.unique_names = get_unique_names_duplicates([self.attr1, self.attr2])
-        renamed = []
-        if self.attr1 != self.unique_names[0]:
-            renamed.append(self.attr1)
-        if self.attr2 != self.unique_names[1]:
-            renamed.append(self.attr2)
-        if renamed:
-            self.Warning.renamed_vars(renamed)
 
         if not self.data:
             self.Outputs.data.send(None)
@@ -1279,21 +1270,30 @@ class OWPaintData(OWWidget):
         data = np.array(self.data)
         if self.hasAttr2:
             X, Y = data[:, :2], data[:, 2]
-            attrs = (Orange.data.ContinuousVariable(self.unique_names[0]),
-                     Orange.data.ContinuousVariable(self.unique_names[1]))
+            proposed = [self.attr1.strip(), self.attr2.strip()]
         else:
             X, Y = data[:, np.newaxis, 0], data[:, 2]
-            attrs = (Orange.data.ContinuousVariable(self.attr1),)
+            proposed = [self.attr1.strip()]
+
         if len(np.unique(Y)) >= 2:
-            domain = Orange.data.Domain(
-                attrs,
-                Orange.data.DiscreteVariable(
-                    "Class", values=tuple(self.class_model))
+            proposed.append("Class")
+            unique_names, renamed = get_unique_names_duplicates(proposed, True)
+            domain = Domain(
+                (map(ContinuousVariable, unique_names[:-1])),
+                DiscreteVariable(
+                    unique_names[-1], values=tuple(self.class_model))
             )
-            data = Orange.data.Table.from_numpy(domain, X, Y)
+            data = Table.from_numpy(domain, X, Y)
         else:
-            domain = Orange.data.Domain(attrs)
-            data = Orange.data.Table.from_numpy(domain, X)
+            unique_names, renamed = get_unique_names_duplicates(proposed, True)
+            domain = Domain(map(ContinuousVariable, unique_names))
+            data = Table.from_numpy(domain, X)
+
+        if renamed:
+            self.Warning.renamed_vars(", ".join(renamed))
+            self.plot.getAxis("bottom").setLabel(unique_names[0])
+            self.plot.getAxis("left").setLabel(unique_names[1])
+
         data.name = self.table_name
         self.Outputs.data.send(data)
 
