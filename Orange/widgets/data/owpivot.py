@@ -258,12 +258,12 @@ class Pivot:
         #rename leading vars (seems the easiest) if needed
         current = [var.name for var in attrs]
         uniq_leading_vars = []
-        for var in leading_vars:
-            uniq = get_unique_names(current, var.name)
-            if uniq != var.name:
-                self.renamed.append(var.name)
-                var = var.copy(name=uniq)
-            uniq_leading_vars.append(var)
+        for v in leading_vars:
+            uniq = get_unique_names(current, v.name)
+            if uniq != v.name:
+                self.renamed.append(v.name)
+                v = v.copy(name=uniq)
+            uniq_leading_vars.append(v)
             current.append(uniq)
 
         return Table(Domain(uniq_leading_vars + attrs), np.hstack((combs, X)))
