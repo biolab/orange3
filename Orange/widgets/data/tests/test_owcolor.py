@@ -8,6 +8,7 @@ from AnyQt.QtCore import Qt, QSize, QRect
 from AnyQt.QtGui import QBrush
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
+from Orange.preprocess.transformation import Identity
 from Orange.util import color_to_hex
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.state_summary import format_summary_details
@@ -58,11 +59,15 @@ class DiscAttrTest(unittest.TestCase):
         self.assertEqual(var.name, "z")
         self.assertEqual(var.values, ("a", "d", "c"))
         np.testing.assert_equal(var.colors, [[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        self.assertIsInstance(var.compute_value, Identity)
+        self.assertIs(var.compute_value.variable, desc.var)
 
         palette = desc.var.attributes["palette"] = object()
         var = desc.create_variable()
         self.assertIs(desc.var.attributes["palette"], palette)
         self.assertFalse(hasattr(var.attributes, "palette"))
+        self.assertIsInstance(var.compute_value, Identity)
+        self.assertIs(var.compute_value.variable, desc.var)
 
 
 class ContAttrDesc(unittest.TestCase):
@@ -89,11 +94,15 @@ class ContAttrDesc(unittest.TestCase):
         self.assertIsInstance(var, ContinuousVariable)
         self.assertEqual(var.name, "z")
         self.assertEqual(var.palette.name, palette_name)
+        self.assertIsInstance(var.compute_value, Identity)
+        self.assertIs(var.compute_value.variable, desc.var)
 
         colors = desc.var.attributes["colors"] = object()
         var = desc.create_variable()
         self.assertIs(desc.var.attributes["colors"], colors)
         self.assertFalse(hasattr(var.attributes, "colors"))
+        self.assertIsInstance(var.compute_value, Identity)
+        self.assertIs(var.compute_value.variable, desc.var)
 
 
 class BaseTestColorTableModel:
@@ -120,7 +129,6 @@ class BaseTestColorTableModel:
 
         index = self.model.index(2, 0)
         self.assertEqual(data(index, Qt.DisplayRole), self.descs[2].name)
-
 
     def test_set_data(self):
         emit = Mock()

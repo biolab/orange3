@@ -7,6 +7,7 @@ from AnyQt.QtGui import QColor, QFont, QBrush
 from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView, QComboBox
 
 import Orange
+from Orange.preprocess.transformation import Identity
 from Orange.util import color_to_hex
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.gui import HorizontalGridDelegate
@@ -82,7 +83,8 @@ class DiscAttrDesc(AttrDesc):
         self.new_values[i] = value
 
     def create_variable(self):
-        new_var = self.var.copy(name=self.name, values=self.values)
+        new_var = self.var.copy(name=self.name, values=self.values,
+                                compute_value=Identity(self.var))
         new_var.colors = np.asarray(self.colors)
         return new_var
 
@@ -114,7 +116,8 @@ class ContAttrDesc(AttrDesc):
         self.new_palette_name = palette_name
 
     def create_variable(self):
-        new_var = self.var.copy(name=self.name)
+        new_var = self.var.copy(name=self.name,
+                                compute_value=Identity(self.var))
         new_var.attributes["palette"] = self.palette_name
         return new_var
 
