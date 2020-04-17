@@ -24,6 +24,7 @@ from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 
@@ -277,6 +278,9 @@ class OWBoxPlot(widget.OWWidget):
         self.stat_test = ""
         self.mainArea.setMinimumWidth(300)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
 
@@ -313,6 +317,7 @@ class OWBoxPlot(widget.OWWidget):
     # noinspection PyTypeChecker
     @Inputs.data
     def set_data(self, dataset):
+        self._set_input_summary(dataset)
         if dataset is not None and (
                 not bool(dataset) or not len(dataset.domain) and not
                 any(var.is_primitive() for var in dataset.domain.metas)):
@@ -332,6 +337,11 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.reset_all_data()
         self.commit()
+
+    def _set_input_summary(self, dataset):
+        summary = len(dataset) if dataset else self.info.NoInput
+        details = format_summary_details(dataset) if dataset else ""
+        self.info.set_input_summary(summary, details)
 
     def select_default_variables(self):
         # visualize first non-class variable, group by class (if present)
@@ -1109,6 +1119,10 @@ class OWBoxPlot(widget.OWWidget):
             selected = Values(self.conditions, conjunction=False)(self.dataset)
             selection = np.in1d(
                 self.dataset.ids, selected.ids, assume_unique=True).nonzero()[0]
+
+        summary = len(selected) if selected else self.info.NoOutput
+        details = format_summary_details(selected) if selected else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(
             create_annotated_table(self.dataset, selection))
