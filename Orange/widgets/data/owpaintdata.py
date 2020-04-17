@@ -29,6 +29,7 @@ from Orange.widgets.utils import itemmodels, colorpalettes
 
 from Orange.util import scale, namegen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -898,7 +899,7 @@ class OWPaintData(OWWidget):
         redo.setShortcut(QKeySequence.Redo)
 
         self.addActions([undo, redo])
-        self.undo_stack.indexChanged.connect(lambda _: self.invalidate())
+        self.undo_stack.indexChanged.connect(self.invalidate)
 
         gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
@@ -963,6 +964,9 @@ class OWPaintData(OWWidget):
 
         self.mainArea.layout().addWidget(self.plotview)
 
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
+
         # enable brush tool
         self.toolActions.actions()[0].setChecked(True)
         self.set_current_tool(self.TOOLS[0][2])
@@ -1001,11 +1005,13 @@ class OWPaintData(OWWidget):
                     data = None
                 elif len(data.domain.attributes) > 2:
                     self.Information.use_first_two()
+                self.info.set_input_summary(len(data), format_summary_details(data))
             self.input_data = data
             self.btResetToInput.setDisabled(data is None)
             return bool(data)
 
         if not _check_and_set_data(data):
+            self.info.set_input_summary(self.info.NoInput)
             return
 
         X = np.array([scale(vals) for vals in data.X[:, :2].T]).T
@@ -1263,6 +1269,7 @@ class OWPaintData(OWWidget):
     def commit(self):
         if not self.data:
             self.Outputs.data.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
         data = np.array(self.data)
         if self.hasAttr2:
@@ -1284,12 +1291,14 @@ class OWPaintData(OWWidget):
             data = Orange.data.Table.from_numpy(domain, X)
         data.name = self.table_name
         self.Outputs.data.send(data)
+        self.info.set_output_summary(len(data), format_summary_details(data))
 
     def sizeHint(self):
         sh = super().sizeHint()
         return sh.expandedTo(QSize(570, 690))
 
     def onDeleteWidget(self):
+        self.undo_stack.indexChanged.disconnect(self.invalidate)
         self.plot.clear()
 
     def send_report(self):

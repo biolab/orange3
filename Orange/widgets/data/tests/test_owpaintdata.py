@@ -11,6 +11,7 @@ from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.widgets.data import owpaintdata
 from Orange.widgets.data.owpaintdata import OWPaintData
 from Orange.widgets.tests.base import WidgetTest, datasets
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWPaintData(WidgetTest):
@@ -108,3 +109,41 @@ class TestOWPaintData(WidgetTest):
         self.widget.reset_to_input()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(output), len(data))
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        data, info = Table("iris"), self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.widget.set_current_tool(self.widget.TOOLS[1][2])
+        tool = self.widget.current_tool
+        event = QMouseEvent(QEvent.MouseButtonPress, QPointF(0.17, 0.17),
+                            Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+        tool.mousePressEvent(event)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        output = self.get_output(self.widget.Outputs.data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.widget.set_current_tool(self.widget.TOOLS[5][2])
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
