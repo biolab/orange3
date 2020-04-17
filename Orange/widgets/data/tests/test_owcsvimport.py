@@ -83,6 +83,7 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertEqual(item.options(), self.data_regions_options)
         out = self.get_output("Data", w)
         self._check_data_regions(out)
+        self.assertEqual(out.name, "data-regions")
 
     def test_restore_from_local(self):
         dirname = os.path.dirname(__file__)

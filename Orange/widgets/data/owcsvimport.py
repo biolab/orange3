@@ -961,6 +961,8 @@ class OWCSVFileImport(widget.OWWidget):
 
         if df is not None:
             table = pandas_to_table(df)
+            filename = self.current_item().path()
+            table.name = os.path.splitext(os.path.split(filename)[-1])[0]
         else:
             table = None
         self.send("Data Frame", df)
