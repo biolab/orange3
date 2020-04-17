@@ -221,3 +221,20 @@ class TestOWPythagoreanForest(WidgetTest):
         output = self.get_output(self.widget.Outputs.tree)
         self.assertIsNotNone(output)
         self.assertIs(output.skl_model, self.titanic.trees[idx].skl_model)
+
+    def test_context(self):
+        iris = Table("iris")
+        iris_tree = RandomForestLearner()(iris)
+        iris_tree.instances = iris
+        self.send_signal(self.widget.Inputs.random_forest, self.titanic)
+        self.widget.target_class_index = 1
+
+        self.send_signal(self.widget.Inputs.random_forest, iris_tree)
+        self.assertEqual(0, self.widget.target_class_index)
+
+        self.widget.target_class_index = 2
+        self.send_signal(self.widget.Inputs.random_forest, self.titanic)
+        self.assertEqual(1, self.widget.target_class_index)
+
+        self.send_signal(self.widget.Inputs.random_forest, iris_tree)
+        self.assertEqual(2, self.widget.target_class_index)

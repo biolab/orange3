@@ -174,9 +174,9 @@ class OWPythagoreanForest(OWWidget):
     graph_name = 'scene'
 
     # Settings
-    settingsHandler = settings.DomainContextHandler()
+    settingsHandler = settings.ClassValuesContextHandler()
 
-    depth_limit = settings.ContextSetting(10)
+    depth_limit = settings.Setting(10)
     target_class_index = settings.ContextSetting(0)
     size_calc_idx = settings.Setting(0)
     zoom = settings.Setting(200)
@@ -274,15 +274,18 @@ class OWPythagoreanForest(OWWidget):
         self.rf_model = model
 
         if model is not None:
+            self.instances = model.instances
+            self._update_target_class_combo()
+
             self.forest = self._get_forest_adapter(self.rf_model)
             self.forest_model[:] = self.forest.trees
-            self.instances = model.instances
 
             self._update_info_box()
-            self._update_target_class_combo()
             self._update_depth_slider()
 
-        self.openContext(model)
+            self.openContext(
+                model.domain.class_var if model.domain is not None else None
+            )
         # Restore item selection
         if self.selected_index is not None:
             index = self.list_view.model().index(self.selected_index)
@@ -324,15 +327,15 @@ class OWPythagoreanForest(OWWidget):
             values = list(ContinuousTreeNode.COLOR_METHODS.keys())
         label.setText(label_text)
         self.ui_target_class_combo.addItems(values)
-        self.ui_target_class_combo.setCurrentIndex(self.target_class_index)
+        # set it to 0, context will change if required
+        self.target_class_index = 0
 
     def _clear_info_box(self):
         self.ui_info.setText('No forest on input.')
 
     def _clear_target_class_combo(self):
         self.ui_target_class_combo.clear()
-        self.target_class_index = 0
-        self.ui_target_class_combo.setCurrentIndex(self.target_class_index)
+        self.target_class_index = -1
 
     def _clear_depth_slider(self):
         self.ui_depth_slider.parent().setEnabled(False)

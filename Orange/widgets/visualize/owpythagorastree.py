@@ -57,7 +57,7 @@ class OWPythagorasTree(OWWidget):
     graph_name = 'scene'
 
     # Settings
-    settingsHandler = settings.DomainContextHandler()
+    settingsHandler = settings.ClassValuesContextHandler()
 
     depth_limit = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
@@ -155,6 +155,8 @@ class OWPythagorasTree(OWWidget):
 
         if model is not None:
             self.data = model.instances
+
+            self._update_target_class_combo()
             self.tree_adapter = self._get_tree_adapter(self.model)
             self.ptree.clear()
 
@@ -169,11 +171,12 @@ class OWPythagorasTree(OWWidget):
             self._update_legend_colors()
             self._update_legend_visibility()
             self._update_info_box()
-            self._update_target_class_combo()
 
             self._update_main_area()
 
-        self.openContext(self.model)
+            self.openContext(
+                model.domain.class_var if model.domain is not None else None
+            )
 
         self.update_depth()
 
@@ -277,8 +280,7 @@ class OWPythagorasTree(OWWidget):
 
     def _clear_target_class_combo(self):
         self.target_class_combo.clear()
-        self.target_class_index = 0
-        self.target_class_combo.setCurrentIndex(self.target_class_index)
+        self.target_class_index = -1
 
     def _set_max_depth(self):
         """Set the depth to the max depth and update appropriate actors."""
@@ -339,7 +341,8 @@ class OWPythagorasTree(OWWidget):
             values = list(ContinuousTreeNode.COLOR_METHODS.keys())
         label.setText(label_text)
         self.target_class_combo.addItems(values)
-        self.target_class_combo.setCurrentIndex(self.target_class_index)
+        # set it to 0, context will change if required
+        self.target_class_index = 0
 
     def _update_legend_colors(self):
         if self.legend is not None:
