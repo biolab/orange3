@@ -143,29 +143,42 @@ class DiscretePaletteTest(unittest.TestCase):
 
 
 class LimitedDiscretePaletteTest(unittest.TestCase):
-    def test_small_palettes(self):
+    @staticmethod
+    def test_small_palettes():
+        defcols = len(DefaultRGBColors.palette)
+
         palette = LimitedDiscretePalette(3)
         np.testing.assert_equal(palette.palette, DefaultRGBColors.palette[:3])
 
-        palette = LimitedDiscretePalette(len(DefaultRGBColors.palette))
+        palette = LimitedDiscretePalette(defcols)
         np.testing.assert_equal(palette.palette, DefaultRGBColors.palette)
 
-        palette = LimitedDiscretePalette(len(DefaultRGBColors.palette) + 1)
-        self.assertFalse(np.all(np.array(palette.palette[:-1])
-                                == np.array(DefaultRGBColors.palette)))
-
-    def test_large_palettes(self):
-        n = len(DefaultRGBColors.palette) + 1
-        palette = LimitedDiscretePalette(n)
-        self.assertEqual(len({tuple(col) for col in palette.palette}), n)
+        palette = LimitedDiscretePalette(defcols + 1)
+        np.testing.assert_equal(palette.palette, Glasbey.palette[:defcols + 1])
 
         palette = LimitedDiscretePalette(100)
-        self.assertEqual(len({tuple(col) for col in palette.palette}), 100)
+        np.testing.assert_equal(palette.palette, Glasbey.palette[:100])
 
-    def test_forced_hsv_palettes(self):
-        palette = LimitedDiscretePalette(5, force_hsv=True)
-        self.assertFalse(np.all(np.array(palette.palette)
-                                == np.array(DefaultRGBColors.palette[:5])))
+    @staticmethod
+    def test_forced_glasbey_palettes():
+        palette = LimitedDiscretePalette(5, force_glasbey=True)
+        np.testing.assert_equal(palette.palette, Glasbey.palette[:5])
+
+    def test_deprecate_force_hsv_palettes(self):
+        with self.assertWarns(DeprecationWarning):
+            palette = LimitedDiscretePalette(3, force_hsv=False)
+            np.testing.assert_equal(palette.palette,
+                                    DefaultRGBColors.palette[:3])
+
+        with self.assertWarns(DeprecationWarning):
+            palette = LimitedDiscretePalette(5, force_hsv=True)
+            np.testing.assert_equal(palette.palette, Glasbey.palette[:5])
+
+
+class HuePaletteTest(unittest.TestCase):
+    def test_n_colors(self):
+        palette = HuePalette(42)
+        self.assertEqual(len(palette), 42)
 
 
 class ContinuousPaletteTest(GuiTest):
@@ -650,7 +663,8 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
         palette = var.palette
         np.testing.assert_equal(palette.palette, [[10, 11, 12], [13, 14, 15]])
 
-    def test_ignore_malfformed_atrtibutes(self):
+    @staticmethod
+    def test_ignore_malfformed_atrtibutes():
         var = DiscreteVariable("a", values=("M", "F"))
         var.attributes["colors"] = {"F": "foo", "M": "bar"}
         palette = var.palette
