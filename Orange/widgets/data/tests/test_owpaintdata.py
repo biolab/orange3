@@ -30,6 +30,17 @@ class TestOWPaintData(WidgetTest):
         self.send_signal(self.widget.Inputs.data,
                          Table.from_domain(data.domain))
 
+    def test_var_name_duplicates(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr1 = 'atr1'
+        self.widget.attr2 = 'atr1'
+        self.widget._attr_name_changed()
+        self.assertTrue(self.widget.Warning.renamed_vars.is_shown())
+        self.widget.attr2 = 'atr2'
+        self.widget._attr_name_changed()
+        self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+
     def test_nan_data(self):
         data = datasets.missing_data_2()
         self.send_signal(self.widget.Inputs.data, data)

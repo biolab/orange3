@@ -259,6 +259,15 @@ class TestOWPivot(WidgetTest):
         output_sum.assert_called_once()
         self.assertEqual(output_sum.call_args[0][0].brief, "")
 
+    def test_renaming_warning(self):
+        data = Table('iris')
+        cls_var = data.domain.class_var.copy(name='Aggregate')
+        data.domain = Domain(data.domain.attributes, (cls_var,))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.Warning.renamed_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
 
 class TestAggregationFunctionsEnum(unittest.TestCase):
     def test_pickle(self):
@@ -619,6 +628,17 @@ class TestPivot(unittest.TestCase):
                 Dv("Iris-versicolor", ["0.0", "50.0", "Iris-versicolor"]))
         domain = Domain(atts)
         self.assert_domain_equal(domain, pivot.pivot_table.domain)
+
+    def test_pivot_renaming_domain(self):
+        data = Table("iris")
+        cls_var = data.domain.class_var.copy(name='Aggregate')
+        data.domain = Domain(data.domain.attributes, (cls_var,))
+        pivot = Pivot(data, [Pivot.Functions.Sum], cls_var, None, None)
+
+        renamed_var = data.domain.class_var.copy(name='Aggregate (1)')
+        self.assertTrue(renamed_var in pivot.pivot_table.domain)
+        renamed_var = data.domain.class_var.copy(name='Aggregate (2)')
+        self.assertTrue(renamed_var in pivot.pivot_table.domain)
 
     def assert_table_equal(self, table1, table2):
         self.assert_domain_equal(table1.domain, table2.domain)
