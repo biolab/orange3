@@ -19,6 +19,7 @@ from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCOR
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 from Orange.widgets.utils.state_summary import format_summary_details
+from orangewidget.settings import Context, IncompatibleContext
 
 
 class TestOWRank(WidgetTest):
@@ -341,6 +342,29 @@ class TestOWRank(WidgetTest):
         w = self.create_widget(OWRank, stored_settings=settings)
 
         self.assertEqual(w.sorting, (0, Qt.AscendingOrder))
+
+    def test_discard_settings_before_v3(self):
+        for version in (None, 1, 2):
+            self.assertRaises(IncompatibleContext, OWRank.migrate_context,
+                              Context(), version=version)
+
+    def test_auto_selection_manual(self):
+        w = self.widget
+
+        data = Table("heart_disease")
+        dom = data.domain
+        self.send_signal(w.Inputs.data, data)
+
+        # Sort by number of values and set selection to attributes with most
+        # values. This must select the top 4 rows.
+        self.widget.ranksView.horizontalHeader().setSortIndicator(0, Qt.DescendingOrder)
+        w.selectionMethod = w.SelectManual
+        w.selected_attrs = [dom["chest pain"], dom["rest ECG"],
+                            dom["slope peak exc ST"], dom["thal"]]
+        w.autoSelection()
+        self.assertEqual(
+            sorted({idx.row() for idx in w.ranksView.selectedIndexes()}),
+            [0, 1, 2, 3])
 
     def test_auto_send(self):
         widget = self.widget
