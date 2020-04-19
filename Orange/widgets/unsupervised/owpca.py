@@ -35,12 +35,10 @@ class OWPCA(widget.OWWidget):
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 
-    settingsHandler = settings.DomainContextHandler()
-
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     auto_commit = settings.Setting(True)
-    normalize = settings.ContextSetting(True)
+    normalize = settings.Setting(True)
     maxp = settings.Setting(20)
     axis_labels = settings.Setting(10)
 
@@ -113,7 +111,6 @@ class OWPCA(widget.OWWidget):
 
     @Inputs.data
     def set_data(self, data):
-        self.closeContext()
         self.clear_messages()
         self.clear()
         self.information()
@@ -136,7 +133,6 @@ class OWPCA(widget.OWWidget):
                 self.clear_outputs()
                 return
 
-        self.openContext(data)
         self._init_projector()
 
         self.data = data
