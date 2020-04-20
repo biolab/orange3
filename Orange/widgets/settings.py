@@ -127,6 +127,10 @@ class DomainContextHandler(ContextHandler):
             new_value = [item for item in value
                          if self.is_valid_item(setting, item, attrs, metas)]
             data[setting.name] = new_value
+        elif isinstance(value, dict):
+            new_value = {item: val for item, val in value.items()
+                         if self.is_valid_item(setting, item, attrs, metas)}
+            data[setting.name] = new_value
         elif value is not None:
             if (value[1] >= 0 and
                     not self._var_exists(setting, value, attrs, metas)):
@@ -159,10 +163,16 @@ class DomainContextHandler(ContextHandler):
         if isinstance(value, list):
             if all(e is None or isinstance(e, Variable) for e in value) \
                     and any(e is not None for e in value):
-                return [None if e is None else cls.encode_variable(e)
-                        for e in value], -3
+                return ([None if e is None else cls.encode_variable(e)
+                         for e in value],
+                        -3)
             else:
                 return copy.copy(value)
+
+        elif isinstance(value, dict) \
+                and all(isinstance(e, Variable) for e in value):
+            return ({cls.encode_variable(e): val for e, val in value.items()},
+                    -4)
 
         if isinstance(value, Variable):
             if isinstance(setting, ContextSetting):
@@ -173,14 +183,21 @@ class DomainContextHandler(ContextHandler):
 
         return copy.copy(value), -2
 
-    def decode_setting(self, setting, value, domain=None):
+    def decode_setting(self, setting, value, domain=None, *args):
+        def get_var(name):
+            if domain is None:
+                raise ValueError("Cannot decode variable without domain")
+            return domain[name]
+
         if isinstance(value, tuple):
-            if value[1] == -3:
-                return [None if e is None else domain[e[0]] for e in value[0]]
-            if value[1] >= 100:
-                if domain is None:
-                    raise ValueError("Cannot decode variable without domain")
-                return domain[value[0]]
+            data, dtype = value
+            if dtype == -3:
+                return[None if name_type is None else get_var(name_type[0])
+                       for name_type in data]
+            if dtype == -4:
+                return {get_var(name): val for (name, _), val in data.items()}
+            if dtype >= 100:
+                return get_var(data)
             return value[0]
         else:
             return value
@@ -212,12 +229,13 @@ class DomainContextHandler(ContextHandler):
                 if isinstance(value, list):
                     matches.append(
                         self.match_list(setting, value, context, attrs, metas))
-                elif isinstance(value, tuple) \
-                        and len(value) == 2 \
-                        and isinstance(value[0], list) \
-                        and value[1] == -3:
-                    matches.append(
-                        self.match_list(setting, value[0], context, attrs, metas))
+                # type check is a (not foolproof) check in case of a pair that
+                # would, by conincidence, have -3 or -4 as the second element
+                elif isinstance(value, tuple) and len(value) == 2 \
+                       and (value[1] == -3 and isinstance(value[0], list)
+                            or (value[1] == -4 and isinstance(value[0], dict))):
+                    matches.append(self.match_list(setting, value[0], context,
+                                                   attrs, metas))
                 elif value is not None:
                     matches.append(
                         self.match_value(setting, value, attrs, metas))
