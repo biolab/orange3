@@ -795,7 +795,11 @@ class Rule:
         else:
             cond = "TRUE"
 
-        outcome = class_var.name + "=" + class_var.values[self.prediction]
+        # it is possible that prediction is not set yet - use _ for outcome
+        outcome = (
+            (class_var.name + "=" + class_var.values[self.prediction])
+            if self.prediction is not None else "_"
+        )
         return "IF {} THEN {} ".format(cond, outcome)
 
 
@@ -870,8 +874,8 @@ class RuleHunter:
                 new_rules = self.search_strategy.refine_rule(
                     X, Y, W, candidate_rule)
                 rules.extend(new_rules)
-                #remove default rule from list of rules
-                if best_rule.length == 0:
+                # remove default rule from list of rules
+                if best_rule.length == 0 and len(new_rules) > 0:
                     best_rule = new_rules[0]
                 for new_rule in new_rules[1:]:
                     if (new_rule.quality > best_rule.quality and
