@@ -29,6 +29,9 @@ so they can be used alter. It should be called before widget starts modifying
 (initializing) the value of the setting attributes.
 """
 
+# Overriden methods in these classes add arguments
+# pylint: disable=arguments-differ,unused-argument,no-value-for-parameter
+
 import copy
 import itertools
 import logging
@@ -183,6 +186,7 @@ class DomainContextHandler(ContextHandler):
 
         return copy.copy(value), -2
 
+    # backward compatibility, pylint: disable=keyword-arg-before-vararg
     def decode_setting(self, setting, value, domain=None, *args):
         def get_var(name):
             if domain is None:
@@ -392,10 +396,10 @@ def migrate_str_to_variable(settings, names=None, none_placeholder=None):
             all settings with values `(str, int)` are migrated.
     """
     def _fix(name):
-        var, vartype = settings.values[name]
-        if 0 <= vartype <= 100:
-            settings.values[name] = (var, 100 + vartype)
-        elif var == none_placeholder and vartype == -2:
+        var, vtype = settings.values[name]
+        if 0 <= vtype <= 100:
+            settings.values[name] = (var, 100 + vtype)
+        elif var == none_placeholder and vtype == -2:
             settings.values[name] = None
 
     if names is None:
