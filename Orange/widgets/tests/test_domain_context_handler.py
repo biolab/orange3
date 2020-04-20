@@ -97,7 +97,7 @@ class TestDomainContextHandler(TestCase):
         self.handler.bind(SimpleWidget)
 
         context = Mock(values={})
-        self.assertEqual(1, self.handler.match(context, *self.args))
+        self.assertEqual(0.1, self.handler.match(context, *self.args))
 
     def test_match_returns_zero_on_incompatible_context(self):
         self.handler.bind(SimpleWidget)

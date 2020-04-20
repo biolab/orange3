@@ -242,7 +242,7 @@ class DomainContextHandler(ContextHandler):
         except IncompatibleContext:
             return self.NO_MATCH
 
-        if self.first_match:
+        if self.first_match and matches and sum(m[0] for m in matches):
             return self.MATCH
 
         matches.append((0, 0))
