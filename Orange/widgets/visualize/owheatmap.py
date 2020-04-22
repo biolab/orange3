@@ -200,6 +200,8 @@ class OWHeatMap(widget.OWWidget):
 
     class Warning(widget.OWWidget.Warning):
         empty_clusters = Msg("Empty clusters were removed")
+        missing_split_values = Msg(
+            "Instances with undefined split variable values are not shown")
 
     def __init__(self):
         super().__init__()
@@ -600,6 +602,12 @@ class OWHeatMap(widget.OWWidget):
                 self.selected_rows = []
         else:
             self.clear()
+        if self.parts is not None and self.effective_data is not None:
+            nrows = sum(len(p.indices) for p in self.parts.rows)
+            self.Warning.missing_split_values(
+                shown=nrows < len(self.effective_data))
+        else:
+            self.Warning.missing_split_values.clear()
 
     def update_merge(self):
         self.kmeans_model = None
