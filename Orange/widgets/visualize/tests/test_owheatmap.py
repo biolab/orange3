@@ -33,6 +33,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
         cls.housing = Table("housing")
         cls.titanic = Table("titanic")
+        cls.brown_selected = Table("brown-selected")
 
         cls.signal_name = "Data"
         cls.signal_data = cls.data
@@ -211,7 +212,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 21)
 
     def test_set_split_var(self):
-        data = Table("brown-selected")
+        data = self.brown_selected[::3]
         w = self.widget
         self.send_signal(self.widget.Inputs.data, data, widget=w)
         self.assertIs(w.split_by_var, data.domain.class_var)
@@ -220,6 +221,18 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         w.set_split_variable(None)
         self.assertIs(w.split_by_var, None)
         self.assertEqual(len(w.parts.rows), 1)
+
+    def test_set_split_var_missing(self):
+        data = self.brown_selected[::3].copy()
+        data.Y[::5] = np.nan
+        w = self.widget
+        self.send_signal(self.widget.Inputs.data, data, widget=w)
+        self.assertIs(w.split_by_var, data.domain.class_var)
+        self.assertEqual(len(w.parts.rows),
+                         len(data.domain.class_var.values))
+        self.assertTrue(w.Warning.missing_split_values.is_shown())
+        w.set_split_variable(None)
+        self.assertFalse(w.Warning.missing_split_values.is_shown())
 
     def test_palette_centering(self):
         data = np.arange(2).reshape(-1, 1)
