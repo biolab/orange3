@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 
 import unittest
 from unittest.mock import patch
@@ -11,11 +11,11 @@ from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable)
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME)
-from Orange.widgets.visualize.owvenndiagram import (
-                        OWVennDiagram,
-                        arrays_equal,
-                        pad_columns,
-                        get_perm)
+from Orange.widgets.utils.state_summary import (format_multiple_summaries,
+                                                format_summary_details)
+from Orange.widgets.visualize.owvenndiagram import (OWVennDiagram, get_perm,
+                                                    arrays_equal, pad_columns)
+
 
 
 class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
@@ -233,6 +233,71 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, table, 1)
         out = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(len(out), len(table))
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        zoo = Table("zoo")
+        data_list = [("zoo", zoo)]
+        self.send_signal(self.widget.Inputs.data, zoo, 1)
+        summary, details = "101", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        iris = Table("iris")
+        data_list = [("zoo", zoo), ("iris", iris)]
+        self.send_signal(self.widget.Inputs.data, iris, 2)
+        summary, details = "101, 150", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        brown = Table("brown-selected")
+        data_list = [("zoo", zoo), ("iris", iris), ("brown-selected", brown)]
+        self.send_signal(self.widget.Inputs.data, brown, 3)
+        summary, details = "101, 150, 186", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None, 1)
+        data_list = [("iris", iris), ("brown-selected", brown)]
+        summary, details = "150, 186", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None, 2)
+        self.send_signal(self.widget.Inputs.data, None, 3)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 class TestVennUtilities(unittest.TestCase):
 
