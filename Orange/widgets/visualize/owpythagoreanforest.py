@@ -14,6 +14,7 @@ from Orange.widgets import gui, settings
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     ContinuousTreeNode,
@@ -210,6 +211,8 @@ class OWPythagoreanForest(OWWidget):
         # Tree info area
         box_info = gui.widgetBox(self.controlArea, 'Forest')
         self.ui_info = gui.widgetLabel(box_info)
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         # Display controls area
         box_display = gui.widgetBox(self.controlArea, 'Display')
@@ -286,6 +289,11 @@ class OWPythagoreanForest(OWWidget):
             self.openContext(
                 model.domain.class_var if model.domain is not None else None
             )
+            self.info.set_input_summary(len(self.instances),
+                                        format_summary_details(self.instances))
+        else:
+            self.info.set_input_summary(self.info.NoInput)
+
         # Restore item selection
         if self.selected_index is not None:
             index = self.list_view.model().index(self.selected_index)
@@ -359,6 +367,7 @@ class OWPythagoreanForest(OWWidget):
         if not len(selected_indices):
             self.selected_index = None
             self.Outputs.tree.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
 
         # We only allow selecting a single tree so there will always be one index
@@ -370,7 +379,11 @@ class OWPythagoreanForest(OWWidget):
         tree.meta_size_calc_idx = self.size_calc_idx
         tree.meta_depth_limit = self.depth_limit
 
+        summary = len(tree.instances) if tree.instances else self.info.NoOutput
+        details = format_summary_details(tree.instances) if tree.instances else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.tree.send(tree)
+
 
     def send_report(self):
         """Send report."""

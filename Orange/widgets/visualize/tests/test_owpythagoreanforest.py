@@ -11,6 +11,7 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWPythagoreanForest(WidgetTest):
@@ -238,3 +239,29 @@ class TestOWPythagoreanForest(WidgetTest):
 
         self.send_signal(self.widget.Inputs.random_forest, iris_tree)
         self.assertEqual(2, self.widget.target_class_index)
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+        data = self.titanic.instances
+
+        self.send_signal(self.widget.Inputs.random_forest, self.titanic)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self.select_tree(1)
+        tree = self.get_output(self.widget.Outputs.tree)
+        tree_data = tree.instances
+        summary, details = f"{len(tree_data)}", format_summary_details(tree_data)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.random_forest, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
