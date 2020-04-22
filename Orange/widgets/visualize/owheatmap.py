@@ -1,4 +1,5 @@
 import enum
+from collections import defaultdict
 from itertools import islice
 from typing import (
     Iterable, Mapping, Any, TypeVar, Type, NamedTuple, Sequence, Optional,
@@ -46,6 +47,20 @@ __all__ = []
 def kmeans_compress(X, k=50):
     km = kmeans.KMeans(n_clusters=k, n_init=5, random_state=42)
     return km.get_model(X)
+
+
+def split_domain(domain: Domain, split_label: str):
+    """Split the domain based on values of `split_label` value.
+    """
+    groups = defaultdict(list)
+    for var in domain.attributes:
+        val = var.attributes.get(split_label)
+        groups[val].append(var)
+    if None in groups:
+        na = groups.pop(None)
+        return [*groups.items(), ("N/A", na)]
+    else:
+        return list(groups.items())
 
 
 def cbselect(cb: QComboBox, value, role: Qt.ItemDataRole = Qt.EditRole) -> None:
@@ -116,6 +131,19 @@ def create_list_model(
     return model
 
 
+def list_model_append(
+        model: QStandardItemModel,
+        items: Iterable[Mapping[Qt.ItemDataRole, Any]]
+):
+    sitems = []
+    for item in items:
+        sitem = QStandardItem()
+        for role, value in item.items():
+            sitem.setData(value, role)
+        sitems.append(sitem)
+    model.invisibleRootItem().appendRows(sitems)
+
+
 E = TypeVar("E", bound=enum.Enum)  # pylint: disable=invalid-name
 
 
@@ -170,6 +198,8 @@ class OWHeatMap(widget.OWWidget):
     annotation_color_var = settings.ContextSetting(None)
     # Discrete variable used to split that data/heatmaps (vertically)
     split_by_var = settings.ContextSetting(None)
+    # Split heatmap columns by 'key' (horizontal)
+    split_columns_key = settings.ContextSetting(None)
     # Selected row/column clustering method (name)
     col_clustering_method: str = settings.Setting(Clustering.None_.name)
     row_clustering_method: str = settings.Setting(Clustering.None_.name)
@@ -300,6 +330,11 @@ class OWHeatMap(widget.OWWidget):
         form.addRow("Columns:", self.col_cluster_cb)
         cluster_box.layout().addLayout(form)
         box = gui.vBox(self.controlArea, "Split By")
+        form = QFormLayout(
+            formAlignment=Qt.AlignLeft, labelAlignment=Qt.AlignLeft,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
+        )
+        box.layout().addLayout(form)
 
         self.row_split_model = DomainModel(
             placeholder="(None)",
@@ -324,7 +359,26 @@ class OWHeatMap(widget.OWWidget):
         self.row_split_cb.activated.connect(
             self.__on_split_rows_activated
         )
-        box.layout().addWidget(self.row_split_cb)
+        # self.col_split_model = PyListModel(parent=self, list_item_role=Qt.UserRole+1)
+        self.col_split_model = create_list_model([
+            {Qt.DisplayRole: "(None)", Qt.UserRole: None},
+            {Qt.AccessibleDescriptionRole: "separator", Qt.UserRole - 1: Qt.NoItemFlags}
+        ], parent=self)
+        self.col_split_cb = cb = ComboBoxSearch(
+            sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLength,
+            minimumContentsLength=14,
+            toolTip="Split the heatmap horizontally by a variable label"
+        )
+        self.col_split_cb.setModel(self.col_split_model)
+        self.connect_control(
+            "split_columns_key", lambda value, cb=cb: cbselect(cb, value)
+        )
+        self.split_columns_key = None
+        self.col_split_cb.activated.connect(self.__on_split_cols_activated)
+        form.addRow("Rows:", self.row_split_cb)
+        form.addRow("Columns:", self.col_split_cb)
+        # box.layout().addWidget(self.row_split_cb)
+        # box.layout().addWidget(self.col_split_cb)
 
         box = gui.vBox(self.controlArea, 'Annotation && Legends')
 
@@ -463,7 +517,10 @@ class OWHeatMap(widget.OWWidget):
         self.row_side_color_model.set_domain(None)
         self.annotation_color_var = None
         self.row_split_model.set_domain(None)
+        # self.col_split_model.clear()
+        self.col_split_model.setRowCount(2)
         self.split_by_var = None
+        self.split_columns_key = None
         self.parts = None
         self.clear_scene()
         self.selected_rows = []
@@ -547,13 +604,31 @@ class OWHeatMap(widget.OWWidget):
             self.annotation_var = None
             self.annotation_color_var = None
             self.row_split_model.set_domain(data.domain)
+            # self.col_split_model.wrap([None, PyListModel.Separator] + candidate_split_labels(data))
+            # self.col_split_model.setData(self.col_split_model.index(0), "(None)", Qt.DisplayRole)
+            # self.col_split_model[2:] = candidate_split_labels(data)
+            # self.col_split_model[1:] = [PyListModel.Separator, *candidate_split_labels(data)]
+            self.col_split_model.setRowCount(2)
+            list_model_append(self.col_split_model, [
+                {Qt.DisplayRole: str(c), Qt.UserRole: c, Qt.EditRole: c}
+                for c in candidate_split_labels(data)
+            ])
+
             if data.domain.has_discrete_class:
                 self.split_by_var = data.domain.class_var
             else:
                 self.split_by_var = None
+            self.split_columns_key = None
             self.openContext(self.input_data)
             if self.split_by_var not in self.row_split_model:
                 self.split_by_var = None
+
+            idx = self.col_split_cb.findData(self.split_columns_key, Qt.UserRole)
+            if idx == -1:
+                self.split_columns_key = None
+
+            # if self.split_columns_key not in self.col_split_model:
+            #     self.split_columns_key = None
 
         self.update_heatmaps()
         if data is not None and self.__pending_selection is not None:
@@ -577,6 +652,14 @@ class OWHeatMap(widget.OWWidget):
             self.split_by_var = var
             self.update_heatmaps()
 
+    def __on_split_cols_activated(self):
+        self.set_column_split_key(self.col_split_cb.currentData(Qt.UserRole))
+
+    def set_column_split_key(self, key):
+        if key != self.split_columns_key:
+            self.split_columns_key = key
+            self.update_heatmaps()
+
     def update_heatmaps(self):
         if self.data is not None:
             self.clear_scene()
@@ -591,7 +674,7 @@ class OWHeatMap(widget.OWWidget):
             elif self.merge_kmeans and len(self.data) < 3:
                 self.Error.not_enough_instances_k_means()
             else:
-                parts = self.construct_heatmaps(self.data, self.split_by_var)
+                parts = self.construct_heatmaps(self.data, self.split_by_var, self.split_columns_key)
                 self.construct_heatmaps_scene(parts, self.effective_data)
                 self.selected_rows = []
         else:
@@ -604,7 +687,7 @@ class OWHeatMap(widget.OWWidget):
             self.update_heatmaps()
             self.commit()
 
-    def _make_parts(self, data, group_var=None):
+    def _make_parts(self, data, group_var=None, column_split_key=None):
         """
         Make initial `Parts` for data, split by group_var, group_key
         """
@@ -626,11 +709,20 @@ class OWHeatMap(widget.OWWidget):
             row_groups = [RowPart(title=None, indices=range(0, len(data)),
                                   cluster=None, cluster_ordered=None)]
 
-        col_groups = [
-            ColumnPart(
-                title=None, indices=range(0, len(data.domain.attributes)),
-                domain=data.domain, cluster=None, cluster_ordered=None)
-        ]
+        if column_split_key is not None:
+            col_groups = split_domain(data.domain, column_split_key)
+            assert len(col_groups) > 0
+            col_indices = [np.array([data.domain.index(var) for var in group])
+                           for _, group in col_groups]
+            col_groups = [ColumnPart(title=str(name), domain=d, indices=ind,
+                                     cluster=None, cluster_ordered=None)
+                          for (name, d), ind in zip(col_groups, col_indices)]
+        else:
+            col_groups = [
+                ColumnPart(
+                    title=None, indices=range(0, len(data.domain.attributes)),
+                    domain=data.domain.attributes, cluster=None, cluster_ordered=None)
+            ]
 
         minv, maxv = np.nanmin(data.X), np.nanmax(data.X)
         return Parts(row_groups, col_groups, span=(minv, maxv))
@@ -668,42 +760,42 @@ class OWHeatMap(widget.OWWidget):
 
         return parts._replace(rows=row_groups)
 
-    def cluster_columns(self, data, parts, ordered=False):
-        assert len(parts.columns) == 1, "columns split is no longer supported"
+    def cluster_columns(self, data, parts: 'Parts', ordered=False):
         assert all(var.is_continuous for var in data.domain.attributes)
+        col_groups = []
+        for col in parts.columns:
+            if col.cluster is not None:
+                cluster = col.cluster
+            else:
+                cluster = None
+            if col.cluster_ordered is not None:
+                cluster_ord = col.cluster_ordered
+            else:
+                cluster_ord = None
+            if col.can_cluster:
+                need_dist = cluster is None or (ordered and cluster_ord is None)
+                matrix = None
+                if need_dist:
+                    subset = data.transform(Domain(col.domain))
+                    subset = Orange.distance._preprocess(subset)
+                    matrix = np.asarray(Orange.distance.PearsonR(subset, axis=0))
+                    # nan values break clustering below
+                    matrix = np.nan_to_num(matrix)
 
-        col0 = parts.columns[0]
-        if col0.cluster is not None:
-            cluster = col0.cluster
-        else:
-            cluster = None
-        if col0.cluster_ordered is not None:
-            cluster_ord = col0.cluster_ordered
-        else:
-            cluster_ord = None
-        need_dist = cluster is None or (ordered and cluster_ord is None)
-        matrix = None
-        if need_dist:
-            data = Orange.distance._preprocess(data)
-            matrix = np.asarray(Orange.distance.PearsonR(data, axis=0))
-            # nan values break clustering below
-            matrix = np.nan_to_num(matrix)
+                if cluster is None:
+                    assert matrix is not None
+                    assert len(matrix) < self.MaxClustering
+                    cluster = hierarchical.dist_matrix_clustering(
+                        matrix, linkage=hierarchical.WARD
+                    )
+                if ordered and cluster_ord is None:
+                    assert len(matrix) < self.MaxOrderedClustering
+                    cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
 
-        if cluster is None:
-            assert matrix is not None
-            assert len(matrix) < self.MaxClustering
-            cluster = hierarchical.dist_matrix_clustering(
-                matrix, linkage=hierarchical.WARD
-            )
-        if ordered and cluster_ord is None:
-            assert len(matrix) < self.MaxOrderedClustering
-            cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
-
-        col_groups = [col._replace(cluster=cluster, cluster_ordered=cluster_ord)
-                      for col in parts.columns]
+            col_groups.append(col._replace(cluster=cluster, cluster_ordered=cluster_ord))
         return parts._replace(columns=col_groups)
 
-    def construct_heatmaps(self, data, group_var=None) -> 'Parts':
+    def construct_heatmaps(self, data, group_var=None, column_split_key=None) -> 'Parts':
         if self.merge_kmeans:
             if self.kmeans_model is None:
                 effective_data = self.input_data.transform(
@@ -740,13 +832,17 @@ class OWHeatMap(widget.OWWidget):
 
         self.__update_clustering_enable_state(effective_data)
 
-        parts = self._make_parts(effective_data, group_var)
+        parts = self._make_parts(effective_data, group_var, column_split_key)
         # Restore/update the row/columns items descriptions from cache if
         # available
         rows_cache_key = (group_var,
                           self.merge_kmeans_k if self.merge_kmeans else None)
         if rows_cache_key in self.__rows_cache:
             parts = parts._replace(rows=self.__rows_cache[rows_cache_key].rows)
+
+        if column_split_key in self.__columns_cache:
+            parts = parts._replace(
+                columns=self.__columns_cache[column_split_key].columns)
 
         if self.row_clustering != Clustering.None_:
             parts = self.cluster_rows(
@@ -1174,6 +1270,13 @@ class ColumnPart(NamedTuple):
     domain: Sequence[int]
     cluster: Optional[hierarchical.Tree] = None
     cluster_ordered: Optional[hierarchical.Tree] = None
+
+    @property
+    def can_cluster(self) -> bool:
+        if isinstance(self.indices, slice):
+            return (self.indices.stop - self.indices.start) > 1
+        else:
+            return len(self.indices) > 1
 
 
 class Parts(NamedTuple):
