@@ -368,21 +368,18 @@ class HeatmapGridWidget(QGraphicsWidget):
         row_dendrograms: List[Optional[DendrogramWidget]] = [None] * N
         right_side_colors: List[Optional[GraphicsPixmapWidget]] = [None] * N
 
-        ncols = sum(c.size for c in parts.columns)
-        nrows = sum(r.size for r in parts.rows)
         data = parts.data
         if parts.col_names is None:
-            col_names = np.full(ncols, "", dtype=object)
+            col_names = np.full(data.shape[1], "", dtype=object)
         else:
             col_names = np.asarray(parts.col_names, dtype=object)
         if parts.row_names is None:
-            row_names = np.full(nrows, "", dtype=object)
+            row_names = np.full(data.shape[0], "", dtype=object)
         else:
             row_names = np.asarray(parts.row_names, dtype=object)
 
-        assert data.shape == (nrows, ncols)
-        assert len(col_names) == ncols
-        assert len(row_names) == nrows
+        assert len(col_names) == data.shape[1]
+        assert len(row_names) == data.shape[0]
 
         for i, rowitem in enumerate(parts.rows):
             if rowitem.title:
@@ -710,8 +707,6 @@ class HeatmapGridWidget(QGraphicsWidget):
             legend_container.setVisible(True)
 
         parts = self.parts.rows
-        nrows = sum(p.size for p in parts)
-        assert len(data) == nrows
         for p, item in zip(parts, items):
             if item is not None:
                 subset = data[p.normalized_indices]
