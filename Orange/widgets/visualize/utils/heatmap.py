@@ -290,16 +290,18 @@ class HeatmapGridWidget(QGraphicsWidget):
 
     # Start row/column where the heatmap items are inserted
     # (after the titles/legends/dendrograms)
-    Row0 = 3
+    Row0 = 4
     Col0 = 3
     # The (color) legend row and column
     LegendRow, LegendCol = 0, 4
     # The column for the vertical dendrogram
     DendrogramColumn = 1
+    # Horizontal split title column
+    GroupTitleRow = 1
     # The row for the horizontal dendrograms
-    DendrogramRow = 1
+    DendrogramRow = 2
     # The row for top column annotation labels
-    TopLabelsRow = 2
+    TopLabelsRow = 3
     # Vertical split title column
     GroupTitleColumn = 0
 
@@ -426,9 +428,10 @@ class HeatmapGridWidget(QGraphicsWidget):
             if colitem.title:
                 item = SimpleLayoutItem(
                     QGraphicsSimpleTextItem(colitem.title, parent=self),
-                    parent=grid
+                    parent=grid, anchor=(0.5, 0.5), anchorItem=(0.5, 0.5)
                 )
-                grid.addItem(item, 1, Col0 + 2 * j + 1)
+                item.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+                grid.addItem(item, self.GroupTitleRow, Col0 + 2 * j + 1)
 
             if colitem.cluster:
                 dendrogram = DendrogramWidget(
