@@ -131,19 +131,6 @@ def create_list_model(
     return model
 
 
-def list_model_append(
-        model: QStandardItemModel,
-        items: Iterable[Mapping[Qt.ItemDataRole, Any]]
-):
-    sitems = []
-    for item in items:
-        sitem = QStandardItem()
-        for role, value in item.items():
-            sitem.setData(value, role)
-        sitems.append(sitem)
-    model.invisibleRootItem().appendRows(sitems)
-
-
 E = TypeVar("E", bound=enum.Enum)  # pylint: disable=invalid-name
 
 
@@ -256,6 +243,8 @@ class OWHeatMap(widget.OWWidget):
         #: merged using k-means
         self.data = None
         self.effective_data = None
+        #: Source of column annotations (derived from self.data)
+        self.col_annot_data: Optional[Table] = None
         #: kmeans model used to merge rows of input_data
         self.kmeans_model = None
         #: merge indices derived from kmeans
@@ -359,15 +348,16 @@ class OWHeatMap(widget.OWWidget):
         self.row_split_cb.activated.connect(
             self.__on_split_rows_activated
         )
-        # self.col_split_model = PyListModel(parent=self, list_item_role=Qt.UserRole+1)
-        self.col_split_model = create_list_model([
-            {Qt.DisplayRole: "(None)", Qt.UserRole: None},
-            {Qt.AccessibleDescriptionRole: "separator", Qt.UserRole - 1: Qt.NoItemFlags}
-        ], parent=self)
+        self.col_split_model = DomainModel(
+            placeholder="(None)",
+            order=DomainModel.MIXED,
+            valid_types=(Orange.data.DiscreteVariable,),
+            parent=self,
+        )
         self.col_split_cb = cb = ComboBoxSearch(
             sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLength,
             minimumContentsLength=14,
-            toolTip="Split the heatmap horizontally by a variable label"
+            toolTip="Split the heatmap horizontally by column annotation"
         )
         self.col_split_cb.setModel(self.col_split_model)
         self.connect_control(
@@ -377,8 +367,6 @@ class OWHeatMap(widget.OWWidget):
         self.col_split_cb.activated.connect(self.__on_split_cols_activated)
         form.addRow("Rows:", self.row_split_cb)
         form.addRow("Columns:", self.col_split_cb)
-        # box.layout().addWidget(self.row_split_cb)
-        # box.layout().addWidget(self.col_split_cb)
 
         box = gui.vBox(self.controlArea, 'Annotation && Legends')
 
@@ -517,8 +505,7 @@ class OWHeatMap(widget.OWWidget):
         self.row_side_color_model.set_domain(None)
         self.annotation_color_var = None
         self.row_split_model.set_domain(None)
-        # self.col_split_model.clear()
-        self.col_split_model.setRowCount(2)
+        self.col_split_model.set_domain(None)
         self.split_by_var = None
         self.split_columns_key = None
         self.parts = None
@@ -604,15 +591,8 @@ class OWHeatMap(widget.OWWidget):
             self.annotation_var = None
             self.annotation_color_var = None
             self.row_split_model.set_domain(data.domain)
-            # self.col_split_model.wrap([None, PyListModel.Separator] + candidate_split_labels(data))
-            # self.col_split_model.setData(self.col_split_model.index(0), "(None)", Qt.DisplayRole)
-            # self.col_split_model[2:] = candidate_split_labels(data)
-            # self.col_split_model[1:] = [PyListModel.Separator, *candidate_split_labels(data)]
-            self.col_split_model.setRowCount(2)
-            list_model_append(self.col_split_model, [
-                {Qt.DisplayRole: str(c), Qt.UserRole: c, Qt.EditRole: c}
-                for c in candidate_split_labels(data)
-            ])
+            self.col_annot_data = data.transpose(data[:0].transform(Domain(data.domain.attributes)))
+            self.col_split_model.set_domain(self.col_annot_data.domain)
 
             if data.domain.has_discrete_class:
                 self.split_by_var = data.domain.class_var
@@ -623,12 +603,9 @@ class OWHeatMap(widget.OWWidget):
             if self.split_by_var not in self.row_split_model:
                 self.split_by_var = None
 
-            idx = self.col_split_cb.findData(self.split_columns_key, Qt.UserRole)
+            idx = self.col_split_cb.findData(self.split_columns_key, Qt.EditRole)
             if idx == -1:
                 self.split_columns_key = None
-
-            # if self.split_columns_key not in self.col_split_model:
-            #     self.split_columns_key = None
 
         self.update_heatmaps()
         if data is not None and self.__pending_selection is not None:
