@@ -229,10 +229,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, data, widget=w)
         self.assertIs(w.split_by_var, data.domain.class_var)
         self.assertEqual(len(w.parts.rows),
-                         len(data.domain.class_var.values))
-        self.assertTrue(w.Warning.missing_split_values.is_shown())
-        w.set_split_variable(None)
-        self.assertFalse(w.Warning.missing_split_values.is_shown())
+                         len(data.domain.class_var.values) + 1)
 
     def test_palette_centering(self):
         data = np.arange(2).reshape(-1, 1)
