@@ -17,7 +17,8 @@ from AnyQt.QtGui import QStandardItemModel, QStandardItem, QFont, QKeySequence
 from AnyQt.QtCore import Qt, QSize, QRectF, QObject
 
 from orangewidget.utils.combobox import ComboBox, ComboBoxSearch
-from Orange.data import Domain, Table, Variable
+from Orange.data import Domain, Table, Variable, DiscreteVariable, \
+    ContinuousVariable
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
@@ -183,6 +184,8 @@ class OWHeatMap(widget.OWWidget):
     annotation_var = settings.ContextSetting(None)
     #: color row annotation
     annotation_color_var = settings.ContextSetting(None)
+    column_annotation_color_key = settings.ContextSetting(None)
+
     # Discrete variable used to split that data/heatmaps (vertically)
     split_by_var = settings.ContextSetting(None)
     # Split heatmap columns by 'key' (horizontal)
@@ -408,13 +411,39 @@ class OWHeatMap(widget.OWWidget):
         form.addRow("Text", self.annotation_text_cb)
         form.addRow("Color", self.row_side_color_cb)
         box.layout().addWidget(annotbox)
-        posbox = gui.vBox(box, "Column Labels Position", addSpace=False)
-        posbox.setFlat(True)
+        annotbox = QGroupBox("Column annotations", flat=True)
+        form = QFormLayout(
+            annotbox,
+            formAlignment=Qt.AlignLeft,
+            labelAlignment=Qt.AlignLeft,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
+        )
+        self.col_side_color_model = DomainModel(
+            placeholder="(None)",
+            valid_types=(DiscreteVariable, ContinuousVariable),
+            parent=self
+        )
+        self.col_side_color_cb = cb = ComboBoxSearch(
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            minimumContentsLength=12
+        )
+        self.col_side_color_cb.setModel(self.col_side_color_model)
+        self.connect_control(
+            "column_annotation_color_key", self.column_annotation_color_key_changed,
+        )
+        self.column_annotation_color_key = None
+        self.col_side_color_cb.activated.connect(
+            self.__set_column_annotation_color_key_index)
+
         cb = gui.comboBox(
-            posbox, self, "column_label_pos",
+            None, self, "column_label_pos",
             callback=self.update_column_annotations)
         cb.setModel(create_list_model(ColumnLabelsPosData, parent=self))
         cb.setCurrentIndex(self.column_label_pos)
+        form.addRow("Color", self.col_side_color_cb)
+        form.addRow("Label position", cb)
+        box.layout().addWidget(annotbox)
+
         gui.checkBox(self.controlArea, self, "keep_aspect",
                      "Keep aspect ratio", box="Resize",
                      callback=self.__aspect_mode_changed)
@@ -503,7 +532,9 @@ class OWHeatMap(widget.OWWidget):
         self.annotation_model.set_domain(None)
         self.annotation_var = None
         self.row_side_color_model.set_domain(None)
+        self.col_side_color_model.set_domain(None)
         self.annotation_color_var = None
+        self.column_annotation_color_key = None
         self.row_split_model.set_domain(None)
         self.col_split_model.set_domain(None)
         self.split_by_var = None
@@ -593,12 +624,13 @@ class OWHeatMap(widget.OWWidget):
             self.row_split_model.set_domain(data.domain)
             self.col_annot_data = data.transpose(data[:0].transform(Domain(data.domain.attributes)))
             self.col_split_model.set_domain(self.col_annot_data.domain)
-
+            self.col_side_color_model.set_domain(self.col_annot_data.domain)
             if data.domain.has_discrete_class:
                 self.split_by_var = data.domain.class_var
             else:
                 self.split_by_var = None
             self.split_columns_key = None
+            self.column_annotation_color_key = None
             self.openContext(self.input_data)
             if self.split_by_var not in self.row_split_model:
                 self.split_by_var = None
@@ -606,6 +638,10 @@ class OWHeatMap(widget.OWWidget):
             idx = self.col_split_cb.findData(self.split_columns_key, Qt.EditRole)
             if idx == -1:
                 self.split_columns_key = None
+
+            idx = self.col_side_color_cb.findData(self.column_annotation_color_key, Qt.EditRole)
+            if idx == -1:
+                self.column_annotation_color_key = None
 
         self.update_heatmaps()
         if data is not None and self.__pending_selection is not None:
@@ -630,7 +666,7 @@ class OWHeatMap(widget.OWWidget):
             self.update_heatmaps()
 
     def __on_split_cols_activated(self):
-        self.set_column_split_key(self.col_split_cb.currentData(Qt.UserRole))
+        self.set_column_split_key(self.col_split_cb.currentData(Qt.EditRole))
 
     def set_column_split_key(self, key):
         if key != self.split_columns_key:
@@ -809,7 +845,9 @@ class OWHeatMap(widget.OWWidget):
 
         self.__update_clustering_enable_state(effective_data)
 
-        parts = self._make_parts(effective_data, group_var, column_split_key)
+        parts = self._make_parts(
+            effective_data, group_var,
+            column_split_key.name if column_split_key is not None else None)
         # Restore/update the row/columns items descriptions from cache if
         # available
         rows_cache_key = (group_var,
@@ -879,9 +917,15 @@ class OWHeatMap(widget.OWWidget):
             col_names=columns,
         )
         widget.setHeatmaps(parts)
+
         side = self.row_side_colors()
         if side is not None:
             widget.setRowSideColorAnnotations(side[0], side[1], name=side[2].name)
+
+        side = self.column_side_colors()
+        if side is not None:
+            widget.setColumnSideColorAnnotations(side[0], side[1], name=side[2].name)
+
         widget.setColumnLabelsPosition(self._column_label_pos)
         widget.setAspectRatioMode(
             Qt.KeepAspectRatio if self.keep_aspect else Qt.IgnoreAspectRatio
@@ -1050,7 +1094,7 @@ class OWHeatMap(widget.OWWidget):
         merges = self._merge_row_indices()
         if merges is not None:
             column_data = aggregate(var, column_data, merges)
-        data, colormap = self._colorize(var, column_data)
+        data, colormap = colorize(var, column_data)
         if var.is_continuous:
             span = (np.nanmin(column_data), np.nanmax(column_data))
             if np.any(np.isnan(span)):
@@ -1076,27 +1120,31 @@ class OWHeatMap(widget.OWWidget):
         else:
             widget.setRowSideColorAnnotations(colors[0], colors[1], colors[2].name)
 
-    def _colorize(self, var: Variable, data: np.ndarray) -> Tuple[np.ndarray, ColorMap]:
-        palette = var.palette  # type: Palette
-        colors = np.array(
-            [[c.red(), c.green(), c.blue()] for c in palette.qcolors_w_nan],
-            dtype=np.uint8,
-        )
-        if var.is_discrete:
-            mask = np.isnan(data)
-            data[mask] = -1
-            data = data.astype(int)
-            if mask.any():
-                values = (*var.values, "N/A")
+    def __set_column_annotation_color_key_index(self, index: int):
+        key = self.col_side_color_cb.itemData(index, Qt.EditRole)
+        self.set_column_annotation_color_key(key)
+
+    def column_annotation_color_key_changed(self, value):
+        cbselect(self.col_side_color_cb, value, Qt.EditRole)
+
+    def set_column_annotation_color_key(self, key):
+        if self.column_annotation_color_key != key:
+            self.column_annotation_color_key = key
+            cbselect(self.col_side_color_cb, key, Qt.EditRole)
+            colors = self.column_side_colors()
+            if colors is not None:
+                self.scene.widget.setColumnSideColorAnnotations(
+                    colors[0], colors[1], colors[2].name,
+                )
             else:
-                values = var.values
-                colors = colors[: -1]
-            return data, CategoricalColorMap(colors, values)
-        elif var.is_continuous:
-            cmap = GradientColorMap(colors[:-1])
-            return data, cmap
-        else:
-            raise TypeError
+                self.scene.widget.setColumnSideColorAnnotations(None)
+
+    def column_side_colors(self):
+        var = self.column_annotation_color_key
+        if var is None:
+            return None
+        table = self.col_annot_data
+        return color_annotation_data(table, var)
 
     def update_column_annotations(self):
         widget = self.scene.widget
@@ -1303,6 +1351,40 @@ def column_data_from_table(
     if var.is_primitive() and data.dtype.kind != "f":
         data = data.astype(float)
     return data
+
+
+def color_annotation_data(
+        table: Table, var: Union[int, str, Variable]
+) -> Tuple[np.ndarray, ColorMap, Variable]:
+    var = table.domain[var]
+    column_data = column_data_from_table(table, var)
+    data, colormap = colorize(var, column_data)
+    return data, colormap, var
+
+
+def colorize(var: Variable, data: np.ndarray) -> Tuple[np.ndarray, ColorMap]:
+    palette = var.palette  # type: Palette
+    colors = np.array(
+        [[c.red(), c.green(), c.blue()] for c in palette.qcolors_w_nan],
+        dtype=np.uint8,
+    )
+    if var.is_discrete:
+        mask = np.isnan(data)
+        data = data.astype(int)
+        data[mask] = -1
+        if mask.any():
+            values = (*var.values, "N/A")
+        else:
+            values = var.values
+            colors = colors[: -1]
+        return data, CategoricalColorMap(colors, values)
+    elif var.is_continuous:
+        span = np.nanmin(data), np.nanmax(data)
+        if np.any(np.isnan(span)):
+            span = 0, 1.
+        return data, GradientColorMap(colors[:-1], span=span)
+    else:
+        raise TypeError
 
 
 def aggregate(
