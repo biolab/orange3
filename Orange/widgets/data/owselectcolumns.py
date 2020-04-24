@@ -124,8 +124,9 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
         value = context.values["domain_role_hints"][0]
         assigned = [desc for desc, (role, _) in value.items()
                     if role != "available"]
-        return assigned and \
-               sum(all_vars.get(attr) == vtype for attr, vtype in assigned) \
+        if not assigned:
+            return self.NO_MATCH
+        return sum(all_vars.get(attr) == vtype for attr, vtype in assigned) \
                / len(assigned)
 
     def filter_value(self, setting, data, domain, attrs, metas):
