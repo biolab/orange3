@@ -32,7 +32,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
-from Orange.widgets.settings import Setting, DomainContextHandler
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
@@ -425,8 +425,6 @@ class OWDataTable(OWWidget):
     auto_commit = Setting(True)
 
     color_by_class = Setting(True)
-    settingsHandler = DomainContextHandler(
-        match_values=DomainContextHandler.MATCH_VALUES_ALL)
     selected_rows = Setting([], schema_only=True)
     selected_cols = Setting([], schema_only=True)
 
@@ -493,7 +491,6 @@ class OWDataTable(OWWidget):
     @Inputs.data
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
-        self.closeContext()
         if data is not None:
             datasetname = getattr(data, "name", "Data")
             if tid in self._inputs:
@@ -560,7 +557,6 @@ class OWDataTable(OWWidget):
                 self.set_info(current.input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
-        self.openContext(data)
 
         if data and self.__pending_selected_rows is not None:
             self.selected_rows = self.__pending_selected_rows
