@@ -1,11 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 from os import path
 
 from Orange.classification import TreeLearner
 from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owtreeviewer import OWTreeGraph
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
@@ -86,3 +87,21 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
                 "sent to widget after receiving a dataset with variables with "
                 "same entropy." % n_tries
             )
+
+    def test_summary(self):
+        """Check if status bar updates"""
+        info = self.widget.info
+        no_output = "No data on output"
+
+        self.send_signal(self.widget.Inputs.tree, self.signal_data)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.tree, None)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
