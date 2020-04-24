@@ -1,4 +1,5 @@
 """Tests for the Pythagorean tree widget and associated classes."""
+# pylint: disable=protected-access
 import math
 import unittest
 
@@ -10,6 +11,7 @@ from Orange.modelling import TreeLearner
 from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.tests.utils import simulate
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owpythagorastree import OWPythagorasTree
 from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest
 from Orange.widgets.visualize.pythagorastreeviewer import (
@@ -411,6 +413,30 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.tree, iris_tree)
         self.assertEqual(2, self.widget.target_class_index)
 
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+        data = self.titanic.instances
+
+        self.send_signal(self.widget.Inputs.tree, self.titanic)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.tree, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 if __name__ == "__main__":
     unittest.main()
