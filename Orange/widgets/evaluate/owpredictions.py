@@ -572,10 +572,12 @@ class OWPredictions(OWWidget):
     def send_report(self):
         def merge_data_with_predictions():
             data_model = self.dataview.model()
-            predictions_model = self.predictionsview.model()
+            predictions_view = self.predictionsview
+            predictions_model = predictions_view.model()
 
             # use ItemDelegate to style prediction values
-            style = lambda x: self.predictionsview.itemDelegate().displayText(x, QLocale())
+            delegates = [predictions_view.itemDelegateForColumn(i)
+                         for i in range(predictions_model.columnCount())]
 
             # iterate only over visible columns of data's QTableView
             iter_data_cols = list(filter(lambda x: not self.dataview.isColumnHidden(x),
@@ -591,8 +593,10 @@ class OWPredictions(OWWidget):
             # print data & predictions
             for i in range(data_model.rowCount()):
                 yield [data_model.headerData(i, Qt.Vertical, Qt.DisplayRole)] + \
-                      [style(predictions_model.data(predictions_model.index(i, j)))
-                       for j in range(predictions_model.columnCount())] + \
+                      [delegate.displayText(
+                          predictions_model.data(predictions_model.index(i, j)),
+                          QLocale())
+                       for j, delegate in enumerate(delegates)] + \
                       [data_model.data(data_model.index(i, j))
                        for j in iter_data_cols]
 
