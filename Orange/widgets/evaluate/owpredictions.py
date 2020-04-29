@@ -11,6 +11,8 @@ from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
     QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer)
 
+from orangewidget.report import plural
+
 import Orange
 from Orange.evaluation import Results
 from Orange.base import Model
@@ -293,18 +295,28 @@ class OWPredictions(OWWidget):
             self.Warning.wrong_targets.clear()
 
     def _update_info(self):
-        n_predictors = len(self.predictors)
-        if not self.data and not n_predictors:
+        if not self.data and not self.predictors:
             self.info.set_input_summary(self.info.NoInput)
             return
 
-        n_valid = len(self._non_errored_predictors())
         summary = str(len(self.data)) if self.data else "0"
-        details = f"{len(self.data)} instances" if self.data else "No data"
-        details += f"\n{n_predictors} models" if n_predictors else "No models"
-        if n_valid != n_predictors:
-            details += f" ({n_predictors - n_valid} failed)"
+        details = self._get_details()
         self.info.set_input_summary(summary, details)
+
+    def _get_details(self):
+        n_predictors = len(self.predictors)
+        if self.data:
+            details = plural("{number} instance{s}", len(self.data))
+        else:
+            details = "No data"
+        if n_predictors:
+            n_valid = len(self._non_errored_predictors())
+            details += plural("\n{number} model{s}", n_predictors)
+            if n_valid != n_predictors:
+                details += plural(" ({number} failed)", n_predictors - n_valid)
+        else:
+            details += "\nNo models"
+        return details
 
     def _invalidate_predictions(self):
         for inputid, pred in list(self.predictors.items()):
@@ -585,7 +597,7 @@ class OWPredictions(OWWidget):
                        for j in iter_data_cols]
 
         if self.data:
-            text = self.infolabel.text().replace('\n', '<br>')
+            text = self._get_details().replace('\n', '<br>')
             if self.selected_classes:
                 text += '<br>Showing probabilities for: '
                 text += ', '. join([self.class_values[i]
