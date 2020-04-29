@@ -412,6 +412,8 @@ class TestOWPredictions(WidgetTest):
         colors = self.widget._get_colors()
         self.assertEqual(3, len(colors))
 
+        self.widget.send_report()  # just a quick check that it doesn't crash
+
 
 if __name__ == "__main__":
     import unittest

@@ -610,6 +610,8 @@ class OWPredictions(OWWidget):
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
 
+            self.report_table("Scores", self.score_table.view)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_splitter()
