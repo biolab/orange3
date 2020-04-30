@@ -61,9 +61,10 @@ class OWDataInfo(widget.OWWidget):
             self._clear_fields()
             self.info.set_input_summary(self.info.NoInput)
         else:
-            self.info.set_input_summary(len(data), format_summary_details(data))
             self._set_fields(data)
             self._set_report(data)
+            self.info.set_input_summary(data.approx_len(),
+                                        format_summary_details(data))
 
     def _clear_fields(self):
         self.data_set_name = ""
