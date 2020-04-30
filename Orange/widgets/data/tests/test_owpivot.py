@@ -18,12 +18,11 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.state_summary import format_summary_details
 
+
 class TestOWPivot(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWPivot)
-        self.agg_checkboxes = [checkbox for checkbox in
-                               self.widget.controlArea.children()[7].children()
-                               if isinstance(checkbox, QCheckBox)]
+        self.agg_checkboxes = self.widget.aggregation_checkboxes
         self.assertGreater(len(self.agg_checkboxes), 0)
         self.iris = Table("iris")
         self.heart_disease = Table("heart_disease")
