@@ -28,11 +28,20 @@ class AttrDescTest(unittest.TestCase):
         desc.name = None
         self.assertEqual(desc.name, "x")
 
+    def test_reset(self):
+        x = ContinuousVariable("x")
+        desc = owcolor.AttrDesc(x)
+        desc.reset()
+        self.assertEqual(desc.name, "x")
+        desc.name = "y"
+        desc.reset()
+        self.assertEqual(desc.name, "x")
+
 
 class DiscAttrTest(unittest.TestCase):
     def setUp(self):
-        x = DiscreteVariable("x", ["a", "b", "c"])
-        self.desc = owcolor.DiscAttrDesc(x)
+        self.var = DiscreteVariable("x", ["a", "b", "c"])
+        self.desc = owcolor.DiscAttrDesc(self.var)
 
     def test_colors(self):
         desc = self.desc
@@ -69,6 +78,16 @@ class DiscAttrTest(unittest.TestCase):
         self.assertIsInstance(var.compute_value, Identity)
         self.assertIs(var.compute_value.variable, desc.var)
 
+    def test_reset(self):
+        desc = self.desc
+        desc.set_color(0, [1, 2, 3])
+        desc.set_color(1, [4, 5, 6])
+        desc.set_color(2, [7, 8, 9])
+        desc.set_value(1, "d")
+        desc.reset()
+        np.testing.assert_equal(desc.colors, self.var.colors)
+        self.assertEqual(desc.values, self.var.values)
+
 
 class ContAttrDesc(unittest.TestCase):
     def setUp(self):
@@ -103,6 +122,14 @@ class ContAttrDesc(unittest.TestCase):
         self.assertFalse(hasattr(var.attributes, "colors"))
         self.assertIsInstance(var.compute_value, Identity)
         self.assertIs(var.compute_value.variable, desc.var)
+
+    def test_reset(self):
+        desc = self.desc
+        palette_name = desc.palette_name
+        desc.palette_name = _find_other_palette(
+            colorpalettes.ContinuousPalettes[palette_name]).name
+        desc.reset()
+        np.testing.assert_equal(desc.palette_name, palette_name)
 
 
 class BaseTestColorTableModel:
@@ -149,6 +176,14 @@ class BaseTestColorTableModel:
             self.assertEqual(self.descs[1].name, "foo")
         finally:
             self.model.dataChanged.disconnect(emit)
+
+    def test_reset(self):
+        for desc in self.descs:
+            desc.reset = Mock()
+        self.model.set_data(self.descs)
+        self.model.reset()
+        for desc in self.descs:
+            desc.reset.assert_called()
 
 
 class TestDiscColorTableModel(GuiTest, BaseTestColorTableModel):
@@ -510,6 +545,22 @@ class TestOWColor(WidgetTest):
         self.assertEqual(input_sum.call_args[0][0].brief, "")
         output_sum.assert_called_once()
         self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+    def test_reset(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        cont_model = self.widget.cont_model
+        disc_model = self.widget.disc_model
+        cont_model.setData(cont_model.index(0, 0), "a", Qt.EditRole)
+        disc_model.setData(disc_model.index(0, 0), "b", Qt.EditRole)
+        outp = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(outp.domain[0].name, "a")
+        self.assertEqual(outp.domain.class_var.name, "b")
+        self.widget.reset()
+        outp = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(
+            outp.domain[0].name, self.iris.domain[0].name)
+        self.assertEqual(
+            outp.domain.class_var.name, self.iris.domain.class_var.name)
 
 
 if __name__ == "__main__":
