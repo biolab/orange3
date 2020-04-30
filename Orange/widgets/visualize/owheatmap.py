@@ -617,9 +617,15 @@ class OWHeatMap(widget.OWWidget):
             _col_data = table_column_data(data, group_var)
             row_indices = [np.flatnonzero(_col_data == i)
                            for i in range(len(group_var.values))]
+
             row_groups = [RowPart(title=name, indices=ind,
                                   cluster=None, cluster_ordered=None)
                           for name, ind in zip(group_var.values, row_indices)]
+            if np.any(_col_data.mask):
+                row_groups.append(RowPart(
+                    title="N/A", indices=np.flatnonzero(_col_data.mask),
+                    cluster=None, cluster_ordered=None
+                ))
         else:
             row_groups = [RowPart(title=None, indices=range(0, len(data)),
                                   cluster=None, cluster_ordered=None)]
