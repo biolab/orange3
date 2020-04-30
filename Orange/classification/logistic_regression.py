@@ -1,10 +1,6 @@
-import warnings
-
 import numpy as np
-
 import sklearn.linear_model as skl_linear_model
 
-import Orange
 from Orange.classification import SklLearner, SklModel
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import LearnerScorer
@@ -44,12 +40,3 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
                  multi_class='ovr', verbose=0, n_jobs=1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-
-    def __call__(self, data):
-        if len(np.unique(data.Y)) > 1:
-            return super().__call__(data)
-        else:
-            warnings.warn("Single class in data, returning Constant Model.")
-            maj = Orange.classification.MajorityLearner()
-            const = maj(data)
-            return const

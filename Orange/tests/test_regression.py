@@ -12,24 +12,26 @@ from Orange.regression import Learner
 from Orange.tests import test_filename
 
 
-class TestRegression(unittest.TestCase):
-    def all_learners(self):
-        regression_modules = pkgutil.walk_packages(
-            path=Orange.regression.__path__,
-            prefix="Orange.regression.",
-            onerror=lambda x: None)
-        for importer, modname, ispkg in regression_modules:
-            try:
-                module = pkgutil.importlib.import_module(modname)
-            except ImportError:
-                continue
+def all_learners():
+    regression_modules = pkgutil.walk_packages(
+        path=Orange.regression.__path__,
+        prefix="Orange.regression.",
+        onerror=lambda x: None)
+    for _, modname, _ in regression_modules:
+        try:
+            module = pkgutil.importlib.import_module(modname)
+        except ImportError:
+            continue
 
-            for name, class_ in inspect.getmembers(module, inspect.isclass):
-                if issubclass(class_, Learner) and 'base' not in class_.__module__:
-                    yield class_
+        for _, class_ in inspect.getmembers(module, inspect.isclass):
+            if issubclass(class_, Learner) and 'base' not in class_.__module__:
+                yield class_
+
+
+class TestRegression(unittest.TestCase):
 
     def test_adequacy_all_learners(self):
-        for learner in self.all_learners():
+        for learner in all_learners():
             try:
                 learner = learner()
                 table = Table("iris")
@@ -39,7 +41,7 @@ class TestRegression(unittest.TestCase):
                 continue
 
     def test_adequacy_all_learners_multiclass(self):
-        for learner in self.all_learners():
+        for learner in all_learners():
             try:
                 learner = learner()
                 table = Table(test_filename("datasets/test8.tab"))
@@ -50,7 +52,7 @@ class TestRegression(unittest.TestCase):
 
     def test_missing_class(self):
         table = Table(test_filename("datasets/imports-85.tab"))
-        for learner in self.all_learners():
+        for learner in all_learners():
             try:
                 learner = learner()
                 model = learner(table)

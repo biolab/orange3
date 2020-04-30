@@ -11,10 +11,8 @@ from sklearn.svm import OneClassSVM
 from Orange.base import SklLearner, SklModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
     Variable
-from Orange.data.table import DomainTransformationError
 from Orange.data.util import get_unique_names
 from Orange.preprocess import AdaptiveNormalize
-from Orange.statistics.util import all_nan
 from Orange.util import wrap_callback, dummy_callback
 
 __all__ = ["LocalOutlierFactorLearner", "IsolationForestLearner",
@@ -48,30 +46,6 @@ class _OutlierModel(SklModel):
         metas = np.hstack((data.metas, self.predict(self._cached_data.X)))
         progress_callback(1)
         return Table.from_numpy(domain, data.X, data.Y, metas)
-
-    def data_to_model_domain(self, data: Table, progress_callback: Callable) \
-            -> Table:
-        if data.domain == self.domain:
-            return data
-
-        progress_callback(0)
-        if self.original_domain.attributes != data.domain.attributes \
-                and data.X.size \
-                and not all_nan(data.X):
-            progress_callback(0.5)
-            new_data = data.transform(self.original_domain)
-            if all_nan(new_data.X):
-                raise DomainTransformationError(
-                    "domain transformation produced no defined values")
-            progress_callback(0.75)
-            data = new_data.transform(self.domain)
-            progress_callback(1)
-            return data
-
-        progress_callback(0.5)
-        data = data.transform(self.domain)
-        progress_callback(1)
-        return data
 
 
 class _OutlierLearner(SklLearner):

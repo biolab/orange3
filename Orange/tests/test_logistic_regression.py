@@ -123,11 +123,8 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         t = self.iris[60:90]
         self.assertEqual(len(np.unique(t.Y)), 1)
         learn = LogisticRegressionLearner()
-        with self.assertWarns(UserWarning):
-            model = learn(t)
-        self.assertEqual(model(t[0]), 1)
-        self.assertTrue(np.all(model(t[0], ret=Model.Probs) == [0, 1, 0]))
-        self.assertTrue(np.all(model(t) == 1))
+        with self.assertRaises(ValueError):
+            learn(t)
 
     def test_sklearn_single_class(self):
         t = self.iris[60:90]
