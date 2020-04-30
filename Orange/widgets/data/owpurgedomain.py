@@ -33,7 +33,7 @@ class OWPurgeDomain(widget.OWWidget):
     sortValues = Setting(True)
     sortClasses = Setting(True)
 
-    want_main_area = False
+    want_main_area = True
     resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
 
@@ -91,12 +91,13 @@ class OWPurgeDomain(widget.OWWidget):
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
 
-        box3 = gui.vBox(self.controlArea, 'Statistics', addSpace=True)
+        box3 = gui.vBox(self.mainArea, 'Statistics', addSpace=True)
         for i, (label, value) in enumerate(self.stat_labels):
             # add a separator after each group of three
             if i != 0 and i % 3 == 0:
                 gui.separator(box3, 2)
             gui.label(box3, self, "{}: %({})s".format(label, value))
+        gui.rubber(self.mainArea)
 
         gui.auto_send(self.buttonsArea, self, "autoSend")
         gui.rubber(self.controlArea)
