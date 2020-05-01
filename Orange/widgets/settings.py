@@ -36,13 +36,13 @@ import copy
 import itertools
 import logging
 import warnings
+from typing import Tuple, Dict, Union, List, Optional
 
 from orangewidget.settings import (
     Setting, SettingProvider, SettingsHandler, ContextSetting,
     ContextHandler, Context, IncompatibleContext, SettingsPrinter,
-    rename_setting, widget_settings_dir
-)
-from orangewidget.settings import _apply_setting
+    rename_setting, widget_settings_dir,
+    TypeSupport)
 
 from Orange.data import Domain, Variable
 from Orange.util import OrangeDeprecationWarning
@@ -62,10 +62,51 @@ __all__ = [
 ]
 
 
+class VariableTypeSupport(TypeSupport):
+    supported_types = (Variable, )
+    handle_derived_types = True
+
+    @classmethod
+    def pack_value(cls, value, tp=None):
+        if isinstance(value, Variable):
+            return value.name, 100 + vartype(value)
+        return value
+
+    @classmethod
+    # pylint: disable=keyword-arg-before-vararg
+    def unpack_value(cls, value, tp, domain=None, *args):
+        # This essentially decodes Tuple[str, int] to Union[Variable, Any]:
+        # if vartype is 100 (or 0), it leaves value as it is. Not nice, but
+        # needed for backward compatiblity -- and also practical in cases where
+        # a combo gives a few fixed options + variables. See Merge Data.
+        if isinstance(tp, type) and issubclass(tp, Variable):
+            if value is None:
+                return None
+            if domain is None:
+                warnings.warn("unpacking variables requires having a domain")
+                return None
+            saved_type = value[1] % 100
+            if saved_type == 0:
+                return value[0]
+            var = domain[value[0]]
+            if vartype(var) != saved_type:
+                warnings.warn(
+                    f"'{var.name}' is of wrong type ({type(var).__name__})")
+            return var
+        return super().unpack_value(value, tp, domain, *args)
+
+
+class DomainContext(Context):
+    attributes: Dict[str, int]
+    metas: Dict[str, int]
+
+
 class DomainContextHandler(ContextHandler):
     """Context handler for widgets with settings that depend on
     the input dataset. Suitable settings are selected based on the
     data domain."""
+
+    ContextType = DomainContext
 
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
@@ -79,6 +120,45 @@ class DomainContextHandler(ContextHandler):
                 "{} is not a valid parameter for DomainContextHandler"
                 .format(name), OrangeDeprecationWarning
             )
+
+    def analyze_settings(self, provider, prefix, class_name):
+        super().analyze_settings(provider, prefix, class_name)
+        if type(self) is DomainContextHandler and \
+                not any(isinstance(setting, ContextSetting)
+                        for setting, *_ in self.provider.traverse_settings()):
+            warnings.warn(f"{class_name} uses DomainContextHandler without "
+                          "having any context settings")
+
+    def _migrate_contexts(self, contexts: List[Context]) -> None:
+        super()._migrate_contexts(contexts)
+        self._migrate_annotated(contexts)
+
+    def _migrate_annotated(self, contexts: List[Context]):
+        for setting, *_ in self.provider.traverse_settings():
+            if not isinstance(setting, ContextSetting) \
+                    or setting.type is None \
+                    or not self.is_allowed_type(setting.type):
+                continue
+            name = setting.name
+            for context in contexts:
+                if name not in context.values:
+                    continue
+                value = context.values[name]
+                if isinstance(value, tuple) and len(value) == 2 and (
+                        value[1] == -2  # encoded any
+                        or (  # encoded list or dict
+                            (value[1] == -3 and isinstance(value[0], list)
+                             or value[1] == -4 and isinstance(value[0], dict))
+                            and all( # check that all elements/keys encode vars
+                                    x is None or
+                                    isinstance(x, tuple)
+                                    and len(x) == 2
+                                    and isinstance(x[0], str)
+                                    and isinstance(x[1], int)
+                                    and 1 <= x[1] % 100 <= 4
+                                    for x in value[0])
+                        )):
+                    context.values[name] = value[0]
 
     def encode_domain(self, domain):
         """
@@ -140,7 +220,7 @@ class DomainContextHandler(ContextHandler):
 
     @staticmethod
     def encode_variable(var):
-        return var.name, 100 + vartype(var)
+        return VariableTypeSupport.pack_value(var)
 
     @classmethod
     def encode_setting(cls, context, setting, value):
@@ -181,9 +261,9 @@ class DomainContextHandler(ContextHandler):
                        for name_type in data]
             if dtype == -4:
                 return {get_var(name): val for (name, _), val in data.items()}
-            if dtype >= 100:
+            if dtype > 0:
                 return get_var(data)
-            return value[0]
+            return data
         else:
             return value
 
@@ -251,7 +331,7 @@ class DomainContextHandler(ContextHandler):
 
     def match_value(self, setting, value, attrs, metas):
         """Match a single value """
-        if value[1] < 0:
+        if not isinstance(value, tuple) or value[1] < 0:
             return 0, 0
 
         if self._var_exists(setting, value, attrs, metas):
@@ -278,9 +358,16 @@ class DomainContextHandler(ContextHandler):
             and isinstance(value[0], str) and isinstance(value[1], int) \
             and value[1] >= 0
 
+
+class ClassValueContext(Context):
+    classes: Optional[Tuple[str, ...]]
+
+
 class ClassValuesContextHandler(ContextHandler):
     """Context handler used for widgets that work with
     a single discrete variable"""
+
+    ContextType = ClassValueContext
 
     def open_context(self, widget, classes):
         if isinstance(classes, Variable):
@@ -288,12 +375,13 @@ class ClassValuesContextHandler(ContextHandler):
                 classes = classes.values
             else:
                 classes = None
-
+        if classes is not None:
+            classes = tuple(classes)
         super().open_context(widget, classes)
 
     def new_context(self, classes):
         context = super().new_context()
-        context.classes = classes
+        context.classes = None if classes is None else tuple(classes)
         return context
 
     def match(self, context, classes):
@@ -309,12 +397,21 @@ class ClassValuesContextHandler(ContextHandler):
                 return self.NO_MATCH
 
 
+class PerfectDomainContext(Context):
+    VarDesc = Tuple[str, Union[List[str], int]]
+    attributes: Tuple[VarDesc, ...]
+    class_vars: Tuple[VarDesc, ...]
+    metas: Tuple[VarDesc, ...]
+
+
 class PerfectDomainContextHandler(DomainContextHandler):
     """Context handler that matches a context only when
     the same domain is available.
 
     It uses a different encoding than the DomainContextHandler.
     """
+
+    ContextType = PerfectDomainContext
 
     def new_context(self, domain, attributes, class_vars, metas):
         """Same as DomainContextHandler, but also store class_vars"""
