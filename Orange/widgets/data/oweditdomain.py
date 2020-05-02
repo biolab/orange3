@@ -1770,6 +1770,7 @@ class OWEditDomain(widget.OWWidget):
     _domain_change_store = settings.ContextSetting({})
     _selected_item = settings.ContextSetting(None)  # type: Optional[Tuple[str, int]]
     _merge_dialog_settings = settings.ContextSetting({})
+    output_table_name = settings.ContextSetting("")
 
     want_control_area = False
 
@@ -1808,6 +1809,10 @@ class OWEditDomain(widget.OWWidget):
         self._editor = ReinterpretVariableEditor()
 
         box.layout().addWidget(self._editor)
+
+        self.le_output_name = gui.lineEdit(
+            self.mainArea, self, "output_table_name", "Output table name: ",
+            box=True, orientation=Qt.Horizontal)
 
         bbox = QDialogButtonBox()
         bbox.setStyleSheet(
@@ -1856,10 +1861,12 @@ class OWEditDomain(widget.OWWidget):
             self.info.set_input_summary(len(data),
                                         format_summary_details(data))
             self.setup_model(data)
+            self.le_output_name.setPlaceholderText(data.name)
             self.openContext(self.data)
             self._editor.set_merge_context(self._merge_dialog_settings)
             self._restore()
         else:
+            self.le_output_name.setPlaceholderText("")
             self.info.set_input_summary(self.info.NoInput)
 
         self.commit()
@@ -2054,7 +2061,8 @@ class OWEditDomain(widget.OWWidget):
                     model.data(midx, TransformRole))
 
         state = [state(i) for i in range(model.rowCount())]
-        if all(tr is None or not tr for _, tr in state):
+        if all(tr is None or not tr for _, tr in state) \
+                and self.output_table_name in ("", data.name):
             self.Outputs.data.send(data)
             self.info.set_output_summary(len(data),
                                          format_summary_details(data))
@@ -2090,6 +2098,8 @@ class OWEditDomain(widget.OWWidget):
         Ys = [v for v in Ys if v.is_primitive()]
         domain = Orange.data.Domain(Xs, Ys, Ms)
         new_data = data.transform(domain)
+        if self.output_table_name:
+            new_data.name = self.output_table_name
         self.Outputs.data.send(new_data)
         self.info.set_output_summary(len(new_data),
                                      format_summary_details(new_data))
