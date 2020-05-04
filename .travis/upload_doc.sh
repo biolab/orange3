@@ -10,7 +10,7 @@ cp -r doc/data-mining-library/build/html doc/orange3doc/data-mining-library
 cp -r doc/development/build/html doc/orange3doc/development
 cp -r doc/visual-programming/build/html doc/orange3doc/visual-programming
 > ~/.ssh/config echo "
-Host biolab.si
+Host ssh.biolab.si
     StrictHostKeyChecking no
     User uploaddocs
     IdentityFile $TRAVIS_BUILD_DIR/.travis/key.private
