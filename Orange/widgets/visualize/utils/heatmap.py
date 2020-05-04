@@ -512,7 +512,7 @@ class HeatmapGridWidget(QGraphicsWidget):
                 items=labels, parent=self,
                 alignment=Qt.AlignLeft | Qt.AlignVCenter,
                 orientation=Qt.Horizontal,
-                autoScale=True,
+                autoScale=len(labels) != 1,
                 sizePolicy=sp,
                 visible=self.__columnLabelPosition & Position.Top,
                 objectName="column-labels-top",
