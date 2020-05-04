@@ -293,17 +293,18 @@ class ColorStripDelegate(HorizontalGridDelegate):
 
     def createEditor(self, parent, option, index):
         class Combo(QComboBox):
-            def __init__(self, parent, initial_data):
+            def __init__(self, parent, initial_data, view):
                 super().__init__(parent)
                 model = itemmodels.ContinuousPalettesModel(icon_width=128)
                 self.setModel(model)
                 self.setCurrentIndex(model.indexOf(initial_data))
                 self.setIconSize(QSize(128, 16))
                 QTimer.singleShot(0, self.showPopup)
+                self.view = view
 
             def hidePopup(self):
                 super().hidePopup()
-                view.closeEditor(self, ColorStripDelegate.NoHint)
+                self.view.closeEditor(self, ColorStripDelegate.NoHint)
 
         def select(i):
             self.view.model().setData(
@@ -311,8 +312,7 @@ class ColorStripDelegate(HorizontalGridDelegate):
                 combo.model().index(i, 0).data(Qt.UserRole),
                 ColorRole)
 
-        view = self.view
-        combo = Combo(parent, index.data(ColorRole))
+        combo = Combo(parent, index.data(ColorRole), self.view)
         combo.currentIndexChanged[int].connect(select)
         return combo
 
