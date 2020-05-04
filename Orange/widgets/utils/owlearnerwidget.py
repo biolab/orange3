@@ -11,6 +11,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils import getmembers
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
 
 
@@ -99,6 +100,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.preprocessors = preprocessors
         self.outdated_settings = False
 
+        self.info.set_input_summary(self.info.NoInput)
+
         self.setup_layout()
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
 
@@ -135,7 +138,13 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             self.Error.data_error("Data has no target variable.")
             self.data = None
 
+        self.set_input_summary()
         self.update_model()
+
+    def set_input_summary(self):
+        summary = len(self.data) if self.data else self.info.NoInput
+        details = format_summary_details(self.data) if self.data else ""
+        self.info.set_input_summary(summary, details)
 
     def apply(self):
         """Applies learner and sends new model."""
