@@ -287,11 +287,11 @@ class OWDistributions(OWWidget):
 
     Fitters = (
         ("None", None, (), ()),
-        ("Normal", norm, ("loc", "scale"), ("μ", "σ²")),
+        ("Normal", norm, ("loc", "scale"), ("μ", "σ")),
         ("Beta", beta, ("a", "b", "loc", "scale"),
          ("α", "β", "-loc", "-scale")),
         ("Gamma", gamma, ("a", "loc", "scale"), ("α", "β", "-loc", "-scale")),
-        ("Rayleigh", rayleigh, ("loc", "scale"), ("-loc", "σ²")),
+        ("Rayleigh", rayleigh, ("loc", "scale"), ("-loc", "σ")),
         ("Pareto", pareto, ("b", "loc", "scale"), ("α", "-loc", "-scale")),
         ("Exponential", expon, ("loc", "scale"), ("-loc", "λ")),
         ("Kernel density", AshCurve, ("a",), ("",))
