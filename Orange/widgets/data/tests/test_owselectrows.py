@@ -191,6 +191,20 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(condition[1], 2)
         self.assertTrue(condition[2][0].startswith("5.2"))
 
+    @override_locale(QLocale.C)
+    def test_partial_matches_with_missing_vars(self):
+        iris = Table("iris")
+        domain = iris.domain
+        self.widget = self.widget_with_context(
+            domain, [[domain[0].name, 2, ("5.2",)],
+                     [domain[2].name, 2, ("4.2",)]])
+        iris2 = iris.transform(Domain(domain.attributes[2:], None))
+        self.send_signal(self.widget.Inputs.data, iris2)
+        condition = self.widget.conditions[0]
+        self.assertEqual(condition[0], domain[2].name)
+        self.assertEqual(condition[1], 2)
+        self.assertTrue(condition[2][0].startswith("4.2"))
+
     def test_load_settings(self):
         iris = Table("iris")[:5]
         self.send_signal(self.widget.Inputs.data, iris)
