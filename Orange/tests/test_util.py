@@ -109,6 +109,7 @@ class TestUtil(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('ORANGE_DEPRECATIONS_ERROR'),
                          'ORANGE_DEPRECATIONS_ERROR not set')
     def test_raise_deprecations(self):
+        # warnings.simplefilter('error', OrangeDeprecationWarning)
         with self.assertRaises(OrangeDeprecationWarning):
             warnings.warn('foo', OrangeDeprecationWarning)
 
