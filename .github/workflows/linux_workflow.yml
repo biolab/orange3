@@ -56,10 +56,10 @@ jobs:
         env:
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
 
-      - name: Upload code coverage
-        if: matrix.python == '3.7'
-        run: |
-          pip install codecov
-          codecov
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+#      - name: Upload code coverage
+#        if: matrix.python == '3.7'
+#        run: |
+#          pip install codecov
+#          codecov
+#        env:
+#          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
