@@ -166,25 +166,38 @@ class TestOWTestAndScore(WidgetTest):
                 "yyyy"))
         )
         self.widget.n_folds = 0
-        self.assertFalse(self.widget.Error.only_one_class_var_value.is_shown())
+        self.assertFalse(self.widget.Error.train_data_error.is_shown())
         self.send_signal("Data", table)
         self.send_signal("Learner", MajorityLearner(), 0, wait=1000)
-        self.assertTrue(self.widget.Error.only_one_class_var_value.is_shown())
+        self.assertTrue(self.widget.Error.train_data_error.is_shown())
 
-    def test_nan_class(self):
-        """
-        Do not crash on a data with only nan class values.
-        GH-2751
-        """
-        def assertErrorShown(data, is_shown):
+    def test_data_errors(self):
+        """ Test all data_errors """
+        def assertErrorShown(data, is_shown, message):
             self.send_signal("Data", data)
-            self.assertEqual(is_shown, self.widget.Error.no_class_values.is_shown())
+            self.assertEqual(is_shown, self.widget.Error.train_data_error.is_shown())
+            self.assertEqual(message, str(self.widget.Error.train_data_error))
 
         data = Table("iris")[::30]
         data.Y[:] = np.nan
 
-        for data, is_shown in zip([None, data, Table("iris")[:30]], [False, True, False]):
-            assertErrorShown(data, is_shown)
+        iris_empty_x = Table.from_table(
+            Domain([], data.domain.class_var), Table("iris")
+        )
+
+        for data, is_shown, message in zip(
+                [None, data, Table("iris")[:30], iris_empty_x, data[:0]],
+                [False, True, True, True, True],
+                [
+                    "",
+                    "Target variable has no values.",
+                    "Target variable has only one value.",
+                    "Data has no features to learn from.",
+                    "Train dataset is empty."
+                ]
+
+        ):
+            assertErrorShown(data, is_shown, message)
 
     def test_addon_scorers(self):
         try:
@@ -319,15 +332,19 @@ class TestOWTestAndScore(WidgetTest):
         self.send_signal(self.widget.Inputs.learner, learner, 0, wait=5000)
         return self._retrieve_scores()
 
-    def test_scores_constant_all_same(self):
+    def test_scores_constant(self):
         table = Table.from_list(
             self.scores_domain,
-            list(zip(*self.scores_table_values + [list("yyyy")]))
+            list(zip(*self.scores_table_values + [list("yyyn")]))
         )
 
-        self.assertTupleEqual(self._test_scores(
-            table, table, ConstantLearner(), OWTestAndScore.TestOnTest, None),
-                              (None, 1, 1, 1, 1))
+        self.assertTupleEqual(
+            self._test_scores(
+                table, table[:3], ConstantLearner(),
+                OWTestAndScore.TestOnTest, None
+            ),
+            (None, 1, 1, 1, 1)
+        )
 
     def test_scores_log_reg_overfitted(self):
         table = Table.from_list(
