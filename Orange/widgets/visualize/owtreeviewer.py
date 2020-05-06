@@ -12,6 +12,7 @@ from orangewidget.utils.combobox import ComboBoxSearch
 from Orange.base import TreeModel, SklModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
@@ -198,6 +199,8 @@ class OWTreeGraph(OWTreeViewer2D):
         combo.activated[int].connect(self.color_changed)
         self.display_box.layout().addRow(self.color_label, combo)
 
+        self.info.set_output_summary(self.info.NoOutput)
+
     def set_node_info(self):
         """Set the content of the node"""
         for node in self.scene.nodes():
@@ -292,6 +295,7 @@ class OWTreeGraph(OWTreeViewer2D):
                 self.tree_adapter.num_nodes,
                 len(self.tree_adapter.leaves(self.tree_adapter.root))))
         self.setup_scene()
+        self.info.set_output_summary(self.info.NoOutput)
         self.Outputs.selected_data.send(None)
         self.Outputs.annotated_data.send(create_annotated_table(self.dataset, []))
 
@@ -318,6 +322,10 @@ class OWTreeGraph(OWTreeViewer2D):
         nodes = [item.node_inst for item in self.scene.selectedItems()
                  if isinstance(item, TreeNode)]
         data = self.tree_adapter.get_instances_in_nodes(nodes)
+
+        summary = len(data) if data else self.info.NoOutput
+        details = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(data)
         self.Outputs.annotated_data.send(create_annotated_table(
             self.dataset, self.tree_adapter.get_indices(nodes)))
