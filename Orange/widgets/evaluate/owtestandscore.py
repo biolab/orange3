@@ -38,6 +38,8 @@ from Orange.widgets.evaluate.utils import \
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.concurrent import ThreadExecutor, TaskState
+from Orange.widgets.utils.state_summary import (format_multiple_summaries,
+                                                format_summary_details)
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 log = logging.getLogger(__name__)
@@ -235,6 +237,9 @@ class OWTestAndScore(OWWidget):
         self.__needupdate = False
         self.__task = None  # type: Optional[TaskState]
         self.__executor = ThreadExecutor()
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         sbox = gui.vBox(self.controlArea, "Sampling")
         rbox = gui.radioButtons(
@@ -532,8 +537,25 @@ class OWTestAndScore(OWWidget):
         self.score_table.update_header(self.scorers)
         self._update_view_enabled()
         self.update_stats_model()
+        self.set_input_summary()
         if self.__needupdate:
             self.__update()
+
+    def set_input_summary(self):
+        summary, details, kwargs = self.info.NoInput, "", {}
+        if self.data and self.test_data:
+            summary = f"{self.info.format_number(len(self.data))}," \
+                      f" {self.info.format_number(len(self.test_data))}"
+            details = format_multiple_summaries([
+                ("Data", self.data), ("Test data", self.test_data)
+            ])
+            kwargs = {"format": Qt.RichText}
+        elif self.data and not self.test_data:
+            summary, details = len(self.data), format_summary_details(self.data)
+        elif self.test_data and not self.data:
+            summary = len(self.test_data)
+            details = format_summary_details(self.test_data)
+        self.info.set_input_summary(summary, details, **kwargs)
 
     def kfold_changed(self):
         self.resampling = OWTestAndScore.KFold
@@ -839,6 +861,10 @@ class OWTestAndScore(OWWidget):
                 predictions = combined.get_augmented_data(combined.learner_names)
             except MemoryError:
                 self.Error.memory_error()
+
+        summary = len(predictions) if predictions else self.info.NoOutput
+        details = format_summary_details(predictions) if predictions else ""
+        self.info.set_output_summary(summary, details)
 
         self.Outputs.evaluations_results.send(combined)
         self.Outputs.predictions.send(predictions)
