@@ -277,10 +277,30 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_row_color_annotations(self):
         widget = self.widget
-        data = Table("brown-selected")[::5]
+        data = self.brown_selected[::5]
         self.send_signal(widget.Inputs.data, data, widget=widget)
         widget.set_annotation_color_var(data.domain["function"])
         self.assertTrue(widget.scene.widget.right_side_colors[0].isVisible())
+        widget.set_annotation_color_var(None)
+        self.assertFalse(widget.scene.widget.right_side_colors[0].isVisible())
+
+    def test_row_color_annotations_with_na(self):
+        widget = self.widget
+        data = self.brown_selected[::5]
+        data = data.transform(
+            Domain(data.domain.attributes[:10], data.domain.class_vars,
+                   data.domain.metas + (data.domain["diau g"], )))
+        data.Y[:3] = np.nan
+        data.metas[:3, -1] = np.nan
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        widget.set_annotation_color_var(data.domain["function"])
+        self.assertTrue(widget.scene.widget.right_side_colors[0].isVisible())
+        widget.set_annotation_color_var(data.domain["diau g"])
+        data.Y[:] = np.nan
+        data.metas[:, -1] = np.nan
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        widget.set_annotation_color_var(data.domain["function"])
+        widget.set_annotation_color_var(data.domain["diau g"])
         widget.set_annotation_color_var(None)
         self.assertFalse(widget.scene.widget.right_side_colors[0].isVisible())
 

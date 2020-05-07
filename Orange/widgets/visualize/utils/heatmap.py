@@ -95,7 +95,10 @@ class GradientColorMap(ColorMap):
         Adjust the data low, high levels by applying the thresholding and
         centering.
         """
-        assert low <= high
+        if np.any(np.isnan([low, high])):
+            return np.nan, np.nan
+        elif low > high:
+            raise ValueError(f"low > high ({low} > {high})")
         threshold_low, threshold_high = self.thresholds
         lt = low + (high - low) * threshold_low
         ht = low + (high - low) * threshold_high
