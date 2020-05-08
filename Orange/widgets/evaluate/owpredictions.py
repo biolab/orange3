@@ -11,6 +11,8 @@ from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
     QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer)
 
+from orangewidget.report import plural
+
 import Orange
 from Orange.evaluation import Results
 from Orange.base import Model
@@ -293,18 +295,28 @@ class OWPredictions(OWWidget):
             self.Warning.wrong_targets.clear()
 
     def _update_info(self):
-        n_predictors = len(self.predictors)
-        if not self.data and not n_predictors:
+        if not self.data and not self.predictors:
             self.info.set_input_summary(self.info.NoInput)
             return
 
-        n_valid = len(self._non_errored_predictors())
         summary = str(len(self.data)) if self.data else "0"
-        details = f"{len(self.data)} instances" if self.data else "No data"
-        details += f"\n{n_predictors} models" if n_predictors else "No models"
-        if n_valid != n_predictors:
-            details += f" ({n_predictors - n_valid} failed)"
+        details = self._get_details()
         self.info.set_input_summary(summary, details)
+
+    def _get_details(self):
+        n_predictors = len(self.predictors)
+        if self.data:
+            details = plural("{number} instance{s}", len(self.data))
+        else:
+            details = "No data"
+        if n_predictors:
+            n_valid = len(self._non_errored_predictors())
+            details += plural("\n{number} model{s}", n_predictors)
+            if n_valid != n_predictors:
+                details += plural(" ({number} failed)", n_predictors - n_valid)
+        else:
+            details += "\nNo models"
+        return details
 
     def _invalidate_predictions(self):
         for inputid, pred in list(self.predictors.items()):
@@ -560,10 +572,12 @@ class OWPredictions(OWWidget):
     def send_report(self):
         def merge_data_with_predictions():
             data_model = self.dataview.model()
-            predictions_model = self.predictionsview.model()
+            predictions_view = self.predictionsview
+            predictions_model = predictions_view.model()
 
             # use ItemDelegate to style prediction values
-            style = lambda x: self.predictionsview.itemDelegate().displayText(x, QLocale())
+            delegates = [predictions_view.itemDelegateForColumn(i)
+                         for i in range(predictions_model.columnCount())]
 
             # iterate only over visible columns of data's QTableView
             iter_data_cols = list(filter(lambda x: not self.dataview.isColumnHidden(x),
@@ -579,13 +593,15 @@ class OWPredictions(OWWidget):
             # print data & predictions
             for i in range(data_model.rowCount()):
                 yield [data_model.headerData(i, Qt.Vertical, Qt.DisplayRole)] + \
-                      [style(predictions_model.data(predictions_model.index(i, j)))
-                       for j in range(predictions_model.columnCount())] + \
+                      [delegate.displayText(
+                          predictions_model.data(predictions_model.index(i, j)),
+                          QLocale())
+                       for j, delegate in enumerate(delegates)] + \
                       [data_model.data(data_model.index(i, j))
                        for j in iter_data_cols]
 
         if self.data:
-            text = self.infolabel.text().replace('\n', '<br>')
+            text = self._get_details().replace('\n', '<br>')
             if self.selected_classes:
                 text += '<br>Showing probabilities for: '
                 text += ', '. join([self.class_values[i]
@@ -593,6 +609,8 @@ class OWPredictions(OWWidget):
             self.report_paragraph('Info', text)
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
+
+            self.report_table("Scores", self.score_table.view)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
