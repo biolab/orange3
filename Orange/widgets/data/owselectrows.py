@@ -80,12 +80,29 @@ class SelectRowsContextHandler(DomainContextHandler):
         conditions = context.values["conditions"]
         all_vars = attrs.copy()
         all_vars.update(metas)
-        # Use this after 2022/2/2:
-        # if all(all_vars.get(name) == tpe for name, tpe, *_ in conditions):
-        if all(all_vars.get(name) == tpe if len(rest) == 2 else name in all_vars
-               for name, tpe, *rest in conditions):
-            return 0.5
+        matched = [all_vars.get(name) == tpe
+                   # After 2022/2/2 remove this line:
+                   if len(rest) == 2 else name in all_vars
+                   for name, tpe, *rest in conditions]
+        if any(matched):
+            return 0.5 * sum(matched) / len(matched)
         return self.NO_MATCH
+
+    def filter_value(self, setting, data, domain, attrs, metas):
+        if setting.name != "conditions":
+            super().filter_value(setting, data, domain, attrs, metas)
+            return
+
+        all_vars = attrs.copy()
+        all_vars.update(metas)
+        conditions = data["conditions"]
+        # Use this after 2022/2/2: if any(all_vars.get(name) == tpe:
+        # conditions[:] = [(name, tpe, *rest) for name, tpe, *rest in conditions
+        #                  if all_vars.get(name) == tpe]
+        conditions[:] = [
+            (name, tpe, *rest) for name, tpe, *rest in conditions
+            if (all_vars.get(name) == tpe if len(rest) == 2
+                else name in all_vars)]
 
 
 class FilterDiscreteType(enum.Enum):
