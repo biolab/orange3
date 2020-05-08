@@ -1,5 +1,6 @@
 # File contains some long lines; breaking them would decrease readability
 # pylint: disable=line-too-long
+import calendar
 import unittest
 from time import struct_time, mktime
 
@@ -24,9 +25,19 @@ class TestTimeBinning(unittest.TestCase):
              (1975, 6, 9, 14, 10, 0, 0, 161, 0)]]
 
     def test_binning(self):
+        def tr1(s):
+            for localname, engname in zip(
+                    calendar.month_abbr[1:],
+                    "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()):
+                s = s.replace(localname, engname)
+            return s
+
+        def tr(ss):
+            return list(map(tr1, ss))
+
         def testbin(start, end):
             bins = _time_binnings(create(*start), create(*end), 3, 51)
-            return [(bin.width_label, bin.short_labels, bin.thresholds)
+            return [(bin.width_label, tr(bin.short_labels), bin.thresholds)
                     for bin in reversed(bins)]
 
         self.assertEqual(
