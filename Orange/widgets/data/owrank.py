@@ -1,10 +1,3 @@
-"""
-Rank
-====
-
-Rank (score) features for prediction.
-
-"""
 import warnings
 from collections import namedtuple, OrderedDict
 import logging
@@ -23,6 +16,7 @@ from AnyQt.QtCore import (
     Qt, QItemSelection, QItemSelectionRange, QItemSelectionModel,
 )
 
+from orangewidget.settings import IncompatibleContext
 from Orange.data import (Table, Domain, ContinuousVariable, DiscreteVariable,
                          StringVariable)
 from Orange.misc.cache import memoize_method
@@ -198,9 +192,9 @@ class OWRank(OWWidget):
     sorting = Setting((0, Qt.DescendingOrder))
     selected_methods = Setting(set())
 
-    settings_version = 2
+    settings_version = 3
     settingsHandler = DomainContextHandler()
-    selected_rows = ContextSetting([])
+    selected_attrs = ContextSetting([], schema_only=True)
     selectionMethod = ContextSetting(SelectNBest)
 
     class Information(OWWidget.Information):
@@ -310,7 +304,7 @@ class OWRank(OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.closeContext()
-        self.selected_rows = []
+        self.selected_attrs = []
         self.ranksModel.clear()
         self.ranksModel.resetSorting(True)
 
@@ -472,8 +466,10 @@ class OWRank(OWWidget):
 
     def on_select(self):
         # Save indices of attributes in the original, unsorted domain
-        self.selected_rows = list(self.ranksModel.mapToSourceRows([
-            i.row() for i in self.ranksView.selectionModel().selectedRows(0)]))
+        selected_rows = self.ranksView.selectionModel().selectedRows(0)
+        row_indices = [i.row() for i in selected_rows]
+        attr_indices = self.ranksModel.mapToSourceRows(row_indices)
+        self.selected_attrs = [self.data.domain[idx] for idx in attr_indices]
         self.commit()
 
     def setSelectionMethod(self, method):
@@ -502,8 +498,10 @@ class OWRank(OWWidget):
             )
         else:
             selection = QItemSelection()
-            if self.selected_rows is not None:
-                for row in model.mapFromSourceRows(self.selected_rows):
+            if self.selected_attrs is not None:
+                attr_indices = [self.data.domain.attributes.index(var)
+                                for var in self.selected_attrs]
+                for row in model.mapFromSourceRows(attr_indices):
                     selection.append(QItemSelectionRange(
                         model.index(row, 0), model.index(row, columnCount - 1)))
 
@@ -536,21 +534,18 @@ class OWRank(OWWidget):
             self.report_items("Output", self.out_domain_desc)
 
     def commit(self):
-        selected_attrs = []
-        if self.data is not None:
-            selected_attrs = [self.data.domain.attributes[i]
-                              for i in self.selected_rows]
-        if not selected_attrs:
+        if not self.selected_attrs:
             self.Outputs.reduced_data.send(None)
             self.Outputs.features.send(None)
             self.out_domain_desc = None
             self.info.set_output_summary(self.info.NoOutput)
         else:
             reduced_domain = Domain(
-                selected_attrs, self.data.domain.class_var, self.data.domain.metas)
+                self.selected_attrs, self.data.domain.class_var,
+                self.data.domain.metas)
             data = self.data.transform(reduced_domain)
             self.Outputs.reduced_data.send(data)
-            self.Outputs.features.send(AttributeList(selected_attrs))
+            self.Outputs.features.send(AttributeList(self.selected_attrs))
             self.out_domain_desc = report.describe_domain(data.domain)
             self.info.set_output_summary(len(data),
                                          format_summary_details(data))
@@ -595,11 +590,10 @@ class OWRank(OWWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
-        if version is None or version < 2:
-            # Old selection was saved as sorted indices. New selection is original indices.
-            # Since we can't devise the latter without first computing the ranks,
-            # just reset the selection to avoid confusion.
-            context.values['selected_rows'] = []
+        if version is None or version < 3:
+            # Selections were stored as indices, so these contexts matched
+            # any domain. The only safe thing to do is to remove them.
+            raise IncompatibleContext
 
 
 if __name__ == "__main__":  # pragma: no cover
