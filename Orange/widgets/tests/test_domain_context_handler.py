@@ -97,7 +97,7 @@ class TestDomainContextHandler(TestCase):
         self.handler.bind(SimpleWidget)
 
         context = Mock(values={})
-        self.assertEqual(1, self.handler.match(context, *self.args))
+        self.assertEqual(0.1, self.handler.match(context, *self.args))
 
     def test_match_returns_zero_on_incompatible_context(self):
         self.handler.bind(SimpleWidget)
@@ -225,6 +225,25 @@ class TestDomainContextHandler(TestCase):
         # All other values in list should remain
         test_filter([0, [1, 2, 3], "abcd", 5.4], [0, [1, 2, 3], "abcd", 5.4])
 
+    def test_filter_value_dict(self):
+        setting = ContextSetting({})
+        setting.name = "value"
+
+        def test_filter(before_value, after_value):
+            data = dict(value=before_value)
+            self.handler.filter_value(setting, data, *self.args)
+            self.assertEqual(data.get("value", None), after_value)
+
+        # filter list values
+        test_filter({}, {})
+        # When list contains attributes asa tuple of (name, type),
+        # Attributes not present in domain should be filtered out
+        test_filter({("d1", Discrete): 1, ("d1", Continuous): 2,
+                     ("c1", Continuous): 3, ("c1", Discrete): 4},
+                    {("d1", Discrete): 1, ("c1", Continuous): 3})
+        # All other values in list should remain
+        test_filter([0, [1, 2, 3], "abcd", 5.4], [0, [1, 2, 3], "abcd", 5.4])
+
     def test_encode_setting(self):
         setting = ContextSetting(None)
 
@@ -264,6 +283,26 @@ class TestDomainContextHandler(TestCase):
         self.assertEqual(val, [None, None])
         self.assertIsNot(val, a_list)
 
+    def test_encode_dict_settings(self):
+        setting = ContextSetting(None)
+
+        var1, var2 = self.domain[:2]
+        val = self.handler.encode_setting(None, setting, {var1: 1, var2: 2})
+        self.assertEqual(
+            val,
+            ({(var1.name, 100 + vartype(var1)): 1,
+              (var2.name, 100 + vartype(var2)): 2}, -4))
+
+        a_dict = {1: 2, 2: 3, 3: 4}
+        val = self.handler.encode_setting(None, setting, a_dict)
+        self.assertEqual(val, ({1: 2, 2: 3, 3: 4}, -2))
+        self.assertIsNot(val, a_dict)
+
+        a_dict = {}
+        val = self.handler.encode_setting(None, setting, a_dict)
+        self.assertEqual(val, ({}, -4))
+        self.assertIsNot(val, a_dict)
+
     def test_decode_setting(self):
         setting = ContextSetting(None)
 
@@ -276,6 +315,11 @@ class TestDomainContextHandler(TestCase):
         val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)),
                                           all_metas_domain)
         self.assertIs(val, var)
+
+        self.assertRaises(ValueError,
+                          self.handler.decode_setting,
+                          setting, (var.name, 100 + vartype(var)))
+        self.handler.decode_setting(setting, None, None)
 
     def test_decode_list_setting(self):
         setting = ContextSetting(None)
@@ -291,6 +335,42 @@ class TestDomainContextHandler(TestCase):
 
         val = self.handler.decode_setting(setting, [1, 2, 3], self.domain)
         self.assertEqual(val, [1, 2, 3])
+
+        self.assertRaises(ValueError,
+                          self.handler.decode_setting,
+                          setting,
+                          ([None,
+                            (var1.name, 100 + vartype(var1)),
+                            (var2.name, 100 + vartype(var2))], -3)
+                          )
+        val = self.handler.decode_setting(setting, ([None, None], -3), None)
+        self.assertEqual(val, [None, None])
+
+
+    def test_decode_dict_setting(self):
+        setting = ContextSetting(None)
+
+        var1, var2 = self.domain[:2]
+        val = self.handler.decode_setting(
+            setting,
+            ({(var1.name, 100 + vartype(var1)): 1,
+              (var2.name, 100 + vartype(var2)): 2}, -4),
+            self.domain)
+        self.assertEqual(val, {var1: 1, var2: 2})
+
+        val = self.handler.decode_setting(
+            setting, ({1: 2, 2: 3, 3: 4}, -2), self.domain)
+        self.assertEqual(val, {1: 2, 2: 3, 3: 4})
+
+        self.assertRaises(ValueError,
+                          self.handler.decode_setting,
+                          setting,
+                          ({(var1.name, 100 + vartype(var1)): 1,
+                            (var2.name, 100 + vartype(var2)): 2}, -4))
+
+        val = self.handler.decode_setting(setting, ({1: 2, 2: 3, 3: 4}, -2))
+        self.assertEqual(val, {1: 2, 2: 3, 3: 4})
+
 
     def test_backward_compatible_params(self):
         with warnings.catch_warnings(record=True) as w:
