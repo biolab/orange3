@@ -1,6 +1,6 @@
 import scipy.sparse as sp
 
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 from Orange.base import Learner, Model
 from Orange.classification import KNNLearner
 from Orange.data import Table, Domain
@@ -10,6 +10,7 @@ from Orange.regression import MeanLearner, LinearRegressionLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWBaseLearner(WidgetTest):
@@ -131,3 +132,20 @@ class TestOWBaseLearner(WidgetTest):
 
         model = self.get_output(w.Outputs.model, widget=w)
         self.assertIsNotNone(model)
+
+    def test_summary(self):
+        """Check if the status bar is updated when data is received"""
+        class WidgetA(OWBaseLearner):
+            name = "A"
+            LEARNER = KNNLearner
+        widget = self.create_widget(WidgetA)
+        info = widget.info
+        no_input = "No data on input"
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        summary, details = "150", format_summary_details(self.iris)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.send_signal(widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
