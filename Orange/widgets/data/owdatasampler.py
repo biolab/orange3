@@ -180,7 +180,7 @@ class OWDataSampler(OWWidget):
             self.cb_seed.setVisible(not sql)
             self.cb_stratify.setVisible(not sql)
             self.cb_sql_dl.setVisible(sql)
-            self.info.set_input_summary(len(dataset),
+            self.info.set_input_summary(dataset.approx_len(),
                                         format_summary_details(dataset))
 
             if not sql:
@@ -231,7 +231,7 @@ class OWDataSampler(OWWidget):
             self.sampled_instances = len(sample)
             self.remaining_instances = len(other)
 
-        summary = len(sample) if sample else self.info.NoOutput
+        summary = sample.approx_len() if sample else self.info.NoOutput
         details = format_summary_details(sample) if sample else ""
         self.info.set_output_summary(summary, details)
 

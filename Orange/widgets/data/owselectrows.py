@@ -492,7 +492,7 @@ class OWSelectRows(widget.OWWidget):
         else:
             self.add_row()
 
-        self.info.set_input_summary(len(data),
+        self.info.set_input_summary(data.approx_len(),
                                     format_summary_details(data))
         self.unconditional_commit()
 
@@ -629,7 +629,8 @@ class OWSelectRows(widget.OWWidget):
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
 
-        summary = len(matching_output) if matching_output else self.info.NoOutput
+        summary = matching_output.approx_len() if matching_output else \
+            self.info.NoOutput
         details = format_summary_details(matching_output) if matching_output else ""
         self.info.set_output_summary(summary, details)
 
