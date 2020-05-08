@@ -60,9 +60,14 @@ class ServerEmbedderCommunicator:
         # attribute that offers support for cancelling the embedding
         # if ran in another thread
         self._cancelled = False
-        self.machine_id = QSettings().value(
-            "error-reporting/machine-id", "", type=str
-        ) or str(uuid.getnode())
+
+        self.machine_id = None
+        try:
+            self.machine_id = QSettings().value(
+                "error-reporting/machine-id", "", type=str
+            ) or str(uuid.getnode())
+        except TypeError:
+            self.machine_id = str(uuid.getnode())
         self.session_id = str(random.randint(1, 1e10))
 
         self._cache = EmbedderCache(model_name)
