@@ -222,6 +222,39 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(w.parts.rows),
                          len(data.domain.class_var.values) + 1)
 
+    def _brown_selected_10(self):
+        data = self.brown_selected[::5]
+        data = data.transform(
+            Domain(data.domain.attributes[:10], data.domain.class_vars,
+                   data.domain.metas + (data.domain["diau g"],)))
+        data.ensure_copy()
+        return data
+
+    def test_set_split_column_key(self):
+        data = self._brown_selected_10()
+        function = data.domain["function"]
+        data_t = data.transpose(data)
+        w = self.widget
+        self.send_signal(self.widget.Inputs.data, data_t, widget=w)
+        w.set_column_split_key(function)
+        self.assertEqual(len(w.parts.columns), len(function.values))
+        w.set_column_split_key(None)
+        self.assertEqual(len(w.parts.columns), 1)
+
+    def test_set_split_column_key_missing(self):
+        data = self._brown_selected_10()
+        data.Y[:5] = np.nan
+        data_t = data.transpose(data)
+        function = data.domain["function"]
+        w = self.widget
+        self.send_signal(self.widget.Inputs.data, data_t, widget=w)
+        w.set_column_split_key(function)
+        self.assertEqual(len(w.parts.columns), len(function.values) + 1)
+        ncols = sum(len(p.indices) for p in w.parts.columns)
+        self.assertEqual(ncols, len(data_t.domain.attributes))
+        w.set_column_split_key(None)
+        self.assertEqual(len(w.parts.columns), 1)
+
     def test_palette_centering(self):
         data = np.arange(2).reshape(-1, 1)
         table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
@@ -277,10 +310,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_row_color_annotations_with_na(self):
         widget = self.widget
-        data = self.brown_selected[::5]
-        data = data.transform(
-            Domain(data.domain.attributes[:10], data.domain.class_vars,
-                   data.domain.metas + (data.domain["diau g"], )))
+        data =  self._brown_selected_10()
         data.Y[:3] = np.nan
         data.metas[:3, -1] = np.nan
         self.send_signal(widget.Inputs.data, data, widget=widget)
@@ -294,6 +324,38 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         widget.set_annotation_color_var(data.domain["diau g"])
         widget.set_annotation_color_var(None)
         self.assertFalse(widget.scene.widget.right_side_colors[0].isVisible())
+
+    def test_col_color_annotations(self):
+        widget = self.widget
+        data = self._brown_selected_10()
+        data_t = data.transpose(data)
+        self.send_signal(widget.Inputs.data, data_t, widget=widget)
+        # discrete
+        widget.set_column_annotation_color_key(data.domain["function"])
+        self.assertTrue(widget.scene.widget.top_side_colors[0].isVisible())
+        # continuous
+        widget.set_column_annotation_color_key(data.domain["diau g"])
+        widget.set_column_annotation_color_key(None)
+        self.assertFalse(widget.scene.widget.top_side_colors[0].isVisible())
+
+    def test_col_color_annotations_with_na(self):
+        widget = self.widget
+        data = self._brown_selected_10()
+        data.Y[:3] = np.nan
+        data.metas[:3, -1] = np.nan
+        data_t = data.transpose(data)
+        self.send_signal(widget.Inputs.data, data_t, widget=widget)
+        widget.set_column_annotation_color_key(data.domain["function"])
+        self.assertTrue(widget.scene.widget.top_side_colors[0].isVisible())
+        widget.set_column_annotation_color_key(data.domain["diau g"])
+        data.Y[:] = np.nan
+        data.metas[:, -1] = np.nan
+        data_t = data.transpose(data)
+        self.send_signal(widget.Inputs.data, data_t, widget=widget)
+        widget.set_column_annotation_color_key(data.domain["function"])
+        widget.set_column_annotation_color_key(data.domain["diau g"])
+        widget.set_column_annotation_color_key(None)
+        self.assertFalse(widget.scene.widget.top_side_colors[0].isVisible())
 
     def test_summary(self):
         """Check if status bar is updated when data is received"""
