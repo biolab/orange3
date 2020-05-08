@@ -339,6 +339,8 @@ class OWSelectRows(widget.OWWidget):
 
     def set_new_operators(self, attr_combo, adding_all,
                           selected_index=None, selected_values=None):
+        old_combo = self.cond_list.cellWidget(attr_combo.row, 1)
+        prev_text = old_combo.currentText() if old_combo else ""
         oper_combo = QComboBox()
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
@@ -348,7 +350,11 @@ class OWSelectRows(widget.OWWidget):
         else:
             var = self.data.domain[attr_name]
             oper_combo.addItems(self.operator_names[type(var)])
-        oper_combo.setCurrentIndex(selected_index or 0)
+        if selected_index is None:
+            selected_index = oper_combo.findText(prev_text)
+            if selected_index == -1:
+                selected_index = 0
+        oper_combo.setCurrentIndex(selected_index)
         self.cond_list.setCellWidget(oper_combo.row, 1, oper_combo)
         self.set_new_values(oper_combo, adding_all, selected_values)
         oper_combo.currentIndexChanged.connect(
@@ -789,4 +795,4 @@ class DropDownToolButton(QToolButton):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWSelectRows).run(Table("zoo"))
+    WidgetPreview(OWSelectRows).run(Table("heart_disease"))
