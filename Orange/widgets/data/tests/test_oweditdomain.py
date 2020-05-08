@@ -171,6 +171,11 @@ class TestOWEditDomain(WidgetTest):
         np.testing.assert_array_equal(output.Y, self.iris.Y)
         self.assertEqual(output.domain, self.iris.domain)
 
+        self.widget.output_table_name = "Iris 2"
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.name, "Iris 2")
+
     def test_input_from_owcolor(self):
         """Check widget's data sent from OWColor widget"""
         owcolor = self.create_widget(OWColor)
