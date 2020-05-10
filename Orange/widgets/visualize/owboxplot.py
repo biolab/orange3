@@ -1160,11 +1160,19 @@ class OWBoxPlot(widget.OWWidget):
         group_attr = self.group_var
         for data_range in self.selection:
             if attr.is_discrete:
+                # If some value was removed from the data (in case settings are
+                # loaded from a scheme), do not include the corresponding
+                # filter; this is appropriate since data with such value does
+                # not exist anyway
+                if data_range.value not in attr.values:
+                    continue
                 condition = FilterDiscrete(attr, [data_range.value])
             else:
                 condition = FilterContinuous(attr, FilterContinuous.Between,
                                              data_range.low, data_range.high)
             if data_range.group_value:
+                if data_range.group_value not in group_attr.values:
+                    continue
                 grp_filter = FilterDiscrete(group_attr, [data_range.group_value])
                 condition = Values([condition, grp_filter], conjunction=True)
             conditions.append(condition)
