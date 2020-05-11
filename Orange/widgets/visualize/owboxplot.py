@@ -563,7 +563,7 @@ class OWBoxPlot(widget.OWWidget):
                 self.label_txts_all = label_texts
             else:
                 self.label_txts_all = [
-                    v for v, c in zip(
+                    v or missing_val_str for v, c in zip(
                         group_var_labels, self.conts.array_with_unknowns)
                     if np.sum(c) > 0]
         else:
