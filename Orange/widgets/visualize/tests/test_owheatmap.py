@@ -236,9 +236,9 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         data_t = data.transpose(data)
         w = self.widget
         self.send_signal(self.widget.Inputs.data, data_t, widget=w)
-        w.set_column_split_key(function)
+        w.set_column_split_var(function)
         self.assertEqual(len(w.parts.columns), len(function.values))
-        w.set_column_split_key(None)
+        w.set_column_split_var(None)
         self.assertEqual(len(w.parts.columns), 1)
 
     def test_set_split_column_key_missing(self):
@@ -248,11 +248,11 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         function = data.domain["function"]
         w = self.widget
         self.send_signal(self.widget.Inputs.data, data_t, widget=w)
-        w.set_column_split_key(function)
+        w.set_column_split_var(function)
         self.assertEqual(len(w.parts.columns), len(function.values) + 1)
         ncols = sum(len(p.indices) for p in w.parts.columns)
         self.assertEqual(ncols, len(data_t.domain.attributes))
-        w.set_column_split_key(None)
+        w.set_column_split_var(None)
         self.assertEqual(len(w.parts.columns), 1)
 
     def test_palette_centering(self):
@@ -331,11 +331,11 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         data_t = data.transpose(data)
         self.send_signal(widget.Inputs.data, data_t, widget=widget)
         # discrete
-        widget.set_column_annotation_color_key(data.domain["function"])
+        widget.set_column_annotation_color_var(data.domain["function"])
         self.assertTrue(widget.scene.widget.top_side_colors[0].isVisible())
         # continuous
-        widget.set_column_annotation_color_key(data.domain["diau g"])
-        widget.set_column_annotation_color_key(None)
+        widget.set_column_annotation_color_var(data.domain["diau g"])
+        widget.set_column_annotation_color_var(None)
         self.assertFalse(widget.scene.widget.top_side_colors[0].isVisible())
 
     def test_col_color_annotations_with_na(self):
@@ -345,16 +345,16 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         data.metas[:3, -1] = np.nan
         data_t = data.transpose(data)
         self.send_signal(widget.Inputs.data, data_t, widget=widget)
-        widget.set_column_annotation_color_key(data.domain["function"])
+        widget.set_column_annotation_color_var(data.domain["function"])
         self.assertTrue(widget.scene.widget.top_side_colors[0].isVisible())
-        widget.set_column_annotation_color_key(data.domain["diau g"])
+        widget.set_column_annotation_color_var(data.domain["diau g"])
         data.Y[:] = np.nan
         data.metas[:, -1] = np.nan
         data_t = data.transpose(data)
         self.send_signal(widget.Inputs.data, data_t, widget=widget)
-        widget.set_column_annotation_color_key(data.domain["function"])
-        widget.set_column_annotation_color_key(data.domain["diau g"])
-        widget.set_column_annotation_color_key(None)
+        widget.set_column_annotation_color_var(data.domain["function"])
+        widget.set_column_annotation_color_var(data.domain["diau g"])
+        widget.set_column_annotation_color_var(None)
         self.assertFalse(widget.scene.widget.top_side_colors[0].isVisible())
 
     def test_summary(self):

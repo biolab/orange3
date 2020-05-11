@@ -184,12 +184,12 @@ class OWHeatMap(widget.OWWidget):
     annotation_var = settings.ContextSetting(None)
     #: color row annotation
     annotation_color_var = settings.ContextSetting(None)
-    column_annotation_color_key = settings.ContextSetting(None)
+    column_annotation_color_key: Optional[Tuple[str, str]] = settings.ContextSetting(None)
 
     # Discrete variable used to split that data/heatmaps (vertically)
     split_by_var = settings.ContextSetting(None)
     # Split heatmap columns by 'key' (horizontal)
-    split_columns_key = settings.ContextSetting(None)
+    split_columns_key: Optional[Tuple[str, str]] = settings.ContextSetting(None)
     # Selected row/column clustering method (name)
     col_clustering_method: str = settings.Setting(Clustering.None_.name)
     row_clustering_method: str = settings.Setting(Clustering.None_.name)
@@ -232,11 +232,7 @@ class OWHeatMap(widget.OWWidget):
         self.row_clustering = enum_get(
             Clustering, self.row_clustering_method, Clustering.None_)
 
-        @self.settingsAboutToBePacked.connect
-        def _():
-            self.col_clustering_method = self.col_clustering.name
-            self.row_clustering_method = self.row_clustering.name
-
+        self.settingsAboutToBePacked.connect(self._save_state_for_serialization)
         self.keep_aspect = False
 
         #: The original data with all features (retained to
@@ -364,9 +360,9 @@ class OWHeatMap(widget.OWWidget):
         )
         self.col_split_cb.setModel(self.col_split_model)
         self.connect_control(
-            "split_columns_key", lambda value, cb=cb: cbselect(cb, value)
+            "split_columns_var", lambda value, cb=cb: cbselect(cb, value)
         )
-        self.split_columns_key = None
+        self.split_columns_var = None
         self.col_split_cb.activated.connect(self.__on_split_cols_activated)
         form.addRow("Rows:", self.row_split_cb)
         form.addRow("Columns:", self.col_split_cb)
@@ -429,11 +425,11 @@ class OWHeatMap(widget.OWWidget):
         )
         self.col_side_color_cb.setModel(self.col_side_color_model)
         self.connect_control(
-            "column_annotation_color_key", self.column_annotation_color_key_changed,
+            "column_annotation_color_var", self.column_annotation_color_var_changed,
         )
-        self.column_annotation_color_key = None
+        self.column_annotation_color_var = None
         self.col_side_color_cb.activated.connect(
-            self.__set_column_annotation_color_key_index)
+            self.__set_column_annotation_color_var_index)
 
         cb = gui.comboBox(
             None, self, "column_label_pos",
@@ -481,6 +477,19 @@ class OWHeatMap(widget.OWWidget):
                 lambda a: a.setShortcutVisibleInContextMenu(True)
             )
         self.addActions([self.__font_inc, self.__font_dec])
+
+    def _save_state_for_serialization(self):
+        def desc(var: Optional[Variable]) -> Optional[Tuple[str, str]]:
+            if var is not None:
+                return type(var).__name__, var.name
+            else:
+                return None
+
+        self.col_clustering_method = self.col_clustering.name
+        self.row_clustering_method = self.row_clustering.name
+
+        self.column_annotation_color_key = desc(self.column_annotation_color_var)
+        self.split_columns_key = desc(self.split_columns_var)
 
     @property
     def center_palette(self):
@@ -534,11 +543,11 @@ class OWHeatMap(widget.OWWidget):
         self.row_side_color_model.set_domain(None)
         self.col_side_color_model.set_domain(None)
         self.annotation_color_var = None
-        self.column_annotation_color_key = None
+        self.column_annotation_color_var = None
         self.row_split_model.set_domain(None)
         self.col_split_model.set_domain(None)
         self.split_by_var = None
-        self.split_columns_key = None
+        self.split_columns_var = None
         self.parts = None
         self.clear_scene()
         self.selected_rows = []
@@ -629,19 +638,32 @@ class OWHeatMap(widget.OWWidget):
                 self.split_by_var = data.domain.class_var
             else:
                 self.split_by_var = None
-            self.split_columns_key = None
-            self.column_annotation_color_key = None
+            self.split_columns_var = None
+            self.column_annotation_color_var = None
             self.openContext(self.input_data)
             if self.split_by_var not in self.row_split_model:
                 self.split_by_var = None
 
-            idx = self.col_split_cb.findData(self.split_columns_key, Qt.EditRole)
-            if idx == -1:
-                self.split_columns_key = None
+            def match(desc: Tuple[str, str], source: Iterable[Variable]):
+                for v in source:
+                    if desc == (type(v).__name__, v.name):
+                        return v
+                return None
 
-            idx = self.col_side_color_cb.findData(self.column_annotation_color_key, Qt.EditRole)
-            if idx == -1:
-                self.column_annotation_color_key = None
+            def is_variable(obj):
+                return isinstance(obj, Variable)
+
+            if self.split_columns_key is not None:
+                self.split_columns_var = match(
+                    self.split_columns_key,
+                    filter(is_variable, self.col_split_model)
+                )
+
+            if self.column_annotation_color_key is not None:
+                self.column_annotation_color_var = match(
+                    self.column_annotation_color_key,
+                    filter(is_variable, self.col_side_color_model)
+                )
 
         self.update_heatmaps()
         if data is not None and self.__pending_selection is not None:
@@ -666,11 +688,11 @@ class OWHeatMap(widget.OWWidget):
             self.update_heatmaps()
 
     def __on_split_cols_activated(self):
-        self.set_column_split_key(self.col_split_cb.currentData(Qt.EditRole))
+        self.set_column_split_var(self.col_split_cb.currentData(Qt.EditRole))
 
-    def set_column_split_key(self, key):
-        if key != self.split_columns_key:
-            self.split_columns_key = key
+    def set_column_split_var(self, var: Optional[Variable]):
+        if var != self.split_columns_var:
+            self.split_columns_var = var
             self.update_heatmaps()
 
     def update_heatmaps(self):
@@ -687,7 +709,7 @@ class OWHeatMap(widget.OWWidget):
             elif self.merge_kmeans and len(self.data) < 3:
                 self.Error.not_enough_instances_k_means()
             else:
-                parts = self.construct_heatmaps(self.data, self.split_by_var, self.split_columns_key)
+                parts = self.construct_heatmaps(self.data, self.split_by_var, self.split_columns_var)
                 self.construct_heatmaps_scene(parts, self.effective_data)
                 self.selected_rows = []
         else:
@@ -1120,17 +1142,16 @@ class OWHeatMap(widget.OWWidget):
         else:
             widget.setRowSideColorAnnotations(colors[0], colors[1], colors[2].name)
 
-    def __set_column_annotation_color_key_index(self, index: int):
+    def __set_column_annotation_color_var_index(self, index: int):
         key = self.col_side_color_cb.itemData(index, Qt.EditRole)
-        self.set_column_annotation_color_key(key)
+        self.set_column_annotation_color_var(key)
 
-    def column_annotation_color_key_changed(self, value):
+    def column_annotation_color_var_changed(self, value):
         cbselect(self.col_side_color_cb, value, Qt.EditRole)
 
-    def set_column_annotation_color_key(self, key):
-        if self.column_annotation_color_key != key:
-            self.column_annotation_color_key = key
-            cbselect(self.col_side_color_cb, key, Qt.EditRole)
+    def set_column_annotation_color_var(self, var):
+        if self.column_annotation_color_var != var:
+            self.column_annotation_color_var = var
             colors = self.column_side_colors()
             if colors is not None:
                 self.scene.widget.setColumnSideColorAnnotations(
@@ -1140,7 +1161,7 @@ class OWHeatMap(widget.OWWidget):
                 self.scene.widget.setColumnSideColorAnnotations(None)
 
     def column_side_colors(self):
-        var = self.column_annotation_color_key
+        var = self.column_annotation_color_var
         if var is None:
             return None
         table = self.col_annot_data
