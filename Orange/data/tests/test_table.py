@@ -131,6 +131,22 @@ class TestTableFilters(unittest.TestCase):
         filtered = val_filter(self.table)
         self.assertEqual(list(filtered.metas[:, -2].flatten()), list("abcdef"))
 
+        val_filter = Values([IsDefined()])
+        filtered = val_filter(self.table)
+        self.assertEqual(list(filtered.metas[:, -2].flatten()), list("ab"))
+
+        val_filter = Values([IsDefined(negate=True)])
+        filtered = val_filter(self.table)
+        self.assertEqual(list(filtered.metas[:, -2].flatten()), list("cdefg"))
+
+        val_filter = Values([IsDefined(["c1"])])
+        filtered = val_filter(self.table)
+        self.assertEqual(list(filtered.metas[:, -2].flatten()), list("abdefg"))
+
+        val_filter = Values([IsDefined(["c1"], negate=True)])
+        filtered = val_filter(self.table)
+        self.assertEqual(list(filtered.metas[:, -2].flatten()), list("c"))
+
     def test_row_filter_no_discrete(self):
         val_filter = Values([FilterDiscrete(None, "a")])
         self.assertRaises(ValueError, val_filter, self.table)

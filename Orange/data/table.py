@@ -1242,7 +1242,10 @@ class Table(Sequence, Storage):
         def get_col_indices():
             cols = chain(self.domain.variables, self.domain.metas)
             if isinstance(filter, IsDefined):
-                return list(cols)
+                if filter.columns is not None:
+                    return list(filter.columns)
+                else:
+                    return list(cols)
 
             if filter.column is not None:
                 return [filter.column]
@@ -1282,11 +1285,14 @@ class Table(Sequence, Storage):
 
         col_indices = get_col_indices()
         if len(col_indices) == 1:
-            return col_filter(col_indices[0])
+            sel = col_filter(col_indices[0])
+        else:
+            sel = np.ones(len(self), dtype=bool)
+            for col_idx in col_indices:
+                sel *= col_filter(col_idx)
 
-        sel = np.ones(len(self), dtype=bool)
-        for col_idx in col_indices:
-            sel *= col_filter(col_idx)
+        if isinstance(filter, IsDefined) and filter.negate:
+            sel = ~sel
         return sel
 
     def _discrete_filter_to_indicator(self, filter, col):
