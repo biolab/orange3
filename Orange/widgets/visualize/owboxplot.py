@@ -15,7 +15,8 @@ import scipy.special
 from scipy.stats import f_oneway, chi2_contingency
 
 import Orange.data
-from Orange.data.filter import FilterDiscrete, FilterContinuous, Values
+from Orange.data.filter import FilterDiscrete, FilterContinuous, Values, \
+    IsDefined
 from Orange.statistics import contingency, distribution
 
 from Orange.widgets import widget, gui
@@ -556,7 +557,7 @@ class OWBoxPlot(widget.OWWidget):
                 for cont, value in zip(self.conts.array_with_unknowns,
                                        group_var_labels):
                     if np.sum(cont[1]):
-                        stats.append(BoxData(cont, value or "?"))
+                        stats.append(BoxData(cont, value))
                         label_texts.append(value or missing_val_str)
                 self.stats = stats
                 self.label_txts_all = label_texts
@@ -682,7 +683,7 @@ class OWBoxPlot(widget.OWWidget):
             self.boxes = \
                 [self.strudel(cont, val)
                  for cont, val in zip(self.conts.array_with_unknowns,
-                                      self.group_var.values + ("?", ))
+                                      self.group_var.values + ("", ))
                  if np.sum(cont) > 0]
 
             if self.sort_freqs:
@@ -1117,7 +1118,7 @@ class OWBoxPlot(widget.OWWidget):
             if self.show_stretched:
                 v /= ss
             v *= self.scale_x
-            cond = DiscDataRange(value or "?", group_val)
+            cond = DiscDataRange(value, group_val)
             rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12)
             rect.setBrush(QBrush(color))
             rect.setPen(QPen(Qt.NoPen))
@@ -1164,16 +1165,22 @@ class OWBoxPlot(widget.OWWidget):
                 # loaded from a scheme), do not include the corresponding
                 # filter; this is appropriate since data with such value does
                 # not exist anyway
-                if data_range.value not in attr.values:
+                if not data_range.value:
+                    condition = IsDefined([attr], negate=True)
+                elif data_range.value not in attr.values:
                     continue
-                condition = FilterDiscrete(attr, [data_range.value])
+                else:
+                    condition = FilterDiscrete(attr, [data_range.value])
             else:
                 condition = FilterContinuous(attr, FilterContinuous.Between,
                                              data_range.low, data_range.high)
             if data_range.group_value:
-                if data_range.group_value not in group_attr.values:
+                if not data_range.group_value:
+                    grp_filter = IsDefined([group_attr], negate=True)
+                elif data_range.group_value not in group_attr.values:
                     continue
-                grp_filter = FilterDiscrete(group_attr, [data_range.group_value])
+                else:
+                    grp_filter = FilterDiscrete(group_attr, [data_range.group_value])
                 condition = Values([condition, grp_filter], conjunction=True)
             conditions.append(condition)
         return conditions
