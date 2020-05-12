@@ -2,6 +2,7 @@
 # pylint: disable=arguments-differ
 from warnings import warn
 from collections import namedtuple
+from itertools import chain
 from time import time
 
 import numpy as np
@@ -9,6 +10,7 @@ import numpy as np
 import sklearn.model_selection as skl
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data.util import get_unique_names
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
            "ShuffleSplit", "TestOnTestData", "sample", "CrossValidationFeature"]
@@ -259,42 +261,44 @@ class Results:
         assert self.predicted.shape[0] == len(model_names)
 
         data = self.data[self.row_indices]
-        class_var = data.domain.class_var
+        domain = data.domain
+        class_var = domain.class_var
         classification = class_var and class_var.is_discrete
 
         new_meta_attr = []
         new_meta_vals = np.empty((len(data), 0))
+        names = [var.name for var in chain(domain.attributes,
+                                           domain.metas,
+                                           [class_var])]
 
         if classification:
             # predictions
             if include_predictions:
-                new_meta_attr += (
-                    DiscreteVariable(name=name, values=class_var.values)
-                    for name in model_names)
+                uniq_new, names = self.add_unique_metas(names, model_names, class_var.values)
+                new_meta_attr += uniq_new
                 new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
 
             # probabilities
             if include_probabilities:
-                for name in model_names:
-                    new_meta_attr += (
-                        ContinuousVariable(name=f"{name} ({value})")
-                        for value in class_var.values)
+                proposed = [f"{name} ({value})" for name in model_names for value in class_var.values]
+
+                uniq_new, names = self.add_unique_metas(names, proposed)
+                new_meta_attr += uniq_new
 
                 for i in self.probabilities:
                     new_meta_vals = np.hstack((new_meta_vals, i))
 
         elif include_predictions:
             # regression
-            new_meta_attr += (ContinuousVariable(name=name)
-                              for name in model_names)
+            uniq_new, names = self.add_unique_metas(names, model_names)
+            new_meta_attr += uniq_new
             new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
 
         # add fold info
         if self.folds is not None:
-            new_meta_attr.append(
-                DiscreteVariable(
-                    name="Fold",
-                    values=[str(i + 1) for i in range(len(self.folds))]))
+            values = [str(i + 1) for i in range(len(self.folds))]
+            uniq_new, names = self.add_unique_metas(names, ["Fold"], values)
+            new_meta_attr += uniq_new
             fold = np.empty((len(data), 1))
             for i, s in enumerate(self.folds):
                 fold[s, 0] = i
@@ -310,6 +314,17 @@ class Results:
         predictions.metas = new_meta_vals
         predictions.name = data.name
         return predictions
+
+    def add_unique_metas(self, names, proposed_names, values=()):
+        unique_metas = []
+        for proposed in proposed_names:
+            uniq = get_unique_names(names, proposed)
+            if values:
+                unique_metas.append(DiscreteVariable(uniq, values))
+            else:
+                unique_metas.append(ContinuousVariable(uniq))
+            names.append(uniq)
+        return unique_metas, names
 
     def split_by_model(self):
         """
