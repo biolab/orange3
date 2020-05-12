@@ -17,7 +17,8 @@ from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
-from Orange.widgets.tests.utils import excepthook_catch, possible_duplicate_table
+from Orange.widgets.tests.utils import excepthook_catch, \
+    possible_duplicate_table
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
 
 
@@ -421,7 +422,6 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, predictor)
 
         output = self.get_output(self.widget.Outputs.predictions)
-        print(output.domain)
         self.assertEqual(output.domain.metas[0].name, 'constant (1)')
 
 
