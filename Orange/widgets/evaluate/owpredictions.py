@@ -545,8 +545,7 @@ class OWPredictions(OWWidget):
 
         attrs = list(self.data.domain.attributes)
         metas = list(self.data.domain.metas)
-        
-        names = [var.name for var in chain(attrs, [self.class_var], metas)]
+        names = [var.name for var in chain(attrs, [self.class_var], metas) if var]
         uniq_newmetas = []
         for new_ in newmetas:
             uniq = get_unique_names(names, new_.name)
