@@ -384,10 +384,12 @@ class OWVennDiagram(widget.OWWidget):
     def merge_data(self, domain, values, ids=None):
         X, metas, class_vars = None, None, None
         renamed = []
+        names = [var.name for val in domain.values() for var in val]
+        unique_names = iter(get_unique_names_duplicates(names))
+        
         for val in domain.values():
-            names = [var.name for var in val]
-            unique_names = get_unique_names_duplicates(names)
-            for n, u, idx, var in zip(names, unique_names, count(), val):
+            for n, idx, var in zip(names, count(), val):
+                u = next(unique_names)
                 if n != u:
                     val[idx] = var.copy(name=u)
                     renamed.append(n)
