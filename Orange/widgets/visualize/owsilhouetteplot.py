@@ -20,6 +20,7 @@ from AnyQt.QtCore import pyqtSignal as Signal
 import pyqtgraph as pg
 
 import Orange.data
+from Orange.data.util import get_unique_names
 import Orange.distance
 import Orange.misc
 from Orange.data import Table, Domain
@@ -501,12 +502,18 @@ class OWSilhouettePlot(widget.OWWidget):
                 scores = self._silhouette
 
             var = self.cluster_var_model[self.cluster_var_idx]
-            silhouette_var = Orange.data.ContinuousVariable(
-                "Silhouette ({})".format(escape(var.name)))
+            
+            domain = self.data.domain
+            proposed = "Silhouette ({})".format(escape(var.name))
+            names = [var.name for var in itertools.chain(domain.attributes,
+                                                         domain.class_vars,
+                                                         domain.metas)]
+            unique = get_unique_names(names, proposed)
+            silhouette_var = Orange.data.ContinuousVariable(unique)
             domain = Orange.data.Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                self.data.domain.metas + (silhouette_var, ))
+                domain.attributes,
+                domain.class_vars,
+                domain.metas + (silhouette_var, ))
             data = self.data.transform(domain)
 
             if np.count_nonzero(selectedmask):
