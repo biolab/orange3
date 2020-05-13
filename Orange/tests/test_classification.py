@@ -214,10 +214,6 @@ class ModelTest(unittest.TestCase):
         """
         iris = Table('iris')
         for learner in all_learners():
-            # TODO: Softmax Regression will be fixed as a separate PR
-            if learner is SoftmaxRegressionLearner:
-                continue
-
             with self.subTest(learner.__name__):
                 # model trained on only one value (but three in the domain)
                 try:
