@@ -1,6 +1,7 @@
 import contextlib
 import csv
 import locale
+import os
 import pickle
 import re
 import sys
@@ -399,7 +400,8 @@ class UrlReader(FileFormat):
         self.filename = self._trim(self._resolve_redirects(self.filename))
         with contextlib.closing(self.urlopen(self.filename)) as response:
             name = self._suggest_filename(response.headers['content-disposition'])
-            with NamedTemporaryFile(suffix=name, delete=False) as f:
+            extension = os.path.splitext(name)[1]  # get only file extension
+            with NamedTemporaryFile(suffix=extension, delete=False) as f:
                 f.write(response.read())
                 # delete=False is a workaround for https://bugs.python.org/issue14243
 
