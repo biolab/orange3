@@ -46,7 +46,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(self.widget.attrs), 0)
         self.assertEqual(len(self.widget.group_vars), 1)
         self.assertTrue(self.widget.display_box.isHidden())
-        self.assertFalse(self.widget.stretching_box.isHidden())
+        self.assertTrue(self.widget.stretching_box.isHidden())
 
     def test_dont_show_hidden_attrs(self):
         """Check widget's data"""
@@ -87,8 +87,8 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         data.domain.attributes[1]._values = []
         self.send_signal("Data", data)
         self.widget.controls.order_by_importance.setChecked(True)
-        self._select_list_items(self.widget.controls.attribute)
-        self._select_list_items(self.widget.controls.group_var)
+        self._select_list_items(self.widget.attr_list)
+        self._select_list_items(self.widget.group_list)
 
     def test_input_data_missings_disc_no_group_var(self):
         """Check widget discrete data with missing values and no group variable"""
@@ -99,28 +99,34 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         # pylint: disable=protected-access
         data.domain.attributes[1]._values = []
         self.send_signal("Data", data)
-        self._select_list_items(self.widget.controls.attribute)
-        self._select_list_items(self.widget.controls.group_var)
+        self._select_list_items(self.widget.attr_list)
+        self._select_list_items(self.widget.group_list)
 
     def test_attribute_combinations(self):
         self.send_signal(self.widget.Inputs.data, self.heart)
-        group_list = self.widget.controls.group_var
+        group_list = self.widget.group_list
         m = group_list.selectionModel()
-        for i in range(len(group_list.model())):
-            m.setCurrentIndex(group_list.model().index(i), m.ClearAndSelect)
-            self._select_list_items(self.widget.controls.attribute)
+        for i in range(len(group_list.model().sourceModel())):
+            m.setCurrentIndex(group_list.model().index(i, 0), m.ClearAndSelect)
+            self._select_list_items(self.widget.attr_list)
+
+    @staticmethod
+    def model_order(model):
+        return [model.index(i, 0).data() for i in range(model.rowCount())]
 
     def test_apply_sorting_group(self):
-        controls = self.widget.controls
-        group_list = controls.group_var
-        order_check = controls.order_by_importance
-        attributes = self.widget.attrs
+        w = self.widget
+        order_check = w.controls.order_by_importance
+        model = w.attr_list.model()
+
 
         def select_group(i):
-            group_selection = group_list.selectionModel()
-            group_selection.setCurrentIndex(
-                group_list.model().index(i),
+            group_selection = w.group_list.selectionModel()
+            group_selection.select(
+                w.group_list.model().index(i, 0),
                 group_selection.ClearAndSelect)
+            w.grouping_changed(group_selection.selection())
+
 
         data = self.titanic
         self.send_signal("Data", data)
@@ -128,20 +134,23 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         select_group(2)  # First attribute
 
         order_check.setChecked(False)
-        self.assertEqual(tuple(attributes),
-                         data.domain.class_vars + data.domain.attributes)
+        self.assertEqual(
+            self.model_order(model),
+            [var.name
+             for var in data.domain.class_vars + data.domain.attributes])
         order_check.setChecked(True)
-        self.assertEqual([x.name for x in attributes],
+        self.assertEqual(self.model_order(model),
                          ['sex', 'survived', 'age', 'status'])
         select_group(1)  # Class
-        self.assertEqual([x.name for x in attributes],
+        self.widget.apply_attr_sorting()
+        self.assertEqual(self.model_order(model),
                          ['sex', 'status', 'age', 'survived'])
 
         data = self.heart
         self.send_signal("Data", data)
         select_group(1)  # Class
         order_check.setChecked(True)
-        self.assertEqual([x.name for x in attributes],
+        self.assertEqual(self.model_order(model),
                          ['thal',
                           'chest pain',
                           'major vessels colored',
@@ -162,9 +171,10 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         attr_list = self.widget.attrs
         order_check = controls.order_grouping_by_importance
         groups = self.widget.group_vars
+        model = self.widget.group_list.model()
 
         def select_attr(i):
-            attr_selection = controls.attribute.selectionModel()
+            attr_selection = self.widget.attr_list.selectionModel()
             attr_selection.setCurrentIndex(
                 attr_list.index(i),
                 attr_selection.ClearAndSelect)
@@ -176,23 +186,26 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
         order_check.setChecked(False)
         self.assertEqual(
-            tuple(groups),
-            (None, ) + data.domain.class_vars + data.domain.attributes)
+            self.model_order(model),
+            ["None"] +
+            [var.name
+             for var in data.domain.class_vars + data.domain.attributes])
         order_check.setChecked(True)
         self.assertIsNone(groups[0])
-        self.assertEqual([x.name for x in groups[1:]],
-                         ['sex', 'survived', 'age', 'status'])
+        self.assertEqual(self.model_order(model),
+                         ['None', 'sex', 'survived', 'age', 'status'])
         select_attr(0)  # Class
         self.assertIsNone(groups[0])
-        self.assertEqual([x.name for x in groups[1:]],
-                         ['sex', 'status', 'age', 'survived'])
+        self.assertEqual(self.model_order(model),
+                         ['None', 'sex', 'status', 'age', 'survived'])
 
         data = self.heart
         self.send_signal("Data", data)
         select_attr(0)  # Class
         self.assertIsNone(groups[0])
-        self.assertEqual([x.name for x in groups[1:]],
-                         ['thal',
+        self.assertEqual(self.model_order(model),
+                         ['None',
+                          'thal',
                           'chest pain',
                           'exerc ind ang',
                           'slope peak exc ST',
@@ -268,26 +281,25 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                 139, 140, 141, 143, 144, 145, 146, 147, 148]
 
     def _select_list_items(self, _list):
-        model = _list.selectionModel()
-        for i in range(len(_list.model())):
-            model.setCurrentIndex(_list.model().index(i), model.ClearAndSelect)
+        for name in _list.model().sourceModel():
+            self.__select_value(_list, name)
 
     def __select_variable(self, name, widget=None):
         if widget is None:
             widget = self.widget
 
-        self.__select_value(widget.controls.attribute, name)
+        self.__select_value(widget.attr_list, name)
 
     def __select_group(self, name, widget=None):
         if widget is None:
             widget = self.widget
 
-        self.__select_value(widget.controls.group_var, name)
+        self.__select_value(widget.group_list, name)
 
     def __select_value(self, list, value):
         m = list.model()
         for i in range(m.rowCount()):
-            idx = m.index(i)
+            idx = m.index(i, 0)
             if m.data(idx) == value:
                 list.selectionModel().setCurrentIndex(
                     idx, QItemSelectionModel.ClearAndSelect)

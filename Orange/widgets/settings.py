@@ -134,10 +134,9 @@ class DomainContextHandler(ContextHandler):
             new_value = {item: val for item, val in value.items()
                          if self.is_valid_item(setting, item, attrs, metas)}
             data[setting.name] = new_value
-        elif value is not None:
-            if (value[1] >= 0 and
-                    not self._var_exists(setting, value, attrs, metas)):
-                del data[setting.name]
+        elif self.is_encoded_var(value) \
+                and not self._var_exists(setting, value, attrs, metas):
+            del data[setting.name]
 
     def settings_to_widget(self, widget, domain, *args):
         # TODO: If https://github.com/biolab/orange-widget-base/pull/56 is:
@@ -208,7 +207,7 @@ class DomainContextHandler(ContextHandler):
 
     @classmethod
     def _var_exists(cls, setting, value, attributes, metas):
-        if not isinstance(value, tuple) or len(value) != 2:
+        if not cls.is_encoded_var(value):
             return False
 
         attr_name, attr_type = value
@@ -287,6 +286,12 @@ class DomainContextHandler(ContextHandler):
             return True
         return self._var_exists(setting, item, attrs, metas)
 
+    @staticmethod
+    def is_encoded_var(value):
+        return isinstance(value, tuple) \
+            and len(value) == 2 \
+            and isinstance(value[0], str) and isinstance(value[1], int) \
+            and value[1] >= 0
 
 class ClassValuesContextHandler(ContextHandler):
     """Context handler used for widgets that work with
@@ -404,8 +409,7 @@ def migrate_str_to_variable(settings, names=None, none_placeholder=None):
 
     if names is None:
         for name, setting in settings.values.items():
-            if isinstance(setting, tuple) and len(setting) == 2 and \
-                    isinstance(setting[0], str) and isinstance(setting[1], int):
+            if DomainContextHandler.is_encoded_var(setting):
                 _fix(name)
     elif isinstance(names, str):
         _fix(names)
