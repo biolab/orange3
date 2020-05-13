@@ -1,4 +1,5 @@
 import sys
+from itertools import chain
 
 import numpy as np
 from AnyQt.QtWidgets import QApplication
@@ -10,6 +11,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.settings import Setting
 from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data.util import get_unique_names
 from Orange.clustering import DBSCAN
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.signals import Input, Output
@@ -196,13 +198,18 @@ class OWDBSCAN(widget.OWWidget):
                             for i in range(len(self.data))])
         in_core = in_core.reshape(len(self.data), 1)
 
-        clust_var = DiscreteVariable(
-            "Cluster", values=["C%d" % (x + 1) for x in range(k)])
-        in_core_var = DiscreteVariable("DBSCAN Core", values=("0", "1"))
-
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
         meta_attrs = domain.metas
+        names = [var.name for var in chain(attributes, classes, meta_attrs) if var]
+
+        u_clust_var = get_unique_names(names, "Cluster")
+        clust_var = DiscreteVariable(
+            u_clust_var, values=["C%d" % (x + 1) for x in range(k)])
+
+        u_in_core = get_unique_names(names + [u_clust_var], "DBSCAN Core")
+        in_core_var = DiscreteVariable(u_in_core, values=("0", "1"))
+
         x, y, metas = self.data.X, self.data.Y, self.data.metas
 
         meta_attrs += (clust_var, )

@@ -4,7 +4,7 @@ from scipy.sparse import csr_matrix, csc_matrix
 from Orange.data import Table
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import simulate
+from Orange.widgets.tests.utils import simulate, possible_duplicate_table
 from Orange.widgets.unsupervised.owdbscan import OWDBSCAN, get_kth_distances
 
 
@@ -32,6 +32,13 @@ class TestOWDBSCAN(WidgetTest):
 
         self.assertEqual("Cluster", str(output.domain.metas[0]))
         self.assertEqual("DBSCAN Core", str(output.domain.metas[1]))
+
+    def test_unique_domain(self):
+        w = self.widget
+        data = possible_duplicate_table("Cluster")
+        self.send_signal(w.Inputs.data, data)
+        output = self.get_output(w.Outputs.annotated_data)
+        self.assertEqual(output.domain.metas[0].name, "Cluster (1)")
 
     def test_bad_input(self):
         w = self.widget
