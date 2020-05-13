@@ -9,7 +9,7 @@ from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.preprocess import preprocess
 from Orange.preprocess.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import table_dense_sparse
+from Orange.widgets.tests.utils import table_dense_sparse, possible_duplicate_table
 from Orange.widgets.unsupervised.owpca import OWPCA
 from Orange.tests import test_filename
 from sklearn.utils import check_random_state
@@ -25,6 +25,12 @@ class TestOWPCA(WidgetTest):
         self.widget.set_data(self.iris)
         self.widget.variance_covered = 100
         self.widget._update_selection_variance_spin()
+
+    def test_renaming_of_vars(self):
+        data = possible_duplicate_table('component')
+        self.widget.set_data(data)
+        out = self.get_output(self.widget.Outputs.components)
+        self.assertEqual(out.domain.metas[0].name, 'component (1)')
 
     def test_constant_data(self):
         data = self.iris[::5]
