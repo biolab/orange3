@@ -347,6 +347,14 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.__select_group("a")
         self.assertTupleEqual(self.widget.conts.shape, (3, 2))
 
+    def test_valid_data_range(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.__select_variable("petal width")
+        self.__select_group("iris")
+        for box in self.widget.box_scene.items():
+            if isinstance(box, FilterGraphicsRectItem):
+                box.setSelected(True)
+
     def test_summary(self):
         """Check if status bar is updated when data is received"""
         data, info = self.titanic, self.widget.info
@@ -407,3 +415,7 @@ class TestUtils(unittest.TestCase):
                        [0.0, 0.25, 0.5, 0.75, 1.0], interpolation="lower"),
             [1, 1, 2, 3, 4]
         )
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -99,7 +99,7 @@ class BoxData:
         # The code below omits the q25 or q75 in the plot when they are None
         self.q25 = None if q25 == median else q25
         self.q75 = None if q75 == median else q75
-        self.data_range = ContDataRange(self.q25, self.q75, group_val)
+        self.data_range = ContDataRange(q25, q75, group_val)
 
 
 class FilterGraphicsRectItem(QGraphicsRectItem):
