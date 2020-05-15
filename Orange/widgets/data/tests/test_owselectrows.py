@@ -315,6 +315,26 @@ class TestOWSelectRows(WidgetTest):
         new_iris = iris.transform(new_domain)
         self.send_signal(self.widget.Inputs.data, new_iris)
 
+    def test_keep_operator(self):
+        data = Table("heart_disease")
+        domain = data.domain
+
+        self.send_signal(self.widget.Inputs.data, data)
+
+        self.widget.remove_all_button.click()
+        self.enterFilter(domain["age"], "is not", "42")
+        simulate.combobox_activate_item(
+            self.widget.cond_list.cellWidget(0, 0), "chest pain", delay=0)
+        self.assertEqual(
+            self.widget.cond_list.cellWidget(0, 1).currentText(), "is not")
+
+        self.widget.remove_all_button.click()
+        self.enterFilter(domain["age"], "is below", "42")
+        simulate.combobox_activate_item(
+            self.widget.cond_list.cellWidget(0, 0), "chest pain", delay=0)
+        self.assertEqual(
+            self.widget.cond_list.cellWidget(0, 1).currentText(), "is")
+
     # Uncomment this on 2022/2/2
     #
     # def test_migration_to_version_1(self):
