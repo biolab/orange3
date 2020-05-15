@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 import warnings
 
 import numpy as np
@@ -13,6 +13,7 @@ from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     OWHierarchicalClustering
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
@@ -170,3 +171,26 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.distances, self.distances, widget=w)
         ids_2 = self.get_output(w.Outputs.selected_data, widget=w).ids
         self.assertSequenceEqual(list(ids_1), list(ids_2))
+
+    def test_summary(self):
+        """Check if the status bar updates"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+        matrix_len = f"{len(self.distances)}"
+
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self.assertEqual(info._StateInfo__input_summary.brief, matrix_len)
+        self.assertEqual(info._StateInfo__input_summary.details, matrix_len)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.distances, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
