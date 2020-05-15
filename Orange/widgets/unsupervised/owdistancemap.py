@@ -26,6 +26,7 @@ from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils.dendrogram import DendrogramWidget
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.utils.heatmap import (
     GradientColorMap, GradientLegendWidget,
 )
@@ -295,6 +296,9 @@ class OWDistanceMap(widget.OWWidget):
         self._sort_indices = None
         self._selection = None
 
+        self._set_input_summary(None)
+        self._set_output_summary(None)
+
         self.sorting_cb = gui.comboBox(
             self.controlArea, self, "sorting", box="Element Sorting",
             items=["None", "Clustering", "Clustering with ordered leaves"],
@@ -402,6 +406,7 @@ class OWDistanceMap(widget.OWWidget):
         self.closeContext()
         self.clear()
         self.error()
+        self._set_input_summary(matrix)
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
@@ -482,6 +487,15 @@ class OWDistanceMap(widget.OWWidget):
                 self.matrix_item.set_selections(self.pending_selection)
                 self.pending_selection = None
         self.unconditional_commit()
+
+    def _set_input_summary(self, matrix):
+        summary = len(matrix) if matrix is not None else self.info.NoInput
+        self.info.set_input_summary(summary)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def _clear_plot(self):
         def remove(item):
@@ -652,6 +666,8 @@ class OWDistanceMap(widget.OWWidget):
         elif isinstance(self.items, widget.AttributeList):
             subset = [self.items[i] for i in self._selection]
             featuresubset = widget.AttributeList(subset)
+
+        self._set_output_summary(datasubset)
 
         self.Outputs.selected_data.send(datasubset)
         self.Outputs.annotated_data.send(create_annotated_table(self.items, self._selection))
