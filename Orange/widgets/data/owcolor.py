@@ -35,6 +35,9 @@ class AttrDesc:
         self.var = var
         self.new_name = None
 
+    def reset(self):
+        self.new_name = None
+
     @property
     def name(self):
         return self.new_name or self.var.name
@@ -58,6 +61,11 @@ class DiscAttrDesc(AttrDesc):
     """
     def __init__(self, var):
         super().__init__(var)
+        self.new_colors = None
+        self.new_values = None
+
+    def reset(self):
+        super().reset()
         self.new_colors = None
         self.new_values = None
 
@@ -102,10 +110,17 @@ class ContAttrDesc(AttrDesc):
     """
     def __init__(self, var):
         super().__init__(var)
-        if var.palette.name not in colorpalettes.ContinuousPalettes:
-            self.new_palette_name = colorpalettes.DefaultContinuousPaletteName
+        self.new_palette_name = self._default_palette_name()
+
+    def reset(self):
+        super().reset()
+        self.new_palette_name = self._default_palette_name()
+
+    def _default_palette_name(self):
+        if self.var.palette.name not in colorpalettes.ContinuousPalettes:
+            return colorpalettes.DefaultContinuousPaletteName
         else:
-            self.new_palette_name = None
+            return None
 
     @property
     def palette_name(self):
@@ -169,6 +184,12 @@ class ColorTableModel(QAbstractTableModel):
             return False
         self.dataChanged.emit(index, index)
         return True
+
+    def reset(self):
+        self.beginResetModel()
+        for desc in self.attrdescs:
+            desc.reset()
+        self.endResetModel()
 
 
 class DiscColorTableModel(ColorTableModel):
@@ -460,7 +481,9 @@ class OWColor(widget.OWWidget):
 
         box = gui.auto_apply(self.controlArea, self, "auto_apply")
         box.button.setFixedWidth(180)
-        box.layout().insertStretch(0)
+        reset = gui.button(None, self, "Reset", callback=self.reset)
+        box.layout().insertWidget(0, reset)
+        box.layout().insertStretch(1)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -494,6 +517,11 @@ class OWColor(widget.OWWidget):
         self.unconditional_commit()
 
     def _on_data_changed(self):
+        self.commit()
+
+    def reset(self):
+        self.disc_model.reset()
+        self.cont_model.reset()
         self.commit()
 
     def commit(self):
