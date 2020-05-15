@@ -8,4 +8,5 @@ coverage:
     project:
       default:
         target: auto
-
+        # https://docs.codecov.io/docs/commit-status#threshold
+        threshold: 1%
