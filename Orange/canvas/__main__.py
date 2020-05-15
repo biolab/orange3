@@ -632,10 +632,7 @@ def main(argv=None):
 
     app.fileOpenRequest.connect(canvas_window.open_scheme_file)
 
-    if want_welcome and not args and not open_requests:
-        canvas_window.welcome_dialog()
-
-    elif args:
+    if args:
         log.info("Loading a scheme from the command line argument %r",
                  args[0])
         canvas_window.load_scheme(args[0])
@@ -643,6 +640,10 @@ def main(argv=None):
         log.info("Loading a scheme from an `QFileOpenEvent` for %r",
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
+    else:
+        canvas_window.ask_load_swp_if_exists()
+        if want_welcome:
+            canvas_window.welcome_dialog()
 
     # local references prevent destruction
     update_check = check_for_updates()
