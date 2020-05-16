@@ -512,7 +512,7 @@ class TSNE(Projector):
         # need the full embedding attributes and is cast into a regular array
         n = self.n_components
         postfixes = ["x", "y"] if n == 2 else list(range(1, n + 1))
-        names = [var.name for var in chain(data.domain.class_vars, data.domain.metas) if var] 
+        names = [var.name for var in chain(data.domain.class_vars, data.domain.metas) if var]
         proposed = [(f"t-SNE-{p}") for p in postfixes]
         uniq_names = get_unique_names(names, proposed)
         tsne_cols = [ContinuousVariable(name) for name in uniq_names]

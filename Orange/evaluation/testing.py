@@ -274,7 +274,7 @@ class Results:
         if classification:
             # predictions
             if include_predictions:
-                uniq_new, names = self.add_unique_metas(names, model_names, class_var.values)
+                uniq_new, names = self.create_unique_vars(names, model_names, class_var.values)
                 new_meta_attr += uniq_new
                 new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
 
@@ -282,7 +282,7 @@ class Results:
             if include_probabilities:
                 proposed = [f"{name} ({value})" for name in model_names for value in class_var.values]
 
-                uniq_new, names = self.add_unique_metas(names, proposed)
+                uniq_new, names = self.create_unique_vars(names, proposed)
                 new_meta_attr += uniq_new
 
                 for i in self.probabilities:
@@ -290,14 +290,14 @@ class Results:
 
         elif include_predictions:
             # regression
-            uniq_new, names = self.add_unique_metas(names, model_names)
+            uniq_new, names = self.create_unique_vars(names, model_names)
             new_meta_attr += uniq_new
             new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
 
         # add fold info
         if self.folds is not None:
             values = [str(i + 1) for i in range(len(self.folds))]
-            uniq_new, names = self.add_unique_metas(names, ["Fold"], values)
+            uniq_new, names = self.create_unique_vars(names, ["Fold"], values)
             new_meta_attr += uniq_new
             fold = np.empty((len(data), 1))
             for i, s in enumerate(self.folds):
@@ -315,16 +315,16 @@ class Results:
         predictions.name = data.name
         return predictions
 
-    def add_unique_metas(self, names, proposed_names, values=()):
-        unique_metas = []
+    def create_unique_vars(self, names, proposed_names, values=()):
+        unique_vars = []
         for proposed in proposed_names:
             uniq = get_unique_names(names, proposed)
             if values:
-                unique_metas.append(DiscreteVariable(uniq, values))
+                unique_vars.append(DiscreteVariable(uniq, values))
             else:
-                unique_metas.append(ContinuousVariable(uniq))
+                unique_vars.append(ContinuousVariable(uniq))
             names.append(uniq)
-        return unique_metas, names
+        return unique_vars, names
 
     def split_by_model(self):
         """
