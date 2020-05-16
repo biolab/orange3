@@ -26,11 +26,12 @@ from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
     QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
     QPushButton, QMenu, QListView, QFrame, QLabel)
-from AnyQt.QtGui import QKeySequence
+from AnyQt.QtGui import QKeySequence, QColor
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
+from Orange.data.util import get_unique_names
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils import itemmodels, vartype
@@ -55,6 +56,7 @@ DiscreteDescriptor = \
 
 StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 
+#warningIcon = gui.createAttributePixmap('!', QColor((202, 0, 32)))
 
 def make_variable(descriptor, compute_value):
     if isinstance(descriptor, ContinuousDescriptor):
@@ -390,6 +392,10 @@ class OWFeatureConstructor(OWWidget):
         more_values_needed = Msg("Categorical feature {} needs more values.")
         invalid_expressions = Msg("Invalid expressions: {}.")
 
+    class Warning(OWWidget.Warning):
+        renamed_var = Msg("Recently added variable has been renamed, "
+                           "to avoid duplicates.\n")
+
     def __init__(self):
         super().__init__()
         self.data = None
@@ -427,16 +433,8 @@ class OWFeatureConstructor(OWWidget):
             candidates = (fmt.format(i) for i in count(1))
             return next(c for c in candidates if c not in reserved)
 
-        def reserved_names():
-            varnames = []
-            if self.data is not None:
-                varnames = [var.name for var in
-                            self.data.domain.variables + self.data.domain.metas]
-            varnames += [desc.name for desc in self.featuremodel]
-            return set(varnames)
-
         def generate_newname(fmt):
-            return unique_name(fmt, reserved_names())
+            return unique_name(fmt, self.reserved_names())
 
         menu = QMenu(self.addbutton)
         cont = menu.addAction("Numeric")
@@ -531,8 +529,18 @@ class OWFeatureConstructor(OWWidget):
 
     def _on_modified(self):
         if self.currentIndex >= 0:
+            self.Warning.clear()
             editor = self.editorstack.currentWidget()
-            self.featuremodel[self.currentIndex] = editor.editorData()
+            proposed = editor.editorData().name
+            unique = get_unique_names(self.reserved_names(self.currentIndex),
+                                      proposed)
+
+            feature = editor.editorData()
+            if editor.editorData().name != unique:
+                self.Warning.renamed_var()
+                feature = feature.__class__(unique, *feature[1:])
+                
+            self.featuremodel[self.currentIndex] = feature
             self.descriptors = list(self.featuremodel)
 
     def setDescriptors(self, descriptors):
@@ -541,6 +549,15 @@ class OWFeatureConstructor(OWWidget):
         """
         self.descriptors = descriptors
         self.featuremodel[:] = list(self.descriptors)
+
+    def reserved_names(self, idx_=None):
+        varnames = []
+        if self.data is not None:
+            varnames = [var.name for var in
+                        self.data.domain.variables + self.data.domain.metas]
+        varnames += [desc.name for idx, desc in enumerate(self.featuremodel)
+                     if idx != idx_]
+        return set(varnames)
 
     @Inputs.data
     @check_sql_input
