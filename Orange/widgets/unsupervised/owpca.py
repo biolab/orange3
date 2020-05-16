@@ -1,5 +1,4 @@
 import numbers
-from itertools import chain
 
 import numpy
 from AnyQt.QtWidgets import QFormLayout
@@ -7,7 +6,6 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
-from Orange.data.util import get_unique_names
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
@@ -292,33 +290,18 @@ class OWPCA(widget.OWWidget):
                 # Compute the full transform (MAX_COMPONENTS components) once.
                 self._transformed = self._pca(self.data)
             transformed = self._transformed
-            d = self.data.domain
-
-            names = [var.name for var in chain(d.attributes, d.class_vars, d.metas) if var]
-            proposed = [var.name for var in transformed.domain.attributes[:self.ncomponents]]
-            unique = get_unique_names(names, proposed)
-
-            transformed_attributes = []
-            for var, u in zip(transformed.domain.attributes[:self.ncomponents], unique):
-                if var.name != u:
-                    transformed_attributes.append(var.copy(u))
-                else:
-                    transformed_attributes.append(var)
 
             domain = Domain(
-                transformed_attributes,
+                transformed.domain.attributes[:self.ncomponents],
                 self.data.domain.class_vars,
                 self.data.domain.metas
             )
             transformed = transformed.from_table(domain, transformed)
             # prevent caching new features by defining compute_value
-            comp_names = [a.name for a in self._pca.orig_domain.attributes]
-            meta_var = get_unique_names(comp_names, 'component')
-
             dom = Domain(
                 [ContinuousVariable(a.name, compute_value=lambda _: None)
                  for a in self._pca.orig_domain.attributes],
-                metas=[StringVariable(name=meta_var)])
+                metas=[StringVariable(name='component')])
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
                                 dtype=object).T
@@ -329,7 +312,7 @@ class OWPCA(widget.OWWidget):
             data_dom = Domain(
                 self.data.domain.attributes,
                 self.data.domain.class_vars,
-                self.data.domain.metas + tuple(transformed_attributes))
+                self.data.domain.metas + domain.attributes)
             data = Table.from_numpy(
                 data_dom, self.data.X, self.data.Y,
                 numpy.hstack((self.data.metas, transformed.X)))
