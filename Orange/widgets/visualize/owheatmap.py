@@ -573,7 +573,7 @@ class OWHeatMap(widget.OWWidget):
         self.set_split_variable(self.row_split_cb.currentData(Qt.EditRole))
 
     def set_split_variable(self, var):
-        if var != self.split_by_var:
+        if var is not self.split_by_var:
             self.split_by_var = var
             self.update_heatmaps()
 
@@ -950,7 +950,7 @@ class OWHeatMap(widget.OWWidget):
     def set_annotation_var(self, var: Union[None, Variable, int]):
         if isinstance(var, int):
             var = self.annotation_model[var]
-        if self.annotation_var != var:
+        if self.annotation_var is not var:
             self.annotation_var = var
             self.update_annotations()
 
@@ -989,7 +989,7 @@ class OWHeatMap(widget.OWWidget):
         """Set the current side color annotation variable."""
         if isinstance(var, int):
             var = self.row_side_color_model[var]
-        if self.annotation_color_var != var:
+        if self.annotation_color_var is not var:
             self.annotation_color_var = var
             self.update_row_side_colors()
 
