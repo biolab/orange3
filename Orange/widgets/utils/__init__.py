@@ -1,7 +1,10 @@
+import enum
 import inspect
 import sys
 from collections import deque
-from typing import TypeVar, Callable, Any, Iterable, Optional, Hashable
+from typing import (
+    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union
+)
 
 from AnyQt.QtCore import QObject
 
@@ -81,7 +84,8 @@ def getmembers(obj, predicate=None):
     return inspect.getmembers(obj, mypredicate)
 
 
-_T1 = TypeVar("_T1")
+_T1 = TypeVar("_T1")  # pylint: disable=invalid-name
+_E = TypeVar("_E", bound=enum.Enum)  # pylint: disable=invalid-name
 
 
 def apply_all(seq, op):
@@ -116,3 +120,14 @@ def unique_everseen(iterable, key=None):
         if el_k not in seen:
             seen.add(el_k)
             yield el
+
+
+def enum_get(etype: Type[_E], name: str, default: _T1) -> Union[_E, _T1]:
+    """
+    Return an Enum member by `name`. If no such member exists in `etype`
+    return `default`.
+    """
+    try:
+        return etype[name]
+    except LookupError:
+        return default

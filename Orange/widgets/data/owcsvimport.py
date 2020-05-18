@@ -52,7 +52,7 @@ import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
-    textimport, concurrent as qconcurrent, unique_everseen
+    textimport, concurrent as qconcurrent, unique_everseen, enum_get
 )
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
@@ -72,17 +72,6 @@ _log = logging.getLogger(__name__)
 
 ColumnType = textimport.ColumnType
 RowSpec = textimport.RowSpec
-
-
-def enum_lookup(enumtype, name):
-    # type: (typing.Type[T], str) -> Optional[T]
-    """
-    Return an value from `enumtype` by its symbolic name or None if not found.
-    """
-    try:
-        return enumtype[name]
-    except LookupError:
-        return None
 
 
 def dialect_eq(lhs, rhs):
@@ -219,7 +208,7 @@ class Options:
             except (KeyError, ValueError):
                 pass
             else:
-                r.append((range(start, stop), enum_lookup(enumtype, name)))
+                r.append((range(start, stop), enum_get(enumtype, name, None)))
         return r
 
 
