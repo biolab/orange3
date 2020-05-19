@@ -29,7 +29,7 @@ from AnyQt.QtGui import (
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
     QFontMetrics, QDesktopServices)
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize, \
-    Signal, QUrl
+    Signal, QUrl, QObject
 
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name, Other
@@ -293,6 +293,16 @@ class Script:
             self.fullname = os.path.join(SCRIPTS_FOLDER_PATH, filename)
             os.rename(old_name, self.fullname)
 
+    def refresh(self, new_script, set_modified=True):
+        if self.script != new_script:
+            if set_modified:
+                self.flags |= self.Modified
+            else:
+                self.flags &= ~self.Modified
+            self._script = new_script
+        else:
+            self.flags = 0
+
     def _save_script(self):
         with open(self.fullname, 'w') as f:
             f.write(self._script)
@@ -314,7 +324,7 @@ class ScriptItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         script = index.data(Qt.DisplayRole)
 
-        if script.flags & Script.Modified:
+        if script.flags & Script.Modified or script.flags & Script.MissingFromFilesystem:
             option = QStyleOptionViewItem(option)
             option.palette.setColor(QPalette.Text, QColor(Qt.red))
             option.palette.setColor(QPalette.HighlightedText, QColor(Qt.white))
@@ -331,13 +341,21 @@ class ScriptItemDelegate(QStyledItemDelegate):
     def setModelData(self, editor, model, index):
         filename = str(editor.text())
         script = index.data(Qt.DisplayRole)
+        old_filename = script.filename
         if not filename.endswith('.py'):
             filename += '.py'
-        if os.path.exists(os.path.join(SCRIPTS_FOLDER_PATH, filename)):
+        if filename != old_filename and \
+                os.path.exists(os.path.join(SCRIPTS_FOLDER_PATH, filename)):
             editor.setText(script.filename)
             message_information('A file named ' + filename + ' already exists.')
         else:
             script.filename = filename
+
+
+class ScriptStateManager(QObject):
+    scriptSaved = Signal(str, str)
+    scriptRemoved = Signal(str)
+    scriptAdded = Signal(str)
 
 
 def select_row(view, row):
@@ -403,12 +421,9 @@ class ConsoleWidget(RichJupyterWidget):
         self.style_sheet = styles.default_light_style_sheet + \
                            '.run-prompt { color: #aa22ff; }'
 
-        """
-        Let the widget/kernel start up before trying to run a script,
-        by storing a queued execution payload when the widget's commit
-        method is invoked before <In [0]:> appears.
-        """
-
+        # Let the widget/kernel start up before trying to run a script,
+        # by storing a queued execution payload when the widget's commit
+        # method is invoked before <In [0]:> appears.
         @self.becomes_ready.connect
         def _():
             self.becomes_ready.disconnect(_)  # reset callback
@@ -488,7 +503,7 @@ class ConsoleWidget(RichJupyterWidget):
 
         # run the script
         self.__executing = True
-        # we abuse this method instead of the public ones to keep
+        # we abuse this method instead of others to keep
         # the 'Running script...' prompt at the bottom of the console
         self.kernel_client.execute(script)
 
@@ -593,6 +608,28 @@ class OWPythonScript(OWWidget):
     multi_kernel_manager = MultiKernelManager()
     multi_kernel_manager.kernel_manager_class = 'qtconsole.manager.QtKernelManager'
 
+    script_state_manager = ScriptStateManager()
+
+    def _handleScriptAdded(self, filename):
+        self.libraryList.append(Script('', filename))
+
+    def _handleScriptRemoved(self, filename):
+        for script in self.libraryList:
+            if script.filename != filename:
+                continue
+
+            if script in self._cachedDocuments:
+                script.flags |= Script.MissingFromFilesystem
+            else:
+                self.libraryList.remove(script)
+
+    def _handleScriptSaved(self, filename, new_script_test):
+        for script in self.libraryList:
+            if script.filename != filename:
+                continue
+            script.refresh(new_script_test,
+                           set_modified=script in self._cachedDocuments)
+
     class Warning(OWWidget.Warning):
         illegal_var_type = Msg('{} should be of type {}, not {}.')
 
@@ -610,6 +647,10 @@ class OWPythonScript(OWWidget):
             [], self,
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         )
+
+        self.script_state_manager.scriptAdded.connect(self._handleScriptAdded)
+        self.script_state_manager.scriptRemoved.connect(self._handleScriptRemoved)
+        self.script_state_manager.scriptSaved.connect(self._handleScriptSaved)
 
         self.controlBox = gui.vBox(self.controlArea, 'Library')
         self.controlBox.layout().setSpacing(1)
@@ -646,8 +687,8 @@ class OWPythonScript(OWWidget):
         action.triggered.connect(self.commitChangesToLibrary)
         w.addAction(action)
 
-        action = QAction("Revert", self)
-        action.setToolTip("Revert changes to selected script")
+        action = QAction("Restore", self)
+        action.setToolTip("Restore saved script")
         action.triggered.connect(self.restoreSaved)
         w.addAction(action)
 
@@ -865,7 +906,12 @@ class OWPythonScript(OWWidget):
                     break
                 i += 1
         self.libraryList.append(Script("", filename))
-        self.setSelectedScript(len(self.libraryList) - 1)
+        index = len(self.libraryList) - 1
+        self.setSelectedScript(index)
+
+        self.script_state_manager.scriptAdded.disconnect(self._handleScriptAdded)
+        self.script_state_manager.scriptAdded.emit(filename)
+        self.script_state_manager.scriptAdded.connect(self._handleScriptAdded)
 
     def onAddScriptFromFile(self, *_):
         filename, _ = QFileDialog.getOpenFileName(
@@ -902,8 +948,14 @@ class OWPythonScript(OWWidget):
         )
         if answer == QMessageBox.No:
             return
+        filename = self.libraryList[index].filename
         os.remove(os.path.join(SCRIPTS_FOLDER_PATH, script.filename))
         del self.libraryList[index]
+
+        self.script_state_manager.scriptRemoved.disconnect(self._handleScriptRemoved)
+        self.script_state_manager.scriptRemoved.emit(filename)
+        self.script_state_manager.scriptRemoved.connect(self._handleScriptRemoved)
+
         if self.libraryList.rowCount() == 0:
             self.onAddScript()
         select_row(self.libraryView, max(index - 1, 0))
@@ -943,21 +995,46 @@ class OWPythonScript(OWWidget):
     def commitChangesToLibrary(self, *_):
         index = self.selectedScriptIndex()
         if index is not None:
-            self.libraryList[index].script = self.editor.text
+            text = self.editor.text
+            script = self.libraryList[index]
+            script.script = text
+
+            if script.flags & Script.MissingFromFilesystem:
+                self.script_state_manager.scriptAdded.disconnect(self._handleScriptAdded)
+                self.script_state_manager.scriptAdded.emit(script.filename)
+                self.script_state_manager.scriptAdded.connect(self._handleScriptAdded)
+                script.flags &= ~Script.MissingFromFilesystem
+
+            self.script_state_manager.scriptSaved.disconnect(self._handleScriptSaved)
+            self.script_state_manager.scriptSaved.emit(script.filename, text)
+            self.script_state_manager.scriptSaved.connect(self._handleScriptSaved)
+
             self.editor.document().setModified(False)
             self.libraryList.emitDataChanged(index)
 
     def onModificationChanged(self, modified):
         index = self.selectedScriptIndex()
         if index is not None:
-            self.libraryList[index].flags = Script.Modified if modified else 0
+            script = self.libraryList[index]
+            if modified:
+                script.flags |= Script.Modified
+            else:
+                script.flags &= ~Script.Modified
             self.libraryList.emitDataChanged(index)
 
     def restoreSaved(self):
         index = self.selectedScriptIndex()
         if index is not None:
-            self.editor.text = self.libraryList[index].script
-            self.editor.document().setModified(False)
+            script = self.libraryList[index]
+            self.editor.text = script.script
+            if script.flags & Script.MissingFromFilesystem:
+                # force a save
+                self.commitChangesToLibrary()
+            else:
+                self.editor.document().setModified(False)
+                # when restoring to an empty string,
+                # onModificationChanged(False) is not called for some reason
+                script.flags &= ~Script.Modified
 
     def saveScript(self):
         index = self.selectedScriptIndex()
@@ -1063,6 +1140,9 @@ class OWPythonScript(OWWidget):
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self.console.kernel_manager.shutdown_kernel()
+        self.script_state_manager.scriptAdded.disconnect(self._handleScriptAdded)
+        self.script_state_manager.scriptRemoved.disconnect(self._handleScriptRemoved)
+        self.script_state_manager.scriptSaved.disconnect(self._handleScriptSaved)
 
 
 if __name__ == "__main__":  # pragma: no cover
