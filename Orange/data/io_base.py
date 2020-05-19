@@ -22,6 +22,7 @@ from Orange.data.io_util import Compression, open_compressed, \
     isnastr, guess_data_type, sanitize_variable
 from Orange.data.util import get_unique_names_duplicates
 from Orange.data.variable import VariableMeta
+from Orange.misc.collections import natural_sorted
 from Orange.util import Registry, flatten, namegen
 
 __all__ = ["FileFormatBase", "Flags", "DataTableMixin", "PICKLE_PROTOCOL"]
@@ -278,7 +279,7 @@ class _TableBuilder:
     def _disc_no_vals_column(data: np.ndarray, col: int, **_) -> \
             _ColumnProperties:
         vals, coltype = _TableBuilder._disc_column(data, col)
-        return _ColumnProperties(valuemap=sorted(set(vals) - {""}),
+        return _ColumnProperties(valuemap=natural_sorted(set(vals) - {""}),
                                  values=vals, coltype=coltype,
                                  orig_values=vals)
 

@@ -8,6 +8,7 @@ from Orange.data import (
     is_discrete_values, MISSING_VALUES, Variable,
     DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
 )
+from Orange.misc.collections import natural_sorted
 
 __all__ = ["Compression", "open_compressed", "detect_encoding", "isnastr",
            "guess_data_type", "sanitize_variable"]
@@ -121,7 +122,7 @@ def guess_data_type(orig_values, namask=None):
     if namask is None:
         namask = isnastr(orig_values)
     if is_discrete:
-        valuemap = sorted(is_discrete)
+        valuemap = natural_sorted(is_discrete)
         coltype = DiscreteVariable
     else:
         # try to parse as float
