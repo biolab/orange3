@@ -5,6 +5,7 @@ CSV File Import Widget
 
 """
 import sys
+import types
 import os
 import csv
 import enum
@@ -27,13 +28,15 @@ from contextlib import ExitStack
 import typing
 from typing import (
     List, Tuple, Dict, Optional, Any, Callable, Iterable,
-    Union, AnyStr, BinaryIO, Set
+    Union, AnyStr, BinaryIO, Set, Type, Mapping
 )
 
 from PyQt5.QtCore import (
     Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType
 )
-from PyQt5.QtGui import QStandardItem, QStandardItemModel, QPalette
+from PyQt5.QtGui import (
+    QStandardItem, QStandardItemModel, QPalette, QColor, QIcon
+)
 from PyQt5.QtWidgets import (
     QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
     QVBoxLayout, QSizePolicy, QStyle, QFileIconProvider, QFileDialog,
@@ -54,17 +57,20 @@ from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get
 )
+from Orange.widgets.utils.pathutils import (
+    PathItem, VarPath, samepath, pathnormalize, prettyfypath, infer_prefix,
+)
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
 )
 from Orange.widgets.utils.state_summary import format_summary_details
 
-
 if typing.TYPE_CHECKING:
     # pylint: disable=invalid-name
     T = typing.TypeVar("T")
     K = typing.TypeVar("K")
+    E = typing.TypeVar("E", bound=enum.Enum)
 
 __all__ = ["OWCSVFileImport"]
 
@@ -110,19 +116,18 @@ class Options:
     RowSpec = RowSpec
     ColumnType = ColumnType
 
-    def __init__(self, encoding='utf-8', dialect=csv.excel(), columntypes=[],
+    def __init__(self, encoding='utf-8', dialect=csv.excel(),
+                 columntypes: Iterable[Tuple[range, 'ColumnType']] = (),
                  rowspec=((range(0, 1), RowSpec.Header),),
-                 decimal_separator=".", group_separator=""):
-        # type: (str, csv.Dialect, List[Tuple[range, ColumnType]], ...) -> None
+                 decimal_separator=".", group_separator="") -> None:
         self.encoding = encoding
         self.dialect = dialect
-        self.columntypes = list(columntypes)
-        self.rowspec = list(rowspec)  # type: List[Tuple[range, Options.RowSpec]]
+        self.columntypes = list(columntypes)  # type: List[Tuple[range, ColumnType]]
+        self.rowspec = list(rowspec)  # type: List[Tuple[range, RowSpec]]
         self.decimal_separator = decimal_separator
         self.group_separator = group_separator
 
     def __eq__(self, other):
-        # type: (Options) -> bool
         """
         Compare this instance to `other` for equality.
         """
@@ -194,13 +199,13 @@ class Options:
 
     @staticmethod
     def spec_as_encodable(spec):
-        # type: (List[Tuple[range, enum.Enum]]) -> List[Dict[str, Any]]
+        # type: (Iterable[Tuple[range, enum.Enum]]) -> List[Dict[str, Any]]
         return [{"start": r.start, "stop": r.stop, "value": value.name}
                 for r, value in spec]
 
     @staticmethod
     def spec_from_encodable(spec, enumtype):
-        # type: (List[Dict[str, Any]], typing.Type[T]) -> List[Tuple[range, T]]
+        # type: (Iterable[Dict[str, Any]], Type[E]) -> List[Tuple[range, E]]
         r = []
         for v in spec:
             try:
@@ -380,61 +385,154 @@ def dialog_button_box_set_enabled(buttonbox, enabled):
             b.setEnabled(state)
 
 
-class ImportItem(QStandardItem):
+def icon_for_path(path: str) -> QIcon:
+    iconprovider = QFileIconProvider()
+    finfo = QFileInfo(path)
+    if finfo.exists():
+        return iconprovider.icon(finfo)
+    else:
+        return iconprovider.icon(QFileIconProvider.File)
+
+
+class VarPathItem(QStandardItem):
+    PathRole = Qt.UserRole + 4502
+    VarPathRole = PathRole + 1
+
+    def path(self) -> str:
+        """Return the resolved path or '' if unresolved or missing"""
+        path = self.data(VarPathItem.PathRole)
+        return path if isinstance(path, str) else ""
+
+    def setPath(self, path: str) -> None:
+        """Set absolute path."""
+        self.setData(PathItem.AbsPath(path), VarPathItem.VarPathRole)
+
+    def varPath(self) -> Optional[PathItem]:
+        vpath = self.data(VarPathItem.VarPathRole)
+        return vpath if isinstance(vpath, PathItem) else None
+
+    def setVarPath(self, vpath: PathItem) -> None:
+        """Set variable path item."""
+        self.setData(vpath, VarPathItem.VarPathRole)
+
+    def resolve(self, vpath: PathItem) -> Optional[str]:
+        """
+        Resolve `vpath` item. This implementation dispatches to parent model's
+        (:func:`VarPathItemModel.resolve`)
+        """
+        model = self.model()
+        if isinstance(model, VarPathItemModel):
+            return model.resolve(vpath)
+        else:
+            return vpath.resolve({})
+
+    def data(self, role=Qt.UserRole + 1) -> Any:
+        if role == Qt.DisplayRole:
+            value = super().data(role)
+            if value is not None:
+                return value
+            vpath = self.varPath()
+            if isinstance(vpath, PathItem.AbsPath):
+                return os.path.basename(vpath.path)
+            elif isinstance(vpath, PathItem.VarPath):
+                return os.path.basename(vpath.relpath)
+            else:
+                return None
+        elif role == Qt.DecorationRole:
+            return icon_for_path(self.path())
+        elif role == VarPathItem.PathRole:
+            vpath = self.data(VarPathItem.VarPathRole)
+            if isinstance(vpath, PathItem.AbsPath):
+                return vpath.path
+            elif isinstance(vpath, VarPath):
+                path = self.resolve(vpath)
+                if path is not None:
+                    return path
+            return super().data(role)
+        elif role == Qt.ToolTipRole:
+            vpath = self.data(VarPathItem.VarPathRole)
+            if isinstance(vpath, VarPath.AbsPath):
+                return vpath.path
+            elif isinstance(vpath, VarPath):
+                text = f"${{{vpath.name}}}/{vpath.relpath}"
+                p = self.resolve(vpath)
+                if p is None or not os.path.exists(p):
+                    text += " (missing)"
+                return text
+        elif role == Qt.ForegroundRole:
+            vpath = self.data(VarPathItem.VarPathRole)
+            if isinstance(vpath, PathItem):
+                p = self.resolve(vpath)
+                if p is None or not os.path.exists(p):
+                    return QColor(Qt.red)
+        return super().data(role)
+
+
+class ImportItem(VarPathItem):
     """
     An item representing a file path and associated load options
     """
-    PathRole = Qt.UserRole + 12
     OptionsRole = Qt.UserRole + 14
+    IsSessionItemRole = Qt.UserRole + 15
 
-    def path(self):
-        # type: () -> str
-        path = self.data(ImportItem.PathRole)
-        return path if isinstance(path, str) else ""
-
-    def setPath(self, path):
-        # type: (str) -> None
-        self.setData(path, ImportItem.PathRole)
-
-    def options(self):
-        # type: () -> Optional[Options]
+    def options(self) -> Optional[Options]:
         options = self.data(ImportItem.OptionsRole)
         return options if isinstance(options, Options) else None
 
-    def setOptions(self, options):
-        # type: (Options) -> None
+    def setOptions(self, options: Options) -> None:
         self.setData(options, ImportItem.OptionsRole)
 
+    def setIsSessionItem(self, issession: bool) -> None:
+        self.setData(issession, ImportItem.IsSessionItemRole)
+
+    def isSessionItem(self) -> bool:
+        return bool(self.data(ImportItem.IsSessionItemRole))
+
     @classmethod
-    def fromPath(cls, path):
-        # type: (str) -> ImportItem
+    def fromPath(cls, path: Union[str, PathItem]) -> 'ImportItem':
         """
         Create a `ImportItem` from a local file system path.
         """
-        iconprovider = QFileIconProvider()
-        basename = os.path.basename(path)
+        if isinstance(path, str):
+            path = PathItem.AbsPath(path)
+        if isinstance(path, PathItem.VarPath):
+            basename = os.path.basename(path.relpath)
+            text = f"${{{path.name}}}/{path.relpath}"
+        elif isinstance(path, PathItem.AbsPath):
+            basename = os.path.basename(path.path)
+            text = path.path
+        else:
+            raise TypeError
+
         item = cls()
         item.setText(basename)
-        item.setToolTip(path)
-        finfo = QFileInfo(path)
-        if finfo.exists():
-            item.setIcon(iconprovider.icon(finfo))
-        else:
-            item.setIcon(iconprovider.icon(QFileIconProvider.File))
-
-        item.setData(path, ImportItem.PathRole)
-        if not os.path.isfile(path):
-            item.setEnabled(False)
-            item.setToolTip(item.toolTip() + " (missing from filesystem)")
+        item.setToolTip(text)
+        item.setData(path, ImportItem.VarPathRole)
         return item
 
 
-def qname(type_):
-    # type: (type) -> str
-    """
-    Return the fully qualified name for a `type_`.
-    """
+class VarPathItemModel(QStandardItemModel):
+    def __init__(self, *args, replacementEnv=types.MappingProxyType({}),
+                 **kwargs):
+        self.__replacements = types.MappingProxyType(dict(replacementEnv))
+        super().__init__(*args, **kwargs)
 
+    def setReplacementEnv(self, env: Mapping[str, str]) -> None:
+        self.__replacements = types.MappingProxyType(dict(env))
+        self.dataChanged.emit(
+            self.index(0, 0),
+            self.index(self.rowCount() - 1, self.columnCount() - 1)
+        )
+
+    def replacementEnv(self) -> Mapping[str, str]:
+        return self.__replacements
+
+    def resolve(self, vpath: PathItem) -> Optional[str]:
+        return vpath.resolve(self.replacementEnv())
+
+
+def qname(type_: type) -> str:
+    """Return the fully qualified name for a `type_`."""
     return "{0.__module__}.{0.__qualname__}".format(type_)
 
 
@@ -472,6 +570,8 @@ class OWCSVFileImport(widget.OWWidget):
     _session_items = settings.Setting(
         [], schema_only=True)  # type: List[Tuple[str, dict]]
 
+    _session_items_v2 = settings.Setting(
+        [], schema_only=True)  # type: List[Tuple[Dict[str, str], dict]]
     #: Saved dialog state (last directory and selected filter)
     dialog_state = settings.Setting({
         "directory": "",
@@ -481,7 +581,7 @@ class OWCSVFileImport(widget.OWWidget):
     # we added column type guessing to this widget, which breaks compatibility
     # with older saved workflows, where types not guessed differently, when
     # compatibility_mode=True widget have older guessing behaviour
-    settings_version = 2
+    settings_version = 3
     compatibility_mode = settings.Setting(False, schema_only=True)
 
     MaxHistorySize = 50
@@ -492,6 +592,7 @@ class OWCSVFileImport(widget.OWWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
+        self.settingsAboutToBePacked.connect(self._saveState)
 
         self.__committimer = QTimer(self, singleShot=True)
         self.__committimer.timeout.connect(self.commit)
@@ -503,7 +604,8 @@ class OWCSVFileImport(widget.OWWidget):
         grid = QGridLayout()
         grid.addWidget(QLabel("File:", self), 0, 0, 1, 1)
 
-        self.import_items_model = QStandardItemModel(self)
+        self.import_items_model = VarPathItemModel(self)
+        self.import_items_model.setReplacementEnv(dict(self._replacements()))
         self.recent_combo = QComboBox(
             self, objectName="recent-combo", toolTip="Recent files.",
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
@@ -577,6 +679,11 @@ class OWCSVFileImport(widget.OWWidget):
         item = self.current_item()
         if item is not None:
             self.set_selected_file(item.path(), item.options())
+
+    def workflowEnvChanged(self, key, value, oldvalue):
+        super().workflowEnvChanged(key, value, oldvalue)
+        if key == "basedir":
+            self.import_items_model.setReplacementEnv(dict(self._replacements()))
 
     @Slot(int)
     def activate_recent(self, index):
@@ -777,6 +884,8 @@ class OWCSVFileImport(widget.OWWidget):
         else:
             item = ImportItem.fromPath(filename)
 
+        # item.setData(VarPath(filename), ImportItem.VarPathRole)
+        item.setData(True, ImportItem.IsSessionItemRole)
         model.insertRow(0, item)
 
         if options is not None:
@@ -793,14 +902,6 @@ class OWCSVFileImport(widget.OWWidget):
         arr = [item for item in arr if item.get("path") != filename]
         arr.append(item)
         QSettings_writeArray(s, "recent", arr)
-
-        # update workflow session items
-        items = self._session_items[:]
-        idx = index_where(items, lambda t: samepath(t[0], filename))
-        if idx is not None:
-            del items[idx]
-        items.insert(0, (filename, options.as_dict()))
-        self._session_items = items[:OWCSVFileImport.MaxHistorySize]
 
     def _invalidate(self):
         # Invalidate the current output and schedule a new commit call.
@@ -1006,6 +1107,25 @@ class OWCSVFileImport(widget.OWWidget):
                 items.append((path, opts))
         return items[::-1]
 
+    def _replacements(self) -> List[Tuple[str, str]]:
+        replacements = []
+        basedir = self.workflowEnv().get("basedir", None)
+        if basedir is not None:
+            replacements += [('basedir', basedir)]
+        return replacements
+
+    def _saveState(self):
+        replacements = self._replacements()
+        session_items = []
+        model = self.import_items_model
+        for item in map(model.item, range(model.rowCount())):
+            if item.data(ImportItem.IsSessionItemRole):
+                vp = infer_prefix(item.path(), replacements)
+                if vp is None:
+                    vp = VarPath.AbsPath(item.path())
+                session_items.append((vp.as_dict(), item.options().as_dict()))
+        self._session_items_v2 = session_items
+
     def _restoreState(self):
         # Restore the state. Merge session (workflow) items with the
         # local history.
@@ -1014,17 +1134,31 @@ class OWCSVFileImport(widget.OWWidget):
         items = self.itemsFromSettings()
         # stored session items
         sitems = []
-        for p, m in self._session_items:
+        replacements = self._replacements()
+        for p, m in self._session_items_v2:
             try:
-                item_ = (p, Options.from_dict(m))
-            except (csv.Error, LookupError):
-                # Is it better to fail then to lose a item slot?
+                p, m = (VarPath.from_dict(p), Options.from_dict(m))
+            except (csv.Error, LookupError, ValueError):
                 _log.error("Failed to restore '%s'", p, exc_info=True)
             else:
-                sitems.append(item_)
+                sitems.append((p, m))
 
         items = sitems + items
-        items = unique_everseen(items, key=lambda t: pathnormalize(t[0]))
+        replacements = self._replacements()
+
+        def key(t: Union[VarPath, str]) -> str:
+            if isinstance(t, PathItem):
+                p = t.resolve(dict(replacements))
+                if p is not None:
+                    return pathnormalize(p)
+                else:
+                    return t
+                    # p = t.abspath
+            else:
+                p = t
+            return pathnormalize(p)
+
+        items = unique_everseen(items, key=lambda t: key(t[0]))
 
         curr = self.recent_combo.currentIndex()
         if curr != -1:
@@ -1045,6 +1179,11 @@ class OWCSVFileImport(widget.OWWidget):
     def migrate_settings(cls, settings, version):
         if not version or version < 2:
             settings["compatibility_mode"] = True
+
+        if version is not None and version < 3:
+            items_ = settings.pop("_session_items", [])
+            items_v2 = [(PathItem.AbsPath(p).as_dict(), m) for p, m in items_]
+            settings["_session_items_v2"] = items_v2
 
 
 @singledispatch
@@ -1169,7 +1308,7 @@ NA_VALUES = {
 
 
 def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
-    # type: (Union[AnyStr, BinaryIO], Options, ..., bool) -> pd.DataFrame
+    # type: (Union[AnyStr, BinaryIO], Options, Optional[Callable[[int, int], None]], bool) -> pd.DataFrame
     def dtype(coltype):
         # type: (ColumnType) -> Optional[str]
         if coltype == ColumnType.Numeric:
@@ -1480,40 +1619,6 @@ def index_where(iterable, pred):
         if pred(el):
             return i
     return None
-
-
-
-def samepath(p1, p2):
-    # type: (str, str) -> bool
-    """
-    Return True if the paths `p1` and `p2` match after case and path
-    normalization.
-    """
-    return pathnormalize(p1) == pathnormalize(p2)
-
-
-def pathnormalize(p):
-    """
-    Normalize a path (apply both path and case normalization.
-    """
-    return os.path.normcase(os.path.normpath(p))
-
-
-def prettyfypath(path):
-    """
-    Return the path with the $HOME prefix shortened to '~/' if applicable.
-
-    Example
-    -------
-    >>> prettyfypath("/home/user/file.dat")
-    '~/file.dat'
-    """
-    home = os.path.expanduser("~/")
-    home_n = pathnormalize(home)
-    path_n = pathnormalize(path)
-    if path_n.startswith(home_n):
-        path = os.path.join("~", os.path.relpath(path, home))
-    return path
 
 
 def pandas_to_table(df):
