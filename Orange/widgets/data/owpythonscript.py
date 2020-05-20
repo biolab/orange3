@@ -1,34 +1,27 @@
 import glob
 import sys
 import os
-import code
-import keyword
-import itertools
-import tokenize
 import unicodedata
 import codecs
 import pickle
 from functools import reduce
 from collections import defaultdict
-from unittest.mock import patch
 
-from typing import Optional, List, TYPE_CHECKING, NamedTuple
+from typing import Optional, List, TYPE_CHECKING
 
 from jupyter_client import MultiKernelManager
-from jupyter_client.kernelspec import KernelSpecManager, NoSuchKernel
 
 import qutepart
 
 from AnyQt.QtWidgets import (
-    QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
+    QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
     QStyleOptionViewItem, QPlainTextDocumentLayout,
     QLabel, QWidget, QHBoxLayout, QMessageBox)
 from AnyQt.QtGui import (
-    QColor, QBrush, QPalette, QFont, QTextDocument,
-    QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
+    QColor, QPalette, QFont, QTextDocument, QTextCursor, QKeySequence,
     QFontMetrics, QDesktopServices, QPainter)
-from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize, \
+from AnyQt.QtCore import Qt, QByteArray, QItemSelectionModel, QSize, \
     Signal, QUrl, QObject, QRectF
 
 import pygments.style
@@ -37,13 +30,11 @@ from pygments.token import Comment, Keyword, Number, String, Punctuation, Operat
 from Orange.canvas import config
 from orangecanvas.gui.utils import message_question, message_information
 from qtconsole import styles
-from qtconsole.jupyter_widget import JupyterWidget
 from qtconsole.pygments_highlighter import PygmentsHighlighter
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 from Orange.data import Table
 from Orange.base import Learner, Model
-from Orange.util import interleave
 from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting

@@ -1,6 +1,5 @@
 import codecs
 import pickle
-import sys
 from collections import defaultdict
 
 from ipykernel.ipkernel import IPythonKernel
