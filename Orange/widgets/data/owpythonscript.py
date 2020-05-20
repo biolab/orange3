@@ -132,24 +132,90 @@ class CodeEditor(qutepart.Qutepart):
         self.viewport_margins_updated.emit(first_char_indent)
 
 
-class FakeSignature(QWidget):
+class FakeSignatureMixin:
     def __init__(self, parent, highlighting_scheme, font):
         super().__init__(parent)
         self.highlighting_scheme = highlighting_scheme
-        self.font = font
+        self.setFont(font)
         self.bold_font = QFont(font)
         self.bold_font.setBold(True)
+
+        self.indentation_level = 0
+
+        self._char_4_width = QFontMetrics(font).width('4444')
+
+    def setIndent(self, margins_width):
+        self.setContentsMargins(max(0,
+                                    margins_width +
+                                    (self.indentation_level - 1) * self._char_4_width),
+                                0, 0, 0)
+
+
+class FunctionSignature(FakeSignatureMixin, QLabel):
+    def __init__(self, parent, highlighting_scheme, font, function_name="python_script"):
+        super().__init__(parent, highlighting_scheme, font)
+        self.signal_prefix = 'in_'
+
+        # `def python_script(`
+        self.prefix = ('<b style="color: ' +
+                       self.highlighting_scheme[Keyword].split(' ')[-1] +
+                       ';">def </b>'
+                       '<span style="color: ' +
+                       self.highlighting_scheme[Name.Function].split(' ')[-1] +
+                       ';">' + function_name + '</span>'
+                       '<span style="color: ' +
+                       self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                       ';">(</span>')
+
+        # `):`
+        self.affix = ('<span style="color: ' +
+                      self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                      ';">):</span>')
+
+        self.update_signal_text({})
+
+    def update_signal_text(self, signal_values_lengths):
+        if not self.signal_prefix:
+            return
+        lbl_text = self.prefix
+        if len(signal_values_lengths) > 0:
+            for name, value in signal_values_lengths.items():
+                if value == 1:
+                    lbl_text += self.signal_prefix + name + ', '
+                elif value > 1:
+                    lbl_text += self.signal_prefix + name + 's, '
+            lbl_text = lbl_text[:-2]  # shave off the trailing ', '
+        lbl_text += self.affix
+        if self.text() != lbl_text:
+            self.setText(lbl_text)
+            self.update()
+
+
+class ReturnStatement(FakeSignatureMixin, QWidget):
+    def __init__(self, parent, highlighting_scheme, font, function_name="python_script"):
+        super().__init__(parent, highlighting_scheme, font)
+
+        self.indentation_level = 1
+        self.signal_labels = {}
+        self._prefix = None
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+
+        # `return `
+        ret_lbl = QLabel('<b style="color: ' + \
+                         highlighting_scheme[Keyword].split(' ')[-1] + \
+                         ';">return </b>', self)
+        ret_lbl.setFont(self.font())
+        ret_lbl.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(ret_lbl)
+
+        # `out_data[, ]` * 4
+        self.make_signal_labels('out_')
+
+        layout.addStretch()
         self.setLayout(layout)
-
-        self.indentation_level = 0
-        self.signal_labels = {}
-
-        self._prefix = None
-        self._char_4_width = QFontMetrics(self.font).width('4444')
 
     def make_signal_labels(self, prefix):
         self._prefix = prefix
@@ -158,7 +224,7 @@ class FakeSignature(QWidget):
             # adding an empty b tag like this adjusts the
             # line height to match the rest of the labels
             signal_lbl = QLabel('<b></b>' + prefix + signal, self)
-            signal_lbl.setFont(self.font)
+            signal_lbl.setFont(self.font())
             signal_lbl.setContentsMargins(0, 0, 0, 0)
             self.layout().addWidget(signal_lbl)
 
@@ -168,20 +234,12 @@ class FakeSignature(QWidget):
                 break
 
             comma_lbl = QLabel(', ')
-            comma_lbl.setFont(self.font)
+            comma_lbl.setFont(self.font())
             comma_lbl.setContentsMargins(0, 0, 0, 0)
             comma_lbl.setStyleSheet('.QLabel { color: ' +
                                     self.highlighting_scheme[Punctuation].split(' ')[-1] +
                                     '; }')
             self.layout().addWidget(comma_lbl)
-
-    def setIndent(self, margins_width):
-        fm = QFontMetrics(self.font)
-        self.setContentsMargins(max(0,
-                                    margins_width +
-                                    (self.indentation_level - 1) * self._char_4_width),
-                                0, 0, 0
-                                )
 
     def update_signal_text(self, signal_name, values_length):
         if not self._prefix:
@@ -196,58 +254,6 @@ class FakeSignature(QWidget):
         if lbl.text() != text:
             lbl.setText(text)
             lbl.update()
-
-
-class FunctionSignature(FakeSignature):
-    def __init__(self, *args, function_name="python_script"):
-        super().__init__(*args)
-
-        # `def python_script(`
-        def_lbl = QLabel('<b style="color: ' +
-                         self.highlighting_scheme[Keyword].split(' ')[-1] +
-                         ';">def </b>'
-                         '<span style="color: ' +
-                         self.highlighting_scheme[Name.Function].split(' ')[-1] +
-                         ';">' + function_name + '</span>'
-                                                 '<span style="color: ' +
-                         self.highlighting_scheme[Punctuation].split(' ')[-1] +
-                         ';">(</span>', self)
-        def_lbl.setFont(self.font)
-        def_lbl.setContentsMargins(0, 0, 0, 0)
-        self.layout().addWidget(def_lbl)
-
-        # `in_data[, ]` * 4
-        self.make_signal_labels('in_')
-
-        # `):`
-        rparen_lbl = QLabel('):', self)
-        rparen_lbl.setFont(self.font)
-        rparen_lbl.setContentsMargins(0, 0, 0, 0)
-        rparen_lbl.setStyleSheet('.QLabel { color: ' +
-                                 self.highlighting_scheme[Punctuation].split(' ')[-1] +
-                                 '; }')
-        self.layout().addWidget(rparen_lbl)
-
-        self.layout().addStretch()
-
-
-class ReturnStatement(FakeSignature):
-    def __init__(self, parent, highlighting_scheme, font, function_name="python_script"):
-        super().__init__(parent, highlighting_scheme, font)
-        self.indentation_level = 1
-
-        # `return `
-        ret_lbl = QLabel('<b style="color: ' + \
-                         highlighting_scheme[Keyword].split(' ')[-1] + \
-                         ';">return </b>', self)
-        ret_lbl.setFont(self.font)
-        ret_lbl.setContentsMargins(0, 0, 0, 0)
-        self.layout().addWidget(ret_lbl)
-
-        # `out_data[, ]` * 4
-        self.make_signal_labels('out_')
-
-        self.layout().addStretch()
 
 
 def read_file_content(filename, limit=None):
@@ -876,9 +882,9 @@ class OWPythonScript(OWWidget):
         self.commit()
 
     def update_fake_function_signature_labels(self):
-        for name in self.signal_names:
-            value = getattr(self, name)
-            self.func_sig.update_signal_text(name, len(value))
+        self.func_sig.update_signal_text({
+            name: len(getattr(self, name)) for name in self.signal_names
+        })
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()
