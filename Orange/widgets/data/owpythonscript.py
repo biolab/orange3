@@ -27,9 +27,9 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
-    QFontMetrics, QDesktopServices)
+    QFontMetrics, QDesktopServices, QPainter)
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize, \
-    Signal, QUrl, QObject
+    Signal, QUrl, QObject, QRectF
 
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name, Other
@@ -130,6 +130,46 @@ class CodeEditor(qutepart.Qutepart):
                             cursorRect.left()
 
         self.viewport_margins_updated.emit(first_char_indent)
+
+    def keyPressEvent(self, event):
+        """
+        Eat all ESC keypresses (in case of vim mode)
+        """
+        b = super().keyPressEvent(event)
+        if event.key() == Qt.Key_Escape:
+            event.accept()
+        return b
+
+
+class VimIndicator(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.indicator_color = QColor('#33cc33')
+        self.indicator_text = 'normal'
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setBrush(self.indicator_color)
+
+        p.save()
+        p.setPen(Qt.NoPen)
+        fm = QFontMetrics(self.font())
+        width = self.rect().width()
+        height = fm.height() + 6
+        rect = QRectF(0, 0, width, height)
+        p.drawRoundedRect(rect, 5, 5)
+        p.restore()
+
+        textstart = (width - fm.width(self.indicator_text)) / 2
+        p.drawText(textstart, height / 2 + 5, self.indicator_text)
+
+    def minimumSizeHint(self):
+        fm = QFontMetrics(self.font())
+        width = fm.width(self.indicator_text) + 10
+        height = fm.height() + 6
+        return QSize(width, height)
 
 
 class FakeSignatureMixin:
@@ -601,6 +641,7 @@ class OWPythonScript(OWWidget):
 
     settings_version = 2
     currentScriptIndex = Setting(0)
+    vimModeEnabled = Setting(False)
     splitterState: Optional[bytes] = Setting(None)
 
     # Widgets in the same schema share namespace through a dictionary whose
@@ -658,8 +699,11 @@ class OWPythonScript(OWWidget):
         self.script_state_manager.scriptRemoved.connect(self._handleScriptRemoved)
         self.script_state_manager.scriptSaved.connect(self._handleScriptSaved)
 
-        self.controlBox = gui.vBox(self.controlArea, 'Library')
-        self.controlBox.layout().setSpacing(1)
+        self.editor_controls = gui.vBox(self.controlArea, 'Editor options')
+        # filled in after editor is constructed
+
+        self.libraryBox = gui.vBox(self.controlArea, 'Library')
+        self.libraryBox.layout().setSpacing(1)
 
         self.libraryView = QListView(
             editTriggers=QListView.DoubleClicked |
@@ -673,7 +717,8 @@ class OWPythonScript(OWWidget):
         self.libraryView.selectionModel().selectionChanged.connect(
             self.onSelectedScriptChanged
         )
-        self.controlBox.layout().addWidget(self.libraryView)
+
+        self.libraryBox.layout().addWidget(self.libraryView)
 
         w = itemmodels.ModelActionsWidget()
 
@@ -723,7 +768,7 @@ class OWPythonScript(OWWidget):
 
         w.layout().setSpacing(1)
 
-        self.controlBox.layout().addWidget(w)
+        self.libraryBox.layout().addWidget(w)
 
         self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
 
@@ -750,7 +795,7 @@ class OWPythonScript(OWWidget):
                                      eFont)
         self.func_sig = func_sig
 
-        editor = CodeEditor(self)
+        editor = CodeEditor(False, True, True, self)
         editor.setFont(eFont)
 
         # use python autoindent, autocomplete
@@ -760,6 +805,25 @@ class OWPythonScript(OWWidget):
 
         # TODO should we care about displaying the these warnings?
         # editor.userWarning.connect()
+
+        self.vim_box = gui.hBox(self.editor_controls, spacing=20)
+        self.vim_indicator = VimIndicator(self.vim_box)
+        self.vim_indicator.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        def enable_vim_mode():
+            editor.vimModeEnabled = self.vimModeEnabled
+            self.vim_indicator.setVisible(self.vimModeEnabled)
+        enable_vim_mode()
+
+        gui.checkBox(self.vim_box, self, 'vimModeEnabled', 'Vim mode',
+                     tooltip='All the cool programmers use vim mode.',
+                     callback=enable_vim_mode)
+        self.vim_box.layout().addWidget(self.vim_indicator)
+        @editor.vimModeIndicationChanged.connect
+        def _(color, text):
+            self.vim_indicator.indicator_color = color
+            self.vim_indicator.indicator_text = text
+            self.vim_indicator.update()
 
         return_stmt = ReturnStatement(self.editorBox,
                                       syntax_highlighting_scheme,
