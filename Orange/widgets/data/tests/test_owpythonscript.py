@@ -196,14 +196,18 @@ class TestOWPythonScript(WidgetTest):
             QPoint(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier)
 
-    def test_dropEvent_replaces_file(self):
-        with named_file("test", suffix=".42") as fn:
-            previous = self.widget.text.toPlainText()
+    def test_dropEvent_adds_file_to_library_if_py(self):
+        with named_file("test", suffix=".py") as fn:
             event = self._drop_event(QUrl.fromLocalFile(fn))
+            libLen = len(self.widget.libraryList)
             self.widget.dropEvent(event)
-            self.assertEqual("test", self.widget.text.toPlainText())
-            self.widget.text.undo()
-            self.assertEqual(previous, self.widget.text.toPlainText())
+            self.assertEqual(libLen + 1, len(self.widget.libraryList))
+            self.assertEqual("test", self.widget.libraryList[-1].script)
+        with named_file("test", suffix=".42") as fn:
+            event = self._drop_event(QUrl.fromLocalFile(fn))
+            libLen = len(self.widget.libraryList)
+            self.widget.dropEvent(event)
+            self.assertEqual(libLen, len(self.widget.libraryList))
 
     def _drop_event(self, url):
         # make sure data does not get garbage collected before it used

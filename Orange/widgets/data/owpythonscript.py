@@ -994,6 +994,11 @@ class OWPythonScript(OWWidget):
 
     def addScriptFromFile(self, filename):
         name = os.path.basename(filename)
+        if not name.endswith('.py'):
+            return
+        if name in [script.filename for script in self.libraryList]:
+            message_information('A file named ' + name + ' already exists.')
+            return
         try:
             with open(filename) as f:
                 contents = f.read()
