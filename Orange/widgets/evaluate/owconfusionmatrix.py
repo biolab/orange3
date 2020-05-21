@@ -1,6 +1,7 @@
 """Confusion matrix widget"""
 
 from math import isnan, isinf
+from itertools import chain
 import unicodedata
 
 from AnyQt.QtWidgets import QTableView, QHeaderView, QStyledItemDelegate, \
@@ -11,6 +12,7 @@ import numpy as np
 import sklearn.metrics as skl_metrics
 
 import Orange
+from Orange.data.util import get_unique_names
 import Orange.evaluation
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import \
@@ -371,13 +373,16 @@ class OWConfusionMatrix(widget.OWWidget):
         extra = []
         class_var = self.data.domain.class_var
         metas = self.data.domain.metas
+        attrs = self.data.domain.attributes
+        names = [var.name for var in chain(metas, [class_var], attrs)]
 
         if self.append_predictions:
             extra.append(predicted.reshape(-1, 1))
+            proposed = "{}({})".format(class_var.name, learner_name)
+            name = get_unique_names(names, proposed)
             var = Orange.data.DiscreteVariable(
-                "{}({})".format(class_var.name, learner_name),
-                class_var.values
-            )
+                                               name,
+                                               class_var.values)
             metas = metas + (var,)
 
         if self.append_probabilities and \

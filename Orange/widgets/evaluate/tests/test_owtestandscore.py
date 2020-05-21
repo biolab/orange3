@@ -9,7 +9,8 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
 import baycomp
 
-from Orange.classification import MajorityLearner, LogisticRegressionLearner
+from Orange.classification import MajorityLearner, LogisticRegressionLearner, \
+    RandomForestLearner
 from Orange.classification.majority import ConstantModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import Results, TestOnTestData, scoring
@@ -24,7 +25,7 @@ from Orange.widgets.evaluate.utils import BUILTIN_SCORERS_ORDER
 from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import simulate
+from Orange.widgets.tests.utils import simulate, possible_duplicate_table
 from Orange.widgets.utils.state_summary import (format_summary_details,
                                                 format_multiple_summaries)
 from Orange.tests import test_filename
@@ -677,6 +678,14 @@ class TestOWTestAndScore(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         self.assertEqual(info._StateInfo__output_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+    def test_unique_output_domain(self):
+        data = possible_duplicate_table('random forest')
+        self.send_signal(self.widget.Inputs.train_data, data)
+        self.send_signal(self.widget.Inputs.learner, RandomForestLearner(), 0)
+        output = self.get_output(self.widget.Outputs.predictions)
+        self.assertEqual(output.domain.metas[0].name, 'random forest (1)')
+
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):

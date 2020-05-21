@@ -9,6 +9,8 @@ from AnyQt.QtTest import QTest
 from AnyQt.QtGui import QMouseEvent
 from AnyQt.QtWidgets import QApplication
 
+from Orange.data import Table, Domain, ContinuousVariable
+
 
 class EventSpy(QObject):
     """
@@ -344,3 +346,23 @@ def table_dense_sparse(test_case):
         test_case(self, lambda table: table.to_sparse())
 
     return _wrapper
+
+
+def possible_duplicate_table(name, table_name='iris', class_var=False):
+    """
+    Used for checking whether widget resolves possible domain duplicates.
+    If the programmer inputs name that will create duplicates and it later fails,
+    that's on them.
+    """
+    data = Table(table_name)
+    attributes = data.domain.attributes
+    class_vars = list(data.domain.class_vars)
+    if class_var:
+        class_vars[0] = ContinuousVariable(name)
+    else:
+        attributes = list(data.domain.attributes[1:])
+        attributes.append(ContinuousVariable(name))
+    domain = Domain(attributes,
+                    class_vars,
+                    data.domain.metas)
+    return Table.from_numpy(domain, data.X, data.Y, data.metas)

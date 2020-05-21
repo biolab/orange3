@@ -8,7 +8,7 @@ from scipy import sparse
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import simulate
+from Orange.widgets.tests.utils import simulate, possible_duplicate_table
 from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
 
 
@@ -103,6 +103,14 @@ class TestOWManifoldLearning(WidgetTest):
         simulate.combobox_run_through_all(
             self.widget.tsne_editor.metric_combo, callback=__callback,
         )
+
+    def test_unique_domain(self):
+        simulate.combobox_activate_item(self.widget.manifold_methods_combo, "MDS")
+        data = possible_duplicate_table('C0', class_var=True)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.apply_button.button.click()
+        out = self.get_output(self.widget.Outputs.transformed_data)
+        self.assertTrue(out.domain.attributes[0], 'C0 (1)')
 
     @skip
     def test_singular_matrices(self):

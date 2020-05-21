@@ -329,6 +329,17 @@ class OWFeatureConstructorTests(WidgetTest):
         self.widget.apply()
         self.assertTrue(self.widget.Error.invalid_expressions.is_shown())
 
+    def test_renaming_duplicate_vars(self):
+        data = Table("iris")
+        self.widget.setData(data)
+        self.widget.addFeature(
+            ContinuousDescriptor("iris", "0", 3)
+        )
+        self.widget.apply()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(set(var.name for var in output.domain.variables)),
+                         len(output.domain.variables))
+
     def test_discrete_no_values(self):
         """
         Should not fail when there are no values set.

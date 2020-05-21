@@ -1,6 +1,7 @@
 from collections import namedtuple
 from functools import partial
 from operator import itemgetter
+from itertools import chain
 
 import numpy
 from AnyQt.QtWidgets import (
@@ -18,6 +19,7 @@ from Orange.evaluation import Results
 from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable, Value, Domain
 from Orange.data.table import DomainTransformationError
+from Orange.data.util import get_unique_names
 from Orange.widgets import gui, settings
 from Orange.widgets.evaluate.utils import (
     ScoreTable, usable_scorers, learner_name, scorer_caller)
@@ -542,7 +544,17 @@ class OWPredictions(OWWidget):
                 self._add_regression_out_columns(slot, newmetas, newcolumns)
 
         attrs = list(self.data.domain.attributes)
-        metas = list(self.data.domain.metas) + newmetas
+        metas = list(self.data.domain.metas)
+        names = [var.name for var in chain(attrs, self.data.domain.class_vars, metas) if var]
+        uniq_newmetas = []
+        for new_ in newmetas:
+            uniq = get_unique_names(names, new_.name)
+            if uniq != new_.name:
+                new_ = new_.copy(name=uniq)
+            uniq_newmetas.append(new_)
+            names.append(uniq)
+
+        metas += uniq_newmetas
         domain = Orange.data.Domain(attrs, self.class_var, metas=metas)
         predictions = self.data.transform(domain)
         if newcolumns:

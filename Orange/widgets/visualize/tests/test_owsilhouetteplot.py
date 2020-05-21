@@ -13,6 +13,7 @@ from Orange.misc import DistMatrix
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.visualize.owsilhouetteplot import OWSilhouettePlot
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.widgets.tests.utils import possible_duplicate_table
 from Orange.widgets.utils.state_summary import format_summary_details
 
 
@@ -251,6 +252,15 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         self.assertEqual(info._StateInfo__output_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+    def test_unique_output_domain(self):
+        widget = self.widget
+        data = possible_duplicate_table('Silhouette (iris)')
+        matrix = Orange.distance.Euclidean(data)
+        self.send_signal(widget.Inputs.data, matrix, widget=widget)
+
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(output.domain.metas[0].name, 'Silhouette (iris) (1)')
 
 
 if __name__ == "__main__":
