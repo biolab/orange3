@@ -1,25 +1,22 @@
 import enum
 from collections import OrderedDict
+from datetime import datetime, timezone, timedelta
 
 import numpy as np
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel, QHBoxLayout)
-from AnyQt.QtGui import (
-    QDoubleValidator, QRegExpValidator, QStandardItemModel, QStandardItem,
-    QFontMetrics, QPalette
-)
-from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex, QLocale
+    QLabel, QHBoxLayout, QDateTimeEdit)
+from AnyQt.QtGui import (QDoubleValidator, QStandardItemModel, QStandardItem,
+                         QFontMetrics, QPalette)
+from AnyQt.QtCore import Qt, QPoint, QPersistentModelIndex, QLocale, \
+    QDateTime, QDate, QTime
 
-from Orange.widgets.utils.itemmodels import DomainModel
 from orangewidget.utils.combobox import ComboBoxSearch
-
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.data import (
-    ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
-    Table
-)
+    ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable, Table)
 import Orange.data.filter as data_filter
 from Orange.data.filter import FilterContinuous, FilterString
 from Orange.data.sql.table import SqlTable
@@ -306,7 +303,6 @@ class OWSelectRows(widget.OWWidget):
         attr_combo.row = row
         attr_combo.setCurrentIndex(self.variable_model.indexOf(attr) if attr
                                    else len(self.AllTypes) + 1)
-
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
         index = QPersistentModelIndex(model.index(row, 3))
@@ -386,8 +382,18 @@ class OWSelectRows(widget.OWWidget):
 
     @staticmethod
     def _get_lineedit_contents(box):
-        return [child.text() for child in getattr(box, "controls", [box])
-                if isinstance(child, QLineEdit)]
+        contents = []
+        for child in getattr(box, "controls", [box]):
+            if isinstance(child, QLineEdit):
+                contents.append(child.text())
+            elif isinstance(child, DateTimeWidget):
+                if child.format == (0, 1):
+                    contents.append(child.time())
+                elif child.format == (1, 0):
+                    contents.append(child.date())
+                elif child.format == (1, 1):
+                    contents.append(child.dateTime())
+        return contents
 
     @staticmethod
     def _get_value_contents(box):
@@ -408,6 +414,13 @@ class OWSelectRows(widget.OWWidget):
                             names.append(item.text())
                     child.desc_text = ', '.join(names)
                     child.set_text()
+            elif isinstance(child, DateTimeWidget):
+                if child.format == (0, 1):
+                    cont.append(child.time())
+                elif child.format == (1, 0):
+                    cont.append(child.date())
+                elif child.format == (1, 1):
+                    cont.append(child.dateTime())
             elif isinstance(child, QLabel) or child is None:
                 pass
             else:
@@ -443,11 +456,6 @@ class OWSelectRows(widget.OWWidget):
             le.setValidator(OWSelectRows.QDoubleValidatorEmpty())
             return le
 
-        def add_datetime(contents):
-            le = add_textual(contents)
-            le.setValidator(QRegExpValidator(QRegExp(TimeVariable.REGEX)))
-            return le
-
         box = self.cond_list.cellWidget(oper_combo.row, 2)
         lc = ["", ""]
         oper = oper_combo.currentIndex()
@@ -457,10 +465,11 @@ class OWSelectRows(widget.OWWidget):
             var = None
         else:
             var = self.data.domain[attr_name]
+            var_idx = self.data.domain.index(attr_name)
             vtype = vartype(var)
             if selected_values is not None:
                 lc = list(selected_values) + ["", ""]
-                lc = [str(x) for x in lc[:2]]
+                lc = [str(x) if vtype != 4 else x for x in lc[:2]]
         if box and vtype == box.var_type:
             lc = self._get_lineedit_contents(box) + lc
 
@@ -489,21 +498,42 @@ class OWSelectRows(widget.OWWidget):
             box = gui.hBox(self, addToLayout=False)
             box.var_type = vtype
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
-            if vtype in (2, 4):  # continuous, time:
-                validator = add_datetime if isinstance(var, TimeVariable) else add_numeric
-                box.controls = [validator(lc[0])]
+            if vtype == 2:  # continuous:
+                box.controls = [add_numeric(lc[0])]
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
-                    box.controls.append(validator(lc[1]))
+                    box.controls.append(add_numeric(lc[1]))
             elif vtype == 3:  # string:
                 box.controls = [add_textual(lc[0])]
                 if oper in [6, 7]:
                     gui.widgetLabel(box, " and ")
                     box.controls.append(add_textual(lc[1]))
+            elif vtype == 4:  # time:
+                datetime_format = (var.have_date, var.have_time)
+                widget = DateTimeWidget(self, var_idx, datetime_format)
+                widget.set_datetime(lc[0])
+                box.controls = [widget]
+                box.layout().addWidget(widget)
+                self._box = []
+                if oper > 5:
+                    gui.widgetLabel(box, " and ")
+                    widget_ = DateTimeWidget(self, var_idx, datetime_format)
+                    widget_.set_datetime(lc[1])
+                    box.layout().addWidget(widget_)
+                    box.controls.append(widget_)
+                    self._box = box
+                    self._invalidate_dates()
             else:
                 box.controls = []
         if not adding_all:
             self.conditions_changed()
+
+    def _invalidate_dates(self):
+        if getattr(self, "_box", None):
+            widget, widget_ = self._box.controls[0], self._box.controls[1]
+            if widget.dateTime() > widget_.dateTime():
+                widget_.setDateTime(widget.dateTime())
+                widget_.dateTimeChanged.connect(self.conditions_changed)
 
     @Inputs.data
     def set_data(self, data):
@@ -563,6 +593,7 @@ class OWSelectRows(widget.OWWidget):
         if not all(values):
             return None
         if isinstance(attr, TimeVariable):
+            values = (value.toString(format=Qt.ISODate) for value in values)
             parse = lambda x: (attr.parse(x), True)
         else:
             parse = QLocale().toDouble
@@ -602,6 +633,7 @@ class OWSelectRows(widget.OWWidget):
                 elif attr_type in (2, 4):  # continuous, time
                     try:
                         floats = self._values_to_floats(attr, values)
+
                     except ValueError as e:
                         self.Error.parsing_error(e.args[0])
                         return
@@ -723,6 +755,9 @@ class OWSelectRows(widget.OWWidget):
             elif var_type == 3:  # string variable
                 conditions.append(
                     f"{attr} {name} {' and '.join(map(repr, values))}")
+            elif var_type == 4:  # time
+                values = (value.toString(format=Qt.ISODate) for value in values)
+                conditions.append(f"{attr} {name} {' and '.join(values)}")
             elif all(x for x in values):  # numeric variable
                 conditions.append(f"{attr} {name} {' and '.join(values)}")
         items = OrderedDict()
@@ -812,6 +847,69 @@ class DropDownToolButton(QToolButton):
 
     def resizeEvent(self, QResizeEvent):
         self.set_text()
+
+
+class DateTimeWidget(QDateTimeEdit):
+    def __init__(self, parent, col_idx, datetime_format):
+        QDateTimeEdit.__init__(self, parent)
+
+        self.parent = parent
+        self.format = datetime_format
+        self.have_date, self.have_time = datetime_format[0], datetime_format[1]
+        self.column = parent.data[:, col_idx]
+        self.set_format()
+        self.setSizePolicy(
+            QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+        self.dateTimeChanged.connect(parent._invalidate_dates)
+
+    def set_format(self):
+        str_format = Qt.ISODate
+        if self.have_date and self.have_time:
+            self.setDisplayFormat("yyyy-MM-dd hh:mm:ss")
+            self.setCalendarPopup(True)
+            c_format = "%Y-%m-%d %H:%M:%S"
+            min_datetime, max_datetime = self.find_range(self.column, c_format)
+            self.min_datetime = QDateTime.fromString(min_datetime, str_format)
+            self.max_datetime = QDateTime.fromString(max_datetime, str_format)
+            self.setDateTimeRange(self.min_datetime, self.max_datetime)
+
+        elif self.have_date and not self.have_time:
+            self.setDisplayFormat("yyyy-MM-dd")
+            self.setCalendarPopup(True)
+            min_datetime, max_datetime = self.find_range(self.column, "%Y-%m-%d")
+            self.min_datetime = QDate.fromString(min_datetime, str_format)
+            self.max_datetime = QDate.fromString(max_datetime, str_format)
+            self.setDateRange(self.min_datetime, self.max_datetime)
+
+        elif not self.have_date and self.have_time:
+            self.setDisplayFormat("hh:mm:ss")
+            min_datetime, max_datetime = self.find_range(self.column, "%H:%M:%S")
+            self.min_datetime = QTime.fromString(min_datetime, str_format)
+            self.max_datetime = QTime.fromString(max_datetime, str_format)
+            self.setTimeRange(self.min_datetime, self.max_datetime)
+
+    def set_datetime(self, datetime):
+        if self.have_date and self.have_time:
+            self.setDateTime(datetime if datetime else self.min_datetime)
+        elif self.have_date and not self.have_time:
+            self.setDate(datetime if datetime else self.min_datetime)
+        elif not self.have_date and self.have_time:
+            self.setTime(datetime if datetime else self.min_datetime)
+        self.dateTimeChanged.connect(self.parent.conditions_changed)
+
+    def find_range(self, column, convert_format):
+        def convert_timestamp(timestamp):
+            if timestamp >= 0:
+                return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            return datetime(1970, 1, 1, tzinfo=timezone.utc) + \
+                       timedelta(seconds=int(timestamp))
+
+        item_list = [item for items in list(column) for item in items]
+        min_datetime = convert_timestamp(
+            np.nanmin(item_list)).strftime(convert_format)
+        max_datetime = convert_timestamp(
+            np.nanmax(item_list)).strftime(convert_format)
+        return min_datetime, max_datetime
 
 
 if __name__ == "__main__":  # pragma: no cover
