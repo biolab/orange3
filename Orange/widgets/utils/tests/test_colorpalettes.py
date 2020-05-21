@@ -159,6 +159,27 @@ class LimitedDiscretePaletteTest(unittest.TestCase):
         palette = LimitedDiscretePalette(100)
         np.testing.assert_equal(palette.palette, Glasbey.palette[:100])
 
+    def test_large_palettes(self):
+        palette = LimitedDiscretePalette(257)
+        qcolors = palette.qcolors
+        qcolors_w_nan = palette.qcolors_w_nan
+        c256 = qcolors[256].getRgb()
+
+        self.assertEqual(len(palette), 257)
+        self.assertEqual(len(palette.palette), 257)
+        self.assertEqual(len(qcolors), 257)
+        self.assertEqual(len(qcolors_w_nan), 258)
+        self.assertEqual([c.getRgb() for c in qcolors],
+                         [c.getRgb() for c in qcolors_w_nan[:-1]])
+        self.assertEqual(palette[256].getRgb(), c256)
+        np.testing.assert_equal(palette.value_to_color(256), c256[:3])
+        self.assertEqual(palette.value_to_qcolor(256).getRgb(), c256)
+        np.testing.assert_equal(palette.values_to_colors([256])[0], c256[:3])
+        self.assertEqual(palette.values_to_qcolors([256])[0].getRgb(), c256)
+
+        for size in range(1020, 1030):
+            self.assertEqual(len(LimitedDiscretePalette(size)), size)
+
     @staticmethod
     def test_forced_glasbey_palettes():
         palette = LimitedDiscretePalette(5, force_glasbey=True)
@@ -597,6 +618,10 @@ class PatchedDiscreteVariableTest(unittest.TestCase):
                                     "B": "#0D0E0F"}
         np.testing.assert_almost_equal(var.colors,
                                        [palette[1], [13, 14, 15], palette[0]])
+
+        # Variable with many values
+        var = DiscreteVariable("x", values=tuple(f"v{i}" for i in range(1020)))
+        self.assertEqual(len(var.colors), 1020)
 
     def test_colors_fallback_to_palette(self):
         var = DiscreteVariable.make("a", values=("F", "M"))

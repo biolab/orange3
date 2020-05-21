@@ -176,11 +176,15 @@ class LimitedDiscretePalette(DiscretePalette):
                 "use 'force_glasbey' instead", DeprecationWarning)
         if force_glasbey or force_hsv \
                 or number_of_colors > len(DefaultRGBColors):
-            palette = Glasbey
+            colors = Glasbey.palette[:number_of_colors]
+            if number_of_colors > len(colors):
+                colors = np.vstack(
+                    (colors, ) * (number_of_colors // len(colors))
+                    + (colors[:number_of_colors % len(colors)], ))
         else:
-            palette = DefaultRGBColors
+            colors = DefaultRGBColors.palette[:number_of_colors]
         super().__init__("custom", "custom",
-                         palette.palette[:number_of_colors], nan_color,
+                         colors, nan_color,
                          category=category, flags=flags)
 
 
