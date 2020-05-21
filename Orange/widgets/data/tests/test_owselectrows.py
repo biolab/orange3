@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
 import time
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from AnyQt.QtCore import QLocale, Qt
 from AnyQt.QtTest import QTest
@@ -10,8 +10,10 @@ from AnyQt.QtWidgets import QLineEdit, QComboBox
 import numpy as np
 
 from Orange.data import (
-    Table, ContinuousVariable, StringVariable, DiscreteVariable, Domain)
+    Table, Variable, ContinuousVariable, StringVariable, DiscreteVariable,
+    Domain)
 from Orange.preprocess import discretize
+from Orange.widgets.data import owselectrows
 from Orange.widgets.data.owselectrows import (
     OWSelectRows, FilterDiscreteType, SelectRowsContextHandler)
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -70,7 +72,7 @@ class TestOWSelectRows(WidgetTest):
 
         for i, (op, _) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
             self.widget.remove_all()
-            self.widget.add_row(1, i, CFValues[op])
+            self.widget.add_row(iris.domain[0], i, CFValues[op])
             self.widget.conditions_changed()
             self.widget.unconditional_commit()
 
@@ -80,7 +82,7 @@ class TestOWSelectRows(WidgetTest):
         self.widget.set_data(zoo)
         for i, (op, _) in enumerate(OWSelectRows.Operators[StringVariable]):
             self.widget.remove_all()
-            self.widget.add_row(1, i, SFValues[op])
+            self.widget.add_row(zoo.domain.metas[0], i, SFValues[op])
             self.widget.conditions_changed()
             self.widget.unconditional_commit()
 
@@ -125,6 +127,22 @@ class TestOWSelectRows(WidgetTest):
         self.enterFilter(iris.domain[2], "is below", "5.2")
         self.assertEqual(self.widget.conditions[0][2], ("52",))
 
+    @override_locale(QLocale.C)  # Locale with decimal point
+    def test_all_numeric_filter_with_c_locale_from_context(self):
+        iris = Table("iris")[:5]
+        widget = self.widget_with_context(
+            iris.domain, [["All numeric variables", None, 0, (3.14, )]])
+        self.send_signal(widget.Inputs.data, iris)
+        self.assertTrue(widget.conditions[0][2][0].startswith("3.14"))
+
+    @override_locale(QLocale.Slovenian)  # Locale with decimal comma
+    def test_all_numeric_filter_with_sl_SI_locale(self):
+        iris = Table("iris")[:5]
+        widget = self.widget_with_context(
+            iris.domain, [["All numeric variables", None, 0, (3.14, )]])
+        self.send_signal(widget.Inputs.data, iris)
+        self.assertTrue(widget.conditions[0][2][0].startswith("3,14"))
+
     @override_locale(QLocale.Slovenian)
     def test_stores_settings_in_invariant_locale(self):
         iris = Table("iris")[:5]
@@ -139,6 +157,26 @@ class TestOWSelectRows(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         saved_condition = context.values["conditions"][0]
         self.assertEqual(saved_condition[3][0], 5.2)
+
+    @override_locale(QLocale.C)  # Locale with decimal point
+    def test_store_all_numeric_filter_with_c_locale_to_context(self):
+        iris = Table("iris")[:5]
+        self.send_signal(self.widget.Inputs.data, iris)
+        self.widget.remove_all_button.click()
+        self.enterFilter("All numeric variables", "equal", "3.14")
+        context = self.widget.current_context
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(context.values["conditions"][0][3], [3.14])
+
+    @override_locale(QLocale.Slovenian)  # Locale with decimal comma
+    def test_store_all_numeric_filter_with_sl_SI_locale_to_context(self):
+        iris = Table("iris")[:5]
+        self.send_signal(self.widget.Inputs.data, iris)
+        self.widget.remove_all_button.click()
+        self.enterFilter("All numeric variables", "equal", "3,14")
+        context = self.widget.current_context
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(context.values["conditions"][0][3], [3.14])
 
     @override_locale(QLocale.C)
     def test_restores_continuous_filter_in_c_locale(self):
@@ -183,25 +221,82 @@ class TestOWSelectRows(WidgetTest):
         iris = Table("iris")
         domain = iris.domain
         self.widget = self.widget_with_context(
-            domain, [[domain[0].name, 2, ("5.2",)]])
+            domain, [[domain[0].name, 2, 2, ("5.2",)]])
         iris2 = iris.transform(Domain(domain.attributes[:2], None))
         self.send_signal(self.widget.Inputs.data, iris2)
         condition = self.widget.conditions[0]
-        self.assertEqual(condition[0], "sepal length")
+        self.assertEqual(condition[0], iris.domain[0])
         self.assertEqual(condition[1], 2)
         self.assertTrue(condition[2][0].startswith("5.2"))
+
+    def test_partial_match_values(self):
+        iris = Table("iris")
+        domain = iris.domain
+        class_var = domain.class_var
+        self.widget = self.widget_with_context(
+            domain, [[class_var.name, 1, 2,
+                      (class_var.values[0], class_var.values[2])]])
+
+        # sanity checks
+        self.send_signal(self.widget.Inputs.data, iris)
+        condition = self.widget.conditions[0]
+        self.assertIs(condition[0], class_var)
+        self.assertEqual(condition[1], 2)
+        self.assertEqual(condition[2], (1, 3))  # indices of values + 1
+
+        # actual test
+        new_class_var = DiscreteVariable(class_var.name, class_var.values[1:])
+        new_domain = Domain(domain.attributes, new_class_var)
+        non0 = iris.Y != 0
+        iris2 = Table.from_numpy(new_domain, iris.X[non0], iris.Y[non0] - 1)
+        self.send_signal(self.widget.Inputs.data, iris2)
+        condition = self.widget.conditions[0]
+        self.assertIs(condition[0], new_class_var)
+        self.assertEqual(condition[1], 2)
+        self.assertEqual(condition[2], (2, ))  # index of value + 1
+
+    def test_backward_compat_match_values(self):
+        iris = Table("iris")
+        domain = iris.domain
+        class_var = domain.class_var
+        self.widget = self.widget_with_context(
+            domain, [[class_var.name, 1, 2, (1, 2)]])
+
+        new_class_var = DiscreteVariable(class_var.name, class_var.values[1:])
+        new_domain = Domain(domain.attributes, new_class_var)
+        non0 = iris.Y != 0
+        iris2 = Table.from_numpy(new_domain, iris.X[non0], iris.Y[non0] - 1)
+        self.send_signal(self.widget.Inputs.data, iris2)
+        condition = self.widget.conditions[0]
+        self.assertIs(condition[0], new_class_var)
+        self.assertEqual(condition[1], 2)
+        self.assertEqual(condition[2], (1, 2))  # index of value + 1
+
+        # reset to [0] if out of range
+        self.widget = self.widget_with_context(
+            domain, [[class_var.name, 1, 2, (1, 3)]])
+
+        new_class_var = DiscreteVariable(class_var.name, class_var.values[1:])
+        new_domain = Domain(domain.attributes, new_class_var)
+        non0 = iris.Y != 0
+        iris2 = Table.from_numpy(new_domain, iris.X[non0], iris.Y[non0] - 1)
+        self.send_signal(self.widget.Inputs.data, iris2)
+        condition = self.widget.conditions[0]
+        self.assertIs(condition[0], new_class_var)
+        self.assertEqual(condition[1], 2)
+        self.assertEqual(condition[2], (0, ))  # index of value + 1
 
     @override_locale(QLocale.C)
     def test_partial_matches_with_missing_vars(self):
         iris = Table("iris")
         domain = iris.domain
         self.widget = self.widget_with_context(
-            domain, [[domain[0].name, 2, ("5.2",)],
-                     [domain[2].name, 2, ("4.2",)]])
+            domain, [[domain[0].name, 2, 2, ("5.2",)],
+                     [domain[2].name, 2, 2, ("4.2",)]])
         iris2 = iris.transform(Domain(domain.attributes[2:], None))
         self.send_signal(self.widget.Inputs.data, iris2)
         condition = self.widget.conditions[0]
-        self.assertEqual(condition[0], domain[2].name)
+        self.assertEqual(condition[0], domain[2])
         self.assertEqual(condition[1], 2)
         self.assertTrue(condition[2][0].startswith("4.2"))
 
@@ -335,6 +430,41 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(
             self.widget.cond_list.cellWidget(0, 1).currentText(), "is")
 
+    @patch.object(owselectrows.QMessageBox, "question",
+                  return_value=owselectrows.QMessageBox.Ok)
+    def test_add_all(self, msgbox):
+        iris = Table("iris")
+        domain = iris.domain
+        self.send_signal(self.widget.Inputs.data, iris)
+        self.widget.add_all_button.click()
+        msgbox.assert_called()
+        self.assertEqual([cond[0] for cond in self.widget.conditions],
+                         list(domain.class_vars + domain.attributes))
+
+    @patch.object(owselectrows.QMessageBox, "question",
+                  return_value=owselectrows.QMessageBox.Cancel)
+    def test_add_all_cancel(self, msgbox):
+        iris = Table("iris")
+        domain = iris.domain
+        self.send_signal(self.widget.Inputs.data, iris)
+        self.assertEqual([cond[0] for cond in self.widget.conditions],
+                         list(domain.class_vars))
+        self.widget.add_all_button.click()
+        msgbox.assert_called()
+        self.assertEqual([cond[0] for cond in self.widget.conditions],
+                         list(domain.class_vars))
+
+    @patch.object(owselectrows.QMessageBox, "question",
+                  return_value=owselectrows.QMessageBox.Ok)
+    def test_report(self, _):
+        zoo = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.widget.add_all_button.click()
+        self.enterFilter("All numeric variables", "equal", "42")
+        self.enterFilter(zoo.domain[0], "is defined")
+        self.enterFilter(zoo.domain[1], "is one of")
+        self.widget.send_report()  # don't crash
+
     # Uncomment this on 2022/2/2
     #
     # def test_migration_to_version_1(self):
@@ -354,7 +484,7 @@ class TestOWSelectRows(WidgetTest):
             iris.domain, [["sepal length", 2, ("5.2",)]])
         self.send_signal(self.widget.Inputs.data, iris)
         condition = self.widget.conditions[0]
-        self.assertEqual(condition[0], "sepal length")
+        self.assertEqual(condition[0], iris.domain["sepal length"])
         self.assertEqual(condition[1], 2)
         self.assertTrue(condition[2][0].startswith("5.2"))
 
@@ -380,7 +510,7 @@ Basically, revert this commit.
             discretize_class=True, method=method)
         domain = discretizer(housing)
         data = housing.transform(domain)
-        widget = self.widget_with_context(domain, [["MEDV", 2, (2, 3)]])
+        widget = self.widget_with_context(domain, [["MEDV", 101, 2, (2, 3)]])
         widget.purge_classes = True
         self.send_signal(widget.Inputs.data, data)
         out = self.get_output(widget.Outputs.matching_data)
@@ -403,7 +533,8 @@ Basically, revert this commit.
         self.widget.add_button.click()
 
         var_combo = self.widget.cond_list.cellWidget(row, 0)
-        simulate.combobox_activate_item(var_combo, variable.name, delay=0)
+        name = variable.name if isinstance(variable, Variable) else variable
+        simulate.combobox_activate_item(var_combo, name, delay=0)
 
         oper_combo = self.widget.cond_list.cellWidget(row, 1)
         simulate.combobox_activate_item(oper_combo, filter, delay=0)
