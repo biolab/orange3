@@ -113,7 +113,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     ])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
-    xls_sheet = ContextSetting("")
     sheet_names = Setting({})
     url = Setting("")
 
@@ -188,9 +187,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         layout.addWidget(reload_button, 0, 3)
 
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
-        self.sheet_combo = gui.comboBox(None, self, "xls_sheet",
-                                        callback=self.select_sheet,
-                                        sendSelectedValue=True,)
+        self.sheet_combo = QComboBox()
+        self.sheet_combo.activated[str].connect(self.select_sheet)
         self.sheet_combo.setSizePolicy(
             Policy.MinimumExpanding, Policy.Fixed)
         self.sheet_label = QLabel()
