@@ -697,9 +697,85 @@ class OWCSVFileImport(widget.OWWidget):
             opts = item.data(ImportItem.OptionsRole)
             if not isinstance(opts, Options):
                 opts = None
-            self.set_selected_file(path, opts)
+            if not os.path.exists(path):
+                vpath = item.data(ImportItem.VarPathRole)
+                if isinstance(vpath, VarPath):
+                    startdir = dict(self._replacements()).get(vpath.name, None)
+                else:
+                    startdir = None
+                self._browse_for_missing(item, startdir=startdir)
+            else:
+                self.set_selected_file(path, opts)
         else:
             self.recent_combo.setCurrentIndex(-1)
+
+    def _browse_for_missing(self, item: ImportItem, startdir: Optional[str] = None):
+        dlg = self._browse_dialog()
+        if startdir is not None:
+            dlg.setDirectory(startdir)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        model = self.import_items_model
+
+        def accepted():
+            path = dlg.selectedFiles()[0]
+            # pre-flight check; try to determine the nature of the file
+            mtype = _mime_type_for_path(path)
+            if not mtype.inherits("text/plain"):
+                mb = self._might_be_binary_mb(path)
+                if mb.exec() == QMessageBox.Cancel:
+                    return
+
+            item.setPath(path)
+            item.setData(infer_prefix(path, self._replacements()),
+                         ImportItem.VarPathRole)
+            assert item.model() is model
+            [item_, ] = model.takeRow(item.row())
+            assert item_ is item
+            model.insertRow(0, [item])
+            item.setData(True, ImportItem.IsSessionItemRole)
+            self.set_selected_file(path, item.options())
+
+        dlg.accepted.connect(accepted)
+        dlg.open()
+
+    def _browse_dialog(self):
+        formats = [
+            "Text - comma separated (*.csv, *)",
+            "Text - tab separated (*.tsv, *)",
+            "Text - all files (*)"
+        ]
+        dlg = QFileDialog(
+            self, windowTitle="Open Data File",
+            acceptMode=QFileDialog.AcceptOpen,
+            fileMode=QFileDialog.ExistingFile
+        )
+        dlg.setNameFilters(formats)
+        state = self.dialog_state
+        lastdir = state.get("directory", "")
+        lastfilter = state.get("filter", "")
+        if lastdir and os.path.isdir(lastdir):
+            dlg.setDirectory(lastdir)
+        if lastfilter:
+            dlg.selectNameFilter(lastfilter)
+
+        def store_state():
+            state["directory"] = dlg.directory().absolutePath()
+            state["filter"] = dlg.selectedNameFilter()
+        dlg.accepted.connect(store_state)
+        return dlg
+
+    def _might_be_binary_mb(self, path) -> QMessageBox:
+        mb = QMessageBox(
+            parent=self,
+            windowTitle=self.tr(""),
+            icon=QMessageBox.Question,
+            text=self.tr("The '{basename}' may be a binary file.\n"
+                         "Are you sure you want to continue?").format(
+                             basename=os.path.basename(path)),
+            standardButtons=QMessageBox.Cancel | QMessageBox.Yes
+        )
+        mb.setWindowModality(Qt.WindowModal)
+        return mb
 
     @Slot()
     def browse(self):
@@ -711,43 +787,16 @@ class OWCSVFileImport(widget.OWWidget):
             "Text - tab separated (*.tsv, *)",
             "Text - all files (*)"
         ]
-
-        dlg = QFileDialog(
-            self, windowTitle="Open Data File",
-            acceptMode=QFileDialog.AcceptOpen,
-            fileMode=QFileDialog.ExistingFile
-        )
-        dlg.setNameFilters(formats)
-        state = self.dialog_state
-        lastdir = state.get("directory", "")
-        lastfilter = state.get("filter", "")
-
-        if lastdir and os.path.isdir(lastdir):
-            dlg.setDirectory(lastdir)
-        if lastfilter:
-            dlg.selectNameFilter(lastfilter)
-
+        dlg = self._browse_dialog()
         status = dlg.exec_()
         dlg.deleteLater()
         if status == QFileDialog.Accepted:
-            self.dialog_state["directory"] = dlg.directory().absolutePath()
-            self.dialog_state["filter"] = dlg.selectedNameFilter()
-
             selected_filter = dlg.selectedNameFilter()
             path = dlg.selectedFiles()[0]
             # pre-flight check; try to determine the nature of the file
             mtype = _mime_type_for_path(path)
             if not mtype.inherits("text/plain"):
-                mb = QMessageBox(
-                    parent=self,
-                    windowTitle="",
-                    icon=QMessageBox.Question,
-                    text="The '{basename}' may be a binary file.\n"
-                         "Are you sure you want to continue?".format(
-                             basename=os.path.basename(path)),
-                    standardButtons=QMessageBox.Cancel | QMessageBox.Yes
-                )
-                mb.setWindowModality(Qt.WindowModal)
+                mb = self._might_be_binary_mb(path)
                 if mb.exec() == QMessageBox.Cancel:
                     return
 
@@ -892,6 +941,10 @@ class OWCSVFileImport(widget.OWWidget):
             item.setOptions(options)
 
         self.recent_combo.setCurrentIndex(0)
+
+        if not os.path.exists(filename):
+            return
+
         # store items to local persistent settings
         s = self._local_settings()
         arr = QSettings_readArray(s, "recent", OWCSVFileImport.SCHEMA)
