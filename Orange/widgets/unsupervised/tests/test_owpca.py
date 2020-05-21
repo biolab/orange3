@@ -9,7 +9,7 @@ from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.preprocess import preprocess
 from Orange.preprocess.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.tests.utils import table_dense_sparse
+from Orange.widgets.tests.utils import table_dense_sparse, possible_duplicate_table
 from Orange.widgets.unsupervised.owpca import OWPCA
 from Orange.tests import test_filename
 from sklearn.utils import check_random_state
@@ -88,6 +88,12 @@ class TestOWPCA(WidgetTest):
         self.widget._update_selection_component_spin()
         var3 = self.widget.variance_covered
         self.assertGreater(var3, var2)
+
+    def test_unique_domain_components(self):
+        table = possible_duplicate_table('components')
+        self.send_signal(self.widget.Inputs.data, table)
+        out = self.get_output(self.widget.Outputs.components)
+        self.assertEqual(out.domain.metas[0].name, 'components (1)')
 
     def test_sparse_data(self):
         """Check that PCA returns the same results for both dense and sparse data."""

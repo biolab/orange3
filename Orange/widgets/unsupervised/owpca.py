@@ -5,6 +5,7 @@ from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
+from Orange.data.util import get_unique_names
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
@@ -298,10 +299,12 @@ class OWPCA(widget.OWWidget):
             )
             transformed = transformed.from_table(domain, transformed)
             # prevent caching new features by defining compute_value
+            proposed = [a.name for a in self._pca.orig_domain.attributes]
+            meta_name = get_unique_names(proposed, 'components')
             dom = Domain(
-                [ContinuousVariable(a.name, compute_value=lambda _: None)
-                 for a in self._pca.orig_domain.attributes],
-                metas=[StringVariable(name='component')])
+                [ContinuousVariable(name, compute_value=lambda _: None)
+                 for name in proposed],
+                metas=[StringVariable(name=meta_name)])
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
                                 dtype=object).T
