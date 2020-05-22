@@ -6,6 +6,12 @@ Change Log
 * ...
 
 
+[3.25.1] - 2020-05-22
+--------------------
+##### Bugfixes
+* Fix compatibility with scikit-learn 0.23 ([#4768](../../pull/4768))
+
+
 [3.25.0] - 2020-04-10
 --------------------
 ##### Enhancements
@@ -1376,7 +1382,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.25.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.25.1...HEAD
+[3.25.1]: https://github.com/biolab/orange3/compare/3.25.0...3.25.1
 [3.25.0]: https://github.com/biolab/orange3/compare/3.24.1...3.25.0
 [3.24.1]: https://github.com/biolab/orange3/compare/3.24.0...3.24.1
 [3.24.0]: https://github.com/biolab/orange3/compare/3.23.1...3.24.0
