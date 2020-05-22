@@ -1249,6 +1249,15 @@ class _GradientLegendAxisItem(pg.AxisItem):
                 br = br.adjusted(-adjust, 0, adjust, 0)
         return br
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        # AxisItem resizes to 0 width/height when hidden, does not update when
+        # shown implicitly (i.e. a parent becomes visible).
+        # Use showLabel(False) which should update the size without actually
+        # changing anything else (no public interface to explicitly recalc
+        # fixed sizes).
+        self.showLabel(False)
+
 
 class GradientLegendWidget(QGraphicsWidget):
     def __init__(
