@@ -62,6 +62,11 @@ class TestOWContinuize(WidgetTest):
         output_sum.assert_called_once()
         self.assertEqual(output_sum.call_args[0][0].brief, "")
 
+    def test_continuous(self):
+        table = Table("housing")
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.unconditional_commit()
+
     def test_one_column_equal_values(self):
         """
         No crash on a column with equal values and with selected option

@@ -206,7 +206,7 @@ def one_hot_coding(var):
 
 def continuize_domain(data,
                       multinomial_treatment=Continuize.Indicators,
-                      continuous_treatment=Continuize.Leave,
+                      continuous_treatment=OWContinuize.Normalize.Leave,
                       class_treatment=Continuize.Leave):
     domain = data.domain
     def needs_dist(var, mtreat, ctreat):
@@ -214,7 +214,7 @@ def continuize_domain(data,
         if var.is_discrete:
             return mtreat == Continuize.FrequentAsBase
         elif var.is_continuous:
-            return ctreat != Continuize.Leave
+            return ctreat != OWContinuize.Normalize.Leave
         else:
             raise ValueError
 
@@ -222,7 +222,7 @@ def continuize_domain(data,
     attr_needs_dist = [needs_dist(var, multinomial_treatment,
                                   continuous_treatment)
                        for var in domain.attributes]
-    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave)
+    cls_needs_dist = [needs_dist(var, class_treatment, OWContinuize.Normalize.Leave)
                       for var in domain.class_vars]
 
     columns = [i for i, needs in enumerate(attr_needs_dist + cls_needs_dist)
@@ -242,7 +242,7 @@ def continuize_domain(data,
                 for var, needs_dist in zip(domain.attributes, attr_needs_dist)]
     newclass = [continuize_var(var,
                                next(dist_iter) if needs_dist else None,
-                               class_treatment, Continuize.Remove)
+                               class_treatment, OWContinuize.Normalize.Leave)
                 for var, needs_dist in zip(domain.class_vars, cls_needs_dist)]
 
     newattrs = reduce(list.__iadd__, newattrs, [])
@@ -253,13 +253,13 @@ def continuize_domain(data,
 def continuize_var(var,
                    data_or_dist=None,
                    multinomial_treatment=Continuize.Indicators,
-                   continuous_treatment=Continuize.Leave):
+                   continuous_treatment=OWContinuize.Normalize.Leave):
     def continuize_continuous():
-        dist = _ensure_dist(var, data_or_dist)
+        dist = _ensure_dist(var, data_or_dist) if continuous_treatment != OWContinuize.Normalize.Leave else None
         treatments = [lambda var, _: var,
                       normalize_by_sd, center_to_mean, divide_by_sd,
                       normalize_to_11, normalize_to_01]
-        if dist.shape[1] == 0:
+        if dist is not None and dist.shape[1] == 0:
             return [var]
         new_var = treatments[continuous_treatment](var, dist)
         return [new_var]
@@ -365,7 +365,7 @@ def normalize_by_span(var, dist, zero_based=True):
 class DomainContinuizer(Reprable):
     def __init__(self,
                  multinomial_treatment=Continuize.Indicators,
-                 continuous_treatment=Continuize.Leave,
+                 continuous_treatment=OWContinuize.Normalize.Leave,
                  class_treatment=Continuize.Leave):
         self.multinomial_treatment = multinomial_treatment
         self.continuous_treatment = continuous_treatment
