@@ -507,11 +507,14 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     def _get_sklparams(self, values):
         skllearner = self.__wraps__
         if skllearner is not None:
-            spec = inspect.getargs(skllearner.__init__.__code__)
+            spec = list(
+                inspect.signature(skllearner.__init__).parameters.keys()
+            )
             # first argument is 'self'
-            assert spec.args[0] == "self"
-            params = {name: values[name] for name in spec.args[1:]
-                      if name in values}
+            assert spec[0] == "self"
+            params = {
+                name: values[name] for name in spec[1:] if name in values
+            }
         else:
             raise TypeError("Wrapper does not define '__wraps__'")
         return params
