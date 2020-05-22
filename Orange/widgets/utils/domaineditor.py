@@ -10,6 +10,7 @@ from AnyQt.QtWidgets import QComboBox, QTableView, QSizePolicy
 
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
     TimeVariable, Domain
+from Orange.misc.collections import natural_sorted
 from Orange.data.util import get_unique_names_duplicates
 from Orange.statistics.util import unique
 from Orange.widgets import gui
@@ -326,7 +327,10 @@ class DomainEditor(QTableView):
             elif tpe == type(orig_var):
                 var = orig_var.copy(name=new_name)
             elif tpe == DiscreteVariable:
-                values = list(str(i) for i in unique(col_data) if not self._is_missing(i))
+                values = natural_sorted(
+                    list(str(i) for i in unique(col_data)
+                         if not self._is_missing(i))
+                )
                 round_numbers = numbers_are_round(orig_var, col_data)
                 col_data = [np.nan if self._is_missing(x) else values.index(str(x))
                             for x in self._iter_vals(col_data)]
