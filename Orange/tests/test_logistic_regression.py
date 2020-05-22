@@ -66,7 +66,7 @@ class TestLogisticRegressionLearner(unittest.TestCase):
     def test_learner_scorer(self):
         learner = LogisticRegressionLearner()
         scores = learner.score_data(self.heart_disease)
-        self.assertEqual('major vessels colored',
+        self.assertEqual('chest pain',
                          self.heart_disease.domain.attributes[np.argmax(scores)].name)
         self.assertEqual(scores.shape, (1, len(self.heart_disease.domain.attributes)))
 
@@ -89,13 +89,13 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         attr = self.zoo.domain.attributes
         learner = LogisticRegressionLearner()
         scores = learner.score_data(self.zoo)
-        self.assertEqual('aquatic', attr[np.argmax(scores[0])].name)  # amphibian
+        self.assertEqual('legs', attr[np.argmax(scores[0])].name)  # amphibian
         self.assertEqual('feathers', attr[np.argmax(scores[1])].name)  # bird
         self.assertEqual('fins', attr[np.argmax(scores[2])].name)  # fish
         self.assertEqual('legs', attr[np.argmax(scores[3])].name)  # insect
         self.assertEqual('backbone', attr[np.argmax(scores[4])].name)  # invertebrate
         self.assertEqual('milk', attr[np.argmax(scores[5])].name)  # mammal
-        self.assertEqual('hair', attr[np.argmax(scores[6])].name)  # reptile
+        self.assertEqual('aquatic', attr[np.argmax(scores[6])].name)  # reptile
         self.assertEqual(scores.shape,
                          (len(self.zoo.domain.class_var.values), len(attr)))
 
@@ -131,3 +131,23 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         self.assertEqual(len(np.unique(t.Y)), 1)
         lr = sklearn.linear_model.LogisticRegression()
         self.assertRaises(ValueError, lr.fit, t.X, t.Y)
+
+    def test_auto_solver(self):
+        # These defaults are valid as of sklearn v0.23.0
+        # lbfgs is default for l2 penalty
+        lr = LogisticRegressionLearner(penalty="l2", solver="auto")
+        skl_clf = lr._initialize_wrapped()
+        self.assertEqual(skl_clf.solver, "lbfgs")
+        self.assertEqual(skl_clf.penalty, "l2")
+
+        # lbfgs is default for no penalty
+        lr = LogisticRegressionLearner(penalty=None, solver="auto")
+        skl_clf = lr._initialize_wrapped()
+        self.assertEqual(skl_clf.solver, "lbfgs")
+        self.assertEqual(skl_clf.penalty, None)
+
+        # liblinear is default for l2 penalty
+        lr = LogisticRegressionLearner(penalty="l1", solver="auto")
+        skl_clf = lr._initialize_wrapped()
+        self.assertEqual(skl_clf.solver, "liblinear")
+        self.assertEqual(skl_clf.penalty, "l1")
