@@ -691,7 +691,7 @@ class OWHeatMap(widget.OWWidget):
         self.set_column_split_var(self.col_split_cb.currentData(Qt.EditRole))
 
     def set_column_split_var(self, var: Optional[Variable]):
-        if var != self.split_columns_var:
+        if var is not self.split_columns_var:
             self.split_columns_var = var
             self.update_heatmaps()
 
@@ -1150,7 +1150,7 @@ class OWHeatMap(widget.OWWidget):
         cbselect(self.col_side_color_cb, value, Qt.EditRole)
 
     def set_column_annotation_color_var(self, var):
-        if self.column_annotation_color_var != var:
+        if self.column_annotation_color_var is not var:
             self.column_annotation_color_var = var
             colors = self.column_side_colors()
             if colors is not None:
