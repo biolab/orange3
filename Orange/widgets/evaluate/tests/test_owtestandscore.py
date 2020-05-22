@@ -381,26 +381,33 @@ class TestOWTestAndScore(WidgetTest):
         table_test = Table.from_list(
             self.scores_domain,
             list(zip(*(self.scores_table_values + [list("yynn")]))))
-        self.assertTupleEqual(self._test_scores(
-            table_train, table_test, LogisticRegressionLearner(),
-            OWTestAndScore.TestOnTest, None),
-                              (0, 0, 0, 0, 0))
+
+        lr = LogisticRegressionLearner()
+        np.testing.assert_almost_equal(
+            self._test_scores(
+                table_train, table_test, lr, OWTestAndScore.TestOnTest, None
+            ),
+            (0, 0.25, 0.2, 0.1666666, 0.25),
+        )
 
     def test_scores_log_reg_advanced(self):
         table_train = Table.from_list(
-            self.scores_domain, list(zip(
-                [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yyynn"))
+            self.scores_domain,
+            list(zip([1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yyynn"))
         )
         table_test = Table.from_list(
-            self.scores_domain, list(zip(
-                [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yynnn"))
+            self.scores_domain,
+            list(zip([1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yynnn"))
         )
 
+        lr = LogisticRegressionLearner()
+        np.testing.assert_
         np.testing.assert_almost_equal(
-            self._test_scores(table_train, table_test,
-                              LogisticRegressionLearner(),
-                              OWTestAndScore.TestOnTest, None),
-            (2 / 3, 0.8, 0.8, 13 / 15, 0.8))
+            self._test_scores(
+                table_train, table_test, lr, OWTestAndScore.TestOnTest, None
+            ),
+            (1, 0.8, 0.8, 13 / 15, 0.8)
+        )
 
     def test_scores_cross_validation(self):
         """
