@@ -131,3 +131,23 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         self.assertEqual(len(np.unique(t.Y)), 1)
         lr = sklearn.linear_model.LogisticRegression()
         self.assertRaises(ValueError, lr.fit, t.X, t.Y)
+
+    def test_auto_solver(self):
+        # These defaults are valid as of sklearn v0.23.0
+        # lbfgs is default for l2 penalty
+        lr = LogisticRegressionLearner(penalty="l2", solver="auto")
+        skl_clf = lr._initialize_wrapped()
+        self.assertEqual(skl_clf.solver, "lbfgs")
+        self.assertEqual(skl_clf.penalty, "l2")
+
+        # lbfgs is default for no penalty
+        lr = LogisticRegressionLearner(penalty=None, solver="auto")
+        skl_clf = lr._initialize_wrapped()
+        self.assertEqual(skl_clf.solver, "lbfgs")
+        self.assertEqual(skl_clf.penalty, None)
+
+        # liblinear is default for l2 penalty
+        lr = LogisticRegressionLearner(penalty="l1", solver="auto")
+        skl_clf = lr._initialize_wrapped()
+        self.assertEqual(skl_clf.solver, "liblinear")
+        self.assertEqual(skl_clf.penalty, "l1")
