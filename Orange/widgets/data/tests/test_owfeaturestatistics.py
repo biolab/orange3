@@ -493,6 +493,15 @@ class TestFeatureStatisticsUI(WidgetTest):
         self.assertEqual(widget.selected_vars, [domain["petal width"],
                                                 domain["iris"]])
 
+    def test_report(self):
+        self.send_signal(self.widget.Inputs.data, self.data1)
+
+        self.widget.report_button.click()
+        report_text = self.widget.report_html
+
+        self.assertIn("<table>", report_text)
+        self.assertEqual(6, report_text.count("<tr>"))  # header + 5 rows
+
 
 class TestSummary(WidgetTest):
     def setUp(self):
