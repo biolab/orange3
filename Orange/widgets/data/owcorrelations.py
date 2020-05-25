@@ -198,7 +198,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
     def start(self, task, *args, **kwargs):
-        self.__set_state_ready()
+        self._set_empty_status()
         super().start(task, *args, **kwargs)
         self.__set_state_busy()
 
@@ -221,13 +221,16 @@ class CorrelationRank(VizRankDialogAttrPair):
         self.__set_state_ready()
 
     def __set_state_ready(self):
-        self.master.progressBarFinished()
+        self._set_empty_status()
         self.master.setBlocking(False)
-        self.master.setStatusMessage("")
 
     def __set_state_busy(self):
         self.master.progressBarInit()
         self.master.setBlocking(True)
+
+    def _set_empty_status(self):
+        self.master.progressBarFinished()
+        self.master.setStatusMessage("")
 
 
 class OWCorrelations(OWWidget):
