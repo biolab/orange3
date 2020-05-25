@@ -318,7 +318,8 @@ class OWPCA(widget.OWWidget):
                 self.data.domain.metas + domain.attributes)
             data = Table.from_numpy(
                 data_dom, self.data.X, self.data.Y,
-                numpy.hstack((self.data.metas, transformed.X)))
+                numpy.hstack((self.data.metas, transformed.X)),
+                ids=self.data.ids)
 
         self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
