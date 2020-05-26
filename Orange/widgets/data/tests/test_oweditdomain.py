@@ -28,7 +28,7 @@ from Orange.widgets.data.oweditdomain import (
     OWEditDomain,
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
     TimeVariableEditor, Categorical, Real, Time, String,
-    Rename, Annotate, CategoriesMapping, ChangeOrdered, report_transform,
+    Rename, Annotate, CategoriesMapping, report_transform,
     apply_transform, apply_transform_var, apply_reinterpret, MultiplicityRole,
     AsString, AsCategorical, AsContinuous, AsTime,
     table_column_data, ReinterpretVariableEditor, CategoricalVector,
@@ -83,12 +83,6 @@ class TestReport(TestCase):
         )
         r = report_transform(var, [tr])
         self.assertIn('b', r)
-
-    def test_change_ordered(self):
-        var = Categorical("C", ("a", "b"), ())
-        tr = ChangeOrdered(True)
-        r = report_transform(var, [tr])
-        self.assertIn("ordered", r)
 
     def test_reinterpret(self):
         var = String("T", ())
@@ -265,21 +259,6 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
 
-    def test_change_ordered(self):
-        """Test categorical ordered flag change"""
-        table = Table.from_domain(Domain(
-            [DiscreteVariable("A", values=("a", "b"), ordered=True)]))
-        self.send_signal(self.widget.Inputs.data, table)
-        output = self.get_output(self.widget.Outputs.data)
-        self.assertTrue(output.domain[0].ordered)
-
-        editor = self.widget.findChild(DiscreteVariableEditor)
-        assert isinstance(editor, DiscreteVariableEditor)
-        editor.ordered_cb.setChecked(False)
-        self.widget.commit()
-        output = self.get_output(self.widget.Outputs.data)
-        self.assertFalse(output.domain[0].ordered)
-
     def test_restore(self):
         iris = self.iris
         viris = (
@@ -392,7 +371,6 @@ class TestEditors(GuiTest):
         w.set_data_categorical(v, values)
 
         self.assertEqual(w.name_edit.text(), v.name)
-        self.assertFalse(w.ordered_cb.isChecked())
         self.assertEqual(w.labels_model.get_dict(), dict(v.annotations))
         self.assertEqual(w.get_data(), (v, []))
         w.set_data_categorical(None, None)
@@ -409,13 +387,6 @@ class TestEditors(GuiTest):
         w.grab()  # run delegate paint method
         self.assertEqual(w.get_data(), (v, [CategoriesMapping(mapping)]))
 
-        w.set_data_categorical(
-            v, values, [CategoriesMapping(mapping), ChangeOrdered(True)]
-        )
-        self.assertTrue(w.ordered_cb.isChecked())
-        self.assertEqual(
-            w.get_data()[1], [CategoriesMapping(mapping), ChangeOrdered(True)]
-        )
         # test selection/deselection in the view
         w.set_data_categorical(v, values)
         view = w.values_edit
@@ -652,11 +623,6 @@ class TestTransforms(TestCase):
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([2, 3, 1, 0]))
         )
-
-    def test_ordered_change(self):
-        D = DiscreteVariable("D", values=("a", "b"), ordered=True)
-        Do = apply_transform_var(D, [ChangeOrdered(False)])
-        self.assertFalse(Do.ordered)
 
     def test_discrete_add_drop(self):
         D = DiscreteVariable("D", values=("2", "3", "1", "0"))

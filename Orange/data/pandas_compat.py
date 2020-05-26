@@ -97,8 +97,9 @@ def table_to_frame(tab, include_metas=False):
         result = ()
         if col.is_discrete:
             codes = pd.Series(vals).fillna(-1).astype(int)
-            result = (col.name, pd.Categorical.from_codes(codes=codes, categories=col.values,
-                                                          ordered=col.ordered))
+            result = (col.name, pd.Categorical.from_codes(
+                codes=codes, categories=col.values, ordered=True
+            ))
         elif col.is_time:
             result = (col.name, pd.to_datetime(vals, unit='s').to_series().reset_index()[0])
         elif col.is_continuous:

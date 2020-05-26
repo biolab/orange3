@@ -629,21 +629,16 @@ class DiscreteVariable(Variable):
     .. attribute:: values
 
         A list of variable's values.
-
-    .. attribute:: ordered
-
-        Some algorithms (and, in particular, visualizations) may
-        sometime reorder the values of the variable, e.g. alphabetically.
-        This flag hints that the given order of values is "natural"
-        (e.g. "small", "middle", "large") and should not be changed.
     """
 
     TYPE_HEADERS = ('discrete', 'd', 'categorical')
 
     presorted_values = []
 
-    def __init__(self, name="", values=(), ordered=False, compute_value=None,
-                 *, sparse=False):
+    def __init__(
+            self, name="", values=(), ordered=None, compute_value=None,
+            *, sparse=False
+    ):
         """ Construct a discrete variable descriptor with the given values. """
         values = TupleList(values)  # some people (including me) pass a generator
         if not all(isinstance(value, str) for value in values):
@@ -652,7 +647,23 @@ class DiscreteVariable(Variable):
         super().__init__(name, compute_value, sparse=sparse)
         self._values = values
         self._value_index = {value: i for i, value in enumerate(values)}
-        self.ordered = ordered
+
+        if ordered is not None:
+            warnings.warn(
+                "ordered is deprecated and does not have effect. It will be "
+                "removed in future versions.",
+                OrangeDeprecationWarning
+            )
+
+    @property
+    def ordered(self):
+        warnings.warn(
+            "ordered is deprecated. It will be removed in future versions.",
+            # FutureWarning warning is used instead of OrangeDeprecation
+            # warning otherwise tests fail (__repr__ still asks for ordered)
+            FutureWarning
+        )
+        return None
 
     @property
     def values(self):
@@ -819,9 +830,11 @@ class DiscreteVariable(Variable):
             raise PickleError("Variables without names cannot be pickled")
         __dict__ = dict(self.__dict__)
         __dict__.pop("_values")
-        return make_variable, (self.__class__, self._compute_value, self.name,
-                               self.values, self.ordered), \
+        return (
+            make_variable,
+            (self.__class__, self._compute_value, self.name, self.values),
             __dict__
+        )
 
     def copy(self, compute_value=Variable._CopyComputeValue,
              *, name=None, values=None, **_):
@@ -830,7 +843,7 @@ class DiscreteVariable(Variable):
             raise ValueError(
                 "number of values must match the number of original values")
         return super().copy(compute_value=compute_value, name=name,
-                            values=values or self.values, ordered=self.ordered)
+                            values=values or self.values)
 
 
 class StringVariable(Variable):

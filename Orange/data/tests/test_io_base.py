@@ -128,7 +128,7 @@ class TestTableBuilder(InitTestData):
         np.testing.assert_array_equal(column.orig_values,
                                       ["red", "red", "green"])
         self.assertEqual(column.coltype, DiscreteVariable)
-        self.assertDictEqual(column.coltype_kwargs, {'ordered': True})
+        self.assertDictEqual(column.coltype_kwargs, {})
 
     def test_unknown_type_column(self):
         data = np.array(self.header0)
