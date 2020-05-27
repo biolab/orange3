@@ -19,6 +19,7 @@ from AnyQt.QtCore import (
 from orangewidget.settings import IncompatibleContext
 from Orange.data import (Table, Domain, ContinuousVariable, DiscreteVariable,
                          StringVariable)
+from Orange.data.util import get_unique_names_duplicates
 from Orange.misc.cache import memoize_method
 from Orange.preprocess import score
 from Orange.widgets import report
@@ -207,6 +208,11 @@ class OWRank(OWWidget):
         invalid_type = Msg("Cannot handle target variable type {}")
         inadequate_learner = Msg("Scorer {} inadequate: {}")
         no_attributes = Msg("Data does not have a single attribute.")
+
+    class Warning(OWWidget.Warning):
+        renamed_variables = Msg(
+            "Variables with duplicated names have been renamed.")
+
 
     def __init__(self):
         super().__init__()
@@ -551,12 +557,17 @@ class OWRank(OWWidget):
                                          format_summary_details(data))
 
     def create_scores_table(self, labels):
+        self.Warning.renamed_variables.clear()
         model_list = self.ranksModel.tolist()
         if not model_list or len(model_list[0]) == 1:  # Empty or just n_values column
             return None
+        unique, renamed = get_unique_names_duplicates(labels + ('Feature',),
+                                                      return_duplicated=True)
+        if renamed:
+            self.Warning.renamed_variables(', '.join(renamed))
 
-        domain = Domain([ContinuousVariable(label) for label in labels],
-                        metas=[StringVariable("Feature")])
+        domain = Domain([ContinuousVariable(label) for label in unique[:-1]],
+                        metas=[StringVariable(unique[-1])])
 
         # Prevent np.inf scores
         finfo = np.finfo(np.float64)
