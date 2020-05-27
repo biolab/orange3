@@ -26,6 +26,7 @@ from Orange.clustering.hierarchical import Tree
 from Orange.widgets.utils import apply_all
 from Orange.widgets.utils.colorpalettes import DefaultContinuousPalette
 from Orange.widgets.utils.graphicslayoutitem import SimpleLayoutItem, scaled
+from Orange.widgets.utils.graphicsflowlayout import GraphicsFlowLayout
 from Orange.widgets.utils.graphicspixmapwidget import GraphicsPixmapWidget
 from Orange.widgets.utils.image import qimage_from_array
 
@@ -1339,8 +1340,11 @@ class CategoricalColorLegend(QGraphicsWidget):
         self.__colormap = colormap
         self.__title = title
         self.__names = colormap.names
-        self.__layout = QGraphicsGridLayout()
-        self.__layout.setSpacing(2)
+        self.__layout = QGraphicsLinearLayout(Qt.Vertical)
+        self.__flow = GraphicsFlowLayout()
+        self.__layout.addItem(self.__flow)
+        self.__flow.setHorizontalSpacing(4)
+        self.__flow.setVerticalSpacing(4)
         self.__orientation = orientation
         kwargs.setdefault(
             "sizePolicy", QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
@@ -1361,10 +1365,16 @@ class CategoricalColorLegend(QGraphicsWidget):
         return self.__orientation
 
     def _clear(self):
-        items = reversed(list(layout_items(self.__layout)))
+        items = list(layout_items(self.__flow))
+        layout_clear(self.__flow)
+        for item in items:
+            if isinstance(item, SimpleLayoutItem):
+                remove_item(item.item)
+        # remove 'title' item if present
+        items = [item for item in layout_items(self.__layout)
+                 if item is not self.__flow]
         for item in items:
             self.__layout.removeItem(item)
-        for item in items:
             if isinstance(item, SimpleLayoutItem):
                 remove_item(item.item)
 
@@ -1374,53 +1384,39 @@ class CategoricalColorLegend(QGraphicsWidget):
         names = self.__colormap.names
         title = self.__title
         layout = self.__layout
-        assert layout.count() == 0
+        flow = self.__flow
+        assert flow.count() == 0
         font = self.font()
         fm = QFontMetrics(font)
         size = fm.width("X")
-        start = 0
+        headeritem = None
         if title:
-            start = 1
-            item = QGraphicsSimpleTextItem(title)
-            item.setFont(font)
             headeritem = QGraphicsSimpleTextItem(title)
             headeritem.setFont(font)
-        else:
-            headeritem = None
-
-        items = []
-        for i, (color, label) in enumerate(zip(colors, names), start=start):
-            colitem = QGraphicsRectItem(0, 0, size, size)
-            colitem.setBrush(QColor(*color))
-            textitem = QGraphicsSimpleTextItem()
-            textitem.setFont(font)
-            textitem.setText(label)
-            items.append((colitem, textitem))
 
         def centered(item):
             return SimpleLayoutItem(item, anchor=(0.5, 0.5), anchorItem=(0.5, 0.5))
 
-        def addrowspan(item):
-            layout.addItem(centered(item), layout.rowCount(), 0, 1, 2)
+        def legend_item_pair(color: QColor, size: float, text: str):
+            coloritem = QGraphicsRectItem(0, 0, size, size)
+            coloritem.setBrush(color)
+            textitem = QGraphicsSimpleTextItem()
+            textitem.setFont(font)
+            textitem.setText(text)
+            layout = QGraphicsLinearLayout(Qt.Horizontal)
+            layout.setSpacing(2)
+            layout.addItem(centered(coloritem))
+            layout.addItem(SimpleLayoutItem(textitem))
+            return coloritem, textitem, layout
 
-        def addrow(symbol, label):
-            row = layout.rowCount()
-            layout.addItem(centered(symbol), row, 0)
-            layout.addItem(
-                SimpleLayoutItem(label), row, 1,
-                alignment=Qt.AlignVCenter | Qt.AlignLeft
-            )
-        if self.__orientation == Qt.Vertical:
-            if headeritem:
-                addrowspan(headeritem)
-            apply_all(items, lambda el: addrow(*el))
-        else:
-            for sym, label in items:
-                layout.addItem(centered(sym), 1, layout.columnCount())
-                layout.addItem(SimpleLayoutItem(label), 1, layout.columnCount())
-            if headeritem:
-                layout.addItem(
-                    centered(headeritem), 0, 0, 1, layout.columnCount())
+        items = [legend_item_pair(QColor(*color), size, name)
+                 for color, name in zip(colors, names)]
+
+        for sym, label, pair_layout in items:
+            flow.addItem(pair_layout)
+
+        if headeritem:
+            layout.insertItem(0, centered(headeritem))
 
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.FontChange:
@@ -1431,7 +1427,7 @@ class CategoricalColorLegend(QGraphicsWidget):
         w = QFontMetrics(font).width("X")
         for item in filter(
                 lambda item: isinstance(item, SimpleLayoutItem),
-                layout_items(self.__layout)
+                layout_items_recursive(self.__layout)
         ):
             if isinstance(item.item, QGraphicsSimpleTextItem):
                 item.item.setFont(font)
@@ -1444,6 +1440,16 @@ def layout_items(layout: QGraphicsLayout) -> Iterable[QGraphicsLayoutItem]:
     for item in map(layout.itemAt, range(layout.count())):
         if item is not None:
             yield item
+
+
+def layout_items_recursive(layout: QGraphicsLayout):
+    for item in map(layout.itemAt, range(layout.count())):
+        if item is not None:
+            if item.isLayout():
+                assert isinstance(item, QGraphicsLayout)
+                yield from layout_items_recursive(item)
+            else:
+                yield item
 
 
 def layout_clear(layout: QGraphicsLayout) -> None:
