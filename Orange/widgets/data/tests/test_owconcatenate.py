@@ -223,7 +223,7 @@ class TestOWConcatenate(WidgetTest):
         X1, X2, X3 = map(ContinuousVariable, ["X1", "X2", "X3"])
         D1, D2 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
                      ["D1", "X2"])
-        S1, S2 = map(StringVariable, ["S1", "X3"])
+        S1, S2 = map(StringVariable, ["S1", "X1"])
         domain1 = Domain([X1, X2], [D1], [S1])
         domain2 = Domain([X3], [D2], [S2])
         res = widget.merge_domains([domain1, domain2])
@@ -233,11 +233,11 @@ class TestOWConcatenate(WidgetTest):
         metas = res.metas
 
         self.assertEqual([var.name for var in attributes],
-                         ["X1", "X2 (1)", "X3 (1)"])
+                         ["X1 (1)", "X2 (1)", "X3"])
         self.assertEqual([var.name for var in class_vars],
                          ["D1", "X2 (2)"])
         self.assertEqual([var.name for var in metas],
-                         ["S1", "X3 (2)"])
+                         ["S1", "X1 (2)"])
 
         x21_val_from = attributes[1].compute_value
         self.assertIsInstance(x21_val_from, Identity)
@@ -249,23 +249,23 @@ class TestOWConcatenate(WidgetTest):
         self.assertIsInstance(x22_val_from.variable, DiscreteVariable)
         self.assertEqual(x22_val_from.variable.name, "X2")
 
-        x31_val_from = attributes[2].compute_value
-        self.assertIsInstance(x31_val_from, Identity)
-        self.assertIsInstance(x31_val_from.variable, ContinuousVariable)
-        self.assertEqual(x31_val_from.variable.name, "X3")
+        x11_val_from = attributes[0].compute_value
+        self.assertIsInstance(x11_val_from, Identity)
+        self.assertIsInstance(x11_val_from.variable, ContinuousVariable)
+        self.assertEqual(x11_val_from.variable.name, "X1")
 
-        x32_val_from = metas[1].compute_value
-        self.assertIsInstance(x32_val_from, Identity)
-        self.assertIsInstance(x32_val_from.variable, StringVariable)
-        self.assertEqual(x32_val_from.variable.name, "X3")
+        x12_val_from = metas[1].compute_value
+        self.assertIsInstance(x12_val_from, Identity)
+        self.assertIsInstance(x12_val_from.variable, StringVariable)
+        self.assertEqual(x12_val_from.variable.name, "X1")
 
     def test_get_part_union(self):
         get_part = OWConcatenate._get_part  # pylint: disable=protected-access
 
         X1, X2, X3, X4 = map(ContinuousVariable, ["X1", "X2", "X3", "X4"])
         D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
-                         ["X1", "X2", "X3"])
-        S1, S2, S3 = map(StringVariable, ["X1", "X2", "X3"])
+                         ["D1", "D2", "D3"])
+        S1, S2, S3 = map(StringVariable, ["S1", "S2", "S3"])
         domain1 = Domain([X1, X2], [D1], [S1, S3])
         domain2 = Domain([X3, X2], [D2, D1], [S2, S3, S1])
         domain3 = Domain([X3, X2, X4], [D2, D1, D3], [S2, S1, S3])
@@ -308,8 +308,8 @@ class TestOWConcatenate(WidgetTest):
 
         X1, X2, X3, X4 = map(ContinuousVariable, ["X1", "X2", "X3", "X4"])
         D1, D2, D3 = map(lambda n: DiscreteVariable(n, values=["a", "b"]),
-                         ["X1", "X2", "X3"])
-        S1, S2, S3 = map(StringVariable, ["X1", "X2", "X3"])
+                         ["D1", "D2", "D3"])
+        S1, S2, S3 = map(StringVariable, ["S1", "S2", "S3"])
         domain1 = Domain([X1, X2], [D1], [S1, S3])
         domain2 = Domain([X3, X2], [D2, D1], [S2, S3, S1])
         domain3 = Domain([X3, X2, X4], [D2, D1, D3], [S2, S1, S3])
