@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
+import unittest
 from unittest.mock import Mock
 
 from Orange.data import Table
@@ -154,3 +155,43 @@ class TestOWDataSampler(WidgetTest):
 
     def assertNoIntersection(self, sample, other):
         self.assertFalse(bool(set(sample.ids) & set(other.ids)))
+
+    def test_cv_outputs(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.iris)
+
+        self.select_sampling_type(w.CrossValidation)
+        self.widget.commit()
+        self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 135)
+        self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 15)
+
+    def test_cv_output_migration(self):
+        self.assertFalse(self.widget.compatibility_mode)
+
+        settings = {"sampling_type": OWDataSampler.CrossValidation}
+        OWDataSampler.migrate_settings(settings, version=2)
+        self.assertFalse(settings.get("compatibility_mode", False))
+
+        settings = {"sampling_type": OWDataSampler.FixedProportion}
+        OWDataSampler.migrate_settings(settings, version=1)
+        self.assertFalse(settings.get("compatibility_mode", False))
+
+        settings = {"sampling_type": OWDataSampler.CrossValidation}
+        OWDataSampler.migrate_settings(settings, version=1)
+        self.assertTrue(settings["compatibility_mode"])
+
+        w = self.create_widget(
+            OWDataSampler,
+            stored_settings={"sampling_type": OWDataSampler.CrossValidation,
+                             "__version__": 1})
+        self.assertTrue(w.compatibility_mode)
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.select_sampling_type(w.CrossValidation)
+        w.commit()
+        self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 15)
+        self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 135)
+
+
+if __name__ == "__main__":
+    unittest.main()
