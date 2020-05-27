@@ -572,7 +572,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         grid.addItem(SimpleLayoutItem(
             row_color_annotation_header, anchor=(0, 1), resizeContents=True,
             aspectMode=Qt.KeepAspectRatio,
-            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred),
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred),
             ),
             self.TopLabelsRow, RightLabelColumn - 1,
         )
@@ -582,7 +582,7 @@ class HeatmapGridWidget(QGraphicsWidget):
             col_color_annotation_header, anchor=(1, 1), anchorItem=(1, 1),
             resizeContents=True,
             aspectMode=Qt.KeepAspectRatio,
-            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred),
+            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed),
         ),
             TopAnnotationRow, 0, 1, Col0, alignment=Qt.AlignRight
         )
