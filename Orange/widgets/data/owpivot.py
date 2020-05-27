@@ -320,7 +320,11 @@ class Pivot:
                 continue
             if idx == 0:
                 self.renamed.append(self._row_var.name)
-                self._row_var = self._row_var.copy(name=u)
+                if self._row_var == self._col_var:
+                    self._row_var = self._row_var.copy(name=u)
+                    self._col_var = self._row_var
+                else:
+                    self._row_var = self._row_var.copy(name=u)
                 row_var_h = row_var_h.copy(name=u)
             elif idx == 1:
                 self.renamed.append(aggr_attr.name)
