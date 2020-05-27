@@ -76,15 +76,6 @@ class DomainEditorTest(GuiTest):
         model.setData(model.index(3, Column.name), "d2")
         model.setData(model.index(5, Column.name), "s")
 
-        domain, _ = \
-            editor.get_domain(self.domain, data)
-        self.assertEqual([var.name for var in domain.attributes],
-                         ["d1", "d2", "c1"])
-        self.assertEqual([var.name for var in domain.class_vars],
-                         ["d2"])
-        self.assertEqual([var.name for var in domain.metas],
-                         ["s", "s"])
-
         domain, _, renamed = \
             editor.get_domain(self.domain, data, deduplicate=True)
         self.assertEqual([var.name for var in domain.attributes],
