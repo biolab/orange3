@@ -5,6 +5,8 @@ import numpy as np
 from AnyQt.QtCore import QSize, Signal
 from AnyQt.QtWidgets import QApplication
 
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
+
 from Orange.data import (
     Table, ContinuousVariable, Domain, Variable, StringVariable
 )
@@ -400,6 +402,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.input_changed.connect(self.set_input_summary)
         self.output_changed.connect(self.set_output_summary)
         self.setup_gui()
+        VisualSettingsDialog(self, self.GRAPH_CLASS.initial_settings)
 
     # GUI
     def setup_gui(self):
@@ -620,6 +623,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             ("Size", self._get_caption_var_name(self.attr_size)),
             ("Jittering", self.graph.jitter_size != 0 and
              "{} %".format(self.graph.jitter_size))))
+
+    # Customize plot
+    def set_visual_settings(self, *args):
+        self.graph.set_parameter(*args)
 
     @staticmethod
     def _get_caption_var_name(var):

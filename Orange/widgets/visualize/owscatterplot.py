@@ -1,3 +1,4 @@
+import copy
 from itertools import chain
 from xml.sax.saxutils import escape
 
@@ -22,8 +23,10 @@ from Orange.widgets.settings import (
     Setting, ContextSetting, SettingProvider, IncompatibleContext)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
+    ParameterSetter as Setter
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
+from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import AttributeList, Msg, Input, Output
 
@@ -95,7 +98,33 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         return [a for _, a in attrs]
 
 
-class OWScatterPlotGraph(OWScatterPlotBase):
+class ParameterSetter(Setter):
+    initial_settings = copy.deepcopy(Setter.initial_settings)
+    initial_settings[Setter.LABELS_BOX].update({
+        Setter.AXIS_TITLE_LABEL: Updater.FONT_SETTING,
+        Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING
+    })
+
+    def __init__(self):
+        super().__init__()
+
+        def update_axes_titles(**settings):
+            Updater.update_axes_titles_font(self.axis_items, **settings)
+
+        def update_axes_ticks(**settings):
+            Updater.update_axes_ticks_font(self.axis_items, **settings)
+
+        labels = self.LABELS_BOX
+        self.setters[labels][self.AXIS_TITLE_LABEL] = update_axes_titles
+        self.setters[labels][self.AXIS_TICKS_LABEL] = update_axes_ticks
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in
+                self.plot_widget.plotItem.axes.values()]
+
+
+class OWScatterPlotGraph(OWScatterPlotBase, ParameterSetter):
     show_reg_line = Setting(False)
     orthonormal_regression = Setting(False)
 

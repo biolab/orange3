@@ -1540,6 +1540,13 @@ class TestScatterPlotItem(GuiTest):
             np.testing.assert_equal(x, np.arange(10, 15))
             np.testing.assert_equal(y, np.arange(20, 25))
 
+    def test_scalable_axis_item(self):
+        from pyqtgraph import __version__
+        # When upgraded to 0.11.1 check if resizing AxisItem font size works
+        # and overwritten functions generateDrawSpecs and _updateMaxTextSize
+        # in AxisItem (owscatterplotgraph) can be removed.
+        self.assertLess(__version__, "0.11.1")
+
 
 if __name__ == "__main__":
     import unittest
