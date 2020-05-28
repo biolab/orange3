@@ -62,8 +62,13 @@ class SelectRowsContextHandler(DomainContextHandler):
                     values = [QLocale().toDouble(v)[0] for v in values]
                 elif isinstance(attr, DiscreteVariable):
                     values = [attr.values[i - 1] if i else "" for i in values]
-                encoded.append(
-                    (attr.name, context.attributes.get(attr.name), op, values))
+                encoded.append((
+                    attr.name,
+                    context.attributes.get(attr.name)
+                    or context.metas.get(attr.name),
+                    op,
+                    values
+                ))
         return encoded
 
     def decode_setting(self, setting, value, domain=None):
