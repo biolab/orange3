@@ -518,6 +518,36 @@ Basically, revert this commit.
         expected = (expected == 2).astype(float)
         np.testing.assert_equal(out.Y, expected)
 
+    def test_meta_setting(self):
+        """
+        Test if all conditions from all segments (attributes, class, meta)
+        stores correctly
+        """
+        data = Table("iris")
+        data = Table.from_table(
+            Domain(
+                data.domain.attributes[:3],
+                data.domain.class_var,
+                data.domain.attributes[3:]
+            ), data)
+        self.send_signal(self.widget.Inputs.data, data)
+
+        vars_ = [
+            data.domain.metas[0],
+            data.domain.attributes[0],
+            data.domain.class_var
+        ]
+        cond = [0, 0, 0]
+        val = [(0, ), (0, ), (1, )]
+        conds = list(zip(vars_, cond, val))
+
+        self.widget.conditions = conds
+        self.assertListEqual([c[0] for c in self.widget.conditions], vars_)
+
+        # when sending new-same data conditions are restored from the context
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertListEqual([c[0] for c in self.widget.conditions], vars_)
+
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()
         context = ch.new_context(domain, *ch.encode_domain(domain))
