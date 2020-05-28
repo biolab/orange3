@@ -29,9 +29,10 @@ class SoftmaxRegressionLearner(Learner):
         parameters to be smaller.
 
     preprocessors : list, optional
-        Preprocessors are applied to data before training or testing. Default preprocessors:
-        Defaults to
-        `[RemoveNaNClasses(), RemoveNaNColumns(), Impute(), Continuize(), Normalize()]`
+        Preprocessors are applied to data before training or testing. Default
+        preprocessors:
+        `[RemoveNaNClasses(), RemoveNaNColumns(), Impute(), Continuize(),
+        Normalize()]`
 
         - remove columns with all values as NaN
         - replace NaN values with suitable values
@@ -52,53 +53,55 @@ class SoftmaxRegressionLearner(Learner):
         super().__init__(preprocessors=preprocessors)
         self.lambda_ = lambda_
         self.fmin_args = fmin_args
+        self.num_classes = None
 
-    def cost_grad(self, Theta_flat, X, Y):
-        Theta = Theta_flat.reshape((self.num_classes, X.shape[1]))
+    def cost_grad(self, theta_flat, X, Y):
+        theta = theta_flat.reshape((self.num_classes, X.shape[1]))
 
-        M = X.dot(Theta.T)
+        M = X.dot(theta.T)
         P = np.exp(M - np.max(M, axis=1)[:, None])
         P /= np.sum(P, axis=1)[:, None]
 
         cost = -np.sum(np.log(P) * Y)
-        cost += self.lambda_ * Theta_flat.dot(Theta_flat) / 2.0
+        cost += self.lambda_ * theta_flat.dot(theta_flat) / 2.0
         cost /= X.shape[0]
 
         grad = X.T.dot(P - Y).T
-        grad += self.lambda_ * Theta
+        grad += self.lambda_ * theta
         grad /= X.shape[0]
 
         return cost, grad.ravel()
 
-    def fit(self, X, y, W):
-        if len(y.shape) > 1:
+    def fit(self, X, Y, W=None):
+        if len(Y.shape) > 1:
             raise ValueError('Softmax regression does not support '
                              'multi-label classification')
 
-        if np.isnan(np.sum(X)) or np.isnan(np.sum(y)):
+        if np.isnan(np.sum(X)) or np.isnan(np.sum(Y)):
             raise ValueError('Softmax regression does not support '
                              'unknown values')
 
         X = np.hstack((X, np.ones((X.shape[0], 1))))
 
-        self.num_classes = np.unique(y).size
-        Y = np.eye(self.num_classes)[y.ravel().astype(int)]
+        self.num_classes = np.unique(Y).size
+        Y = np.eye(self.num_classes)[Y.ravel().astype(int)]
 
         theta = np.zeros(self.num_classes * X.shape[1])
         theta, j, ret = fmin_l_bfgs_b(self.cost_grad, theta,
                                       args=(X, Y), **self.fmin_args)
-        Theta = theta.reshape((self.num_classes, X.shape[1]))
+        theta = theta.reshape((self.num_classes, X.shape[1]))
 
-        return SoftmaxRegressionModel(Theta)
+        return SoftmaxRegressionModel(theta)
 
 
 class SoftmaxRegressionModel(Model):
-    def __init__(self, Theta):
-        self.Theta = Theta
+    def __init__(self, theta):
+        super().__init__()
+        self.theta = theta
 
     def predict(self, X):
         X = np.hstack((X, np.ones((X.shape[0], 1))))
-        M = X.dot(self.Theta.T)
+        M = X.dot(self.theta.T)
         P = np.exp(M - np.max(M, axis=1)[:, None])
         P /= np.sum(P, axis=1)[:, None]
         return P
@@ -119,7 +122,6 @@ if __name__ == '__main__':
         return grad
 
     d = Orange.data.Table('iris')
-    m = SoftmaxRegressionLearner(lambda_=1.0)
 
     # gradient check
     m = SoftmaxRegressionLearner(lambda_=1.0)
@@ -132,11 +134,3 @@ if __name__ == '__main__':
 
     print(ga)
     print(gn)
-
-# for lambda_ in [0.1, 0.3, 1, 3, 10]:
-# m = SoftmaxRegressionLearner(lambda_=lambda_)
-# scores = []
-# for tr_ind, te_ind in StratifiedKFold(d.Y.ravel()):
-#            s = np.mean(m(d[tr_ind])(d[te_ind]) == d[te_ind].Y.ravel())
-#            scores.append(s)
-#        print('{:4.1f} {}'.format(lambda_, np.mean(scores)))

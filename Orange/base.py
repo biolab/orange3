@@ -206,15 +206,12 @@ class Model(Reprable):
     ValueProbs = 2
 
     def __init__(self, domain=None, original_domain=None):
-        if isinstance(self, Learner):
-            domain = None
-        elif domain is None:
-            raise ValueError("unspecified domain")
         self.domain = domain
         if original_domain is not None:
             self.original_domain = original_domain
         else:
             self.original_domain = domain
+        self.used_vals = None
 
     def predict(self, X):
         if type(self).predict_storage is Model.predict_storage:
@@ -383,6 +380,30 @@ class Model(Reprable):
                 probs[:, i, :] = one_hot(value[:, i])
             return probs
 
+        def extend_probabilities(probs):
+            """
+            Since SklModels and models implementing `fit` and not `fit_storage`
+            do not guarantee correct prediction dimensionality, extend
+            dimensionality of probabilities when it does not match the number
+            of values in the domain.
+            """
+            class_vars = self.domain.class_vars
+            max_values = max(len(cv.values) for cv in class_vars)
+            if max_values == probs.shape[-1]:
+                return probs
+
+            if not self.supports_multiclass:
+                probs = probs[:, np.newaxis, :]
+
+            probs_ext = np.zeros((len(probs), len(class_vars), max_values))
+            for c, used_vals in enumerate(self.used_vals):
+                for i, cv in enumerate(used_vals):
+                    probs_ext[:, c, cv] = probs[:, c, i]
+
+            if not self.supports_multiclass:
+                probs_ext = probs_ext[:, 0, :]
+            return probs_ext
+
         def fix_dim(x):
             return x[0] if one_d else x
 
@@ -439,6 +460,7 @@ class Model(Reprable):
         if probs is None and (ret != Model.Value or backmappers is not None):
             probs = one_hot_probs(value)
         if probs is not None:
+            probs = extend_probabilities(probs)
             probs = self.backmap_probs(probs, n_values, backmappers)
         if ret != Model.Probs:
             if value is None:
