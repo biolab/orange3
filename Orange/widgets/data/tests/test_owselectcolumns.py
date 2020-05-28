@@ -2,6 +2,7 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
+import numpy as np
 from AnyQt.QtCore import QMimeData, QPoint, Qt
 from AnyQt.QtGui import QDragEnterEvent
 
@@ -396,3 +397,17 @@ class TestOWSelectAttributes(WidgetTest):
         self.assertEqual(input_sum.call_args[0][0].brief, "")
         output_sum.assert_called_once()
         self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+    def test_domain_new_feature(self):
+        """ Test scenario when new attribute is added at position 0 """
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+
+        data1 = Table(
+            Domain(
+                (ContinuousVariable("a"),) + data.domain.attributes,
+                data.domain.class_var),
+            np.hstack((np.ones((len(data), 1)), data.X)),
+            data.Y
+        )
+        self.send_signal(self.widget.Inputs.data, data1)

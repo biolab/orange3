@@ -362,9 +362,10 @@ class OWSelectAttributes(widget.OWWidget):
         all_vars = data.domain.variables + data.domain.metas
 
         def attrs_for_role(role):
-            return [attr for _, attr in sorted(
-                (domain_hints[attr][1], attr)
-                for attr in all_vars if domain_hints[attr][0] == role)]
+            selected_attrs = [
+                attr for attr in all_vars if domain_hints[attr][0] == role
+            ]
+            return sorted(selected_attrs, key=lambda attr: domain_hints[attr][1])
 
         domain = data.domain
         domain_hints = {}
