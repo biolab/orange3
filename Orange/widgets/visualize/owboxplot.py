@@ -680,19 +680,22 @@ class OWBoxPlot(widget.OWWidget):
 
         self.draw_axis_disc()
         if self.group_var:
-            self.boxes = \
-                [self.strudel(cont, val)
-                 for cont, val in zip(self.conts.array_with_unknowns,
-                                      self.group_var.values + ("", ))
-                 if np.sum(cont) > 0]
+            conts = self.conts.array_with_unknowns
+            self.boxes = [
+                self.strudel(cont, val)
+                for cont, val in zip(conts, self.group_var.values + ("", ))
+                if np.sum(cont) > 0
+            ]
+            sums_ = np.sum(conts, axis=1)
+            sums_ = sums_[sums_ > 0]  # only bars with sum > 0 are shown
 
             if self.sort_freqs:
                 # pylint: disable=invalid-unary-operand-type
-                self.order = sorted(
-                    self.order, key=(-np.sum(
-                        self.conts.array_with_unknowns, axis=1)).__getitem__)
+                self.order = sorted(self.order, key=(-sums_).__getitem__)
         else:
-            self.boxes = [self.strudel(self.dist.array_with_unknowns)]
+            conts = self.dist.array_with_unknowns
+            self.boxes = [self.strudel(conts)]
+            sums_ = [np.sum(conts)]
 
         for row, box_index in enumerate(self.order):
             y = (-len(self.boxes) + row) * 40 + 10
@@ -701,7 +704,9 @@ class OWBoxPlot(widget.OWWidget):
 
             self.__draw_group_labels(y, box_index)
             if not self.show_stretched:
-                self.__draw_row_counts(y, box_index)
+                self.__draw_row_counts(
+                    y, self.labels[box_index], sums_[box_index]
+                )
             if self.show_labels and self.attribute is not self.group_var:
                 self.__draw_bar_labels(y, bars, labels)
             self.__draw_bars(y, bars)
@@ -726,23 +731,21 @@ class OWBoxPlot(widget.OWWidget):
         label.setPos(-b.width() - 10, y - b.height() / 2)
         self.box_scene.addItem(label)
 
-    def __draw_row_counts(self, y, row):
+    def __draw_row_counts(self, y, label, row_sum_):
         """Draw row counts
 
         Parameters
         ----------
         y: int
             vertical offset of bars
-        row: int
-            row index
+        label: QGraphicsSimpleTextItem
+            Label for group
+        row_sum_: int
+            Sum for the group
         """
         assert not self.attribute.is_continuous
-        label = self.labels[row]
         b = label.boundingRect()
-        if self.group_var:
-            right = self.scale_x * sum(self.conts.array_with_unknowns[row])
-        else:
-            right = self.scale_x * sum(self.dist)
+        right = self.scale_x * row_sum_
         label.setPos(right + 10, y - b.height() / 2)
         self.box_scene.addItem(label)
 
