@@ -17,7 +17,7 @@ class ColorGradientSelection(QWidget):
     thresholdsChanged = Signal(float, float)
     centerChanged = Signal(float)
 
-    def __init__(self, *args, thresholds=(0.0, 1.0), center=0, **kwargs):
+    def __init__(self, *args, thresholds=(0.0, 1.0), center=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         low = round(clip(thresholds[0], 0., 1.), 2)
@@ -45,21 +45,29 @@ class ColorGradientSelection(QWidget):
         self.gradient_cb.setModel(model)
         self.gradient_cb.activated[int].connect(self.activated)
         self.gradient_cb.currentIndexChanged.connect(self.currentIndexChanged)
-        self.gradient_cb.currentIndexChanged.connect(self.__on_palette_changed)
 
-        self.center_box = QWidget()
-        center_layout = QHBoxLayout()
-        self.center_box.setLayout(center_layout)
-        width = QFontMetrics(self.font()).boundingRect("9999999").width()
-        self.center_edit = QLineEdit(
-            text=f"{self.__center}",
-            maximumWidth=width, placeholderText="0", alignment=Qt.AlignRight)
-        self.center_edit.setValidator(QDoubleValidator())
-        self.center_edit.editingFinished.connect(self.__on_center_changed)
-        center_layout.setContentsMargins(0, 0, 0, 0)
-        center_layout.addWidget(QLabel("Centered at"))
-        center_layout.addWidget(self.center_edit)
-        center_layout.addStretch(1)
+        if center is not None:
+            def __on_center_changed():
+                self.__center = float(self.center_edit.text() or "0")
+                self.centerChanged.emit(self.__center)
+
+            self.center_box = QWidget()
+            center_layout = QHBoxLayout()
+            self.center_box.setLayout(center_layout)
+            width = QFontMetrics(self.font()).boundingRect("9999999").width()
+            self.center_edit = QLineEdit(
+                text=f"{self.__center}",
+                maximumWidth=width, placeholderText="0", alignment=Qt.AlignRight)
+            self.center_edit.setValidator(QDoubleValidator())
+            self.center_edit.editingFinished.connect(__on_center_changed)
+            center_layout.setContentsMargins(0, 0, 0, 0)
+            center_layout.addStretch(1)
+            center_layout.addWidget(QLabel("Centered at"))
+            center_layout.addWidget(self.center_edit)
+            self.gradient_cb.currentIndexChanged.connect(
+                self.__update_center_visibility)
+        else:
+            self.center_box = None
 
         slider_low = QSlider(
             objectName="threshold-low-slider", minimum=0, maximum=100,
@@ -78,7 +86,8 @@ class ColorGradientSelection(QWidget):
                               "gradient from the higher end")
         )
         form.setWidget(0, QFormLayout.SpanningRole, self.gradient_cb)
-        form.setWidget(1, QFormLayout.SpanningRole, self.center_box)
+        if self.center_box:
+            form.setWidget(1, QFormLayout.SpanningRole, self.center_box)
         form.addRow(self.tr("Low:"), slider_low)
         form.addRow(self.tr("High:"), slider_high)
         self.slider_low = slider_low
@@ -98,6 +107,7 @@ class ColorGradientSelection(QWidget):
 
     def setCurrentIndex(self, index: int) -> None:
         self.gradient_cb.setCurrentIndex(index)
+        self.__update_center_visibility()
 
     def currentIndex(self) -> int:
         return self.gradient_cb.currentIndex()
@@ -173,15 +183,15 @@ class ColorGradientSelection(QWidget):
             self.slider_high.setSliderPosition(high * 100)
             self.thresholdsChanged.emit(high, low)
 
-    def __on_palette_changed(self):
+    def __update_center_visibility(self):
+        if self.center_box is None:
+            return
+
         palette = self.currentData()
         self.center_box.setVisible(
             isinstance(palette, colorpalettes.Palette)
-            and palette.flags & palette.Flags.Diverging)
+            and palette.flags & palette.Flags.Diverging != 0)
 
-    def __on_center_changed(self):
-        self.__center = float(self.center_edit.text() or "0")
-        self.centerChanged.emit(self.__center)
 
 def clip(a, amin, amax):
     return min(max(a, amin), amax)
