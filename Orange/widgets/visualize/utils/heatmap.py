@@ -570,19 +570,19 @@ class HeatmapGridWidget(QGraphicsWidget):
         row_color_annotation_header.rotate(-90)
 
         grid.addItem(SimpleLayoutItem(
-            row_color_annotation_header, anchor=(0, 1), resizeContents=True,
+            row_color_annotation_header, anchor=(0, 1),
             aspectMode=Qt.KeepAspectRatio,
             sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred),
             ),
-            self.TopLabelsRow, RightLabelColumn - 1,
+            0, RightLabelColumn - 1, self.TopLabelsRow + 1, 1,
+            alignment=Qt.AlignBottom
         )
 
         col_color_annotation_header = QGraphicsSimpleTextItem("", self)
         grid.addItem(SimpleLayoutItem(
             col_color_annotation_header, anchor=(1, 1), anchorItem=(1, 1),
-            resizeContents=True,
             aspectMode=Qt.KeepAspectRatio,
-            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed),
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed),
         ),
             TopAnnotationRow, 0, 1, Col0, alignment=Qt.AlignRight
         )
@@ -596,7 +596,7 @@ class HeatmapGridWidget(QGraphicsWidget):
             sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         )
         legend.setMaximumWidth(300)
-        grid.addItem(legend, self.LegendRow, self.LegendCol, 1, M * 2)
+        grid.addItem(legend, self.LegendRow, self.LegendCol, 1, M * 2 - 1)
 
         def container(parent=None, orientation=Qt.Horizontal, margin=0, spacing=0, **kwargs):
             widget = QGraphicsWidget(**kwargs)
