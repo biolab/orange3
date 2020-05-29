@@ -862,8 +862,8 @@ class HeatmapGridWidget(QGraphicsWidget):
             container.addItem(legend)
         elif isinstance(colormap, GradientColorMap):
             legend = GradientLegendWidget(
-                *colormap.span, colormap,
-                sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+                *colormap.span, colormap, title=name,
+                sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum),
             )
             legend.setMinimumWidth(100)
             container.addItem(legend)
@@ -1262,7 +1262,8 @@ class _GradientLegendAxisItem(pg.AxisItem):
 
 class GradientLegendWidget(QGraphicsWidget):
     def __init__(
-            self, low, high, colormap: GradientColorMap, parent=None, **kwargs
+            self, low, high, colormap: GradientColorMap, parent=None, title="",
+            **kwargs
     ):
         kwargs.setdefault(
             "sizePolicy", QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -1271,11 +1272,18 @@ class GradientLegendWidget(QGraphicsWidget):
         self.low = low
         self.high = high
         self.colormap = colormap
+        self.title = title
 
         layout = QGraphicsLinearLayout(Qt.Vertical)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
+        if title:
+            titleitem = SimpleLayoutItem(
+                QGraphicsSimpleTextItem(title, self), parent=layout,
+                anchor=(0.5, 1.), anchorItem=(0.5, 1.0)
+            )
+            layout.addItem(titleitem)
         self.__axis = axis = _GradientLegendAxisItem(
             orientation="top", maxTickLength=3)
         axis.setRange(low, high)
