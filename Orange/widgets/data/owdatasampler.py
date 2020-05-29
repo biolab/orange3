@@ -336,7 +336,9 @@ class OWDataSampler(OWWidget):
         elif self.sampling_type == self.CrossValidation:
             tpe = f"{self.number_of_folds}-fold cross-validation " \
                   f"without subset #{self.selectedFold}"
-        else:
+        elif self.sampling_type == self.Bootstrap:
+            tpe = "Bootstrap"
+        else:  # pragma: no cover
             tpe = "Undefined"  # should not come here at all
         if self.stratify:
             tpe += ", stratified (if possible)"

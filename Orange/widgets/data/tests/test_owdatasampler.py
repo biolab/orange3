@@ -192,6 +192,39 @@ class TestOWDataSampler(WidgetTest):
         self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 15)
         self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 135)
 
+    def test_send_report(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.iris)
+
+        w.stratify = True
+        w.use_seed = True
+
+        self.select_sampling_type(0)
+        w.commit()
+        w.send_report()
+
+        self.select_sampling_type(1)
+        w.sampleSizeNumber = 1
+        w.commit()
+        w.send_report()
+
+        w.sampleSizeNumber = 10
+        w.replacement = False
+        w.commit()
+        w.send_report()
+
+        w.replacement = True
+        w.commit()
+        w.send_report()
+
+        self.select_sampling_type(2)
+        w.commit()
+        w.send_report()
+
+        self.select_sampling_type(3)
+        w.commit()
+        w.send_report()
+
 
 if __name__ == "__main__":
     unittest.main()
