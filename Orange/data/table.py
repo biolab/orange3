@@ -1607,7 +1607,7 @@ class Table(Sequence, Storage):
             names = get_unique_names_duplicates(names)
             attributes = [ContinuousVariable(name) for name in names]
         else:
-            places = int(np.ceil(np.log10(n_cols)))
+            places = int(np.ceil(np.log10(n_cols))) if n_cols else 1
             attributes = [ContinuousVariable(f"{feature_name} {i:0{places}}")
                           for i in range(1, n_cols + 1)]
         if old_domain is not None and feature_names_column:
