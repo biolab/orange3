@@ -70,9 +70,8 @@ class TestOWDistributions(WidgetTest):
         self.assertIs(widget.cvar, domain.class_var)
         np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
         np.testing.assert_equal(widget.valid_group_data, self.iris.Y)
-        self.assertEqual(
-            len(self.get_output(widget.Outputs.histogram_data)), 150)
-        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.histogram_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.annotated_data))
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
 
         # Data gone: clean up
@@ -108,9 +107,8 @@ class TestOWDistributions(WidgetTest):
         self.assertIs(widget.cvar, None)
         np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
         self.assertIsNone(widget.valid_group_data)
-        self.assertEqual(
-            len(self.get_output(widget.Outputs.histogram_data)), 150)
-        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.histogram_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.annotated_data))
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
 
     def test_set_data_no_class(self):
@@ -131,9 +129,8 @@ class TestOWDistributions(WidgetTest):
         self.assertIs(widget.cvar, None)
         np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
         self.assertIsNone(widget.valid_group_data)
-        self.assertEqual(
-            len(self.get_output(widget.Outputs.histogram_data)), 150)
-        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.histogram_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.annotated_data))
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
 
     def test_set_data_reg_class(self):
@@ -155,9 +152,8 @@ class TestOWDistributions(WidgetTest):
         self.assertIs(widget.cvar, None)
         np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
         self.assertIsNone(widget.valid_group_data)
-        self.assertEqual(
-            len(self.get_output(widget.Outputs.histogram_data)), 150)
-        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.histogram_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.annotated_data))
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
 
     def test_set_data_reg_class_no_discrete(self):
@@ -177,10 +173,17 @@ class TestOWDistributions(WidgetTest):
         self.assertIs(widget.cvar, None)
         np.testing.assert_equal(widget.valid_data, self.iris.X[:, 0])
         self.assertIsNone(widget.valid_group_data)
-        self.assertEqual(
-            len(self.get_output(widget.Outputs.histogram_data)), 150)
-        self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.histogram_data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.annotated_data))
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
+
+    def test_histogram_data(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+        self._set_var(self.iris.domain["sepal length"])
+        self._set_cvar(self.iris.domain["iris"])
+        hist = self.get_output(widget.Outputs.histogram_data)
+        self.assertTrue(len(hist)>0 and len(hist)%3==0)
 
     def test_switch_var(self):
         """Widget reset and recomputes when changing var"""
