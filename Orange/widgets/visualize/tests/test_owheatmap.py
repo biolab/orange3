@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring, protected-access
 import warnings
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
@@ -244,6 +244,21 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
                 image = heatmap_widget.pixmap().toImage()
                 colors = image_row_colors(image)
                 np.testing.assert_almost_equal(colors, desired)
+
+    def test_centering_threshold_change(self):
+        data = np.arange(2).reshape(-1, 1)
+        table = Table.from_numpy(Domain([ContinuousVariable("y")]), data)
+        self.send_signal(self.widget.Inputs.data, table)
+
+        cmw = self.widget.color_map_widget
+        palette_index = cmw.findData(
+            colorpalettes.ContinuousPalettes["diverging_bwr_40_95_c42"],
+            Qt.UserRole)
+        cmw.setCurrentIndex(palette_index)
+
+        self.widget.update_color_schema = Mock()
+        cmw.centerChanged.emit(42)
+        self.widget.update_color_schema.assert_called()
 
     def test_palette_center(self):
         widget = self.widget
