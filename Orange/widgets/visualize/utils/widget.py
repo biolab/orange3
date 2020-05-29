@@ -738,7 +738,9 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     def send_components(self):
         components = None
         if self.data is not None and self.projection is not None:
-            meta_attrs = [StringVariable(name='component')]
+            proposed = [var.name for var in self.effective_variables]
+            comp_name = get_unique_names(proposed, 'component')
+            meta_attrs = [StringVariable(name=comp_name)]
             domain = Domain(self.effective_variables, metas=meta_attrs)
             components = Table(domain, self._send_components_x(),
                                metas=self._send_components_metas())
