@@ -10,7 +10,8 @@ from AnyQt.QtCore import (Qt, QSize, QItemSelection, QItemSelectionModel,
                           pyqtSignal)
 from AnyQt.QtGui import QStandardItem, QColor, QStandardItemModel
 from AnyQt.QtWidgets import (QTableView, QSizePolicy, QHeaderView,
-                             QStyledItemDelegate, QCheckBox, QFrame)
+                             QStyledItemDelegate, QCheckBox, QFrame, QWidget,
+                             QGridLayout)
 
 from Orange.data import (Table, DiscreteVariable, Variable, Domain,
                          ContinuousVariable)
@@ -704,7 +705,7 @@ class OWPivot(OWWidget):
     class Warning(OWWidget.Warning):
         # TODO - inconsistent for different variable types
         no_col_feature = Msg("Column feature should be selected.")
-        cannot_aggregate = Msg("Some aggregations ({}) cannot be performed.")
+        cannot_aggregate = Msg("Some aggregations ({}) cannot be computed.")
         renamed_vars = Msg("Some variables have been renamed in some tables"
                            "to avoid duplicates.\n{}")
 
@@ -718,14 +719,15 @@ class OWPivot(OWWidget):
 
     AGGREGATIONS = (Pivot.Count,
                     Pivot.Count_defined,
-                    None,
+                    None,  # separator
                     Pivot.Sum,
                     Pivot.Mean,
+                    Pivot.Var,
+                    Pivot.Median,
+                    2,  # column break
                     Pivot.Mode,
                     Pivot.Min,
                     Pivot.Max,
-                    Pivot.Median,
-                    Pivot.Var,
                     None,
                     Pivot.Majority)
 
@@ -737,21 +739,20 @@ class OWPivot(OWWidget):
         self._add_main_area_controls()
 
     def _add_control_area_controls(self):
-        box = gui.vBox(self.controlArea, "Rows")
-        gui.comboBox(box, self, "row_feature", contentsLength=12,
+        box = gui.vBox(self.controlArea, box=True)
+        gui.comboBox(box, self, "row_feature", label="Rows", contentsLength=12,
                      searchable=True,
                      model=DomainModel(valid_types=DomainModel.PRIMITIVE),
                      callback=self.__feature_changed)
-        box = gui.vBox(self.controlArea, "Columns")
-        gui.comboBox(box, self, "col_feature", contentsLength=12,
+        gui.comboBox(box, self, "col_feature", label="Columns",
+                     contentsLength=12,
                      searchable=True,
                      model=DomainModel(placeholder="(Same as rows)",
                                        valid_types=DiscreteVariable),
                      callback=self.__feature_changed,)
-        box = gui.vBox(self.controlArea, "Values")
-        gui.comboBox(box, self, "val_feature", contentsLength=12,
+        gui.comboBox(box, self, "val_feature", label="Values",
+                     contentsLength=12,
                      searchable=True,
-                     orientation=Qt.Horizontal,
                      model=DomainModel(placeholder="(None)"),
                      callback=self.__val_feature_changed)
         self.__add_aggregation_controls()
@@ -762,7 +763,20 @@ class OWPivot(OWWidget):
         self.info.set_output_summary(self.info.NoOutput)
 
     def __add_aggregation_controls(self):
+        def new_inbox():
+            nonlocal row, col, inbox
+            inbox = QWidget()
+            layout = QGridLayout()
+            inbox.setLayout(layout)
+            layout.setContentsMargins(0, 0, 0, 0)
+            box.layout().addWidget(inbox)
+            row = col = 0
+
         box = gui.vBox(self.controlArea, "Aggregations")
+        row = col = 0
+        inbox = None
+        new_inbox()
+        self.aggregation_checkboxes = []  # for test purposes
         for agg in self.AGGREGATIONS:
             if agg is None:
                 gui.separator(box, height=1)
@@ -771,12 +785,19 @@ class OWPivot(OWWidget):
                 line.setLineWidth(1)
                 line.setFrameShadow(QFrame.Sunken)
                 box.layout().addWidget(line)
+                new_inbox()
                 continue
-            check_box = QCheckBox(str(agg), box)
+            elif agg == 2:
+                col += 1
+                row = 0
+                continue
+            check_box = QCheckBox(str(agg), inbox)
             check_box.setChecked(agg in self.sel_agg_functions)
             check_box.clicked.connect(lambda *args, a=agg:
                                       self.__aggregation_cb_clicked(a, args[0]))
-            box.layout().addWidget(check_box)
+            inbox.layout().addWidget(check_box, row, col)
+            self.aggregation_checkboxes.append(check_box)
+            row += 1
 
     def _add_main_area_controls(self):
         self.table_view = PivotTableView()

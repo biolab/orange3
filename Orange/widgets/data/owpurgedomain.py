@@ -1,4 +1,6 @@
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QFrame
+
 from Orange.data import Table
 from Orange.preprocess.remove import Remove
 from Orange.widgets import gui, widget
@@ -70,12 +72,24 @@ class OWPurgeDomain(widget.OWWidget):
         self.removedMetas = "-"
         self.reducedMetas = "-"
 
+        def add_line(parent):
+            frame = QFrame()
+            frame.setFrameShape(QFrame.HLine)
+            frame.setFrameShadow(QFrame.Sunken)
+            parent.layout().addSpacing(6)
+            parent.layout().addWidget(frame)
+            parent.layout().addSpacing(6)
+
         boxAt = gui.vBox(self.controlArea, "Features")
         for not_first, (value, label) in enumerate(self.feature_options):
             if not_first:
                 gui.separator(boxAt, 2)
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
+        add_line(boxAt)
+        gui.label(boxAt, self,
+                  "Sorted: %(resortedAttrs)s, "
+                  "reduced: %(reducedAttrs)s, removed: %(removedAttrs)s")
 
         boxAt = gui.vBox(self.controlArea, "Classes", addSpace=True)
         for not_first, (value, label) in enumerate(self.class_options):
@@ -83,6 +97,10 @@ class OWPurgeDomain(widget.OWWidget):
                 gui.separator(boxAt, 2)
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
+        add_line(boxAt)
+        gui.label(boxAt, self,
+                  "Sorted: %(resortedClasses)s,"
+                  "reduced: %(reducedClasses)s, removed: %(removedClasses)s")
 
         boxAt = gui.vBox(self.controlArea, "Meta attributes", addSpace=True)
         for not_first, (value, label) in enumerate(self.meta_options):
@@ -90,13 +108,9 @@ class OWPurgeDomain(widget.OWWidget):
                 gui.separator(boxAt, 2)
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
-
-        box3 = gui.vBox(self.controlArea, 'Statistics', addSpace=True)
-        for i, (label, value) in enumerate(self.stat_labels):
-            # add a separator after each group of three
-            if i != 0 and i % 3 == 0:
-                gui.separator(box3, 2)
-            gui.label(box3, self, "{}: %({})s".format(label, value))
+        add_line(boxAt)
+        gui.label(boxAt, self,
+                  "Reduced: %(reducedMetas)s, removed: %(removedMetas)s")
 
         gui.auto_send(self.buttonsArea, self, "autoSend")
         gui.rubber(self.controlArea)

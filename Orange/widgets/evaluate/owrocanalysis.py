@@ -10,9 +10,11 @@ from collections import namedtuple, deque, OrderedDict
 import numpy as np
 import sklearn.metrics as skl_metrics
 
-from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction, QToolTip
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont, QCursor
-from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction, \
+    QToolTip, QSizePolicy
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont, \
+    QCursor, QFontMetrics
+from AnyQt.QtCore import Qt, QSize
 import pyqtgraph as pg
 
 import Orange
@@ -339,32 +341,29 @@ class OWROCAnalysis(widget.OWWidget):
         self._tooltip_cache = None
 
         box = gui.vBox(self.controlArea, "Plot")
-        tbox = gui.vBox(box, "Target Class")
-        tbox.setFlat(True)
-
         self.target_cb = gui.comboBox(
-            tbox, self, "target_index", callback=self._on_target_changed,
+            box, self, "target_index",
+            label="Target", orientation=Qt.Horizontal,
+            callback=self._on_target_changed,
             contentsLength=8, searchable=True)
 
-        cbox = gui.vBox(box, "Classifiers")
-        cbox.setFlat(True)
+        gui.widgetLabel(box, "Classifiers")
+        line_height = 4 * QFontMetrics(self.font()).lineSpacing()
         self.classifiers_list_box = gui.listBox(
-            cbox, self, "selected_classifiers", "classifier_names",
+            box, self, "selected_classifiers", "classifier_names",
             selectionMode=QListView.MultiSelection,
-            callback=self._on_classifiers_changed)
+            callback=self._on_classifiers_changed,
+            sizeHint=QSize(0, line_height))
 
-        abox = gui.vBox(box, "Combine ROC Curves From Folds")
-        abox.setFlat(True)
+        abox = gui.vBox(self.controlArea, "Curves")
         gui.comboBox(abox, self, "roc_averaging",
                      items=["Merge Predictions from Folds", "Mean TP Rate",
                             "Mean TP and FP at Threshold", "Show Individual Curves"],
                      callback=self._replot)
 
-        hbox = gui.vBox(box, "ROC Convex Hull")
-        hbox.setFlat(True)
-        gui.checkBox(hbox, self, "display_convex_curve",
+        gui.checkBox(abox, self, "display_convex_curve",
                      "Show convex ROC curves", callback=self._replot)
-        gui.checkBox(hbox, self, "display_convex_hull",
+        gui.checkBox(abox, self, "display_convex_hull",
                      "Show ROC convex hull", callback=self._replot)
 
         box = gui.vBox(self.controlArea, "Analysis")
@@ -394,7 +393,7 @@ class OWROCAnalysis(widget.OWWidget):
                                         callback=self._on_target_prior_changed)
         self.target_prior_sp.setSuffix(" %")
         self.target_prior_sp.addAction(QAction("Auto", sp))
-        grid.addWidget(QLabel("Prior target class probability:"))
+        grid.addWidget(QLabel("Prior probability:"))
         grid.addWidget(self.target_prior_sp, 2, 1)
 
         self.plotview = pg.GraphicsView(background="w")

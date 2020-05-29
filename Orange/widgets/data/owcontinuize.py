@@ -2,6 +2,7 @@ from functools import reduce
 from types import SimpleNamespace
 
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QGridLayout
 
 import Orange.data
 from Orange.util import Reprable
@@ -72,25 +73,32 @@ class OWContinuize(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        box = gui.vBox(self.controlArea, "Categorical Features")
-        gui.radioButtonsInBox(
-            box, self, "multinomial_treatment",
+        layout = QGridLayout()
+        gui.widgetBox(self.controlArea, orientation=layout)
+
+        box = gui.radioButtonsInBox(
+            None, self, "multinomial_treatment", box="Categorical Features",
             btnLabels=[x[0] for x in self.multinomial_treats],
             callback=self.settings_changed)
+        gui.rubber(box)
+        layout.addWidget(box, 0, 0, 2, 1)
 
-        box = gui.vBox(self.controlArea, "Numeric Features")
-        gui.radioButtonsInBox(
-            box, self, "continuous_treatment",
+        box = gui.radioButtonsInBox(
+            None, self, "continuous_treatment", box = "Numeric Features",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
+        box.layout().addStretch(10)
+        layout.addWidget(box, 0, 1, 2, 1)
 
-        box = gui.vBox(self.controlArea, "Categorical Outcome(s)")
-        gui.radioButtonsInBox(
-            box, self, "class_treatment",
+        box = gui.radioButtonsInBox(
+            None, self, "class_treatment", box="Categorical Outcome(s)",
             btnLabels=[t[0] for t in self.class_treats],
             callback=self.settings_changed)
+        box.layout().addStretch(10)
+        layout.addWidget(box, 0, 2)
 
-        gui.auto_apply(self.buttonsArea, self, "autosend", box=False)
+        ac = gui.auto_apply(None, self, "autosend", box=False)
+        layout.addWidget(ac, 1, 2)
 
         self.data = None
         self.info.set_input_summary(self.info.NoInput)
