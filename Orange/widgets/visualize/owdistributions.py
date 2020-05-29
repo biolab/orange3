@@ -1081,7 +1081,7 @@ class OWDistributions(OWWidget):
                 selected_data = create_groups_table(
                     data, group_indices,
                     include_unselected=False, values=values)
-                annotated_data = create_annotated_table(data, selected)
+            annotated_data = create_annotated_table(data, selected)
 
         summary = len(selected_data) if selected_data else self.info.NoOutput
         details = format_summary_details(selected_data) if selected_data else ""
