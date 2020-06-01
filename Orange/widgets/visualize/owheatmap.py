@@ -879,11 +879,11 @@ class OWHeatMap(widget.OWWidget):
 
         self.effective_data = effective_data
 
-        self.__update_clustering_enable_state(effective_data)
-
         parts = self._make_parts(
             effective_data, group_var,
             column_split_key.name if column_split_key is not None else None)
+
+        self.__update_clustering_enable_state(parts)
         # Restore/update the row/columns items descriptions from cache if
         # available
         rows_cache_key = (group_var,
@@ -1005,10 +1005,10 @@ class OWHeatMap(widget.OWWidget):
             sp.setVerticalPolicy(QSizePolicy.Preferred)
         widget.setSizePolicy(sp)
 
-    def __update_clustering_enable_state(self, data):
-        if data is not None:
-            N = len(data)
-            M = len(data.domain.attributes)
+    def __update_clustering_enable_state(self, parts: Optional['Parts']):
+        if parts is not None:
+            N = max((len(p.indices) for p in parts.rows), default=0)
+            M = max((len(p.indices) for p in parts.columns), default=0)
         else:
             N = M = 0
 
