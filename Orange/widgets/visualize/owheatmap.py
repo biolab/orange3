@@ -879,11 +879,11 @@ class OWHeatMap(widget.OWWidget):
 
         self.effective_data = effective_data
 
-        self.__update_clustering_enable_state(effective_data)
-
         parts = self._make_parts(
             effective_data, group_var,
             column_split_key.name if column_split_key is not None else None)
+
+        self.__update_clustering_enable_state(parts)
         # Restore/update the row/columns items descriptions from cache if
         # available
         rows_cache_key = (group_var,
@@ -1005,17 +1005,26 @@ class OWHeatMap(widget.OWWidget):
             sp.setVerticalPolicy(QSizePolicy.Preferred)
         widget.setSizePolicy(sp)
 
-    def __update_clustering_enable_state(self, data):
-        if data is not None:
-            N = len(data)
-            M = len(data.domain.attributes)
-        else:
-            N = M = 0
+    def __update_clustering_enable_state(self, parts: Optional['Parts']):
+        def c_cost(sizes: Iterable[int]) -> int:
+            """Estimated cost for clustering of `sizes`"""
+            return sum(n ** 2 for n in sizes)
 
-        rc_enabled = N <= self.MaxClustering
-        rco_enabled = N <= self.MaxOrderedClustering
-        cc_enabled = M <= self.MaxClustering
-        cco_enabled = M <= self.MaxOrderedClustering
+        def co_cost(sizes: Iterable[int]) -> int:
+            """Estimated cost for cluster ordering of `sizes`"""
+            # ~O(N ** 3) but O(N ** 4) worst case.
+            return sum(n ** 4 for n in sizes)
+
+        if parts is not None:
+            Ns = [len(p.indices) for p in parts.rows]
+            Ms = [len(p.indices) for p in parts.columns]
+        else:
+            Ns = Ms = [0]
+
+        rc_enabled = c_cost(Ns) <= c_cost([self.MaxClustering])
+        rco_enabled = co_cost(Ns) <= co_cost([self.MaxOrderedClustering])
+        cc_enabled = c_cost(Ms) <= c_cost([self.MaxClustering])
+        cco_enabled = co_cost(Ms) <= co_cost([self.MaxOrderedClustering])
         row_clust, col_clust = self.row_clustering, self.col_clustering
 
         row_clust_msg = ""
@@ -1024,20 +1033,20 @@ class OWHeatMap(widget.OWWidget):
         if not rco_enabled and row_clust == Clustering.OrderedClustering:
             row_clust = Clustering.Clustering
             row_clust_msg = "Row cluster ordering was disabled due to the " \
-                            "input matrix being to big"
+                            "estimated runtime cost"
         if not rc_enabled and row_clust == Clustering.Clustering:
             row_clust = Clustering.None_
             row_clust_msg = "Row clustering was was disabled due to the " \
-                            "input matrix being to big"
+                            "estimated runtime cost"
 
         if not cco_enabled and col_clust == Clustering.OrderedClustering:
             col_clust = Clustering.Clustering
             col_clust_msg = "Column cluster ordering was disabled due to " \
-                            "the input matrix being to big"
+                            "estimated runtime cost"
         if not cc_enabled and col_clust == Clustering.Clustering:
             col_clust = Clustering.None_
             col_clust_msg = "Column clustering was disabled due to the " \
-                            "input matrix being to big"
+                            "estimated runtime cost"
 
         self.col_clustering = col_clust
         self.row_clustering = row_clust
