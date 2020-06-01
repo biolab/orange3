@@ -1,10 +1,14 @@
+from unittest.mock import Mock
+
 import numpy as np
 
 from AnyQt.QtTest import QSignalSpy
-from AnyQt.QtCore import Qt, QStringListModel
+from AnyQt.QtCore import Qt, QStringListModel, QModelIndex
 
+from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.colorgradientselection import ColorGradientSelection
 from Orange.widgets.tests.base import GuiTest
+
 
 class TestColorGradientSelection(GuiTest):
     def test_constructor(self):
@@ -68,3 +72,40 @@ class TestColorGradientSelection(GuiTest):
         low, high = changed[-1]
         self.assertLessEqual(low, high)
         self.assertEqual(high, 0.0)
+
+    def test_center(self):
+        w = ColorGradientSelection(center=42)
+        self.assertEqual(w.center(), 42)
+        w.setCenter(40)
+        self.assertEqual(w.center(), 40)
+
+    def test_center_visibility(self):
+        w = ColorGradientSelection(center=0)
+        w.center_box.setVisible = Mock()
+        model = itemmodels.ContinuousPalettesModel()
+        w.setModel(model)
+        for row in range(model.rowCount(QModelIndex())):
+            palette = model.data(model.index(row, 0), Qt.UserRole)
+            if palette:
+                if palette.flags & palette.Diverging:
+                    diverging = row
+                else:
+                    nondiverging = row
+
+        w.setCurrentIndex(diverging)
+        w.center_box.setVisible.assert_called_with(True)
+        w.setCurrentIndex(nondiverging)
+        w.center_box.setVisible.assert_called_with(False)
+        w.setCurrentIndex(diverging)
+        w.center_box.setVisible.assert_called_with(True)
+
+        w = ColorGradientSelection()
+        self.assertIsNone(w.center_box)
+
+    def test_center_changed(self):
+        w = ColorGradientSelection(center=42)
+        changed = QSignalSpy(w.centerChanged)
+        w.center_edit.setText("41")
+        w.center_edit.editingFinished.emit()
+        self.assertEqual(w.center(), 41)
+        self.assertEqual(list(changed), [[41]])

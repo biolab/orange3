@@ -171,6 +171,7 @@ class OWHeatMap(widget.OWWidget):
 
     threshold_low = settings.Setting(0.0)
     threshold_high = settings.Setting(1.0)
+    color_center = settings.Setting(0)
 
     merge_kmeans = settings.Setting(False)
     merge_kmeans_k = settings.Setting(50)
@@ -222,6 +223,12 @@ class OWHeatMap(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         empty_clusters = Msg("Empty clusters were removed")
 
+    UserAdviceMessages = [
+        widget.Message(
+            "For data with a meaningful mid-point, "
+            "choose one of diverging palettes.",
+            "diverging_palette")]
+
     def __init__(self):
         super().__init__()
         self.__pending_selection = self.selected_rows
@@ -262,6 +269,7 @@ class OWHeatMap(widget.OWWidget):
 
         self.color_map_widget = cmw = ColorGradientSelection(
             thresholds=(self.threshold_low, self.threshold_high),
+            center=self.color_center
         )
         model = itemmodels.ContinuousPalettesModel(parent=self)
         cmw.setModel(model)
@@ -275,6 +283,12 @@ class OWHeatMap(widget.OWWidget):
             self.threshold_low, self.threshold_high = low, high
             self.update_color_schema()
         cmw.thresholdsChanged.connect(_set_thresholds)
+
+        def _set_centering(center):
+            self.color_center = center
+            self.update_color_schema()
+        cmw.centerChanged.connect(_set_centering)
+
         colorbox.layout().addWidget(self.color_map_widget)
 
         mergebox = gui.vBox(self.controlArea, "Merge",)
@@ -529,7 +543,7 @@ class OWHeatMap(widget.OWWidget):
     def color_map(self) -> GradientColorMap:
         return GradientColorMap(
             self.color_palette(), (self.threshold_low, self.threshold_high),
-            0 if self.center_palette else None
+            self.color_map_widget.center() if self.center_palette else None
         )
 
     def clear(self):
