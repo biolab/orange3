@@ -1,0 +1,6 @@
+time	numeric1	discrete1	numeric2	discrete2	string
+2020-05-05	1	0		a	a
+2020-05-06	2	1		a	b
+2020-05-07	3	0		a	c
+2020-05-08	4	1		b	d
+2020-05-09	5	1		b	e
