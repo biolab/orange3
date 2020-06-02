@@ -15,6 +15,7 @@ from Orange.data.util import get_unique_names
 from Orange.clustering import DBSCAN
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg
 
 
@@ -89,6 +90,8 @@ class OWDBSCAN(widget.OWWidget):
         self.data_normalized = None
         self.db = None
         self.model = None
+        self._set_input_summary(None)
+        self._set_output_summary(None)
 
         box = gui.widgetBox(self.controlArea, "Parameters")
         gui.spin(box, self, "min_samples", 1, 100, 1,
@@ -169,10 +172,12 @@ class OWDBSCAN(widget.OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.Error.clear()
+        self._set_input_summary(data)
         if not self.check_data_size(data):
             data = None
         self.data = self.data_normalized = data
         if self.data is None:
+            self._set_output_summary(None)
             self.Outputs.annotated_data.send(None)
             self.plot.clear_plot()
             return
@@ -220,7 +225,18 @@ class OWDBSCAN(widget.OWWidget):
         domain = Domain(attributes, classes, meta_attrs)
         new_table = Table(domain, x, y, metas, self.data.W)
 
+        self._set_output_summary(new_table)
         self.Outputs.annotated_data.send(new_table)
+
+    def _set_input_summary(self, data):
+        summary = len(data) if data else self.info.NoInput
+        details = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, details)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def _invalidate(self):
         self.commit()
