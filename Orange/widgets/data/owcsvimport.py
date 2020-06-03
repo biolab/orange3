@@ -57,6 +57,7 @@ from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get
 )
+from Orange.widgets.utils.combobox import ItemStyledComboBox
 from Orange.widgets.utils.pathutils import (
     PathItem, VarPath, samepath, pathnormalize, prettyfypath, infer_prefix,
 )
@@ -606,10 +607,10 @@ class OWCSVFileImport(widget.OWWidget):
 
         self.import_items_model = VarPathItemModel(self)
         self.import_items_model.setReplacementEnv(dict(self._replacements()))
-        self.recent_combo = QComboBox(
+        self.recent_combo = ItemStyledComboBox(
             self, objectName="recent-combo", toolTip="Recent files.",
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
-            minimumContentsLength=16, placeholderText="..."
+            minimumContentsLength=16, placeholderText="Recent files…"
         )
         self.recent_combo.setModel(self.import_items_model)
         self.recent_combo.activated.connect(self.activate_recent)
