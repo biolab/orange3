@@ -485,15 +485,20 @@ def main(argv=None):
         filename=os.path.join(config.log_dir(), "canvas.log"),
         mode="w"
     )
-    file_handler.setFormatter(
-        logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
-    )
+    formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+    file_handler.setFormatter(formatter)
     file_handler.setLevel(level)
+
+    stream = TextStream()
+    stream_handler = logging.StreamHandler(stream)
+    stream_handler.setFormatter(formatter)
+    stream_handler.setLevel(level)
 
     for namespace in ["orangecanvas", "orangewidget", "Orange"]:
         logger = logging.getLogger(namespace)
         logger.setLevel(level)
         logger.addHandler(file_handler)
+        logger.addHandler(stream_handler)
 
     # intercept any QFileOpenEvent requests until the main window is
     # fully initialized.
@@ -562,6 +567,7 @@ def main(argv=None):
     canvas_window = MainWindow()
     canvas_window.setAttribute(Qt.WA_DeleteOnClose)
     canvas_window.setWindowIcon(config.application_icon())
+    canvas_window.connect_output_stream(stream)
 
     # initialize notification server, set to initial canvas
     notif_server = NotificationServer()
@@ -672,6 +678,7 @@ def main(argv=None):
     try:
         with closing(stdout),\
              closing(stderr),\
+             closing(stream), \
              patch('sys.excepthook', excepthook),\
              patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):
