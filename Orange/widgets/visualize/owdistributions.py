@@ -1089,6 +1089,10 @@ class OWDistributions(OWWidget):
                     data, group_indices,
                     include_unselected=False, values=values)
             annotated_data = create_annotated_table(data, selected)
+            if self.var.is_continuous:  # annotate with bins
+                hist_indices, hist_values = self._get_histogram_indices()
+                annotated_data = create_groups_table(
+                    annotated_data, hist_indices, var_name="Bin", values=hist_values)
             histogram_data = self._get_histogram_table()
 
         summary = len(selected_data) if selected_data else self.info.NoOutput
@@ -1125,8 +1129,8 @@ class OWDistributions(OWWidget):
         return group_indices, values
 
     def _get_histogram_table(self):
-        var_bin = DiscreteVariable("bin", [bar.desc for bar in self.bar_items])
-        var_freq = ContinuousVariable("frequency")
+        var_bin = DiscreteVariable("Bin", [bar.desc for bar in self.bar_items])
+        var_freq = ContinuousVariable("Count")
         X = []
         if self.cvar:
             domain = Domain([var_bin, self.cvar, var_freq])
