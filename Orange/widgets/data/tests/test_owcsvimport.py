@@ -12,6 +12,8 @@ from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QSettings
 
+from Orange.data import DiscreteVariable, TimeVariable, ContinuousVariable, \
+    StringVariable
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.data import owcsvimport
@@ -126,6 +128,37 @@ class TestOWCSVFileImport(WidgetTest):
         output = self.get_output("Data", widget)
         output_sum.assert_called_with(len(output),
                                       format_summary_details(output))
+
+    data_csv_types_options = owcsvimport.Options(
+        encoding="ascii", dialect=csv.excel_tab(),
+        columntypes=[
+            (range(0, 5), ColumnType.Auto),
+        ]
+    )
+
+    def test_type_guessing(self):
+        """ Check if correct column type is guessed when column type auto """
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-csv-types.tab")
+        widget = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+            stored_settings={
+                "_session_items": [
+                    (path, self.data_csv_types_options.as_dict())
+                ]
+            }
+        )
+        widget.commit()
+        self.wait_until_finished(widget)
+        output = self.get_output("Data", widget)
+        domain = output.domain
+
+        self.assertIsInstance(domain["time"], TimeVariable)
+        self.assertIsInstance(domain["discrete1"], DiscreteVariable)
+        self.assertIsInstance(domain["discrete2"], DiscreteVariable)
+        self.assertIsInstance(domain["numeric1"], ContinuousVariable)
+        self.assertIsInstance(domain["numeric2"], ContinuousVariable)
+        self.assertIsInstance(domain["string"], StringVariable)
 
 
 class TestImportDialog(GuiTest):
@@ -253,3 +286,7 @@ class TestUtils(unittest.TestCase):
         assert_array_equal(tb.X[:, 0], [np.nan, 0, np.nan])
         assert_array_equal(tb.X[:, 1], [0, np.nan, np.nan])
         assert_array_equal(tb.X[:, 2], [np.nan, 1, np.nan])
+
+
+if __name__ == "__main__":
+    unittest.main()

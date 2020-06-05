@@ -1259,6 +1259,8 @@ def load_csv(path, opts, progress_callback=None):
             float_precision="round_trip",
             **numbers_format_kwds
         )
+        df = guess_types(df, dtypes, columns_ignored)
+
         if columns_ignored:
             # TODO: use 'usecols' parameter in `read_csv` call to
             # avoid loading/parsing the columns
@@ -1268,6 +1270,86 @@ def load_csv(path, opts, progress_callback=None):
                 inplace=True
             )
         return df
+
+
+def guess_types(
+        df: pd.DataFrame, dtypes: Dict[int, str], columns_ignored: List[int]
+) -> pd.DataFrame:
+    """
+    Guess data type for variables according to values.
+
+    Parameters
+    ----------
+    df
+        Data frame
+    dtypes
+        The dictionary with data types set by user. We will guess values only
+        for columns that does not have data type defined.
+    columns_ignored
+        List with indices of ignored columns. Ignored columns are skipped.
+
+    Returns
+    -------
+    A data frame with changed dtypes according to the strategy.
+    """
+    for i, col in enumerate(df):
+        # only when automatic is set in widget dialog
+        if dtypes.get(i, None) is None and i not in columns_ignored:
+            df[col] = guess_data_type(df[col])
+    return df
+
+
+def guess_data_type(col: pd.Series) -> pd.Series:
+    """
+    Guess column types. Logic is same than in guess_data_type from io_utils
+    module. This function only change the dtype of the column such that later
+    correct Orange.data.variable is used.
+    Logic:
+    - if can converted to date-time (ISO) -> TimeVariable
+    - if numeric (only numbers)
+        - only values {0, 1} or {1, 2} -> DiscreteVariable
+        - else -> ContinuousVariable
+    - if not numbers:
+        - num_unique_values < len(data) ** 0.7 and < 100 -> DiscreteVariable
+        - else -> StringVariable
+
+    Parameters
+    ----------
+    col
+        Data column
+
+    Returns
+    -------
+    Data column with correct dtype
+    """
+    def parse_dates(s):
+        """
+        This is an extremely fast approach to datetime parsing.
+        For large data, the same dates are often repeated. Rather than
+        re-parse these, we store all unique dates, parse them, and
+        use a lookup to convert all dates.
+        """
+        try:
+            dates = {date: pd.to_datetime(date) for date in s.unique()}
+        except ValueError:
+            return None
+        return s.map(dates)
+
+    if pdtypes.is_numeric_dtype(col):
+        unique_values = col.unique()
+        if len(unique_values) <= 2 and (
+                len(np.setdiff1d(unique_values, [0, 1])) == 0
+                or len(np.setdiff1d(unique_values, [1, 2])) == 0):
+            return col.astype("category")
+    else:  # object
+        # try parse as date - if None not a date
+        parsed_col = parse_dates(col)
+        if parsed_col is not None:
+            return parsed_col
+        unique_values = col.unique()
+        if len(unique_values) < 100 and len(unique_values) < len(col)**0.7:
+            return col.astype("category")
+    return col
 
 
 def clear_stack_on_cancel(f):
@@ -1465,7 +1547,8 @@ def pandas_to_table(df):
             )
             # Remap the coldata into the var.values order/set
             coldata = pd.Categorical(
-                coldata, categories=var.values, ordered=coldata.ordered
+                coldata.astype("str"), categories=var.values,
+                ordered=coldata.ordered,
             )
             codes = coldata.codes
             assert np.issubdtype(codes.dtype, np.integer)
