@@ -7,6 +7,8 @@ from AnyQt.QtWidgets import QListWidget, QSizePolicy
 
 import pyqtgraph as pg
 
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
+
 from Orange.base import Model
 from Orange.classification import ThresholdClassifier, CalibratedLearner
 from Orange.evaluation import Results
@@ -17,6 +19,9 @@ from Orange.widgets.evaluate.contexthandlers import \
 from Orange.widgets.evaluate.utils import results_for_preview
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.customizableplot import Updater, \
+    BaseParameterSetter as Setter
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
 
@@ -56,6 +61,63 @@ Metrics = [MetricDefinition(*args) for args in (
      "<p><b>True and false positive rate</b> are proportions of detected "
      "and omitted positive instances</p>"),
 )]
+
+
+class ParameterSetter(Setter):
+    initial_settings = {
+        Setter.LABELS_BOX: {
+            Setter.FONT_FAMILY_LABEL: Updater.FONT_FAMILY_SETTING,
+            Setter.TITLE_LABEL: Updater.FONT_SETTING,
+            Setter.AXIS_TITLE_LABEL: Updater.FONT_SETTING,
+            Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING,
+        },
+        Setter.ANNOT_BOX: {
+            Setter.TITLE_LABEL: {Setter.TITLE_LABEL: ("", "")},
+        }
+    }
+
+    def __init__(self):
+        def update_font_family(**settings):
+            for label, setter in self.setters[self.LABELS_BOX].items():
+                if label != self.FONT_FAMILY_LABEL:
+                    setter(**settings)
+
+        def update_title(**settings):
+            Updater.update_plot_title_font(self.title_item, **settings)
+
+        def update_axes_titles(**settings):
+            Updater.update_axes_titles_font(self.axis_items, **settings)
+
+        def update_axes_ticks(**settings):
+            Updater.update_axes_ticks_font(self.axis_items, **settings)
+
+        def update_title_text(**settings):
+            Updater.update_plot_title_text(
+                self.title_item, settings[self.TITLE_LABEL])
+
+        self.setters = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: update_font_family,
+                self.TITLE_LABEL: update_title,
+                self.AXIS_TITLE_LABEL: update_axes_titles,
+                self.AXIS_TICKS_LABEL: update_axes_ticks,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: update_title_text,
+            }
+        }
+
+    @property
+    def title_item(self):
+        return self.titleLabel
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in self.axes.values()]
+
+
+class PlotItem(pg.PlotItem, ParameterSetter):
+    pass
 
 
 class OWCalibrationPlot(widget.OWWidget):
@@ -157,7 +219,9 @@ class OWCalibrationPlot(widget.OWWidget):
         gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
 
         self.plotview = pg.GraphicsView(background="w")
-        self.plot = pg.PlotItem(enableMenu=False)
+        axes = {"bottom": AxisItem(orientation="bottom"),
+                "left": AxisItem(orientation="left")}
+        self.plot = PlotItem(enableMenu=False, axisItems=axes)
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
 
@@ -176,6 +240,8 @@ class OWCalibrationPlot(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.plotview)
         self._set_explanation()
+
+        VisualSettingsDialog(self, PlotItem.initial_settings)
 
     @Inputs.evaluation_results
     def set_results(self, results):
@@ -497,6 +563,9 @@ class OWCalibrationPlot(widget.OWWidget):
 
         if self.score != 0:
             self.report_raw(self.get_info_text(short=False))
+
+    def set_visual_settings(self, *args):
+        self.plot.set_parameter(*args)
 
 
 def gaussian_smoother(x, y, sigma=1.0):
