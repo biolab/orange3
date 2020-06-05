@@ -602,6 +602,7 @@ class OWDataTable(OWWidget):
         header = view.horizontalHeader()
         header.setSectionsClickable(is_sortable(data))
         header.setSortIndicatorShown(is_sortable(data))
+        header.sortIndicatorChanged.connect(self.update_selection)
 
         view.setModel(datamodel)
 
@@ -856,7 +857,6 @@ class OWDataTable(OWWidget):
         rows = numpy.array(rows, dtype=numpy.intp)
         # map the rows through the applied sorting (if any)
         rows = model.mapToSourceRows(rows)
-        rows.sort()
         rows = rows.tolist()
         return rows, cols
 
@@ -887,21 +887,6 @@ class OWDataTable(OWWidget):
             rowsel, colsel = self.get_selection(view)
             self.selected_rows, self.selected_cols = rowsel, colsel
 
-            def select(data, rows, domain):
-                """
-                Select the data subset with specified rows and domain subsets.
-
-                If either rows or domain is None they mean select all.
-                """
-                if rows is not None and domain is not None:
-                    return data.from_table(domain, data, rows)
-                elif rows is not None:
-                    return data.from_table(data.domain, rows)
-                elif domain is not None:
-                    return data.from_table(domain, data)
-                else:
-                    return data
-
             domain = table.domain
 
             if len(colsel) < len(domain) + len(domain.metas):
@@ -924,13 +909,11 @@ class OWDataTable(OWWidget):
                 metas = select_vars(TableModel.Meta)
                 domain = Orange.data.Domain(attrs, class_vars, metas)
 
-            # Avoid a copy if all/none rows are selected.
+            # Avoid a copy if none rows are selected.
             if not rowsel:
                 selected_data = None
-            elif len(rowsel) == len(table):
-                selected_data = select(table, None, domain)
             else:
-                selected_data = select(table, rowsel, domain)
+                selected_data = table.from_table(domain, table, rowsel)
 
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(create_annotated_table(table, rowsel))
@@ -1095,21 +1078,6 @@ def is_sortable(table):
         return True
     else:
         return False
-
-
-def test_model():
-    app = QApplication([])
-    view = QTableView(
-        sortingEnabled=True
-    )
-    data = Orange.data.Table("lenses")
-    model = TableModel(data)
-
-    view.setModel(model)
-
-    view.show()
-    view.raise_()
-    return app.exec()
 
 
 if __name__ == "__main__":  # pragma: no cover

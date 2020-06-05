@@ -1,5 +1,8 @@
 import unittest
+
+
 from unittest.mock import Mock, patch
+from AnyQt.QtCore import Qt
 
 from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -74,6 +77,29 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(widget.Inputs.data, self.data, 1)
         output = self.get_output(widget.Outputs.selected_data)
         self.assertEqual(5, len(output))
+
+    def test_sorting(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.selected_rows = [0, 1, 2, 3, 4]
+        self.widget.selected_cols = list(range(len(self.data.domain)))
+        self.widget.set_selection()
+
+        output = self.get_output(self.widget.Outputs.selected_data)
+        output, _ = output.get_column_view(0)
+        output_original = output.tolist()
+
+        self.widget.tabs.currentWidget().sortByColumn(1, Qt.AscendingOrder)
+
+        output = self.get_output(self.widget.Outputs.selected_data)
+        output, _ = output.get_column_view(0)
+        output_sorted = output.tolist()
+        
+        # the two outputs should not be the same.
+        self.assertTrue(output_original != output_sorted)
+
+        # check if output after sorting is actually sorted.
+        self.assertTrue(sorted(output_original) == output_sorted)
+        self.assertTrue(sorted(output_sorted) == output_sorted)
 
 
 if __name__ == "__main__":
