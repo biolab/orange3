@@ -11,6 +11,8 @@ import pyqtgraph as pg
 from pyqtgraph.functions import mkPen
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
+
 from Orange.data import Table, DiscreteVariable
 from Orange.data.sql.table import SqlTable
 from Orange.statistics.util import countnans, nanmean, nanmin, nanmax, nanstd
@@ -27,6 +29,9 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owdistributions import LegendItem
+from Orange.widgets.visualize.utils.customizableplot import Updater, \
+    BaseParameterSetter as Setter
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -92,7 +97,7 @@ class LinePlotStyle:
     MEAN_DARK_FACTOR = 110
 
 
-class LinePlotAxisItem(pg.AxisItem):
+class BottomAxisItem(AxisItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._ticks = {}
@@ -183,12 +188,89 @@ class LinePlotViewBox(ViewBox):
         self._graph_state = SELECT
 
 
-class LinePlotGraph(pg.PlotWidget):
+class ParameterSetter(Setter):
+    initial_settings = {
+        Setter.LABELS_BOX: {
+            Setter.FONT_FAMILY_LABEL: Updater.FONT_FAMILY_SETTING,
+            Setter.TITLE_LABEL: Updater.FONT_SETTING,
+            Setter.AXIS_TITLE_LABEL: Updater.FONT_SETTING,
+            Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING,
+            Setter.LEGEND_LABEL: Updater.FONT_SETTING,
+        },
+        Setter.ANNOT_BOX: {
+            Setter.TITLE_LABEL: {Setter.TITLE_LABEL: ("", "")},
+            Setter.X_AXIS_LABEL: {Setter.TITLE_LABEL: ("", "")},
+            Setter.Y_AXIS_LABEL: {Setter.TITLE_LABEL: ("", "")},
+        }
+    }
+
+    def __init__(self):
+        def update_font_family(**settings):
+            for label, setter in self.setters[self.LABELS_BOX].items():
+                if label != self.FONT_FAMILY_LABEL:
+                    setter(**settings)
+
+        def update_title(**settings):
+            Updater.update_plot_title_font(self.title_item, **settings)
+
+        def update_axes_titles(**settings):
+            Updater.update_axes_titles_font(self.axis_items, **settings)
+
+        def update_axes_ticks(**settings):
+            Updater.update_axes_ticks_font(self.axis_items, **settings)
+
+        def update_legend(**settings):
+            self.legend_settings.update(**settings)
+            Updater.update_legend_font(self.legend_items, **settings)
+
+        def update_title_text(**settings):
+            Updater.update_plot_title_text(
+                self.title_item, settings[self.TITLE_LABEL])
+
+        def update_axis(axis, **settings):
+            Updater.update_axis_title_text(
+                self.getAxis(axis), settings[self.TITLE_LABEL])
+
+        self.legend_settings = {}
+        self.setters = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: update_font_family,
+                self.TITLE_LABEL: update_title,
+                self.AXIS_TITLE_LABEL: update_axes_titles,
+                self.AXIS_TICKS_LABEL: update_axes_ticks,
+                self.LEGEND_LABEL: update_legend,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: update_title_text,
+                self.X_AXIS_LABEL: lambda **kw: update_axis("bottom", **kw),
+                self.Y_AXIS_LABEL: lambda **kw: update_axis("left", **kw),
+            }
+        }
+
+    @property
+    def title_item(self):
+        return self.getPlotItem().titleLabel
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in self.getPlotItem().axes.values()]
+
+    @property
+    def legend_items(self):
+        return self.legend.items
+
+
+# Customizable plot widget
+class LinePlotGraph(pg.PlotWidget, ParameterSetter):
     def __init__(self, parent):
-        self.bottom_axis = LinePlotAxisItem(orientation="bottom")
+        self.bottom_axis = BottomAxisItem(orientation="bottom")
+        self.bottom_axis.setLabel("")
+        left_axis = AxisItem(orientation="left")
+        left_axis.setLabel("")
         super().__init__(parent, viewBox=LinePlotViewBox(),
                          background="w", enableMenu=False,
-                         axisItems={"bottom": self.bottom_axis})
+                         axisItems={"bottom": self.bottom_axis,
+                                    "left": left_axis})
         self.view_box = self.getViewBox()
         self.selection = set()
         self.legend = self._create_legend(((1, 0), (1, 0)))
@@ -211,6 +293,7 @@ class LinePlotGraph(pg.PlotWidget):
                 dots = pg.ScatterPlotItem(pen=c, brush=c, size=10, shape="s")
                 self.legend.addItem(dots, escape(name))
             self.legend.show()
+        Updater.update_legend_font(self.legend_items, **self.legend_settings)
 
     def select(self, indices):
         keys = QApplication.keyboardModifiers()
@@ -463,6 +546,7 @@ class OWLinePlot(OWWidget):
         self.graph_variables = []
         self.setup_gui()
 
+        VisualSettingsDialog(self, LinePlotGraph.initial_settings)
         self.graph.view_box.selection_changed.connect(self.selection_changed)
         self.enable_selection.connect(self.graph.view_box.enable_selection)
 
@@ -770,6 +854,9 @@ class OWLinePlot(OWWidget):
     @staticmethod
     def __in(obj, collection):
         return collection is not None and obj in collection
+
+    def set_visual_settings(self, *args):
+        self.graph.set_parameter(*args)
 
 
 if __name__ == "__main__":
