@@ -482,9 +482,13 @@ class Variable(Reprable, metaclass=VariableMeta):
         # Use make to unpickle variables.
         return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
-    def copy(self, compute_value=None, *, name=None, **kwargs):
+    _CopyComputeValue = object()
+
+    def copy(self, compute_value=_CopyComputeValue, *, name=None, **kwargs):
+        if compute_value is self._CopyComputeValue:
+            compute_value = self.compute_value
         var = type(self)(name=name or self.name,
-                         compute_value=compute_value or self.compute_value,
+                         compute_value=compute_value,
                          sparse=self.sparse, **kwargs)
         var.attributes = dict(self.attributes)
         return var
@@ -590,7 +594,8 @@ class ContinuousVariable(Variable):
 
     str_val = repr_val
 
-    def copy(self, compute_value=None, *, name=None, **kwargs):
+    def copy(self, compute_value=Variable._CopyComputeValue,
+             *, name=None, **kwargs):
         # pylint understand not that `var` is `DiscreteVariable`:
         # pylint: disable=protected-access
         number_of_decimals = kwargs.pop("number_of_decimals", None)
@@ -826,7 +831,8 @@ class DiscreteVariable(Variable):
                                self.values, self.ordered), \
             __dict__
 
-    def copy(self, compute_value=None, *, name=None, values=None, **_):
+    def copy(self, compute_value=Variable._CopyComputeValue,
+             *, name=None, values=None, **_):
         # pylint: disable=arguments-differ
         if values is not None and len(values) != len(self.values):
             raise ValueError(
@@ -956,7 +962,7 @@ class TimeVariable(ContinuousVariable):
         self.have_date = have_date
         self.have_time = have_time
 
-    def copy(self, compute_value=None, *, name=None, **_):
+    def copy(self, compute_value=Variable._CopyComputeValue, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
                             have_date=self.have_date, have_time=self.have_time)
 

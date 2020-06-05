@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, abstract-method, protected-access
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -420,6 +420,123 @@ class TestOWConcatenate(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         self.assertEqual(info._StateInfo__output_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+    def _create_compute_values(self):
+        a1, a2, a3, a4, c1 = self.iris.domain.variables
+
+        def times2(*_):
+            return 2
+
+        na1 = a1.copy()
+        na2 = a2.copy(compute_value=times2)
+        na3 = a3.copy(compute_value=lambda *_: 3)
+        na4 = a4.copy(compute_value=lambda *_: 4)
+        nc1 = c1.copy(compute_value=lambda *_: 5)
+
+        ma1 = a1.copy()
+        ma2 = a2.copy(compute_value=times2)
+        ma3 = a3.copy(compute_value=lambda x: 6)
+        ma4 = a4.copy(compute_value=lambda x: 7)
+
+        table_n = self.iris.transform(Domain([na1, na2, na3, na4], nc1))
+        table_m = self.iris.transform(Domain([ma1, ma2, ma3], None, [ma4]))
+        return table_n, table_m
+
+    def test_dumb_tables(self):
+        self.widget.apply = Mock()
+        table_n, table_m = self._create_compute_values()
+        na1, na2, na3, na4, nc1 = table_n.domain.variables
+        ma1, ma2, ma3 = table_m.domain.attributes
+        ma4 = table_m.domain.metas[0]
+
+        self.send_signal(self.widget.Inputs.additional_data, table_n, 1)
+        self.send_signal(self.widget.Inputs.additional_data, table_m, 2)
+
+        # pylint: disable=unbalanced-tuple-unpacking
+        dtable_n, dtable_m = self.widget._dumb_tables()
+        dna1, dna2, dna3, dna4, dnc1 = dtable_n.domain.variables
+        dma1, dma2, dma3 = dtable_m.domain.attributes
+        dma4 = dtable_m.domain.metas[0]
+
+        # No copying: same name and no compute value
+        self.assertIs(na1, dna1)
+        self.assertIs(ma1, dma1)
+
+        # No copying: same name and same compute value
+        self.assertIs(na2, dna2)
+        self.assertIs(ma2, dma2)
+
+        # Copy: same name and different compute value
+        self.assertIsNot(na3, dna3)
+        self.assertIsNot(ma3, dma3)
+        self.assertIsNone(dna3.compute_value)
+        self.assertIsNone(dma3.compute_value)
+
+        # No copying: same name and different compute value, but different part
+        self.assertIs(na4, dna4)
+        self.assertIs(ma4, dma4)
+
+        # No copying: does not appear in the other table
+        self.assertIs(nc1, dnc1)
+
+        np.testing.assert_equal(table_m.X, dtable_m.X)
+        np.testing.assert_equal(table_m.Y, dtable_m.Y)
+        np.testing.assert_equal(table_n.X, dtable_n.X)
+        np.testing.assert_equal(table_n.metas, dtable_n.metas)
+
+    def test_dont_ignore_compute_value(self):
+        table_n, table_m = self._create_compute_values()
+        na1, na2, na3, na4, nc1 = table_n.domain.variables
+        ma3 = table_m.domain.attributes[2]
+        ma4 = table_m.domain.metas[0]
+
+        self.send_signal(self.widget.Inputs.additional_data, table_n, 1)
+        self.send_signal(self.widget.Inputs.additional_data, table_m, 2)
+
+        self.widget.ignore_compute_value = False
+        self.widget.apply()
+
+        output = self.get_output(self.widget.Outputs.data)
+        attributes = output.domain.attributes
+        self.assertEqual(len(attributes), 5)
+        self.assertIs(attributes[0], na1)
+        self.assertIs(attributes[1], na2)
+        self.assertIs(attributes[2].compute_value.variable, na3)  # renamed
+        self.assertIs(attributes[3].compute_value.variable, na4)  # renamed
+        self.assertIs(attributes[4].compute_value.variable, ma3)  # renamed
+
+        self.assertIs(output.domain.class_var, nc1)
+
+        self.assertEqual(len(output.domain.metas), 1)
+        self.assertIs(output.domain.metas[0].compute_value.variable, ma4)
+
+    def test_ignore_compute_value(self):
+        table_n, table_m = self._create_compute_values()
+        na1, na2, na3, na4, nc1 = table_n.domain.variables
+        ma3 = table_m.domain.attributes[2]
+        ma4 = table_m.domain.metas[0]
+
+        self.send_signal(self.widget.Inputs.additional_data, table_n, 1)
+        self.send_signal(self.widget.Inputs.additional_data, table_m, 2)
+
+        self.widget.ignore_compute_value = True
+        self.widget.apply()
+
+        output = self.get_output(self.widget.Outputs.data)
+        attributes = output.domain.attributes
+        self.assertEqual(len(attributes), 4)
+        self.assertIs(attributes[0], na1)
+        self.assertIs(attributes[1], na2)
+        self.assertIsNot(attributes[2], na3)
+        self.assertIsNot(attributes[2], ma3)
+        self.assertIsNone(attributes[2].compute_value, ma3)  # renamed
+        self.assertEqual(attributes[2].name, na3.name)
+        self.assertIs(attributes[3].compute_value.variable, na4)  # renamed
+
+        self.assertIs(output.domain.class_var, nc1)
+
+        self.assertEqual(len(output.domain.metas), 1)
+        self.assertIs(output.domain.metas[0].compute_value.variable, ma4)  # renamed
 
 
 if __name__ == "__main__":
