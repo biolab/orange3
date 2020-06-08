@@ -821,8 +821,8 @@ class TestReinterpretTransforms(TestCase):
         domain = table.domain
         tvars = []
         for v in domain.metas:
-            for tr in [AsContinuous(), AsCategorical(), AsTime(), AsString()]:
-                tr = apply_reinterpret(v, tr, table_column_data(table, v))
+            for i, tr in enumerate([AsContinuous(), AsCategorical(), AsTime(), AsString()]):
+                tr = apply_reinterpret(v, tr, table_column_data(table, v)).renamed(f'{v.name}_{i}')
                 tvars.append(tr)
         tdomain = Domain([], metas=tvars)
         ttable = table.transform(tdomain)
