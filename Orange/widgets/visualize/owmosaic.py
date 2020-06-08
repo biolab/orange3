@@ -14,7 +14,6 @@ from AnyQt.QtWidgets import (
 
 from Orange.data import Table, filter, Variable, Domain
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
-from Orange.data.util import get_unique_names_domain
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 from Orange.preprocess.score import ReliefF
@@ -384,7 +383,9 @@ class OWMosaicDisplay(OWWidget):
             return None
         elif any(attr.is_continuous for attr in data.domain.variables):
             return Discretize(
-                method=EqualFreq(n=4), remove_const=False, discretize_classes=True,
+                method=EqualFreq(n=4),
+                remove_const=False,
+                discretize_classes=True,
                 discretize_metas=True)(data)
         else:
             return data
@@ -450,7 +451,7 @@ class OWMosaicDisplay(OWWidget):
             self.info.set_input_summary(self.info.NoInput)
             return
 
-        self.info.set_input_summary(len(data),format_summary_details(data))
+        self.info.set_input_summary(len(data), format_summary_details(data))
         self.init_combos(self.data)
         self.openContext(self.data)
 
@@ -892,7 +893,8 @@ class OWMosaicDisplay(OWWidget):
                        self.canvas_view.height() / 2)
             return
         if self.variable_color is None:
-            apriori_dists = [get_distribution(data, attr) for attr in attr_list]
+            apriori_dists = [get_distribution(data, attr) for attr
+                             in attr_list]
         else:
             apriori_dists = []
 

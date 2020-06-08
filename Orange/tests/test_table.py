@@ -1651,7 +1651,7 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table, self.table, xcols=order[:2], ycols=order[2:4], mcols=order[4:])
 
     def test_can_use_class_vars_as_new_columns(self):
-        a, c, _ = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         order = np.random.permutation(range(a))
         cvs = [self.domain.attributes[i] for i in order[:2]]
         metas = [self.domain.attributes[i] for i in order[2:]]
@@ -1677,10 +1677,10 @@ class CreateTableWithDomainAndTable(TableTests):
         a, c, m = column_sizes(self.table)
         order = (list(range(a+c)) + list(range(-m+1, 0)))
         random. shuffle(order)
-        vars = list(self.domain.variables) + list(self.domain.metas[::-1])
-        atrs = [vars[order[i]] for i in range(a)]
-        cv = [vars[order[i]] for i in range(a, a+c)]
-        metas = [vars[order[i]] for i in range(a+c, a+c+m-1)]
+        vars_ = list(self.domain.variables) + list(self.domain.metas[::-1])
+        atrs = [vars_[order[i]] for i in range(a)]
+        cv = [vars_[order[i]] for i in range(a, a+c)]
+        metas = [vars_[order[i]] for i in range(a+c, a+c+m-1)]
 
         new_domain = self.create_domain(atrs, cv, metas)
         new_table = data.Table.from_table(new_domain, self.table)
@@ -1691,10 +1691,10 @@ class CreateTableWithDomainAndTable(TableTests):
         a, c, m = column_sizes(self.table)
         order = (list(range(a+c)) + list(range(-m+1, 0)))
         random.shuffle(order)
-        vars = list(self.domain.variables) + list(self.domain.metas[::-1])
-        atrs = [vars[order[i]] for i in range(a)]
-        cv = [vars[order[i]] for i in range(a, a+c)]
-        metas = [vars[order[i]] for i in range(a+c, a+c+m-1)]
+        vars_ = list(self.domain.variables) + list(self.domain.metas[::-1])
+        atrs = [vars_[order[i]] for i in range(a)]
+        cv = [vars_[order[i]] for i in range(a, a+c)]
+        metas = [vars_[order[i]] for i in range(a+c, a+c+m-1)]
 
         new_domain = self.create_domain(atrs, cv, metas)
         new_table = data.Table.from_table(new_domain, self.table, [0])
