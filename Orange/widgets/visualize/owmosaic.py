@@ -14,6 +14,7 @@ from AnyQt.QtWidgets import (
 
 from Orange.data import Table, filter, Variable, Domain
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
+from Orange.data.util import get_unique_names_domain
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 from Orange.preprocess.score import ReliefF
@@ -868,7 +869,12 @@ class OWMosaicDisplay(OWWidget):
             return
         attr_list = self.get_disc_attr_list()
         class_var = data.domain.class_var
+        #u_attrs, u_cv, _,  _ = get_unique_names_domain(attr_list, class_var)
+        #TODO: rename here
+        """
         if class_var:
+            if class_var in attr_list:
+                attr_list.remove(class_var)
             sql = isinstance(data, SqlTable)
             name = not sql and data.name
             # save class_var because it is removed in the next line
@@ -878,6 +884,7 @@ class OWMosaicDisplay(OWWidget):
                 data.name = name
         else:
             data = data[:, attr_list]
+        """
         # TODO: check this
         # data = Preprocessor_dropMissing(data)
         if len(data) == 0:
