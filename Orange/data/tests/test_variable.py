@@ -163,6 +163,7 @@ class TestVariable(unittest.TestCase):
         a._compute_value = Identity(a1)
         self.assertEqual(a, a)
         self.assertEqual(a, b)
+        self.assertEqual(hash(a), hash(b))
 
         b._compute_value = a.compute_value
         self.assertEqual(a, b)
@@ -205,6 +206,27 @@ class TestVariable(unittest.TestCase):
 
         b._compute_value = Identity(a2)
         self.assertEqual(hash(a), hash(b))
+
+        at = TimeVariable("a")
+        b = ContinuousVariable("b")
+        self.assertEqual(hash(a1), hash(a2))
+        self.assertNotEqual(hash(a1), hash(b))
+        self.assertNotEqual(hash(a1), hash(at))
+
+    def test_hash_eq(self):
+        a = ContinuousVariable("a")
+        b1 = ContinuousVariable("b", compute_value=Identity(a))
+        b2 = ContinuousVariable("b2", compute_value=Identity(b1))
+        b3 = ContinuousVariable("b")
+        self.assertEqual(a, b2)
+        self.assertEqual(b1, b2)
+        self.assertEqual(a, b1)
+        self.assertNotEqual(b1, b3)
+
+        self.assertEqual(hash(a), hash(b2))
+        self.assertEqual(hash(b1), hash(b2))
+        self.assertEqual(hash(a), hash(b1))
+        self.assertNotEqual(hash(b1), hash(b3))
 
 
 def variabletest(varcls):
@@ -251,7 +273,6 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(var.val_from_str_add("M"), 1)
         self.assertEqual(var.val_from_str_add("F"), 0)
         self.assertEqual(var.val_from_str_add("N"), 2)
-
 
     def test_repr(self):
         var = DiscreteVariable.make("a", values=("F", "M"))
