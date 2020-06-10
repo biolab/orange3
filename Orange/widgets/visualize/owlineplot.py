@@ -520,6 +520,7 @@ class OWLinePlot(OWWidget):
     show_error = Setting(False)
     auto_commit = Setting(True)
     selection = Setting(None, schema_only=True)
+    visual_settings = Setting({}, schema_only=True)
 
     graph_name = "graph.plotItem"
 
@@ -855,8 +856,9 @@ class OWLinePlot(OWWidget):
     def __in(obj, collection):
         return collection is not None and obj in collection
 
-    def set_visual_settings(self, *args):
-        self.graph.set_parameter(*args)
+    def set_visual_settings(self, key, value):
+        self.graph.set_parameter(key, value)
+        self.visual_settings[key] = value
 
 
 if __name__ == "__main__":

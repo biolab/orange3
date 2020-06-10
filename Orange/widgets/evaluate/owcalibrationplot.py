@@ -162,6 +162,7 @@ class OWCalibrationPlot(widget.OWWidget):
     fold_curves = settings.Setting(False)
     display_rug = settings.Setting(True)
     threshold = settings.Setting(0.5)
+    visual_settings = settings.Setting({}, schema_only=True)
     auto_commit = settings.Setting(True)
 
     graph_name = "plot"
@@ -564,8 +565,9 @@ class OWCalibrationPlot(widget.OWWidget):
         if self.score != 0:
             self.report_raw(self.get_info_text(short=False))
 
-    def set_visual_settings(self, *args):
-        self.plot.set_parameter(*args)
+    def set_visual_settings(self, key, value):
+        self.plot.set_parameter(key, value)
+        self.visual_settings[key] = value
 
 
 def gaussian_smoother(x, y, sigma=1.0):

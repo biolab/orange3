@@ -381,6 +381,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
+    visual_settings = Setting({}, schema_only=True)
     auto_commit = Setting(True)
 
     GRAPH_CLASS = OWScatterPlotBase
@@ -625,8 +626,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
              "{} %".format(self.graph.jitter_size))))
 
     # Customize plot
-    def set_visual_settings(self, *args):
-        self.graph.set_parameter(*args)
+    def set_visual_settings(self, key, value):
+        self.graph.set_parameter(key, value)
+        self.visual_settings[key] = value
 
     @staticmethod
     def _get_caption_var_name(var):
@@ -664,8 +666,8 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
         proj_error = Msg("An error occurred while projecting data.\n{}")
 
     def __init__(self):
-        super().__init__()
         self.projector = self.projection = None
+        super().__init__()
         self.graph.view_box.started.connect(self._manual_move_start)
         self.graph.view_box.moved.connect(self._manual_move)
         self.graph.view_box.finished.connect(self._manual_move_finish)
