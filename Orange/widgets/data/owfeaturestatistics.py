@@ -850,7 +850,8 @@ class OWFeatureStatistics(widget.OWWidget):
         self.Outputs.statistics.send(statistics)
 
     def send_report(self):
-        pass
+        view = self.table_view
+        self.report_table(view)
 
     @classmethod
     def migrate_context(cls, context, version):
