@@ -6,6 +6,61 @@ Change Log
 * ...
 
 
+[3.26.0] - 2020-06-12
+--------------------
+##### Enhancements
+* main: Log to main window output view ([#4842](../../pull/4842))
+* Feature statistics report ([#4812](../../pull/4812))
+* Distributions: change Histogram Data output ([#4832](../../pull/4832))
+* owtable: output sorted data ([#4644](../../pull/4644))
+* Add an option to Concatenate to merge columns with different formulae ([#4831](../../pull/4831))
+* CSV Import: guess data types ([#4838](../../pull/4838))
+* HeatMap: Allow setting the center when using diverging palettes ([#4809](../../pull/4809))
+* Heatmap: Split columns, Column annotations ([#4703](../../pull/4703))
+* Sort values naturally when reading files ([#4793](../../pull/4793))
+* Color widget: Add reset button ([#4718](../../pull/4718))
+* Gradient selection/parameters widget ([#4596](../../pull/4596))
+* Select Rows: Allow partial context matches ([#4740](../../pull/4740))
+* Edit Domain: Add an option to change the output table name ([#4722](../../pull/4722))
+* ApplyDomain: data info displayed in the status bar ([#4611](../../pull/4611))
+* BoxPlot: data info displayed in the status bar ([#4626](../../pull/4626))
+* LinePlot: data info displayed in the status bar ([#4633](../../pull/4633))
+* MosaicDisplay: data info displayed in the status bar ([#4634](../../pull/4634))
+* CreateClass: data info displayed in the status bar ([#4625](../../pull/4625))
+
+##### Bugfixes
+* Variable: Fix cases when equal variables had different hashes ([#4843](../../pull/4843))
+* OWBoxPlot: Fix wrong labels position and ordering for values with no items ([#4829](../../pull/4829))
+* Select Rows: Fix saving meta variables in context ([#4830](../../pull/4830))
+* Select Columns: Fix attributes sorting ([#4827](../../pull/4827))
+* Fix and update Softmax regression learner ([#4767](../../pull/4767))
+* PCA: fix subsets with the "Data" output ([#4811](../../pull/4811))
+* OWContinuize: Fix treatment of continuous features. ([#4806](../../pull/4806))
+* Select Rows: Fix incorrectly stored values in settings ([#4798](../../pull/4798))
+* Fix colors for discrete variables with >256 values ([#4803](../../pull/4803))
+* Unique domain checks ([#4760](../../pull/4760))
+* owheatmap: Use 'is' instead of 'eq' for column id comparison ([#4788](../../pull/4788))
+* BoxPlot: Fix invalid data range ([#4769](../../pull/4769))
+* graphicstextlist: Fix size/spacing adjustment for single item ([#4777](../../pull/4777))
+* Feature Statistics: Fix wrong or even crashing selections ([#4741](../../pull/4741))
+* UrlReader: shorten TempFile extension ([#4747](../../pull/4747))
+* Embedder: catch machine id setting type error ([#4675](../../pull/4675))
+* relief: Fix contingency (de)allocation ([#4745](../../pull/4745))
+* Test and Score: Improve data errors ([#4738](../../pull/4738))
+* PythagoreanTree: Fix crushing when number of classes decreases ([#4743](../../pull/4743))
+* Fix report in Predictions ([#4709](../../pull/4709))
+* owheatmap: Handle all N/A column for color annotation ([#4742](../../pull/4742))
+* Distributions widget's legend: Remove the square from sigma in normal and Rayleigh ([#4739](../../pull/4739))
+* Several fixes in learners/models ([#4655](../../pull/4655))
+* Heatmap: Split by missing values ([#4686](../../pull/4686))
+* Owpaintdata, owpivot: ensure unique domain ([#4578](../../pull/4578))
+* Pythagorantrees/forests: change context handler ([#4656](../../pull/4656))
+* Color: Fix renaming of variables ([#4669](../../pull/4669))
+* Heatmap: Sticky footer ([#4610](../../pull/4610))
+* SOM: fix colors for numeric variables ([#4660](../../pull/4660))
+* Fixes for deprecations in 3.26, and for changed behaviour of file dialog ([#4643](../../pull/4643))
+
+
 [3.25.1] - 2020-05-22
 --------------------
 ##### Bugfixes
@@ -1382,7 +1437,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.25.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.26.0...HEAD
+[3.26.0]: https://github.com/biolab/orange3/compare/3.25.1...3.26.0
 [3.25.1]: https://github.com/biolab/orange3/compare/3.25.0...3.25.1
 [3.25.0]: https://github.com/biolab/orange3/compare/3.24.1...3.25.0
 [3.24.1]: https://github.com/biolab/orange3/compare/3.24.0...3.24.1
