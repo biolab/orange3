@@ -8,7 +8,6 @@ import unittest
 import pickle
 import pkgutil
 from datetime import datetime, timezone
-from distutils.version import LooseVersion
 
 from io import StringIO
 
@@ -296,19 +295,6 @@ class TestDiscreteVariable(VariableTest):
         a.add_value("b")
         self.assertEqual(list(a.values), ["a", "b", "c"])
         self.assertEqual(list(a._value_index), ["a", "b", "c"])
-
-    def test_tuple_list_warning(self):
-        if LooseVersion(Orange.version.short_version) >= LooseVersion("3.27"):
-            self.fail("Remove class TupleList; replace it with tuple.")
-
-        d1 = DiscreteVariable("A", values=("one", "two"))
-        with self.assertWarns(DeprecationWarning):
-            val = d1.values + ["three", ]
-        self.assertEqual(val, ["one", "two", "three"])
-        with self.assertWarns(DeprecationWarning):
-            val = d1.values.copy()
-        self.assertIsInstance(val, list)
-        self.assertSequenceEqual(val, d1.values)
 
     def test_unpickle(self):
         d1 = DiscreteVariable("A", values=("two", "one"))
