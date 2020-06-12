@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 
@@ -6,6 +7,7 @@ from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate, possible_duplicate_table
 from Orange.widgets.unsupervised.owdbscan import OWDBSCAN, get_kth_distances
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWDBSCAN(WidgetTest):
@@ -220,3 +222,23 @@ class TestOWDBSCAN(WidgetTest):
         self.send_signal(w.Inputs.data, self.iris)
         output = self.get_output(w.Outputs.annotated_data)
         self.assertTupleEqual((150, 1), output[:, "Cluster"].metas.shape)
+
+    def test_summary(self):
+        """Check if the status bar updates when data on input"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        summary, details = f"{len(self.iris)}", format_summary_details(self.iris)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
