@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel, QHBoxLayout, QDateTimeEdit)
+    QLabel, QHBoxLayout, QDateTimeEdit, QCalendarWidget)
 from AnyQt.QtGui import (QDoubleValidator, QStandardItemModel, QStandardItem,
                          QFontMetrics, QPalette)
 from AnyQt.QtCore import Qt, QPoint, QPersistentModelIndex, QLocale, \
@@ -146,6 +146,30 @@ def _plural(s):
         s = s.replace(word, word[:-1])
     return s
 
+
+class CalendarWidgetWithTime(QCalendarWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        timeedit = QDateTimeEdit(displayFormat="hh:mm:ss")
+
+        self._time_layout = sublay = QHBoxLayout()
+        sublay.setContentsMargins(6, 6, 6, 6)
+        sublay.addStretch(1)
+        sublay.addWidget(QLabel("Time: "))
+        sublay.addWidget(timeedit)
+        sublay.addStretch(1)
+        self.layout().addLayout(sublay)
+
+    def minimumSize(self):
+        return self.sizeHint()
+
+    def sizeHint(self):
+        size = super().sizeHint()
+        size.setHeight(
+            size.height()
+            + self._time_layout.sizeHint().height()
+            + self.layout().spacing())
+        return size
 
 class OWSelectRows(widget.OWWidget):
     name = "Select Rows"
@@ -867,6 +891,8 @@ class DateTimeWidget(QDateTimeEdit):
         if self.have_date and self.have_time:
             self.setDisplayFormat("yyyy-MM-dd hh:mm:ss")
             self.setCalendarPopup(True)
+            self._calendarWidget = CalendarWidgetWithTime(self)
+            self.setCalendarWidget(self._calendarWidget)
             c_format = "%Y-%m-%d %H:%M:%S"
             min_datetime, max_datetime = self.find_range(self.column, c_format)
             self.min_datetime = QDateTime.fromString(min_datetime, str_format)
