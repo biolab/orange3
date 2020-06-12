@@ -637,6 +637,7 @@ class OWSOM(OWWidget):
     def _draw_colored_circles(self, sizes):
         fx, fy = self._grid_factors
         color_column = self._get_color_column()
+        qcolors = self.colors.qcolors_w_nan
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = sizes[x, y]
@@ -648,10 +649,10 @@ class OWSOM(OWWidget):
                 if len(color_dist) != len(members):
                     self.Warning.missing_colors(self.attr_color.name)
                 bc = np.bincount(color_dist, minlength=len(self.colors))
-                color = self.colors[np.argmax(bc)]
+                color = qcolors[np.argmax(bc)]
                 ellipse = ColoredCircle(r / 2, color, np.max(bc) / len(members))
                 ellipse.setPos(x + (y % 2) * fx, y * fy)
-                ellipse.setToolTip(self._tooltip(self.colors, bc))
+                ellipse.setToolTip(self._tooltip(qcolors, bc))
                 self.elements.addToGroup(ellipse)
 
     def redraw_grid(self):
@@ -863,7 +864,7 @@ class OWSOM(OWWidget):
 
         items = []
         size = 8
-        for name, color in zip(names, self.colors):
+        for name, color in zip(names, self.colors.qcolors):
             item = QGraphicsItemGroup()
             item.addToGroup(
                 CanvasRectangle(None, -size / 2, -size / 2, size, size,

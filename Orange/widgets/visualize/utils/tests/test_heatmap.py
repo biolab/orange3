@@ -1,6 +1,7 @@
 import numpy as np
 
 from AnyQt.QtCore import Qt, QPoint
+from AnyQt.QtGui import QFont
 from AnyQt.QtTest import QTest, QSignalSpy
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsView
 
@@ -8,11 +9,11 @@ from orangecanvas.gui.test import mouseMove
 from orangewidget.tests.base import GuiTest
 
 from Orange.clustering.hierarchical import Tree, SingletonData, ClusterData
-from Orange.widgets.visualize.utils.heatmap import HeatmapGridWidget, ColorMap, \
-    GradientColorMap, CategoricalColorMap
+from Orange.widgets.visualize.utils.heatmap import HeatmapGridWidget, \
+    GradientColorMap, CategoricalColorMap, CategoricalColorLegend
 
 
-class TestHeatmapGridWidget(GuiTest):
+class _GraphicsGuiTest(GuiTest):
     scene: QGraphicsScene
     view: QGraphicsView
 
@@ -30,6 +31,8 @@ class TestHeatmapGridWidget(GuiTest):
         self.view = None
         super().tearDown()
 
+
+class TestHeatmapGridWidget(_GraphicsGuiTest):
     _c2 = Tree(ClusterData((0, 1), 0.5), (
         Tree(SingletonData((0, 0), 0, 0), ()),
         Tree(SingletonData((1, 1), 0, 1), ()),
@@ -170,3 +173,20 @@ class TestHeatmapGridWidget(GuiTest):
         w.setHeatmaps(self._Data["2-2"])
         w.setColorMap(GradientColorMap([[255] * 3, [0] * 3]))
         w.setColorMap(GradientColorMap([[255] * 3, [0] * 3], center=0))
+
+
+class TestCategoricalColorLegend(_GraphicsGuiTest):
+    def ensure_scene_polished(self):
+        self.view.grab()
+
+    def test_font_propagation(self):
+        cmap = CategoricalColorMap(np.array([[255] * 3, [0] * 3]),
+                                   names=["a", "b"])
+        w = CategoricalColorLegend(cmap, title="Title")
+        self.scene.addItem(w)
+        font = QFont("Windings")
+        w.setFont(font)
+        # needs to be polished for FontChange to be delivered
+        self.ensure_scene_polished()
+        self.assertEqual(w.layout().itemAt(0).item.font().family(),
+                         font.family())

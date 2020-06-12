@@ -605,6 +605,7 @@ class ContinuousPalettesModel(QAbstractListModel):
     """
     Model for combo boxes
     """
+    KeyRole = Qt.UserRole + 1
     def __init__(self, parent=None, categories=None, icon_width=64):
         super().__init__(parent)
         self.icon_width = icon_width
@@ -641,6 +642,8 @@ class ContinuousPalettesModel(QAbstractListModel):
                 return item.color_strip(self.icon_width, 16)
             if role == Qt.UserRole:
                 return item
+            if role == self.KeyRole:
+                return item.name
         return None
 
     def flags(self, index):

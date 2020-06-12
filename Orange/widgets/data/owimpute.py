@@ -9,7 +9,7 @@ from typing import List, Any, Dict, Tuple, Type, Optional
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGroupBox, QRadioButton, QPushButton, QHBoxLayout,
+    QGroupBox, QRadioButton, QPushButton, QHBoxLayout, QGridLayout,
     QVBoxLayout, QStackedWidget, QComboBox,
     QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
 )
@@ -172,18 +172,19 @@ class OWImpute(OWWidget):
         self.controlArea.layout().addLayout(main_layout)
 
         box = QGroupBox(title=self.tr("Default Method"), flat=False)
-        box_layout = QVBoxLayout(box)
+        box_layout = QGridLayout(box)
+        box_layout.setContentsMargins(5, 0, 0, 0)
         main_layout.addWidget(box)
 
         button_group = QButtonGroup()
         button_group.buttonClicked[int].connect(self.set_default_method)
 
-        for method, _ in list(METHODS.items())[1:-1]:
+        for i, (method, _) in enumerate(list(METHODS.items())[1:-1]):
             imputer = self.create_imputer(method)
             button = QRadioButton(imputer.name)
             button.setChecked(method == self.default_method_index)
             button_group.addButton(button, method)
-            box_layout.addWidget(button)
+            box_layout.addWidget(button, i % 3, i // 3)
 
         self.default_button_group = button_group
 

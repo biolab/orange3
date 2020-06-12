@@ -198,7 +198,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         header.setSectionResizeMode(1, QHeaderView.Stretch)
 
     def start(self, task, *args, **kwargs):
-        self.__set_state_ready()
+        self._set_empty_status()
         super().start(task, *args, **kwargs)
         self.__set_state_busy()
 
@@ -221,13 +221,16 @@ class CorrelationRank(VizRankDialogAttrPair):
         self.__set_state_ready()
 
     def __set_state_ready(self):
-        self.master.progressBarFinished()
+        self._set_empty_status()
         self.master.setBlocking(False)
-        self.master.setStatusMessage("")
 
     def __set_state_busy(self):
         self.master.progressBarInit()
         self.master.setBlocking(True)
+
+    def _set_empty_status(self):
+        self.master.progressBarFinished()
+        self.master.setStatusMessage("")
 
 
 class OWCorrelations(OWWidget):
@@ -248,9 +251,9 @@ class OWCorrelations(OWWidget):
 
     correlation_type: int
 
-    settings_version = 2
+    settings_version = 3
     settingsHandler = DomainContextHandler()
-    selection = ContextSetting(())
+    selection = ContextSetting([])
     feature = ContextSetting(None)
     correlation_type = Setting(0)
 
@@ -307,7 +310,7 @@ class OWCorrelations(OWWidget):
         self.apply()
 
     def _vizrank_selection_changed(self, *args):
-        self.selection = [(var.name, vartype(var)) for var in args]
+        self.selection = list(args)
         self.commit()
 
     def _vizrank_stopped(self):
@@ -323,7 +326,7 @@ class OWCorrelations(OWWidget):
         # filtered by a feature and therefore selection could not be found
         selection_in_model = False
         if self.selection:
-            sel_names = sorted(name for name, _ in self.selection)
+            sel_names = sorted(var.name for var in self.selection)
             for i in range(model.rowCount()):
                 # pylint: disable=protected-access
                 names = sorted(x.name for x in model.data(
@@ -345,7 +348,7 @@ class OWCorrelations(OWWidget):
         self.clear_messages()
         self.data = data
         self.cont_data = None
-        self.selection = ()
+        self.selection = []
         if data is not None:
             if len(data) < 2:
                 self.Warning.not_enough_inst()
@@ -415,7 +418,7 @@ class OWCorrelations(OWWidget):
 
         # data has been imputed; send original attributes
         self.Outputs.features.send(AttributeList(
-            [self.data.domain[name] for name, _ in self.selection]))
+            [self.data.domain[var.name] for var in self.selection]))
         self.Outputs.correlations.send(corr_table)
 
     def send_report(self):
@@ -426,8 +429,12 @@ class OWCorrelations(OWWidget):
     def migrate_context(cls, context, version):
         if version < 2:
             sel = context.values["selection"]
-            context.values["selection"] = ([(var.name, vartype(var))
-                                            for var in sel[0]], sel[1])
+            context.values["selection"] = [(var.name, vartype(var))
+                                           for var in sel[0]]
+        if version < 3:
+            sel = context.values["selection"]
+            context.values["selection"] = ([(name, vtype + 100)
+                                            for name, vtype in sel], -3)
 
 
 if __name__ == "__main__":  # pragma: no cover

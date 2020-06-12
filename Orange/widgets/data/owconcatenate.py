@@ -6,7 +6,7 @@ Concatenate (append) two or more datasets.
 
 """
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict, namedtuple, defaultdict
 from functools import reduce
 from itertools import chain, count
 from typing import List
@@ -72,11 +72,13 @@ class OWConcatenate(widget.OWWidget):
     #: User specified name for the "Source ID" attr
     source_attr_name = settings.Setting("Source ID")
 
+    ignore_compute_value = settings.Setting(False)
+
     want_main_area = False
     resizing_enabled = False
 
-    domain_opts = ("Union of attributes appearing in all tables",
-                   "Intersection of attributes in all tables")
+    domain_opts = ("all variables that appear in input tables",
+                   "only variables that appear in all tables")
 
     id_roles = ("Class attribute", "Attribute", "Meta attribute")
 
@@ -88,14 +90,14 @@ class OWConcatenate(widget.OWWidget):
         self.primary_data = None
         self.more_data = OrderedDict()
 
-        self.mergebox = gui.vBox(self.controlArea, "Domain Merging")
+        self.mergebox = gui.vBox(self.controlArea, "Variable Merging")
         box = gui.radioButtons(
             self.mergebox, self, "merge_type",
             callback=self._merge_type_changed)
 
         gui.widgetLabel(
             box, self.tr("When there is no primary table, " +
-                         "the domain should be:"))
+                         "the output should contain:"))
 
         for opts in self.domain_opts:
             gui.appendRadioButton(box, self.tr(opts))
@@ -108,6 +110,12 @@ class OWConcatenate(widget.OWWidget):
                     "is no conflict between input classes."))
         label.setWordWrap(True)
 
+        gui.separator(box)
+        gui.checkBox(
+            box, self, "ignore_compute_value",
+            "Treat variables with the same name as the same variable,\n"
+            "even if they are computed using different formulae.",
+            callback=self.apply, stateWhenDisabled=False)
         ###
         box = gui.vBox(
             self.controlArea, self.tr("Source Identification"),
@@ -207,7 +215,10 @@ class OWConcatenate(widget.OWWidget):
             tables = [self.primary_data] + list(self.more_data.values())
             domain = self.primary_data.domain
         elif self.more_data:
-            tables = self.more_data.values()
+            if self.ignore_compute_value:
+                tables = self._dumb_tables()
+            else:
+                tables = self.more_data.values()
             domains = [table.domain for table in tables]
             domain = self.merge_domains(domains)
 
@@ -239,6 +250,35 @@ class OWConcatenate(widget.OWWidget):
             self.info.set_output_summary(self.info.NoOutput)
 
         self.Outputs.data.send(data)
+
+    def _dumb_tables(self):
+        def enumerated_parts(domain):
+            return enumerate((domain.attributes, domain.class_vars, domain.metas))
+
+        compute_value_groups = defaultdict(set)
+        for table in self.more_data.values():
+            for part, part_vars in enumerated_parts(table.domain):
+                for var in part_vars:
+                    desc = (var.name, type(var), part)
+                    compute_value_groups[desc].add(var.compute_value)
+        to_dumbify = {desc
+                      for desc, compute_values in compute_value_groups.items()
+                      if len(compute_values) > 1}
+
+        dumb_tables = []
+        for table in self.more_data.values():
+            dumb_domain = Orange.data.Domain(
+                *[[var.copy(compute_value=None)
+                   if (var.name, type(var), part) in to_dumbify
+                   else var
+                   for var in part_vars]
+                  for part, part_vars in enumerated_parts(table.domain)])
+            dumb_table = type(table).from_numpy(
+                dumb_domain,
+                table.X, table.Y, table.metas, table.W,
+                table.attributes, table.ids)
+            dumb_tables.append(dumb_table)
+        return dumb_tables
 
     def _merge_type_changed(self, ):
         if self.incompatible_types():

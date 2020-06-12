@@ -15,7 +15,7 @@ Plots a heat map for a pair of attributes.
 
 ![](images/HeatMap-stamped.png)
 
-1. The color scheme legend. **Low** and **High** are thresholds for the color palette (low for attributes with low values and high for attributes with high values).
+1. The color scheme legend. **Low** and **High** are thresholds for the color palette (low for attributes with low values and high for attributes with high values). Selecting one of diverging palettes, which have two extreme colors and a neutral (black or white) color at the midpoint, enables an option to set a meaningful mid-point value (default is 0).
 2. Merge data.
 3. Sort columns and rows:
    - **No Sorting** (lists attributes as found in the dataset)

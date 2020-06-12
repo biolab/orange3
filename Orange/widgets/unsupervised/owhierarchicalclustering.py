@@ -35,6 +35,7 @@ from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.dendrogram import DendrogramWidget
+from Orange.widgets.utils.state_summary import format_summary_details
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -161,6 +162,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.root = None
         self._displayed_root = None
         self.cutoff_height = 0.0
+
+        self._set_input_summary(None)
+        self._set_output_summary(None)
 
         gui.comboBox(
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
@@ -336,6 +340,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.error()
         self.Error.clear()
+        self._set_input_summary(matrix)
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
@@ -409,6 +414,15 @@ class OWHierarchicalClustering(widget.OWWidget):
             self._main_graphics.sizeHint(Qt.PreferredSize).height()
         )
         self._main_graphics.layout().activate()
+
+    def _set_input_summary(self, matrix):
+        summary = len(matrix) if matrix is not None else self.info.NoInput
+        self.info.set_input_summary(summary)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def _update(self):
         self._clear_plot()
@@ -552,6 +566,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
         if not items:
+            self._set_output_summary(None)
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
@@ -569,6 +584,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                                     set(selected_indices))
 
         if not selected_indices:
+            self._set_output_summary(None)
             self.Outputs.selected_data.send(None)
             annotated_data = create_annotated_table(items, []) \
                 if self.selection_method == 0 and self.matrix.axis else None
@@ -615,6 +631,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 items.domain.class_vars, items.domain.metas)
             selected_data = items.from_table(domain, items)
             data = None
+
+        self._set_output_summary(selected_data)
 
         self.Outputs.selected_data.send(selected_data)
         annotated_data = create_annotated_table(data, selected_indices)

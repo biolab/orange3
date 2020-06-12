@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 from unittest.mock import Mock
 
 from numpy import testing as npt
@@ -9,6 +9,8 @@ from Orange.preprocess import Discretize
 from Orange.widgets.data.owtransform import OWTransform
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owpca import OWPCA
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 
 
 class TestOWTransform(WidgetTest):
@@ -19,6 +21,8 @@ class TestOWTransform(WidgetTest):
 
     def test_output(self):
         # send data and template data
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
         self.send_signal(self.widget.Inputs.data, self.data[::15])
         self.send_signal(self.widget.Inputs.template_data, self.disc_data)
         output = self.get_output(self.widget.Outputs.transformed_data)
@@ -29,6 +33,13 @@ class TestOWTransform(WidgetTest):
                          self.widget.template_label.text())
         self.assertEqual("Output data includes 4 features.",
                          self.widget.output_label.text())
+        data_list = [("Data", self.data[::15]), ("Template data", self.disc_data)]
+        summary, details = "10, 150", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        summary, details = "10", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
 
         # remove template data
         self.send_signal(self.widget.Inputs.template_data, None)
@@ -39,6 +50,12 @@ class TestOWTransform(WidgetTest):
         self.assertEqual("No template data on input.",
                          self.widget.template_label.text())
         self.assertEqual("", self.widget.output_label.text())
+        data_list = [("Data", self.data[::15]), ("Template data", None)]
+        summary, details = "10, 0", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         # send template data
         self.send_signal(self.widget.Inputs.template_data, self.disc_data)
@@ -59,6 +76,12 @@ class TestOWTransform(WidgetTest):
         self.assertEqual("Template data includes 4 features.",
                          self.widget.template_label.text())
         self.assertEqual("", self.widget.output_label.text())
+        data_list = [("Data", None), ("Template data", self.disc_data)]
+        summary, details = "0, 150", format_multiple_summaries(data_list)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         # remove template data
         self.send_signal(self.widget.Inputs.template_data, None)
@@ -66,6 +89,10 @@ class TestOWTransform(WidgetTest):
         self.assertEqual("No template data on input.",
                          self.widget.template_label.text())
         self.assertEqual("", self.widget.output_label.text())
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def assertTableEqual(self, table1, table2):
         self.assertIs(table1.domain, table2.domain)

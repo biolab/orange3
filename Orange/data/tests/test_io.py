@@ -4,10 +4,10 @@ import numpy as np
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, \
     TimeVariable
 from Orange.data.io_util import guess_data_type
+from Orange.misc.collections import natural_sorted
 
 
 class TestTableFilters(unittest.TestCase):
-
     def test_guess_data_type_continuous(self):
         # should be ContinuousVariable
         valuemap, values, coltype = guess_data_type(list(range(1, 100)))
@@ -42,7 +42,7 @@ class TestTableFilters(unittest.TestCase):
         in_values = list(map(lambda x: str(x) + "a", range(24))) + ["a"] * 76
         valuemap, values, coltype = guess_data_type(in_values)
         self.assertEqual(DiscreteVariable, coltype)
-        self.assertEqual(sorted(set(in_values)), valuemap)
+        self.assertEqual(natural_sorted(set(in_values)), valuemap)
         np.testing.assert_array_equal(in_values, values)
 
     def test_guess_data_type_string(self):
@@ -93,3 +93,21 @@ class TestTableFilters(unittest.TestCase):
         valuemap, _, coltype = guess_data_type(in_values)
         self.assertEqual(TimeVariable, coltype)
         self.assertIsNone(valuemap)
+
+    def test_guess_data_type_values_order(self):
+        """
+        Test if values are ordered naturally
+        """
+        in_values = [
+            "something1", "something12", "something2", "something1",
+            "something20", "something1", "something2", "something12",
+            "something1", "something12"
+        ]
+        res = ["something1", "something2", "something12", "something20"]
+        valuemap, _, coltype = guess_data_type(in_values)
+        self.assertEqual(DiscreteVariable, coltype)
+        self.assertListEqual(res, valuemap)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -20,7 +20,7 @@ The **Data Sampler** widget implements several data sampling methods. It outputs
 2. The desired sampling method:
    - **Fixed proportion of data** returns a selected percentage of the entire data (e.g. 70% of all the data)
    - **Fixed sample size** returns a selected number of data instances with a chance to set *Sample with replacement*, which always samples from the entire dataset (does not subtract instances already in the subset). With replacement, you can generate more instances than available in the input dataset.
-   - [Cross Validation](https://en.wikipedia.org/wiki/Cross-validation_(statistics)) partitions data instances into complementary subsets, where you can select the number of folds (subsets) and which fold you want to use as a sample.
+   - [Cross Validation](https://en.wikipedia.org/wiki/Cross-validation_(statistics)) partitions data instances into the specified number of complementary subsets. Following a typical validation schema, all subsets except the one selected by the user are output as Data Sample, and the selected subset goes to Remaining Data. (Note: In older versions, the outputs were swapped. If the widget is loaded from an older workflow, it switches to compatibility mode.)
    - [Bootstrap](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)) infers the sample from the population statistic.
 3. *Replicable sampling* maintains sampling patterns that can be carried
    across users, while *stratify sample* mimics the composition of the

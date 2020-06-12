@@ -1,7 +1,7 @@
 # pylint: disable=missing-docstring
 from typing import Iterable, Set
 from collections import defaultdict
-from itertools import product
+from itertools import product, chain
 
 import numpy as np
 from scipy import sparse as sp
@@ -10,11 +10,13 @@ from AnyQt.QtCore import (Qt, QSize, QItemSelection, QItemSelectionModel,
                           pyqtSignal)
 from AnyQt.QtGui import QStandardItem, QColor, QStandardItemModel
 from AnyQt.QtWidgets import (QTableView, QSizePolicy, QHeaderView,
-                             QStyledItemDelegate, QCheckBox, QFrame)
+                             QStyledItemDelegate, QCheckBox, QFrame, QWidget,
+                             QGridLayout)
 
 from Orange.data import (Table, DiscreteVariable, Variable, Domain,
                          ContinuousVariable)
 from Orange.data.domain import filter_visible
+from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
 from Orange.statistics.util import (nanmin, nanmax, nanunique, nansum, nanvar,
                                     nanmean, nanmedian, nanmode, bincount)
@@ -82,6 +84,7 @@ class Pivot:
         self._table = table
         self._row_var = row_var
         self._col_var = col_var if col_var else row_var
+        self.renamed = []
 
         if not table:
             return
@@ -252,7 +255,19 @@ class Pivot:
                     X[:, k] = group_tab.X[:, self._depen_agg_done[fun][v] - offset]
                 else:
                     X[i, k] = fun(sub_table.get_column_view(v)[0])
-        return Table(Domain(leading_vars + attrs), np.hstack((combs, X)))
+
+        #rename leading vars (seems the easiest) if needed
+        current = [var.name for var in attrs]
+        uniq_leading_vars = []
+        for v in leading_vars:
+            uniq = get_unique_names(current, v.name)
+            if uniq != v.name:
+                self.renamed.append(v.name)
+                v = v.copy(name=uniq)
+            uniq_leading_vars.append(v)
+            current.append(uniq)
+
+        return Table(Domain(uniq_leading_vars + attrs), np.hstack((combs, X)))
 
     def update_pivot_table(self, val_var: Variable):
         self._create_pivot_tables(val_var)
@@ -293,8 +308,35 @@ class Pivot:
                               for i, v in enumerate(vals, 2)])
             for x in (X_v, X_t):
                 attrs.append([DiscreteVariable("Total", map_values(0, x))])
-        row_var_h = DiscreteVariable(self._row_var.name, values=("Total", ))
-        aggr_attr = DiscreteVariable("Aggregate", [str(f) for f in agg_funs])
+        row_var_h = DiscreteVariable(self._row_var.name, values=["Total"])
+        aggr_attr = DiscreteVariable('Aggregate', [str(f) for f in agg_funs])
+
+        change_domain = self._col_var == self._row_var
+
+        extra_vars = [self._row_var, aggr_attr]
+        uniq_a = get_unique_names_duplicates([v.name for v in extra_vars]
+                                             + [atr.name for atr in attrs[0]])
+        for (idx, var), u in zip(enumerate(chain(extra_vars, attrs[0])), uniq_a):
+            if var.name == u:
+                continue
+            if idx == 0:
+                self.renamed.append(self._row_var.name)
+                self._row_var = self._row_var.copy(name=u)
+                row_var_h = row_var_h.copy(name=u)
+            elif idx == 1:
+                self.renamed.append(aggr_attr.name)
+                aggr_attr = aggr_attr.copy(name=u)
+            else:
+                self.renamed.append(var.name)
+                attrs[0][idx-2] = var.copy(name=u)
+                attrs[1][idx-2] = var.copy(name=u)
+
+        if change_domain:
+            vals = tuple(v.name for v in attrs[0])
+            self._row_var.make(self._row_var.name, values=vals)
+            vals = tuple(v.name for v in attrs[2])
+            row_var_h.make(row_var_h.name, vals)
+
         return (Domain([self._row_var, aggr_attr] + attrs[0]),
                 Domain([row_var_h, aggr_attr] + attrs[1]),
                 Domain(attrs[2]), Domain(attrs[3]))
@@ -663,7 +705,9 @@ class OWPivot(OWWidget):
     class Warning(OWWidget.Warning):
         # TODO - inconsistent for different variable types
         no_col_feature = Msg("Column feature should be selected.")
-        cannot_aggregate = Msg("Some aggregations ({}) cannot be performed.")
+        cannot_aggregate = Msg("Some aggregations ({}) cannot be computed.")
+        renamed_vars = Msg("Some variables have been renamed in some tables"
+                           "to avoid duplicates.\n{}")
 
     settingsHandler = DomainContextHandler()
     row_feature = ContextSetting(None)
@@ -675,14 +719,15 @@ class OWPivot(OWWidget):
 
     AGGREGATIONS = (Pivot.Count,
                     Pivot.Count_defined,
-                    None,
+                    None,  # separator
                     Pivot.Sum,
                     Pivot.Mean,
+                    Pivot.Var,
+                    Pivot.Median,
+                    2,  # column break
                     Pivot.Mode,
                     Pivot.Min,
                     Pivot.Max,
-                    Pivot.Median,
-                    Pivot.Var,
                     None,
                     Pivot.Majority)
 
@@ -694,21 +739,20 @@ class OWPivot(OWWidget):
         self._add_main_area_controls()
 
     def _add_control_area_controls(self):
-        box = gui.vBox(self.controlArea, "Rows")
-        gui.comboBox(box, self, "row_feature", contentsLength=12,
+        box = gui.vBox(self.controlArea, box=True)
+        gui.comboBox(box, self, "row_feature", label="Rows", contentsLength=12,
                      searchable=True,
                      model=DomainModel(valid_types=DomainModel.PRIMITIVE),
                      callback=self.__feature_changed)
-        box = gui.vBox(self.controlArea, "Columns")
-        gui.comboBox(box, self, "col_feature", contentsLength=12,
+        gui.comboBox(box, self, "col_feature", label="Columns",
+                     contentsLength=12,
                      searchable=True,
                      model=DomainModel(placeholder="(Same as rows)",
                                        valid_types=DiscreteVariable),
                      callback=self.__feature_changed,)
-        box = gui.vBox(self.controlArea, "Values")
-        gui.comboBox(box, self, "val_feature", contentsLength=12,
+        gui.comboBox(box, self, "val_feature", label="Values",
+                     contentsLength=12,
                      searchable=True,
-                     orientation=Qt.Horizontal,
                      model=DomainModel(placeholder="(None)"),
                      callback=self.__val_feature_changed)
         self.__add_aggregation_controls()
@@ -719,7 +763,20 @@ class OWPivot(OWWidget):
         self.info.set_output_summary(self.info.NoOutput)
 
     def __add_aggregation_controls(self):
+        def new_inbox():
+            nonlocal row, col, inbox
+            inbox = QWidget()
+            layout = QGridLayout()
+            inbox.setLayout(layout)
+            layout.setContentsMargins(0, 0, 0, 0)
+            box.layout().addWidget(inbox)
+            row = col = 0
+
         box = gui.vBox(self.controlArea, "Aggregations")
+        row = col = 0
+        inbox = None
+        new_inbox()
+        self.aggregation_checkboxes = []  # for test purposes
         for agg in self.AGGREGATIONS:
             if agg is None:
                 gui.separator(box, height=1)
@@ -728,12 +785,19 @@ class OWPivot(OWWidget):
                 line.setLineWidth(1)
                 line.setFrameShadow(QFrame.Sunken)
                 box.layout().addWidget(line)
+                new_inbox()
                 continue
-            check_box = QCheckBox(str(agg), box)
+            elif agg == 2:
+                col += 1
+                row = 0
+                continue
+            check_box = QCheckBox(str(agg), inbox)
             check_box.setChecked(agg in self.sel_agg_functions)
             check_box.clicked.connect(lambda *args, a=agg:
                                       self.__aggregation_cb_clicked(a, args[0]))
-            box.layout().addWidget(check_box)
+            inbox.layout().addWidget(check_box, row, col)
+            self.aggregation_checkboxes.append(check_box)
+            row += 1
 
     def _add_main_area_controls(self):
         self.table_view = PivotTableView()
@@ -816,6 +880,7 @@ class OWPivot(OWWidget):
                 if domain.variables[0] in model else model[2]
 
     def commit(self):
+        self.Warning.renamed_vars.clear()
         if self.pivot is None:
             self.Warning.no_col_feature.clear()
             if self.no_col_feature:
@@ -836,6 +901,9 @@ class OWPivot(OWWidget):
         summary = len(filtered_data) if filtered_data else self.info.NoOutput
         details = format_summary_details(filtered_data) if filtered_data else ""
         self.info.set_output_summary(summary, details)
+
+        if self.pivot.renamed:
+            self.Warning.renamed_vars(self.pivot.renamed)
 
     def _update_graph(self):
         self.table_view.clear()

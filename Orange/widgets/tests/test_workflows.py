@@ -10,6 +10,7 @@ from Orange.canvas.config import Config
 from Orange.canvas import workflows
 
 from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.tests.utils import excepthook_catch
 
 
 def discover_workflows(dir):
@@ -46,7 +47,8 @@ class TestWorkflows(GuiTest):
             )
             with open(ows_file, "rb") as f:
                 try:
-                    new_scheme.load_from(f, registry=reg)
+                    with excepthook_catch(raise_on_exit=True):
+                        new_scheme.load_from(f, registry=reg)
                 except Exception as e:
                     self.fail("Old workflow '{}' could not be loaded\n'{}'".
                               format(ows_file, str(e)))

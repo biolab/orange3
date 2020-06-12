@@ -192,6 +192,7 @@ class PythagorasTreeViewer(QGraphicsWidget):
     def clear(self):
         """Clear the entire widget state."""
         self.clear_tree()
+        self._target_class_index = 0
 
     def clear_tree(self):
         """Clear only the tree, keeping tooltip and color functions."""

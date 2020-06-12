@@ -7,6 +7,7 @@ from AnyQt.QtGui import QColor, QFont, QBrush
 from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView, QComboBox
 
 import Orange
+from Orange.preprocess.transformation import Identity
 from Orange.util import color_to_hex
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.gui import HorizontalGridDelegate
@@ -32,6 +33,9 @@ class AttrDesc:
     """
     def __init__(self, var):
         self.var = var
+        self.new_name = None
+
+    def reset(self):
         self.new_name = None
 
     @property
@@ -60,6 +64,11 @@ class DiscAttrDesc(AttrDesc):
         self.new_colors = None
         self.new_values = None
 
+    def reset(self):
+        super().reset()
+        self.new_colors = None
+        self.new_values = None
+
     @property
     def colors(self):
         if self.new_colors is None:
@@ -82,7 +91,8 @@ class DiscAttrDesc(AttrDesc):
         self.new_values[i] = value
 
     def create_variable(self):
-        new_var = self.var.copy(name=self.name, values=self.values)
+        new_var = self.var.copy(name=self.name, values=self.values,
+                                compute_value=Identity(self.var))
         new_var.colors = np.asarray(self.colors)
         return new_var
 
@@ -100,10 +110,17 @@ class ContAttrDesc(AttrDesc):
     """
     def __init__(self, var):
         super().__init__(var)
-        if var.palette.name not in colorpalettes.ContinuousPalettes:
-            self.new_palette_name = colorpalettes.DefaultContinuousPaletteName
+        self.new_palette_name = self._default_palette_name()
+
+    def reset(self):
+        super().reset()
+        self.new_palette_name = self._default_palette_name()
+
+    def _default_palette_name(self):
+        if self.var.palette.name not in colorpalettes.ContinuousPalettes:
+            return colorpalettes.DefaultContinuousPaletteName
         else:
-            self.new_palette_name = None
+            return None
 
     @property
     def palette_name(self):
@@ -114,7 +131,8 @@ class ContAttrDesc(AttrDesc):
         self.new_palette_name = palette_name
 
     def create_variable(self):
-        new_var = self.var.copy(name=self.name)
+        new_var = self.var.copy(name=self.name,
+                                compute_value=Identity(self.var))
         new_var.attributes["palette"] = self.palette_name
         return new_var
 
@@ -166,6 +184,12 @@ class ColorTableModel(QAbstractTableModel):
             return False
         self.dataChanged.emit(index, index)
         return True
+
+    def reset(self):
+        self.beginResetModel()
+        for desc in self.attrdescs:
+            desc.reset()
+        self.endResetModel()
 
 
 class DiscColorTableModel(ColorTableModel):
@@ -290,17 +314,18 @@ class ColorStripDelegate(HorizontalGridDelegate):
 
     def createEditor(self, parent, option, index):
         class Combo(QComboBox):
-            def __init__(self, parent, initial_data):
+            def __init__(self, parent, initial_data, view):
                 super().__init__(parent)
                 model = itemmodels.ContinuousPalettesModel(icon_width=128)
                 self.setModel(model)
                 self.setCurrentIndex(model.indexOf(initial_data))
                 self.setIconSize(QSize(128, 16))
                 QTimer.singleShot(0, self.showPopup)
+                self.view = view
 
             def hidePopup(self):
                 super().hidePopup()
-                view.closeEditor(self, ColorStripDelegate.NoHint)
+                self.view.closeEditor(self, ColorStripDelegate.NoHint)
 
         def select(i):
             self.view.model().setData(
@@ -308,8 +333,7 @@ class ColorStripDelegate(HorizontalGridDelegate):
                 combo.model().index(i, 0).data(Qt.UserRole),
                 ColorRole)
 
-        view = self.view
-        combo = Combo(parent, index.data(ColorRole))
+        combo = Combo(parent, index.data(ColorRole), self.view)
         combo.currentIndexChanged[int].connect(select)
         return combo
 
@@ -457,7 +481,9 @@ class OWColor(widget.OWWidget):
 
         box = gui.auto_apply(self.controlArea, self, "auto_apply")
         box.button.setFixedWidth(180)
-        box.layout().insertStretch(0)
+        reset = gui.button(None, self, "Reset", callback=self.reset)
+        box.layout().insertWidget(0, reset)
+        box.layout().insertStretch(1)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -491,6 +517,11 @@ class OWColor(widget.OWWidget):
         self.unconditional_commit()
 
     def _on_data_changed(self):
+        self.commit()
+
+    def reset(self):
+        self.disc_model.reset()
+        self.cont_model.reset()
         self.commit()
 
     def commit(self):

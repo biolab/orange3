@@ -18,6 +18,7 @@ from Orange.widgets.tests.utils import simulate, table_dense_sparse
 from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
 from Orange.widgets.utils.state_summary import format_summary_details
+from orangewidget.settings import Context
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
 
@@ -454,17 +455,53 @@ class TestFeatureStatisticsUI(WidgetTest):
     def test_restores_previous_selection(self):
         """Widget should remember selection with domain context handler."""
         # Send data and select rows
+        domain1 = self.data1.domain
         self.send_signal(self.widget.Inputs.data, self.data1)
         self.select_rows([0, 2])
-        self.assertEqual(len(self.widget.selected_rows), 2)
+        self.assertEqual(set(self.widget.selected_vars),
+                         {domain1[0], domain1[2]})
 
         # Sending new data clears selection
         self.send_signal(self.widget.Inputs.data, self.data2)
-        self.assertEqual(len(self.widget.selected_rows), 0)
+        self.assertEqual(len(self.widget.selected_vars), 0)
 
         # Sending back the old data restores the selection
+        iris3 = self.data1.transform(
+            Domain([domain1[2], domain1[0], domain1[1]], domain1.class_var))
+        self.send_signal(self.widget.Inputs.data, iris3)
+        self.assertEqual(set(self.widget.selected_vars),
+                         {domain1[0], domain1[2]})
+
+    def test_settings_migration_to_ver21(self):
+        settings = {
+            'controlAreaVisible': True, 'savedWidgetGeometry': '',
+            '__version__': 1,
+            'context_settings': [
+                Context(
+                    values={'auto_commit': (True, -2),
+                            'color_var': ('iris', 101),
+                            'selected_rows': [1, 4],
+                            'sorting': ((1, 0), -2), '__version__': 1},
+                    attributes={'petal length': 2, 'petal width': 2,
+                                'sepal length': 2, 'sepal width': 2},
+                    metas={'iris': 1})]
+        }
+        widget = self.create_widget(OWFeatureStatistics,
+                                    stored_settings=settings)
+        self.send_signal(widget.Inputs.data, self.data1)
+        domain = self.data1.domain
+        self.assertEqual(widget.selected_vars, [domain["petal width"],
+                                                domain["iris"]])
+
+    def test_report(self):
         self.send_signal(self.widget.Inputs.data, self.data1)
-        self.assertEqual(len(self.widget.selected_rows), 2)
+
+        self.widget.report_button.click()
+        report_text = self.widget.report_html
+
+        self.assertIn("<table>", report_text)
+        self.assertEqual(6, report_text.count("<tr>"))  # header + 5 rows
+
 
 class TestSummary(WidgetTest):
     def setUp(self):

@@ -2,6 +2,7 @@ from functools import reduce
 from types import SimpleNamespace
 
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QGridLayout
 
 import Orange.data
 from Orange.util import Reprable
@@ -72,25 +73,32 @@ class OWContinuize(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        box = gui.vBox(self.controlArea, "Categorical Features")
-        gui.radioButtonsInBox(
-            box, self, "multinomial_treatment",
+        layout = QGridLayout()
+        gui.widgetBox(self.controlArea, orientation=layout)
+
+        box = gui.radioButtonsInBox(
+            None, self, "multinomial_treatment", box="Categorical Features",
             btnLabels=[x[0] for x in self.multinomial_treats],
             callback=self.settings_changed)
+        gui.rubber(box)
+        layout.addWidget(box, 0, 0, 2, 1)
 
-        box = gui.vBox(self.controlArea, "Numeric Features")
-        gui.radioButtonsInBox(
-            box, self, "continuous_treatment",
+        box = gui.radioButtonsInBox(
+            None, self, "continuous_treatment", box = "Numeric Features",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
+        box.layout().addStretch(10)
+        layout.addWidget(box, 0, 1, 2, 1)
 
-        box = gui.vBox(self.controlArea, "Categorical Outcome(s)")
-        gui.radioButtonsInBox(
-            box, self, "class_treatment",
+        box = gui.radioButtonsInBox(
+            None, self, "class_treatment", box="Categorical Outcome(s)",
             btnLabels=[t[0] for t in self.class_treats],
             callback=self.settings_changed)
+        box.layout().addStretch(10)
+        layout.addWidget(box, 0, 2)
 
-        gui.auto_apply(self.buttonsArea, self, "autosend", box=False)
+        ac = gui.auto_apply(None, self, "autosend", box=False)
+        layout.addWidget(ac, 1, 2)
 
         self.data = None
         self.info.set_input_summary(self.info.NoInput)
@@ -206,7 +214,7 @@ def one_hot_coding(var):
 
 def continuize_domain(data,
                       multinomial_treatment=Continuize.Indicators,
-                      continuous_treatment=Continuize.Leave,
+                      continuous_treatment=OWContinuize.Normalize.Leave,
                       class_treatment=Continuize.Leave):
     domain = data.domain
     def needs_dist(var, mtreat, ctreat):
@@ -214,7 +222,7 @@ def continuize_domain(data,
         if var.is_discrete:
             return mtreat == Continuize.FrequentAsBase
         elif var.is_continuous:
-            return ctreat != Continuize.Leave
+            return ctreat != OWContinuize.Normalize.Leave
         else:
             raise ValueError
 
@@ -222,7 +230,7 @@ def continuize_domain(data,
     attr_needs_dist = [needs_dist(var, multinomial_treatment,
                                   continuous_treatment)
                        for var in domain.attributes]
-    cls_needs_dist = [needs_dist(var, class_treatment, Continuize.Leave)
+    cls_needs_dist = [needs_dist(var, class_treatment, OWContinuize.Normalize.Leave)
                       for var in domain.class_vars]
 
     columns = [i for i, needs in enumerate(attr_needs_dist + cls_needs_dist)
@@ -242,7 +250,7 @@ def continuize_domain(data,
                 for var, needs_dist in zip(domain.attributes, attr_needs_dist)]
     newclass = [continuize_var(var,
                                next(dist_iter) if needs_dist else None,
-                               class_treatment, Continuize.Remove)
+                               class_treatment, OWContinuize.Normalize.Leave)
                 for var, needs_dist in zip(domain.class_vars, cls_needs_dist)]
 
     newattrs = reduce(list.__iadd__, newattrs, [])
@@ -253,13 +261,13 @@ def continuize_domain(data,
 def continuize_var(var,
                    data_or_dist=None,
                    multinomial_treatment=Continuize.Indicators,
-                   continuous_treatment=Continuize.Leave):
+                   continuous_treatment=OWContinuize.Normalize.Leave):
     def continuize_continuous():
-        dist = _ensure_dist(var, data_or_dist)
+        dist = _ensure_dist(var, data_or_dist) if continuous_treatment != OWContinuize.Normalize.Leave else None
         treatments = [lambda var, _: var,
                       normalize_by_sd, center_to_mean, divide_by_sd,
                       normalize_to_11, normalize_to_01]
-        if dist.shape[1] == 0:
+        if dist is not None and dist.shape[1] == 0:
             return [var]
         new_var = treatments[continuous_treatment](var, dist)
         return [new_var]
@@ -365,7 +373,7 @@ def normalize_by_span(var, dist, zero_based=True):
 class DomainContinuizer(Reprable):
     def __init__(self,
                  multinomial_treatment=Continuize.Indicators,
-                 continuous_treatment=Continuize.Leave,
+                 continuous_treatment=OWContinuize.Normalize.Leave,
                  class_treatment=Continuize.Leave):
         self.multinomial_treatment = multinomial_treatment
         self.continuous_treatment = continuous_treatment

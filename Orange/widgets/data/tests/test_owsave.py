@@ -404,13 +404,13 @@ class TestFunctionalOWSave(WidgetTest):
                 self.send_signal(widget.Inputs.data, self.iris)
                 widget.save_file_as()
                 if hasattr(writer, "read"):
-                    self.assertEqual(len(Table(filename)), 150)
+                    self.assertEqual(len(writer(filename).read()), 150)
 
                 if writer.SUPPORT_SPARSE_DATA:
                     self.send_signal(widget.Inputs.data, spiris)
                     widget.save_file()
                     if hasattr(writer, "read"):
-                        self.assertEqual(len(Table(filename)), 150)
+                        self.assertEqual(len(writer(filename).read()), 150)
 
 
 @unittest.skipUnless(sys.platform == "linux", "Tests for dialog on Linux")

@@ -1,4 +1,5 @@
 import warnings
+from itertools import chain
 
 import numpy as np
 
@@ -6,6 +7,7 @@ from AnyQt.QtWidgets import QWidget, QVBoxLayout
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data.util import get_unique_names
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
 from Orange.projection.manifold import TSNEModel
@@ -306,8 +308,11 @@ class OWManifoldLearning(OWWidget):
         if have_data and data.is_sparse():
             self.Error.sparse_not_supported()
         elif have_data:
-            domain = Domain([ContinuousVariable("C{}".format(i))
-                             for i in range(self.n_components)],
+            names = [var.name for var in chain(data.domain.class_vars,
+                                               data.domain.metas) if var]
+            proposed = ["C{}".format(i) for i in range(self.n_components)]
+            unique = get_unique_names(names, proposed)
+            domain = Domain([ContinuousVariable(name) for name in unique],
                             data.domain.class_vars,
                             data.domain.metas)
             try:

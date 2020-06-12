@@ -15,6 +15,7 @@ from os import path, remove
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
 from urllib.request import urlopen, Request
+from pathlib import Path
 
 import numpy as np
 
@@ -399,7 +400,9 @@ class UrlReader(FileFormat):
         self.filename = self._trim(self._resolve_redirects(self.filename))
         with contextlib.closing(self.urlopen(self.filename)) as response:
             name = self._suggest_filename(response.headers['content-disposition'])
-            with NamedTemporaryFile(suffix=name, delete=False) as f:
+            # using Path since splitext does not extract more extensions
+            extension = ''.join(Path(name).suffixes)  # get only file extension
+            with NamedTemporaryFile(suffix=extension, delete=False) as f:
                 f.write(response.read())
                 # delete=False is a workaround for https://bugs.python.org/issue14243
 

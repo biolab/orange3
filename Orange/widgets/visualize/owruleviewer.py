@@ -14,6 +14,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 
@@ -44,6 +45,9 @@ class OWRuleViewer(widget.OWWidget):
         self.data = None
         self.classifier = None
         self.selected = None
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         self.model = CustomRuleViewerTableModel(parent=self)
         self.model.set_horizontal_header_labels(
@@ -81,6 +85,7 @@ class OWRuleViewer(widget.OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.data = data
+        self._set_input_summary()
         self.commit()
 
     @Inputs.classifier
@@ -100,6 +105,11 @@ class OWRuleViewer(widget.OWWidget):
 
         self.on_update()
         self.commit()
+
+    def _set_input_summary(self):
+        summary = len(self.data) if self.data else self.info.NoInput
+        details = format_summary_details(self.data) if self.data else ""
+        self.info.set_input_summary(summary, details)
 
     def on_update(self):
         self._save_selected()
@@ -168,6 +178,9 @@ class OWRuleViewer(widget.OWWidget):
             data_output = data.from_table_rows(data, selected_indices) \
                 if len(selected_indices) else None
 
+        summary = len(data_output) if data_output else self.info.NoOutput
+        details = format_summary_details(data_output) if data_output else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(data_output)
         self.Outputs.annotated_data.send(create_annotated_table(data, selected_indices))
 

@@ -1,12 +1,19 @@
+# pylint: disable=protected-access
 import unittest
+
+
 from unittest.mock import Mock, patch
+from AnyQt.QtCore import Qt
 
 from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.data import Table, Domain
+from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.data.sql.table import SqlTable
+from Orange.tests.sql.base import DataBaseTest as dbt
 
 
-class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
+class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -17,6 +24,14 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
 
     def setUp(self):
         self.widget = self.create_widget(OWDataTable)
+
+    def setUpDB(self):
+        # pylint: disable=attribute-defined-outside-init
+        conn, self.iris = self.create_iris_sql_table()
+        self.table = SqlTable(conn, self.iris)
+
+    def tearDownDB(self):
+        self.drop_iris_sql_table()
 
     def test_input_data(self):
         """Check number of tabs with data on the input"""
@@ -75,6 +90,84 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(widget.Outputs.selected_data)
         self.assertEqual(5, len(output))
 
+    def test_sorting(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.selected_rows = [0, 1, 2, 3, 4]
+        self.widget.selected_cols = list(range(len(self.data.domain)))
+        self.widget.set_selection()
+
+        output = self.get_output(self.widget.Outputs.selected_data)
+        output, _ = output.get_column_view(0)
+        output_original = output.tolist()
+
+        self.widget.tabs.currentWidget().sortByColumn(1, Qt.AscendingOrder)
+
+        output = self.get_output(self.widget.Outputs.selected_data)
+        output, _ = output.get_column_view(0)
+        output_sorted = output.tolist()
+        
+        # the two outputs should not be the same.
+        self.assertTrue(output_original != output_sorted)
+
+        # check if output after sorting is actually sorted.
+        self.assertTrue(sorted(output_original) == output_sorted)
+        self.assertTrue(sorted(output_sorted) == output_sorted)
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        data = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, data, 1)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self.widget.tabs.currentWidget().selectAll()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data, 2)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+        self.widget.tabs.setCurrentWidget(self.widget._inputs[1].view)
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None, 1)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None, 2)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 if __name__ == "__main__":
     unittest.main()

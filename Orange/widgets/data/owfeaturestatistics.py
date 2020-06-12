@@ -8,6 +8,7 @@ TODO:
 
 import datetime
 from enum import IntEnum
+from itertools import chain
 from typing import Any, Optional, Tuple, List
 
 import numpy as np
@@ -24,7 +25,8 @@ from Orange.data import Table, StringVariable, DiscreteVariable, \
     ContinuousVariable, TimeVariable, Domain, Variable
 from Orange.widgets import widget, gui
 from Orange.widgets.data.utils.histogram import Histogram
-from Orange.widgets.settings import ContextSetting, DomainContextHandler
+from Orange.widgets.settings import Setting, ContextSetting, \
+    DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -685,13 +687,14 @@ class OWFeatureStatistics(widget.OWWidget):
     buttons_area_orientation = Qt.Vertical
 
     settingsHandler = DomainContextHandler()
+    settings_version = 2
 
-    auto_commit = ContextSetting(True)
+    auto_commit = Setting(True)
     color_var = ContextSetting(None)  # type: Optional[Variable]
     # filter_string = ContextSetting('')
 
-    sorting = ContextSetting((0, Qt.DescendingOrder))
-    selected_rows = ContextSetting([])
+    sorting = Setting((0, Qt.DescendingOrder))
+    selected_vars = ContextSetting([], schema_only=True)
 
     def __init__(self):
         super().__init__()
@@ -753,7 +756,7 @@ class OWFeatureStatistics(widget.OWWidget):
     def set_data(self, data):
         # Clear outputs and reset widget state
         self.closeContext()
-        self.selected_rows = []
+        self.selected_vars = []
         self.model.resetSorting()
         self.Outputs.reduced_data.send(None)
         self.Outputs.statistics.send(None)
@@ -786,10 +789,10 @@ class OWFeatureStatistics(widget.OWWidget):
         """Restore the selection on the table view from saved settings."""
         selection_model = self.table_view.selectionModel()
         selection = QItemSelection()
-        # self.selected_rows can be list or numpy.array, thus
-        # pylint: disable=len-as-condition
-        if len(self.selected_rows):
-            for row in self.model.mapFromSourceRows(self.selected_rows):
+        if self.selected_vars:
+            var_indices = {var: i for i, var in enumerate(self.model.variables)}
+            selected_indices = [var_indices[var] for var in self.selected_vars]
+            for row in self.model.mapFromSourceRows(selected_indices):
                 selection.append(QItemSelectionRange(
                     self.model.index(row, 0),
                     self.model.index(row, self.model.columnCount() - 1)
@@ -816,22 +819,21 @@ class OWFeatureStatistics(widget.OWWidget):
             self.model.set_target_var(self.color_var)
 
     def on_select(self):
-        self.selected_rows = list(self.model.mapToSourceRows([
+        selection_indices = list(self.model.mapToSourceRows([
             i.row() for i in self.table_view.selectionModel().selectedRows()
         ]))
+        self.selected_vars = list(self.model.variables[selection_indices])
         self.commit()
 
     def commit(self):
-        # self.selected_rows can be list or numpy.array, thus
-        # pylint: disable=len-as-condition
-        if not len(self.selected_rows):
+        if not self.selected_vars:
             self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.reduced_data.send(None)
             self.Outputs.statistics.send(None)
             return
 
         # Send a table with only selected columns to output
-        variables = self.model.variables[self.selected_rows]
+        variables = self.selected_vars
         self.info.set_output_summary(len(self.data[:, variables]),
                                      format_summary_details(self.data[:, variables]))
         self.Outputs.reduced_data.send(self.data[:, variables])
@@ -848,7 +850,28 @@ class OWFeatureStatistics(widget.OWWidget):
         self.Outputs.statistics.send(statistics)
 
     def send_report(self):
-        pass
+        view = self.table_view
+        self.report_table(view)
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if not version or version < 2:
+            selected_rows = context.values.pop("selected_rows", None)
+            if not selected_rows:
+                selected_vars = []
+            else:
+                # This assumes that dict was saved by Python >= 3.6 so dict is
+                # ordered; if not, context hasn't had worked anyway.
+                all_vars = [
+                    (var, tpe)
+                    for (var, tpe) in chain(context.attributes.items(),
+                                            context.metas.items())
+                    # it would be nicer to use cls.HIDDEN_VAR_TYPES, but there
+                    # is no suitable conversion function, and StringVariable (3)
+                    # was the only hidden var when settings_version < 2, so:
+                    if tpe != 3]
+                selected_vars = [all_vars[i] for i in selected_rows]
+            context.values["selected_vars"] = selected_vars, -3
 
 
 if __name__ == '__main__':  # pragma: no cover

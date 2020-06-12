@@ -1,10 +1,14 @@
 from typing import Optional
 
-from Orange.data import Table, Domain
+from AnyQt.QtCore import Qt
+
+from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.report.report import describe_data
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_multiple_summaries, \
+    format_summary_details
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -31,7 +35,7 @@ class OWTransform(OWWidget):
     def __init__(self):
         super().__init__()
         self.data = None  # type: Optional[Table]
-        self.template_domain = None  # type: Optional[Domain]
+        self.template_data = None  # type: Optional[Table]
         self.transformed_info = describe_data(None)  # type: OrderedDict
 
         info_box = gui.widgetBox(self.controlArea, "Info")
@@ -40,6 +44,9 @@ class OWTransform(OWWidget):
         self.output_label = gui.widgetLabel(info_box, "")
         self.set_input_label_text()
         self.set_template_label_text()
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
     def set_input_label_text(self):
         text = "No data on input."
@@ -51,11 +58,11 @@ class OWTransform(OWWidget):
 
     def set_template_label_text(self):
         text = "No template data on input."
-        if self.data and self.template_domain is not None:
+        if self.data and self.template_data:
             text = "Template domain applied."
-        elif self.template_domain is not None:
+        elif self.template_data:
             text = "Template data includes {:,} features.".format(
-                len(self.template_domain.attributes))
+                len(self.template_data.domain.attributes))
         self.template_label.setText(text)
 
     def set_output_label_text(self, data):
@@ -74,21 +81,36 @@ class OWTransform(OWWidget):
     @Inputs.template_data
     @check_sql_input
     def set_template_data(self, data):
-        self.template_domain = data and data.domain
+        self.template_data = data
 
     def handleNewSignals(self):
+        summary, details, kwargs = self.info.NoInput, "", {}
+        if self.data or self.template_data:
+            n_data = len(self.data) if self.data else 0
+            n_template = len(self.template_data) if self.template_data else 0
+            summary = f"{self.info.format_number(n_data)}, " \
+                      f"{self.info.format_number(n_template)}"
+            kwargs = {"format": Qt.RichText}
+            details = format_multiple_summaries([
+                ("Data", self.data),
+                ("Template data", self.template_data)
+            ])
+        self.info.set_input_summary(summary, details, **kwargs)
         self.apply()
 
     def apply(self):
         self.clear_messages()
         transformed_data = None
-        if self.data and self.template_domain is not None:
+        if self.data and self.template_data:
             try:
-                transformed_data = self.data.transform(self.template_domain)
+                transformed_data = self.data.transform(self.template_data.domain)
             except Exception as ex:  # pylint: disable=broad-except
                 self.Error.error(ex)
 
         data = transformed_data
+        summary = len(data) if data else self.info.NoOutput
+        details = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, details)
         self.transformed_info = describe_data(data)
         self.Outputs.transformed_data.send(data)
         self.set_template_label_text()
@@ -97,8 +119,8 @@ class OWTransform(OWWidget):
     def send_report(self):
         if self.data:
             self.report_data("Data", self.data)
-        if self.template_domain is not None:
-            self.report_domain("Template data", self.template_domain)
+        if self.template_data:
+            self.report_domain("Template data", self.template_data.domain)
         if self.transformed_info:
             self.report_items("Transformed data", self.transformed_info)
 

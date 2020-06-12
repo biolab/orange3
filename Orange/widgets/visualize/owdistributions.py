@@ -10,7 +10,7 @@ from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 import pyqtgraph as pg
 
-from Orange.data import Table, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.preprocess.discretize import decimal_binnings, time_binnings, \
     short_time_units
 from Orange.statistics import distribution, contingency
@@ -66,7 +66,7 @@ class LegendItem(SPGLegendItem):
 
 class DistributionBarItem(pg.GraphicsObject):
     def __init__(self, x, width, padding, freqs, colors, stacked, expanded,
-                 tooltip, hidden):
+                 tooltip, desc, hidden):
         super().__init__()
         self.x = x
         self.width = width
@@ -79,6 +79,7 @@ class DistributionBarItem(pg.GraphicsObject):
         self.polygon = None
         self.hovered = False
         self._tooltip = tooltip
+        self.desc = desc
         self.hidden = False
         self.setHidden(hidden)
         self.setAcceptHoverEvents(True)
@@ -287,11 +288,11 @@ class OWDistributions(OWWidget):
 
     Fitters = (
         ("None", None, (), ()),
-        ("Normal", norm, ("loc", "scale"), ("μ", "σ²")),
+        ("Normal", norm, ("loc", "scale"), ("μ", "σ")),
         ("Beta", beta, ("a", "b", "loc", "scale"),
          ("α", "β", "-loc", "-scale")),
         ("Gamma", gamma, ("a", "loc", "scale"), ("α", "β", "-loc", "-scale")),
-        ("Rayleigh", rayleigh, ("loc", "scale"), ("-loc", "σ²")),
+        ("Rayleigh", rayleigh, ("loc", "scale"), ("-loc", "σ")),
         ("Pareto", pareto, ("b", "loc", "scale"), ("α", "-loc", "-scale")),
         ("Exponential", expon, ("loc", "scale"), ("-loc", "λ")),
         ("Kernel density", AshCurve, ("a",), ("",))
@@ -358,7 +359,7 @@ class OWDistributions(OWWidget):
             callback=self._on_show_probabilities_changed)
         gui.checkBox(
             box, self, "cumulative_distr", "Show cumulative distribution",
-            callback=self.replot)
+            callback=self._on_show_cumulative)
 
         gui.auto_apply(self.controlArea, self, commit=self.apply)
 
@@ -458,6 +459,10 @@ class OWDistributions(OWWidget):
 
     def _on_cvar_changed(self):
         self.set_valid_data()
+        self.replot()
+        self.apply()
+
+    def _on_show_cumulative(self):
         self.replot()
         self.apply()
 
@@ -596,10 +601,10 @@ class OWDistributions(OWWidget):
         self.plot.autoRange()
 
     def _add_bar(self, x, width, padding, freqs, colors, stacked, expanded,
-                 tooltip, hidden=False):
+                 tooltip, desc, hidden=False):
         item = DistributionBarItem(
             x, width, padding, freqs, colors, stacked, expanded, tooltip,
-            hidden)
+            desc, hidden)
         self.plot.addItem(item)
         self.bar_items.append(item)
 
@@ -609,13 +614,14 @@ class OWDistributions(OWWidget):
         colors = [QColor(0, 128, 255)]
         dist = distribution.get_distribution(self.data, self.var)
         for i, freq in enumerate(dist):
+            desc = var.values[i]
             tooltip = \
                 "<p style='white-space:pre;'>" \
-                f"<b>{escape(var.values[i])}</b>: {int(freq)} " \
+                f"<b>{escape(desc)}</b>: {int(freq)} " \
                 f"({100 * freq / len(self.valid_data):.2f} %) "
             self._add_bar(
                 i - 0.5, 1, 0.1, [freq], colors,
-                stacked=False, expanded=False, tooltip=tooltip)
+                stacked=False, expanded=False, tooltip=tooltip, desc=desc)
 
     def _disc_split_plot(self):
         var = self.var
@@ -625,11 +631,13 @@ class OWDistributions(OWWidget):
         conts = contingency.get_contingency(self.data, self.cvar, self.var)
         total = len(self.data)
         for i, freqs in enumerate(conts):
+            desc = var.values[i]
             self._add_bar(
                 i - 0.5, 1, 0.1, freqs, gcolors,
                 stacked=self.stacked_columns, expanded=self.show_probs,
                 tooltip=self._split_tooltip(
-                    var.values[i], np.sum(freqs), total, gvalues, freqs))
+                    desc, np.sum(freqs), total, gvalues, freqs),
+                desc=desc)
 
     def _cont_plot(self):
         self._set_cont_ticks()
@@ -645,14 +653,15 @@ class OWDistributions(OWWidget):
         lasti = len(y) - 1
         for i, (x0, x1), freq in zip(count(), zip(x, x[1:]), y):
             tot_freq += freq
+            desc = self.str_int(x0, x1, not i, i == lasti)
             tooltip = \
                 "<p style='white-space:pre;'>" \
-                f"<b>{escape(self.str_int(x0, x1, not i, i == lasti))}</b>: " \
+                f"<b>{escape(desc)}</b>: " \
                 f"{freq} ({100 * freq / total:.2f} %)</p>"
             self._add_bar(
                 x0, x1 - x0, 0, [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip,
-                hidden=self.hide_bars)
+                desc=desc, hidden=self.hide_bars)
 
         if self.fitted_distribution:
             self._plot_approximations(
@@ -688,13 +697,14 @@ class OWDistributions(OWWidget):
         for i, x0, x1, freqs in zip(count(), bins, bins[1:], zip(*ys)):
             tot_freqs += freqs
             plotfreqs = tot_freqs.copy() if self.cumulative_distr else freqs
+            desc = self.str_int(x0, x1, not i, i == lasti)
             self._add_bar(
                 x0, x1 - x0, 0 if self.stacked_columns else 0.1, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 hidden=self.hide_bars,
                 tooltip=self._split_tooltip(
-                    self.str_int(x0, x1, not i, i == lasti),
-                    np.sum(plotfreqs), total, gvalues, plotfreqs))
+                    desc, np.sum(plotfreqs), total, gvalues, plotfreqs),
+                desc=desc)
 
         if fitters:
             self._plot_approximations(bins[0], bins[-1], fitters, varcolors,
@@ -1073,15 +1083,17 @@ class OWDistributions(OWWidget):
                 group_indices, values = self._get_output_indices_disc()
             else:
                 group_indices, values = self._get_output_indices_cont()
-                hist_indices, hist_values = self._get_histogram_indices()
-                histogram_data = create_groups_table(
-                    data, hist_indices, values=hist_values)
             selected = np.nonzero(group_indices)[0]
             if selected.size:
                 selected_data = create_groups_table(
                     data, group_indices,
                     include_unselected=False, values=values)
-                annotated_data = create_annotated_table(data, selected)
+            annotated_data = create_annotated_table(data, selected)
+            if self.var.is_continuous:  # annotate with bins
+                hist_indices, hist_values = self._get_histogram_indices()
+                annotated_data = create_groups_table(
+                    annotated_data, hist_indices, var_name="Bin", values=hist_values)
+            histogram_data = self._get_histogram_table()
 
         summary = len(selected_data) if selected_data else self.info.NoOutput
         details = format_summary_details(selected_data) if selected_data else ""
@@ -1115,6 +1127,21 @@ class OWDistributions(OWWidget):
             values.append(
                 self.str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
         return group_indices, values
+
+    def _get_histogram_table(self):
+        var_bin = DiscreteVariable("Bin", [bar.desc for bar in self.bar_items])
+        var_freq = ContinuousVariable("Count")
+        X = []
+        if self.cvar:
+            domain = Domain([var_bin, self.cvar, var_freq])
+            for i, bar in enumerate(self.bar_items):
+                for j, freq in enumerate(bar.freqs):
+                    X.append([i, j, freq])
+        else:
+            domain = Domain([var_bin, var_freq])
+            for i, bar in enumerate(self.bar_items):
+                X.append([i, bar.freqs[0]])
+        return Table.from_numpy(domain, X)
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)

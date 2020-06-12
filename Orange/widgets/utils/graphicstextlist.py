@@ -237,7 +237,7 @@ class TextListWidget(QGraphicsWidget):
         vspace = crect.height() - (N - 1) * spacing
         cell_height = vspace / N
 
-        if cell_height > fontheight and N > 1:
+        if cell_height > fontheight:
             # use font height, adjust (widen) spacing.
             cell_height = fontheight
             spacing = (crect.height() - N * cell_height) / N

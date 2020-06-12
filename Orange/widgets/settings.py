@@ -29,6 +29,9 @@ so they can be used alter. It should be called before widget starts modifying
 (initializing) the value of the setting attributes.
 """
 
+# Overriden methods in these classes add arguments
+# pylint: disable=arguments-differ,unused-argument,no-value-for-parameter
+
 import copy
 import itertools
 import logging
@@ -76,14 +79,6 @@ class DomainContextHandler(ContextHandler):
                 "{} is not a valid parameter for DomainContextHandler"
                 .format(name), OrangeDeprecationWarning
             )
-
-    @staticmethod
-    def _warn_about_str_var_settings(setting):
-        warnings.warn(
-            "Storing variables as strings in settings is deprecated.\n"
-            "Support for this will be dropped in Orange 3.26.\n"
-            f"Change {setting.name} to store an instance of `Variable`.",
-            stacklevel=9)
 
     def encode_domain(self, domain):
         """
@@ -135,12 +130,18 @@ class DomainContextHandler(ContextHandler):
             new_value = [item for item in value
                          if self.is_valid_item(setting, item, attrs, metas)]
             data[setting.name] = new_value
-        elif value is not None:
-            if (value[1] >= 0 and
-                    not self._var_exists(setting, value, attrs, metas)):
-                del data[setting.name]
+        elif isinstance(value, dict):
+            new_value = {item: val for item, val in value.items()
+                         if self.is_valid_item(setting, item, attrs, metas)}
+            data[setting.name] = new_value
+        elif self.is_encoded_var(value) \
+                and not self._var_exists(setting, value, attrs, metas):
+            del data[setting.name]
 
     def settings_to_widget(self, widget, domain, *args):
+        # TODO: If https://github.com/biolab/orange-widget-base/pull/56 is:
+        #  - merged, remove this method.
+        #  - rejected, remove this comment.
         context = widget.current_context
         if context is None:
             return
@@ -164,46 +165,56 @@ class DomainContextHandler(ContextHandler):
         if isinstance(value, list):
             if all(e is None or isinstance(e, Variable) for e in value) \
                     and any(e is not None for e in value):
-                return [None if e is None else cls.encode_variable(e)
-                        for e in value], -3
+                return ([None if e is None else cls.encode_variable(e)
+                         for e in value],
+                        -3)
             else:
                 return copy.copy(value)
 
-        if isinstance(setting, ContextSetting):
-            if isinstance(value, str):
-                variables = {
-                    **({} if setting.exclude_attributes else context.attributes),
-                    **({} if setting.exclude_metas else context.metas)}
-                if value in variables:
-                    cls._warn_about_str_var_settings(setting)
-                    return value, variables[value]
-            elif isinstance(value, Variable):
+        elif isinstance(value, dict) \
+                and all(isinstance(e, Variable) for e in value):
+            return ({cls.encode_variable(e): val for e, val in value.items()},
+                    -4)
+
+        if isinstance(value, Variable):
+            if isinstance(setting, ContextSetting):
                 return cls.encode_variable(value)
+            else:
+                raise ValueError("Variables must be stored as ContextSettings; "
+                                 f"change {setting.name} to ContextSetting.")
 
         return copy.copy(value), -2
 
-    def decode_setting(self, setting, value, domain=None):
+    # backward compatibility, pylint: disable=keyword-arg-before-vararg
+    def decode_setting(self, setting, value, domain=None, *args):
+        def get_var(name):
+            if domain is None:
+                raise ValueError("Cannot decode variable without domain")
+            return domain[name]
+
         if isinstance(value, tuple):
-            if value[1] == -3:
-                return [None if e is None else domain[e[0]] for e in value[0]]
-            if value[1] >= 100:
-                if domain is None:
-                    raise ValueError("Cannot decode variable without domain")
-                return domain[value[0]]
+            data, dtype = value
+            if dtype == -3:
+                return[None if name_type is None else get_var(name_type[0])
+                       for name_type in data]
+            if dtype == -4:
+                return {get_var(name): val for (name, _), val in data.items()}
+            if dtype >= 100:
+                return get_var(data)
             return value[0]
         else:
             return value
 
     @classmethod
     def _var_exists(cls, setting, value, attributes, metas):
-        if not isinstance(value, tuple) or len(value) != 2:
+        if not cls.is_encoded_var(value):
             return False
 
         attr_name, attr_type = value
-        if attr_type >= 100:
-            attr_type -= 100
-        else:
-            cls._warn_about_str_var_settings(setting)
+        # attr_type used to be either 1-4 for variables stored as string
+        # settings, and 101-104 for variables stored as variables. The former is
+        # no longer supported, but we play it safe and still handle both here.
+        attr_type %= 100
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
                 not setting.exclude_metas and
@@ -221,20 +232,21 @@ class DomainContextHandler(ContextHandler):
                 if isinstance(value, list):
                     matches.append(
                         self.match_list(setting, value, context, attrs, metas))
-                elif isinstance(value, tuple) \
-                        and len(value) == 2 \
-                        and isinstance(value[0], list) \
-                        and value[1] == -3:
-                    matches.append(
-                        self.match_list(setting, value[0], context, attrs, metas))
+                # type check is a (not foolproof) check in case of a pair that
+                # would, by conincidence, have -3 or -4 as the second element
+                elif isinstance(value, tuple) and len(value) == 2 \
+                       and (value[1] == -3 and isinstance(value[0], list)
+                            or (value[1] == -4 and isinstance(value[0], dict))):
+                    matches.append(self.match_list(setting, value[0], context,
+                                                   attrs, metas))
                 elif value is not None:
                     matches.append(
                         self.match_value(setting, value, attrs, metas))
         except IncompatibleContext:
             return self.NO_MATCH
 
-        if self.first_match:
-            return 1  # Change to self.MATCH after releasing orange-widget-base
+        if self.first_match and matches and sum(m[0] for m in matches):
+            return self.MATCH
 
         matches.append((0, 0))
         matched, available = [sum(m) for m in zip(*matches)]
@@ -274,6 +286,12 @@ class DomainContextHandler(ContextHandler):
             return True
         return self._var_exists(setting, item, attrs, metas)
 
+    @staticmethod
+    def is_encoded_var(value):
+        return isinstance(value, tuple) \
+            and len(value) == 2 \
+            and isinstance(value[0], str) and isinstance(value[1], int) \
+            and value[1] >= 0
 
 class ClassValuesContextHandler(ContextHandler):
     """Context handler used for widgets that work with
@@ -383,16 +401,15 @@ def migrate_str_to_variable(settings, names=None, none_placeholder=None):
             all settings with values `(str, int)` are migrated.
     """
     def _fix(name):
-        var, vartype = settings.values[name]
-        if 0 <= vartype <= 100:
-            settings.values[name] = (var, 100 + vartype)
-        elif var == none_placeholder and vartype == -2:
+        var, vtype = settings.values[name]
+        if 0 <= vtype <= 100:
+            settings.values[name] = (var, 100 + vtype)
+        elif var == none_placeholder and vtype == -2:
             settings.values[name] = None
 
     if names is None:
         for name, setting in settings.values.items():
-            if isinstance(setting, tuple) and len(setting) == 2 and \
-                    isinstance(setting[0], str) and isinstance(setting[1], int):
+            if DomainContextHandler.is_encoded_var(setting):
                 _fix(name)
     elif isinstance(names, str):
         _fix(names)

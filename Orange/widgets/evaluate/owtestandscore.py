@@ -32,12 +32,15 @@ import Orange.evaluation
 from Orange.evaluation import Results
 from Orange.preprocess.preprocess import Preprocess
 import Orange.regression
+from Orange.statistics.util import unique
 from Orange.widgets import gui, settings, widget
 from Orange.widgets.evaluate.utils import \
     usable_scorers, ScoreTable, learner_name, scorer_caller
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.concurrent import ThreadExecutor, TaskState
+from Orange.widgets.utils.state_summary import (format_multiple_summaries,
+                                                format_summary_details)
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 log = logging.getLogger(__name__)
@@ -187,19 +190,15 @@ class OWTestAndScore(OWWidget):
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
     class Error(OWWidget.Error):
-        train_data_empty = Msg("Train dataset is empty.")
         test_data_empty = Msg("Test dataset is empty.")
-        class_required = Msg("Train data input requires a target variable.")
-        too_many_classes = Msg("Too many target variables.")
         class_required_test = Msg("Test data input requires a target variable.")
         too_many_folds = Msg("Number of folds exceeds the data size")
         class_inconsistent = Msg("Test and train datasets "
                                  "have different target variables.")
         memory_error = Msg("Not enough memory.")
-        no_class_values = Msg("Target variable has no values.")
-        only_one_class_var_value = Msg("Target variable has only one value.")
         test_data_incompatible = Msg(
             "Test data may be incompatible with train data.")
+        train_data_error = Msg("{}")
 
     class Warning(OWWidget.Warning):
         missing_data = \
@@ -235,6 +234,9 @@ class OWTestAndScore(OWWidget):
         self.__needupdate = False
         self.__task = None  # type: Optional[TaskState]
         self.__executor = ThreadExecutor()
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
         sbox = gui.vBox(self.controlArea, "Sampling")
         rbox = gui.radioButtons(
@@ -382,26 +384,27 @@ class OWTestAndScore(OWWidget):
         """
         self.cancel()
         self.Information.data_sampled.clear()
-        self.Error.train_data_empty.clear()
-        self.Error.class_required.clear()
-        self.Error.too_many_classes.clear()
-        self.Error.no_class_values.clear()
-        self.Error.only_one_class_var_value.clear()
-        if data is not None and not data:
-            self.Error.train_data_empty()
-            data = None
-        if data:
-            conds = [not data.domain.class_vars,
-                     len(data.domain.class_vars) > 1,
-                     np.isnan(data.Y).all(),
-                     data.domain.has_discrete_class and len(data.domain.class_var.values) == 1]
-            errors = [self.Error.class_required,
-                      self.Error.too_many_classes,
-                      self.Error.no_class_values,
-                      self.Error.only_one_class_var_value]
-            for cond, error in zip(conds, errors):
+        self.Error.train_data_error.clear()
+
+        if data is not None:
+            data_errors = [
+                ("Train dataset is empty.", len(data) == 0),
+                (
+                    "Train data input requires a target variable.",
+                    not data.domain.class_vars
+                ),
+                ("Too many target variables.", len(data.domain.class_vars) > 1),
+                ("Target variable has no values.", np.isnan(data.Y).all()),
+                (
+                    "Target variable has only one value.",
+                    data.domain.has_discrete_class and len(unique(data.Y)) < 2
+                ),
+                ("Data has no features to learn from.", data.X.shape[1] == 0),
+            ]
+
+            for error_msg, cond in data_errors:
                 if cond:
-                    error()
+                    self.Error.train_data_error(error_msg)
                     data = None
                     break
 
@@ -532,8 +535,25 @@ class OWTestAndScore(OWWidget):
         self.score_table.update_header(self.scorers)
         self._update_view_enabled()
         self.update_stats_model()
+        self.set_input_summary()
         if self.__needupdate:
             self.__update()
+
+    def set_input_summary(self):
+        summary, details, kwargs = self.info.NoInput, "", {}
+        if self.data and self.test_data:
+            summary = f"{self.info.format_number(len(self.data))}," \
+                      f" {self.info.format_number(len(self.test_data))}"
+            details = format_multiple_summaries([
+                ("Data", self.data), ("Test data", self.test_data)
+            ])
+            kwargs = {"format": Qt.RichText}
+        elif self.data and not self.test_data:
+            summary, details = len(self.data), format_summary_details(self.data)
+        elif self.test_data and not self.data:
+            summary = len(self.test_data)
+            details = format_summary_details(self.test_data)
+        self.info.set_input_summary(summary, details, **kwargs)
 
     def kfold_changed(self):
         self.resampling = OWTestAndScore.KFold
@@ -839,6 +859,10 @@ class OWTestAndScore(OWWidget):
                 predictions = combined.get_augmented_data(combined.learner_names)
             except MemoryError:
                 self.Error.memory_error()
+
+        summary = len(predictions) if predictions else self.info.NoOutput
+        details = format_summary_details(predictions) if predictions else ""
+        self.info.set_output_summary(summary, details)
 
         self.Outputs.evaluations_results.send(combined)
         self.Outputs.predictions.send(predictions)

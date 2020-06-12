@@ -32,13 +32,14 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
-from Orange.widgets.settings import Setting, DomainContextHandler
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class RichTableModel(TableModel):
@@ -425,8 +426,6 @@ class OWDataTable(OWWidget):
     auto_commit = Setting(True)
 
     color_by_class = Setting(True)
-    settingsHandler = DomainContextHandler(
-        match_values=DomainContextHandler.MATCH_VALUES_ALL)
     selected_rows = Setting([], schema_only=True)
     selected_cols = Setting([], schema_only=True)
 
@@ -442,16 +441,8 @@ class OWDataTable(OWWidget):
 
         self.dist_color = QColor(*self.dist_color_RGB)
 
-        info_box = gui.vBox(self.controlArea, "Info")
-        self.info_ex = gui.widgetLabel(info_box, 'No data on input.', )
-        self.info_ex.setWordWrap(True)
-        self.info_attr = gui.widgetLabel(info_box, ' ')
-        self.info_attr.setWordWrap(True)
-        self.info_class = gui.widgetLabel(info_box, ' ')
-        self.info_class.setWordWrap(True)
-        self.info_meta = gui.widgetLabel(info_box, ' ')
-        self.info_meta.setWordWrap(True)
-        info_box.setMinimumWidth(200)
+        self._set_input_summary(None)
+        self._set_output_summary(None)
         gui.separator(self.controlArea)
 
         box = gui.vBox(self.controlArea, "Variables")
@@ -493,7 +484,6 @@ class OWDataTable(OWWidget):
     @Inputs.data
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
-        self.closeContext()
         if data is not None:
             datasetname = getattr(data, "name", "Data")
             if tid in self._inputs:
@@ -539,7 +529,7 @@ class OWDataTable(OWWidget):
 
             self.tabs.setCurrentIndex(self.tabs.indexOf(view))
 
-            self.set_info(slot.summary)
+            self._set_input_summary(slot)
 
             if isinstance(slot.summary.len, concurrent.futures.Future):
                 def update(_):
@@ -557,10 +547,11 @@ class OWDataTable(OWWidget):
 
             current = self.tabs.currentWidget()
             if current is not None:
-                self.set_info(current.input_slot.summary)
+                self._set_input_summary(current.input_slot)
+        else:
+            self._set_input_summary(None)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
-        self.openContext(data)
 
         if data and self.__pending_selected_rows is not None:
             self.selected_rows = self.__pending_selected_rows
@@ -606,6 +597,7 @@ class OWDataTable(OWWidget):
         header = view.horizontalHeader()
         header.setSectionsClickable(is_sortable(data))
         header.setSortIndicatorShown(is_sortable(data))
+        header.sortIndicatorChanged.connect(self.update_selection)
 
         view.setModel(datamodel)
 
@@ -705,6 +697,26 @@ class OWDataTable(OWWidget):
             except Exception:
                 pass
 
+    def _set_input_summary(self, slot):
+        def format_summary(summary):
+            if isinstance(summary, ApproxSummary):
+                length = summary.len.result() if summary.len.done() else \
+                    summary.approx_len
+            elif isinstance(summary, Summary):
+                length = summary.len
+            return length
+
+        summary, details = self.info.NoInput, ""
+        if slot:
+            summary = format_summary(slot.summary)
+            details = format_summary_details(slot.table)
+        self.info.set_input_summary(summary, details)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
+
     def _on_select_all(self, _):
         data_info = self.tabs.currentWidget().input_slot.summary
         if len(self.selected_rows) == data_info.len \
@@ -714,13 +726,13 @@ class OWDataTable(OWWidget):
             self.tabs.currentWidget().selectAll()
 
     def _on_current_tab_changed(self, index):
-        """Update the info box on current tab change"""
+        """Update the status bar on current tab change"""
         view = self.tabs.widget(index)
         if view is not None and view.model() is not None:
-            self.set_info(view.input_slot.summary)
+            self._set_input_summary(view.input_slot)
             self.update_selection()
         else:
-            self.set_info(None)
+            self._set_input_summary(None)
 
     def _update_variable_labels(self, view):
         "Update the variable labels visibility for `view`"
@@ -790,26 +802,11 @@ class OWDataTable(OWWidget):
         if table is not None:
             table.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
-    def set_info(self, summary):
-        if summary is None:
-            self.info_ex.setText("No data on input.")
-            self.info_attr.setText("")
-            self.info_class.setText("")
-            self.info_meta.setText("")
-        else:
-            info_len, info_attr, info_class, info_meta = \
-                format_summary(summary)
-
-            self.info_ex.setText(info_len)
-            self.info_attr.setText(info_attr)
-            self.info_class.setText(info_class)
-            self.info_meta.setText(info_meta)
-
     @Slot()
     def _update_info(self):
         current = self.tabs.currentWidget()
         if current is not None and current.model() is not None:
-            self.set_info(current.input_slot.summary)
+            self._set_input_summary(current.input_slot)
 
     def update_selection(self, *_):
         self.commit()
@@ -860,7 +857,6 @@ class OWDataTable(OWWidget):
         rows = numpy.array(rows, dtype=numpy.intp)
         # map the rows through the applied sorting (if any)
         rows = model.mapToSourceRows(rows)
-        rows.sort()
         rows = rows.tolist()
         return rows, cols
 
@@ -884,27 +880,13 @@ class OWDataTable(OWWidget):
             # Selections of individual instances are not implemented
             # for SqlTables
             if isinstance(table, SqlTable):
+                self._set_output_summary(selected_data)
                 self.Outputs.selected_data.send(selected_data)
                 self.Outputs.annotated_data.send(None)
                 return
 
             rowsel, colsel = self.get_selection(view)
             self.selected_rows, self.selected_cols = rowsel, colsel
-
-            def select(data, rows, domain):
-                """
-                Select the data subset with specified rows and domain subsets.
-
-                If either rows or domain is None they mean select all.
-                """
-                if rows is not None and domain is not None:
-                    return data.from_table(domain, data, rows)
-                elif rows is not None:
-                    return data.from_table(data.domain, rows)
-                elif domain is not None:
-                    return data.from_table(domain, data)
-                else:
-                    return data
 
             domain = table.domain
 
@@ -928,14 +910,13 @@ class OWDataTable(OWWidget):
                 metas = select_vars(TableModel.Meta)
                 domain = Orange.data.Domain(attrs, class_vars, metas)
 
-            # Avoid a copy if all/none rows are selected.
+            # Avoid a copy if none rows are selected.
             if not rowsel:
                 selected_data = None
-            elif len(rowsel) == len(table):
-                selected_data = select(table, None, domain)
             else:
-                selected_data = select(table, rowsel, domain)
+                selected_data = table.from_table(domain, table, rowsel)
 
+        self._set_output_summary(selected_data)
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(create_annotated_table(table, rowsel))
 
@@ -1028,70 +1009,6 @@ def table_summary(table):
         return Summary(n_instances, domain, X_part, Y_part, M_part)
 
 
-def format_summary(summary):
-    text = []
-    if isinstance(summary, ApproxSummary):
-        if summary.len.done():
-            text += ["{} instances".format(summary.len.result())]
-        else:
-            text += ["~{} instances".format(summary.approx_len)]
-
-    elif isinstance(summary, Summary):
-        text += ["{} instances".format(summary.len)]
-
-        if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
-            text[-1] += " (no missing values)"
-
-    def format_part(part):
-        if isinstance(part, NotAvailable):
-            return ""
-        elif part.nans + part.non_nans == 0:
-            return ""
-
-        if isinstance(part, DenseArray):
-            total = part.nans + part.non_nans
-            miss = ("%.1f%%" % (100 * part.nans / total) if part.nans > 0
-                    else "no")
-            return " (%s missing values)" % miss
-        elif isinstance(part, (SparseArray, SparseBoolArray)):
-            text = " ({}, density {:.2f}%)"
-            tag = "sparse" if isinstance(part, SparseArray) else "tags"
-            total = part.nans + part.non_nans
-            return text.format(tag, 100 * part.non_nans / total)
-        else:
-            # MISSING, N/A
-            return ""
-
-    def sp(n):
-        if n == 0:
-            return "No", "s"
-        elif n == 1:
-            return str(n), ''
-        else:
-            return str(n), 's'
-
-    text += [("%s feature%s" % sp(len(summary.domain.attributes)))
-             + format_part(summary.X)]
-
-    if not summary.domain.class_vars:
-        text += ["No target variable."]
-    else:
-        if len(summary.domain.class_vars) > 1:
-            c_text = "%s outcome%s" % sp(len(summary.domain.class_vars))
-        elif summary.domain.has_continuous_class:
-            c_text = "Continuous target variable"
-        else:
-            c_text = "Discrete class with %s value%s" % sp(
-                len(summary.domain.class_var.values))
-        c_text += format_part(summary.Y)
-        text += [c_text]
-
-    text += [("%s meta attribute%s" % sp(len(summary.domain.metas)))
-             + format_part(summary.M)]
-
-    return text
-
-
 def is_sortable(table):
     if isinstance(table, SqlTable):
         return False
@@ -1099,21 +1016,6 @@ def is_sortable(table):
         return True
     else:
         return False
-
-
-def test_model():
-    app = QApplication([])
-    view = QTableView(
-        sortingEnabled=True
-    )
-    data = Orange.data.Table("lenses")
-    model = TableModel(data)
-
-    view.setModel(model)
-
-    view.show()
-    view.raise_()
-    return app.exec()
 
 
 if __name__ == "__main__":  # pragma: no cover

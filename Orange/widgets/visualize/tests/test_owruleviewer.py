@@ -6,6 +6,7 @@ from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.classification import CN2Learner
 from Orange.widgets.visualize.owruleviewer import OWRuleViewer
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
@@ -156,3 +157,41 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
         selection_model.select(self.widget.proxy_model.index(2, 0),
                                selection_model.Select | selection_model.Rows)
         return list(range(586, 597))
+
+    def test_summary(self):
+        """Check if status bar is updated when data is received"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        data = self.titanic
+        self.send_signal(self.widget.Inputs.data, data)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self.send_signal(self.widget.Inputs.classifier, self.classifier)
+        summary, details = f"{len(data)}", format_summary_details(data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.classifier, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)

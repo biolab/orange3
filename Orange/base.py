@@ -3,6 +3,7 @@ import itertools
 from collections import Iterable
 import re
 import warnings
+from typing import Callable
 
 import numpy as np
 import scipy
@@ -205,15 +206,12 @@ class Model(Reprable):
     ValueProbs = 2
 
     def __init__(self, domain=None, original_domain=None):
-        if isinstance(self, Learner):
-            domain = None
-        elif domain is None:
-            raise ValueError("unspecified domain")
         self.domain = domain
         if original_domain is not None:
             self.original_domain = original_domain
         else:
             self.original_domain = domain
+        self.used_vals = None
 
     def predict(self, X):
         if type(self).predict_storage is Model.predict_storage:
@@ -320,7 +318,9 @@ class Model(Reprable):
         new_probs = new_probs / tots[:, None]
         return new_probs
 
-    def data_to_model_domain(self, data: Table) -> Table:
+    def data_to_model_domain(
+            self, data: Table, progress_callback: Callable = dummy_callback
+    ) -> Table:
         """
         Transforms data to the model domain if possible.
 
@@ -328,6 +328,8 @@ class Model(Reprable):
         ----------
         data
             Data to be transformed to the model domain
+        progress_callback
+            Callback - callable - to report the progress
 
         Returns
         -------
@@ -342,16 +344,24 @@ class Model(Reprable):
         if data.domain == self.domain:
             return data
 
+        progress_callback(0)
         if self.original_domain.attributes != data.domain.attributes \
                 and data.X.size \
                 and not all_nan(data.X):
+            progress_callback(0.5)
             new_data = data.transform(self.original_domain)
             if all_nan(new_data.X):
                 raise DomainTransformationError(
                     "domain transformation produced no defined values")
-            return new_data.transform(self.domain)
+            progress_callback(0.75)
+            data = new_data.transform(self.domain)
+            progress_callback(1)
+            return data
 
-        return data.transform(self.domain)
+        progress_callback(0.5)
+        data = data.transform(self.domain)
+        progress_callback(1)
+        return data
 
     def __call__(self, data, ret=Value):
         multitarget = len(self.domain.class_vars) > 1
@@ -369,6 +379,30 @@ class Model(Reprable):
             for i in range(len(self.domain.class_vars)):
                 probs[:, i, :] = one_hot(value[:, i])
             return probs
+
+        def extend_probabilities(probs):
+            """
+            Since SklModels and models implementing `fit` and not `fit_storage`
+            do not guarantee correct prediction dimensionality, extend
+            dimensionality of probabilities when it does not match the number
+            of values in the domain.
+            """
+            class_vars = self.domain.class_vars
+            max_values = max(len(cv.values) for cv in class_vars)
+            if max_values == probs.shape[-1]:
+                return probs
+
+            if not self.supports_multiclass:
+                probs = probs[:, np.newaxis, :]
+
+            probs_ext = np.zeros((len(probs), len(class_vars), max_values))
+            for c, used_vals in enumerate(self.used_vals):
+                for i, cv in enumerate(used_vals):
+                    probs_ext[:, c, cv] = probs[:, c, i]
+
+            if not self.supports_multiclass:
+                probs_ext = probs_ext[:, 0, :]
+            return probs_ext
 
         def fix_dim(x):
             return x[0] if one_d else x
@@ -426,6 +460,7 @@ class Model(Reprable):
         if probs is None and (ret != Model.Value or backmappers is not None):
             probs = one_hot_probs(value)
         if probs is not None:
+            probs = extend_probabilities(probs)
             probs = self.backmap_probs(probs, n_values, backmappers)
         if ret != Model.Probs:
             if value is None:

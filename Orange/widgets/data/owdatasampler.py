@@ -55,18 +55,33 @@ class OWDataSampler(OWWidget):
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
 
+    # Older versions of the widget had swapped outputs for cross validation
+    # Migrations set this to True for compability with older workflows
+    compatibility_mode = Setting(False, schema_only=True)
+
+    settings_version = 2
+
+    class Information(OWWidget.Information):
+        compatibility_mode = Msg(
+            "Compatibility mode\n"
+            "New versions of widget have swapped outputs for cross validation"
+        )
+
     class Warning(OWWidget.Warning):
         could_not_stratify = Msg("Stratification failed\n{}")
         bigger_sample = Msg('Sample is bigger than input')
 
     class Error(OWWidget.Error):
-        too_many_folds = Msg("Number of folds exceeds data size")
+        too_many_folds = Msg("Number of subsets exceeds data size")
         sample_larger_than_data = Msg("Sample can't be larger than data")
         not_enough_to_stratify = Msg("Data is too small to stratify")
         no_data = Msg("Dataset is empty")
 
     def __init__(self):
         super().__init__()
+        if self.compatibility_mode:
+            self.Information.compatibility_mode()
+
         self.data = None
         self.indices = None
         self.sampled_instances = self.remaining_instances = None
@@ -110,7 +125,7 @@ class OWDataSampler(OWWidget):
             labelAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow)
         ibox = gui.indentedBox(sampling, addSpace=True, orientation=form)
-        form.addRow("Number of folds:",
+        form.addRow("Number of subsets:",
                     gui.spin(
                         ibox, self, "number_of_folds", 2, 100,
                         addToLayout=False,
@@ -118,7 +133,8 @@ class OWDataSampler(OWWidget):
         self.selected_fold_spin = gui.spin(
             ibox, self, "selectedFold", 1, self.number_of_folds,
             addToLayout=False, callback=self.fold_changed)
-        form.addRow("Selected fold:", self.selected_fold_spin)
+        form.addRow("Unused subset:" if not self.compatibility_mode
+                    else "Selected subset:", self.selected_fold_spin)
 
         gui.appendRadioButton(sampling, "Bootstrap")
 
@@ -180,7 +196,7 @@ class OWDataSampler(OWWidget):
             self.cb_seed.setVisible(not sql)
             self.cb_stratify.setVisible(not sql)
             self.cb_sql_dl.setVisible(sql)
-            self.info.set_input_summary(len(dataset),
+            self.info.set_input_summary(dataset.approx_len(),
                                         format_summary_details(dataset))
 
             if not sql:
@@ -224,14 +240,17 @@ class OWDataSampler(OWWidget):
                     self.FixedProportion, self.FixedSize, self.Bootstrap):
                 remaining, sample = self.indices
             elif self.sampling_type == self.CrossValidation:
-                remaining, sample = self.indices[self.selectedFold - 1]
+                if self.compatibility_mode:
+                    remaining, sample = self.indices[self.selectedFold - 1]
+                else:
+                    sample, remaining = self.indices[self.selectedFold - 1]
 
             sample = self.data[sample]
             other = self.data[remaining]
             self.sampled_instances = len(sample)
             self.remaining_instances = len(other)
 
-        summary = len(sample) if sample else self.info.NoOutput
+        summary = sample.approx_len() if sample else self.info.NoOutput
         details = format_summary_details(sample) if sample else ""
         self.info.set_output_summary(summary, details)
 
@@ -315,9 +334,11 @@ class OWDataSampler(OWWidget):
                 if self.replacement:
                     tpe += ", with replacement"
         elif self.sampling_type == self.CrossValidation:
-            tpe = "Fold {} of {}-fold cross-validation".format(
-                self.selectedFold, self.number_of_folds)
-        else:
+            tpe = f"{self.number_of_folds}-fold cross-validation " \
+                  f"without subset #{self.selectedFold}"
+        elif self.sampling_type == self.Bootstrap:
+            tpe = "Bootstrap"
+        else:  # pragma: no cover
             tpe = "Undefined"  # should not come here at all
         if self.stratify:
             tpe += ", stratified (if possible)"
@@ -331,6 +352,12 @@ class OWDataSampler(OWWidget):
                 ("Remaining", "{} instances".format(self.remaining_instances)),
             ]
         self.report_items(items)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if not version or version < 2 \
+                and settings["sampling_type"] == cls.CrossValidation:
+            settings["compatibility_mode"] = True
 
 
 class SampleFoldIndices(Reprable):

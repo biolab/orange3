@@ -5,8 +5,7 @@ from operator import iadd
 import numpy
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QApplication,
-    QSizePolicy
+    QGraphicsRectItem, QGraphicsGridLayout, QApplication, QSizePolicy
 )
 from AnyQt.QtGui import QFontMetrics, QPen, QTransform, QFont
 from AnyQt.QtCore import Qt, QRect, QRectF, QPointF
@@ -27,9 +26,11 @@ from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils.dendrogram import DendrogramWidget
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.utils.heatmap import (
     GradientColorMap, GradientLegendWidget,
 )
+from Orange.widgets.utils.colorgradientselection import ColorGradientSelection
 
 
 def _remove_item(item):
@@ -295,34 +296,32 @@ class OWDistanceMap(widget.OWWidget):
         self._sort_indices = None
         self._selection = None
 
+        self._set_input_summary(None)
+        self._set_output_summary(None)
+
         self.sorting_cb = gui.comboBox(
             self.controlArea, self, "sorting", box="Element Sorting",
             items=["None", "Clustering", "Clustering with ordered leaves"],
             callback=self._invalidate_ordering)
 
         box = gui.vBox(self.controlArea, "Colors")
-        self.color_box = gui.palette_combo_box(self.palette_name)
-        self.color_box.currentIndexChanged.connect(self._update_color)
-        box.layout().addWidget(self.color_box)
+        self.color_map_widget = cmw = ColorGradientSelection(
+            thresholds=(self.color_low, self.color_high),
+        )
+        model = itemmodels.ContinuousPalettesModel(parent=self)
+        cmw.setModel(model)
+        idx = cmw.findData(self.palette_name, model.KeyRole)
+        if idx != -1:
+            cmw.setCurrentIndex(idx)
 
-        form = QFormLayout(
-            formAlignment=Qt.AlignLeft,
-            labelAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow
-        )
-        form.addRow(
-            "Low:",
-            gui.hSlider(box, self, "color_low", minValue=0.0, maxValue=1.0,
-                        step=0.05, ticks=True, intOnly=False,
-                        createLabel=False, callback=self._update_color)
-        )
-        form.addRow(
-            "High:",
-            gui.hSlider(box, self, "color_high", minValue=0.0, maxValue=1.0,
-                        step=0.05, ticks=True, intOnly=False,
-                        createLabel=False, callback=self._update_color)
-        )
-        box.layout().addLayout(form)
+        cmw.activated.connect(self._update_color)
+
+        def _set_thresholds(low, high):
+            self.color_low, self.color_high = low, high
+            self._update_color()
+
+        cmw.thresholdsChanged.connect(_set_thresholds)
+        box.layout().addWidget(self.color_map_widget)
 
         self.annot_combo = gui.comboBox(
             self.controlArea, self, "annotation_idx", box="Annotations",
@@ -342,9 +341,7 @@ class OWDistanceMap(widget.OWWidget):
         self.grid = QGraphicsGridLayout()
         self.grid_widget.setLayout(self.grid)
 
-        self.gradient_legend = GradientLegendWidget(
-            0, 1, self._color_map()
-        )
+        self.gradient_legend = GradientLegendWidget(0, 1, self._color_map())
         self.gradient_legend.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.gradient_legend.setMaximumWidth(250)
         self.grid.addItem(self.gradient_legend, 0, 1)
@@ -409,6 +406,7 @@ class OWDistanceMap(widget.OWWidget):
         self.closeContext()
         self.clear()
         self.error()
+        self._set_input_summary(matrix)
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
@@ -489,6 +487,15 @@ class OWDistanceMap(widget.OWWidget):
                 self.matrix_item.set_selections(self.pending_selection)
                 self.pending_selection = None
         self.unconditional_commit()
+
+    def _set_input_summary(self, matrix):
+        summary = len(matrix) if matrix is not None else self.info.NoInput
+        self.info.set_input_summary(summary)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def _clear_plot(self):
         def remove(item):
@@ -613,17 +620,18 @@ class OWDistanceMap(widget.OWWidget):
         self.bottom_labels.setMaximumHeight(constraint)
 
     def _color_map(self) -> GradientColorMap:
-        palette = self.color_box.currentData()
+        palette = self.color_map_widget.currentData()
         return GradientColorMap(
             palette.lookup_table(),
             thresholds=(self.color_low, max(self.color_high, self.color_low)),
             span=(0., self._matrix_range))
 
     def _update_color(self):
-        palette = self.color_box.currentData()
+        palette = self.color_map_widget.currentData()
         self.palette_name = palette.name
         if self.matrix_item:
-            colors = palette.lookup_table(self.color_low, self.color_high)
+            cmap = self._color_map().replace(span=(0., 1.))
+            colors = cmap.apply(numpy.arange(256) / 255.)
             self.matrix_item.setLookupTable(colors)
             self.gradient_legend.show()
             self.gradient_legend.setRange(0, self._matrix_range)
@@ -658,6 +666,8 @@ class OWDistanceMap(widget.OWWidget):
         elif isinstance(self.items, widget.AttributeList):
             subset = [self.items[i] for i in self._selection]
             featuresubset = widget.AttributeList(subset)
+
+        self._set_output_summary(datasubset)
 
         self.Outputs.selected_data.send(datasubset)
         self.Outputs.annotated_data.send(create_annotated_table(self.items, self._selection))

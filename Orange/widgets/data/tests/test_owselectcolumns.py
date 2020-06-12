@@ -2,18 +2,18 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
+import numpy as np
 from AnyQt.QtCore import QMimeData, QPoint, Qt
 from AnyQt.QtGui import QDragEnterEvent
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
-from Orange.widgets.data.contexthandlers import \
-    SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.data.owselectcolumns \
-    import OWSelectAttributes, VariablesListItemModel
+    import OWSelectAttributes, VariablesListItemModel, \
+    SelectAttributesDomainContextHandler
 from Orange.widgets.data.owrank import OWRank
 from Orange.widgets.widget import AttributeList
 
@@ -56,20 +56,21 @@ class TestSelectAttributesDomainContextHandler(TestCase):
 
         widget = SimpleWidget()
         self.handler.initialize(widget)
-        self.handler.open_context(widget, self.args[0])
+        domain = self.args[0]
+        self.handler.open_context(widget, domain)
         self.assertEqual(widget.domain_role_hints,
-                         {('d1', Discrete): ('available', 0),
-                          ('d2', Discrete): ('meta', 0),
-                          ('c1', Continuous): ('attribute', 0),
-                          ('d3', Discrete): ('attribute', 1),
-                          ('d4', Discrete): ('attribute', 2),
-                          ('c2', Continuous): ('class', 0)})
+                         {domain['d1']: ('available', 0),
+                          domain['d2']: ('meta', 0),
+                          domain['c1']: ('attribute', 0),
+                          domain['d3']: ('attribute', 1),
+                          domain['d4']: ('attribute', 2),
+                          domain['c2']: ('class', 0)})
 
     def test_open_context_with_imperfect_match(self):
         self.handler.bind(SimpleWidget)
         context1 = Mock(values=dict(
             domain_role_hints=({('d1', Discrete): ('attribute', 0),
-                                ('m2', Discrete): ('meta', 0)})
+                                ('m2', Discrete): ('meta', 0)}, -2)
         ))
         context = Mock(values=dict(
             domain_role_hints=({('d1', Discrete): ('available', 0),
@@ -84,30 +85,14 @@ class TestSelectAttributesDomainContextHandler(TestCase):
 
         widget = SimpleWidget()
         self.handler.initialize(widget)
-        self.handler.open_context(widget, self.args[0])
+        domain = self.args[0]
+        self.handler.open_context(widget, domain)
 
         self.assertEqual(widget.domain_role_hints,
-                         {('d1', Discrete): ('available', 0),
-                          ('d2', Discrete): ('meta', 0),
-                          ('c1', Continuous): ('attribute', 0),
-                          ('c2', Continuous): ('class', 0)})
-
-    def test_open_context_with_no_match(self):
-        self.handler.bind(SimpleWidget)
-        context = Mock(values=dict(
-            domain_role_hints=({('d1', Discrete): ('available', 0),
-                                ('d2', Discrete): ('meta', 0),
-                                ('c1', Continuous): ('attribute', 0),
-                                ('d3', Discrete): ('attribute', 1),
-                                ('d4', Discrete): ('attribute', 2),
-                                ('c2', Continuous): ('class', 0)}, -2),
-            required=('g1', Continuous),
-        ))
-        self.handler.global_contexts = [context]
-        widget = SimpleWidget()
-        self.handler.initialize(widget)
-        self.handler.open_context(widget, self.args[0])
-        self.assertEqual(widget.domain_role_hints, {})
+                         {domain['d1']: ('available', 0),
+                          domain['d2']: ('meta', 0),
+                          domain['c1']: ('attribute', 0),
+                          domain['c2']: ('class', 0)})
 
 
 class TestModel(TestCase):
@@ -412,3 +397,17 @@ class TestOWSelectAttributes(WidgetTest):
         self.assertEqual(input_sum.call_args[0][0].brief, "")
         output_sum.assert_called_once()
         self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+    def test_domain_new_feature(self):
+        """ Test scenario when new attribute is added at position 0 """
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+
+        data1 = Table(
+            Domain(
+                (ContinuousVariable("a"),) + data.domain.attributes,
+                data.domain.class_var),
+            np.hstack((np.ones((len(data), 1)), data.X)),
+            data.Y
+        )
+        self.send_signal(self.widget.Inputs.data, data1)

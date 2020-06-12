@@ -5,6 +5,7 @@ from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
+from Orange.data.util import get_unique_names
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
@@ -35,12 +36,10 @@ class OWPCA(widget.OWWidget):
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 
-    settingsHandler = settings.DomainContextHandler()
-
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     auto_commit = settings.Setting(True)
-    normalize = settings.ContextSetting(True)
+    normalize = settings.Setting(True)
     maxp = settings.Setting(20)
     axis_labels = settings.Setting(10)
 
@@ -113,7 +112,6 @@ class OWPCA(widget.OWWidget):
 
     @Inputs.data
     def set_data(self, data):
-        self.closeContext()
         self.clear_messages()
         self.clear()
         self.information()
@@ -136,7 +134,6 @@ class OWPCA(widget.OWWidget):
                 self.clear_outputs()
                 return
 
-        self.openContext(data)
         self._init_projector()
 
         self.data = data
@@ -302,10 +299,12 @@ class OWPCA(widget.OWWidget):
             )
             transformed = transformed.from_table(domain, transformed)
             # prevent caching new features by defining compute_value
+            proposed = [a.name for a in self._pca.orig_domain.attributes]
+            meta_name = get_unique_names(proposed, 'components')
             dom = Domain(
-                [ContinuousVariable(a.name, compute_value=lambda _: None)
-                 for a in self._pca.orig_domain.attributes],
-                metas=[StringVariable(name='component')])
+                [ContinuousVariable(name, compute_value=lambda _: None)
+                 for name in proposed],
+                metas=[StringVariable(name=meta_name)])
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
                                 dtype=object).T
@@ -319,7 +318,8 @@ class OWPCA(widget.OWWidget):
                 self.data.domain.metas + domain.attributes)
             data = Table.from_numpy(
                 data_dom, self.data.X, self.data.Y,
-                numpy.hstack((self.data.metas, transformed.X)))
+                numpy.hstack((self.data.metas, transformed.X)),
+                ids=self.data.ids)
 
         self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)

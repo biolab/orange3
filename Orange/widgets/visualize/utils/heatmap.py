@@ -26,6 +26,7 @@ from Orange.clustering.hierarchical import Tree
 from Orange.widgets.utils import apply_all
 from Orange.widgets.utils.colorpalettes import DefaultContinuousPalette
 from Orange.widgets.utils.graphicslayoutitem import SimpleLayoutItem, scaled
+from Orange.widgets.utils.graphicsflowlayout import GraphicsFlowLayout
 from Orange.widgets.utils.graphicspixmapwidget import GraphicsPixmapWidget
 from Orange.widgets.utils.image import qimage_from_array
 
@@ -95,7 +96,10 @@ class GradientColorMap(ColorMap):
         Adjust the data low, high levels by applying the thresholding and
         centering.
         """
-        assert low <= high
+        if np.any(np.isnan([low, high])):
+            return np.nan, np.nan
+        elif low > high:
+            raise ValueError(f"low > high ({low} > {high})")
         threshold_low, threshold_high = self.thresholds
         lt = low + (high - low) * threshold_low
         ht = low + (high - low) * threshold_high
@@ -113,7 +117,16 @@ class GradientColorMap(ColorMap):
             low, high = self.span
         low, high = self.adjust_levels(low, high)
         mask = np.isnan(data)
-        normalized = (data - low) / (high - low)
+        normalized = data - low
+        finfo = np.finfo(normalized.dtype)
+        if high - low <= 1 / finfo.max:
+            n_fact = finfo.max
+        else:
+            n_fact = 1. / (high - low)
+        # over/underflow to inf are expected and cliped with the rest in the
+        # next step
+        with np.errstate(over="ignore", under="ignore"):
+            normalized *= n_fact
         normalized = np.clip(normalized, 0, 1, out=normalized)
         table = np.empty_like(normalized, dtype=np.uint8)
         ncolors = len(self.colortable)
@@ -278,16 +291,20 @@ class HeatmapGridWidget(QGraphicsWidget):
 
     # Start row/column where the heatmap items are inserted
     # (after the titles/legends/dendrograms)
-    Row0 = 3
+    Row0 = 5
     Col0 = 3
     # The (color) legend row and column
     LegendRow, LegendCol = 0, 4
     # The column for the vertical dendrogram
     DendrogramColumn = 1
+    # Horizontal split title column
+    GroupTitleRow = 1
     # The row for the horizontal dendrograms
-    DendrogramRow = 1
+    DendrogramRow = 2
     # The row for top column annotation labels
-    TopLabelsRow = 2
+    TopLabelsRow = 3
+    # Top color annotation row
+    TopAnnotationRow = 4
     # Vertical split title column
     GroupTitleColumn = 0
 
@@ -310,6 +327,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         self.col_dendrograms = []  # type: List[Optional[DendrogramWidget]]
         self.row_dendrograms = []  # type: List[Optional[DendrogramWidget]]
         self.right_side_colors = []  # type: List[Optional[GraphicsPixmapWidget]]
+        self.top_side_colors = []  # type: List[Optional[GraphicsPixmapWidget]]
         self.heatmap_colormap_legend = None
         self.bottom_legend_container = None
         self.__layout = GridLayout()
@@ -341,6 +359,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         self.col_dendrograms = []
         self.row_dendrograms = []
         self.right_side_colors = []
+        self.top_side_colors = []
         self.heatmap_colormap_legend = None
         self.bottom_legend_container = None
         self.parts = None
@@ -361,28 +380,27 @@ class HeatmapGridWidget(QGraphicsWidget):
         # The row for the horizontal dendrograms
         DendrogramRow = self.DendrogramRow
         RightLabelColumn = Col0 + 2 * M + 1
+        TopAnnotationRow = self.TopAnnotationRow
         TopLabelsRow = self.TopLabelsRow
         BottomLabelsRow = Row0 + N
         colormap = self.__colormap
         column_dendrograms: List[Optional[DendrogramWidget]] = [None] * M
         row_dendrograms: List[Optional[DendrogramWidget]] = [None] * N
         right_side_colors: List[Optional[GraphicsPixmapWidget]] = [None] * N
+        top_side_colors: List[Optional[GraphicsPixmapWidget]] = [None] * M
 
-        ncols = sum(c.size for c in parts.columns)
-        nrows = sum(r.size for r in parts.rows)
         data = parts.data
         if parts.col_names is None:
-            col_names = np.full(ncols, "", dtype=object)
+            col_names = np.full(data.shape[1], "", dtype=object)
         else:
             col_names = np.asarray(parts.col_names, dtype=object)
         if parts.row_names is None:
-            row_names = np.full(nrows, "", dtype=object)
+            row_names = np.full(data.shape[0], "", dtype=object)
         else:
             row_names = np.asarray(parts.row_names, dtype=object)
 
-        assert data.shape == (nrows, ncols)
-        assert len(col_names) == ncols
-        assert len(row_names) == nrows
+        assert len(col_names) == data.shape[1]
+        assert len(row_names) == data.shape[0]
 
         for i, rowitem in enumerate(parts.rows):
             if rowitem.title:
@@ -417,9 +435,10 @@ class HeatmapGridWidget(QGraphicsWidget):
             if colitem.title:
                 item = SimpleLayoutItem(
                     QGraphicsSimpleTextItem(colitem.title, parent=self),
-                    parent=grid
+                    parent=grid, anchor=(0.5, 0.5), anchorItem=(0.5, 0.5)
                 )
-                grid.addItem(item, 1, Col0 + 2 * j + 1)
+                item.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+                grid.addItem(item, self.GroupTitleRow, Col0 + 2 * j + 1)
 
             if colitem.cluster:
                 dendrogram = DendrogramWidget(
@@ -492,8 +511,6 @@ class HeatmapGridWidget(QGraphicsWidget):
                 objectName="row-labels-right"
             )
             labelslist.setMaximumWidth(300)
-            pm = QPixmap(1, rowitem.size)
-            pm.fill(Qt.transparent)
             rowauxsidecolor = GraphicsPixmapWidget(
                 parent=self, visible=False,
                 scaleContents=True, aspectMode=Qt.IgnoreAspectRatio,
@@ -520,10 +537,20 @@ class HeatmapGridWidget(QGraphicsWidget):
                 visible=self.__columnLabelPosition & Position.Top,
                 objectName="column-labels-top",
             )
+            colauxsidecolor = GraphicsPixmapWidget(
+                parent=self, visible=False,
+                scaleContents=True, aspectMode=Qt.IgnoreAspectRatio,
+                sizePolicy=QSizePolicy(QSizePolicy.Ignored,
+                                       QSizePolicy.Maximum),
+                minimumSize=QSizeF(-1, 10)
+            )
+
             grid.addItem(labelslist, TopLabelsRow, Col0 + 2 * j + 1,
                          Qt.AlignBottom | Qt.AlignLeft)
+            grid.addItem(colauxsidecolor, TopAnnotationRow, Col0 + 2 * j + 1)
             col_annotation_widgets.append(labelslist)
             col_annotation_widgets_top.append(labelslist)
+            top_side_colors[j] = colauxsidecolor
 
             # Bottom attr annotations
             labelslist = TextListWidget(
@@ -543,11 +570,21 @@ class HeatmapGridWidget(QGraphicsWidget):
         row_color_annotation_header.rotate(-90)
 
         grid.addItem(SimpleLayoutItem(
-            row_color_annotation_header, anchor=(0, 1), resizeContents=True,
+            row_color_annotation_header, anchor=(0, 1),
             aspectMode=Qt.KeepAspectRatio,
-            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred),
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred),
             ),
-            self.TopLabelsRow, RightLabelColumn - 1,
+            0, RightLabelColumn - 1, self.TopLabelsRow + 1, 1,
+            alignment=Qt.AlignBottom
+        )
+
+        col_color_annotation_header = QGraphicsSimpleTextItem("", self)
+        grid.addItem(SimpleLayoutItem(
+            col_color_annotation_header, anchor=(1, 1), anchorItem=(1, 1),
+            aspectMode=Qt.KeepAspectRatio,
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed),
+        ),
+            TopAnnotationRow, 0, 1, Col0, alignment=Qt.AlignRight
         )
 
         legend = GradientLegendWidget(
@@ -559,13 +596,39 @@ class HeatmapGridWidget(QGraphicsWidget):
             sizePolicy=QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         )
         legend.setMaximumWidth(300)
-        grid.addItem(legend, self.LegendRow, self.LegendCol)
-        legend_container = QGraphicsWidget(
-            visible=False,
-            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        grid.addItem(legend, self.LegendRow, self.LegendCol, 1, M * 2 - 1)
+
+        def container(parent=None, orientation=Qt.Horizontal, margin=0, spacing=0, **kwargs):
+            widget = QGraphicsWidget(**kwargs)
+            layout = QGraphicsLinearLayout(orientation)
+            layout.setContentsMargins(margin, margin, margin, margin)
+            layout.setSpacing(spacing)
+            widget.setLayout(layout)
+            if parent is not None:
+                widget.setParentItem(parent)
+
+            return widget
+        # Container for color annotation legends
+        legend_container = container(
+            spacing=3,
+            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed),
+            visible=False, objectName="annotation-legend-container"
         )
-        legend_container.setLayout(QGraphicsLinearLayout())
-        legend_container.layout().setContentsMargins(0, 0, 0, 0)
+        legend_container_rows = container(
+            parent=legend_container,
+            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed),
+            visible=False, objectName="row-annotation-legend-container"
+        )
+        legend_container_cols = container(
+            parent=legend_container,
+            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed),
+            visible=False, objectName="col-annotation-legend-container"
+        )
+        # ? keep refs to child containers; segfault in scene.clear() ?
+        legend_container._refs = (legend_container_rows, legend_container_cols)
+        legend_container.layout().addItem(legend_container_rows)
+        legend_container.layout().addItem(legend_container_cols)
+
         grid.addItem(legend_container, BottomLabelsRow + 1, Col0 + 1, 1, M * 2 - 1,
                      alignment=Qt.AlignRight)
 
@@ -577,6 +640,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         self.col_dendrograms = column_dendrograms
         self.row_dendrograms = row_dendrograms
         self.right_side_colors = right_side_colors
+        self.top_side_colors = top_side_colors
         self.heatmap_colormap_legend = legend
         self.bottom_legend_container = legend_container
         self.parts = parts
@@ -679,52 +743,113 @@ class HeatmapGridWidget(QGraphicsWidget):
         name: str
             Name/title for the annotation column.
         """
-        items = self.right_side_colors
         col = self.Col0 + 2 * len(self.parts.columns)
+        legend_layout = self.bottom_legend_container.layout()
+        legend_container = legend_layout.itemAt(1)
+        self.__setColorAnnotationsHelper(
+            data, colormap, name, self.right_side_colors, col, Qt.Vertical,
+            legend_container
+        )
+        legend_container.setVisible(True)
+
+    def setColumnSideColorAnnotations(
+            self, data: np.ndarray, colormap: ColorMap = None, name=""
+    ):
+        """
+        Set an optional column color annotations.
+
+        Parameters
+        ----------
+        data: Optional[np.ndarray]
+            A sequence such that it is accepted by `colormap.apply`. If None
+            then the color annotations are cleared.
+        colormap: ColorMap
+        name: str
+            Name/title for the annotation column.
+        """
+        row = self.TopAnnotationRow
+        legend_layout = self.bottom_legend_container.layout()
+        legend_container = legend_layout.itemAt(0)
+        self.__setColorAnnotationsHelper(
+            data, colormap, name, self.top_side_colors, row, Qt.Horizontal,
+            legend_container)
+        legend_container.setVisible(True)
+
+    def __setColorAnnotationsHelper(
+            self, data: np.ndarray, colormap: ColorMap, name: str,
+            items: List[GraphicsPixmapWidget], position: int,
+            orientation: Qt.Orientation, legend_container: QGraphicsWidget):
         layout = self.__layout
-        nameitem = layout.itemAt(self.TopLabelsRow, col)
-        width = QFontMetrics(self.font()).lineSpacing()
-        legend_container = self.bottom_legend_container
+        if orientation == Qt.Horizontal:
+            nameitem = layout.itemAt(position, 0)
+        else:
+            nameitem = layout.itemAt(self.TopLabelsRow, position)
+        size = QFontMetrics(self.font()).lineSpacing()
         layout_clear(legend_container.layout())
+
+        def grid_set_maximum_size(position: int, size: float):
+            if orientation == Qt.Horizontal:
+                layout.setRowMaximumHeight(position, size)
+            else:
+                layout.setColumnMaximumWidth(position, size)
+
+        def set_minimum_size(item: QGraphicsLayoutItem, size: float):
+            if orientation == Qt.Horizontal:
+                item.setMinimumHeight(size)
+            else:
+                item.setMinimumWidth(size)
+            item.updateGeometry()
+
+        def reset_minimum_size(item: QGraphicsLayoutItem):
+            set_minimum_size(item, -1)
 
         def set_hidden(item: GraphicsPixmapWidget):
             item.setVisible(False)
-            item.setMinimumWidth(-1)
-            item.updateGeometry()
+            reset_minimum_size(item,)
 
         def set_visible(item: GraphicsPixmapWidget):
             item.setVisible(True)
-            item.setMinimumWidth(10)
+            set_minimum_size(item, 10)
+
+        def set_preferred_size(item, size):
+            if orientation == Qt.Horizontal:
+                item.setPreferredHeight(size)
+            else:
+                item.setPreferredWidth(size)
             item.updateGeometry()
 
         if data is None:
             apply_all(filter(None, items), set_hidden)
-            layout.setColumnMaximumWidth(col, 0)
+            grid_set_maximum_size(position, 0)
+
             nameitem.item.setVisible(False)
             nameitem.updateGeometry()
             legend_container.setVisible(False)
             return
         else:
             apply_all(filter(None, items), set_visible)
-            layout.setColumnMaximumWidth(col, FLT_MAX)
+            grid_set_maximum_size(position, FLT_MAX)
             legend_container.setVisible(True)
 
-        parts = self.parts.rows
-        nrows = sum(p.size for p in parts)
-        assert len(data) == nrows
+        if orientation == Qt.Horizontal:
+            parts = self.parts.columns
+        else:
+            parts = self.parts.rows
         for p, item in zip(parts, items):
             if item is not None:
                 subset = data[p.normalized_indices]
                 subset = colormap.apply(subset)
-                img = qimage_from_array(subset.reshape((-1, 1, subset.shape[-1])))
+                rgbdata = subset.reshape((-1, 1, subset.shape[-1]))
+                if orientation == Qt.Horizontal:
+                    rgbdata = rgbdata.reshape((1, -1, rgbdata.shape[-1]))
+                img = qimage_from_array(rgbdata)
                 item.setPixmap(img)
                 item.setVisible(True)
-                item.setPreferredWidth(width)
+                set_preferred_size(item, size)
 
         nameitem.item.setText(name)
         nameitem.item.setVisible(True)
-        nameitem.setPreferredWidth(width)
-        nameitem.updateGeometry()
+        set_preferred_size(nameitem, size)
 
         container = legend_container.layout()
         if isinstance(colormap, CategoricalColorMap):
@@ -737,8 +862,8 @@ class HeatmapGridWidget(QGraphicsWidget):
             container.addItem(legend)
         elif isinstance(colormap, GradientColorMap):
             legend = GradientLegendWidget(
-                *colormap.span, colormap,
-                sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+                *colormap.span, colormap, title=name,
+                sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum),
             )
             legend.setMinimumWidth(100)
             container.addItem(legend)
@@ -1125,10 +1250,20 @@ class _GradientLegendAxisItem(pg.AxisItem):
                 br = br.adjusted(-adjust, 0, adjust, 0)
         return br
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        # AxisItem resizes to 0 width/height when hidden, does not update when
+        # shown implicitly (i.e. a parent becomes visible).
+        # Use showLabel(False) which should update the size without actually
+        # changing anything else (no public interface to explicitly recalc
+        # fixed sizes).
+        self.showLabel(False)
+
 
 class GradientLegendWidget(QGraphicsWidget):
     def __init__(
-            self, low, high, colormap: GradientColorMap, parent=None, **kwargs
+            self, low, high, colormap: GradientColorMap, parent=None, title="",
+            **kwargs
     ):
         kwargs.setdefault(
             "sizePolicy", QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -1137,11 +1272,18 @@ class GradientLegendWidget(QGraphicsWidget):
         self.low = low
         self.high = high
         self.colormap = colormap
+        self.title = title
 
         layout = QGraphicsLinearLayout(Qt.Vertical)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.setLayout(layout)
+        if title:
+            titleitem = SimpleLayoutItem(
+                QGraphicsSimpleTextItem(title, self), parent=layout,
+                anchor=(0.5, 1.), anchorItem=(0.5, 1.0)
+            )
+            layout.addItem(titleitem)
         self.__axis = axis = _GradientLegendAxisItem(
             orientation="top", maxTickLength=3)
         axis.setRange(low, high)
@@ -1206,8 +1348,11 @@ class CategoricalColorLegend(QGraphicsWidget):
         self.__colormap = colormap
         self.__title = title
         self.__names = colormap.names
-        self.__layout = QGraphicsGridLayout()
-        self.__layout.setSpacing(2)
+        self.__layout = QGraphicsLinearLayout(Qt.Vertical)
+        self.__flow = GraphicsFlowLayout()
+        self.__layout.addItem(self.__flow)
+        self.__flow.setHorizontalSpacing(4)
+        self.__flow.setVerticalSpacing(4)
         self.__orientation = orientation
         kwargs.setdefault(
             "sizePolicy", QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
@@ -1228,10 +1373,16 @@ class CategoricalColorLegend(QGraphicsWidget):
         return self.__orientation
 
     def _clear(self):
-        items = reversed(list(layout_items(self.__layout)))
+        items = list(layout_items(self.__flow))
+        layout_clear(self.__flow)
+        for item in items:
+            if isinstance(item, SimpleLayoutItem):
+                remove_item(item.item)
+        # remove 'title' item if present
+        items = [item for item in layout_items(self.__layout)
+                 if item is not self.__flow]
         for item in items:
             self.__layout.removeItem(item)
-        for item in items:
             if isinstance(item, SimpleLayoutItem):
                 remove_item(item.item)
 
@@ -1241,53 +1392,39 @@ class CategoricalColorLegend(QGraphicsWidget):
         names = self.__colormap.names
         title = self.__title
         layout = self.__layout
-        assert layout.count() == 0
+        flow = self.__flow
+        assert flow.count() == 0
         font = self.font()
         fm = QFontMetrics(font)
         size = fm.width("X")
-        start = 0
+        headeritem = None
         if title:
-            start = 1
-            item = QGraphicsSimpleTextItem(title)
-            item.setFont(font)
             headeritem = QGraphicsSimpleTextItem(title)
             headeritem.setFont(font)
-        else:
-            headeritem = None
-
-        items = []
-        for i, (color, label) in enumerate(zip(colors, names), start=start):
-            colitem = QGraphicsRectItem(0, 0, size, size)
-            colitem.setBrush(QColor(*color))
-            textitem = QGraphicsSimpleTextItem()
-            textitem.setFont(font)
-            textitem.setText(label)
-            items.append((colitem, textitem))
 
         def centered(item):
             return SimpleLayoutItem(item, anchor=(0.5, 0.5), anchorItem=(0.5, 0.5))
 
-        def addrowspan(item):
-            layout.addItem(centered(item), layout.rowCount(), 0, 1, 2)
+        def legend_item_pair(color: QColor, size: float, text: str):
+            coloritem = QGraphicsRectItem(0, 0, size, size)
+            coloritem.setBrush(color)
+            textitem = QGraphicsSimpleTextItem()
+            textitem.setFont(font)
+            textitem.setText(text)
+            layout = QGraphicsLinearLayout(Qt.Horizontal)
+            layout.setSpacing(2)
+            layout.addItem(centered(coloritem))
+            layout.addItem(SimpleLayoutItem(textitem))
+            return coloritem, textitem, layout
 
-        def addrow(symbol, label):
-            row = layout.rowCount()
-            layout.addItem(centered(symbol), row, 0)
-            layout.addItem(
-                SimpleLayoutItem(label), row, 1,
-                alignment=Qt.AlignVCenter | Qt.AlignLeft
-            )
-        if self.__orientation == Qt.Vertical:
-            if headeritem:
-                addrowspan(headeritem)
-            apply_all(items, lambda el: addrow(*el))
-        else:
-            for sym, label in items:
-                layout.addItem(centered(sym), 1, layout.columnCount())
-                layout.addItem(SimpleLayoutItem(label), 1, layout.columnCount())
-            if headeritem:
-                layout.addItem(
-                    centered(headeritem), 0, 0, 1, layout.columnCount())
+        items = [legend_item_pair(QColor(*color), size, name)
+                 for color, name in zip(colors, names)]
+
+        for sym, label, pair_layout in items:
+            flow.addItem(pair_layout)
+
+        if headeritem:
+            layout.insertItem(0, centered(headeritem))
 
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.FontChange:
@@ -1298,7 +1435,7 @@ class CategoricalColorLegend(QGraphicsWidget):
         w = QFontMetrics(font).width("X")
         for item in filter(
                 lambda item: isinstance(item, SimpleLayoutItem),
-                layout_items(self.__layout)
+                layout_items_recursive(self.__layout)
         ):
             if isinstance(item.item, QGraphicsSimpleTextItem):
                 item.item.setFont(font)
@@ -1311,6 +1448,16 @@ def layout_items(layout: QGraphicsLayout) -> Iterable[QGraphicsLayoutItem]:
     for item in map(layout.itemAt, range(layout.count())):
         if item is not None:
             yield item
+
+
+def layout_items_recursive(layout: QGraphicsLayout):
+    for item in map(layout.itemAt, range(layout.count())):
+        if item is not None:
+            if item.isLayout():
+                assert isinstance(item, QGraphicsLayout)
+                yield from layout_items_recursive(item)
+            else:
+                yield item
 
 
 def layout_clear(layout: QGraphicsLayout) -> None:

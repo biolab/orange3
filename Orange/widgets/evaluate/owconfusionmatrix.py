@@ -1,6 +1,7 @@
 """Confusion matrix widget"""
 
 from math import isnan, isinf
+from itertools import chain
 import unicodedata
 
 from AnyQt.QtWidgets import QTableView, QHeaderView, QStyledItemDelegate, \
@@ -11,6 +12,7 @@ import numpy as np
 import sklearn.metrics as skl_metrics
 
 import Orange
+from Orange.data.util import get_unique_names
 import Orange.evaluation
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import \
@@ -18,6 +20,7 @@ from Orange.widgets.settings import \
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -142,6 +145,8 @@ class OWConfusionMatrix(widget.OWWidget):
                      callback=self._invalidate)
 
         gui.auto_apply(self.outputbox, self, "autocommit", box=False)
+
+        self.info.set_output_summary(self.info.NoOutput)
 
         self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
 
@@ -368,13 +373,16 @@ class OWConfusionMatrix(widget.OWWidget):
         extra = []
         class_var = self.data.domain.class_var
         metas = self.data.domain.metas
+        attrs = self.data.domain.attributes
+        names = [var.name for var in chain(metas, [class_var], attrs)]
 
         if self.append_predictions:
             extra.append(predicted.reshape(-1, 1))
+            proposed = "{}({})".format(class_var.name, learner_name)
+            name = get_unique_names(names, proposed)
             var = Orange.data.DiscreteVariable(
-                "{}({})".format(class_var.name, learner_name),
-                class_var.values
-            )
+                                               name,
+                                               class_var.values)
             metas = metas + (var,)
 
         if self.append_probabilities and \
@@ -411,6 +419,10 @@ class OWConfusionMatrix(widget.OWWidget):
         else:
             data = None
             annotated_data = None
+
+        summary = len(data) if data else self.info.NoOutput
+        details = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, details)
 
         self.Outputs.selected_data.send(data)
         self.Outputs.annotated_data.send(annotated_data)

@@ -9,15 +9,17 @@ from AnyQt.QtCore import (
 )
 
 from Orange.widgets import gui, widget
-from Orange.widgets.data.contexthandlers import \
-    SelectAttributesDomainContextHandler
-from Orange.widgets.settings import ContextSetting, Setting
-from Orange.widgets.utils.listfilter import VariablesListItemView, slices, variables_filter
+from Orange.widgets.settings import (
+    ContextSetting, Setting, DomainContextHandler
+)
+from Orange.widgets.utils import vartype
+from Orange.widgets.utils.listfilter import (
+    VariablesListItemView, slices, variables_filter
+)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output, AttributeList, Msg
 from Orange.data.table import Table
-from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
 import Orange
 
@@ -97,6 +99,46 @@ class VariablesListItemModel(VariableListModel):
 
         self[row:row] = variables
         return True
+
+
+class SelectAttributesDomainContextHandler(DomainContextHandler):
+    def encode_setting(self, context, setting, value):
+        if setting.name == 'domain_role_hints':
+            value = {(var.name, vartype(var)): role_i
+                     for var, role_i in value.items()}
+        return super().encode_setting(context, setting, value)
+
+    def decode_setting(self, setting, value, domain=None):
+        decoded = super().decode_setting(setting, value, domain)
+        if setting.name == 'domain_role_hints':
+            decoded = {domain[name]: role_i
+                       for (name, _), role_i in decoded.items()}
+        return decoded
+
+    def match(self, context, domain, attrs, metas):
+        if not "domain_role_hints" in context.values:
+            return self.NO_MATCH
+
+        all_vars = attrs.copy()
+        all_vars.update(metas)
+        value = context.values["domain_role_hints"][0]
+        assigned = [desc for desc, (role, _) in value.items()
+                    if role != "available"]
+        if not assigned:
+            return self.NO_MATCH
+        return sum(all_vars.get(attr) == vtype for attr, vtype in assigned) \
+               / len(assigned)
+
+    def filter_value(self, setting, data, domain, attrs, metas):
+        if setting.name != "domain_role_hints":
+            return super().filter_value(setting, data, domain, attrs, metas)
+
+        all_vars = attrs.copy()
+        all_vars.update(metas)
+        value = data["domain_role_hints"][0].items()
+        data["domain_role_hints"] = {desc: role_i
+                                     for desc, role_i in value
+                                     if all_vars.get(desc[0]) == desc[1]}
 
 
 class OWSelectAttributes(widget.OWWidget):
@@ -305,67 +347,52 @@ class OWSelectAttributes(widget.OWWidget):
     def set_data(self, data=None):
         self.update_domain_role_hints()
         self.closeContext()
+        self.domain_role_hints = {}
+
         self.data = data
-        if data is not None:
-            self.openContext(data)
-            all_vars = data.domain.variables + data.domain.metas
-
-            var_sig = lambda attr: (attr.name, vartype(attr))
-
-            domain_hints = {var_sig(attr): ("attribute", i)
-                            for i, attr in enumerate(data.domain.attributes)}
-
-            domain_hints.update({var_sig(attr): ("meta", i)
-                                 for i, attr in enumerate(data.domain.metas)})
-
-            if data.domain.class_vars:
-                domain_hints.update(
-                    {var_sig(attr): ("class", i)
-                     for i, attr in enumerate(data.domain.class_vars)})
-
-            # update the hints from context settings
-            domain_hints.update(self.domain_role_hints)
-
-            attrs_for_role = lambda role: [
-                (domain_hints[var_sig(attr)][1], attr)
-                for attr in all_vars if domain_hints[var_sig(attr)][0] == role]
-
-            attributes = [
-                attr for place, attr in sorted(attrs_for_role("attribute"),
-                                               key=lambda a: a[0])]
-            classes = [
-                attr for place, attr in sorted(attrs_for_role("class"),
-                                               key=lambda a: a[0])]
-            metas = [
-                attr for place, attr in sorted(attrs_for_role("meta"),
-                                               key=lambda a: a[0])]
-            available = [
-                attr for place, attr in sorted(attrs_for_role("available"),
-                                               key=lambda a: a[0])]
-
-            self.used_attrs[:] = attributes
-            self.class_attrs[:] = classes
-            self.meta_attrs[:] = metas
-            self.available_attrs[:] = available
-            self.info.set_input_summary(len(data), format_summary_details(data))
-        else:
+        if data is None:
             self.used_attrs[:] = []
             self.class_attrs[:] = []
             self.meta_attrs[:] = []
             self.available_attrs[:] = []
             self.info.set_input_summary(self.info.NoInput)
+            return
+
+        self.openContext(data)
+        all_vars = data.domain.variables + data.domain.metas
+
+        def attrs_for_role(role):
+            selected_attrs = [
+                attr for attr in all_vars if domain_hints[attr][0] == role
+            ]
+            return sorted(selected_attrs, key=lambda attr: domain_hints[attr][1])
+
+        domain = data.domain
+        domain_hints = {}
+        domain_hints.update(self._hints_from_seq("attribute", domain.attributes))
+        domain_hints.update(self._hints_from_seq("meta", domain.metas))
+        domain_hints.update(self._hints_from_seq("class", domain.class_vars))
+        domain_hints.update(self.domain_role_hints)
+
+        self.used_attrs[:] = attrs_for_role("attribute")
+        self.class_attrs[:] = attrs_for_role("class")
+        self.meta_attrs[:] = attrs_for_role("meta")
+        self.available_attrs[:] = attrs_for_role("available")
+        self.info.set_input_summary(len(data), format_summary_details(data))
 
     def update_domain_role_hints(self):
         """ Update the domain hints to be stored in the widgets settings.
         """
-        hints_from_model = lambda role, model: [
-            ((attr.name, vartype(attr)), (role, i))
-            for i, attr in enumerate(model)]
-        hints = dict(hints_from_model("available", self.available_attrs))
-        hints.update(hints_from_model("attribute", self.used_attrs))
-        hints.update(hints_from_model("class", self.class_attrs))
-        hints.update(hints_from_model("meta", self.meta_attrs))
+        hints = {}
+        hints.update(self._hints_from_seq("available", self.available_attrs))
+        hints.update(self._hints_from_seq("attribute", self.used_attrs))
+        hints.update(self._hints_from_seq("class", self.class_attrs))
+        hints.update(self._hints_from_seq("meta", self.meta_attrs))
         self.domain_role_hints = hints
+
+    @staticmethod
+    def _hints_from_seq(role, model):
+        return [(attr, (role, i)) for i, attr in enumerate(model)]
 
     @Inputs.features
     def set_features(self, features):

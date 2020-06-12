@@ -1,4 +1,5 @@
 import sys
+from itertools import chain
 
 import numpy as np
 from AnyQt.QtWidgets import QApplication
@@ -10,9 +11,11 @@ from Orange.widgets import widget, gui
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.settings import Setting
 from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data.util import get_unique_names
 from Orange.clustering import DBSCAN
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg
 
 
@@ -87,6 +90,8 @@ class OWDBSCAN(widget.OWWidget):
         self.data_normalized = None
         self.db = None
         self.model = None
+        self._set_input_summary(None)
+        self._set_output_summary(None)
 
         box = gui.widgetBox(self.controlArea, "Parameters")
         gui.spin(box, self, "min_samples", 1, 100, 1,
@@ -167,10 +172,12 @@ class OWDBSCAN(widget.OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.Error.clear()
+        self._set_input_summary(data)
         if not self.check_data_size(data):
             data = None
         self.data = self.data_normalized = data
         if self.data is None:
+            self._set_output_summary(None)
             self.Outputs.annotated_data.send(None)
             self.plot.clear_plot()
             return
@@ -196,13 +203,18 @@ class OWDBSCAN(widget.OWWidget):
                             for i in range(len(self.data))])
         in_core = in_core.reshape(len(self.data), 1)
 
-        clust_var = DiscreteVariable(
-            "Cluster", values=["C%d" % (x + 1) for x in range(k)])
-        in_core_var = DiscreteVariable("DBSCAN Core", values=("0", "1"))
-
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
         meta_attrs = domain.metas
+        names = [var.name for var in chain(attributes, classes, meta_attrs) if var]
+
+        u_clust_var = get_unique_names(names, "Cluster")
+        clust_var = DiscreteVariable(
+            u_clust_var, values=["C%d" % (x + 1) for x in range(k)])
+
+        u_in_core = get_unique_names(names + [u_clust_var], "DBSCAN Core")
+        in_core_var = DiscreteVariable(u_in_core, values=("0", "1"))
+
         x, y, metas = self.data.X, self.data.Y, self.data.metas
 
         meta_attrs += (clust_var, )
@@ -213,7 +225,18 @@ class OWDBSCAN(widget.OWWidget):
         domain = Domain(attributes, classes, meta_attrs)
         new_table = Table(domain, x, y, metas, self.data.W)
 
+        self._set_output_summary(new_table)
         self.Outputs.annotated_data.send(new_table)
+
+    def _set_input_summary(self, data):
+        summary = len(data) if data else self.info.NoInput
+        details = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, details)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def _invalidate(self):
         self.commit()

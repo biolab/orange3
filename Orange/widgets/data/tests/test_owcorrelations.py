@@ -1,6 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access, unsubscriptable-object
-import time
 import unittest
 from unittest.mock import patch, Mock
 
@@ -37,7 +36,7 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_cont(self):
         """Check correlation table for dataset with continuous attributes"""
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         n_attrs = len(self.data_cont.domain.attributes)
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 3)
@@ -60,7 +59,7 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data_mixed)
         domain = self.data_mixed.domain
         n_attrs = len([a for a in domain.attributes if a.is_continuous])
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 3)
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(),
@@ -69,7 +68,7 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_one_feature(self):
         """Check correlation table for dataset with one attribute"""
         self.send_signal(self.widget.Inputs.data, self.data_cont[:, [0, 4]])
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
         self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
@@ -79,7 +78,7 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_one_instance(self):
         """Check correlation table for dataset with one instance"""
         self.send_signal(self.widget.Inputs.data, self.data_cont[:1])
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
         self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
@@ -97,21 +96,21 @@ class TestOWCorrelations(WidgetTest):
         domain = Domain([ContinuousVariable("c1"), ContinuousVariable("c2"),
                          DiscreteVariable("d1")])
         self.send_signal(self.widget.Inputs.data, Table(domain, X))
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 1)
         self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
 
         domain = Domain([ContinuousVariable(str(i)) for i in range(3)])
         self.send_signal(self.widget.Inputs.data, Table(domain, X))
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 1)
         self.assertTrue(self.widget.Information.removed_cons_feat.is_shown())
 
         X = np.ones((4, 3), dtype=float)
         self.send_signal(self.widget.Inputs.data, Table(domain, X))
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
         self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
@@ -124,7 +123,7 @@ class TestOWCorrelations(WidgetTest):
         """Check correlation table for dataset with continuous class variable"""
         data = self.housing[:5, 11:]
         self.send_signal(self.widget.Inputs.data, data)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 2)
         self.assertEqual(self.widget.controls.feature.count(), 4)
@@ -137,7 +136,7 @@ class TestOWCorrelations(WidgetTest):
     def test_output_data(self):
         """Check dataset on output"""
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(self.data_cont, output)
@@ -145,7 +144,7 @@ class TestOWCorrelations(WidgetTest):
     def test_output_features(self):
         """Check features on output"""
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         features = self.get_output(self.widget.Outputs.features)
         self.assertIsInstance(features, AttributeList)
@@ -154,7 +153,7 @@ class TestOWCorrelations(WidgetTest):
     def test_output_correlations(self):
         """Check correlation table on on output"""
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         correlations = self.get_output(self.widget.Outputs.correlations)
         self.assertIsInstance(correlations, Table)
@@ -170,20 +169,20 @@ class TestOWCorrelations(WidgetTest):
         """Check whether changing input emits commit"""
         self.widget.commit = Mock()
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.widget.commit.assert_called_once()
 
         self.widget.commit.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data_mixed)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.widget.commit.assert_called_once()
 
     def test_saved_selection(self):
         """Select row from settings"""
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         attrs = self.widget.cont_data.domain.attributes
         self.widget._vizrank_selection_changed(attrs[3], attrs[1])
@@ -191,7 +190,7 @@ class TestOWCorrelations(WidgetTest):
 
         w = self.create_widget(OWCorrelations, stored_settings=settings)
         self.send_signal(self.widget.Inputs.data, self.data_cont, widget=w)
-        time.sleep(0.1)
+        self.wait_until_finished(w)
         self.process_events()
         sel_row = w.vizrank.rank_table.selectionModel().selectedRows()[0].row()
         self.assertEqual(sel_row, 4)
@@ -227,12 +226,12 @@ class TestOWCorrelations(WidgetTest):
     def test_correlation_type(self):
         c_type = self.widget.controls.correlation_type
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         pearson_corr = self.get_output(self.widget.Outputs.correlations)
 
         simulate.combobox_activate_item(c_type, "Spearman correlation")
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         sperman_corr = self.get_output(self.widget.Outputs.correlations)
         self.assertFalse((pearson_corr.X == sperman_corr.X).all())
@@ -253,7 +252,7 @@ class TestOWCorrelations(WidgetTest):
         """Test feature selection"""
         feature_combo = self.widget.controls.feature
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 6)
         self.assertListEqual(["petal length", "petal width"],
@@ -261,7 +260,7 @@ class TestOWCorrelations(WidgetTest):
                                  self.widget.Outputs.features)])
 
         simulate.combobox_activate_index(feature_combo, 1)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 3)
         self.assertListEqual(["petal length", "sepal length"],
@@ -269,7 +268,7 @@ class TestOWCorrelations(WidgetTest):
                                  self.widget.Outputs.features)])
 
         simulate.combobox_activate_index(feature_combo, 0)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 6)
         self.assertListEqual(["petal length", "sepal length"],
@@ -279,7 +278,7 @@ class TestOWCorrelations(WidgetTest):
     @patch("Orange.widgets.data.owcorrelations.SIZE_LIMIT", 2000)
     def test_vizrank_use_heuristic(self):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertTrue(self.widget.vizrank.use_heuristic)
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 6)
@@ -290,7 +289,7 @@ class TestOWCorrelations(WidgetTest):
         feature_combo = self.widget.controls.feature
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         simulate.combobox_activate_index(feature_combo, 2)
-        time.sleep(0.1)
+        self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 3)
 

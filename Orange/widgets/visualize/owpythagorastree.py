@@ -14,6 +14,7 @@ from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_SIGNAL_NAME
 )
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
@@ -57,7 +58,7 @@ class OWPythagorasTree(OWWidget):
     graph_name = 'scene'
 
     # Settings
-    settingsHandler = settings.DomainContextHandler()
+    settingsHandler = settings.ClassValuesContextHandler()
 
     depth_limit = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
@@ -93,6 +94,7 @@ class OWPythagorasTree(OWWidget):
         # Tree info area
         box_info = gui.widgetBox(self.controlArea, 'Tree Info')
         self.infolabel = gui.widgetLabel(box_info)
+        self.info.set_output_summary(self.info.NoOutput)
 
         # Display settings area
         box_display = gui.widgetBox(self.controlArea, 'Display Settings')
@@ -155,6 +157,8 @@ class OWPythagorasTree(OWWidget):
 
         if model is not None:
             self.data = model.instances
+
+            self._update_target_class_combo()
             self.tree_adapter = self._get_tree_adapter(self.model)
             self.ptree.clear()
 
@@ -169,11 +173,12 @@ class OWPythagorasTree(OWWidget):
             self._update_legend_colors()
             self._update_legend_visibility()
             self._update_info_box()
-            self._update_target_class_combo()
 
             self._update_main_area()
 
-        self.openContext(self.model)
+            self.openContext(
+                model.domain.class_var if model.domain is not None else None
+            )
 
         self.update_depth()
 
@@ -277,8 +282,7 @@ class OWPythagorasTree(OWWidget):
 
     def _clear_target_class_combo(self):
         self.target_class_combo.clear()
-        self.target_class_index = 0
-        self.target_class_combo.setCurrentIndex(self.target_class_index)
+        self.target_class_index = -1
 
     def _set_max_depth(self):
         """Set the depth to the max depth and update appropriate actors."""
@@ -306,6 +310,7 @@ class OWPythagorasTree(OWWidget):
     def commit(self):
         """Commit the selected data to output."""
         if self.data is None:
+            self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
@@ -315,6 +320,10 @@ class OWPythagorasTree(OWWidget):
             if isinstance(i, SquareGraphicsItem)
         ]
         data = self.tree_adapter.get_instances_in_nodes(nodes)
+
+        summary = len(data) if data else self.info.NoOutput
+        details = format_summary_details(data) if data else ""
+        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(data)
         selected_indices = self.tree_adapter.get_indices(nodes)
         self.Outputs.annotated_data.send(
@@ -339,7 +348,8 @@ class OWPythagorasTree(OWWidget):
             values = list(ContinuousTreeNode.COLOR_METHODS.keys())
         label.setText(label_text)
         self.target_class_combo.addItems(values)
-        self.target_class_combo.setCurrentIndex(self.target_class_index)
+        # set it to 0, context will change if required
+        self.target_class_index = 0
 
     def _update_legend_colors(self):
         if self.legend is not None:

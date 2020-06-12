@@ -1,10 +1,6 @@
-import warnings
-
 import numpy as np
-
 import sklearn.linear_model as skl_linear_model
 
-import Orange
 from Orange.classification import SklLearner, SklModel
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import LearnerScorer
@@ -40,16 +36,22 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
 
     def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
                  fit_intercept=True, intercept_scaling=1, class_weight=None,
-                 random_state=None, solver='liblinear', max_iter=100,
-                 multi_class='ovr', verbose=0, n_jobs=1, preprocessors=None):
+                 random_state=None, solver="auto", max_iter=100,
+                 multi_class="auto", verbose=0, n_jobs=1, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    def __call__(self, data):
-        if len(np.unique(data.Y)) > 1:
-            return super().__call__(data)
-        else:
-            warnings.warn("Single class in data, returning Constant Model.")
-            maj = Orange.classification.MajorityLearner()
-            const = maj(data)
-            return const
+    def _initialize_wrapped(self):
+        params = self.params.copy()
+        # The default scikit-learn solver `lbfgs` (v0.22) does not support the
+        # l1 penalty.
+        solver, penalty = params.pop("solver"), params.get("penalty")
+        if solver == "auto":
+            if penalty == "l1":
+                solver = "liblinear"
+            else:
+                solver = "lbfgs"
+        params["solver"] = solver
+
+        return self.__wraps__(**params)
+
