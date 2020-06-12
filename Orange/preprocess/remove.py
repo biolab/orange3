@@ -169,7 +169,6 @@ def merge_transforms(exp):
             new_var = DiscreteVariable(
                 exp.var.name,
                 values=exp.var.values,
-                ordered=exp.var.ordered,
                 compute_value=merge_lookup(A, B),
                 sparse=exp.var.sparse,
             )

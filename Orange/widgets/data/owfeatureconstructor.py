@@ -72,7 +72,6 @@ def make_variable(descriptor, compute_value):
         return Orange.data.DiscreteVariable(
             descriptor.name,
             values=descriptor.values,
-            ordered=descriptor.ordered,
             compute_value=compute_value)
     elif isinstance(descriptor, StringDescriptor):
         return Orange.data.StringVariable(
@@ -539,7 +538,7 @@ class OWFeatureConstructor(OWWidget):
             if editor.editorData().name != unique:
                 self.Warning.renamed_var()
                 feature = feature.__class__(unique, *feature[1:])
-                
+
             self.featuremodel[self.currentIndex] = feature
             self.descriptors = list(self.featuremodel)
 

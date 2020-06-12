@@ -7,6 +7,7 @@ import pickle
 import shutil
 import tempfile
 import unittest
+import warnings
 from unittest.mock import Mock, patch
 
 from Orange import data
@@ -16,6 +17,7 @@ from Orange.data.io_base import PICKLE_PROTOCOL
 from Orange.data.table import get_sample_datasets_dir
 from Orange.data import Table, Variable
 from Orange.tests import test_dirname
+from Orange.util import OrangeDeprecationWarning
 
 
 class WildcardReader(FileFormat):
@@ -161,27 +163,34 @@ class TestReader(unittest.TestCase):
         This function tests whether pickled files in older Orange loads
         correctly with newer version of Orange.
         """
-        # load pickles created with Orange 3.20
-        # in next version there is a change in variables.py - line 738
-        # which broke back compatibility - tests were introduced after the fix
-        data1 = Table("datasets/sailing-orange-3-20.pkl")
-        data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
+        with warnings.catch_warnings():
+            # in unittests on travis/github actions OrangeDeprecationWarning
+            # is raised as an error. With this statement it si disabled only
+            # for this test - when unpickling pickle created with version older
+            # than 3.27 ordered parameter in DiscreteVariable which is
+            # deprecated still appears - which will raise deprecation warning
+            warnings.simplefilter('default', OrangeDeprecationWarning)
+            # load pickles created with Orange 3.20
+            # in next version there is a change in variables.py - line 738
+            # which broke back compatibility - tests introduced after the fix
+            data1 = Table("datasets/sailing-orange-3-20.pkl")
+            data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
 
-        # load pickles created with Orange 3.21
-        data3 = Table("datasets/sailing-orange-3-21.pkl")
-        data4 = Table("datasets/sailing-orange-3-21.pkl.gz")
+            # load pickles created with Orange 3.21
+            data3 = Table("datasets/sailing-orange-3-21.pkl")
+            data4 = Table("datasets/sailing-orange-3-21.pkl.gz")
 
-        examples_count = 20
-        self.assertEqual(examples_count, len(data1))
-        self.assertEqual(examples_count, len(data2))
-        self.assertEqual(examples_count, len(data3))
-        self.assertEqual(examples_count, len(data4))
+            examples_count = 20
+            self.assertEqual(examples_count, len(data1))
+            self.assertEqual(examples_count, len(data2))
+            self.assertEqual(examples_count, len(data3))
+            self.assertEqual(examples_count, len(data4))
 
-        attributes_count = 3
-        self.assertEqual(attributes_count, len(data1.domain.attributes))
-        self.assertEqual(attributes_count, len(data2.domain.attributes))
-        self.assertEqual(attributes_count, len(data3.domain.attributes))
-        self.assertEqual(attributes_count, len(data4.domain.attributes))
+            attributes_count = 3
+            self.assertEqual(attributes_count, len(data1.domain.attributes))
+            self.assertEqual(attributes_count, len(data2.domain.attributes))
+            self.assertEqual(attributes_count, len(data3.domain.attributes))
+            self.assertEqual(attributes_count, len(data4.domain.attributes))
 
     def test_pickle_version(self):
         """
@@ -196,3 +205,7 @@ class TestReader(unittest.TestCase):
         self.assertGreaterEqual(PICKLE_PROTOCOL, pickle.DEFAULT_PROTOCOL)
         # we should not use a version that is not supported
         self.assertLessEqual(PICKLE_PROTOCOL, pickle.HIGHEST_PROTOCOL)
+
+
+if __name__ == "__main__":
+    unittest.main()

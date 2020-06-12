@@ -217,12 +217,10 @@ class Discrete(Distribution):
         return data.Value(self.variable, value_indices)
 
     def min(self):
-        if self.variable.ordered:
-            return self.variable.values[0]
+        return None
 
     def max(self):
-        if self.variable.ordered:
-            return self.variable.values[-1]
+        return None
 
     def sum(self, *args, **kwargs):
         res = super().sum(*args, **kwargs)

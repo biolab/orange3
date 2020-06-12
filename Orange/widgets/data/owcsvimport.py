@@ -1543,12 +1543,11 @@ def pandas_to_table(df):
             coldata = series.values  # type: pd.Categorical
             categories = [str(c) for c in coldata.categories]
             var = Orange.data.DiscreteVariable.make(
-                str(header), values=categories, ordered=coldata.ordered
+                str(header), values=categories
             )
             # Remap the coldata into the var.values order/set
             coldata = pd.Categorical(
-                coldata.astype("str"), categories=var.values,
-                ordered=coldata.ordered,
+                coldata.astype(coldata), categories=var.values
             )
             codes = coldata.codes
             assert np.issubdtype(codes.dtype, np.integer)

@@ -288,8 +288,7 @@ class _TableBuilder:
                                values="", **_) -> _ColumnProperties:
         vals, coltype = _TableBuilder._disc_column(data, col)
         return _ColumnProperties(valuemap=Flags.split(values), values=vals,
-                                 coltype=coltype, orig_values=vals,
-                                 coltype_kwargs={"ordered": True})
+                                 coltype=coltype, orig_values=vals)
 
     @staticmethod
     def _unknown_column(data: np.ndarray, col: int, **_) -> _ColumnProperties:
@@ -607,8 +606,12 @@ class _FileWriter:
             if var.is_continuous or var.is_string:
                 return var.TYPE_HEADERS[0]
             elif var.is_discrete:
-                return Flags.join(var.values) if var.ordered else \
-                    var.TYPE_HEADERS[0]
+                # if number of values is 1 order is not important if more
+                # values write order in file
+                return (
+                    Flags.join(var.values) if len(var.values) >= 2
+                    else var.TYPE_HEADERS[0]
+                )
             raise NotImplementedError
 
         return ['continuous'] * data.has_weights() + \

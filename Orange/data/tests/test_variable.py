@@ -279,15 +279,12 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(
             repr(var),
             "DiscreteVariable(name='a', values=('F', 'M'))")
-        var.ordered = True
-        self.assertEqual(
-            repr(var),
-            "DiscreteVariable(name='a', values=('F', 'M'), ordered=True)")
 
         var = DiscreteVariable.make("a", values="1234567")
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=('1', '2', '3', '4', '5', '6', '7'))")
+            "DiscreteVariable(name='a', values=('1', '2', '3', '4', '5', '6', '7'))"
+        )
 
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=("a", 42))
@@ -488,7 +485,6 @@ class TestDiscreteVariable(VariableTest):
         var = super().varcls_modified(name)
         var.add_value("A")
         var.add_value("B")
-        var.ordered = True
         return var
 
     def test_copy_checks_len_values(self):
@@ -507,6 +503,16 @@ class TestDiscreteVariable(VariableTest):
 
         var2 = var.copy(values=("W", "M"))
         self.assertEqual(var2.values, ("W", "M"))
+
+    def test_remove_ordered(self):
+        """
+        ordered is deprecated when this test starts to fail remove ordered
+        parameter. Remove also this test.
+        Ordered parameter should still be allowed in __init__ for backward
+        compatibilities in data-sets pickled with older versions, I suggest
+        adding **kwargs which is ignored
+        """
+        self.assertLess(Orange.__version__, "3.29.0")
 
 
 @variabletest(ContinuousVariable)
@@ -697,10 +703,7 @@ PickleDiscreteVariable = create_pickling_tests(
     "PickleDiscreteVariable",
     ("with_name", lambda: DiscreteVariable(name="Feature 0")),
     ("with_str_value", lambda: DiscreteVariable(name="Feature 0",
-                                                values=("F", "M"))),
-    ("ordered", lambda: DiscreteVariable(name="Feature 0",
-                                         values=("F", "M"),
-                                         ordered=True)),
+                                                values=("F", "M")))
 )
 
 
@@ -712,7 +715,7 @@ PickleStringVariable = create_pickling_tests(
 
 class VariableTestMakeProxy(unittest.TestCase):
     def test_make_proxy_disc(self):
-        abc = DiscreteVariable("abc", values="abc", ordered=True)
+        abc = DiscreteVariable("abc", values="abc")
         abc1 = abc.make_proxy()
         abc2 = abc1.make_proxy()
         self.assertEqual(abc, abc1)
@@ -721,7 +724,7 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(hash(abc), hash(abc1))
         self.assertEqual(hash(abc1), hash(abc2))
 
-        abcx = DiscreteVariable("abc", values="abc", ordered=True)
+        abcx = DiscreteVariable("abc", values="abc")
         self.assertEqual(abc, abcx)
         self.assertIsNot(abc, abcx)
 

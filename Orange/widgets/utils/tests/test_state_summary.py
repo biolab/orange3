@@ -33,11 +33,11 @@ rgb_missing = VarDataPair(
 
 # Ordered discrete variable variations
 ints_full = VarDataPair(
-    DiscreteVariable('ints_full', values=('2', '3', '4'), ordered=True),
+    DiscreteVariable('ints_full', values=('2', '3', '4')),
     np.array([0, 1, 1, 1, 2], dtype=float),
 )
 ints_missing = VarDataPair(
-    DiscreteVariable('ints_missing', values=('2', '3', '4'), ordered=True),
+    DiscreteVariable('ints_missing', values=('2', '3', '4')),
     np.array([0, 1, 1, np.nan, 2], dtype=float),
 )
 

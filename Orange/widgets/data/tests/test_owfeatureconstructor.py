@@ -35,7 +35,7 @@ class FeatureConstructorTest(unittest.TestCase):
         values = ('iris one', 'iris two', 'iris three')
         desc = PyListModel(
             [DiscreteDescriptor(name=name, expression=expression,
-                                values=values, ordered=False)]
+                                values=values, ordered=True)]
         )
         data = data.transform(Domain(list(data.domain.attributes) +
                                      construct_variables(desc, data),
