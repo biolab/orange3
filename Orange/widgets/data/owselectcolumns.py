@@ -108,7 +108,7 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
                      for var, role_i in value.items()}
         return super().encode_setting(context, setting, value)
 
-    def decode_setting(self, setting, value, domain=None):
+    def decode_setting(self, setting, value, domain=None, *_args):
         decoded = super().decode_setting(setting, value, domain)
         if setting.name == 'domain_role_hints':
             decoded = {domain[name]: role_i

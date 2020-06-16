@@ -71,7 +71,7 @@ class SelectRowsContextHandler(DomainContextHandler):
                 ))
         return encoded
 
-    def decode_setting(self, setting, value, domain=None):
+    def decode_setting(self, setting, value, domain=None, *_args):
         value = super().decode_setting(setting, value, domain)
         if setting.name == 'conditions':
             CONTINUOUS = vartype(ContinuousVariable("x"))
