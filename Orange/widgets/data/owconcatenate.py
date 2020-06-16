@@ -347,8 +347,9 @@ class OWConcatenate(widget.OWWidget):
             if desc.template.is_discrete:
                 sattr_values = set(desc.values)
                 # don't use sets: keep the order
-                missing_values = [val for val in el.values
-                                  if val not in sattr_values]
+                missing_values = tuple(
+                    val for val in el.values if val not in sattr_values
+                )
                 if missing_values:
                     attrs[el] = attrs[el]._replace(
                         original=False,
