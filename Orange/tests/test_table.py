@@ -1079,16 +1079,19 @@ class TableTestCase(unittest.TestCase):
         table = data.Table("iris")
         metas = np.hstack((table.metas, table.Y.reshape(len(table), 1)))
         attributes_metas = table.domain.metas + table.domain.class_vars
-        domain_metas = data.Domain(table.domain.attributes,
-                                   table.domain.class_vars,
+        domain_metas = data.Domain(table.domain.attributes[:2],
+                                   table.domain.attributes[2:],
                                    attributes_metas)
-        table_metas = data.Table(domain_metas, table.X, table.Y, metas)
-        new_table = data.Table.from_table(data.Domain(table_metas.domain.metas,
-                                                      table_metas.domain.metas,
-                                                      table_metas.domain.metas),
+        table_metas = data.Table(domain_metas, table.X[:, : 2], table.X[:, 2:],
+                                 metas)
+        new_table = data.Table.from_table(data.Domain(table_metas.domain.metas),
                                           table_metas)
         self.assertEqual(new_table.X.dtype, np.float64)
+        new_table = data.Table.from_table(data.Domain((), table_metas.domain.metas),
+                                          table_metas)
         self.assertEqual(new_table.Y.dtype, np.float64)
+        new_table = data.Table.from_table(data.Domain((), (), table_metas.domain.metas),
+                                          table_metas)
         self.assertEqual(new_table.metas.dtype, np.float64)
 
     def test_attributes(self):
@@ -1638,70 +1641,73 @@ class CreateTableWithDomainAndTable(TableTests):
 
     def test_can_use_attributes_as_new_columns(self):
         a, _, _ = column_sizes(self.table)
-        order = [random.randrange(a) for _ in self.domain.attributes]
+        order = np.random.permutation(a)
         new_attributes = [self.domain.attributes[i] for i in order]
         new_domain = self.create_domain(
-            new_attributes, new_attributes, new_attributes)
+            new_attributes[:2], new_attributes[2:4], new_attributes[4:])
         new_table = data.Table.from_table(new_domain, self.table)
 
         self.assert_table_with_filter_matches(
-            new_table, self.table, xcols=order, ycols=order, mcols=order)
+            new_table, self.table, xcols=order[:2], ycols=order[2:4], mcols=order[4:])
 
     def test_can_use_class_vars_as_new_columns(self):
-        a, c, _ = column_sizes(self.table)
-        order = [random.randrange(a, a + c) for _ in self.domain.class_vars]
-        new_classes = [self.domain.class_vars[i - a] for i in order]
-        new_domain = self.create_domain(new_classes, new_classes, new_classes)
+        a, _, _ = column_sizes(self.table)
+        order = np.random.permutation(range(a))
+        cvs = [self.domain.attributes[i] for i in order[:2]]
+        metas = [self.domain.attributes[i] for i in order[2:]]
+        new_domain = self.create_domain(self.domain.class_vars,
+                                        cvs,
+                                        metas)
         new_table = data.Table.from_table(new_domain, self.table)
 
         self.assert_table_with_filter_matches(
-            new_table, self.table, xcols=order, ycols=order, mcols=order)
+            new_table, self.table, xcols=[a], ycols=order[:2], mcols=order[2:])
 
     def test_can_use_metas_as_new_columns(self):
         _, _, m = column_sizes(self.table)
-        order = [random.randrange(-m + 1, 0) for _ in self.domain.metas]
+        order = np.random.permutation(range(-m, 0))
         new_metas = [self.domain.metas[::-1][i] for i in order]
-        new_domain = self.create_domain(new_metas, new_metas, new_metas)
+        new_domain = self.create_domain(new_metas[0:2], [new_metas[2]], new_metas[3:5])
         new_table = data.Table.from_table(new_domain, self.table)
 
         self.assert_table_with_filter_matches(
-            new_table, self.table, xcols=order, ycols=order, mcols=order)
+            new_table, self.table, xcols=order[0:2], ycols=order[2], mcols=order[3:5])
 
     def test_can_use_combination_of_all_as_new_columns(self):
         a, c, m = column_sizes(self.table)
-        order = ([random.randrange(a) for _ in self.domain.attributes] +
-                 [random.randrange(a, a + c) for _ in self.domain.class_vars] +
-                 [random.randrange(-m + 1, 0) for _ in self.domain.metas])
-        random.shuffle(order)
-        vars = list(self.domain.variables) + list(self.domain.metas[::-1])
-        vars = [vars[i] for i in order]
+        order = (list(range(a+c)) + list(range(-m+1, 0)))
+        random. shuffle(order)
+        vars_ = list(self.domain.variables) + list(self.domain.metas[::-1])
+        atrs = [vars_[order[i]] for i in range(a)]
+        cv = [vars_[order[i]] for i in range(a, a+c)]
+        metas = [vars_[order[i]] for i in range(a+c, a+c+m-1)]
 
-        new_domain = self.create_domain(vars, vars, vars)
+        new_domain = self.create_domain(atrs, cv, metas)
         new_table = data.Table.from_table(new_domain, self.table)
         self.assert_table_with_filter_matches(
-            new_table, self.table, xcols=order, ycols=order, mcols=order)
+            new_table, self.table, xcols=order[:a], ycols=order[a:a+c], mcols=order[a+c:])
 
     def test_creates_table_with_given_domain_and_row_filter(self):
         a, c, m = column_sizes(self.table)
-        order = ([random.randrange(a) for _ in self.domain.attributes] +
-                 [random.randrange(a, a + c) for _ in self.domain.class_vars] +
-                 [random.randrange(-m + 1, 0) for _ in self.domain.metas])
+        order = (list(range(a+c)) + list(range(-m+1, 0)))
         random.shuffle(order)
-        vars = list(self.domain.variables) + list(self.domain.metas[::-1])
-        vars = [vars[i] for i in order]
+        vars_ = list(self.domain.variables) + list(self.domain.metas[::-1])
+        atrs = [vars_[order[i]] for i in range(a)]
+        cv = [vars_[order[i]] for i in range(a, a+c)]
+        metas = [vars_[order[i]] for i in range(a+c, a+c+m-1)]
 
-        new_domain = self.create_domain(vars, vars, vars)
+        new_domain = self.create_domain(atrs, cv, metas)
         new_table = data.Table.from_table(new_domain, self.table, [0])
         self.assert_table_with_filter_matches(
-            new_table, self.table[:1], xcols=order, ycols=order, mcols=order)
+            new_table, self.table[:1], xcols=order[:a], ycols=order[a:a+c], mcols=order[a+c:])
 
         new_table = data.Table.from_table(new_domain, self.table, [2, 1, 0])
         self.assert_table_with_filter_matches(
-            new_table, self.table[2::-1], xcols=order, ycols=order, mcols=order)
+            new_table, self.table[2::-1], xcols=order[:a], ycols=order[a:a+c], mcols=order[a+c:])
 
         new_table = data.Table.from_table(new_domain, self.table, [])
         self.assert_table_with_filter_matches(
-            new_table, self.table[:0], xcols=order, ycols=order, mcols=order)
+            new_table, self.table[:0], xcols=order[:a], ycols=order[a:a+c], mcols=order[a+c:])
 
     def test_from_table_sparse_move_some_to_empty_metas(self):
         iris = data.Table("iris").to_sparse()
@@ -1813,7 +1819,7 @@ class CreateTableWithDomainAndTable(TableTests):
                            old_table.metas[:, ::-1]))
         np.testing.assert_almost_equal(new_table.X, magic[rows, xcols])
         Y = magic[rows, ycols]
-        if Y.shape[1] == 1:
+        if len(Y.shape) == 2 and Y.shape[1] == 1:
             Y = Y.flatten()
         np.testing.assert_almost_equal(new_table.Y, Y)
         np.testing.assert_almost_equal(new_table.metas, magic[rows, mcols])
@@ -2854,19 +2860,6 @@ class EfficientTransformTests(unittest.TestCase):
         self.iris.transform(d6)
         self.assertEqual(2, call_shared.call_count)
         self.assertEqual(24, call_cv.call_count)
-
-    def test_same_simple_shared_union(self):
-        call_cv = Mock()
-        call_shared = Mock()
-        call_cvs = Mock()
-        same_simple = preprocess_domain_single(self.iris.domain, call_cv)
-        s1 = preprocess_domain_shared(same_simple, call_cvs, call_shared)
-        s2 = preprocess_domain_shared(same_simple, call_cvs, call_shared)
-        ndom = Domain(s1.attributes + s2.attributes)
-        self.iris.transform(ndom)
-        self.assertEqual(2, call_shared.call_count)
-        self.assertEqual(4, call_cv.call_count)
-        self.assertEqual(8, call_cvs.call_count)
 
     def test_simple_simple_stupid(self):
         call_cv = Mock()

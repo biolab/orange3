@@ -120,11 +120,11 @@ class TestDomainInit(unittest.TestCase):
     def test_init_metas(self):
         attributes = (age, gender, income)
         metas = (ssn, race)
-        d = Domain(attributes, race, metas=metas)
-        self.assertEqual(d.variables, attributes + (race, ))
+        d = Domain(attributes, education, metas=metas)
+        self.assertEqual(d.variables, attributes + (education, ))
         self.assertEqual(d.attributes, attributes)
-        self.assertEqual(d.class_var, race)
-        self.assertEqual(d.class_vars, (race, ))
+        self.assertEqual(d.class_var, education)
+        self.assertEqual(d.class_vars, (education, ))
         self.assertEqual(d.metas, metas)
 
     def test_from_numpy_names(self):
@@ -158,6 +158,10 @@ class TestDomainInit(unittest.TestCase):
         self.assertRaises(ValueError, Domain.from_numpy, np.zeros(2))
         self.assertRaises(ValueError, Domain.from_numpy, np.zeros((2, 2, 2)))
         self.assertRaises(ValueError, Domain.from_numpy, np.zeros((2, 2)), np.zeros((2, 2, 2)))
+
+    def test_nonunique_domain_error(self):
+        self.assertRaises(Exception, Domain, [ContinuousVariable('a'),
+                                              ContinuousVariable('a')])
 
     def test_from_numpy_values(self):
         for aran_min, aran_max, vartype in [(1, 3, ContinuousVariable),
@@ -230,7 +234,7 @@ class TestDomainInit(unittest.TestCase):
             self.assertEqual(d.index(idx), var)
 
     def test_get_item_slices(self):
-        d = Domain((age, gender, income, race), metas=(ssn, race))
+        d = Domain((age, gender, income, race), metas=(ssn, education))
         self.assertEqual(d[:2], (age, gender))
         self.assertEqual(d[1:3], (gender, income))
         self.assertEqual(d[2:], (income, race))
@@ -377,19 +381,19 @@ class TestDomainInit(unittest.TestCase):
 
     def test_get_conversion(self):
         compute_value = lambda: 42
-        new_income = income.copy(compute_value=compute_value)
+        new_income = income.copy(compute_value=compute_value, name='new_income')
 
         d = Domain((age, gender, income), metas=(ssn, race))
-        e = Domain((gender, race), None, metas=(age, gender, ssn))
-        f = Domain((gender,), (race, income), metas=(age, income, ssn))
+        e = Domain((gender, race), None, metas=(age, income, ssn))
+        f = Domain((gender,), (race, income), metas=(age, incomeA, ssn))
         g = Domain((), metas=(age, gender, ssn))
-        h = Domain((gender,), (race, new_income), metas=(age, new_income, ssn))
+        h = Domain((gender,), (race, income), metas=(age, new_income, ssn))
 
         for conver, domain, attr, class_vars, metas in (
-                (d, e, [1, -2], [], [0, 1, -1]),
-                (d, f, [1], [-2, 2], [0, 2, -1]),
+                (d, e, [1, -2], [], [0, 2, -1]),
+                (d, f, [1], [-2, 2], [0, None, -1]),
                 (f, g, [], [], [-1, 0, -3]),
-                (g, h, [-2], [None, compute_value], [-1, compute_value, -3])):
+                (g, h, [-2], [None, None], [-1, compute_value, -3])):
             to_domain = DomainConversion(conver, domain)
             self.assertIs(to_domain.source, conver)
             self.assertEqual(to_domain.attributes, attr)

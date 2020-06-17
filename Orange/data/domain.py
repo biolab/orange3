@@ -148,7 +148,12 @@ class Domain:
                         raise TypeError(
                             "descriptors must be instances of Variable, "
                             "not '%s'" % type(var).__name__)
-
+      
+        names = [var.name for var in chain(attributes, class_vars, metas)]
+        if len(names) != len(set(names)):
+            raise Exception('All variables in the domain should have'
+                            ' unique names.')
+  
         # Store everything
         self.attributes = tuple(attributes)
         self.class_vars = tuple(class_vars)

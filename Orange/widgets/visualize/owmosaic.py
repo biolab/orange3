@@ -383,7 +383,9 @@ class OWMosaicDisplay(OWWidget):
             return None
         elif any(attr.is_continuous for attr in data.domain.variables):
             return Discretize(
-                method=EqualFreq(n=4), remove_const=False, discretize_classes=True,
+                method=EqualFreq(n=4),
+                remove_const=False,
+                discretize_classes=True,
                 discretize_metas=True)(data)
         else:
             return data
@@ -449,7 +451,7 @@ class OWMosaicDisplay(OWWidget):
             self.info.set_input_summary(self.info.NoInput)
             return
 
-        self.info.set_input_summary(len(data),format_summary_details(data))
+        self.info.set_input_summary(len(data), format_summary_details(data))
         self.init_combos(self.data)
         self.openContext(self.data)
 
@@ -868,19 +870,11 @@ class OWMosaicDisplay(OWWidget):
             return
         attr_list = self.get_disc_attr_list()
         class_var = data.domain.class_var
-        if class_var:
-            sql = isinstance(data, SqlTable)
-            name = not sql and data.name
-            # save class_var because it is removed in the next line
-            data = data[:, attr_list + [class_var]]
-            data.domain.class_var = class_var
-            if not sql:
-                data.name = name
-        else:
-            data = data[:, attr_list]
         # TODO: check this
         # data = Preprocessor_dropMissing(data)
-        if len(data) == 0:
+
+        unique = [v.name for v in set(attr_list + [class_var]) if v]
+        if len(data[:, unique]) == 0:
             self.Warning.no_valid_data()
             return
         else:
@@ -894,7 +888,8 @@ class OWMosaicDisplay(OWWidget):
                        self.canvas_view.height() / 2)
             return
         if self.variable_color is None:
-            apriori_dists = [get_distribution(data, attr) for attr in attr_list]
+            apriori_dists = [get_distribution(data, attr) for attr
+                             in attr_list]
         else:
             apriori_dists = []
 

@@ -194,7 +194,7 @@ class TestDiscrete(unittest.TestCase):
     def test_mixedtype_metas(self):
         import Orange
         zoo = Orange.data.Table("zoo")
-        dom = Orange.data.Domain(zoo.domain.attributes, zoo.domain.class_var,
+        dom = Orange.data.Domain(zoo.domain.attributes[2:], zoo.domain.class_var,
                                  zoo.domain.metas + zoo.domain.attributes[:2])
         t = zoo.transform(dom)
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])

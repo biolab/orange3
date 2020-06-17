@@ -303,6 +303,13 @@ class OWScatterPlot(OWDataProjectionWidget):
     def effective_variables(self):
         return [self.attr_x, self.attr_y] if self.attr_x and self.attr_y else []
 
+    @property
+    def effective_data(self):
+        eff_var = self.effective_variables
+        if eff_var and self.attr_x.name == self.attr_y.name:
+            eff_var = [self.attr_x]
+        return self.data.transform(Domain(eff_var))
+
     def _vizrank_color_change(self):
         self.vizrank.initialize()
         err_msg = ""
