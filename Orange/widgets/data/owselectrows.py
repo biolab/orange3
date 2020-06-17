@@ -150,13 +150,14 @@ def _plural(s):
 class CalendarWidgetWithTime(QCalendarWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        timeedit = QDateTimeEdit(displayFormat="hh:mm:ss")
+        self.timeedit = QDateTimeEdit(displayFormat="hh:mm:ss")
+        self.timeedit.setTime(self.parent().min_datetime.time())
 
         self._time_layout = sublay = QHBoxLayout()
         sublay.setContentsMargins(6, 6, 6, 6)
         sublay.addStretch(1)
         sublay.addWidget(QLabel("Time: "))
-        sublay.addWidget(timeedit)
+        sublay.addWidget(self.timeedit)
         sublay.addStretch(1)
         self.layout().addLayout(sublay)
 
@@ -534,30 +535,42 @@ class OWSelectRows(widget.OWWidget):
                     box.controls.append(add_textual(lc[1]))
             elif vtype == 4:  # time:
                 datetime_format = (var.have_date, var.have_time)
-                widget = DateTimeWidget(self, var_idx, datetime_format)
-                widget.set_datetime(lc[0])
-                box.controls = [widget]
-                box.layout().addWidget(widget)
-                self._box = []
+                column = self.data[:, var_idx]
+                w = DateTimeWidget(self, column, datetime_format)
+                w.set_datetime(lc[0])
+                box.controls = [w]
+                box.layout().addWidget(w)
+                w.dateTimeChanged.connect(self._datetime_changed)
+                self._box = box
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
-                    widget_ = DateTimeWidget(self, var_idx, datetime_format)
-                    widget_.set_datetime(lc[1])
-                    box.layout().addWidget(widget_)
-                    box.controls.append(widget_)
+                    w_ = DateTimeWidget(self, column, datetime_format)
+                    w_.set_datetime(lc[1])
+                    box.layout().addWidget(w_)
+                    box.controls.append(w_)
+                    self._invalidate_datetime()
+                    w_.dateTimeChanged.connect(self._datetime_changed)
                     self._box = box
-                    self._invalidate_dates()
             else:
                 box.controls = []
         if not adding_all:
             self.conditions_changed()
 
-    def _invalidate_dates(self):
-        if getattr(self, "_box", None):
-            widget, widget_ = self._box.controls[0], self._box.controls[1]
-            if widget.dateTime() > widget_.dateTime():
-                widget_.setDateTime(widget.dateTime())
-                widget_.dateTimeChanged.connect(self.conditions_changed)
+    def _invalidate_datetime(self):
+        w = self._box.controls[0]
+        if len(self._box.controls) > 1:
+            w_ = self._box.controls[1]
+            if w.dateTime() > w_.dateTime():
+                w_.setDateTime(w.dateTime())
+            if w.format == (1, 1):
+                w.calendarWidget.timeedit.setTime(w.time())
+                w_.calendarWidget.timeedit.setTime(w_.time())
+        elif w.format == (1, 1):
+            w.calendarWidget.timeedit.setTime(w.time())
+
+    def _datetime_changed(self):
+        self.conditions_changed()
+        self._invalidate_datetime()
 
     @Inputs.data
     def set_data(self, data):
@@ -874,54 +887,56 @@ class DropDownToolButton(QToolButton):
 
 
 class DateTimeWidget(QDateTimeEdit):
-    def __init__(self, parent, col_idx, datetime_format):
+    def __init__(self, parent, column, datetime_format):
         QDateTimeEdit.__init__(self, parent)
 
-        self.parent = parent
         self.format = datetime_format
         self.have_date, self.have_time = datetime_format[0], datetime_format[1]
-        self.column = parent.data[:, col_idx]
-        self.set_format()
+        self.set_format(column)
         self.setSizePolicy(
             QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
-        self.dateTimeChanged.connect(parent._invalidate_dates)
 
-    def set_format(self):
+    def set_format(self, column):
         str_format = Qt.ISODate
         if self.have_date and self.have_time:
             self.setDisplayFormat("yyyy-MM-dd hh:mm:ss")
-            self.setCalendarPopup(True)
-            self._calendarWidget = CalendarWidgetWithTime(self)
-            self.setCalendarWidget(self._calendarWidget)
             c_format = "%Y-%m-%d %H:%M:%S"
-            min_datetime, max_datetime = self.find_range(self.column, c_format)
+            min_datetime, max_datetime = self.find_range(column, c_format)
             self.min_datetime = QDateTime.fromString(min_datetime, str_format)
             self.max_datetime = QDateTime.fromString(max_datetime, str_format)
+            self.setCalendarPopup(True)
+            self.calendarWidget = CalendarWidgetWithTime(self)
+            self.calendarWidget.timeedit.timeChanged.connect(
+                self.set_datetime)
+            self.setCalendarWidget(self.calendarWidget)
             self.setDateTimeRange(self.min_datetime, self.max_datetime)
 
         elif self.have_date and not self.have_time:
             self.setDisplayFormat("yyyy-MM-dd")
             self.setCalendarPopup(True)
-            min_datetime, max_datetime = self.find_range(self.column, "%Y-%m-%d")
+            min_datetime, max_datetime = self.find_range(column, "%Y-%m-%d")
             self.min_datetime = QDate.fromString(min_datetime, str_format)
             self.max_datetime = QDate.fromString(max_datetime, str_format)
             self.setDateRange(self.min_datetime, self.max_datetime)
 
         elif not self.have_date and self.have_time:
             self.setDisplayFormat("hh:mm:ss")
-            min_datetime, max_datetime = self.find_range(self.column, "%H:%M:%S")
+            min_datetime, max_datetime = self.find_range(column, "%H:%M:%S")
             self.min_datetime = QTime.fromString(min_datetime, str_format)
             self.max_datetime = QTime.fromString(max_datetime, str_format)
             self.setTimeRange(self.min_datetime, self.max_datetime)
 
     def set_datetime(self, datetime):
         if self.have_date and self.have_time:
-            self.setDateTime(datetime if datetime else self.min_datetime)
+            if isinstance(datetime, QTime):
+                self.setDateTime(
+                    QDateTime(self.date(), self.calendarWidget.timeedit.time()))
+            else:
+                self.setDateTime(datetime if datetime else self.min_datetime)
         elif self.have_date and not self.have_time:
             self.setDate(datetime if datetime else self.min_datetime)
         elif not self.have_date and self.have_time:
             self.setTime(datetime if datetime else self.min_datetime)
-        self.dateTimeChanged.connect(self.parent.conditions_changed)
 
     def find_range(self, column, convert_format):
         def convert_timestamp(timestamp):
