@@ -159,6 +159,10 @@ class TestDomainInit(unittest.TestCase):
         self.assertRaises(ValueError, Domain.from_numpy, np.zeros((2, 2, 2)))
         self.assertRaises(ValueError, Domain.from_numpy, np.zeros((2, 2)), np.zeros((2, 2, 2)))
 
+    def test_nonunique_domain_error(self):
+        self.assertRaises(Exception, Domain, [ContinuousVariable('a'),
+                                              ContinuousVariable('a')])
+
     def test_from_numpy_values(self):
         for aran_min, aran_max, vartype in [(1, 3, ContinuousVariable),
                                             (0, 2, DiscreteVariable),

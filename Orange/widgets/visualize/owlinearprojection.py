@@ -325,6 +325,10 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     def effective_variables(self):
         return self.selected_vars
 
+    @property
+    def effective_data(self):
+        return self.data.transform(Domain(self.effective_variables))
+
     def __vizrank_set_attrs(self, attrs):
         if not attrs:
             return

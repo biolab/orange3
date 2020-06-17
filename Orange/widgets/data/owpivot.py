@@ -310,7 +310,7 @@ class Pivot:
         row_var_h = DiscreteVariable(self._row_var.name, values=["Total"])
         aggr_attr = DiscreteVariable('Aggregate', [str(f) for f in agg_funs])
 
-        change_domain = self._col_var == self._row_var
+        same_row_col = self._col_var is self._row_var
 
         extra_vars = [self._row_var, aggr_attr]
         uniq_a = get_unique_names_duplicates([v.name for v in extra_vars]
@@ -320,11 +320,9 @@ class Pivot:
                 continue
             if idx == 0:
                 self.renamed.append(self._row_var.name)
-                if self._row_var == self._col_var:
-                    self._row_var = self._row_var.copy(name=u)
+                self._row_var = self._row_var.copy(name=u)
+                if same_row_col:
                     self._col_var = self._row_var
-                else:
-                    self._row_var = self._row_var.copy(name=u)
                 row_var_h = row_var_h.copy(name=u)
             elif idx == 1:
                 self.renamed.append(aggr_attr.name)
@@ -334,7 +332,7 @@ class Pivot:
                 attrs[0][idx-2] = var.copy(name=u)
                 attrs[1][idx-2] = var.copy(name=u)
 
-        if change_domain:
+        if same_row_col:
             vals = tuple(v.name for v in attrs[0])
             self._row_var.make(self._row_var.name, values=vals)
             vals = tuple(v.name for v in attrs[2])

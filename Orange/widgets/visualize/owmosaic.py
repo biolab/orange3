@@ -870,11 +870,6 @@ class OWMosaicDisplay(OWWidget):
             return
         attr_list = self.get_disc_attr_list()
         class_var = data.domain.class_var
-        if class_var:
-            sql = isinstance(data, SqlTable)
-            name = not sql and data.name
-            if not sql:
-                data.name = name
         # TODO: check this
         # data = Preprocessor_dropMissing(data)
 

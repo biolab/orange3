@@ -151,7 +151,7 @@ class Domain:
       
         names = [var.name for var in chain(attributes, class_vars, metas)]
         if len(names) != len(set(names)):
-            raise Exception('All the variables in the domain should have'
+            raise Exception('All variables in the domain should have'
                             ' unique names.')
   
         # Store everything
