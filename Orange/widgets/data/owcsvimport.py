@@ -1547,7 +1547,7 @@ def pandas_to_table(df):
             )
             # Remap the coldata into the var.values order/set
             coldata = pd.Categorical(
-                coldata.astype(coldata), categories=var.values
+                coldata.astype("str"), categories=var.values
             )
             codes = coldata.codes
             assert np.issubdtype(codes.dtype, np.integer)
