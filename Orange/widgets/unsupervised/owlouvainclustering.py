@@ -40,7 +40,7 @@ _MAX_PCA_COMPONENTS = 50
 _DEFAULT_PCA_COMPONENTS = 25
 _MAX_K_NEIGBOURS = 200
 _DEFAULT_K_NEIGHBORS = 30
-
+_MAX_COSINE_ROWS = 2000
 
 METRICS = [("Euclidean", "l2"), ("Manhattan", "l1"), ("Cosine", "cosine")]
 
@@ -77,6 +77,7 @@ class OWLouvainClustering(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         empty_dataset = Msg("No features in data")
+        too_large_for_cosine = Msg("Data is too large for cosine distance")
 
     def __init__(self):
         super().__init__()
@@ -204,6 +205,7 @@ class OWLouvainClustering(widget.OWWidget):
         elif self.auto_commit:
             # does not apply when auto commit is on
             state = False
+        self.Error.too_large_for_cosine.clear()
         self.Information.modified(shown=state)
 
     def _on_auto_commit_changed(self):
@@ -228,6 +230,12 @@ class OWLouvainClustering(widget.OWWidget):
             return
 
         self.Error.clear()
+
+        if METRICS[self.metric_idx][1] == "cosine" \
+                and len(self.data) > _MAX_COSINE_ROWS:
+            self._clear_outputs()
+            self.Error.too_large_for_cosine()
+            return
 
         if self.partition is not None:
             self.__set_state_ready()
@@ -372,6 +380,12 @@ class OWLouvainClustering(widget.OWWidget):
 
         self._send_data()
 
+    def _clear_outputs(self):
+        self.info.set_output_summary(self.info.NoOutput)
+        self.Outputs.annotated_data.send(None)
+        if Network is not None:
+            self.Outputs.graph.send(None)
+
     def _send_data(self):
         if self.partition is None or self.data is None:
             return
@@ -420,11 +434,7 @@ class OWLouvainClustering(widget.OWWidget):
             return
 
         self.cancel()
-        # Clear the outputs
-        self.info.set_output_summary(self.info.NoOutput)
-        self.Outputs.annotated_data.send(None)
-        if Network is not None:
-            self.Outputs.graph.send(None)
+        self._clear_outputs()
 
         # Clear internal state
         self.clear()

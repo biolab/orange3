@@ -1,4 +1,5 @@
 # pylint: disable=protected-access
+import unittest
 from unittest.mock import patch
 
 import numpy as np
@@ -292,3 +293,44 @@ class TestOWLouvain(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         self.assertEqual(info._StateInfo__output_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+    @patch.object(OWLouvainClustering, "_OWLouvainClustering__start_task")
+    def test_too_large_for_cosine(self, start_task):
+        w = self.widget
+        with patch("Orange.widgets.unsupervised.owlouvainclustering"
+                   "._MAX_COSINE_ROWS", 20):
+            w.metric_idx = 2
+            self.send_signal(w.Inputs.data, self.iris)
+            w.commit()
+            self.assertTrue(w.Error.too_large_for_cosine.is_shown())
+            start_task.assert_not_called()
+
+            w.metric_idx = 1
+            self.assertTrue(w.Error.too_large_for_cosine.is_shown())
+            w.commit()
+            self.assertFalse(w.Error.too_large_for_cosine.is_shown())
+            start_task.assert_called()
+
+            w.metric_idx = 2
+            start_task.reset_mock()
+            self.send_signal(w.Inputs.data, self.iris)
+            w.commit()
+            self.assertTrue(w.Error.too_large_for_cosine.is_shown())
+            start_task.assert_not_called()
+
+            self.send_signal(w.Inputs.data, self.iris[:15])
+            w.commit()
+            self.assertFalse(w.Error.too_large_for_cosine.is_shown())
+
+            start_task.reset_mock()
+            self.send_signal(w.Inputs.data, self.iris)
+            w.commit()
+            self.assertTrue(w.Error.too_large_for_cosine.is_shown())
+            start_task.assert_not_called()
+
+            self.send_signal(w.Inputs.data, None)
+            self.assertFalse(w.Error.too_large_for_cosine.is_shown())
+
+
+if __name__ == "__main__":
+    unittest.main()
