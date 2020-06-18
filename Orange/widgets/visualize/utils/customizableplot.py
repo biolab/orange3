@@ -182,19 +182,66 @@ class BaseParameterSetter:
     initial_settings: Dict[str, Dict[str, SettingsType]] = NotImplemented
 
     def __init__(self):
-        self._setters: Dict[str, Dict[str, Callable]] = NotImplemented
+        def update_font_family(**settings):
+            for label in self.initial_settings[self.LABELS_BOX]:
+                if label != self.FONT_FAMILY_LABEL:
+                    setter = self._setters[self.LABELS_BOX][label]
+                    setter(**settings)
 
-    @property
-    def setters(self) -> Dict:
-        return self._setters
+        def update_title(**settings):
+            Updater.update_plot_title_font(self.title_item, **settings)
 
-    @setters.setter
-    def setters(self, setters: Dict[str, Dict[str, Callable]]):
-        assert setters.keys() == self.initial_settings.keys()
-        assert all(setters[key].keys() == self.initial_settings[key].keys()
-                   for key in setters.keys())
+        def update_label(**settings):
+            self.label_font = Updater.change_font(self.label_font, settings)
+            Updater.update_label_font(self.labels, self.label_font)
 
-        self._setters = setters
+        def update_axes_titles(**settings):
+            Updater.update_axes_titles_font(self.axis_items, **settings)
+
+        def update_axes_ticks(**settings):
+            Updater.update_axes_ticks_font(self.axis_items, **settings)
+
+        def update_legend(**settings):
+            self.legend_settings.update(**settings)
+            Updater.update_legend_font(self.legend_items, **settings)
+
+        def update_title_text(**settings):
+            Updater.update_plot_title_text(
+                self.title_item, settings[self.TITLE_LABEL])
+
+        def update_axis(axis, **settings):
+            Updater.update_axis_title_text(
+                self.getAxis(axis), settings[self.TITLE_LABEL])
+
+        self.label_font = QFont()
+        self.legend_settings = {}
+
+        self._setters = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: update_font_family,
+                self.TITLE_LABEL: update_title,
+                self.LABEL_LABEL: update_label,
+                self.AXIS_TITLE_LABEL: update_axes_titles,
+                self.AXIS_TICKS_LABEL: update_axes_ticks,
+                self.LEGEND_LABEL: update_legend,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: update_title_text,
+                self.X_AXIS_LABEL: lambda **kw: update_axis("bottom", **kw),
+                self.Y_AXIS_LABEL: lambda **kw: update_axis("left", **kw),
+            }
+        }
+
+        self.update_setters()
+        self._check_setters()
+        
+    def update_setters(self):
+        pass
+
+    def _check_setters(self):
+        assert all(key in self._setters for key in self.initial_settings)
+        for k, inner in self.initial_settings.items():
+            assert all(key in self._setters[k] for key in inner)
 
     def set_parameter(self, key: KeyType, value: ValueType):
-        self.setters[key[0]][key[1]](**{key[2]: value})
+        self._setters[key[0]][key[1]](**{key[2]: value})

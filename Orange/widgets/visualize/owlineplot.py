@@ -204,49 +204,6 @@ class ParameterSetter(Setter):
         }
     }
 
-    def __init__(self):
-        def update_font_family(**settings):
-            for label, setter in self.setters[self.LABELS_BOX].items():
-                if label != self.FONT_FAMILY_LABEL:
-                    setter(**settings)
-
-        def update_title(**settings):
-            Updater.update_plot_title_font(self.title_item, **settings)
-
-        def update_axes_titles(**settings):
-            Updater.update_axes_titles_font(self.axis_items, **settings)
-
-        def update_axes_ticks(**settings):
-            Updater.update_axes_ticks_font(self.axis_items, **settings)
-
-        def update_legend(**settings):
-            self.legend_settings.update(**settings)
-            Updater.update_legend_font(self.legend_items, **settings)
-
-        def update_title_text(**settings):
-            Updater.update_plot_title_text(
-                self.title_item, settings[self.TITLE_LABEL])
-
-        def update_axis(axis, **settings):
-            Updater.update_axis_title_text(
-                self.getAxis(axis), settings[self.TITLE_LABEL])
-
-        self.legend_settings = {}
-        self.setters = {
-            self.LABELS_BOX: {
-                self.FONT_FAMILY_LABEL: update_font_family,
-                self.TITLE_LABEL: update_title,
-                self.AXIS_TITLE_LABEL: update_axes_titles,
-                self.AXIS_TICKS_LABEL: update_axes_ticks,
-                self.LEGEND_LABEL: update_legend,
-            },
-            self.ANNOT_BOX: {
-                self.TITLE_LABEL: update_title_text,
-                self.X_AXIS_LABEL: lambda **kw: update_axis("bottom", **kw),
-                self.Y_AXIS_LABEL: lambda **kw: update_axis("left", **kw),
-            }
-        }
-
     @property
     def title_item(self):
         return self.getPlotItem().titleLabel

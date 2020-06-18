@@ -76,37 +76,6 @@ class ParameterSetter(Setter):
         }
     }
 
-    def __init__(self):
-        def update_font_family(**settings):
-            for label, setter in self.setters[self.LABELS_BOX].items():
-                if label != self.FONT_FAMILY_LABEL:
-                    setter(**settings)
-
-        def update_title(**settings):
-            Updater.update_plot_title_font(self.title_item, **settings)
-
-        def update_axes_titles(**settings):
-            Updater.update_axes_titles_font(self.axis_items, **settings)
-
-        def update_axes_ticks(**settings):
-            Updater.update_axes_ticks_font(self.axis_items, **settings)
-
-        def update_title_text(**settings):
-            Updater.update_plot_title_text(
-                self.title_item, settings[self.TITLE_LABEL])
-
-        self.setters = {
-            self.LABELS_BOX: {
-                self.FONT_FAMILY_LABEL: update_font_family,
-                self.TITLE_LABEL: update_title,
-                self.AXIS_TITLE_LABEL: update_axes_titles,
-                self.AXIS_TICKS_LABEL: update_axes_ticks,
-            },
-            self.ANNOT_BOX: {
-                self.TITLE_LABEL: update_title_text,
-            }
-        }
-
     @property
     def title_item(self):
         return self.titleLabel

@@ -360,22 +360,11 @@ class ParameterSetter(Setter):
     }
 
     def __init__(self):
-        self.label_font = QFont()
+        super().__init__()
         self.cat_legend_settings = {}
         self.num_legend_settings = {}
 
-        def update_font_family(**settings):
-            for label, setter in self.setters[self.LABELS_BOX].items():
-                if label != self.FONT_FAMILY_LABEL:
-                    setter(**settings)
-
-        def update_title(**settings):
-            Updater.update_plot_title_font(self.title_item, **settings)
-
-        def update_label(**settings):
-            self.label_font = Updater.change_font(self.label_font, settings)
-            Updater.update_label_font(self.labels, self.label_font)
-
+    def update_setters(self):
         def update_cat_legend(**settings):
             self.cat_legend_settings.update(**settings)
             Updater.update_legend_font(self.cat_legend_items, **settings)
@@ -384,22 +373,9 @@ class ParameterSetter(Setter):
             self.num_legend_settings.update(**settings)
             Updater.update_num_legend_font(self.num_legend, **settings)
 
-        def update_title_text(**settings):
-            Updater.update_plot_title_text(
-                self.title_item, settings[self.TITLE_LABEL])
-
-        self._setters = {
-            self.LABELS_BOX: {
-                self.FONT_FAMILY_LABEL: update_font_family,
-                self.TITLE_LABEL: update_title,
-                self.LABEL_LABEL: update_label,
-                self.CAT_LEGEND_LABEL: update_cat_legend,
-                self.NUM_LEGEND_LABEL: update_num_legend,
-            },
-            self.ANNOT_BOX: {
-                self.TITLE_LABEL: update_title_text,
-            }
-        }
+        labels = self.LABELS_BOX
+        self._setters[labels][self.CAT_LEGEND_LABEL] = update_cat_legend
+        self._setters[labels][self.NUM_LEGEND_LABEL] = update_num_legend
 
     @property
     def title_item(self):

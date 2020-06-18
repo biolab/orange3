@@ -105,19 +105,6 @@ class ParameterSetter(Setter):
         Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING
     })
 
-    def __init__(self):
-        super().__init__()
-
-        def update_axes_titles(**settings):
-            Updater.update_axes_titles_font(self.axis_items, **settings)
-
-        def update_axes_ticks(**settings):
-            Updater.update_axes_ticks_font(self.axis_items, **settings)
-
-        labels = self.LABELS_BOX
-        self.setters[labels][self.AXIS_TITLE_LABEL] = update_axes_titles
-        self.setters[labels][self.AXIS_TICKS_LABEL] = update_axes_ticks
-
     @property
     def axis_items(self):
         return [value["item"] for value in

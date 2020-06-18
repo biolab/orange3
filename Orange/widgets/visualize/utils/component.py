@@ -23,13 +23,16 @@ class ParameterSetter(Setter):
     })
 
     def __init__(self):
+        super().__init__()
+        self.anchor_font = QFont()
+
+    def update_setters(self):
         def update_anchors(**settings):
             self.anchor_font = Updater.change_font(self.anchor_font, settings)
             self.update_anchors()
 
-        super().__init__()
-        self.anchor_font = QFont()
-        self.setters[self.LABELS_BOX][self.ANCHOR_LABEL] = update_anchors
+        super().update_setters()
+        self._setters[self.LABELS_BOX][self.ANCHOR_LABEL] = update_anchors
 
 
 class OWGraphWithAnchors(OWScatterPlotBase, ParameterSetter):
