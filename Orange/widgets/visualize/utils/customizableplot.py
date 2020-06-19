@@ -1,6 +1,7 @@
 import sys
-from typing import Tuple, List, Dict, Callable, Iterable
+from typing import Tuple, List, Dict, Iterable
 
+from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QFont, QFontDatabase
 from AnyQt.QtWidgets import QApplication
 
@@ -69,6 +70,21 @@ class Updater:
     FONT_SETTING: SettingsType = {
         SIZE_LABEL: (range(4, 50), default_font_size()),
         IS_ITALIC_LABEL: (None, False)
+    }
+
+    WIDTH_LABEL, ALPHA_LABEL, STYLE_LABEL, ANTIALIAS_LABEL = \
+        "Width", "Opacity", "Style", "Antialias"
+    LINE_STYLES = {"Solid line": Qt.SolidLine,
+                   "Dash line": Qt.DashLine,
+                   "Dot line": Qt.DotLine,
+                   "Dash dot line": Qt.DashDotLine,
+                   "Dash dot dot line": Qt.DashDotDotLine}
+    DEFAULT_LINE_STYLE = "Solid line"
+    LINE_SETTING: SettingsType = {
+        WIDTH_LABEL: (range(1, 15), 1),
+        ALPHA_LABEL: (range(0, 255, 5), 255),
+        STYLE_LABEL: (list(LINE_STYLES), DEFAULT_LINE_STYLE),
+        ANTIALIAS_LABEL: (None, False),
     }
 
     @staticmethod
@@ -164,11 +180,36 @@ class Updater:
             font.setItalic(italic)
         return font
 
+    @staticmethod
+    def update_lines(items: List[pg.PlotCurveItem], **settings: _SettingType):
+        for item in items:
+            antialias = settings.get(Updater.ANTIALIAS_LABEL)
+            if antialias is not None:
+                item.setData(item.xData, item.yData, antialias=antialias)
+
+            pen = item.opts["pen"]
+            alpha = settings.get(Updater.ALPHA_LABEL)
+            if alpha is not None:
+                color = pen.color()
+                color.setAlpha(alpha)
+                pen.setColor(color)
+
+            style = settings.get(Updater.STYLE_LABEL)
+            if style is not None:
+                pen.setStyle(Updater.LINE_STYLES[style])
+
+            width = settings.get(Updater.WIDTH_LABEL)
+            if width is not None:
+                pen.setWidth(width)
+
+            item.setPen(pen)
+
 
 class BaseParameterSetter:
     """ Subclass to add 'setter' functionality to a plot. """
     LABELS_BOX = "Fonts"
     ANNOT_BOX = "Annotations"
+    PLOT_BOX = "Figure"
 
     FONT_FAMILY_LABEL = "Font family"
     AXIS_TITLE_LABEL = "Axis title"
