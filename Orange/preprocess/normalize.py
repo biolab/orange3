@@ -52,8 +52,14 @@ class Normalizer(Reprable):
             compute_val = Norm(var, avg, 1 / sd)
         else:
             compute_val = Norm(var, 0, 1 / sd)
-        num_decimals = var.number_of_decimals + int(np.ceil(np.log10(sd)))
-        num_decimals = max(num_decimals, 0)  # num decimals can't be negative
+
+        # When dealing with integers, and multiplying by something smaller than
+        # 1, the number of decimals should be decreased, but this integer will
+        # likely turn into a float, which should have some default number of
+        # decimals
+        num_decimals = var.number_of_decimals + int(np.round(np.log10(sd)))
+        num_decimals = max(num_decimals, 1)  # num decimals can't be negative
+
         return var.copy(compute_value=compute_val, number_of_decimals=num_decimals)
 
     def normalize_by_span(self, dist, var: ContinuousVariable) -> ContinuousVariable:
@@ -65,6 +71,9 @@ class Normalizer(Reprable):
             compute_val = Norm(var, dmi, 1 / diff)
         else:
             compute_val = Norm(var, (dma + dmi) / 2, 2 / diff)
-        num_decimals = var.number_of_decimals + int(np.ceil(np.log10(diff)))
-        num_decimals = max(num_decimals, 0)  # num decimals can't be negative
-        return var.copy(compute_value=compute_val, number_of_decimals=num_decimals)
+        if not np.isnan(diff):
+            num_decimals = var.number_of_decimals + int(np.ceil(np.log10(diff)))
+            num_decimals = max(num_decimals, 0)  # num decimals can't be negative
+            return var.copy(compute_value=compute_val, number_of_decimals=num_decimals)
+        else:
+            return var.copy(compute_value=compute_val)
