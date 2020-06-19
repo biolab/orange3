@@ -493,8 +493,22 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
         def display():
             # pylint: disable=too-many-branches
+            def format_zeros(str_val):
+                """Zeros should be handled separately as they cannot be negative."""
+                if float(str_val) == 0:
+                    num_decimals = min(self.variables[row].number_of_decimals, 2)
+                    str_val = f"{0:.{num_decimals}f}"
+                return str_val
+
             def render_value(value):
-                return "" if np.isnan(value) else attribute.str_val(value)
+                if np.isnan(value):
+                    return ""
+
+                str_val = attribute.str_val(value)
+                if attribute.is_continuous:
+                    str_val = format_zeros(str_val)
+
+                return str_val
 
             if column == self.Columns.NAME:
                 return attribute.name
