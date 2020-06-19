@@ -1,6 +1,6 @@
 import numpy as np
 
-from Orange.data import Domain
+from Orange.data import Domain, ContinuousVariable
 from Orange.statistics import distribution
 from Orange.util import Reprable
 from .preprocess import Normalize
@@ -42,10 +42,9 @@ class Normalizer(Reprable):
             var = self.normalize_by_sd(dist, var)
         elif self.norm_type == Normalize.NormalizeBySpan:
             var = self.normalize_by_span(dist, var)
-        var.number_of_decimals = None
         return var
 
-    def normalize_by_sd(self, dist, var):
+    def normalize_by_sd(self, dist, var: ContinuousVariable) -> ContinuousVariable:
         avg, sd = (dist.mean(), dist.standard_deviation()) if dist.size else (0, 1)
         if sd == 0:
             sd = 1
@@ -53,9 +52,17 @@ class Normalizer(Reprable):
             compute_val = Norm(var, avg, 1 / sd)
         else:
             compute_val = Norm(var, 0, 1 / sd)
-        return var.copy(compute_value=compute_val)
 
-    def normalize_by_span(self, dist, var):
+        # When dealing with integers, and multiplying by something smaller than
+        # 1, the number of decimals should be decreased, but this integer will
+        # likely turn into a float, which should have some default number of
+        # decimals
+        num_decimals = var.number_of_decimals + int(np.round(np.log10(sd)))
+        num_decimals = max(num_decimals, 1)  # num decimals can't be negative
+
+        return var.copy(compute_value=compute_val, number_of_decimals=num_decimals)
+
+    def normalize_by_span(self, dist, var: ContinuousVariable) -> ContinuousVariable:
         dma, dmi = (dist.max(), dist.min()) if dist.shape[1] else (np.nan, np.nan)
         diff = dma - dmi
         if diff < 1e-15:
@@ -64,4 +71,9 @@ class Normalizer(Reprable):
             compute_val = Norm(var, dmi, 1 / diff)
         else:
             compute_val = Norm(var, (dma + dmi) / 2, 2 / diff)
-        return var.copy(compute_value=compute_val)
+        if not np.isnan(diff):
+            num_decimals = var.number_of_decimals + int(np.ceil(np.log10(diff)))
+            num_decimals = max(num_decimals, 0)  # num decimals can't be negative
+            return var.copy(compute_value=compute_val, number_of_decimals=num_decimals)
+        else:
+            return var.copy(compute_value=compute_val)

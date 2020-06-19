@@ -159,14 +159,12 @@ class TestNormalizer(unittest.TestCase):
         data = Table.from_list(Domain((foo,)), [[1], [2], [3]])
 
         normalized = Normalize()(data)
-        norm_foo = normalized.domain.attributes[0]
+        norm_foo: ContinuousVariable = normalized.domain.attributes[0]
 
-        self.assertEqual(norm_foo.number_of_decimals, 3)
-        self.assertEqual(norm_foo.format_str, "%g")
-        self.assertEqual(norm_foo.adjust_decimals, 2)
+        self.assertGreater(norm_foo.number_of_decimals, 0)
 
         for val1, val2 in zip(normalized[:, "Foo"],
-                              ["-1.22474", "0", "1.22474"]):
+                              ["-1.225", "0.0", "1.225"]):
             self.assertEqual(str(val1[0]), val2)
 
 

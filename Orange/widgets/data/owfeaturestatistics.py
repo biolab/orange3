@@ -41,6 +41,14 @@ def _categorical_entropy(x):
     return np.fromiter((ss.entropy(pk) for pk in p), dtype=np.float64)
 
 
+def coefficient_of_variation(x: np.ndarray) -> np.ndarray:
+    mu = ut.nanmean(x, axis=0)
+    mask = ~np.isclose(mu, 0, atol=1e-12)
+    result = np.full_like(mu, fill_value=np.inf)
+    result[mask] = np.sqrt(ut.nanvar(x, axis=0)[mask]) / mu[mask]
+    return result
+
+
 def format_time_diff(start, end, round_up_after=2):
     """Return an approximate human readable time difference between two dates.
 
@@ -230,7 +238,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         self._dispersion = self.__compute_stat(
             matrices,
             discrete_f=_categorical_entropy,
-            continuous_f=lambda x: np.sqrt(ut.nanvar(x, axis=0)) / ut.nanmean(x, axis=0),
+            continuous_f=coefficient_of_variation,
         )
         self._missing = self.__compute_stat(
             matrices,
@@ -487,8 +495,22 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
         def display():
             # pylint: disable=too-many-branches
+            def format_zeros(str_val):
+                """Zeros should be handled separately as they cannot be negative."""
+                if float(str_val) == 0:
+                    num_decimals = min(self.variables[row].number_of_decimals, 2)
+                    str_val = f"{0:.{num_decimals}f}"
+                return str_val
+
             def render_value(value):
-                return "" if np.isnan(value) else attribute.str_val(value)
+                if np.isnan(value):
+                    return ""
+
+                str_val = attribute.str_val(value)
+                if attribute.is_continuous:
+                    str_val = format_zeros(str_val)
+
+                return str_val
 
             if column == self.Columns.NAME:
                 return attribute.name
