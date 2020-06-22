@@ -1751,6 +1751,8 @@ def _check_arrays(*arrays, dtype=None, shape_1=None):
                              % (ninstances(array), shape_1))
 
         if sp.issparse(array):
+            if not (sp.isspmatrix_csr(array) or sp.isspmatrix_csc(array)):
+                array = array.tocsr()
             array.data = np.asarray(array.data)
             has_inf = _check_inf(array.data)
         else:
