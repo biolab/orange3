@@ -84,6 +84,11 @@ def getmembers(obj, predicate=None):
     return inspect.getmembers(obj, mypredicate)
 
 
+def qname(type_: type) -> str:
+    """Return the fully qualified name for a `type_`."""
+    return "{0.__module__}.{0.__qualname__}".format(type_)
+
+
 _T1 = TypeVar("_T1")  # pylint: disable=invalid-name
 _E = TypeVar("_E", bound=enum.Enum)  # pylint: disable=invalid-name
 
