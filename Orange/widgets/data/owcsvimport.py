@@ -870,9 +870,8 @@ class OWCSVFileImport(widget.OWWidget):
         )
         dlg.setWindowModality(Qt.WindowModal)
         dlg.setAttribute(Qt.WA_DeleteOnClose)
-        settings = QSettings()
-        qualname = qname(type(self))
-        settings.beginGroup(qualname)
+        settings = self._local_settings()
+        settings.beginGroup(qname(type(dlg)))
         size = settings.value("size", QSize(), type=QSize)  # type: QSize
         if size.isValid():
             dlg.resize(size)
