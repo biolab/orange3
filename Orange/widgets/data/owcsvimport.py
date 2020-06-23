@@ -40,7 +40,7 @@ from PyQt5.QtGui import (
 from PyQt5.QtWidgets import (
     QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
     QVBoxLayout, QSizePolicy, QStyle, QFileIconProvider, QFileDialog,
-    QApplication, QMessageBox, QTextBrowser
+    QApplication, QMessageBox, QTextBrowser, QMenu
 )
 from PyQt5.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
@@ -59,7 +59,7 @@ from Orange.widgets.utils import (
 )
 from Orange.widgets.utils.combobox import ItemStyledComboBox
 from Orange.widgets.utils.pathutils import (
-    PathItem, VarPath, samepath, pathnormalize, prettyfypath, infer_prefix,
+    PathItem, VarPath, AbsPath, samepath, prettyfypath, isprefixed,
 )
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
@@ -532,6 +532,15 @@ class VarPathItemModel(QStandardItemModel):
         return vpath.resolve(self.replacementEnv())
 
 
+def move_item_to_index(model: QStandardItemModel, item: QStandardItem, index: int):
+    if item.row() == index:
+        return
+    assert item.model() is model
+    [item_] = model.takeRow(item.row())
+    assert item_ is item
+    model.insertRow(index, [item])
+
+
 class OWCSVFileImport(widget.OWWidget):
     name = "CSV File Import"
     description = "Import a data table from a CSV formatted file."
@@ -601,7 +610,7 @@ class OWCSVFileImport(widget.OWWidget):
         grid.addWidget(QLabel("File:", self), 0, 0, 1, 1)
 
         self.import_items_model = VarPathItemModel(self)
-        self.import_items_model.setReplacementEnv(dict(self._replacements()))
+        self.import_items_model.setReplacementEnv(self._replacements())
         self.recent_combo = ItemStyledComboBox(
             self, objectName="recent-combo", toolTip="Recent files.",
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
@@ -615,6 +624,20 @@ class OWCSVFileImport(widget.OWWidget):
             "…", icon=self.style().standardIcon(QStyle.SP_DirOpenIcon),
             toolTip="Browse filesystem", autoDefault=False,
         )
+        # A button drop down menu with selection of explicit workflow dir
+        # relative import. This is only enabled when 'basedir' workflow env
+        # is set. XXX: Always use menu, disable Import relative... action?
+        self.browse_menu = menu = QMenu(self.browse_button)
+        ac = menu.addAction("Import any file…")
+        ac.triggered.connect(self.browse)
+
+        ac = menu.addAction("Import relative to workflow file…")
+        ac.setToolTip("Import a file within the workflow file directory")
+        ac.triggered.connect(lambda: self.browse_relative("basedir"))
+
+        if "basedir" in self._replacements():
+            self.browse_button.setMenu(menu)
+
         self.browse_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.browse_button.clicked.connect(self.browse)
         grid.addWidget(self.recent_combo, 0, 1, 1, 1)
@@ -679,57 +702,76 @@ class OWCSVFileImport(widget.OWWidget):
     def workflowEnvChanged(self, key, value, oldvalue):
         super().workflowEnvChanged(key, value, oldvalue)
         if key == "basedir":
-            self.import_items_model.setReplacementEnv(dict(self._replacements()))
+            self.browse_button.setMenu(self.browse_menu)
+            self.import_items_model.setReplacementEnv(self._replacements())
 
     @Slot(int)
     def activate_recent(self, index):
         """
         Activate an item from the recent list.
         """
-        if 0 <= index < self.import_items_model.rowCount():
-            item = self.import_items_model.item(index)
-            assert item is not None
-            path = item.data(ImportItem.PathRole)
-            opts = item.data(ImportItem.OptionsRole)
-            if not isinstance(opts, Options):
-                opts = None
+        model = self.import_items_model
+        cb = self.recent_combo
+        if 0 <= index < model.rowCount():
+            item = model.item(index)
+            assert isinstance(item, ImportItem)
+            path = item.path()
+            item.setData(True, ImportItem.IsSessionItemRole)
+            move_item_to_index(model, item, 0)
             if not os.path.exists(path):
-                vpath = item.data(ImportItem.VarPathRole)
-                if isinstance(vpath, VarPath):
-                    startdir = dict(self._replacements()).get(vpath.name, None)
-                else:
-                    startdir = None
-                self._browse_for_missing(item, startdir=startdir)
+                self._browse_for_missing(
+                    item, onfinished=lambda status: self._invalidate()
+                )
             else:
-                self.set_selected_file(path, opts)
+                cb.setCurrentIndex(0)
+                self._invalidate()
         else:
             self.recent_combo.setCurrentIndex(-1)
 
-    def _browse_for_missing(self, item: ImportItem, startdir: Optional[str] = None):
+    def _browse_for_missing(
+            self, item: ImportItem, *, onfinished: Optional[Callable[[int], Any]] = None):
         dlg = self._browse_dialog()
-        if startdir is not None:
-            dlg.setDirectory(startdir)
-        dlg.setAttribute(Qt.WA_DeleteOnClose)
         model = self.import_items_model
+
+        if onfinished is None:
+            onfinished = lambda status: None
+
+        vpath = item.varPath()
+        prefixpath = None
+        if isinstance(vpath, PathItem.VarPath):
+            prefixpath = self._replacements().get(vpath.name)
+        if prefixpath is not None:
+            dlg.setDirectory(prefixpath)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
 
         def accepted():
             path = dlg.selectedFiles()[0]
+            if isinstance(vpath, VarPath) and not isprefixed(prefixpath, path):
+                mb = self._path_must_be_relative_mb(prefixpath)
+                mb.show()
+                mb.finished.connect(lambda _: onfinished(QDialog.Rejected))
+                return
+
             # pre-flight check; try to determine the nature of the file
             mtype = _mime_type_for_path(path)
             if not mtype.inherits("text/plain"):
                 mb = self._might_be_binary_mb(path)
                 if mb.exec() == QMessageBox.Cancel:
+                    if onfinished:
+                        onfinished(QDialog.Rejected)
                     return
 
-            item.setPath(path)
-            item.setData(infer_prefix(path, self._replacements()),
-                         ImportItem.VarPathRole)
-            assert item.model() is model
-            [item_, ] = model.takeRow(item.row())
-            assert item_ is item
-            model.insertRow(0, [item])
+            if isinstance(vpath, VarPath):
+                vpath_ = VarPath(vpath.name, os.path.relpath(path, prefixpath))
+            else:
+                vpath_ = AbsPath(path)
+            item.setVarPath(vpath_)
+            if item.row() != 0:
+                move_item_to_index(model, item, 0)
             item.setData(True, ImportItem.IsSessionItemRole)
             self.set_selected_file(path, item.options())
+            self._note_recent(path, item.options())
+            onfinished(QDialog.Accepted)
 
         dlg.accepted.connect(accepted)
         dlg.open()
@@ -773,22 +815,51 @@ class OWCSVFileImport(widget.OWWidget):
         mb.setWindowModality(Qt.WindowModal)
         return mb
 
+    def _path_must_be_relative_mb(self, prefix: str) -> QMessageBox:
+        mb = QMessageBox(
+            parent=self, windowTitle=self.tr("Invalid path"),
+            icon=QMessageBox.Warning,
+            text=self.tr("Selected path is not within '{prefix}'").format(
+                prefix=prefix
+            ),
+        )
+        mb.setAttribute(Qt.WA_DeleteOnClose)
+        return mb
+
+    @Slot(str)
+    def browse_relative(self, prefixname):
+        path = self._replacements().get(prefixname)
+        self.browse(prefixname=prefixname, directory=path)
+
     @Slot()
-    def browse(self):
+    def browse(self, prefixname=None, directory=None):
         """
         Open a file dialog and select a user specified file.
         """
         formats = [
             "Text - comma separated (*.csv, *)",
-            "Text - tab separated (*.tsv, *)",
+            "Text - tab separated (*.tsv, *.tab, *)",
             "Text - all files (*)"
         ]
         dlg = self._browse_dialog()
+        if directory is not None:
+            dlg.setDirectory(directory)
+
         status = dlg.exec_()
         dlg.deleteLater()
         if status == QFileDialog.Accepted:
             selected_filter = dlg.selectedNameFilter()
             path = dlg.selectedFiles()[0]
+            if prefixname:
+                _prefixpath = self._replacements().get(prefixname, "")
+                if not isprefixed(_prefixpath, path):
+                    mb = self._path_must_be_relative_mb(_prefixpath)
+                    mb.show()
+                    return
+                varpath = VarPath(prefixname, os.path.relpath(path, _prefixpath))
+            else:
+                varpath = PathItem.AbsPath(path)
+
             # pre-flight check; try to determine the nature of the file
             mtype = _mime_type_for_path(path)
             if not mtype.inherits("text/plain"):
@@ -839,6 +910,7 @@ class OWCSVFileImport(widget.OWWidget):
             dlg.deleteLater()
             if status == QDialog.Accepted:
                 self.set_selected_file(path, dlg.options())
+                self.current_item().setVarPath(varpath)
 
     def current_item(self):
         # type: () -> Optional[ImportItem]
@@ -880,8 +952,8 @@ class OWCSVFileImport(widget.OWWidget):
         def update():
             newoptions = dlg.options()
             item.setData(newoptions, ImportItem.OptionsRole)
-            # update the stored item
-            self._add_recent(path, newoptions)
+            # update local recent paths list
+            self._note_recent(path, newoptions)
             if newoptions != options:
                 self._invalidate()
         dlg.accepted.connect(update)
@@ -939,15 +1011,16 @@ class OWCSVFileImport(widget.OWWidget):
 
         if not os.path.exists(filename):
             return
+        self._note_recent(filename, options)
 
-        # store items to local persistent settings
+    def _note_recent(self, filename, options):
+        # store item to local persistent settings
         s = self._local_settings()
         arr = QSettings_readArray(s, "recent", OWCSVFileImport.SCHEMA)
         item = {"path": filename}
         if options is not None:
             item["options"] = json.dumps(options.as_dict())
-
-        arr = [item for item in arr if item.get("path") != filename]
+        arr = [item for item in arr if not samepath(item.get("path"), filename)]
         arr.append(item)
         QSettings_writeArray(s, "recent", arr)
 
@@ -975,8 +1048,8 @@ class OWCSVFileImport(widget.OWWidget):
         item = self.current_item()
         if item is None:
             return
-        path = item.data(ImportItem.PathRole)
-        opts = item.data(ImportItem.OptionsRole)
+        path = item.path()
+        opts = item.options()
         if not isinstance(opts, Options):
             return
 
@@ -1155,22 +1228,19 @@ class OWCSVFileImport(widget.OWWidget):
                 items.append((path, opts))
         return items[::-1]
 
-    def _replacements(self) -> List[Tuple[str, str]]:
+    def _replacements(self) -> Mapping[str, str]:
         replacements = []
         basedir = self.workflowEnv().get("basedir", None)
         if basedir is not None:
             replacements += [('basedir', basedir)]
-        return replacements
+        return dict(replacements)
 
     def _saveState(self):
-        replacements = self._replacements()
         session_items = []
         model = self.import_items_model
         for item in map(model.item, range(model.rowCount())):
-            if item.data(ImportItem.IsSessionItemRole):
-                vp = infer_prefix(item.path(), replacements)
-                if vp is None:
-                    vp = VarPath.AbsPath(item.path())
+            if isinstance(item, ImportItem) and item.data(ImportItem.IsSessionItemRole):
+                vp = item.data(VarPathItem.VarPathRole)
                 session_items.append((vp.as_dict(), item.options().as_dict()))
         self._session_items_v2 = session_items
 
@@ -1178,47 +1248,36 @@ class OWCSVFileImport(widget.OWWidget):
         # Restore the state. Merge session (workflow) items with the
         # local history.
         model = self.import_items_model
+        model.setReplacementEnv(self._replacements())
+
         # local history
         items = self.itemsFromSettings()
         # stored session items
         sitems = []
-        replacements = self._replacements()
+        # replacements = self._replacements()
         for p, m in self._session_items_v2:
             try:
-                p, m = (VarPath.from_dict(p), Options.from_dict(m))
+                p, m = (PathItem.from_dict(p), Options.from_dict(m))
             except (csv.Error, LookupError, ValueError):
                 _log.error("Failed to restore '%s'", p, exc_info=True)
             else:
-                sitems.append((p, m))
+                sitems.append((p, m, True))
 
-        items = sitems + items
-        replacements = self._replacements()
-
-        def key(t: Union[VarPath, str]) -> str:
-            if isinstance(t, PathItem):
-                p = t.resolve(dict(replacements))
-                if p is not None:
-                    return pathnormalize(p)
-                else:
-                    return t
-                    # p = t.abspath
-            else:
-                p = t
-            return pathnormalize(p)
-
-        items = unique_everseen(items, key=lambda t: key(t[0]))
-
+        items = sitems + [(PathItem.AbsPath(p), m, False) for p, m in items]
+        items = unique_everseen(items, key=lambda t: t[0])
         curr = self.recent_combo.currentIndex()
         if curr != -1:
             currentpath = self.recent_combo.currentData(ImportItem.PathRole)
         else:
             currentpath = None
-        for path, options in items:
+
+        for path, options, is_session in items:
             item = ImportItem.fromPath(path)
             item.setOptions(options)
+            item.setData(is_session, ImportItem.IsSessionItemRole)
             model.appendRow(item)
 
-        if currentpath is not None:
+        if currentpath:
             idx = self.recent_combo.findData(currentpath, ImportItem.PathRole)
             if idx != -1:
                 self.recent_combo.setCurrentIndex(idx)
