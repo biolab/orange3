@@ -609,7 +609,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.recent_combo = QComboBox(
             self, objectName="recent-combo", toolTip="Recent files.",
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
-            minimumContentsLength=16,
+            minimumContentsLength=16, placeholderText="..."
         )
         self.recent_combo.setModel(self.import_items_model)
         self.recent_combo.activated.connect(self.activate_recent)

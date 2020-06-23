@@ -18,6 +18,10 @@ class ItemStyledComboBox(ComboBox):
     ----
     Stylesheets etc. can completely ignore this.
     """
+    def __init__(self, *args, placeholderText="", **kwargs):
+        self.__placeholderText = placeholderText
+        super().__init__(*args, **kwargs)
+
     def paintEvent(self, _event) -> None:
         painter = QStylePainter(self)
         option = QStyleOptionComboBox()
@@ -37,3 +41,33 @@ class ItemStyledComboBox(ComboBox):
             option.fontMetrics = QFontMetrics(font)
             painter.setFont(font)
         painter.drawControl(QStyle.CE_ComboBoxLabel, option)
+
+    def placeholderText(self) -> str:
+        """
+        Return the placeholder text.
+
+        Returns
+        -------
+        text : str
+        """
+        return self.__placeholderText
+
+    def setPlaceholderText(self, text: str):
+        """
+        Set the placeholder text.
+
+        This text is displayed on the checkbox when the currentIndex() == -1
+
+        Parameters
+        ----------
+        text : str
+        """
+        if self.__placeholderText != text:
+            self.__placeholderText = text
+            self.update()
+
+    def initStyleOption(self, option: 'QStyleOptionComboBox') -> None:
+        super().initStyleOption(option)
+        if self.currentIndex() == -1:
+            option.currentText = self.__placeholderText
+            option.palette.setCurrentColorGroup(QPalette.Disabled)
