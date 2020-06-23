@@ -697,7 +697,7 @@ class OWCSVFileImport(widget.OWWidget):
         self._restoreState()
         item = self.current_item()
         if item is not None:
-            self.set_selected_file(item.path(), item.options())
+            self._invalidate()
 
     def workflowEnvChanged(self, key, value, oldvalue):
         super().workflowEnvChanged(key, value, oldvalue)
@@ -1279,8 +1279,12 @@ class OWCSVFileImport(widget.OWWidget):
 
         if currentpath:
             idx = self.recent_combo.findData(currentpath, ImportItem.PathRole)
-            if idx != -1:
-                self.recent_combo.setCurrentIndex(idx)
+        elif model.data(model.index(0, 0), ImportItem.IsSessionItemRole):
+            # restore last (current) session item
+            idx = 0
+        else:
+            idx = -1
+        self.recent_combo.setCurrentIndex(idx)
 
     @classmethod
     def migrate_settings(cls, settings, version):

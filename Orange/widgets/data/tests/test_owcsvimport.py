@@ -13,6 +13,8 @@ from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QSettings
 
+from orangewidget.tests.utils import simulate
+
 from Orange.data import DiscreteVariable, TimeVariable, ContinuousVariable, \
     StringVariable
 from Orange.tests import named_file
@@ -21,6 +23,7 @@ from Orange.widgets.data import owcsvimport
 from Orange.widgets.data.owcsvimport import (
     pandas_to_table, ColumnType, RowSpec
 )
+from Orange.widgets.utils.pathutils import PathItem
 from Orange.widgets.utils.settings import QSettings_writeArray
 from Orange.widgets.utils.state_summary import format_summary_details
 
@@ -102,12 +105,19 @@ class TestOWCSVFileImport(WidgetTest):
             owcsvimport.OWCSVFileImport,
         )
         item = w.current_item()
+        self.assertIsNone(item)
+        simulate.combobox_activate_index(w.recent_combo, 0)
+        item = w.current_item()
         self.assertEqual(item.path(), path)
         self.assertEqual(item.options(), self.data_regions_options)
+        data = w.settingsHandler.pack_data(w)
         self.assertEqual(
-            w._session_items, [(path, self.data_regions_options.as_dict())],
-            "local settings item must be recorded in _session_items when "
-            "activated in __init__",
+            data['_session_items_v2'], [
+                (PathItem.AbsPath(path).as_dict(),
+                 self.data_regions_options.as_dict())
+            ],
+            "local settings item must be recorded in _session_items_v2 when "
+            "activated",
         )
         self._check_data_regions(self.get_output("Data", w))
 
