@@ -2,12 +2,11 @@
 # pylint: disable=missing-docstring,unsubscriptable-object
 import time
 from unittest.mock import Mock, patch
+import numpy as np
 
-from AnyQt.QtCore import QLocale, Qt
+from AnyQt.QtCore import QLocale, Qt, QDate
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit, QComboBox
-
-import numpy as np
 
 from Orange.data import (
     Table, Variable, ContinuousVariable, StringVariable, DiscreteVariable,
@@ -15,7 +14,7 @@ from Orange.data import (
 from Orange.preprocess import discretize
 from Orange.widgets.data import owselectrows
 from Orange.widgets.data.owselectrows import (
-    OWSelectRows, FilterDiscreteType, SelectRowsContextHandler)
+    OWSelectRows, FilterDiscreteType, SelectRowsContextHandler, DateTimeWidget)
 from Orange.widgets.tests.base import WidgetTest, datasets
 
 from Orange.data.filter import FilterContinuous, FilterString
@@ -430,6 +429,42 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(
             self.widget.cond_list.cellWidget(0, 1).currentText(), "is")
 
+    def test_calendar_dates(self):
+        data = Table(test_filename("datasets/cyber-security-breaches.tab"))
+        self.send_signal(self.widget.Inputs.data, data)
+        simulate.combobox_activate_item(
+            self.widget.cond_list.cellWidget(0, 0), "Date_Posted_or_Updated",
+            delay=0)
+        value_combo = self.widget.cond_list.cellWidget(0, 2).children()[1]
+        self.assertIsInstance(value_combo, DateTimeWidget)
+
+        # first displayed date is min date
+        self.assertEqual(value_combo.date(), QDate(2014, 1, 23))
+        self.assertEqual(len(self.get_output("Matching Data")), 691)
+        self.widget.remove_all_button.click()
+        self.enterFilter("Date_Posted_or_Updated", "is below",
+                         QDate(2014, 4, 17))
+        self.assertEqual(len(self.get_output("Matching Data")), 840)
+        self.enterFilter("Date_Posted_or_Updated", "is greater than",
+                         QDate(2014, 6, 30))
+        self.assertIsNone(self.get_output("Matching Data"))
+        self.widget.remove_all_button.click()
+        # date is in range min-max date
+        self.enterFilter("Date_Posted_or_Updated", "equals", QDate(2013, 1, 1))
+        self.assertEqual(self.widget.conditions[0][2][0], QDate(2014, 1, 23))
+        self.enterFilter("Date_Posted_or_Updated", "equals", QDate(2015, 1, 1))
+        self.assertEqual(self.widget.conditions[1][2][0], QDate(2014, 6, 30))
+        self.widget.remove_all_button.click()
+        # no date crossings
+        self.enterFilter("Date_Posted_or_Updated", "is between",
+                         QDate(2014, 4, 17), QDate(2014, 1, 23))
+        self.assertEqual(self.widget.conditions[0][2],
+                         (QDate(2014, 4, 17), QDate(2014, 4, 17)))
+        self.widget.remove_all_button.click()
+        self.enterFilter("Date_Posted_or_Updated", "is between",
+                         QDate(2014, 4, 17), QDate(2014, 4, 30))
+        self.assertEqual(len(self.get_output("Matching Data")), 58)
+
     @patch.object(owselectrows.QMessageBox, "question",
                   return_value=owselectrows.QMessageBox.Ok)
     def test_add_all(self, msgbox):
@@ -581,9 +616,13 @@ Basically, revert this commit.
             if isinstance(value_inputs, QComboBox):
                 value_inputs = [value_inputs]
             else:
-                value_inputs = [
-                    w for w in value_inputs.children()
-                    if isinstance(w, QLineEdit)]
+                value_input = []
+                for widget in value_inputs.children():
+                    if isinstance(widget, QLineEdit):
+                        value_input.append(widget)
+                    elif isinstance(widget, DateTimeWidget):
+                        value_input.append(widget)
+                return value_input
         return value_inputs
 
     @staticmethod
@@ -594,5 +633,7 @@ Basically, revert this commit.
             QTest.keyClick(widget, Qt.Key_Enter)
         elif isinstance(widget, QComboBox):
             simulate.combobox_activate_item(widget, value)
+        elif isinstance(widget, DateTimeWidget):
+            widget.setDate(value)
         else:
             raise ValueError("Unsupported widget {}".format(widget))
