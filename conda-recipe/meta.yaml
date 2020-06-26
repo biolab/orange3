@@ -33,32 +33,37 @@ requirements:
 
   run:
     - python
-    - setuptools
-    - numpy         >=1.16.0
-    - scipy
-    - scikit-learn  >=0.22
-    - bottleneck    >=1.0.0
-    - chardet       >=3.0.2
+    - setuptools >=36.3
+    - numpy >=1.16.0
+    - scipy >=0.16.1
+    - scikit-learn >=0.22.0,!=0.23.0
+    - bottleneck >=1.0.0
+    - chardet >=3.0.2
     - docutils
-    - xlrd          >=0.9.2
+    - xlrd >=0.9.2
+    - xlsxwriter
+    - anyqt >=0.0.8
+    - pyqt >=5.12
+    - pyqtgraph ~=0.10.0|~=0.11.0
+    - joblib >=0.9.4
     - keyring
-    - keyrings.alt  # for alternative keyring implementations
-    - pyqt          >=5.12
-    - pyqtgraph     ~=0.10.0|~=0.11.0
-    - anyqt         >=0.0.8
-    - joblib
-    - python.app    # [osx]
-    - commonmark
+    - keyrings.alt
+    - pip >=9.0
+    - python.app  # [osx]
     - serverfiles
-    - matplotlib    >=2.0.0
-    - opentsne      >=0.3.11
+    - python-louvain >=0.13
+    - requests
+    - matplotlib-base >=2.0.0
+    - openTSNE >=0.4.3
     - pandas
     - pyyaml
-    - orange-canvas-core  >=0.1.9
-    - orange-widget-base  >=4.4.0
+    - orange-canvas-core >=0.1.15,<0.2a
+    - orange-widget-base >=4.6.0
     - openpyxl
-    - python-louvain      >=0.13
-    - xlsxwriter
+    - httpx >=0.12
+    - baycomp >=1.0.2
+    # cachecontrol (required by canvas core) <0.12.5 is incompatible with msgpack 1.0
+    - cachecontrol >=0.12.6
 
 test:
   # Python imports
