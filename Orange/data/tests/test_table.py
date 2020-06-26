@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable,
@@ -84,6 +85,28 @@ class TestTableInit(unittest.TestCase):
             self.assertRaises(ValueError, func, dom, X, Y, metas, W[:4])
             self.assertRaises(ValueError, func, dom, X, Y, metas[:4])
             self.assertRaises(ValueError, func, dom, X, Y[:4])
+
+    def test_from_numpy_sparse(self):
+        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        x = np.arange(12).reshape(4, 3)
+
+        t = Table.from_numpy(domain, x, None, None)
+        self.assertFalse(sp.issparse(t.X))
+
+        t = Table.from_numpy(domain, sp.csr_matrix(x))
+        self.assertTrue(sp.isspmatrix_csr(t.X))
+
+        t = Table.from_numpy(domain, sp.csc_matrix(x))
+        self.assertTrue(sp.isspmatrix_csc(t.X))
+
+        t = Table.from_numpy(domain, sp.coo_matrix(x))
+        self.assertTrue(sp.isspmatrix_csr(t.X))
+
+        t = Table.from_numpy(domain, sp.lil_matrix(x))
+        self.assertTrue(sp.isspmatrix_csr(t.X))
+
+        t = Table.from_numpy(domain, sp.bsr_matrix(x))
+        self.assertTrue(sp.isspmatrix_csr(t.X))
 
 
 class TestTableFilters(unittest.TestCase):
