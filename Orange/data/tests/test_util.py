@@ -48,6 +48,78 @@ class TestGetUniqueNames(unittest.TestCase):
         self.assertEqual(get_unique_names(domain, "foo"), "foo (1)")
         self.assertEqual(get_unique_names(domain, "baz"), "baz (4)")
 
+    def test_get_unique_names_not_equal(self):
+        names = ["foo", "bar", "baz", "baz (3)"]
+        self.assertEqual(
+            get_unique_names(names, ["qux"], equal_numbers=False), ["qux"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["foo"], equal_numbers=False), ["foo (1)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["baz"], equal_numbers=False), ["baz (4)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["baz (3)"], equal_numbers=False),
+            ["baz (3) (1)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["qux", "quux"], equal_numbers=False),
+            ["qux", "quux"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["bar", "baz"], equal_numbers=False),
+            ["bar (1)", "baz (4)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["qux", "baz"], equal_numbers=False),
+            ["qux", "baz (4)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["qux", "bar"], equal_numbers=False),
+            ["qux", "bar (1)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["foo", "bar", "baz"], equal_numbers=False),
+            ["foo (1)", "bar (1)", "baz (4)"]
+        )
+
+        a, b, c, d = map(ContinuousVariable, ["foo", "bar", "baz", "baz (3)"])
+        domain = Domain([a, b], c, [d])
+        self.assertEqual(
+            get_unique_names(names, ["qux"], equal_numbers=False), ["qux"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["foo"], equal_numbers=False), ["foo (1)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["baz"], equal_numbers=False), ["baz (4)"]
+        )
+        self.assertEqual(
+            get_unique_names(names, ["baz (3)"], equal_numbers=False),
+            ["baz (3) (1)"]
+        )
+        self.assertEqual(
+            get_unique_names(domain, ["qux", "quux"], equal_numbers=False),
+            ["qux", "quux"]
+        )
+        self.assertEqual(
+            get_unique_names(domain, ["bar", "baz"], equal_numbers=False),
+            ["bar (1)", "baz (4)"]
+        )
+        self.assertEqual(
+            get_unique_names(domain, ["qux", "baz"], equal_numbers=False),
+            ["qux", "baz (4)"]
+        )
+        self.assertEqual(
+            get_unique_names(domain, ["qux", "bar"], equal_numbers=False),
+            ["qux", "bar (1)"]
+        )
+        self.assertEqual(
+            get_unique_names(domain, ["foo", "bar", "baz"], equal_numbers=False),
+            ["foo (1)", "bar (1)", "baz (4)"]
+        )
+
     def test_get_unique_names_from_duplicates(self):
         self.assertEqual(
             get_unique_names_duplicates(["foo", "bar", "baz"]),
