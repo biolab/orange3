@@ -54,7 +54,7 @@ requirements:
     - python-louvain >=0.13
     - requests
     - matplotlib-base >=2.0.0
-    - openTSNE >=0.3.11
+    - openTSNE >=0.4.3
     - pandas
     - pyyaml
     - orange-canvas-core >=0.1.15,<0.2a
