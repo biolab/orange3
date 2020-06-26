@@ -50,13 +50,9 @@ Verify the installation by importing the Orange package from Python and loading 
     >>> print(Orange.data.Table("iris")[0])
     [5.1, 3.5, 1.4, 0.2 | Iris-setosa]
 
-Using the graphic user interface requires some additional packages
+Using the graphic user interface requires some additional packages.
 
     pip install -r requirements-gui.txt
-
-and Qt dependencies.
-
-    pip install PyQt5 PyQtWebEngine
 
 To start Orange GUI from the command line, run:
 
