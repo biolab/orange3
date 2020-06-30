@@ -603,13 +603,18 @@ class OWPredictions(OWWidget):
                 [numpy.atleast_2d(cols) for cols in newcolumns])
             predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
 
+        index = self.dataview.model().index
+        map_to = self.dataview.model().mapToSource
         assert self.selection_store is not None
+        rows = None
         if self.selection_store.rows:
-            index = self.dataview.model().index
-            map_to = self.dataview.model().mapToSource
             rows = [ind.row()
                     for ind in self.dataview.selectionModel().selectedRows(0)]
             rows.sort()
+        elif self.dataview.model().isSorted() \
+                or self.predictionsview.model().isSorted():
+            rows = list(range(len(self.data)))
+        if rows:
             source_rows = [map_to(index(row, 0)).row() for row in rows]
             predictions = predictions[source_rows]
         self.Outputs.predictions.send(predictions)
