@@ -23,7 +23,7 @@ from Orange.widgets.data import owcsvimport
 from Orange.widgets.data.owcsvimport import (
     pandas_to_table, ColumnType, RowSpec
 )
-from Orange.widgets.utils.pathutils import PathItem
+from Orange.widgets.utils.pathutils import PathItem, samepath
 from Orange.widgets.utils.settings import QSettings_writeArray
 from Orange.widgets.utils.state_summary import format_summary_details
 
@@ -85,7 +85,7 @@ class TestOWCSVFileImport(WidgetTest):
             }
         )
         item = w.current_item()
-        self.assertEqual(item.path(), path)
+        self.assertTrue(samepath(item.path(), path))
         self.assertEqual(item.options(), self.data_regions_options)
         out = self.get_output("Data", w)
         self._check_data_regions(out)
@@ -108,7 +108,7 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertIsNone(item)
         simulate.combobox_activate_index(w.recent_combo, 0)
         item = w.current_item()
-        self.assertEqual(item.path(), path)
+        self.assertTrue(samepath(item.path(), path))
         self.assertEqual(item.options(), self.data_regions_options)
         data = w.settingsHandler.pack_data(w)
         self.assertEqual(
