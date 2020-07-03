@@ -128,7 +128,7 @@ class HelpEventDelegate(QObject):
         super().__init__(parent)
         self.delegate = delegate
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, _, event):
         if event.type() == QEvent.GraphicsSceneHelp:
             return self.delegate(event)
         else:
@@ -140,10 +140,10 @@ class MouseEventDelegate(HelpEventDelegate):
         self.delegate2 = delegate2
         super().__init__(delegate, parent=parent)
 
-    def eventFilter(self, obj, ev):
-        if isinstance(ev, QGraphicsSceneMouseEvent):
-            self.delegate2(ev)
-        return super().eventFilter(obj, ev)
+    def eventFilter(self, obj, event):
+        if isinstance(event, QGraphicsSceneMouseEvent):
+            self.delegate2(event)
+        return super().eventFilter(obj, event)
 
 
 class InteractiveViewBox(pg.ViewBox):
@@ -154,7 +154,8 @@ class InteractiveViewBox(pg.ViewBox):
         self.setMouseMode(self.PanMode)
         self.grabGesture(Qt.PinchGesture)
 
-    def _dragtip_pos(self):
+    @staticmethod
+    def _dragtip_pos():
         return 10, 10
 
     def updateScaleBox(self, p1, p2):
@@ -259,7 +260,7 @@ class InteractiveViewBox(pg.ViewBox):
         super().autoRange(padding=padding, items=items, item=item)
         self.tag_history()
 
-    def suggestPadding(self, axis): #no padding so that undo works correcty
+    def suggestPadding(self, _):  # no padding so that undo works correcty
         return 0.
 
     def scaleHistory(self, d):

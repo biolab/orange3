@@ -155,7 +155,7 @@ class Updater:
                                **settings: _SettingType):
         if not legend:
             return
-        for sample, label in legend.items:
+        for sample, _ in legend.items:
             sample.set_font(Updater.change_font(sample.font, settings))
             legend.setGeometry(sample.boundingRect())
 
@@ -275,7 +275,7 @@ class BaseParameterSetter:
 
         self.update_setters()
         self._check_setters()
-        
+
     def update_setters(self):
         pass
 

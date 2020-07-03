@@ -107,7 +107,7 @@ class BottomAxisItem(AxisItem):
     def set_ticks(self, ticks):
         self._ticks = dict(enumerate(ticks, 1)) if ticks else {}
 
-    def tickStrings(self, values, scale, spacing):
+    def tickStrings(self, values, scale, _):
         return [self._ticks.get(v * scale, "") for v in values]
 
 
@@ -159,29 +159,29 @@ class LinePlotViewBox(ViewBox):
     def remove_profiles(self):
         self._profile_items = None
 
-    def mouseDragEvent(self, event, axis=None):
+    def mouseDragEvent(self, ev, axis=None):
         if self._graph_state == SELECT and axis is None and self._can_select:
-            event.accept()
-            if event.button() == Qt.LeftButton:
-                self.update_selection_line(event.buttonDownPos(), event.pos())
-                if event.isFinish():
+            ev.accept()
+            if ev.button() == Qt.LeftButton:
+                self.update_selection_line(ev.buttonDownPos(), ev.pos())
+                if ev.isFinish():
                     self.selection_line.hide()
                     p1 = self.childGroup.mapFromParent(
-                        event.buttonDownPos(event.button()))
-                    p2 = self.childGroup.mapFromParent(event.pos())
+                        ev.buttonDownPos(ev.button()))
+                    p2 = self.childGroup.mapFromParent(ev.pos())
                     self.selection_changed.emit(self.get_selected(p1, p2))
         elif self._graph_state == ZOOMING or self._graph_state == PANNING:
-            event.ignore()
-            super().mouseDragEvent(event, axis=axis)
+            ev.ignore()
+            super().mouseDragEvent(ev, axis=axis)
         else:
-            event.ignore()
+            ev.ignore()
 
-    def mouseClickEvent(self, event):
-        if event.button() == Qt.RightButton:
+    def mouseClickEvent(self, ev):
+        if ev.button() == Qt.RightButton:
             self.autoRange()
             self.enableAutoRange()
         else:
-            event.accept()
+            ev.accept()
             self.selection_changed.emit(np.array(False))
 
     def reset(self):
@@ -627,6 +627,9 @@ class OWLinePlot(OWWidget):
         self.subset_indices = None
         self.__pending_selection = self.selection
         self.graph_variables = []
+        self.graph = None
+        self.group_vars = None
+        self.group_view = None
         self.setup_gui()
 
         VisualSettingsDialog(self, LinePlotGraph.initial_settings)
@@ -946,5 +949,5 @@ class OWLinePlot(OWWidget):
 
 
 if __name__ == "__main__":
-    data = Table("brown-selected")
-    WidgetPreview(OWLinePlot).run(set_data=data, set_subset_data=data[:30])
+    brown = Table("brown-selected")
+    WidgetPreview(OWLinePlot).run(set_data=brown, set_subset_data=brown[:30])

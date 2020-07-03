@@ -546,5 +546,6 @@ class CircularPlacement(LinearProjector):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("iris")
-    WidgetPreview(OWLinearProjection).run(set_data=data, set_subset_data=data[::10])
+    iris = Table("iris")
+    WidgetPreview(OWLinearProjection).run(set_data=iris,
+                                          set_subset_data=iris[::10])

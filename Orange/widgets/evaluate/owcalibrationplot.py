@@ -471,6 +471,7 @@ class OWCalibrationPlot(widget.OWWidget):
                 text += "</tr>"
             text += "<table>"
             return text
+        return None
 
     def _update_info(self):
         self.info_label.setText(self.get_info_text(short=True))
