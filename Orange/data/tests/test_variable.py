@@ -1,12 +1,13 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 # pylint: disable=protected-access
-
+import os
 import sys
 import math
 import unittest
 import pickle
 import pkgutil
+import warnings
 from datetime import datetime, timezone
 
 from io import StringIO
@@ -16,7 +17,7 @@ import scipy.sparse as sp
 
 import Orange
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
-    StringVariable, TimeVariable, Unknown, Value
+    StringVariable, TimeVariable, Unknown, Value, Table
 from Orange.data.io import CSVReader
 from Orange.preprocess.transformation import Identity
 from Orange.tests.base import create_pickling_tests
@@ -499,6 +500,25 @@ class TestDiscreteVariable(VariableTest):
         adding **kwargs which is ignored
         """
         self.assertLess(Orange.__version__, "3.29.0")
+
+    @staticmethod
+    def test_pickle_backward_compatibility():
+        """
+        Test that pickle made with an older version of Orange are correctly
+        loaded after changes in DiscreteVariable
+        """
+        with warnings.catch_warnings():
+            # travis/gh-action tests change OrangeDeprecationWarning to error
+            # temporary disable it
+            warnings.simplefilter('default', OrangeDeprecationWarning)
+            this_dir = os.path.dirname(os.path.realpath(__file__))
+            datasets_dir = os.path.join(
+                this_dir, "..", "..", "tests", "datasets"
+            )
+            # pickle with values as list
+            Table(os.path.join(datasets_dir, "sailing-orange-3-20.pkl"))
+            # pickle with values as tuple list
+            Table(os.path.join(datasets_dir, "iris-orange-3-25.pkl"))
 
 
 @variabletest(ContinuousVariable)
