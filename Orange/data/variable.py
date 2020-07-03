@@ -602,6 +602,9 @@ class ContinuousVariable(Variable):
         return var
 
 
+TupleList = tuple # backward compatibility (for pickled table)
+
+
 class DiscreteVariable(Variable):
     """
     Descriptor for symbolic, discrete variables. Values of discrete variables
