@@ -5,6 +5,8 @@ import numpy as np
 from AnyQt.QtCore import QSize, Signal
 from AnyQt.QtWidgets import QApplication
 
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
+
 from Orange.data import (
     Table, ContinuousVariable, Domain, Variable, StringVariable
 )
@@ -379,6 +381,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
+    visual_settings = Setting({}, schema_only=True)
     auto_commit = Setting(True)
 
     GRAPH_CLASS = OWScatterPlotBase
@@ -400,6 +403,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.input_changed.connect(self.set_input_summary)
         self.output_changed.connect(self.set_output_summary)
         self.setup_gui()
+        VisualSettingsDialog(self, self.GRAPH_CLASS.initial_settings)
 
     # GUI
     def setup_gui(self):
@@ -621,6 +625,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             ("Jittering", self.graph.jitter_size != 0 and
              "{} %".format(self.graph.jitter_size))))
 
+    # Customize plot
+    def set_visual_settings(self, key, value):
+        self.graph.set_parameter(key, value)
+        self.visual_settings[key] = value
+
     @staticmethod
     def _get_caption_var_name(var):
         return var.name if isinstance(var, Variable) else var
@@ -657,8 +666,8 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
         proj_error = Msg("An error occurred while projecting data.\n{}")
 
     def __init__(self):
-        super().__init__()
         self.projector = self.projection = None
+        super().__init__()
         self.graph.view_box.started.connect(self._manual_move_start)
         self.graph.view_box.moved.connect(self._manual_move)
         self.graph.view_box.finished.connect(self._manual_move_finish)

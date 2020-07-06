@@ -1,14 +1,20 @@
+import itertools
+
 import numpy as np
 
 from AnyQt.QtCore import (
     QRectF, QLineF, QObject, QEvent, Qt, pyqtSignal as Signal
 )
-from AnyQt.QtGui import QTransform, QFontMetrics
+from AnyQt.QtGui import QTransform, QFontMetrics, QStaticText, QBrush, QPen, \
+    QFont
 from AnyQt.QtWidgets import (
     QGraphicsLineItem, QGraphicsSceneMouseEvent, QPinchGesture,
     QGraphicsItemGroup, QWidget)
 
 import pyqtgraph as pg
+import pyqtgraph.functions as fn
+from pyqtgraph.graphicsItems.LegendItem import ItemSample
+from pyqtgraph.graphicsItems.ScatterPlotItem import drawSymbol
 
 from Orange.widgets.utils.plot import SELECT, PANNING, ZOOMING
 
@@ -50,6 +56,9 @@ class AnchorItem(pg.GraphicsObject):
     def get_xy(self):
         point = self._spine.line().p2()
         return point.x(), point.y()
+
+    def setFont(self, font):
+        self._label.setFont(font)
 
     def setText(self, text):
         if text != self._text:
@@ -119,7 +128,7 @@ class HelpEventDelegate(QObject):
         super().__init__(parent)
         self.delegate = delegate
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, _, event):
         if event.type() == QEvent.GraphicsSceneHelp:
             return self.delegate(event)
         else:
@@ -131,10 +140,10 @@ class MouseEventDelegate(HelpEventDelegate):
         self.delegate2 = delegate2
         super().__init__(delegate, parent=parent)
 
-    def eventFilter(self, obj, ev):
-        if isinstance(ev, QGraphicsSceneMouseEvent):
-            self.delegate2(ev)
-        return super().eventFilter(obj, ev)
+    def eventFilter(self, obj, event):
+        if isinstance(event, QGraphicsSceneMouseEvent):
+            self.delegate2(event)
+        return super().eventFilter(obj, event)
 
 
 class InteractiveViewBox(pg.ViewBox):
@@ -145,7 +154,8 @@ class InteractiveViewBox(pg.ViewBox):
         self.setMouseMode(self.PanMode)
         self.grabGesture(Qt.PinchGesture)
 
-    def _dragtip_pos(self):
+    @staticmethod
+    def _dragtip_pos():
         return 10, 10
 
     def updateScaleBox(self, p1, p2):
@@ -250,7 +260,7 @@ class InteractiveViewBox(pg.ViewBox):
         super().autoRange(padding=padding, items=items, item=item)
         self.tag_history()
 
-    def suggestPadding(self, axis): #no padding so that undo works correcty
+    def suggestPadding(self, _):  # no padding so that undo works correcty
         return 0.
 
     def scaleHistory(self, d):
@@ -403,3 +413,90 @@ class ElidedLabelsAxis(pg.AxisItem):
         text_specs = [(rect, flags, elide(text, Qt.ElideRight, max_width))
                       for rect, flags, text in text_specs]
         return axis_spec, tick_specs, text_specs
+
+
+class PaletteItemSample(ItemSample):
+    """A color strip to insert into legends for discretized continuous values"""
+
+    def __init__(self, palette, scale, label_formatter=None):
+        """
+        :param palette: palette used for showing continuous values
+        :type palette: BinnedContinuousPalette
+        :param scale: an instance of DiscretizedScale that defines the
+                      conversion of values into bins
+        :type scale: DiscretizedScale
+        """
+        super().__init__(None)
+        self.palette = palette
+        self.scale = scale
+        if label_formatter is None:
+            label_formatter = "{{:.{}f}}".format(scale.decimals).format
+        cuts = [label_formatter(scale.offset + i * scale.width)
+                for i in range(scale.bins + 1)]
+        self.labels = [QStaticText("{} - {}".format(fr, to))
+                       for fr, to in zip(cuts, cuts[1:])]
+        self.font = self.font()
+        self.font.setPointSize(11)
+
+    @property
+    def bin_height(self):
+        return self.font.pointSize() + 4
+
+    @property
+    def text_width(self):
+        for label in self.labels:
+            label.prepare(font=self.font)
+        return max(label.size().width() for label in self.labels)
+
+    def set_font(self, font: QFont):
+        self.font = font
+        self.update()
+
+    def boundingRect(self):
+        return QRectF(0, 0,
+                      25 + self.text_width + self.bin_height,
+                      20 + self.scale.bins * self.bin_height)
+
+    def paint(self, p, *args):
+        p.setRenderHint(p.Antialiasing)
+        p.translate(5, 5)
+        p.setFont(self.font)
+        colors = self.palette.qcolors
+        h = self.bin_height
+        for i, color, label in zip(itertools.count(), colors, self.labels):
+            p.setPen(Qt.NoPen)
+            p.setBrush(QBrush(color))
+            p.drawRect(0, i * h, h, h)
+            p.setPen(QPen(Qt.black))
+            p.drawStaticText(h + 5, i * h + 1, label)
+
+
+class SymbolItemSample(ItemSample):
+    """Adjust position for symbols"""
+    def __init__(self, pen, brush, size, symbol):
+        super().__init__(None)
+        self.__pen = fn.mkPen(pen)
+        self.__brush = fn.mkBrush(brush)
+        self.__size = size
+        self.__symbol = symbol
+
+    def paint(self, p, *args):
+        p.translate(8, 12)
+        drawSymbol(p, self.__symbol, self.__size, self.__pen, self.__brush)
+
+
+class AxisItem(pg.AxisItem):
+    def generateDrawSpecs(self, p):
+        if self.style["tickFont"]:
+            p.setFont(self.style["tickFont"])
+        return super().generateDrawSpecs(p)
+
+    def _updateMaxTextSize(self, x):
+        if self.orientation in ["left", "right"]:
+            self.textWidth = x
+            if self.style["autoExpandTextSpace"] is True:
+                self._updateWidth()
+        else:
+            self.textHeight = x
+            if self.style["autoExpandTextSpace"] is True:
+                self._updateHeight()

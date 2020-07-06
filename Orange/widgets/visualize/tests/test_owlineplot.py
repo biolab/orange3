@@ -7,7 +7,7 @@ from unittest.mock import patch, Mock
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QPointF
 
 from pyqtgraph import PlotCurveItem
 from pyqtgraph.Point import Point
@@ -151,15 +151,14 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, self.data)
 
         # set view-dependent click coordinates
-        vb = self.widget.graph.view_box
-        event.buttonDownPos.return_value = vb.mapFromView(Point(2.49, 5.79))
-        event.pos.return_value = vb.mapFromView(Point(2.99, 4.69))
+        event.buttonDownPos.return_value = QPointF(2.38, 4.84)
+        event.pos.return_value = QPointF(3.58, 4.76)
 
         self.widget.graph.view_box.mouseDragEvent(event)
         line = self.widget.graph.view_box.selection_line
         self.assertFalse(line.line().isNull())
 
-        # click oon the plot resets selection
+        # click on the plot resets selection
         self.assertEqual(len(self.widget.selection), 55)
         self.widget.graph.view_box.mouseClickEvent(event)
         self.assertListEqual(self.widget.selection, [])

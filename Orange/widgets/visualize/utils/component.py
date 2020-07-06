@@ -1,16 +1,41 @@
 """Common gui.OWComponent components."""
+import copy
+
 from AnyQt.QtCore import Qt, QRectF
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QColor, QFont
 from AnyQt.QtWidgets import QGraphicsEllipseItem
 
 import pyqtgraph as pg
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+from Orange.widgets.visualize.owscatterplotgraph import (
+    OWScatterPlotBase, ParameterSetter as Setter
+)
+from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.plotutils import (
     MouseEventDelegate, DraggableItemsViewBox
 )
 
 
-class OWGraphWithAnchors(OWScatterPlotBase):
+class ParameterSetter(Setter):
+    ANCHOR_LABEL = "Anchor"
+    initial_settings = copy.deepcopy(Setter.initial_settings)
+    initial_settings[Setter.LABELS_BOX].update({
+        ANCHOR_LABEL: Updater.FONT_SETTING
+    })
+
+    def __init__(self):
+        super().__init__()
+        self.anchor_font = QFont()
+
+    def update_setters(self):
+        def update_anchors(**settings):
+            self.anchor_font = Updater.change_font(self.anchor_font, settings)
+            self.update_anchors()
+
+        super().update_setters()
+        self._setters[self.LABELS_BOX][self.ANCHOR_LABEL] = update_anchors
+
+
+class OWGraphWithAnchors(OWScatterPlotBase, ParameterSetter):
     """
     Graph for projections in which dimensions can be manually moved
 

@@ -174,17 +174,16 @@ class OWBoxPlot(widget.OWWidget):
     _pen_axis_tick.setCapStyle(Qt.FlatCap)
 
     _box_brush = QBrush(QColor(0x33, 0x88, 0xff, 0xc0))
-
-    _axis_font = QFont()
-    _axis_font.setPixelSize(12)
-    _label_font = QFont()
-    _label_font.setPixelSize(11)
     _attr_brush = QBrush(QColor(0x33, 0x00, 0xff))
 
     graph_name = "box_scene"
 
     def __init__(self):
         super().__init__()
+        self._axis_font = QFont()
+        self._axis_font.setPixelSize(12)
+        self._label_font = QFont()
+        self._label_font.setPixelSize(11)
         self.dataset = None
         self.stats = []
         self.dist = self.conts = None
