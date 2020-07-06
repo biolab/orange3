@@ -27,7 +27,9 @@ def available_font_families() -> List:
     """
     if not QApplication.instance():
         _ = QApplication(sys.argv)
-    return QFontDatabase().families()
+    fonts = QFontDatabase().families()
+    default = fonts.pop(fonts.index(default_font_family()))
+    return [default] + sorted(fonts, key=lambda s: s.replace(".", "{"))
 
 
 def default_font_family() -> str:
