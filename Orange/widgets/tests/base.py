@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import scipy.sparse as sp
 
+from AnyQt.QtGui import QFont
 from AnyQt.QtCore import QRectF, QPointF
 from AnyQt.QtTest import QSignalSpy
 from AnyQt.QtWidgets import (
@@ -34,6 +35,7 @@ from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.widget import OWWidget
 
 
@@ -183,7 +185,7 @@ class ParameterMapping(BaseParameterMapping):
     @staticmethod
     def _default_get_value(gui_element, values):
         if isinstance(gui_element, (QSpinBox, QDoubleSpinBox, QSlider)):
-            return lambda: gui_element.value()
+            return gui_element.value
         elif isinstance(gui_element, QComboBox):
             return lambda: values[gui_element.currentIndex()]
         else:
@@ -368,7 +370,8 @@ class WidgetLearnerTestMixin:
         model = self.get_output(self.widget.Outputs.model)
         pickle.dumps(model)
 
-    def _get_param_value(self, learner, param):
+    @staticmethod
+    def _get_param_value(learner, param):
         if isinstance(learner, Fitter):
             # Both is just a was to indicate to the tests, fitters don't
             # actually support this
@@ -780,6 +783,63 @@ class ProjectionWidgetTestMixin:
         self.assertIn(info._StateInfo__output_summary.details,
                       ["", "No data on output"])
 
+    def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):
+        graph = self.widget.graph
+        font = QFont()
+        font.setItalic(True)
+        font.setFamily("Helvetica")
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.wait_until_finished(timeout=timeout)
+
+        key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Title", "Font size"), 20
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(20)
+        self.assertFontEqual(graph.title_item.item.font(), font)
+
+        key, value = ("Fonts", "Label", "Font size"), 10
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Label", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        simulate.combobox_activate_item(self.widget.controls.attr_label,
+                                        self.data.domain[0].name)
+        font.setPointSize(10)
+        self.assertFontEqual(graph.labels[0].textItem.font(), font)
+
+        key, value = ("Fonts", "Categorical legend", "Font size"), 14
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Categorical legend", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(14)
+        legend_item = list(graph.cat_legend_items)[0]
+        self.assertFontEqual(legend_item[1].item.font(), font)
+
+        key, value = ("Fonts", "Numerical legend", "Font size"), 12
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Numerical legend", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        simulate.combobox_activate_item(self.widget.controls.attr_color,
+                                        self.data.domain[0].name)
+        simulate.combobox_activate_item(self.widget.controls.attr_shape,
+                                        self.data.domain[4].name)
+        font.setPointSize(12)
+        self.assertFontEqual(graph.num_legend.items[0][0].font, font)
+
+        key, value = ("Annotations", "Title", "Title"), "Foo"
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(graph.title_item.item.toPlainText(), "Foo")
+        self.assertEqual(graph.title_item.text, "Foo")
+
+    def assertFontEqual(self, font1, font2):
+        self.assertEqual(font1.family(), font2.family())
+        self.assertEqual(font1.pointSize(), font2.pointSize())
+        self.assertEqual(font1.italic(), font2.italic())
+
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
     def test_embedding_missing_values(self):
@@ -793,7 +853,7 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         # reload
         self.send_signal(self.widget.Inputs.data, table)
 
-    def test_sparse_data(self):
+    def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         table = Table("iris")
         table.X = sp.csr_matrix(table.X)
         self.assertTrue(sp.issparse(table.X))
@@ -823,6 +883,24 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         # check new state
         self.assertEqual(len(self.widget.graph.scatterplot_item.data), nvalid)
         np.testing.assert_equal(self.widget.graph.selection, selection)
+
+    def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):
+        super().test_visual_settings(timeout)
+
+        graph = self.widget.graph
+        font = QFont()
+        font.setItalic(True)
+        font.setFamily("Helvetica")
+
+        key, value = ("Fonts", "Anchor", "Font size"), 10
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Anchor", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(10)
+        for item in graph.anchor_items:
+            if isinstance(item, AnchorItem):
+                item = item._label
+            self.assertFontEqual(item.textItem.font(), font)
 
 
 class datasets:
