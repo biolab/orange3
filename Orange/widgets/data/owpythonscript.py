@@ -1,6 +1,8 @@
 import glob
+import shutil
 import sys
 import os
+import tempfile
 import unicodedata
 import codecs
 import pickle
@@ -858,6 +860,8 @@ class OWPythonScript(OWWidget):
         self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
 
+        self._temp_connection_dir = tempfile.mkdtemp()
+        self.multi_kernel_manager.connection_dir = self._temp_connection_dir
         kernel_id = self.multi_kernel_manager.start_kernel(
             extra_arguments=[
                 '--IPKernelApp.kernel_class='
@@ -1222,6 +1226,7 @@ class OWPythonScript(OWWidget):
         self.script_state_manager.scriptAdded.disconnect(self._handleScriptAdded)
         self.script_state_manager.scriptRemoved.disconnect(self._handleScriptRemoved)
         self.script_state_manager.scriptSaved.disconnect(self._handleScriptSaved)
+        shutil.rmtree(self._temp_connection_dir)
 
 
 if __name__ == "__main__":  # pragma: no cover
