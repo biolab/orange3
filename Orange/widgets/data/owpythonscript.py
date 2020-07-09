@@ -4,6 +4,7 @@ import os
 import unicodedata
 import codecs
 import pickle
+import pandas
 from functools import reduce
 from collections import defaultdict
 
@@ -33,7 +34,7 @@ from qtconsole import styles
 from qtconsole.pygments_highlighter import PygmentsHighlighter
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
-from Orange.data import Table
+from Orange.data import Table, pandas_compat
 from Orange.base import Learner, Model
 from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
@@ -632,7 +633,10 @@ class OWPythonScript(OWWidget):
 
     settings_version = 2
     currentScriptIndex = Setting(0)
+
     vimModeEnabled = Setting(False)
+    orangeDataTablesEnabled = Setting(False)
+
     splitterState: Optional[bytes] = Setting(None)
 
     # Widgets in the same schema share namespace through a dictionary whose
@@ -815,6 +819,10 @@ class OWPythonScript(OWWidget):
             self.vim_indicator.indicator_color = color
             self.vim_indicator.indicator_text = text
             self.vim_indicator.update()
+
+        gui.checkBox(self.editor_controls, self, 'orangeDataTablesEnabled',
+                     'Use native data tables',
+                     tooltip='By default, in_data and out_data are pandas dataframes.')
 
         return_stmt = ReturnStatement(self.editorBox,
                                       syntax_highlighting_scheme,
@@ -1134,6 +1142,12 @@ class OWPythonScript(OWWidget):
                 continue
             all_values = list(value.values())
             one_value = all_values[0] if len(all_values) == 1 else None
+            if name == 'data' and not self.orangeDataTablesEnabled:
+                one_value = pandas_compat.table_to_frame(one_value, include_metas=True) \
+                            if one_value is not None else \
+                            None
+                all_values = [pandas_compat.table_to_frame(v, include_metas=True)
+                              for v in all_values]
             d["in_" + name + "s"] = all_values
             d["in_" + name] = one_value
         return d
@@ -1163,7 +1177,9 @@ class OWPythonScript(OWWidget):
                 continue
             var = out_vars[out_name]
 
-            req_type = self.Outputs.__dict__[signal].type
+            req_type = self.Outputs.__dict__[signal].type \
+                       if not (signal == 'data' and not self.orangeDataTablesEnabled) \
+                       else pandas.DataFrame
             if not isinstance(var, req_type):
                 self.return_stmt.update_signal_text(signal, 0)
                 output.send(None)
@@ -1172,6 +1188,8 @@ class OWPythonScript(OWWidget):
                                               req_type.__module__ + '.' + req_type.__name__,
                                               actual_type.__module__ + '.' + actual_type.__name__)
                 continue
+            if req_type == pandas.DataFrame:
+                var = pandas_compat.table_from_frame(var)
 
             self.return_stmt.update_signal_text(signal, 1)
             output.send(var)
