@@ -865,7 +865,9 @@ class OWPythonScript(OWWidget):
         kernel_id = self.multi_kernel_manager.start_kernel(
             extra_arguments=[
                 '--IPKernelApp.kernel_class='
-                'Orange.widgets.data.utils.kernel.OrangeIPythonKernel'
+                'Orange.widgets.data.utils.kernel.OrangeIPythonKernel',
+                '--matplotlib='
+                'inline'
             ]
         )
         kernel_manager = self.multi_kernel_manager.get_kernel(kernel_id)
