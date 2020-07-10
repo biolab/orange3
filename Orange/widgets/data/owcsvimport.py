@@ -28,7 +28,7 @@ from contextlib import ExitStack
 import typing
 from typing import (
     List, Tuple, Dict, Optional, Any, Callable, Iterable,
-    Union, AnyStr, BinaryIO, Set, Type, Mapping
+    Union, AnyStr, BinaryIO, Set, Type, Mapping, Sequence, NamedTuple
 )
 
 from PyQt5.QtCore import (
@@ -541,6 +541,61 @@ def move_item_to_index(model: QStandardItemModel, item: QStandardItem, index: in
     model.insertRow(index, [item])
 
 
+class FileFormat(NamedTuple):
+    mime_type: str
+    name: str
+    globs: Sequence[str]
+
+
+FileFormats = [
+    FileFormat("text/csv", "Text - comma separated", ("*.csv", "*")),
+    FileFormat("text/tab-separated-values", "Text - tab separated", ("*.tsv", "*")),
+    FileFormat("text/plain", "Text - all files", ("*.txt", "*")),
+]
+
+
+class FileDialog(QFileDialog):
+    __formats: Sequence[FileFormat] = ()
+
+    @staticmethod
+    def filterStr(f: FileFormat) -> str:
+        return f"{f.name} ({', '.join(f.globs)})"
+
+    def setFileFormats(self, formats: Sequence[FileFormat]):
+        filters = [FileDialog.filterStr(f) for f in formats]
+        self.__formats = tuple(formats)
+        self.setNameFilters(filters)
+
+    def fileFormats(self) -> Sequence[FileFormat]:
+        return self.__formats
+
+    def selectedFileFormat(self) -> FileFormat:
+        filter_ = self.selectedNameFilter()
+        index = index_where(
+            self.__formats, lambda f: FileDialog.filterStr(f) == filter_
+        )
+        return self.__formats[index]
+
+
+def default_options_for_mime_type(
+        path: str, mime_type: str
+) -> Tuple[csv.Dialect, bool]:
+    defaults = {
+        "text/csv": (csv.excel(), True),
+        "text/tab-separated-values": (csv.excel_tab(), True)
+    }
+    dialect, header = csv.excel(), True
+    delimiters = None
+    if mime_type in defaults:
+        dialect, header = defaults[mime_type]
+        delimiters = [dialect.delimiter]
+    try:
+        dialect, header = sniff_csv_with_path(path, delimiters=delimiters)
+    except (OSError, UnicodeDecodeError, csv.Error):
+        pass
+    return dialect, header
+
+
 class OWCSVFileImport(widget.OWWidget):
     name = "CSV File Import"
     description = "Import a data table from a CSV formatted file."
@@ -777,17 +832,13 @@ class OWCSVFileImport(widget.OWWidget):
         dlg.open()
 
     def _browse_dialog(self):
-        formats = [
-            "Text - comma separated (*.csv, *)",
-            "Text - tab separated (*.tsv, *)",
-            "Text - all files (*)"
-        ]
-        dlg = QFileDialog(
-            self, windowTitle="Open Data File",
+        dlg = FileDialog(
+            self, windowTitle=self.tr("Open Data File"),
             acceptMode=QFileDialog.AcceptOpen,
             fileMode=QFileDialog.ExistingFile
         )
-        dlg.setNameFilters(formats)
+
+        dlg.setFileFormats(FileFormats)
         state = self.dialog_state
         lastdir = state.get("directory", "")
         lastfilter = state.get("filter", "")
@@ -836,11 +887,6 @@ class OWCSVFileImport(widget.OWWidget):
         """
         Open a file dialog and select a user specified file.
         """
-        formats = [
-            "Text - comma separated (*.csv, *)",
-            "Text - tab separated (*.tsv, *.tab, *)",
-            "Text - all files (*)"
-        ]
         dlg = self._browse_dialog()
         if directory is not None:
             dlg.setDirectory(directory)
@@ -848,7 +894,7 @@ class OWCSVFileImport(widget.OWWidget):
         status = dlg.exec_()
         dlg.deleteLater()
         if status == QFileDialog.Accepted:
-            selected_filter = dlg.selectedNameFilter()
+            selected_filter = dlg.selectedFileFormat()
             path = dlg.selectedFiles()[0]
             if prefixname:
                 _prefixpath = self._replacements().get(prefixname, "")
@@ -866,23 +912,10 @@ class OWCSVFileImport(widget.OWWidget):
                 mb = self._might_be_binary_mb(path)
                 if mb.exec() == QMessageBox.Cancel:
                     return
-
-            # initialize dialect based on selected extension
-            if selected_filter in formats[:-1]:
-                filter_idx = formats.index(selected_filter)
-                if filter_idx == 0:
-                    dialect = csv.excel()
-                elif filter_idx == 1:
-                    dialect = csv.excel_tab()
-                else:
-                    dialect = csv.excel_tab()
-                header = True
-            else:
-                try:
-                    dialect, header = sniff_csv_with_path(path)
-                except Exception:  # pylint: disable=broad-except
-                    dialect, header = csv.excel(), True
-
+            # initialize dialect based on selected format
+            dialect, header = default_options_for_mime_type(
+                path, selected_filter.mime_type,
+            )
             options = None
             # Search for path in history.
             # If found use the stored params to initialize the import dialog
