@@ -357,6 +357,14 @@ class TestUtils(unittest.TestCase):
                 with owcsvimport._open(fname, "rt", encoding="ascii") as f:
                     self.assertEqual(content, f.read())
 
+    def test_sniff_csv(self):
+        f = io.StringIO("A|B|C\n1|2|3\n1|2|3")
+        dialect, header = owcsvimport.sniff_csv(f)
+        self.assertEqual(dialect.delimiter, "|")
+        self.assertTrue(header)
+        with self.assertRaises(csv.Error):
+            owcsvimport.sniff_csv(f, delimiters=["."])
+
 
 def _open_write(path, mode, encoding=None):
     # pylint: disable=import-outside-toplevel

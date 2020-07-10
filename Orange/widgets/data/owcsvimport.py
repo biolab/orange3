@@ -1298,24 +1298,35 @@ class OWCSVFileImport(widget.OWWidget):
 
 
 @singledispatch
-def sniff_csv(file, samplesize=2 ** 20):
+def sniff_csv(file, samplesize=2 ** 20, delimiters=None):
     sniffer = csv.Sniffer()
     sample = file.read(samplesize)
-    dialect = sniffer.sniff(sample)
+    dialect = sniffer.sniff(sample, delimiters=delimiters)
     dialect = textimport.Dialect(
         dialect.delimiter, dialect.quotechar,
         dialect.escapechar, dialect.doublequote,
         dialect.skipinitialspace, dialect.quoting
     )
-    has_header = sniffer.has_header(sample)
+    has_header = HeaderSniffer(dialect).has_header(sample)
     return dialect, has_header
+
+
+class HeaderSniffer(csv.Sniffer):
+    def __init__(self, dialect: csv.Dialect):
+        super().__init__()
+        self.dialect = dialect
+
+    def sniff(self, *_args, **_kwargs):  # pylint: disable=signature-differs
+        # return fixed constant dialect, has_header sniffs dialect itself,
+        # so it can't detect headers for a predefined dialect
+        return self.dialect
 
 
 @sniff_csv.register(str)
 @sniff_csv.register(bytes)
-def sniff_csv_with_path(path, encoding="utf-8", samplesize=2 ** 20):
+def sniff_csv_with_path(path, encoding="utf-8", samplesize=2 ** 20, delimiters=None):
     with _open(path, "rt", encoding=encoding) as f:
-        return sniff_csv(f, samplesize)
+        return sniff_csv(f, samplesize, delimiters)
 
 
 def _open(path, mode, encoding=None):
