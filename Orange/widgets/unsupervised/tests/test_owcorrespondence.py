@@ -1,9 +1,10 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owcorrespondence \
     import OWCorrespondenceAnalysis, select_rows
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWCorrespondence(WidgetTest):
@@ -89,3 +90,24 @@ class TestOWCorrespondence(WidgetTest):
                               (8, 8))
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(w.Outputs.coordinates), None)
+
+    def test_summary(self):
+        """Check if the status bar updates when data on input"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        summary, details = f"{len(self.data)}", format_summary_details(
+            self.data)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.coordinates)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)

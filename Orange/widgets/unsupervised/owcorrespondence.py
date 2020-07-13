@@ -16,6 +16,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.itemmodels import select_rows
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
 from Orange.widgets.widget import Input, Output
@@ -60,6 +61,9 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.data = None
         self.component_x = 0
         self.component_y = 1
+
+        self._set_input_summary(None)
+        self._set_output_summary(None)
 
         box = gui.vBox(self.controlArea, "Variables")
         self.varlist = itemmodels.VariableListModel()
@@ -106,6 +110,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             data = None
 
         self.data = data
+        self._set_input_summary(self.data)
         if data is not None:
             self.varlist[:] = [var for var in data.domain.variables
                                if var.is_discrete]
@@ -145,6 +150,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                               StringVariable("Value")]),
                 rf, metas=vars_data
             )
+        self._set_output_summary(output_table)
         self.Outputs.coordinates.send(output_table)
 
     def clear(self):
@@ -152,6 +158,16 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.ca = None
         self.plot.clear()
         self.varlist[:] = []
+
+    def _set_input_summary(self, data):
+        summary = len(data) if data else self.info.NoInput
+        details = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, details)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def selected_vars(self):
         rows = sorted(
