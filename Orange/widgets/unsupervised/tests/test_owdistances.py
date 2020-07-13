@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access
 import unittest
 from unittest.mock import Mock
 
@@ -11,6 +11,7 @@ from Orange.misc import DistMatrix
 from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS, \
     DistanceRunner
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestDistanceRunner(unittest.TestCase):
@@ -227,6 +228,27 @@ class TestOWDistances(WidgetTest):
 
         self.send_signal(widget.Inputs.data, self.iris)
         assert_no_error()
+
+    def test_summary(self):
+        """Check if the status bar updates"""
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        summary, details = f"{len(self.iris)}", format_summary_details(
+            self.iris)
+        self.assertEqual(info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.distances)
+        summary = f"{output.shape[0]}×{output.shape[1]}"
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, summary)
 
 
 if __name__ == "__main__":
