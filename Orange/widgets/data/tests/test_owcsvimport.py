@@ -240,6 +240,28 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertIsNotNone(cur)
         self.assertTrue(samepath(cur.path(), path))
 
+    def test_browse_prefix(self):
+        widget = self.widget
+        path = self.data_regions_path
+        browse_dialog = widget._browse_dialog
+        with mock.patch.object(widget, "_browse_dialog") as r:
+            dlg = browse_dialog()
+            dlg.setOption(QFileDialog.DontUseNativeDialog)
+            dlg.selectFile(path)
+            dlg.exec_ = dlg.exec = lambda: QFileDialog.Accepted
+            r.return_value = dlg
+            with mock.patch.object(owcsvimport.CSVImportDialog, "exec_",
+                                   lambda _: QFileDialog.Accepted):
+                dir = os.path.dirname(__file__)
+                widget.workflowEnv = lambda: {"basedir": dir}
+                widget.workflowEnvChanged("basedir", dir, "")
+                widget.browse_relative(prefixname="basedir")
+
+        cur = widget.current_item()
+        self.assertIsNotNone(cur)
+        self.assertTrue(samepath(cur.path(), path))
+        self.assertIsInstance(cur.varPath(), PathItem.VarPath)
+
     def test_browse_for_missing(self):
         missing = os.path.dirname(__file__) + "/this file does not exist.csv"
         widget = self.create_widget(
