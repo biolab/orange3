@@ -1,7 +1,7 @@
-# pylint: disable=no-self-use,protected-access
+# pylint: disable=no-self-use,protected-access,invalid-name,arguments-differ
 import unittest
 from unittest import mock
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 
 import os
 import io
@@ -24,7 +24,7 @@ from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.data import owcsvimport
 from Orange.widgets.data.owcsvimport import (
-    pandas_to_table, ColumnType, RowSpec
+    OWCSVFileImport, pandas_to_table, ColumnType, RowSpec,
 )
 from Orange.widgets.utils.pathutils import PathItem, samepath
 from Orange.widgets.utils.settings import QSettings_writeArray
@@ -223,9 +223,9 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertIsInstance(domain["numeric2"], ContinuousVariable)
         self.assertIsInstance(domain["string"], StringVariable)
 
-    def test_browse(self):
-        widget = self.widget
-        path = self.data_regions_path
+    @staticmethod
+    @contextmanager
+    def _browse_setup(widget: OWCSVFileImport, path: str):
         browse_dialog = widget._browse_dialog
         with mock.patch.object(widget, "_browse_dialog") as r:
             dlg = browse_dialog()
@@ -235,7 +235,13 @@ class TestOWCSVFileImport(WidgetTest):
             r.return_value = dlg
             with mock.patch.object(owcsvimport.CSVImportDialog, "exec_",
                                    lambda _: QFileDialog.Accepted):
-                widget.browse()
+                yield
+
+    def test_browse(self):
+        widget = self.widget
+        path = self.data_regions_path
+        with self._browse_setup(widget, path):
+            widget.browse()
         cur = widget.current_item()
         self.assertIsNotNone(cur)
         self.assertTrue(samepath(cur.path(), path))
@@ -243,24 +249,29 @@ class TestOWCSVFileImport(WidgetTest):
     def test_browse_prefix(self):
         widget = self.widget
         path = self.data_regions_path
-        browse_dialog = widget._browse_dialog
-        with mock.patch.object(widget, "_browse_dialog") as r:
-            dlg = browse_dialog()
-            dlg.setOption(QFileDialog.DontUseNativeDialog)
-            dlg.selectFile(path)
-            dlg.exec_ = dlg.exec = lambda: QFileDialog.Accepted
-            r.return_value = dlg
-            with mock.patch.object(owcsvimport.CSVImportDialog, "exec_",
-                                   lambda _: QFileDialog.Accepted):
-                dir = os.path.dirname(__file__)
-                widget.workflowEnv = lambda: {"basedir": dir}
-                widget.workflowEnvChanged("basedir", dir, "")
-                widget.browse_relative(prefixname="basedir")
+        with self._browse_setup(widget, path):
+            basedir = os.path.dirname(__file__)
+            widget.workflowEnv = lambda: {"basedir": basedir}
+            widget.workflowEnvChanged("basedir", basedir, "")
+            widget.browse_relative(prefixname="basedir")
 
         cur = widget.current_item()
         self.assertIsNotNone(cur)
         self.assertTrue(samepath(cur.path(), path))
         self.assertIsInstance(cur.varPath(), PathItem.VarPath)
+
+    def test_browse_prefix_parent(self):
+        widget = self.widget
+        path = self.data_regions_path
+
+        with self._browse_setup(widget, path):
+            basedir = os.path.join(os.path.dirname(__file__), "bs")
+            widget.workflowEnv = lambda: {"basedir": basedir}
+            widget.workflowEnvChanged("basedir", basedir, "")
+            mb = widget._path_must_be_relative_mb = mock.Mock()
+            widget.browse_relative(prefixname="basedir")
+            mb.assert_called()
+        self.assertIsNone(widget.current_item())
 
     def test_browse_for_missing(self):
         missing = os.path.dirname(__file__) + "/this file does not exist.csv"
@@ -279,13 +290,10 @@ class TestOWCSVFileImport(WidgetTest):
         dlg.setOption(QFileDialog.DontUseNativeDialog)
         dlg.selectFile(self.data_regions_path)
         dlg.accept()
-        self.assertTrue(samepath(
-            self.data_regions_path,
-            widget.recent_combo.currentData(owcsvimport.ImportItem.PathRole)
-        ))
+        cur = widget.current_item()
+        self.assertTrue(samepath(self.data_regions_path, cur.path()))
         self.assertEqual(
-            self.data_regions_options.as_dict(),
-            widget.recent_combo.currentData(owcsvimport.ImportItem.OptionsRole).as_dict()
+            self.data_regions_options.as_dict(), cur.options().as_dict()
         )
 
 
