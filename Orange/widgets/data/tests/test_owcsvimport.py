@@ -7,13 +7,16 @@ import os
 import io
 import csv
 import json
+from typing import Type, TypeVar, Optional
 
 import numpy as np
 from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QSettings
+from AnyQt.QtWidgets import QFileDialog
 
 from orangewidget.tests.utils import simulate
+from orangewidget.widget import OWBaseWidget
 
 from Orange.data import DiscreteVariable, TimeVariable, ContinuousVariable, \
     StringVariable
@@ -27,9 +30,29 @@ from Orange.widgets.utils.pathutils import PathItem, samepath
 from Orange.widgets.utils.settings import QSettings_writeArray
 from Orange.widgets.utils.state_summary import format_summary_details
 
+W = TypeVar("W", bound=OWBaseWidget)
+
 
 class TestOWCSVFileImport(WidgetTest):
+    def create_widget(
+            self, cls: Type[W], stored_settings: Optional[dict] = None,
+            reset_default_settings=True, **kwargs) -> W:
+        if reset_default_settings:
+            self.reset_default_settings(cls)
+        widget = cls.__new__(cls, signal_manager=self.signal_manager,
+                             stored_settings=stored_settings, **kwargs)
+        widget.__init__()
+
+        def delete():
+            widget.onDeleteWidget()
+            widget.close()
+            widget.deleteLater()
+
+        self._stack.callback(delete)
+        return widget
+
     def setUp(self):
+        super().setUp()
         self._stack = ExitStack().__enter__()
         # patch `_local_settings` to avoid side effects, across tests
         fname = self._stack.enter_context(named_file(""))
@@ -40,10 +63,9 @@ class TestOWCSVFileImport(WidgetTest):
         self.widget = self.create_widget(owcsvimport.OWCSVFileImport)
 
     def tearDown(self):
-        self.widgets.remove(self.widget)
-        self.widget.onDeleteWidget()
-        self.widget = None
+        del self.widget
         self._stack.close()
+        super().tearDown()
 
     def test_basic(self):
         w = self.widget
@@ -61,6 +83,8 @@ class TestOWCSVFileImport(WidgetTest):
             (range(1, 3), RowSpec.Skipped),
         ],
     )
+    data_regions_path = os.path.join(
+        os.path.dirname(__file__), "data-regions.tab")
 
     def _check_data_regions(self, table):
         self.assertEqual(len(table), 3)
@@ -198,6 +222,32 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertIsInstance(domain["numeric1"], ContinuousVariable)
         self.assertIsInstance(domain["numeric2"], ContinuousVariable)
         self.assertIsInstance(domain["string"], StringVariable)
+
+    def test_browse_for_missing(self):
+        missing = os.path.dirname(__file__) + "/this file does not exist.csv"
+        widget = self.create_widget(
+            owcsvimport.OWCSVFileImport, stored_settings={
+                "_session_items": [
+                    (missing, self.data_regions_options.as_dict())
+                ]
+            }
+        )
+        widget.activate_recent(0)
+        dlg = widget.findChild(QFileDialog)
+        assert dlg is not None
+        # calling selectFile when using native (macOS) dialog does not have
+        # an effect - at least not immediately;
+        dlg.setOption(QFileDialog.DontUseNativeDialog)
+        dlg.selectFile(self.data_regions_path)
+        dlg.accept()
+        self.assertTrue(samepath(
+            self.data_regions_path,
+            widget.recent_combo.currentData(owcsvimport.ImportItem.PathRole)
+        ))
+        self.assertEqual(
+            self.data_regions_options.as_dict(),
+            widget.recent_combo.currentData(owcsvimport.ImportItem.OptionsRole).as_dict()
+        )
 
 
 class TestImportDialog(GuiTest):
