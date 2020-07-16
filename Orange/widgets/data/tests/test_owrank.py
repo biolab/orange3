@@ -1,4 +1,5 @@
 # pylint: disable=unsubscriptable-object
+import time
 import warnings
 import unittest
 from unittest.mock import patch, Mock
@@ -20,6 +21,14 @@ from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 from Orange.widgets.utils.state_summary import format_summary_details
 from orangewidget.settings import Context, IncompatibleContext
+
+
+class SlowScorer(Scorer):
+    name = "Slow scorer"
+
+    def score_data(self, data, feature=None):
+        time.sleep(3)
+        return np.ones((1, len(data.domain.attributes)))
 
 
 class TestOWRank(WidgetTest):
@@ -44,6 +53,7 @@ class TestOWRank(WidgetTest):
         """Check widget's data after disconnecting data on the input"""
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(self.widget.data, self.iris)
+        self.wait_until_finished()
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
 
@@ -51,6 +61,7 @@ class TestOWRank(WidgetTest):
         """Check widget's scorer with scorer on the input"""
         self.assertEqual(self.widget.scorers, {})
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
+        self.wait_until_finished()
         value = self.widget.scorers[1]
         self.assertEqual(self.log_reg, value.scorer)
         self.assertIsInstance(value.scorer, Scorer)
@@ -72,6 +83,7 @@ class TestOWRank(WidgetTest):
                              heart_disease):
                     with self.subTest(data=data.name):
                         self.send_signal('Data', data)
+                        self.wait_until_finished()
                         scores = [model.data(model.index(row, model.columnCount() - 1))
                                   for row in range(model.rowCount())]
                         self.assertEqual(len(scores), len(data.domain.attributes))
@@ -94,6 +106,7 @@ class TestOWRank(WidgetTest):
     def test_output_data(self):
         """Check data on the output after apply"""
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.reduced_data)
         self.assertIsInstance(output, Table)
         self.assertEqual(len(output.X), len(self.iris))
@@ -104,6 +117,7 @@ class TestOWRank(WidgetTest):
     def test_output_scores(self):
         """Check scores on the output after apply"""
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.scores)
         self.assertIsInstance(output, Table)
         self.assertEqual(output.X.shape, (len(self.iris.domain.attributes), 2))
@@ -114,12 +128,14 @@ class TestOWRank(WidgetTest):
         """Check scores on the output after apply with scorer on the input"""
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
+        self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.scores)
         self.assertIsInstance(output, Table)
         self.assertEqual(output.X.shape, (len(self.iris.domain.attributes), 5))
 
     def test_output_features(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.features)
         self.assertIsInstance(output, AttributeList)
         self.send_signal(self.widget.Inputs.data, None)
@@ -161,8 +177,10 @@ class TestOWRank(WidgetTest):
         """Check scores on the output with inadequate scorer"""
         self.send_signal(self.widget.Inputs.data, self.housing)
         self.send_signal(self.widget.Inputs.scorer, self.pca, 1)
+        self.wait_until_finished()
         with patch("Orange.widgets.data.owrank.log.error") as log:
             self.send_signal(self.widget.Inputs.scorer, self.log_reg, 2)
+            self.wait_until_finished()
             log.assert_called()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 16))
@@ -171,8 +189,10 @@ class TestOWRank(WidgetTest):
         """Check scores on the output with inadequate scorer"""
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.send_signal(self.widget.Inputs.scorer, self.pca, 1)
+        self.wait_until_finished()
         with patch("Orange.widgets.data.owrank.log.error") as log:
             self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 2)
+            self.wait_until_finished()
             log.assert_called()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 7))
@@ -181,6 +201,7 @@ class TestOWRank(WidgetTest):
         """Check arbitrary workflow with classification data"""
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 5))
         self._get_checkbox('Gini').setChecked(False)
@@ -190,16 +211,20 @@ class TestOWRank(WidgetTest):
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 5))
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 2)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 8))
         self.send_signal(self.widget.Inputs.scorer, None, 1)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 5))
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 8))
         with patch("Orange.widgets.data.owrank.log.error") as log:
             self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 3)
+            self.wait_until_finished()
             log.assert_called()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 9))
@@ -208,6 +233,7 @@ class TestOWRank(WidgetTest):
         """Check arbitrary workflow with regression data"""
         self.send_signal(self.widget.Inputs.data, self.housing)
         self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 1)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 3))
 
@@ -220,10 +246,12 @@ class TestOWRank(WidgetTest):
                          (len(self.housing.domain.attributes), 3))
 
         self.send_signal(self.widget.Inputs.scorer, None, 1)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 2))
 
         self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 1)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 3))
 
@@ -232,20 +260,24 @@ class TestOWRank(WidgetTest):
         data = Table.from_table(Domain(self.iris.domain.variables), self.iris)
         self.assertIsNone(data.domain.class_var)
         self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_finished()
         self.assertIsNone(self.get_output(self.widget.Outputs.scores))
 
         with patch("Orange.widgets.data.owrank.log.error") as log:
             self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 1)
+            self.wait_until_finished()
             log.assert_called()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 1))
 
         self.send_signal(self.widget.Inputs.scorer, self.pca, 1)
+        self.wait_until_finished()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 7))
 
         with patch("Orange.widgets.data.owrank.log.error") as log:
             self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 2)
+            self.wait_until_finished()
             log.assert_called()
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 8))
@@ -263,6 +295,7 @@ class TestOWRank(WidgetTest):
 
         with patch("Orange.widgets.data.owrank.log.error") as log:
             self.send_signal(self.widget.Inputs.scorer, random_forest, 1)
+            self.wait_until_finished()
             log.assert_called()
 
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
@@ -271,8 +304,10 @@ class TestOWRank(WidgetTest):
     def test_scores_sorting(self):
         """Check clicking on header column orders scores in a different way"""
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         order1 = self.widget.ranksModel.mapToSourceRows(...).tolist()
         self._get_checkbox('FCBF').setChecked(True)
+        self.wait_until_finished()
         self.widget.ranksView.horizontalHeader().setSortIndicator(3, Qt.DescendingOrder)
         order2 = self.widget.ranksModel.mapToSourceRows(...).tolist()
         self.assertNotEqual(order1, order2)
@@ -282,6 +317,7 @@ class TestOWRank(WidgetTest):
         data = self.iris.copy()
         data.get_column_view('petal length')[0][:] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_finished()
 
         # Assert last row is all nan
         for order in (Qt.AscendingOrder,
@@ -292,6 +328,7 @@ class TestOWRank(WidgetTest):
 
     def test_default_sort_indicator(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
         self.assertNotEqual(
             0, self.widget.ranksView.horizontalHeader().sortIndicatorSection())
 
@@ -354,6 +391,7 @@ class TestOWRank(WidgetTest):
         data = Table("heart_disease")
         dom = data.domain
         self.send_signal(w.Inputs.data, data)
+        self.wait_until_finished()
 
         # Sort by number of values and set selection to attributes with most
         # values. This must select the top 4 rows.
@@ -424,6 +462,7 @@ class TestOWRank(WidgetTest):
     def test_selected_rows(self):
         w = self.widget
         self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
 
         # select first and second row
         w.selected_rows = [1, 2]
@@ -438,6 +477,7 @@ class TestOWRank(WidgetTest):
         output_sum = self.widget.info.set_output_summary = Mock()
 
         self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_finished()
         input_sum.assert_called_with(len(data), format_summary_details(data))
         output = self.get_output(self.widget.Outputs.reduced_data)
         output_sum.assert_called_with(len(output),
@@ -446,10 +486,24 @@ class TestOWRank(WidgetTest):
         input_sum.reset_mock()
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
+        self.wait_until_finished()
         input_sum.assert_called_once()
         self.assertEqual(input_sum.call_args[0][0].brief, "")
         output_sum.assert_called_once()
         self.assertEqual(output_sum.call_args[0][0].brief, "")
+
+    def test_concurrent_cancel(self):
+        """
+        Send one signal after another. It test if the first process get
+        correctly canceled when new signal comes.
+        """
+        sc = SlowScorer()
+        self.send_signal(self.widget.Inputs.scorer, sc, 1)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.wait_until_finished()
+        output = self.get_output(self.widget.Outputs.reduced_data)
+        self.assertEqual(len(output), len(self.housing))
 
 
 if __name__ == "__main__":
