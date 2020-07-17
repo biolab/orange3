@@ -322,7 +322,9 @@
     "doc": "visual-programming/source/widgets/visualize/distributions.md",
     "icon": "../Orange/widgets/visualize/icons/Distribution.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "histogram"
+    ]
    },
    {
     "text": "Scatter Plot",

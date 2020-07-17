@@ -249,7 +249,7 @@ class OWDistributions(OWWidget):
     description = "Display value distributions of a data feature in a graph."
     icon = "icons/Distribution.svg"
     priority = 120
-    keywords = []
+    keywords = ["histogram"]
 
     class Inputs:
         data = Input("Data", Table, doc="Set the input dataset")
