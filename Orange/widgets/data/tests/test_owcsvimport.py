@@ -324,6 +324,33 @@ class TestOWCSVFileImport(WidgetTest):
             self.data_regions_options.as_dict(), cur.options().as_dict()
         )
 
+    def test_browse_for_missing_prefixed_parent(self):
+        path = self.data_regions_path
+        basedir = os.path.join(os.path.dirname(path), "origin1")
+        item = (PathItem.VarPath("basedir",
+                                 "this file does not exist.csv"),
+                self.data_regions_options)
+        widget = self.create_widget(
+            owcsvimport.OWCSVFileImport, stored_settings={
+                "__version__": 3,
+                "_session_items_v2": [(item[0].as_dict(), item[1].as_dict())]
+            },
+            env={"basedir": basedir}
+        )
+        mb = widget._path_must_be_relative_mb = mock.Mock()
+        widget.activate_recent(0)
+        dlg = widget.findChild(QFileDialog)
+        assert dlg is not None
+        # calling selectFile when using native (macOS) dialog does not have
+        # an effect - at least not immediately;
+        dlg.setOption(QFileDialog.DontUseNativeDialog)
+        dlg.selectFile(path)
+        dlg.accept()
+        mb.assert_called()
+        cur = widget.current_item()
+        self.assertEqual(item[0], cur.varPath())
+        self.assertEqual(item[1].as_dict(), cur.options().as_dict())
+
 
 class TestImportDialog(GuiTest):
     @staticmethod
