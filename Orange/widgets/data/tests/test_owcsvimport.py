@@ -12,8 +12,10 @@ from typing import Type, TypeVar, Optional
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from AnyQt.QtCore import QSettings
+from AnyQt.QtCore import QSettings, Qt
+from AnyQt.QtGui import QIcon
 from AnyQt.QtWidgets import QFileDialog
+from AnyQt.QtTest import QSignalSpy
 
 from orangewidget.tests.utils import simulate
 from orangewidget.widget import OWBaseWidget
@@ -379,6 +381,42 @@ class TestImportDialog(GuiTest):
         opts1 = d.options()
         d.reset()
         opts1 = d.options()
+
+
+class TestModel(GuiTest):
+    def test_model(self):
+        path = TestOWCSVFileImport.data_regions_path
+        model = owcsvimport.VarPathItemModel()
+        model.setItemPrototype(owcsvimport.ImportItem())
+        it1 = owcsvimport.ImportItem()
+        it1.setVarPath(PathItem.VarPath("prefix", "data-regions.tab"))
+        it2 = owcsvimport.ImportItem()
+        it2.setVarPath(PathItem.AbsPath(path))
+        model.appendRow([it1])
+        model.appendRow([it2])
+
+        def data(row, role):
+            return model.data(model.index(row, 0), role)
+
+        self.assertIsInstance(data(0, Qt.DecorationRole), QIcon)
+        self.assertIsInstance(data(1, Qt.DecorationRole), QIcon)
+
+        self.assertEqual(data(0, Qt.DisplayRole), "data-regions.tab")
+        self.assertEqual(data(1, Qt.DisplayRole), "data-regions.tab")
+
+        self.assertEqual(data(0, Qt.ToolTipRole), "${prefix}/data-regions.tab (missing)")
+        self.assertTrue(samepath(data(1, Qt.ToolTipRole), path))
+
+        self.assertIsNotNone(data(0, Qt.ForegroundRole))
+        self.assertIsNone(data(1, Qt.ForegroundRole))
+        spy = QSignalSpy(model.dataChanged)
+        model.setReplacementEnv({"prefix": os.path.dirname(path)})
+        self.assertSequenceEqual(
+            [[model.index(0, 0), model.index(1, 0), []]],
+            list(spy)
+        )
+        self.assertEqual(data(0, Qt.ToolTipRole), "${prefix}/data-regions.tab")
+        self.assertIsNone(data(0, Qt.ForegroundRole))
 
 
 class TestUtils(unittest.TestCase):
