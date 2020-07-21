@@ -1235,6 +1235,14 @@ def load_csv(path, opts, progress_callback=None):
     if opts.group_separator != "":
         numbers_format_kwds["thousands"] = opts.group_separator
 
+    if numbers_format_kwds:
+        # float_precision = "round_trip" cannot handle non c-locale decimal and
+        # thousands sep (https://github.com/pandas-dev/pandas/issues/35365).
+        # Fallback to 'high'.
+        numbers_format_kwds["float_precision"] = "high"
+    else:
+        numbers_format_kwds["float_precision"] = "round_trip"
+
     with ExitStack() as stack:
         if isinstance(path, (str, bytes)):
             f = stack.enter_context(_open(path, 'rb'))
@@ -1253,7 +1261,6 @@ def load_csv(path, opts, progress_callback=None):
             header=header, skiprows=skiprows,
             dtype=dtypes, parse_dates=parse_dates, prefix=prefix,
             na_values=na_values, keep_default_na=False,
-            float_precision="round_trip",
             **numbers_format_kwds
         )
         df = guess_types(df, dtypes, columns_ignored)
