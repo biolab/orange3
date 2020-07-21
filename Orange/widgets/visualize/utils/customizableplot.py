@@ -9,7 +9,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
 
 from orangewidget.utils.visual_settings_dlg import KeyType, ValueType, \
-    SettingsType
+    SettingsType, FontList
 
 _SettingType = Dict[str, ValueType]
 _LegendItemType = Tuple[ItemSample, pg.LabelItem]
@@ -29,7 +29,18 @@ def available_font_families() -> List:
         _ = QApplication(sys.argv)
     fonts = QFontDatabase().families()
     default = fonts.pop(fonts.index(default_font_family()))
-    return [default] + sorted(fonts, key=lambda s: s.replace(".", "{"))
+    defaults = [default]
+
+    guessed_name = default.split()[0]
+    i = 0
+    while i < len(fonts):
+        if fonts[i].startswith(guessed_name):
+            defaults.append(fonts.pop(i))
+        else:
+            i += 1
+    return FontList(defaults
+                    + [""]
+                    + sorted(fonts, key=lambda s: s.replace(".", "")))
 
 
 def default_font_family() -> str:
