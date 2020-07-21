@@ -5,6 +5,7 @@ from collections import deque
 from typing import (
     TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union
 )
+from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import QObject
 
@@ -26,7 +27,7 @@ def vartype(var):
 
 
 def progress_bar_milestones(count, iterations=100):
-    return set([int(i*count/float(iterations)) for i in range(iterations)])
+    return {int(i * count / float(iterations)) for i in range(iterations)}
 
 
 def getdeepattr(obj, attr, *arg, **kwarg):
@@ -35,9 +36,10 @@ def getdeepattr(obj, attr, *arg, **kwarg):
     return deepgetattr(obj, attr, *arg, **kwarg)
 
 
-def to_html(str):
-    return str.replace("<=", "&#8804;").replace(">=", "&#8805;").\
+def to_html(s):
+    return s.replace("<=", "&#8804;").replace(">=", "&#8805;"). \
         replace("<", "&#60;").replace(">", "&#62;").replace("=\\=", "&#8800;")
+
 
 getHtmlCompatibleString = to_html
 
@@ -136,3 +138,24 @@ def enum_get(etype: Type[_E], name: str, default: _T1) -> Union[_E, _T1]:
         return etype[name]
     except LookupError:
         return default
+
+
+def instance_tooltip(domain, row, skip_attrs=()):
+    def show_part(_point_data, singular, plural, max_shown, _vars):
+        cols = [escape('{} = {}'.format(var.name, _point_data[var]))
+                for var in _vars[:max_shown + len(skip_attrs)]
+                if _vars is domain.class_vars
+                or var not in skip_attrs][:max_shown]
+        if not cols:
+            return ""
+        n_vars = len(_vars)
+        if n_vars > max_shown:
+            cols[-1] = "... and {} others".format(n_vars - max_shown + 1)
+        return \
+            "<b>{}</b>:<br/>".format(singular if n_vars < 2 else plural) \
+            + "<br/>".join(cols)
+
+    parts = (("Class", "Classes", 4, domain.class_vars),
+             ("Meta", "Metas", 4, domain.metas),
+             ("Feature", "Features", 10, domain.attributes))
+    return "<br/>".join(show_part(row, *columns) for columns in parts)
