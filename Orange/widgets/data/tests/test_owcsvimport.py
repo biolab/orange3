@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use
 import unittest
 from unittest import mock
 from contextlib import ExitStack
@@ -286,6 +287,24 @@ class TestUtils(unittest.TestCase):
         assert_array_equal(tb.X[:, 0], [np.nan, 0, np.nan])
         assert_array_equal(tb.X[:, 1], [0, np.nan, np.nan])
         assert_array_equal(tb.X[:, 2], [np.nan, 1, np.nan])
+
+    def test_decimal_format(self):
+        class Dialect(csv.excel):
+            delimiter = ";"
+
+        contents = b'3,21;3,37\n4,13;1.000,142'
+        opts = owcsvimport.Options(
+            encoding="ascii",
+            dialect=Dialect(),
+            decimal_separator=",",
+            group_separator=".",
+            columntypes=[
+                (range(0, 2), ColumnType.Numeric),
+            ],
+            rowspec=[],
+        )
+        df = owcsvimport.load_csv(io.BytesIO(contents), opts)
+        assert_array_equal(df.values, np.array([[3.21, 3.37], [4.13, 1000.142]]))
 
 
 if __name__ == "__main__":
