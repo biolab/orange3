@@ -8,7 +8,7 @@ import numpy as np
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.preprocess import transformation
 from Orange.widgets.data import owcontinuize
-from Orange.widgets.data.owcontinuize import OWContinuize
+from Orange.widgets.data.owcontinuize import OWContinuize, WeightedIndicator
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.state_summary import format_summary_details
 
@@ -275,6 +275,34 @@ class TestOWContinuizeUtils(unittest.TestCase):
             self.assertIsInstance(nvar.compute_value, transformation.Indicator)
             self.assertEqual(nvar.compute_value.value, i)
             self.assertIs(nvar.compute_value.variable, var)
+
+
+class TestWeightedIndicator(unittest.TestCase):
+    def test_equality(self):
+        disc1 = DiscreteVariable("d1", values=tuple("abc"))
+        disc1a = DiscreteVariable("d1", values=tuple("abc"))
+        disc2 = DiscreteVariable("d2", values=tuple("abc"))
+        assert disc1 == disc1a
+
+        t1 = WeightedIndicator(disc1, 0, 1)
+        t1a = WeightedIndicator(disc1a, 0, 1)
+        t2 = WeightedIndicator(disc2, 0, 1)
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
+
+        t1 = WeightedIndicator(disc1, 0, 1)
+        t1a = WeightedIndicator(disc1a, 1, 1)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        t1 = WeightedIndicator(disc1, 0, 1)
+        t1a = WeightedIndicator(disc1a, 0, 2)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
 
 
 if __name__ == "__main__":

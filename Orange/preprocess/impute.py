@@ -32,6 +32,12 @@ class ReplaceUnknowns(Transformation):
         else:
             return np.where(np.isnan(c), self.value, c)
 
+    def __eq__(self, other):
+        return super().__eq__(other) and self.value == other.value
+
+    def __hash__(self):
+        return hash((type(self), self.variable, float(self.value)))
+
 
 class BaseImputeMethod(Reprable):
     name = ""
@@ -315,6 +321,12 @@ class ReplaceUnknownsRandom(Transformation):
 
         c[nanindices] = sample
         return c
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.distribution == other.distribution
+
+    def __hash__(self):
+        return hash((type(self), self.variable, self.distribution))
 
 
 class Random(BaseImputeMethod):
