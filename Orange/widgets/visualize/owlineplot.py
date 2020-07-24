@@ -106,6 +106,8 @@ class BottomAxisItem(AxisItem):
 
     def set_ticks(self, ticks):
         self._ticks = dict(enumerate(ticks, 1)) if ticks else {}
+        if not ticks:
+            self.setTicks(None)
 
     def tickStrings(self, values, scale, _):
         return [self._ticks.get(v * scale, "") for v in values]
