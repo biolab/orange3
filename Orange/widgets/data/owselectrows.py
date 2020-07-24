@@ -554,7 +554,7 @@ class OWSelectRows(widget.OWWidget):
                     invalidate_datetime()
 
                 datetime_format = (var.have_date, var.have_time)
-                column = self.data[:, var_idx]
+                column = self.data.get_column_view(var_idx)[0]
                 w = DateTimeWidget(self, column, datetime_format)
                 w.set_datetime(lc[0])
                 box.controls = [w]
@@ -951,11 +951,10 @@ class DateTimeWidget(QDateTimeEdit):
             return datetime(1970, 1, 1, tzinfo=timezone.utc) + \
                        timedelta(seconds=int(timestamp))
 
-        item_list = [item for items in list(column) for item in items]
         min_datetime = convert_timestamp(
-            np.nanmin(item_list)).strftime(convert_format)
+            np.nanmin(column)).strftime(convert_format)
         max_datetime = convert_timestamp(
-            np.nanmax(item_list)).strftime(convert_format)
+            np.nanmax(column)).strftime(convert_format)
         return min_datetime, max_datetime
 
 
