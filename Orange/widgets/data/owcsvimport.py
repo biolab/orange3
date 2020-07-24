@@ -1101,9 +1101,7 @@ def _open(path, mode, encoding=None):
         arh = zipfile.ZipFile(path, 'r')
         filelist = arh.infolist()
         if len(filelist) == 1:
-            filename = filelist[0]
-            zinfo = arh.getinfo(filename)
-            f = arh.open(zinfo.filename, 'r')
+            f = arh.open(filelist[0], 'r')
             if 't' in mode:
                 f = io.TextIOWrapper(f, encoding=encoding)
             return f
