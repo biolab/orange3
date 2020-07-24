@@ -1102,6 +1102,13 @@ def _open(path, mode, encoding=None):
         filelist = arh.infolist()
         if len(filelist) == 1:
             f = arh.open(filelist[0], 'r')
+            # patch the f.close to also close the main archive file
+            f_close = f.close
+
+            def close_():
+                f_close()
+                arh.close()
+            f.close = close_
             if 't' in mode:
                 f = io.TextIOWrapper(f, encoding=encoding)
             return f
