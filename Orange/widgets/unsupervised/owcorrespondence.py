@@ -6,6 +6,7 @@ import numpy as np
 from AnyQt.QtWidgets import QListView, QApplication
 from AnyQt.QtGui import QBrush, QColor, QPainter
 from AnyQt.QtCore import QEvent
+from orangewidget.utils.listview import ListViewSearch
 
 import pyqtgraph as pg
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
@@ -62,7 +63,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Variables")
         self.varlist = itemmodels.VariableListModel()
-        self.varview = view = QListView(
+        self.varview = view = ListViewSearch(
             selectionMode=QListView.MultiSelection,
             uniformItemSizes=True
         )

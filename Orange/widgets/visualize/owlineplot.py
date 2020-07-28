@@ -12,6 +12,7 @@ import pyqtgraph as pg
 from pyqtgraph.functions import mkPen
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 
+from orangewidget.utils.listview import ListViewSearch
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from Orange.data import Table, DiscreteVariable
@@ -676,7 +677,8 @@ class OWLinePlot(OWWidget):
         self.group_view = gui.listView(
             self.controlArea, self, "group_var", box="Group by",
             model=self.group_vars, callback=self.__group_var_changed,
-            sizeHint=QSize(30, 100))
+            sizeHint=QSize(30, 100), viewType=ListViewSearch
+        )
         self.group_view.setEnabled(False)
 
         plot_gui = OWPlotGUI(self)
