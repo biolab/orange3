@@ -1,8 +1,13 @@
+from enum import IntEnum
 from collections import namedtuple
 from typing import Optional
 
-from AnyQt.QtWidgets import QListView, QHBoxLayout, QStyledItemDelegate
-from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import (
+    QListView, QHBoxLayout, QStyledItemDelegate, QButtonGroup, QWidget,
+    QLineEdit
+)
+from AnyQt.QtGui import QRegularExpressionValidator
+from AnyQt.QtCore import Qt, QRegularExpression
 
 import Orange.data
 import Orange.preprocess.discretize as disc
@@ -12,6 +17,7 @@ from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
+from Orange.widgets.data.oweditdomain import FixedSizeButton
 
 __all__ = ["OWDiscretize"]
 
@@ -126,7 +132,17 @@ class DiscDelegate(QStyledItemDelegate):
             return points
 
 
+#: Discretization methods
+class Methods(IntEnum):
+    Default, Leave, MDL, EqualFreq, EqualWidth, Remove, Custom = range(7)
+
+    @staticmethod
+    def from_method(method):
+        return Methods[type(method).__name__]
+
+
 class OWDiscretize(widget.OWWidget):
+    # pylint: disable=too-many-instance-attributes
     name = "Discretize"
     description = "Discretize the numeric data features."
     icon = "icons/Discretize.svg"
@@ -139,14 +155,19 @@ class OWDiscretize(widget.OWWidget):
         data = Output("Data", Orange.data.Table, doc="Table with discretized features")
 
     settingsHandler = settings.DomainContextHandler()
+    settings_version = 2
     saved_var_states = settings.ContextSetting({})
 
-    default_method = settings.Setting(2)
+    #: The default method name
+    default_method_name = settings.Setting(Methods.EqualFreq.name)
+    #: The k for Equal{Freq,Width}
     default_k = settings.Setting(3)
+    #: The default cut points for custom entry
+    default_cutpoints: Tuple[float, ...] = settings.Setting(())
     autosend = settings.Setting(True)
 
     #: Discretization methods
-    Default, Leave, MDL, EqualFreq, EqualWidth, Remove, Custom = range(7)
+    Default, Leave, MDL, EqualFreq, EqualWidth, Remove, Custom = list(Methods)
 
     want_main_area = False
     resizing_enabled = False
@@ -162,33 +183,38 @@ class OWDiscretize(widget.OWWidget):
         #: Saved variable discretization settings (context setting)
         self.saved_var_states = {}
 
-        self.method = 0
+        self.method = Methods.Default
         self.k = 5
-        self.cutpoints = []
+        self.cutpoints = ()
+        self.default_cutpoints = ()
 
         box = gui.vBox(self.controlArea, self.tr("Default Discretization"))
+        self._default_method_ = 0
         self.default_bbox = rbox = gui.radioButtons(
-            box, self, "default_method", callback=self._default_disc_changed)
+            box, self, "_default_method_", callback=self._default_disc_changed)
+        self.default_button_group = bg = rbox.findChild(QButtonGroup)
+        bg.buttonClicked[int].connect(self.set_default_method)
+
         rb = gui.hBox(rbox)
         self.left = gui.vBox(rb)
         right = gui.vBox(rb)
         rb.layout().setStretch(0, 1)
         rb.layout().setStretch(1, 1)
-        options = self.options = [
-            self.tr("Default"),
-            self.tr("Leave numeric"),
-            self.tr("Entropy-MDL discretization"),
-            self.tr("Equal-frequency discretization"),
-            self.tr("Equal-width discretization"),
-            self.tr("Remove numeric variables")
+        self.options = [
+            (Methods.Default, self.tr("Default")),
+            (Methods.Leave, self.tr("Leave numeric")),
+            (Methods.MDL, self.tr("Entropy-MDL discretization")),
+            (Methods.EqualFreq, self.tr("Equal-frequency discretization")),
+            (Methods.EqualWidth, self.tr("Equal-width discretization")),
+            (Methods.Remove, self.tr("Remove numeric variables")),
+            (Methods.Custom, self.tr("Manual")),
         ]
 
-        for opt in options[1:]:
+        for id_, opt in self.options[1:]:
             t = gui.appendRadioButton(rbox, opt)
-            # This condition is ugly, but it keeps the same order of
-            # options for backward compatibility of saved schemata
+            bg.setId(t, id_)
+            t.setChecked(id_ == self.default_method)
             [right, self.left][opt.startswith("Equal")].layout().addWidget(t)
-        gui.separator(right, 18, 18)
 
         def _intbox(parent, attr, callback):
             box = gui.indentedBox(parent)
@@ -198,11 +224,47 @@ class OWDiscretize(widget.OWWidget):
             s.setMaximumWidth(60)
             s.setAlignment(Qt.AlignRight)
             gui.rubber(s.box)
+            sp = box.sizePolicy()
+            sp.setControlType(sp.SpinBox)
             return box.box
 
         self.k_general = _intbox(self.left, "default_k",
                                  self._default_disc_changed)
         self.k_general.layout().setContentsMargins(0, 0, 0, 0)
+        self.manual_cuts_edit = QLineEdit(
+            text=", ".join(map(str, self.default_cutpoints))
+        )
+
+        def set_manual_default_cuts():
+            text = self.manual_cuts_edit.text()
+            self.default_cutpoints = tuple(
+                float(s.strip()) for s in text.split(",") if s.strip())
+            self._default_disc_changed()
+        self.manual_cuts_edit.editingFinished.connect(set_manual_default_cuts)
+
+        reexp = QRegularExpression()
+        decimal = r"([+-]?(\.\d+|\d+\.?|\d+\.\d+))"
+        reexp.setPattern(rf"""
+            \s*(,?|[+-]?)?
+            \s*({decimal} # single number
+                |({decimal}(\s*,\s*{decimal})*) # concat
+                )
+            \s*,?\s* # optional trailing separator/space
+        """)
+        reexp.setPatternOptions(QRegularExpression.ExtendedPatternSyntaxOption)
+        assert reexp.isValid()
+        validator = QRegularExpressionValidator(reexp)
+        self.manual_cuts_edit.setValidator(validator)
+        ibox = gui.indentedBox(right, orientation=Qt.Horizontal)
+        ibox.layout().addWidget(self.manual_cuts_edit)
+
+        right.layout().addStretch(10)
+        self.left.layout().addStretch(10)
+
+        self.connect_control(
+            "default_cutpoints",
+            lambda values: self.manual_cuts_edit.setText(", ".join(map(str, values)))
+        )
         vlayout = QHBoxLayout()
         box = gui.widgetBox(
             self.controlArea, "Individual Attribute Settings",
@@ -227,17 +289,42 @@ class OWDiscretize(widget.OWWidget):
             box, self, "method", callback=self._disc_method_changed
         )
         vlayout.addWidget(controlbox)
-
-        for opt in options[:5]:
-            gui.appendRadioButton(controlbox, opt)
+        self.variable_button_group = bg = controlbox.findChild(QButtonGroup)
+        for id_, opt in self.options[:5]:
+            b = gui.appendRadioButton(controlbox, opt)
+            bg.setId(b, id_)
 
         self.k_specific = _intbox(controlbox, "k", self._disc_method_changed)
 
-        gui.appendRadioButton(controlbox, "Remove attribute")
+        gui.appendRadioButton(controlbox, "Remove attribute", id=Methods.Remove)
+        b = gui.appendRadioButton(controlbox, "Manual", id=Methods.Custom)
+
+        self.manual_cuts_specific = QLineEdit()
+        b.toggled[bool].connect(self.manual_cuts_specific.setEnabled)
+
+        def set_manual_cuts():
+            text = self.manual_cuts_specific.text()
+            points = [t for t in text.split(",") if t.split()]
+            self.cutpoints = tuple(float(t) for t in points)
+            self._disc_method_changed()
+        self.manual_cuts_specific.editingFinished.connect(set_manual_cuts)
+
+        self.connect_control(
+            "cutpoints",
+            lambda values: self.manual_cuts_specific.setText(", ".join(map(str, values)))
+        )
+        ibox = gui.indentedBox(controlbox, orientation=Qt.Horizontal)
+        self.copy_current_to_manual_button = b = FixedSizeButton(
+            text="CC", toolTip="Copy the current cut points to manual mode",
+            enabled=False
+        )
+        b.clicked.connect(self._copy_to_manual)
+        ibox.layout().addWidget(self.manual_cuts_specific)
+        ibox.layout().addWidget(b)
 
         gui.rubber(controlbox)
         controlbox.setEnabled(False)
-
+        bg.button(self.method)
         self.controlbox = controlbox
 
         box = gui.auto_apply(self.controlArea, self, "autosend")
@@ -249,6 +336,24 @@ class OWDiscretize(widget.OWWidget):
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
 
+    @property
+    def default_method(self) -> Methods:
+        return Methods[self.default_method_name]
+
+    @default_method.setter
+    def default_method(self, method):
+        self.set_default_method(method)
+
+    def set_default_method(self, method: Methods):
+        if isinstance(method, int):
+            method = Methods(method)
+        else:
+            method = Methods.from_method(method)
+
+        if method != self.default_method:
+            self.default_method_name = method.name
+            self.default_button_group.button(method).setChecked(True)
+            self._default_disc_changed()
 
     @Inputs.data
     def set_data(self, data):
@@ -277,14 +382,22 @@ class OWDiscretize(widget.OWWidget):
 
         has_disc_class = data.domain.has_discrete_class
 
-        self.default_bbox.buttons[self.MDL - 1].setEnabled(has_disc_class)
-        self.bbox.buttons[self.MDL].setEnabled(has_disc_class)
+        def set_enabled(box: QWidget, id_: Methods, state: bool):
+            bg = box.findChild(QButtonGroup)
+            b = bg.button(id_)
+            b.setEnabled(state)
+
+        set_enabled(self.default_bbox, self.MDL, has_disc_class)
+        bg = self.bbox.findChild(QButtonGroup)
+        b = bg.button(Methods.MDL)
+        b.setEnabled(has_disc_class)
+        set_enabled(self.bbox, self.MDL, has_disc_class)
 
         # If the newly disabled MDL button is checked then change it
-        if not has_disc_class and self.default_method == self.MDL - 1:
-            self.default_method = 0
+        if not has_disc_class and self.default_method == self.MDL:
+            self.default_method = Methods.Leave
         if not has_disc_class and self.method == self.MDL:
-            self.method = 0
+            self.method = Methods.Default
 
         # Reset (initialize) the variable discretization states.
         self._reset()
@@ -318,8 +431,8 @@ class OWDiscretize(widget.OWWidget):
         self.varmodel[:] = []
         self.var_state = {}
         self.saved_var_states = {}
-        self.default_bbox.buttons[self.MDL - 1].setEnabled(True)
-        self.bbox.buttons[self.MDL].setEnabled(True)
+        self.default_button_group.button(self.MDL).setEnabled(True)
+        self.variable_button_group.button(self.MDL).setEnabled(True)
 
     def _update_points(self):
         """
@@ -338,8 +451,7 @@ class OWDiscretize(widget.OWWidget):
                 return None, var
             elif is_discretized(dvar):
                 return dvar.compute_value.points, dvar
-            assert False
-            return None
+            raise ValueError
 
         for i, var in enumerate(self.varmodel):
             state = self.var_state[i]
@@ -348,57 +460,56 @@ class OWDiscretize(widget.OWWidget):
                 new_state = state._replace(points=points, disc_var=dvar)
                 self._set_var_state(i, new_state)
 
-    @staticmethod
-    def _method_index(method):
-        return METHODS.index((type(method), ))
-
     def _current_default_method(self):
-        method = self.default_method + 1
+        method = self.default_method
         k = self.default_k
-        if method == OWDiscretize.Leave:
+        if method == Methods.Leave:
             def_method = Leave()
-        elif method == OWDiscretize.MDL:
+        elif method == Methods.MDL:
             def_method = MDL()
-        elif method == OWDiscretize.EqualFreq:
+        elif method == Methods.EqualFreq:
             def_method = EqualFreq(k)
-        elif method == OWDiscretize.EqualWidth:
+        elif method == Methods.EqualWidth:
             def_method = EqualWidth(k)
-        elif method == OWDiscretize.Remove:
+        elif method == Methods.Remove:
             def_method = Remove()
+        elif method == Methods.Custom:
+            def_method = Custom(self.default_cutpoints)
         else:
             assert False
         return def_method
 
     def _current_method(self):
-        if self.method == OWDiscretize.Default:
+        if self.method == Methods.Default:
             method = Default(self._current_default_method())
-        elif self.method == OWDiscretize.Leave:
+        elif self.method == Methods.Leave:
             method = Leave()
-        elif self.method == OWDiscretize.MDL:
+        elif self.method == Methods.MDL:
             method = MDL()
-        elif self.method == OWDiscretize.EqualFreq:
+        elif self.method == Methods.EqualFreq:
             method = EqualFreq(self.k)
-        elif self.method == OWDiscretize.EqualWidth:
+        elif self.method == Methods.EqualWidth:
             method = EqualWidth(self.k)
-        elif self.method == OWDiscretize.Remove:
+        elif self.method == Methods.Remove:
             method = Remove()
-        elif self.method == OWDiscretize.Custom:
+        elif self.method == Methods.Custom:
             method = Custom(self.cutpoints)
         else:
             assert False
         return method
 
     def _update_spin_positions(self):
-        self.k_general.setDisabled(self.default_method not in [2, 3])
-        if self.default_method == 2:
+        kmethods = [Methods.EqualFreq, Methods.EqualWidth]
+        self.k_general.setDisabled(self.default_method not in kmethods)
+        if self.default_method == Methods.EqualFreq:
             self.left.layout().insertWidget(1, self.k_general)
-        elif self.default_method == 3:
+        elif self.default_method == Methods.EqualWidth:
             self.left.layout().insertWidget(2, self.k_general)
 
-        self.k_specific.setDisabled(self.method not in [3, 4])
-        if self.method == 3:
+        self.k_specific.setDisabled(self.method not in kmethods)
+        if self.method == Methods.EqualFreq:
             self.bbox.layout().insertWidget(4, self.k_specific)
-        elif self.method == 4:
+        elif self.method == Methods.EqualWidth:
             self.bbox.layout().insertWidget(5, self.k_specific)
 
     def _default_disc_changed(self):
@@ -421,15 +532,37 @@ class OWDiscretize(widget.OWWidget):
         self._update_points()
         self.commit()
 
+    def _copy_to_manual(self):
+        indices = self.selected_indices()
+        # set of all methods for the current selection
+        if len(indices) != 1:
+            return
+        index = indices[0]
+        state = self.var_state[index]
+        points = state.points
+        if points is None:
+            points = ()
+        else:
+            points = tuple(state.points)
+        state = state._replace(method=Custom(points), points=None, disc_var=None)
+        self._set_var_state(index, state)
+        self.method = Methods.Custom
+        self.cutpoints = points
+        self._update_points()
+        self.commit()
+
     def _var_selection_changed(self, *_):
         indices = self.selected_indices()
         # set of all methods for the current selection
         methods = [self.var_state[i].method for i in indices]
+        self.copy_current_to_manual_button.setEnabled(
+            len(indices) == 1 and not isinstance(methods[0], Custom)
+        )
         mset = set(methods)
         self.controlbox.setEnabled(len(mset) > 0)
         if len(mset) == 1:
             method = mset.pop()
-            self.method = self._method_index(method)
+            self.method = Methods.from_method(method)
             if isinstance(method, (EqualFreq, EqualWidth)):
                 self.k = method.k
             elif isinstance(method, Custom):
@@ -444,6 +577,10 @@ class OWDiscretize(widget.OWWidget):
     def selected_indices(self):
         rows = self.varview.selectionModel().selectedRows()
         return [index.row() for index in rows]
+
+    def method_for_index(self, index):
+        state = self.var_state[index]
+        return state.method
 
     def discretized_var(self, index):
         # type: (int) -> Optional[Orange.data.DiscreteVariable]
@@ -501,12 +638,20 @@ class OWDiscretize(widget.OWWidget):
 
     def send_report(self):
         self.report_items((
-            ("Default method", self.options[self.default_method + 1]),))
+            ("Default method", self.options[self.default_method][1]),))
         if self.varmodel:
             self.report_items("Thresholds", [
                 (var.name,
                  DiscDelegate.cutsText(self.var_state[i]) or "leave numeric")
                 for i, var in enumerate(self.varmodel)])
+
+    @classmethod
+    def migrate_settings(cls, settings, version):  # pylint: disable=redefined-outer-name
+        if version is None or version < 2:
+            # was stored as int indexing Methods (but offset by 1)
+            default = settings.pop("default_method", 0)
+            default = Methods(default + 1)
+            settings["default_method_name"] = default.name
 
 
 if __name__ == "__main__":  # pragma: no cover
