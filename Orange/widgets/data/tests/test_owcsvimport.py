@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use
+# pylint: disable=no-self-use,protected-access
 import unittest
 from unittest import mock
 from contextlib import ExitStack
@@ -305,6 +305,51 @@ class TestUtils(unittest.TestCase):
         )
         df = owcsvimport.load_csv(io.BytesIO(contents), opts)
         assert_array_equal(df.values, np.array([[3.21, 3.37], [4.13, 1000.142]]))
+
+    def test_open_compressed(self):
+        content = 'abc'
+        for ext in ["txt", "gz", "bz2", "xz", "zip"]:
+            with named_file('', suffix=f".{ext}") as fname:
+                with _open_write(fname, "wt", encoding="ascii") as f:
+                    f.write(content)
+                f.close()
+
+                with owcsvimport._open(fname, "rt", encoding="ascii") as f:
+                    self.assertEqual(content, f.read())
+
+
+def _open_write(path, mode, encoding=None):
+    # pylint: disable=import-outside-toplevel
+    if mode not in {'w', 'wb', 'wt'}:
+        raise ValueError('r')
+    _, ext = os.path.splitext(path)
+    ext = ext.lower()
+    if ext == ".gz":
+        import gzip
+        return gzip.open(path, mode, encoding=encoding)
+    elif ext == ".bz2":
+        import bz2
+        return bz2.open(path, mode, encoding=encoding)
+    elif ext == ".xz":
+        import lzma
+        return lzma.open(path, mode, encoding=encoding)
+    elif ext == ".zip":
+        import zipfile
+        arh = zipfile.ZipFile(path, 'w')
+        filename, _ = os.path.splitext(os.path.basename(path))
+        f = arh.open(filename, mode="w")
+        f_close = f.close
+        # patch the f.close to also close the main archive file
+
+        def close_():
+            f_close()
+            arh.close()
+        f.close = close_
+        if 't' in mode:
+            f = io.TextIOWrapper(f, encoding=encoding)
+        return f
+    else:
+        return open(path, mode, encoding=encoding)
 
 
 if __name__ == "__main__":
