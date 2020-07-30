@@ -235,7 +235,7 @@ class LintCommand(Command):
                     awk '/[@\/]github.com[:\/]biolab\/orange3[\. ]/{ print $1; exit }')"
         git fetch -q $upstream master
         best_ancestor=$(git merge-base HEAD refs/remotes/$upstream/master)
-        .travis/check_pylint_diff $best_ancestor
+        .github/workflows/check_pylint_diff.sh $best_ancestor
         ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
 
 class CoverageCommand(Command):
