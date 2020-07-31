@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring,unsubscriptable-object
+# pylint: disable=missing-docstring,unsubscriptable-object,protected-access
 from unittest.mock import Mock
 
 from Orange.data import Table
@@ -80,3 +80,46 @@ class TestOWDiscretize(WidgetTest):
         varbg.button(OWDiscretize.Default).click()
         self.assertIsInstance(widget.method_for_index(0), Default)
         self.assertIsInstance(widget.method_for_index(2), Default)
+
+    def test_manual_cuts_edit(self):
+        widget = self.widget
+        data = Table("iris")[::5]
+        self.send_signal(self.widget.Inputs.data, data)
+        view = widget.varview
+        varbg = widget.variable_button_group
+        widget.set_default_method(OWDiscretize.Custom)
+        widget.default_cutpoints = (0, 2, 4)
+        ledit = widget.manual_cuts_edit
+        self.assertEqual(ledit.text(), "0, 2, 4")
+        ledit.setText("3, 4, 5")
+        ledit.editingFinished.emit()
+        self.assertEqual(widget.default_cutpoints, (3, 4, 5))
+        self.assertEqual(widget._current_default_method(), Custom((3, 4, 5)))
+        self.assertTrue(
+            all(widget.method_for_index(i) == Default(Custom((3, 4, 5)))
+                for i in range(len(data.domain.attributes)))
+        )
+        select_row(view, 0)
+        varbg.button(OWDiscretize.Custom).click()
+        ledit = widget.manual_cuts_specific
+        ledit.setText("1, 2, 3")
+        ledit.editingFinished.emit()
+        self.assertEqual(widget.method_for_index(0), Custom((1, 2, 3)))
+        ledit.setText("")
+        ledit.editingFinished.emit()
+        self.assertEqual(widget.method_for_index(0), Custom(()))
+
+    def test_manual_cuts_copy(self):
+        widget = self.widget
+        data = Table("iris")[::5]
+        self.send_signal(self.widget.Inputs.data, data)
+        view = widget.varview
+        select_row(view, 0)
+        varbg = widget.variable_button_group
+        varbg.button(OWDiscretize.EqualWidth).click()
+        v = widget.discretized_var(0)
+        points = tuple(v.compute_value.points)
+        cc_button = widget.copy_current_to_manual_button
+        cc_button.click()
+        self.assertEqual(widget.method_for_index(0), Custom(points))
+        self.assertEqual(varbg.checkedId(), OWDiscretize.Custom)
