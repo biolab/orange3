@@ -1,7 +1,7 @@
 import re
 from enum import IntEnum
 from collections import namedtuple
-from typing import Optional, Tuple, Iterable
+from typing import Optional, Tuple, Iterable, Union, Callable, Any
 
 from AnyQt.QtWidgets import (
     QListView, QHBoxLayout, QStyledItemDelegate, QButtonGroup, QWidget,
@@ -12,7 +12,7 @@ from AnyQt.QtCore import Qt, QTimer, QPoint
 
 import Orange.data
 import Orange.preprocess.discretize as disc
-
+from Orange.data import Variable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, vartype, unique_everseen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -31,14 +31,15 @@ EqualWidth = namedtuple("EqualWidth", ["k"])
 Remove = namedtuple("Remove", [])
 Custom = namedtuple("Custom", ["points"])
 
-METHODS = [
-    (Default, ),
-    (Leave, ),
-    (MDL, ),
-    (EqualFreq, ),
-    (EqualWidth, ),
-    (Remove, ),
-    (Custom, )
+
+MethodType = Union[
+    Default,
+    Leave,
+    MDL,
+    EqualFreq,
+    EqualWidth,
+    Remove,
+    Custom,
 ]
 
 _dispatch = {
@@ -54,18 +55,13 @@ _dispatch = {
         disc.Discretizer.create_discretized_var(var, m.points)
 }
 
-
-# Variable discretization state
+# Variable discretization state (back compat for deserialization)
 DState = namedtuple(
     "DState",
     ["method",    # discretization method
      "points",    # induced cut points
      "disc_var"]  # induced discretized variable
 )
-
-
-def is_derived(var):
-    return var.compute_value is not None
 
 
 def is_discretized(var):
@@ -88,17 +84,21 @@ class DiscDelegate(QStyledItemDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
         state = index.data(Qt.UserRole)
+        var = index.data(Qt.EditRole)
 
         if state is not None:
-            extra = self.cutsText(state)
+            if isinstance(var, Variable):
+                fmt = var.repr_val
+            else:
+                fmt = str
+            extra = self.cutsText(state, fmt)
             option.text = option.text + ": " + extra
 
     @staticmethod
-    def cutsText(state):
+    def cutsText(state: DState, fmt: Callable[[Any], str] = str):
         # This function has many branches, but they don't hurt readabability
         # pylint: disable=too-many-branches
         method = state.method
-        name = None
         # Need a better way to distinguish discretization states
         # i.e. between 'induced no points v.s. 'removed by choice'
         if state.points is None and state.disc_var is not None:
@@ -108,7 +108,7 @@ class DiscDelegate(QStyledItemDelegate):
         elif state.points == []:
             points = "<removed>"
         else:
-            points = ", ".join(map("{:.2f}".format, state.points))
+            points = ", ".join(map(fmt, state.points))
 
         if isinstance(method, Default):
             name = None
@@ -790,7 +790,7 @@ class OWDiscretize(widget.OWWidget):
         if self.varmodel:
             self.report_items("Thresholds", [
                 (var.name,
-                 DiscDelegate.cutsText(self.var_state[i]) or "leave numeric")
+                 DiscDelegate.cutsText(self.var_state[i], var.repr_val) or "leave numeric")
                 for i, var in enumerate(self.varmodel)])
 
     @classmethod
