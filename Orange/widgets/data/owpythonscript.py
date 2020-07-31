@@ -232,6 +232,7 @@ class ReturnStatement(FakeSignatureMixin, QWidget):
         self.indentation_level = 1
         self.signal_labels = {}
         self._prefix = None
+        self.df_enabled = True
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -257,7 +258,8 @@ class ReturnStatement(FakeSignatureMixin, QWidget):
         for i, signal in enumerate(OWPythonScript.signal_names):
             # adding an empty b tag like this adjusts the
             # line height to match the rest of the labels
-            signal_lbl = QLabel('<b></b>' + prefix + signal, self)
+            signal_display_name = 'df' if signal == 'data' and self.df_enabled else signal
+            signal_lbl = QLabel('<b></b>' + prefix + signal_display_name, self)
             signal_lbl.setFont(self.font())
             signal_lbl.setContentsMargins(0, 0, 0, 0)
             self.layout().addWidget(signal_lbl)
@@ -279,12 +281,29 @@ class ReturnStatement(FakeSignatureMixin, QWidget):
         if not self._prefix:
             return
         lbl = self.signal_labels[signal_name]
+        if signal_name == 'data' and self.df_enabled:
+            signal_name = 'df'
         if values_length == 0:
             text = '<b></b>' + self._prefix + signal_name
-        elif values_length == 1:
+        else:  # if values_length == 1:
             text = '<b>' + self._prefix + signal_name + '</b>'
+        if lbl.text() != text:
+            lbl.setText(text)
+            lbl.update()
+
+    def use_df_data_label(self, enabled):
+        self.df_enabled = enabled
+        lbl = self.signal_labels['data']
+        if enabled:
+            if lbl.text().startswith('<b></b>'):
+                text = '<b></b>' + self._prefix + 'df'
+            else:
+                text = '<b>' + self._prefix + 'df</b>'
         else:
-            text = '<b>' + self._prefix + signal_name + 's</b>'
+            if lbl.text().startswith('<b></b>'):
+                text = '<b></b>' + self._prefix + 'data'
+            else:
+                text = '<b>' + self._prefix + 'data</b>'
         if lbl.text() != text:
             lbl.setText(text)
             lbl.update()
@@ -822,14 +841,21 @@ class OWPythonScript(OWWidget):
             self.vim_indicator.indicator_text = text
             self.vim_indicator.update()
 
-        gui.checkBox(self.editor_controls, self, 'orangeDataTablesEnabled',
-                     'Use native data tables',
-                     tooltip='By default, in_data and out_data are pandas dataframes.')
-
         return_stmt = ReturnStatement(self.editorBox,
                                       syntax_highlighting_scheme,
                                       eFont)
         self.return_stmt = return_stmt
+
+        def update_df_label_in_signatures():
+            return_stmt.use_df_data_label(not self.orangeDataTablesEnabled)
+            self.update_fake_function_signature_labels()
+        update_df_label_in_signatures()
+
+        gui.checkBox(self.editor_controls, self, 'orangeDataTablesEnabled',
+                     'Use native data tables',
+                     tooltip='By default, in_df and out_df (pandas.DataFrame) '
+                             'replace in_data and out_data (Orange.data.table).',
+                     callback=update_df_label_in_signatures)
 
         textEditBox = QWidget(self.editorBox)
         textEditBox.setLayout(QHBoxLayout())
@@ -951,8 +977,12 @@ class OWPythonScript(OWWidget):
         self.commit()
 
     def update_fake_function_signature_labels(self):
+        display_names = ['df' if n == 'data' and not self.orangeDataTablesEnabled
+                         else n
+                         for n in self.signal_names]
         self.func_sig.update_signal_text({
-            name: len(getattr(self, name)) for name in self.signal_names
+            dn: len(getattr(self, n)) for n, dn in zip(self.signal_names,
+                                                       display_names)
         })
 
     def selectedScriptIndex(self):
@@ -1154,8 +1184,11 @@ class OWPythonScript(OWWidget):
                             None
                 all_values = [pandas_compat.table_to_frame(v, include_metas=True)
                               for v in all_values]
-            d["in_" + name + "s"] = all_values
-            d["in_" + name] = one_value
+                d["in_dfs"] = all_values
+                d["in_df"] = one_value
+            else:
+                d["in_" + name + "s"] = all_values
+                d["in_" + name] = one_value
         return d
 
     def update_namespace(self, namespace):
@@ -1175,7 +1208,13 @@ class OWPythonScript(OWWidget):
 
     def receive_outputs(self, out_vars):
         for signal in self.signal_names:
-            out_name = "out_" + signal
+            if signal == 'data' and not self.orangeDataTablesEnabled:
+                out_name = "out_df"
+                req_type = pandas.DataFrame
+            else:
+                out_name = "out_" + signal
+                req_type = self.Outputs.__dict__[signal].type
+
             output = getattr(self.Outputs, signal)
             if out_name not in out_vars:
                 self.return_stmt.update_signal_text(signal, 0)
@@ -1183,9 +1222,6 @@ class OWPythonScript(OWWidget):
                 continue
             var = out_vars[out_name]
 
-            req_type = self.Outputs.__dict__[signal].type \
-                       if not (signal == 'data' and not self.orangeDataTablesEnabled) \
-                       else pandas.DataFrame
             if not isinstance(var, req_type):
                 self.return_stmt.update_signal_text(signal, 0)
                 output.send(None)
