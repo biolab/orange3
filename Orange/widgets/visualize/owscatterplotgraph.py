@@ -834,6 +834,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject, ParameterSetter):
         x, y = self.get_coordinates()
         if x is None or len(x) == 0:
             return
+
+        self._reset_view(x, y)
         if self.scatterplot_item is None:
             if self.sample_indices is None:
                 indices = np.arange(self.n_valid)
@@ -851,7 +853,6 @@ class OWScatterPlotBase(gui.OWComponent, QObject, ParameterSetter):
             self.update_labels()
 
         self.update_density()  # Todo: doesn't work: try MDS with density on
-        self._reset_view(x, y)
 
     # Sizes
     def get_sizes(self):
