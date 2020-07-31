@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+
 from Orange.data import DiscreteVariable
 from Orange.preprocess.transformation import \
     Transformation, _Indicator, Normalizer, Lookup
@@ -61,9 +63,9 @@ class TestTransformEquality(unittest.TestCase):
         self.assertNotEqual(hash(t1), hash(t1a))
 
     def test_lookup(self):
-        t1 = Lookup(self.disc1, [0, 2, 1], 1)
-        t1a = Lookup(self.disc1a, [0, 2, 1], 1)
-        t2 = Lookup(self.disc2, [0, 2, 1], 1)
+        t1 = Lookup(self.disc1, np.array([0, 2, 1]), 1)
+        t1a = Lookup(self.disc1a, np.array([0, 2, 1]), 1)
+        t2 = Lookup(self.disc2, np.array([0, 2, 1]), 1)
         self.assertEqual(t1, t1)
         self.assertEqual(t1, t1a)
         self.assertNotEqual(t1, t2)
@@ -71,13 +73,13 @@ class TestTransformEquality(unittest.TestCase):
         self.assertEqual(hash(t1), hash(t1a))
         self.assertNotEqual(hash(t1), hash(t2))
 
-        t1 = Lookup(self.disc1, [0, 2, 1], 1)
-        t1a = Lookup(self.disc1a, [1, 2, 0], 1)
+        t1 = Lookup(self.disc1, np.array([0, 2, 1]), 1)
+        t1a = Lookup(self.disc1a, np.array([1, 2, 0]), 1)
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 
-        t1 = Lookup(self.disc1, [0, 2, 1], 1)
-        t1a = Lookup(self.disc1a, [0, 2, 1], 2)
+        t1 = Lookup(self.disc1, np.array([0, 2, 1]), 1)
+        t1a = Lookup(self.disc1a, np.array([0, 2, 1]), 2)
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 

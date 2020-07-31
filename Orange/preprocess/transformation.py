@@ -143,7 +143,7 @@ class Lookup(Transformation):
         :param variable: The variable whose transformed value is returned.
         :type variable: int or str or :obj:`~Orange.data.DiscreteVariable`
         :param lookup_table: transformations for each value of `self.variable`
-        :type lookup_table: np.array or list or tuple
+        :type lookup_table: np.array
         :param unknown: The value to be used as unknown value.
         :type unknown: float or int
         """
@@ -162,14 +162,10 @@ class Lookup(Transformation):
         return np.where(mask, self.unknown, values)
 
     def __eq__(self, other):
-        def nan_equal(x, y):
-            return x == y or np.isnan(x) and np.isnan(y)
-
         return super().__eq__(other) \
-               and len(self.lookup_table) == len(other.lookup_table) \
-               and all(nan_equal(x, y) or np.isnan(x) and np.isnan(y)
-                       for x, y in zip(self.lookup_table, other.lookup_table)) \
-               and nan_equal(self.unknown, other.unknown)
+               and np.allclose(self.lookup_table, other.lookup_table,
+                               equal_nan=True) \
+               and np.allclose(self.unknown, other.unknown, equal_nan=True)
 
     def __hash__(self):
         return hash((type(self), self.variable,
