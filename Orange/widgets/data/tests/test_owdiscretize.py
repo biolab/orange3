@@ -82,6 +82,12 @@ class TestOWDiscretize(WidgetTest):
         self.assertIsInstance(widget.method_for_index(0), Default)
         self.assertIsInstance(widget.method_for_index(2), Default)
 
+    def test_migration(self):
+        w = self.create_widget(OWDiscretize, stored_settings={
+            "default_method": 0
+        })
+        self.assertEqual(w.default_method, OWDiscretize.Leave)
+
     def test_manual_cuts_edit(self):
         widget = self.widget
         data = Table("iris")[::5]
