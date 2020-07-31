@@ -1,13 +1,14 @@
+import re
 from enum import IntEnum
 from collections import namedtuple
-from typing import Optional
+from typing import Optional, Tuple, Iterable
 
 from AnyQt.QtWidgets import (
     QListView, QHBoxLayout, QStyledItemDelegate, QButtonGroup, QWidget,
     QLineEdit
 )
-from AnyQt.QtGui import QRegularExpressionValidator
-from AnyQt.QtCore import Qt, QRegularExpression
+from AnyQt.QtGui import QValidator
+from AnyQt.QtCore import Qt
 
 import Orange.data
 import Orange.preprocess.discretize as disc
@@ -141,6 +142,71 @@ class Methods(IntEnum):
         return Methods[type(method).__name__]
 
 
+def parse_float(string: str) -> Optional[float]:
+    try:
+        return float(string)
+    except ValueError:
+        return None
+
+
+class IncreasingNumbersListValidator(QValidator):
+    """
+    Match a comma separated list of non-empty and increasing number strings.
+
+    Example
+    -------
+    >>> v = IncreasingNumbersListValidator()
+    >>> v.validate("", 0)   # Acceptable
+    (2, '', 0)
+    >>> v.validate("1", 1)  # Acceptable
+    (2, '1', 1)
+    >>> v.validate("1,,", 1)  # Intermediate
+    (1, '1,,', 1)
+    """
+    @staticmethod
+    def itersplit(string: str) -> Iterable[Tuple[int, int]]:
+        sepiter = re.finditer(r"(?<!\\),", string)
+        start = 0
+        for match in sepiter:
+            yield start, match.start()
+            start = match.end()
+        # yield the rest if any
+        if start < len(string):
+            yield start, len(string)
+
+    def validate(self, string: str, pos: int) -> Tuple[QValidator.State, str, int]:
+        state = QValidator.Acceptable
+        # Matches non-complete intermediate numbers (while editing)
+        intermediate = re.compile(r"([+-]?\s?\d*\s?\d*\.?\d*\s?\d*)")
+        values = []
+        for start, end in self.itersplit(string):
+            valuestr = string[start:end].strip()
+            if not valuestr:
+                state = min(state, QValidator.Intermediate)
+                # Middle element is empty
+                continue
+            value = parse_float(valuestr)
+            if value is None:
+                if intermediate.fullmatch(valuestr):
+                    state = min(state, QValidator.Intermediate)
+                    continue
+                return QValidator.Invalid, string, pos
+            if values and value <= values[-1]:
+                state = min(state, QValidator.Intermediate)
+            else:
+                values.append(value)
+        return state, string, pos
+
+    def fixup(self, string):
+        # type: (str) -> str
+        """
+        Fixup the input. Remove empty parts from the string.
+        """
+        parts = [string[start: end] for start, end in self.itersplit(string)]
+        parts = [part for part in parts if part.strip()]
+        return ", ".join(parts)
+
+
 class OWDiscretize(widget.OWWidget):
     # pylint: disable=too-many-instance-attributes
     name = "Discretize"
@@ -242,18 +308,7 @@ class OWDiscretize(widget.OWWidget):
             self._default_disc_changed()
         self.manual_cuts_edit.editingFinished.connect(set_manual_default_cuts)
 
-        reexp = QRegularExpression()
-        decimal = r"([+-]?(\.\d+|\d+\.?|\d+\.\d+))"
-        reexp.setPattern(rf"""
-            \s*(,?|[+-]?)?
-            \s*({decimal} # single number
-                |({decimal}(\s*,\s*{decimal})*) # concat
-                )
-            \s*,?\s* # optional trailing separator/space
-        """)
-        reexp.setPatternOptions(QRegularExpression.ExtendedPatternSyntaxOption)
-        assert reexp.isValid()
-        validator = QRegularExpressionValidator(reexp)
+        validator = IncreasingNumbersListValidator()
         self.manual_cuts_edit.setValidator(validator)
         ibox = gui.indentedBox(right, orientation=Qt.Horizontal)
         ibox.layout().addWidget(self.manual_cuts_edit)
@@ -300,6 +355,7 @@ class OWDiscretize(widget.OWWidget):
         b = gui.appendRadioButton(controlbox, "Manual", id=Methods.Custom)
 
         self.manual_cuts_specific = QLineEdit()
+        self.manual_cuts_specific.setValidator(validator)
         b.toggled[bool].connect(self.manual_cuts_specific.setEnabled)
 
         def set_manual_cuts():

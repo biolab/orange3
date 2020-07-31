@@ -1,10 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object,protected-access
+import unittest
 from unittest.mock import Mock
 
 from Orange.data import Table
 from Orange.widgets.data.owdiscretize import OWDiscretize, Default, EqualFreq, \
-    Remove, Leave, Custom
+    Remove, Leave, Custom, IncreasingNumbersListValidator
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.itemmodels import select_row
@@ -123,3 +124,26 @@ class TestOWDiscretize(WidgetTest):
         cc_button.click()
         self.assertEqual(widget.method_for_index(0), Custom(points))
         self.assertEqual(varbg.checkedId(), OWDiscretize.Custom)
+
+
+class TestValidator(unittest.TestCase):
+    def test_validate(self):
+        v = IncreasingNumbersListValidator()
+        self.assertEqual(v.validate("", 0), (v.Acceptable, '', 0))
+        self.assertEqual(v.validate("1", 1), (v.Acceptable, '1', 1))
+        self.assertEqual(v.validate(",", 0), (v.Intermediate, ',', 0))
+        self.assertEqual(v.validate("-", 0), (v.Intermediate, '-', 0))
+        self.assertEqual(v.validate("1,,", 1), (v.Intermediate, '1,,', 1))
+        self.assertEqual(v.validate("1,a,", 1), (v.Invalid, '1,a,', 1))
+        self.assertEqual(v.validate("a", 1), (v.Invalid, 'a', 1))
+        self.assertEqual(v.validate("1,1", 0), (v.Intermediate, '1,1', 0))
+        self.assertEqual(v.validate("1,12", 0), (v.Acceptable, '1,12', 0))
+
+    def test_fixup(self):
+        v = IncreasingNumbersListValidator()
+        self.assertEqual(v.fixup(""), "")
+        self.assertEqual(v.fixup("1,,2"), "1, 2")
+        self.assertEqual(v.fixup("1,,"), "1")
+        self.assertEqual(v.fixup("1,"), "1")
+        self.assertEqual(v.fixup(",1"), "1")
+        self.assertEqual(v.fixup(","), "")
