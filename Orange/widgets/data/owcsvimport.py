@@ -27,7 +27,7 @@ from contextlib import ExitStack
 import typing
 from typing import (
     List, Tuple, Dict, Optional, Any, Callable, Iterable, Hashable,
-    Union, AnyStr, BinaryIO
+    Union, AnyStr, BinaryIO, Set
 )
 
 from PyQt5.QtCore import (
@@ -486,6 +486,13 @@ class OWCSVFileImport(widget.OWWidget):
         "directory": "",
         "filter": ""
     })  # type: Dict[str, str]
+
+    # we added column type guessing to this widget, which breaks compatibility
+    # with older saved workflows, where types not guessed differently, when
+    # compatibility_mode=True widget have older guessing behaviour
+    settings_version = 2
+    compatibility_mode = settings.Setting(False, schema_only=True)
+
     MaxHistorySize = 50
 
     want_main_area = False
@@ -844,7 +851,7 @@ class OWCSVFileImport(widget.OWWidget):
 
         task.future = self.__executor.submit(
             clear_stack_on_cancel(load_csv),
-            path, opts, progress_,
+            path, opts, progress_, self.compatibility_mode
         )
         task.watcher.setFuture(task.future)
         w = task.watcher
@@ -1043,6 +1050,11 @@ class OWCSVFileImport(widget.OWWidget):
             if idx != -1:
                 self.recent_combo.setCurrentIndex(idx)
 
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if not version or version < 2:
+            settings["compatibility_mode"] = True
+
 
 @singledispatch
 def sniff_csv(file, samplesize=2 ** 20):
@@ -1165,8 +1177,8 @@ NA_VALUES = {
 }
 
 
-def load_csv(path, opts, progress_callback=None):
-    # type: (Union[AnyStr, BinaryIO], Options, ...) -> pd.DataFrame
+def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
+    # type: (Union[AnyStr, BinaryIO], Options, ..., bool) -> pd.DataFrame
     def dtype(coltype):
         # type: (ColumnType) -> Optional[str]
         if coltype == ColumnType.Numeric:
@@ -1268,7 +1280,10 @@ def load_csv(path, opts, progress_callback=None):
             na_values=na_values, keep_default_na=False,
             **numbers_format_kwds
         )
-        df = guess_types(df, dtypes, columns_ignored)
+
+        # for older workflows avoid guessing type guessing
+        if not compatibility_mode:
+            df = guess_types(df, dtypes, columns_ignored)
 
         if columns_ignored:
             # TODO: use 'usecols' parameter in `read_csv` call to
@@ -1282,7 +1297,7 @@ def load_csv(path, opts, progress_callback=None):
 
 
 def guess_types(
-        df: pd.DataFrame, dtypes: Dict[int, str], columns_ignored: List[int]
+        df: pd.DataFrame, dtypes: Dict[int, str], columns_ignored: Set[int]
 ) -> pd.DataFrame:
     """
     Guess data type for variables according to values.

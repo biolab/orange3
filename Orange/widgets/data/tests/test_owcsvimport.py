@@ -146,7 +146,8 @@ class TestOWCSVFileImport(WidgetTest):
             stored_settings={
                 "_session_items": [
                     (path, self.data_csv_types_options.as_dict())
-                ]
+                ],
+                "__version__": 2  # guessing works for versions >= 2
             }
         )
         widget.commit()
@@ -161,9 +162,37 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertIsInstance(domain["numeric2"], ContinuousVariable)
         self.assertIsInstance(domain["string"], StringVariable)
 
+    def test_backward_compatibility(self):
+        """
+        Check that widget have old behaviour on workflows with version < 2
+        """
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-csv-types.tab")
+        widget = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+            stored_settings={
+                "_session_items": [
+                    (path, self.data_csv_types_options.as_dict())
+                ],
+                "__version__": 1  # guessing works for versions >= 2
+            }
+        )
+        widget.commit()
+        self.wait_until_finished(widget)
+        output = self.get_output("Data", widget)
+        domain = output.domain
+
+        self.assertIsInstance(domain["time"], StringVariable)
+        self.assertIsInstance(domain["discrete1"], ContinuousVariable)
+        self.assertIsInstance(domain["discrete2"], StringVariable)
+        self.assertIsInstance(domain["numeric1"], ContinuousVariable)
+        self.assertIsInstance(domain["numeric2"], ContinuousVariable)
+        self.assertIsInstance(domain["string"], StringVariable)
+
 
 class TestImportDialog(GuiTest):
-    def test_dialog(self):
+    @staticmethod
+    def test_dialog():
         dirname = os.path.dirname(__file__)
         path = os.path.join(dirname, "grep_file.txt")
         d = owcsvimport.CSVImportDialog()
@@ -242,7 +271,8 @@ class TestUtils(unittest.TestCase):
             list(df.iloc[:, 1]), ["one", "three"]
         )
 
-    def test_convert(self):
+    @staticmethod
+    def test_convert():
         contents = (
             b'I, J,  K\n'
             b' , A,   \n'
