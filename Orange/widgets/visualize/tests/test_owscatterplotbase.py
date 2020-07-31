@@ -114,9 +114,9 @@ class TestOWScatterPlotBase(WidgetTest):
         xy[0][0] = 1.5
         graph.update_coordinates()
         self.assertEqual(graph.labels[0].pos().x(), 1.5)
-        xy[0][0] = 0  # This label goes out of the range
+        xy[0][0] = 0  # This label goes out of the range; reset puts it back
         graph.update_coordinates()
-        self.assertEqual(graph.labels[0].pos().x(), 2)
+        self.assertEqual(graph.labels[0].pos().x(), 0)
 
     def test_update_coordinates_and_density(self):
         graph = self.graph
