@@ -17,13 +17,16 @@ class TestOWDiscretize(WidgetTest):
         self.widget = self.create_widget(OWDiscretize)
 
     def test_empty_data(self):
-        """No crash on empty data"""
         data = Table("iris")
         widget = self.widget
-        widget.default_method = 3
         self.send_signal(self.widget.Inputs.data,
                          Table.from_domain(data.domain))
-        widget.unconditional_commit()
+        for m in (OWDiscretize.Leave, OWDiscretize.MDL, OWDiscretize.EqualFreq,
+                  OWDiscretize.EqualWidth, OWDiscretize.Remove,
+                  OWDiscretize.Custom):
+            widget.default_method = m
+            widget.unconditional_commit()
+            self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
     def test_summary(self):
         """Check if status bar is updated when data is received"""

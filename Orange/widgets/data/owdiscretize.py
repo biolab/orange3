@@ -494,7 +494,7 @@ class OWDiscretize(widget.OWWidget):
         """
         Update the induced cut points.
         """
-        if self.data is None or not len(self.data):
+        if self.data is None:
             return
 
         def induce_cuts(method, data, var):
@@ -675,7 +675,7 @@ class OWDiscretize(widget.OWWidget):
 
     def commit(self):
         output = None
-        if self.data is not None and len(self.data):
+        if self.data is not None:
             domain = self.discretized_domain()
             output = self.data.transform(domain)
 
