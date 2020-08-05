@@ -14,7 +14,7 @@ import Orange.data
 import Orange.preprocess.discretize as disc
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils import itemmodels, vartype, unique_everseen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
@@ -614,7 +614,14 @@ class OWDiscretize(widget.OWWidget):
         self.copy_current_to_manual_button.setEnabled(
             len(indices) == 1 and not isinstance(methods[0], Custom)
         )
-        mset = set(methods)
+
+        def key(method):
+            if isinstance(method, Default):
+                return Default, (None, )
+            return type(method), tuple(method)
+
+        mset = list(unique_everseen(methods, key=key))
+
         self.controlbox.setEnabled(len(mset) > 0)
         if len(mset) == 1:
             method = mset.pop()
