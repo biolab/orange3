@@ -26,7 +26,7 @@ from contextlib import ExitStack
 
 import typing
 from typing import (
-    List, Tuple, Dict, Optional, Any, Callable, Iterable, Hashable,
+    List, Tuple, Dict, Optional, Any, Callable, Iterable,
     Union, AnyStr, BinaryIO, Set
 )
 
@@ -51,7 +51,9 @@ import Orange.data
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.concurrent import PyOwned
-from Orange.widgets.utils import textimport, concurrent as qconcurrent
+from Orange.widgets.utils import (
+    textimport, concurrent as qconcurrent, unique_everseen
+)
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
@@ -1033,7 +1035,7 @@ class OWCSVFileImport(widget.OWWidget):
                 sitems.append(item_)
 
         items = sitems + items
-        items = unique(items, key=lambda t: pathnormalize(t[0]))
+        items = unique_everseen(items, key=lambda t: pathnormalize(t[0]))
 
         curr = self.recent_combo.currentIndex()
         if curr != -1:
@@ -1490,32 +1492,6 @@ def index_where(iterable, pred):
             return i
     return None
 
-
-def unique(iterable, key=None):
-    # type: (Iterable[T], Optional[Callable[[T], Hashable]]) -> Iterable[T]
-    """
-    Return an iterator over unique elements of `iterable`.
-
-    If `key` is supplied it is used as a substitute for determining
-    'uniqueness' of elements.
-
-    Parameters
-    ----------
-    iterable : Iterable[T]
-    key : Callable[[T], Hashable]
-
-    Returns
-    -------
-    unique : Iterable[T]
-    """
-    seen = set()
-    if key is None:
-        key = lambda t: t
-    for el in iterable:
-        el_k = key(el)
-        if el_k not in seen:
-            seen.add(el_k)
-            yield el
 
 
 def samepath(p1, p2):
