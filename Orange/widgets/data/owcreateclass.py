@@ -86,6 +86,17 @@ class ValueFromStringSubstring(Transformation):
         res[nans] = np.nan
         return res
 
+    def __eq__(self, other):
+        return super().__eq__(other) \
+               and self.patterns == other.patterns \
+               and self.case_sensitive == other.case_sensitive \
+               and self.match_beginning == other.match_beginning
+
+    def __hash__(self):
+        return hash((type(self), self.variable,
+                     tuple(self.patterns),
+                     self.case_sensitive, self.match_beginning))
+
 
 class ValueFromDiscreteSubstring(Lookup):
     """

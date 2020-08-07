@@ -932,7 +932,7 @@ class TestUtils(TestCase):
         self.assertEqual(d[1], 1)
         self.assertEqual(d[-1], "<->")
         # must be sufficiently different from defaultdict to warrant existence
-        self.assertEqual(d, {1: 1, 2: 2})
+        self.assertEqual(d, DictMissingConst("<->", {1: 1, 2: 2}))
 
     def test_as_float_or_nan(self):
         a = np.array(["a", "1.1", ".2", "NaN"], object)
@@ -995,6 +995,42 @@ class TestLookupMappingTransform(TestCase):
         assert_array_equal(r, [np.nan, 0, 1, np.nan])
         r_ = lookup_.transform(c)
         assert_array_equal(r_, [np.nan, 0, 1, np.nan])
+
+    def test_equality(self):
+        v1 = DiscreteVariable("v1", values=tuple("abc"))
+        v2 = DiscreteVariable("v1", values=tuple("abc"))
+        v3 = DiscreteVariable("v3", values=tuple("abc"))
+
+        map1 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map2 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map3 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v2, map2, float)
+        t2 = LookupMappingTransform(v3, map3, float)
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
+
+        map1a = DictMissingConst(np.nan, {"a": 2, "b": 1, "c": 0})
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1a, float)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        map1a = DictMissingConst(2, {"a": 2, "b": 0, "c": 1})
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1a, float)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1, int)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
 
 
 class TestGroupLessFrequentItemsDialog(GuiTest):

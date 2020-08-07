@@ -83,6 +83,12 @@ class Discretizer(Transformation):
         dvar.to_sql = to_sql
         return dvar
 
+    def __eq__(self, other):
+        return super().__eq__(other) and self.points == other.points
+
+    def __hash__(self):
+        return hash((type(self), self.variable, tuple(self.points)))
+
 
 class BinSql:
     def __init__(self, var, points):

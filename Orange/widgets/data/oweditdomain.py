@@ -2545,6 +2545,14 @@ class DictMissingConst(dict):
     def __missing__(self, key):
         return self.__missing
 
+    def __eq__(self, other):
+        return super().__eq__(other) and isinstance(other, DictMissingConst) \
+            and (self.__missing == other[()]  # get `__missing`
+                 or np.isnan(self.__missing) and np.isnan(other[()]))
+
+    def __hash__(self):
+        return hash((self.__missing, frozenset(self.items())))
+
 
 def make_dict_mapper(
         mapping: Mapping, dtype: Optional[DType] = None
@@ -2822,6 +2830,14 @@ class LookupMappingTransform(Transformation):
 
     def __reduce_ex__(self, protocol):
         return type(self), (self.variable, self.mapping, self.dtype)
+
+    def __eq__(self, other):
+        return self.variable == other.variable \
+               and self.mapping == other.mapping \
+               and self.dtype == other.dtype
+
+    def __hash__(self):
+        return hash((type(self), self.variable, self.mapping, self.dtype))
 
 
 @singledispatch

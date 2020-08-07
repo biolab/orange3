@@ -5,8 +5,10 @@ import unittest
 from time import struct_time, mktime
 
 import numpy as np
+
+from Orange.data import ContinuousVariable
 from Orange.preprocess.discretize import \
-    _time_binnings, time_binnings, BinDefinition
+ _time_binnings, time_binnings, BinDefinition, Discretizer
 
 
 # pylint: disable=redefined-builtin
@@ -17,12 +19,12 @@ def create(year=1970, month=1, day=1, hour=0, min=0, sec=0):
 class TestTimeBinning(unittest.TestCase):
     def setUp(self):
         self.dates = [mktime(x) for x in
-            [(1975, 6, 9, 10, 0, 0, 0, 161, 0),
-             (1975, 6, 9, 10, 50, 0, 0, 161, 0),
-             (1975, 6, 9, 11, 40, 0, 0, 161, 0),
-             (1975, 6, 9, 12, 30, 0, 0, 161, 0),
-             (1975, 6, 9, 13, 20, 0, 0, 161, 0),
-             (1975, 6, 9, 14, 10, 0, 0, 161, 0)]]
+                      [(1975, 6, 9, 10, 0, 0, 0, 161, 0),
+                       (1975, 6, 9, 10, 50, 0, 0, 161, 0),
+                       (1975, 6, 9, 11, 40, 0, 0, 161, 0),
+                       (1975, 6, 9, 12, 30, 0, 0, 161, 0),
+                       (1975, 6, 9, 13, 20, 0, 0, 161, 0),
+                       (1975, 6, 9, 14, 10, 0, 0, 161, 0)]]
 
     def test_binning(self):
         def tr1(s):
@@ -750,6 +752,29 @@ class TestBinDefinition(unittest.TestCase):
         np.testing.assert_equal(bindef.thresholds, thresholds)
         self.assertEqual(bindef.start, 1)
         self.assertEqual(bindef.nbins, 2)
+
+
+class TestDiscretizer(unittest.TestCase):
+    def test_equality(self):
+        v1 = ContinuousVariable("x")
+        v2 = ContinuousVariable("x", number_of_decimals=42)
+        v3 = ContinuousVariable("y")
+        assert v1 == v2
+
+        t1 = Discretizer(v1, [0, 2, 1])
+        t1a = Discretizer(v2, [0, 2, 1])
+        t2 = Discretizer(v3, [0, 2, 1])
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
+
+        t1 = Discretizer(v1, [0, 2, 1])
+        t1a = Discretizer(v2, [1, 2, 0])
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
 
 
 if __name__ == '__main__':
