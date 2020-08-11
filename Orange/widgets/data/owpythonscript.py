@@ -27,6 +27,9 @@ from AnyQt.QtCore import Qt, QByteArray, QItemSelectionModel, QSize, \
 
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
+from qtconsole.client import QtHBChannel, QtKernelClient
+from qtconsole.manager import QtKernelManager
+from traitlets import DottedObjectName, Type
 
 from Orange.canvas import config
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
@@ -597,6 +600,22 @@ class ConsoleWidget(RichJupyterWidget):
         return super()._event_filter_console_keypress(event)
 
 
+# TODO it takes a while for the kernel and client to start up,
+# the default 3 second timeout seems too short.
+# it's likely a bug that it takes that long, but for now,
+# this monkeypatch making it a 10 second timeout works fine
+class HBChannel(QtHBChannel):
+    time_to_dead = 10.0
+
+
+class KernelClient(QtKernelClient):
+    hb_channel_class = Type(HBChannel)
+
+
+class KernelManager(QtKernelManager):
+    client_class = DottedObjectName('Orange.widgets.data.owpythonscript.KernelClient')
+
+
 class OWPythonScript(OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
@@ -639,7 +658,7 @@ class OWPythonScript(OWWidget):
     shared_namespaces = defaultdict(dict)
 
     multi_kernel_manager = MultiKernelManager()
-    multi_kernel_manager.kernel_manager_class = 'qtconsole.manager.QtKernelManager'
+    multi_kernel_manager.kernel_manager_class = 'Orange.widgets.data.owpythonscript.KernelManager'
 
     script_state_manager = ScriptStateManager()
 
