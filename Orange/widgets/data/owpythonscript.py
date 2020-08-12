@@ -444,11 +444,10 @@ class OrangePythonEditor(PythonEditor):
             super().keyPressEvent(event)
 
 
-
 class OrangeConsoleWidget(RichJupyterWidget):
     becomes_ready = Signal()
 
-    execution_finished = Signal()
+    execution_finished = Signal(bool)  # False for error
 
     results_ready = Signal(dict)
 
@@ -485,7 +484,7 @@ class OrangeConsoleWidget(RichJupyterWidget):
         )
         self.collect_vars_comm.on_msg(self.__on_done)
         self.execution_finished.connect(
-            lambda: self.collect_vars_comm.send({})
+            lambda success: self.collect_vars_comm.send({}) if success else None
         )
 
         def err():
@@ -579,12 +578,13 @@ class OrangeConsoleWidget(RichJupyterWidget):
         self.in_prompt = self.__default_in_prompt
 
         if msg['content']['status'] != 'ok':
+            self.execution_finished.emit(False)
             self._show_interpreter_prompt(self.__prompt_num)
             return super()._handle_execute_reply(msg)
 
         self._update_prompt(self.__prompt_num)
 
-        self.execution_finished.emit()
+        self.execution_finished.emit(True)
 
     # override
     def _handle_kernel_died(self, since_last_heartbeat):

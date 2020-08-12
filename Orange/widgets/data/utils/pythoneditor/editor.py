@@ -1336,9 +1336,12 @@ class PythonEditor(QPlainTextEdit):
             return [makeSelection(self.textCursor())]
 
     def insertFromMimeData(self, source):
-        pass  # suppress docstring for non-public method
-        if source.hasFormat(self._rectangularSelection.MIME_TYPE):
-            self._rectangularSelection.paste(source)
+        if source.hasUrls():
+            cursor = self.textCursor()
+            filenames = [url.toLocalFile() for url in source.urls()]
+            text = ', '.join("'" + f.replace("'", "'\"'\"'") + "'"
+                             for f in filenames)
+            cursor.insertText(text)
         else:
             super(PythonEditor, self).insertFromMimeData(source)
 
