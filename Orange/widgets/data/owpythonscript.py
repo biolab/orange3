@@ -432,7 +432,20 @@ out_data = table_from_frame(out_df)
     }]
 
 
-class ConsoleWidget(RichJupyterWidget):
+class OrangePythonEditor(PythonEditor):
+    run_event = Signal()
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.InsertLineSeparator):
+            # run on Shift+Enter, Ctrl+Enter
+            self.run_event.emit()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+
+
+class OrangeConsoleWidget(RichJupyterWidget):
     becomes_ready = Signal()
 
     execution_finished = Signal()
@@ -800,11 +813,13 @@ class OWPythonScript(OWWidget):
                                      eFont)
         self.func_sig = func_sig
 
-        editor = PythonEditor(self)
+        editor = OrangePythonEditor(self)
         editor.setFont(eFont)
 
         # TODO should we care about displaying these warnings?
         # editor.userWarning.connect()
+
+        editor.run_event.connect(self.commit)
 
         self.vim_box = gui.hBox(self.editor_controls, spacing=20)
         self.vim_indicator = VimIndicator(self.vim_box)
@@ -885,7 +900,7 @@ class OWPythonScript(OWWidget):
         kernel_client = kernel_manager.client()
         kernel_client.start_channels()
 
-        jupyter_widget = ConsoleWidget()
+        jupyter_widget = OrangeConsoleWidget()
         jupyter_widget.results_ready.connect(self.receive_outputs)
 
         jupyter_widget.kernel_manager = kernel_manager

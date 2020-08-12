@@ -802,7 +802,7 @@ class PythonEditor(QPlainTextEdit):
                     cursor.deleteChar()
                 cursor.insertText(text)
 
-        if event.matches(QKeySequence.InsertParagraphSeparator):
+        if event.matches(QKeySequence.InsertParagraphSeparator) or event.matches(QKeySequence.InsertLineSeparator):
             if self._vim is not None:
                 if self._vim.keyPressEvent(event):
                     return
@@ -1412,12 +1412,11 @@ class LineNumberArea(QWidget):
                 painter.drawText(self._LEFT_MARGIN, top,
                                  availableWidth, availableHeight,
                                  Qt.AlignRight, number)
-                if boundingRect.height() >= singleBlockHeight * 2:  # wrapped block
-                    pass
-                    # painter.fillRect(1, top + singleBlockHeight,
-                    #                  self.__width - 2,
-                    #                  boundingRect.height() - singleBlockHeight - 2,
-                    #                  Qt.darkGreen)
+                # if boundingRect.height() >= singleBlockHeight * 2:  # wrapped block
+                #     painter.fillRect(1, top + singleBlockHeight,
+                #                      self.__width - 2,
+                #                      boundingRect.height() - singleBlockHeight - 2,
+                #                      Qt.darkGreen)
 
             block = block.next()
             boundingRect = self._editor.blockBoundingRect(block)
