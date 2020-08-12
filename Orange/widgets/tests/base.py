@@ -800,7 +800,7 @@ class ProjectionWidgetTestMixin:
         key, value = ("Fonts", "Title", "Italic"), True
         self.widget.set_visual_settings(key, value)
         font.setPointSize(20)
-        self.assertFontEqual(graph.title_item.item.font(), font)
+        self.assertFontEqual(graph.parameter_setter.title_item.item.font(), font)
 
         key, value = ("Fonts", "Label", "Font size"), 10
         self.widget.set_visual_settings(key, value)
@@ -816,7 +816,7 @@ class ProjectionWidgetTestMixin:
         key, value = ("Fonts", "Categorical legend", "Italic"), True
         self.widget.set_visual_settings(key, value)
         font.setPointSize(14)
-        legend_item = list(graph.cat_legend_items)[0]
+        legend_item = list(graph.parameter_setter.cat_legend_items)[0]
         self.assertFontEqual(legend_item[1].item.font(), font)
 
         key, value = ("Fonts", "Numerical legend", "Font size"), 12
@@ -828,12 +828,12 @@ class ProjectionWidgetTestMixin:
         simulate.combobox_activate_item(self.widget.controls.attr_shape,
                                         self.data.domain[4].name)
         font.setPointSize(12)
-        self.assertFontEqual(graph.num_legend.items[0][0].font, font)
+        self.assertFontEqual(graph.parameter_setter.num_legend.items[0][0].font, font)
 
         key, value = ("Annotations", "Title", "Title"), "Foo"
         self.widget.set_visual_settings(key, value)
-        self.assertEqual(graph.title_item.item.toPlainText(), "Foo")
-        self.assertEqual(graph.title_item.text, "Foo")
+        self.assertEqual(graph.parameter_setter.title_item.item.toPlainText(), "Foo")
+        self.assertEqual(graph.parameter_setter.title_item.text, "Foo")
 
     def assertFontEqual(self, font1, font2):
         self.assertEqual(font1.family(), font2.family())

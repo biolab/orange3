@@ -1,5 +1,4 @@
 """Common gui.OWComponent components."""
-import copy
 
 from AnyQt.QtCore import Qt, QRectF
 from AnyQt.QtGui import QColor, QFont
@@ -7,35 +6,34 @@ from AnyQt.QtWidgets import QGraphicsEllipseItem
 
 import pyqtgraph as pg
 from Orange.widgets.visualize.owscatterplotgraph import (
-    OWScatterPlotBase, ParameterSetter as Setter
+    OWScatterPlotBase, ScatterBaseParameterSetter
 )
 from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.plotutils import (
     MouseEventDelegate, DraggableItemsViewBox
 )
 
-
-class ParameterSetter(Setter):
+class AnchorParameterSetter(ScatterBaseParameterSetter):
     ANCHOR_LABEL = "Anchor"
-    initial_settings = copy.deepcopy(Setter.initial_settings)
-    initial_settings[Setter.LABELS_BOX].update({
-        ANCHOR_LABEL: Updater.FONT_SETTING
-    })
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, master):
+        super().__init__(master)
         self.anchor_font = QFont()
 
     def update_setters(self):
+        super().update_setters()
+        self.initial_settings[self.LABELS_BOX].update({
+            self.ANCHOR_LABEL: self.FONT_SETTING
+        })
+
         def update_anchors(**settings):
             self.anchor_font = Updater.change_font(self.anchor_font, settings)
-            self.update_anchors()
+            self.master.update_anchors()
 
-        super().update_setters()
         self._setters[self.LABELS_BOX][self.ANCHOR_LABEL] = update_anchors
 
 
-class OWGraphWithAnchors(OWScatterPlotBase, ParameterSetter):
+class OWGraphWithAnchors(OWScatterPlotBase):
     """
     Graph for projections in which dimensions can be manually moved
 
@@ -50,6 +48,7 @@ class OWGraphWithAnchors(OWScatterPlotBase, ParameterSetter):
         self._tooltip_delegate = MouseEventDelegate(self.help_event,
                                                     self.show_indicator_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
+        self.parameter_setter = AnchorParameterSetter(self)
 
     def clear(self):
         super().clear()

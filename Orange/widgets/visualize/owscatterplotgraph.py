@@ -10,7 +10,7 @@ import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
     QObject
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
-    QPainter, QFont
+    QPainter
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
     QGraphicsRectItem
 
@@ -30,7 +30,7 @@ from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
     OWScatterPlotGraph as OWScatterPlotGraphObs
 )
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
-    BaseParameterSetter as Setter
+    CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import (
     HelpEventDelegate as EventDelegate, InteractiveViewBox as ViewBox,
     PaletteItemSample, SymbolItemSample, AxisItem
@@ -338,7 +338,7 @@ class AxisItem(AxisItem):
                 for x in values]
 
 
-class ParameterSetter(Setter):
+class ScatterBaseParameterSetter(CommonParameterSetter):
     CAT_LEGEND_LABEL = "Categorical legend"
     NUM_LEGEND_LABEL = "Numerical legend"
     NUM_LEGEND_SETTING = {
@@ -346,25 +346,26 @@ class ParameterSetter(Setter):
         Updater.IS_ITALIC_LABEL: (None, False),
     }
 
-    initial_settings = {
-        Setter.LABELS_BOX: {
-            Setter.FONT_FAMILY_LABEL: Updater.FONT_FAMILY_SETTING,
-            Setter.TITLE_LABEL: Updater.FONT_SETTING,
-            Setter.LABEL_LABEL: Updater.FONT_SETTING,
-            CAT_LEGEND_LABEL: Updater.FONT_SETTING,
-            NUM_LEGEND_LABEL: NUM_LEGEND_SETTING,
-        },
-        Setter.ANNOT_BOX: {
-            Setter.TITLE_LABEL: {Setter.TITLE_LABEL: ("", "")},
-        }
-    }
-
-    def __init__(self):
+    def __init__(self, master):
         super().__init__()
+        self.master = master
         self.cat_legend_settings = {}
         self.num_legend_settings = {}
 
     def update_setters(self):
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
+                self.LABEL_LABEL: self.FONT_SETTING,
+                self.CAT_LEGEND_LABEL: self.FONT_SETTING,
+                self.NUM_LEGEND_LABEL: self.NUM_LEGEND_SETTING,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
+            }
+        }
+
         def update_cat_legend(**settings):
             self.cat_legend_settings.update(**settings)
             Updater.update_legend_font(self.cat_legend_items, **settings)
@@ -379,24 +380,28 @@ class ParameterSetter(Setter):
 
     @property
     def title_item(self):
-        return self.plot_widget.getPlotItem().titleLabel
+        return self.master.plot_widget.getPlotItem().titleLabel
 
     @property
     def cat_legend_items(self):
-        items = self.color_legend.items
+        items = self.master.color_legend.items
         if items and items[0] and isinstance(items[0][0], PaletteItemSample):
             items = []
-        return itertools.chain(self.shape_legend.items, items)
+        return itertools.chain(self.master.shape_legend.items, items)
 
     @property
     def num_legend(self):
-        items = self.color_legend.items
+        items = self.master.color_legend.items
         if items and items[0] and isinstance(items[0][0], PaletteItemSample):
-            return self.color_legend
+            return self.master.color_legend
         return None
 
+    @property
+    def labels(self):
+        return self.master.labels
 
-class OWScatterPlotBase(gui.OWComponent, QObject, ParameterSetter):
+
+class OWScatterPlotBase(gui.OWComponent, QObject):
     """
     Provide a graph component for widgets that show any kind of point plot
 
@@ -563,6 +568,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject, ParameterSetter):
         self.view_box.sigRangeChangedManually.connect(self.update_labels)
 
         self.timer = None
+
+        self.parameter_setter = ScatterBaseParameterSetter(self)
 
     def _create_legend(self, anchor):
         legend = LegendItem()
@@ -1255,7 +1262,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject, ParameterSetter):
             ti.setPos(xp, yp)
             self.plot_widget.addItem(ti)
             self.labels.append(ti)
-            ti.setFont(self.label_font)
+            ti.setFont(self.parameter_setter.label_font)
 
     def _signal_too_many_labels(self, too_many):
         if self._too_many_labels != too_many:
@@ -1422,10 +1429,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject, ParameterSetter):
             else:
                 self._update_color_legend(color_labels)
         self.update_legend_visibility()
-        Updater.update_legend_font(self.cat_legend_items,
-                                   **self.cat_legend_settings)
-        Updater.update_num_legend_font(self.num_legend,
-                                       **self.num_legend_settings)
+        Updater.update_legend_font(self.parameter_setter.cat_legend_items,
+                                   **self.parameter_setter.cat_legend_settings)
+        Updater.update_num_legend_font(self.parameter_setter.num_legend,
+                                       **self.parameter_setter.num_legend_settings)
 
     def _update_shape_legend(self, labels):
         self.shape_legend.clear()

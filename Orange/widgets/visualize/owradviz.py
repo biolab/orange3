@@ -264,7 +264,7 @@ class OWRadvizGraph(OWGraphWithAnchors):
                     label = label[:MAX_LABEL_LEN - 3] + "..."
 
             anchor.setText(label)
-            anchor.setFont(self.anchor_font)
+            anchor.setFont(self.parameter_setter.anchor_font)
             label_len = min(MAX_LABEL_LEN, len(label))
             anchor.setColor(QColor(0, 0, 0))
 
