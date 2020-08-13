@@ -406,32 +406,6 @@ if TYPE_CHECKING:
     })
 
 
-def get_default_scripts():
-    return [{
-        "filename": "pandas_example.py",
-        "script": """\
-from Orange.data.pandas_compat import table_to_frame, table_from_frame
-
-# Convert in_data: Orange.data.Table to pandas.DataFrame
-in_df = table_to_frame(in_data)
-# To include meta attributes:
-# in_df = table_to_frame(in_data, include_metas=True)
-
-
-print('Hello world')
-out_df = in_df
-
-
-# Convert out_df: pandas.DataFrame to Orange.data.Table
-out_data = table_from_frame(out_df)
-# To interpret strings as discrete attributes:
-# out_data = table_from_frame(out_df, force_nominal=True)
-
-# Consider using Select Columns to set out_data features as target/meta\
-"""
-    }]
-
-
 class OrangePythonEditor(PythonEditor):
     run_event = Signal()
 
@@ -655,7 +629,7 @@ class OWPythonScript(OWWidget):
     signal_names = ("data", "learner", "classifier", "object")
 
     settings_version = 2
-    currentScriptIndex = Setting(0)
+    script_text = Setting("print('Hello world!')")
 
     vimModeEnabled = Setting(False)
     orangeDataTablesEnabled = Setting(False)
@@ -925,10 +899,9 @@ class OWPythonScript(OWWidget):
         return super().sizeHint().expandedTo(QSize(800, 600))
 
     def _restoreState(self):
+        scripts = []
         if not os.path.exists(SCRIPTS_FOLDER_PATH):
             os.makedirs(SCRIPTS_FOLDER_PATH)
-            # save default scripts to folder
-            scripts = [Script.fromdict(s) for s in get_default_scripts()]
         else:
             script_paths = glob.glob(os.path.join(SCRIPTS_FOLDER_PATH, '*.py'))
             scripts = []
@@ -938,13 +911,20 @@ class OWPythonScript(OWWidget):
                 f.close()
 
         self.libraryList.wrap(scripts)
-        select_row(self.libraryView, self.currentScriptIndex)
 
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
 
+        for i, script in enumerate(s.script for s in scripts):
+            if self.script_text == script:
+                select_row(self.libraryView, i)
+                break
+        else:
+            self.editor.text = self.script_text
+
     def _saveState(self):
         self.splitterState = bytes(self.splitCanvas.saveState())
+        self.script_text = self.editor.text
 
     def handle_input(self, obj, sig_id, signal):
         sig_id = sig_id[0]
@@ -1083,7 +1063,6 @@ class OWPythonScript(OWWidget):
                 return
 
             self.editor.setDocument(self.documentForScript(current))
-            self.currentScriptIndex = current
 
     def documentForScript(self, script=0):
         if not isinstance(script, Script):
