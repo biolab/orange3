@@ -41,6 +41,13 @@ class OrangeIPythonKernel(IPythonKernel):
                 del self.shell.user_ns[name]
                 self.shell.user_ns_hidden.pop(name, None)
 
+        # prepend script to set single signal values,
+        # e.g. in_data = in_datas[0])
+        # this is done in the console to avoid sending over the same object twice
+        for signal_s in list(input_vars)[:]:
+            v = input_vars[signal_s][0]
+            input_vars[signal_s[:-1]] = v
+
         self.shell.push(input_vars)
         self.comm_variables[comm] = list(input_vars)
 

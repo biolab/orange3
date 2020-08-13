@@ -636,14 +636,6 @@ class OWPythonScript(OWWidget):
 
     splitterState: Optional[bytes] = Setting(None)
 
-    # Widgets in the same schema share namespace through a dictionary whose
-    # key is self.signalManager. ales-erjavec expressed concern (and I fully
-    # agree!) about widget being aware of the outside world. I am leaving this
-    # anyway. If this causes any problems in the future, replace this with
-    # shared_namespaces = {} and thus use a common namespace for all instances
-    # of # PythonScript even if they are in different schemata.
-    shared_namespaces = defaultdict(dict)
-
     multi_kernel_manager = MultiKernelManager()
     multi_kernel_manager.kernel_manager_class = 'Orange.widgets.data.owpythonscript.KernelManager'
 
@@ -1154,33 +1146,21 @@ class OWPythonScript(OWWidget):
         QDesktopServices.openUrl(QUrl.fromLocalFile(SCRIPTS_FOLDER_PATH))
 
     def initial_locals_state(self):
-        d = self.shared_namespaces[self.signalManager].copy()
+        """
+        Returns lists of input signals.
+        """
+        d = {}
         for name in self.signal_names:
             value = getattr(self, name)
             if len(value) == 0:
                 continue
             all_values = list(value.values())
-            one_value = all_values[0] if len(all_values) == 1 else None
             if name == 'data' and not self.orangeDataTablesEnabled:
-                one_value = pandas_compat.table_to_frame(one_value, include_metas=True) \
-                            if one_value is not None else \
-                            None
+                name = 'df'
                 all_values = [pandas_compat.table_to_frame(v, include_metas=True)
                               for v in all_values]
-                d["in_dfs"] = all_values
-                d["in_df"] = one_value
-            else:
-                d["in_" + name + "s"] = all_values
-                d["in_" + name] = one_value
+            d["in_" + name + "s"] = all_values
         return d
-
-    def update_namespace(self, namespace):
-        not_saved = reduce(set.union,
-                           ({f"in_{name}s", f"in_{name}", f"out_{name}"}
-                            for name in self.signal_names))
-        self.shared_namespaces[self.signalManager].update(
-            {name: value for name, value in namespace.items()
-             if name not in not_saved})
 
     def commit(self):
         self.Warning.clear()
