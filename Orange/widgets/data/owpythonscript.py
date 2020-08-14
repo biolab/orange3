@@ -332,6 +332,12 @@ class Script:
             os.rename(old_fullname, self.fullname)
             OWPythonScript.script_state_manager.scriptRenamed.emit(old_filename, filename)
 
+    def reload(self):
+        if self.flags & self.MissingFromFilesystem:
+            raise FileNotFoundError()
+        with open(self.fullname) as f:
+            self._script = f.readlines()
+
     def refresh(self, new_script, set_modified=True):
         if self.script != new_script:
             if set_modified:
@@ -801,10 +807,14 @@ class OWPythonScript(OWWidget):
         )
         reveal_folder.triggered.connect(self.revealFolder)
 
+        reload_library = QAction('Reload Library', self)
+        reload_library.triggered.connect(self.reloadLibrary)
+
         menu = QMenu(w)
         menu.addAction(remove_script)
         menu.addAction(save_to_file)
         menu.addAction(reveal_folder)
+        menu.addAction(reload_library)
         action.setMenu(menu)
         button = w.addAction(action)
         button.setPopupMode(QToolButton.InstantPopup)
@@ -1170,15 +1180,12 @@ class OWPythonScript(OWWidget):
         index = self.selectedScriptIndex()
         if index is not None:
             script = self.libraryList[index]
+            script.reload()
             self.editor.text = script.script
-            if script.flags & Script.MissingFromFilesystem:
-                # force a save
-                self.commitChangesToLibrary()
-            else:
-                self.editor.document().setModified(False)
-                # when restoring to an empty string,
-                # onModificationChanged(False) is not called for some reason
-                script.flags &= ~Script.Modified
+            self.editor.document().setModified(False)
+            # when restoring to an empty string,
+            # onModificationChanged(False) is not called for some reason
+            script.flags &= ~Script.Modified
 
     def saveScript(self):
         index = self.selectedScriptIndex()
@@ -1208,6 +1215,26 @@ class OWPythonScript(OWWidget):
 
     def revealFolder(self):
         QDesktopServices.openUrl(QUrl.fromLocalFile(SCRIPTS_FOLDER_PATH))
+
+    def reloadLibrary(self):
+        scripts = []
+        if not os.path.exists(SCRIPTS_FOLDER_PATH):
+            os.makedirs(SCRIPTS_FOLDER_PATH)
+        else:
+            script_paths = glob.glob(os.path.join(SCRIPTS_FOLDER_PATH, '*.py'))
+            scripts = []
+            for pathname in script_paths:
+                f = open(pathname, 'r')
+                scripts += [Script(f.read(), os.path.basename(pathname), flags=0)]
+                f.close()
+        scripts.extend([
+            s for s in self.libraryList
+            if s.flags & Script.MissingFromFilesystem
+        ])
+        self.libraryList.wrap(scripts)
+        if not scripts:
+            self.addScript()
+        select_row(self.libraryView, 0)
 
     def initial_locals_state(self):
         """
