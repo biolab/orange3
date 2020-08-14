@@ -373,8 +373,12 @@ class TestOWPythonScript(WidgetTest):
                       self.widget.console._control.toPlainText())
 
     def test_migrate_0(self):
+        class _Script:
+            def __init__(self, name, script):
+                self.name = name
+                self.script = script
         w = self.create_widget(OWPythonScript, {
-            "libraryListSource": [Script("A", "1")],
+            "libraryListSource": [_Script('A', '1')],
             "__version__": 0
         })
         self.assertEqual(w.editor.text, "1")

@@ -352,13 +352,6 @@ class Script:
             f.write(self._script)
         self.flags &= ~(self.Modified | self.MissingFromFilesystem)
 
-    def asdict(self) -> '_ScriptData':
-        return dict(script=self.script, filename=self.filename)
-
-    @classmethod
-    def fromdict(cls, state: '_ScriptData') -> 'Script':
-        return Script(state["script"], state["filename"])
-
 
 class ScriptItemDelegate(QStyledItemDelegate):
     # pylint: disable=no-self-use
@@ -434,13 +427,6 @@ def select_row(view, row):
     selmodel = view.selectionModel()
     selmodel.select(view.model().index(row, 0),
                     QItemSelectionModel.ClearAndSelect)
-
-
-if TYPE_CHECKING:
-    # pylint: disable=used-before-assignment
-    _ScriptData = TypedDict("_ScriptData", {
-        "script": str, "filename": Optional[str]
-    })
 
 
 class OrangePythonEditor(PythonEditor):
@@ -665,9 +651,9 @@ class OWPythonScript(OWWidget):
 
     signal_names = ("data", "learner", "classifier", "object")
 
-    settings_version = 2
-    current_script: Optional[tuple] = Setting(None)
-    other_scratch_scripts: list = Setting([])
+    settings_version = 3
+    current_script: Optional[tuple] = Setting(None, schema_only=True)
+    other_scratch_scripts: list = Setting([], schema_only=True)
 
     vimModeEnabled = Setting(False)
     orangeDataTablesEnabled = Setting(False)
@@ -1307,10 +1293,22 @@ class OWPythonScript(OWWidget):
     @classmethod
     def migrate_settings(cls, settings, version):
         if version is not None and version < 2:
-            scripts = settings.pop("libraryListSource")  # type: List[Script]
-            library = [dict(script=s.script, filename=s.filename)
-                       for s in scripts]  # type: List[_ScriptData]
-            settings["scriptLibrary"] = library
+            scripts = settings.pop("libraryListSource")
+            library = [(s.__dict__['script'],
+                        '_'.join(s.__dict__['name'].split(' ')) + '.py')
+                       for s in scripts]  # type: List[tuple]
+            settings["current_script"] = library.pop(0)
+            settings["other_scratch_scripts"] = library
+        elif version < 3:
+            scripts = settings.pop("scriptLibrary")  # type: List[dict]
+            index = settings.pop("currentScriptIndex")
+            library = [(s['script'], s['name'] + '.py')
+                       for s in scripts]
+            settings["current_script"] = library.pop(index)
+            settings["other_scratch_scripts"] = library
+            if 'scriptText' in settings:
+                text = settings.pop("scriptText")
+                settings["current_script"] = (text, settings["current_script"][1])
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
