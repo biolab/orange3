@@ -660,7 +660,8 @@ class OWPythonScript(OWWidget):
     signal_names = ("data", "learner", "classifier", "object")
 
     settings_version = 2
-    script_text = Setting("print('Hello world!')")
+    current_script: Optional[tuple] = Setting(None)
+    other_scratch_scripts: list = Setting([])
 
     vimModeEnabled = Setting(False)
     orangeDataTablesEnabled = Setting(False)
@@ -675,21 +676,19 @@ class OWPythonScript(OWWidget):
     # TODO handle script renamed, or at least, see how it's handled rn
 
     def _handleScriptRemoved(self, filename):
-        for script in self.libraryList:
-            if script.filename != filename:
-                continue
-
-            if script in self._cachedDocuments:
-                script.flags |= Script.MissingFromFilesystem
-            else:
-                self.libraryList.remove(script)
-                if len(self.libraryList) == 0:
-                    self.addScript()
+        script = next(s for s in self.libraryList if s.filename == filename)
+        if script in self._cachedDocuments:
+            script.flags |= Script.MissingFromFilesystem
+        else:
+            self.libraryList.remove(script)
+            if len(self.libraryList) == 0:
+                self.addScript()
+                select_row(self.libraryView, 0)
 
     def _handleScriptSaved(self, filename, new_script_text):
-        name_colliding_script = next(s for s in self.libraryList if s.filename == filename)
-        if name_colliding_script:
+        try:
             # is this an already saved script?
+            name_colliding_script = next(s for s in self.libraryList if s.filename == filename)
             if not name_colliding_script.flags & Script.MissingFromFilesystem:
                 name_colliding_script.refresh(
                     new_script_text,
@@ -702,6 +701,8 @@ class OWPythonScript(OWWidget):
                 name_colliding_script.filename = uniqueify_filename(
                     self.libraryList, None, filename
                 )
+        except StopIteration:
+            pass
         self.libraryList.append(Script(new_script_text, filename, flags=0))
 
     def _handleScriptRenamed(self, old_filename, new_filename):
@@ -965,16 +966,32 @@ class OWPythonScript(OWWidget):
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
 
-        for i, script in enumerate(s.script for s in scripts):
-            if self.script_text == script:
-                select_row(self.libraryView, i)
-                break
+        if self.current_script is None:
+            self.addScript(text="print('Hello world!')")
+            i = len(self.libraryList) - 1
         else:
-            self.addScript(text=self.script_text)
+            text, filename = self.current_script
+            for i, script in enumerate(scripts):
+                if text == script.script and filename == script.filename:
+                    break
+            else:
+                self.addScript(text=text, filename=filename)
+                i = len(self.libraryList) - 1
+
+        for script in self.other_scratch_scripts:
+            self.addScript(text=script[0], filename=script[1])
+
+        select_row(self.libraryView, i)
 
     def _saveState(self):
         self.splitterState = bytes(self.splitCanvas.saveState())
-        self.script_text = self.editor.text
+        current_index = self.selectedScriptIndex()
+        script = self.libraryList[current_index]
+        self.current_script = (self.editor.text, script.filename)
+        self.other_scratch_scripts = [
+            (s.script, s.filename) for i, s in enumerate(self.libraryList)
+            if s.flags & Script.MissingFromFilesystem and i != current_index
+        ]
 
     def handle_input(self, obj, sig_id, signal):
         sig_id = sig_id[0]
@@ -1025,7 +1042,9 @@ class OWPythonScript(OWWidget):
         select_row(self.libraryView, index)
 
     def onAddScript(self, *_):
-        i = self.addScript(text='')
+        self.addScript(text='')
+        i = len(self.libraryList) - 1
+        self.setSelectedScript(i)
         self.libraryView.edit(self.libraryList.index(i))
 
     def onAddScriptFromFile(self, *_):
@@ -1039,6 +1058,8 @@ class OWPythonScript(OWWidget):
 
     def addScriptFromFile(self, filename):
         name = os.path.basename(filename)
+        if not name.endswith('.py'):
+            return
         try:
             with open(filename) as f:
                 contents = f.read()
@@ -1046,17 +1067,15 @@ class OWPythonScript(OWWidget):
             self.Error.load_error(filename)
             return
         self.addScript(contents, name)
+        i = len(self.libraryList) - 1
+        self.setSelectedScript(i)
 
     def addScript(self, text=None, filename=DEFAULT_FILENAME):
         if text is None:
             text = self.editor.text
         filename = uniqueify_filename(self.libraryView.model(), -1, filename)
         script = Script(text, filename)
-
         self.libraryList.append(script)
-        i = len(self.libraryList) - 1
-        self.setSelectedScript(i)
-        return i
 
     def onRemoveScript(self, *_):
         index = self.selectedScriptIndex()
@@ -1071,8 +1090,13 @@ class OWPythonScript(OWWidget):
         )
         if answer == QMessageBox.No:
             return
-        filename = self.libraryList[index].filename
-        os.remove(os.path.join(SCRIPTS_FOLDER_PATH, script.filename))
+
+        self.removeScript(index)
+
+    def removeScript(self, index):
+        script = self.libraryList[index]
+        filename = script.filename
+        os.remove(os.path.join(SCRIPTS_FOLDER_PATH, filename))
         del self.libraryList[index]
 
         if not script.flags & Script.MissingFromFilesystem:
