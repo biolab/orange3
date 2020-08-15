@@ -21,7 +21,7 @@ from AnyQt.QtWidgets import (
     QLabel, QWidget, QHBoxLayout, QMessageBox, QPlainTextEdit, QAbstractItemView)
 from AnyQt.QtGui import (
     QColor, QPalette, QFont, QTextDocument, QTextCursor, QKeySequence,
-    QFontMetrics, QDesktopServices, QPainter)
+    QFontMetrics, QDesktopServices, QPainter, QIcon)
 from AnyQt.QtCore import Qt, QByteArray, QItemSelectionModel, QSize, \
     Signal, QUrl, QObject, QRectF
 
@@ -336,7 +336,7 @@ class Script:
         if self.flags & self.MissingFromFilesystem:
             raise FileNotFoundError()
         with open(self.fullname) as f:
-            self._script = f.readlines()
+            self._script = f.read()
 
     def refresh(self, new_script, set_modified=True):
         if self.script != new_script:
@@ -754,28 +754,44 @@ class OWPythonScript(OWWidget):
 
         self.libraryBox.layout().addWidget(self.libraryView)
 
-        w = itemmodels.ModelActionsWidget()
+        def _icon(name):
+            return QIcon(os.path.join(
+                os.path.dirname(__file__), "icons/pythonscript", name)
+            )
 
-        self.addNewScriptAction = action = QAction("+", self)
+        actions_box = gui.hBox(self.libraryBox, box=True)
+
+        icon = _icon('add.svg')
+        self.addNewScriptAction = action = QAction(icon, 'Add', self)
         action.setToolTip("New script")
         action.triggered.connect(self.onAddScript)
-        w.addAction(action)
+        button = QToolButton(actions_box)
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setDefaultAction(action)
+        actions_box.layout().addWidget(button)
 
-        # TODO save icon
-        action = QAction("Save", self)
+        icon = _icon('save.svg')
+        action = QAction(icon, 'Save', self)
         action.setToolTip("Save changes to selected script")
         action.setShortcut(QKeySequence(QKeySequence.Save))
         action.triggered.connect(self.commitChangesToLibrary)
-        w.addAction(action)
+        button = QToolButton(actions_box)
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setDefaultAction(action)
+        actions_box.layout().addWidget(button)
 
-        # TODO restore icon
-        self.restoreAction = action = QAction("Restore", self)
-        action.setEnabled(False)
+        icon = _icon('restore.svg')
+        restoreAction = action = QAction(icon, 'Restore', self)
         action.setToolTip("Restore saved script")
         action.triggered.connect(self.restoreSaved)
-        w.addAction(action)
+        button = QToolButton(actions_box)
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setDefaultAction(action)
+        actions_box.layout().addWidget(button)
 
-        action = QAction("More", self, toolTip="More actions")
+        icon = _icon('more.svg')
+        action = QAction(icon, "More", self)
+        action.setToolTip('More actions')
 
         save_to_file = QAction("Save As", self)
         save_to_file.setShortcut(QKeySequence.SaveAs)
@@ -796,18 +812,21 @@ class OWPythonScript(OWWidget):
         reload_library = QAction('Reload Library', self)
         reload_library.triggered.connect(self.reloadLibrary)
 
-        menu = QMenu(w)
+        menu = QMenu(actions_box)
         menu.addAction(remove_script)
         menu.addAction(save_to_file)
         menu.addAction(reveal_folder)
         menu.addAction(reload_library)
         action.setMenu(menu)
-        button = w.addAction(action)
+        button = QToolButton(actions_box)
+        button.setContentsMargins(0, 0, 0, 0)
+        button.setDefaultAction(action)
         button.setPopupMode(QToolButton.InstantPopup)
+        actions_box.layout().addWidget(button)
 
-        w.layout().setSpacing(1)
-
-        self.libraryBox.layout().addWidget(w)
+        self.saved_script_actions = (restoreAction, remove_script)
+        for a in self.saved_script_actions:
+            a.setEnabled(False)
 
         self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
 
@@ -1115,8 +1134,10 @@ class OWPythonScript(OWWidget):
             current = index[0]
             self.editor.setDocument(self.documentForScript(current))
             script = self.libraryList[current]
-            if bool(script.flags & Script.MissingFromFilesystem) == self.restoreAction.isEnabled():
-                self.restoreAction.setEnabled(not script.flags & Script.MissingFromFilesystem)
+            an_action = self.saved_script_actions[0]
+            if bool(script.flags & Script.MissingFromFilesystem) == an_action.isEnabled():
+                for a in self.saved_script_actions:
+                    a.setEnabled(not script.flags & Script.MissingFromFilesystem)
 
     def documentForScript(self, script=0):
         if not isinstance(script, Script):
@@ -1139,12 +1160,12 @@ class OWPythonScript(OWWidget):
         if index is not None:
             text = self.editor.text
             script = self.libraryList[index]
-            script.script = text
 
             if script.flags & Script.MissingFromFilesystem:
-                script.flags &= ~Script.MissingFromFilesystem
-                self.restoreAction.setEnabled(True)
+                for a in self.saved_script_actions:
+                    a.setEnabled(True)
 
+            script.script = text
             self.script_state_manager.scriptSaved.disconnect(self._handleScriptSaved)
             self.script_state_manager.scriptSaved.emit(script.filename, text)
             self.script_state_manager.scriptSaved.connect(self._handleScriptSaved)
