@@ -105,7 +105,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         output = self.get_output(self.widget.Outputs.selected_data)
         output, _ = output.get_column_view(0)
         output_sorted = output.tolist()
-        
+
         # the two outputs should not be the same.
         self.assertTrue(output_original != output_sorted)
 

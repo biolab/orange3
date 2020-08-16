@@ -3,9 +3,9 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import unittest
 
@@ -15,6 +15,8 @@ from AnyQt.QtTest import QTest
 from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
 from Orange.widgets.data.utils.pythoneditor.vim import _globalClipboard
 from Orange.widgets.tests.base import WidgetTest
+
+# pylint: disable=too-many-lines
 
 
 class _Test(WidgetTest):
@@ -37,7 +39,7 @@ class _Test(WidgetTest):
         self.qpart.hide()
         self.qpart.terminate()
 
-    def _onVimModeChanged(self, color, mode):
+    def _onVimModeChanged(self, _, mode):
         self.vimMode = mode
 
     def click(self, keys):
@@ -186,7 +188,8 @@ class Move(_Test):
         self.assertEqual(self.qpart.cursorPosition, (3, 1))
 
         self.click("k")
-        self.assertIn(self.qpart.cursorPosition, ((2, 1), (2, 2)))  # (2, 1) on monospace, (2, 2) on non-monospace font
+        # (2, 1) on monospace, (2, 2) on non-monospace font
+        self.assertIn(self.qpart.cursorPosition, ((2, 1), (2, 2)))
 
     def test_02(self):
         """w
@@ -491,12 +494,11 @@ class Edit(_Test):
         """
         oldText = self.qpart.text
         self.click('ddu')
-        modifiedText = self.qpart.text
+        modifiedText = self.qpart.text  # pylint: disable=unused-variable
         self.assertEqual(self.qpart.text, oldText)
-        """ NOTE this part of test doesn't work. Don't know why.
-        self.click('U')
-        self.assertEqual(self.qpart.text, modifiedText)
-        """
+        # NOTE this part of test doesn't work. Don't know why.
+        # self.click('U')
+        # self.assertEqual(self.qpart.text, modifiedText)
 
     def test_02(self):
         """Change with C

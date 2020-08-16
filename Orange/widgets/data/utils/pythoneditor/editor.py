@@ -3,15 +3,15 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import sys
 
-from AnyQt.QtCore import Signal, Qt, QRect, QMimeData
+from AnyQt.QtCore import Signal, Qt, QRect
 from AnyQt.QtGui import QColor, QPainter, QPalette, QTextCursor, QKeySequence, QTextBlock, \
-    QTextFormat, QBrush, QPen, QKeyEvent, QTextCharFormat
+    QTextFormat, QBrush, QPen, QTextCharFormat
 from AnyQt.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QAction, QApplication
 from pygments.token import Token
 from qtconsole.pygments_highlighter import PygmentsHighlighter, PygmentsBlockUserData
@@ -21,6 +21,13 @@ from Orange.widgets.data.utils.pythoneditor.indenter import Indenter
 from Orange.widgets.data.utils.pythoneditor.lines import Lines
 from Orange.widgets.data.utils.pythoneditor.rectangularselection import RectangularSelection
 from Orange.widgets.data.utils.pythoneditor.vim import Vim, isChar
+
+# pylint: disable=protected-access
+# pylint: disable=unused-argument
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-branches
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-public-methods
 
 
 def setPositionInBlock(cursor, positionInBlock, anchor=QTextCursor.MoveAnchor):
@@ -111,7 +118,6 @@ class PythonEditor(QPlainTextEdit):
         highlighter = PygmentsHighlighter(doc)
         doc.highlighter = highlighter
 
-
         self._vim = None
 
         self._initActions()
@@ -120,7 +126,8 @@ class PythonEditor(QPlainTextEdit):
         self._marginWidth = -1
 
         self._nonVimExtraSelections = []
-        self._userExtraSelections = []  # we draw bracket highlighting, current line and extra selections by user
+        # we draw bracket highlighting, current line and extra selections by user
+        self._userExtraSelections = []
         self._userExtraSelectionFormat = QTextCharFormat()
         self._userExtraSelectionFormat.setBackground(QBrush(QColor('#ffee00')))
 
@@ -360,12 +367,11 @@ class PythonEditor(QPlainTextEdit):
     def _onShortcutPasteLine(self):
         """Paste lines from the clipboard
         """
-        lines = self.lines[self._selectedLinesSlice()]
         text = QApplication.clipboard().text()
         if text:
             with self:
                 if self.textCursor().hasSelection():
-                    startBlockNumber, endBlockNumber = self._selectedBlockNumbers()
+                    startBlockNumber, _ = self._selectedBlockNumbers()
                     del self.lines[self._selectedLinesSlice()]
                     self.lines.insert(startBlockNumber, text)
                 else:
@@ -377,8 +383,6 @@ class PythonEditor(QPlainTextEdit):
     def _onShortcutCutLine(self):
         """Cut selected lines to the clipboard
         """
-        lines = self.lines[self._selectedLinesSlice()]
-
         self._onShortcutCopyLine()
         self._onShortcutDeleteLine()
 
@@ -627,7 +631,8 @@ class PythonEditor(QPlainTextEdit):
     def replaceText(self, pos, length, text):
         """Replace length symbols from ``pos`` with new text.
 
-        If ``pos`` is an integer, it is interpreted as absolute position, if a tuple - as ``(line, column)``
+        If ``pos`` is an integer, it is interpreted as absolute position,
+        if a tuple - as ``(line, column)``
         """
         if isinstance(pos, tuple):
             pos = self.mapToAbsPosition(*pos)
@@ -649,7 +654,8 @@ class PythonEditor(QPlainTextEdit):
     def insertText(self, pos, text):
         """Insert text at position
 
-        If ``pos`` is an integer, it is interpreted as absolute position, if a tuple - as ``(line, column)``
+        If ``pos`` is an integer, it is interpreted as absolute position,
+        if a tuple - as ``(line, column)``
         """
         return self.replaceText(pos, 0, text)
 
@@ -709,7 +715,8 @@ class PythonEditor(QPlainTextEdit):
         QPlainTextEdit.setExtraSelections(self, allSelections)
 
     def _updateVimExtraSelections(self):
-        QPlainTextEdit.setExtraSelections(self, self._nonVimExtraSelections + self._vim.extraSelections())
+        QPlainTextEdit.setExtraSelections(self,
+                                          self._nonVimExtraSelections + self._vim.extraSelections())
 
     def _setSolidEdgeGeometry(self):
         """Sets the solid edge line geometry if needed"""
@@ -744,14 +751,12 @@ class PythonEditor(QPlainTextEdit):
         self.viewport_margins_updated.emit(first_char_indent)
 
     def textBeforeCursor(self):
-        pass  # suppress docstring for non-API method, used by internal classes
         """Text in current block from start to cursor position
         """
         cursor = self.textCursor()
         return cursor.block().text()[:cursor.positionInBlock()]
 
     def keyPressEvent(self, event):
-        pass  # suppress dockstring for non-public method
         """QPlainTextEdit.keyPressEvent() implementation.
         Catch events, which may not be catched with QShortcut and call slots
         """
@@ -798,9 +803,10 @@ class PythonEditor(QPlainTextEdit):
             if event.key() == Qt.Key_Backspace and event.modifiers() == Qt.ControlModifier:
                 self.deleteLineAction.trigger()
                 event.accept()
-                return True
+                return
 
-        if event.matches(QKeySequence.InsertParagraphSeparator) or event.matches(QKeySequence.InsertLineSeparator):
+        if event.matches(QKeySequence.InsertParagraphSeparator) or event.matches(
+                QKeySequence.InsertLineSeparator):
             if self._vim is not None:
                 if self._vim.keyPressEvent(event):
                     return
@@ -892,12 +898,9 @@ class PythonEditor(QPlainTextEdit):
         self._atomicModificationDepth = self._atomicModificationDepth - 1
         if self._atomicModificationDepth == 0:
             self.textCursor().endEditBlock()
-
-        if exc_type is not None:
-            return False
+        return exc_type is None
 
     def setFont(self, font):
-        pass  # suppress dockstring for non-public method
         """Set font and update tab stop width
         """
         self._fontBackup = font
@@ -914,8 +917,8 @@ class PythonEditor(QPlainTextEdit):
             lineNumbersMargin.setFont(font)
 
     def showEvent(self, ev):
-        pass  # suppress dockstring for non-public method
-        """ Qt 5.big automatically changes font when adding document to workspace. Workaround this bug """
+        """ Qt 5.big automatically changes font when adding document to workspace.
+        Workaround this bug """
         super().setFont(self._fontBackup)
         return super().showEvent(ev)
 
@@ -993,7 +996,6 @@ class PythonEditor(QPlainTextEdit):
 
         return token_type
 
-
     def isComment(self, line, column):
         """Check if character at column is a comment
         """
@@ -1064,7 +1066,8 @@ class PythonEditor(QPlainTextEdit):
         Selections are list of tuples ``(startAbsolutePosition, length)``.
         Extra selections are reset on any text modification.
 
-        This is reimplemented method of QPlainTextEdit, it has different signature. Do not use QPlainTextEdit method
+        This is reimplemented method of QPlainTextEdit, it has different signature.
+        Do not use QPlainTextEdit method
         """
 
         def _makeQtExtraSelection(startAbsolutePosition, length):
@@ -1100,13 +1103,11 @@ class PythonEditor(QPlainTextEdit):
                 absPosition - block.position())
 
     def resizeEvent(self, event):
-        pass  # suppress docstring for non-public method
         """QWidget.resizeEvent() implementation.
         Adjust line number area
         """
         QPlainTextEdit.resizeEvent(self, event)
         self.updateViewport()
-        return
 
     def _insertNewBlock(self):
         """Enter pressed.
@@ -1122,8 +1123,7 @@ class PythonEditor(QPlainTextEdit):
 
     def keyReleaseEvent(self, event):
         if self._lastKeyPressProcessedByParent and self._completer is not None:
-            """ A hacky way to do not show completion list after a event, processed by vim
-            """
+            # A hacky way to do not show completion list after a event, processed by vim
 
             text = event.text()
             textTyped = (text and
@@ -1137,7 +1137,6 @@ class PythonEditor(QPlainTextEdit):
         super(PythonEditor, self).keyReleaseEvent(event)
 
     def mousePressEvent(self, mouseEvent):
-        pass  # suppress docstring for non-public method
         if mouseEvent.modifiers() in RectangularSelection.MOUSE_MODIFIERS and \
                 mouseEvent.button() == Qt.LeftButton:
             self._rectangularSelection.mousePressEvent(mouseEvent)
@@ -1145,7 +1144,6 @@ class PythonEditor(QPlainTextEdit):
             super(PythonEditor, self).mousePressEvent(mouseEvent)
 
     def mouseMoveEvent(self, mouseEvent):
-        pass  # suppress docstring for non-public method
         if mouseEvent.modifiers() in RectangularSelection.MOUSE_MODIFIERS and \
                 mouseEvent.buttons() == Qt.LeftButton:
             self._rectangularSelection.mouseMoveEvent(mouseEvent)
@@ -1246,8 +1244,8 @@ class PythonEditor(QPlainTextEdit):
                     currentWidth += 1
                 if currentWidth > self._lineLengthEdge:
                     return pos
-            else:  # line too narrow, probably visible \t width is small
-                return -1
+            # line too narrow, probably visible \t width is small
+            return -1
 
         def drawEdgeLine(block, edgePos):
             painter.setPen(QPen(QBrush(self._lineLengthEdgeColor), 0))
@@ -1258,6 +1256,22 @@ class PythonEditor(QPlainTextEdit):
             painter.setPen(QColor(Qt.darkGray).lighter())
             rect = self.__cursorRect(block, column, offset=0)
             painter.drawLine(rect.topLeft(), rect.bottomLeft())
+
+        def drawIndentMarkers(block, text, column):
+            # this was 6 blocks deep  ~irgolic
+            while text.startswith(self._indenter.text()) and \
+                    len(text) > indentWidthChars and \
+                    text[indentWidthChars].isspace():
+
+                if column != self._lineLengthEdge and \
+                        (block.blockNumber(),
+                         column) != cursorPos:  # looks ugly, if both drawn
+                    # on some fonts line is drawn below the cursor, if offset is 1
+                    # Looks like Qt bug
+                    drawIndentMarker(block, column)
+
+                text = text[indentWidthChars:]
+                column += indentWidthChars
 
         indentWidthChars = len(self._indenter.text())
         cursorPos = self.cursorPosition
@@ -1274,24 +1288,12 @@ class PythonEditor(QPlainTextEdit):
                     text = block.text()
                     if not self.drawAnyWhitespace:
                         column = indentWidthChars
-                        while text.startswith(self._indenter.text()) and \
-                                len(text) > indentWidthChars and \
-                                text[indentWidthChars].isspace():
-
-                            if column != self._lineLengthEdge and \
-                                    (block.blockNumber(),
-                                     column) != cursorPos:  # looks ugly, if both drawn
-                                """on some fonts line is drawn below the cursor, if offset is 1
-                                Looks like Qt bug"""
-                                drawIndentMarker(block, column)
-
-                            text = text[indentWidthChars:]
-                            column += indentWidthChars
+                        drawIndentMarkers(block, text, column)
 
                 # Draw edge, but not over a cursor
                 if not self._drawSolidEdge:
                     edgePos = effectiveEdgePos(block.text())
-                    if edgePos != -1 and edgePos != cursorPos[1]:
+                    if edgePos not in (-1, cursorPos[1]):
                         drawEdgeLine(block, edgePos)
 
                 if self.drawAnyWhitespace or \
@@ -1302,7 +1304,6 @@ class PythonEditor(QPlainTextEdit):
                             drawWhiteSpace(block, column, text[column])
 
     def paintEvent(self, event):
-        pass  # suppress dockstring for non-public method
         """Paint event
         Draw indentation markers after main contents is drawn
         """
@@ -1399,7 +1400,6 @@ class LineNumberArea(QWidget):
             self._editor.blockBoundingGeometry(block).translated(
                 self._editor.contentOffset()).top())
         bottom = top + int(self._editor.blockBoundingRect(block).height())
-        singleBlockHeight = self._editor.cursorRect().height()
 
         boundingRect = self._editor.blockBoundingRect(block)
         availableWidth = self.__width - self._RIGHT_MARGIN - self._LEFT_MARGIN
@@ -1453,7 +1453,7 @@ class LineNumberArea(QWidget):
             if bitRange is not None:
                 # pick the right position
                 added = False
-                for index in range(len(occupiedRanges)):
+                for index, r in enumerate(occupiedRanges):
                     r = occupiedRanges[index]
                     if bitRange[1] < r[0]:
                         occupiedRanges.insert(index, bitRange)
@@ -1591,5 +1591,3 @@ class LineNumberArea(QWidget):
 
     def toggleBlockMark(self, block):
         self.setBlockValue(block, 0 if self.isBlockMarked(block) else 1)
-
-

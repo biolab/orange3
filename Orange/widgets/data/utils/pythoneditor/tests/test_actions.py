@@ -3,9 +3,9 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import os
 import unittest
@@ -29,16 +29,18 @@ class _BaseTest(WidgetTest):
         self.qpart.terminate()
 
 
+def _rm():
+    try:
+        os.remove('print.pdf')
+    except (OSError, ValueError):
+        pass
+
+
+def _exists():
+    return os.path.isfile('print.pdf')
+
+
 class Print(_BaseTest):
-    def _rm(self):
-        try:
-            os.remove('print.pdf')
-        except:
-            pass
-
-    def _exists(self):
-        return os.path.isfile('print.pdf')
-
     @unittest.skip("Does not work")
     def test_1(self):
         self._rm()

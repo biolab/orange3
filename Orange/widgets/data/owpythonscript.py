@@ -3,14 +3,9 @@ import shutil
 import sys
 import os
 import tempfile
-import unicodedata
-import codecs
-import pickle
-import pandas
-from functools import reduce
-from collections import defaultdict
+from typing import Optional, List
 
-from typing import Optional, List, TYPE_CHECKING
+import pandas
 
 from jupyter_client import MultiKernelManager
 
@@ -18,26 +13,24 @@ from AnyQt.QtWidgets import (
     QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
     QStyleOptionViewItem, QPlainTextDocumentLayout,
-    QLabel, QWidget, QHBoxLayout, QMessageBox, QPlainTextEdit, QAbstractItemView)
+    QLabel, QWidget, QHBoxLayout, QMessageBox, QAbstractItemView)
 from AnyQt.QtGui import (
-    QColor, QPalette, QFont, QTextDocument, QTextCursor, QKeySequence,
+    QColor, QPalette, QFont, QTextDocument, QKeySequence,
     QFontMetrics, QDesktopServices, QPainter, QIcon)
 from AnyQt.QtCore import Qt, QByteArray, QItemSelectionModel, QSize, \
     Signal, QUrl, QObject, QRectF
 
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
+from qtconsole import styles
 from qtconsole.client import QtHBChannel, QtKernelClient
 from qtconsole.manager import QtKernelManager
+from qtconsole.pygments_highlighter import PygmentsHighlighter
 from traitlets import DottedObjectName, Type
 
 from Orange.canvas import config
+from Orange.widgets.data.utils.python_console import OrangeConsoleWidget
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
-from orangecanvas.gui.utils import message_question, message_information
-from qtconsole import styles
-from qtconsole.pygments_highlighter import PygmentsHighlighter
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
-
 from Orange.data import Table, pandas_compat
 from Orange.base import Learner, Model
 from Orange.widgets import gui
@@ -45,9 +38,9 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
+from orangecanvas.gui.utils import message_question
 
-if TYPE_CHECKING:
-    from typing_extensions import TypedDict
+# pylint: disable=too-many-lines,too-many-instance-attributes
 
 __all__ = ["OWPythonScript"]
 
@@ -200,7 +193,7 @@ class FunctionSignature(FakeSignatureMixin, QLabel):
 
 
 class ReturnStatement(FakeSignatureMixin, QWidget):
-    def __init__(self, parent, highlighting_scheme, font, function_name="python_script"):
+    def __init__(self, parent, highlighting_scheme, font):
         super().__init__(parent, highlighting_scheme, font)
 
         self.indentation_level = 1
@@ -443,175 +436,6 @@ class OrangePythonEditor(PythonEditor):
             super().keyPressEvent(event)
 
 
-class OrangeConsoleWidget(RichJupyterWidget):
-    becomes_ready = Signal()
-
-    execution_finished = Signal(bool)  # False for error
-
-    results_ready = Signal(dict)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__queued_execution = None
-        self.__prompt_num = 1
-        self.__default_in_prompt = self.in_prompt
-        self.__executing = False
-        self.__is_ready = False
-
-        self.inject_vars_comm = None
-        self.collect_vars_comm = None
-
-        self.style_sheet = styles.default_light_style_sheet + \
-                           '.run-prompt { color: #aa22ff; }'
-
-        # Let the widget/kernel start up before trying to run a script,
-        # by storing a queued execution payload when the widget's commit
-        # method is invoked before <In [0]:> appears.
-        @self.becomes_ready.connect
-        def _():
-            self.becomes_ready.disconnect(_)  # reset callback
-            self.__initialize_comms()
-            self.becomes_ready.connect(self.__on_ready)
-            self.__on_ready()
-
-    def __initialize_comms(self):
-        self.inject_vars_comm = self.kernel_client.comm_manager.new_comm(
-            'inject_vars', {}
-        )
-        self.collect_vars_comm = self.kernel_client.comm_manager.new_comm(
-            'collect_vars', {}
-        )
-        self.collect_vars_comm.on_msg(self.__on_done)
-        self.execution_finished.connect(
-            lambda success: self.collect_vars_comm.send({}) if success else None
-        )
-
-        def err():
-            raise ConnectionAbortedError("Kernel closed run_script comm channel.")
-
-        self.inject_vars_comm.on_close(err)
-        self.collect_vars_comm.on_close(err)
-
-    def __on_ready(self):
-        self.__is_ready = True
-        self.__run_queued_payload()
-
-    def __run_queued_payload(self):
-        if self.__queued_execution is None:
-            return
-        qe = self.__queued_execution
-        self.__queued_execution = None
-        self.run_script_with_locals(*qe)
-
-    def run_script_with_locals(self, script, locals):
-        """
-        Inject the in vars, run the script,
-        collect the out vars (emit the results_ready signal).
-        """
-        if not self.__is_ready:
-            self.__queued_execution = (script, locals)
-            return
-
-        if self.__executing:
-            if not self.__queued_execution:
-                @self.execution_finished.connect
-                def _():
-                    self.execution_finished.disconnect(_)  # reset callback
-                    self.__run_queued_payload()
-            self.__queued_execution = (script, locals)
-            self.__is_ready = False
-            self.interrupt_kernel()
-            return
-
-        @self.inject_vars_comm.on_msg
-        def _(msg):
-            self.inject_vars_comm.on_msg(None)  # reset callback
-            self.__on_variables_injected(msg, script)
-
-        # pickle-strings aren't json-serializable,
-        # but with a little bit of magic (and spatial inefficiency)...
-        self.inject_vars_comm.send({'locals': {
-            k: codecs.encode(pickle.dumps(l), 'base64').decode()
-            for k, l in locals.items()
-        }})
-
-    def __on_variables_injected(self, msg, script):
-        # update prompts
-        self._set_input_buffer('')
-        self.in_prompt = '<span class="run-prompt">Run[<span class="in-prompt-number">%i</span>]</span>'
-        self._update_prompt(self.__prompt_num)
-        self._append_plain_text('\n')
-        self.in_prompt = 'Running script...'
-        self._show_interpreter_prompt(self.__prompt_num)
-
-        # run the script
-        self.__executing = True
-        # we abuse this method instead of others to keep
-        # the 'Running script...' prompt at the bottom of the console
-        self.kernel_client.execute(script)
-
-    def __on_done(self, msg):
-        data = msg['content']['data']
-        outputs = data['outputs']
-
-        out_vars = {
-            k: pickle.loads(codecs.decode(l.encode(), 'base64'))
-            for k, l in outputs.items()
-        }
-        self.results_ready.emit(out_vars)
-
-    # override
-    def _handle_execute_result(self, msg):
-        super()._handle_execute_result(msg)
-        if self.__executing:
-            self._append_plain_text('\n', before_prompt=True)
-
-    # override
-    def _handle_execute_reply(self, msg):
-        self.__prompt_num = msg['content']['execution_count'] + 1
-
-        if not self.__executing:
-            return super()._handle_execute_reply(msg)
-        self.__executing = False
-
-        self.in_prompt = self.__default_in_prompt
-
-        if msg['content']['status'] != 'ok':
-            self.execution_finished.emit(False)
-            self._show_interpreter_prompt(self.__prompt_num)
-            return super()._handle_execute_reply(msg)
-
-        self._update_prompt(self.__prompt_num)
-
-        self.execution_finished.emit(True)
-
-    # override
-    def _handle_kernel_died(self, since_last_heartbeat):
-        super()._handle_kernel_died(since_last_heartbeat)
-        self.__is_ready = False
-
-    # override
-    def _show_interpreter_prompt(self, number=None):
-        """
-        The console's ready when the first prompt shows up.
-        """
-        super()._show_interpreter_prompt(number)
-        if number is not None and not self.__is_ready:
-            self.becomes_ready.emit()
-
-    # override
-    def _event_filter_console_keypress(self, event):
-        """
-        KeyboardInterrupt on run script.
-        """
-        if self._control_key_down(event.modifiers(), include_command=False) and \
-                event.key() == Qt.Key_C and \
-                self.__executing:
-            self.interrupt_kernel()
-            return True
-        return super()._event_filter_console_keypress(event)
-
-
 # TODO it takes a while for the kernel and client to start up,
 # the default 3 second timeout seems too short.
 # it's likely a bug that it takes that long, but for now,
@@ -666,8 +490,6 @@ class OWPythonScript(OWWidget):
     multi_kernel_manager.kernel_manager_class = 'Orange.widgets.data.owpythonscript.KernelManager'
 
     script_state_manager = ScriptStateManager()
-
-    # TODO handle script renamed, or at least, see how it's handled rn
 
     def _handleScriptRemoved(self, filename):
         script = next(s for s in self.libraryList if s.filename == filename)
@@ -741,8 +563,7 @@ class OWPythonScript(OWWidget):
         self.libraryBox.layout().setSpacing(1)
 
         self.libraryView = QListView(
-            editTriggers=QListView.DoubleClicked |
-                         QListView.EditKeyPressed,
+            editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed,
             sizePolicy=QSizePolicy(QSizePolicy.Ignored,
                                    QSizePolicy.Preferred),
         )
@@ -758,8 +579,8 @@ class OWPythonScript(OWWidget):
 
         def _icon(name):
             return QIcon(os.path.join(
-                os.path.dirname(__file__), "icons/pythonscript", name)
-            )
+                os.path.dirname(__file__), "icons/pythonscript", name
+            ))
 
         actions_box = gui.hBox(self.libraryBox, box=True)
 
@@ -931,7 +752,7 @@ class OWPythonScript(OWWidget):
         kernel_id = self.multi_kernel_manager.start_kernel(
             extra_arguments=[
                 '--IPKernelApp.kernel_class='
-                'Orange.widgets.data.utils.kernel.OrangeIPythonKernel',
+                'Orange.widgets.data.utils.python_kernel.OrangeIPythonKernel',
                 '--matplotlib='
                 'inline'
             ]
@@ -941,7 +762,7 @@ class OWPythonScript(OWWidget):
         kernel_client = kernel_manager.client()
         kernel_client.start_channels()
 
-        jupyter_widget = OrangeConsoleWidget()
+        jupyter_widget = OrangeConsoleWidget(style_sheet=styles.default_light_style_sheet)
         jupyter_widget.results_ready.connect(self.receive_outputs)
 
         jupyter_widget.kernel_manager = kernel_manager
@@ -1079,7 +900,7 @@ class OWPythonScript(OWWidget):
         try:
             with open(filename) as f:
                 contents = f.read()
-        except:
+        except (OSError, ValueError):
             self.Error.load_error(filename)
             return
         self.addScript(contents, name)
@@ -1221,7 +1042,8 @@ class OWPythonScript(OWWidget):
             f.write(self.editor.text)
             f.close()
 
-    def revealFolder(self):
+    @staticmethod
+    def revealFolder():
         QDesktopServices.openUrl(QUrl.fromLocalFile(SCRIPTS_FOLDER_PATH))
 
     def reloadLibrary(self):

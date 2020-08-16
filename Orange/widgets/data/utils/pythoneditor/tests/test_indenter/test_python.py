@@ -3,9 +3,9 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import unittest
 
@@ -32,9 +32,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1,11);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(1, 11)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_dedentContinue(self):
@@ -48,9 +48,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1,11);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(1, 11)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_keepIndent2(self):
@@ -68,9 +68,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(3, 12);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(3, 12)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_keepIndent4(self):
@@ -84,12 +84,12 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(0,22);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(0, 22)
+        self.enter()
+        self.type("pass")
         self.enter()
         self.enter()
-        self.type("pass");
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_dedentRaise(self):
@@ -103,9 +103,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1,9);
-        self.enter();
-        self.type("except:");
+        self.setCursorPosition(1, 9)
+        self.enter()
+        self.type("except:")
         self.verifyExpected(expected)
 
     def test_indentColon1(self):
@@ -117,9 +117,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(0,34);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(0, 34)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_indentColon2(self):
@@ -135,9 +135,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1,21);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(1, 21)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_indentColon3(self):
@@ -145,17 +145,17 @@ class Test(IndentTest):
         """
         origin = [
             "     a = {1:"
-            ]
+        ]
         expected = [
             "     a = {1:",
             "          x"
-            ]
+        ]
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(0, 12);
-        self.enter();
-        self.type("x");
+        self.setCursorPosition(0, 12)
+        self.enter()
+        self.type("x")
         self.verifyExpected(expected)
 
     def test_dedentPass(self):
@@ -169,9 +169,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1,8);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(1, 8)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_dedentBreak(self):
@@ -185,9 +185,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1,11);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(1, 11)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_keepIndent3(self):
@@ -203,9 +203,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(2, 12);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(2, 12)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_keepIndent1(self):
@@ -221,9 +221,9 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(2, 8);
-        self.enter();
-        self.type("pass");
+        self.setCursorPosition(2, 8)
+        self.enter()
+        self.type("pass")
         self.verifyExpected(expected)
 
     def test_autoIndentAfterEmpty(self):
@@ -241,10 +241,10 @@ class Test(IndentTest):
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(2, 0);
-        self.enter();
-        self.tab();
-        self.type("x");
+        self.setCursorPosition(2, 0)
+        self.enter()
+        self.tab()
+        self.type("x")
         self.verifyExpected(expected)
 
     def test_hangingIndentation(self):
@@ -254,13 +254,13 @@ class Test(IndentTest):
         expected = [
             "     return func (something,",
             "                  x",
-            ]
+        ]
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(0, 28);
-        self.enter();
-        self.type("x");
+        self.setCursorPosition(0, 28)
+        self.enter()
+        self.type("x")
         self.verifyExpected(expected)
 
     def test_hangingIndentation2(self):
@@ -272,13 +272,13 @@ class Test(IndentTest):
             "     return func (",
             "         something,",
             "         x",
-            ]
+        ]
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1, 19);
-        self.enter();
-        self.type("x");
+        self.setCursorPosition(1, 19)
+        self.enter()
+        self.type("x")
         self.verifyExpected(expected)
 
     def test_hangingIndentation3(self):
@@ -290,13 +290,13 @@ class Test(IndentTest):
             "     a = func (",
             "         something)",
             "     x",
-            ]
+        ]
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(1, 19);
-        self.enter();
-        self.type("x");
+        self.setCursorPosition(1, 19)
+        self.enter()
+        self.type("x")
         self.verifyExpected(expected)
 
     def test_hangingIndentation4(self):
@@ -310,13 +310,13 @@ class Test(IndentTest):
             "                 another_func(1,",
             "                              2),",
             "                 x"
-            ]
+        ]
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(2, 33);
-        self.enter();
-        self.type("x");
+        self.setCursorPosition(2, 33)
+        self.enter()
+        self.type("x")
         self.verifyExpected(expected)
 
     def test_hangingIndentation5(self):
@@ -328,16 +328,14 @@ class Test(IndentTest):
             "     return func(another_func(1,",
             "                              2),",
             "                 x"
-            ]
+        ]
 
         self.setOrigin(origin)
 
-        self.setCursorPosition(2, 33);
-        self.enter();
-        self.type("x");
+        self.setCursorPosition(2, 33)
+        self.enter()
+        self.type("x")
         self.verifyExpected(expected)
-
-
 
 
 if __name__ == '__main__':

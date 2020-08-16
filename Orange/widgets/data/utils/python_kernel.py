@@ -15,7 +15,7 @@ class OrangeIPythonKernel(IPythonKernel):
         self.comm_manager.register_target('inject_vars', self.inject_vars)
         self.comm_manager.register_target('collect_vars', self.collect_vars)
 
-    def inject_vars(self, comm, open_msg):
+    def inject_vars(self, comm, msg):
         comm.on_msg(
             lambda msg: self._on_inject_vars_request(comm, msg)
         )
@@ -55,7 +55,7 @@ class OrangeIPythonKernel(IPythonKernel):
             'status': 'ok'
         })
 
-    def collect_vars(self, comm, open_msg):
+    def collect_vars(self, comm, msg):
         comm.on_msg(
             lambda msg: self._on_collect_vars_request(comm, msg)
         )
@@ -65,7 +65,6 @@ class OrangeIPythonKernel(IPythonKernel):
         for signal in OWPythonScript.signal_names:
             name = 'out_' + signal
             ns = self.shell.user_ns
-            out = OWPythonScript.Outputs.__dict__[signal]
             if name in ns:
                 outputs[name] = ns[name]
 

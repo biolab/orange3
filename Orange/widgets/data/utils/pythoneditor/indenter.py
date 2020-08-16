@@ -3,11 +3,13 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 from PyQt5.QtGui import QTextCursor
+
+# pylint: disable=pointless-string-statement
 
 MAX_SEARCH_OFFSET_LINES = 128
 
@@ -56,6 +58,7 @@ class Indenter:
         """Tab or Space pressed and few blocks are selected, or Shift+Tab pressed
         Insert or remove text from the beginning of blocks
         """
+
         def blockIndentation(block):
             text = block.text()
             return text[:len(text) - len(text.lstrip())]
@@ -97,10 +100,11 @@ class Indenter:
 
         startBlock = self._qpart.document().findBlock(cursor.selectionStart())
         endBlock = self._qpart.document().findBlock(cursor.selectionEnd())
-        if(cursor.selectionStart() != cursor.selectionEnd() and
-           endBlock.position() == cursor.selectionEnd() and
-           endBlock.previous().isValid()):
-            endBlock = endBlock.previous()  # do not indent not selected line if indenting multiple lines
+        if (cursor.selectionStart() != cursor.selectionEnd() and
+                endBlock.position() == cursor.selectionEnd() and
+                endBlock.previous().isValid()):
+            # do not indent not selected line if indenting multiple lines
+            endBlock = endBlock.previous()
 
         indentFunc = indentBlock if increase else unIndentBlock
 
@@ -115,7 +119,8 @@ class Indenter:
                     block = block.next()
 
             newCursor = QTextCursor(startBlock)
-            newCursor.setPosition(endBlock.position() + len(endBlock.text()), QTextCursor.KeepAnchor)
+            newCursor.setPosition(endBlock.position() + len(endBlock.text()),
+                                  QTextCursor.KeepAnchor)
             self._qpart.setTextCursor(newCursor)
         else:  # indent 1 line
             indentFunc(startBlock)
@@ -176,18 +181,7 @@ class Indenter:
             self.autoIndentBlock(startBlock, '')
 
 
-class IndentAlgNone:
-    """No any indentation
-    """
-
-    def __init__(self, qpart):
-        pass
-
-    def computeSmartIndent(self, block, char):
-        return ''
-
-
-class IndentAlgBase(IndentAlgNone):
+class IndentAlgBase:
     """Base class for indenters
     """
     TRIGGER_CHARACTERS = ""  # indenter is called, when user types Enter of one of trigger chars
@@ -222,7 +216,7 @@ class IndentAlgBase(IndentAlgNone):
         Implementation might return self._prevNonEmptyBlockIndent(), if doesn't have
         any ideas, how to indent text better
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def _qpartIndent(self):
         """Return text previous block, which is non empty (contains something, except spaces)
@@ -300,9 +294,9 @@ class IndentAlgBase(IndentAlgNone):
                 yield block, len(text) - index - 1, char
             block = block.previous()
 
-        for block in cls.iterateBlocksBackFrom(block):
-            for index, char in enumerate(reversed(block.text())):
-                yield block, len(block.text()) - index - 1, char
+        for b in cls.iterateBlocksBackFrom(block):
+            for index, char in enumerate(reversed(b.text())):
+                yield b, len(b.text()) - index - 1, char
 
     def findBracketBackward(self, block, column, bracket):
         """Search for a needle and return (block, column)
@@ -330,8 +324,7 @@ class IndentAlgBase(IndentAlgNone):
 
                 if depth == 0:
                     return foundBlock, foundColumn
-        else:
-            raise ValueError('Not found')
+        raise ValueError('Not found')
 
     def findAnyBracketBackward(self, block, column):
         """Search for a needle and return (block, column)
@@ -346,7 +339,7 @@ class IndentAlgBase(IndentAlgNone):
 
         for foundBlock, foundColumn, char in self.iterateCharsBackwardFrom(block, column):
             if self._qpart.isCode(foundBlock.blockNumber(), foundColumn):
-                for brackets in depth.keys():
+                for brackets in depth:
                     opening, closing = brackets
                     if char == opening:
                         depth[brackets] -= 1
@@ -354,8 +347,7 @@ class IndentAlgBase(IndentAlgNone):
                             return foundBlock, foundColumn
                     elif char == closing:
                         depth[brackets] += 1
-        else:
-            raise ValueError('Not found')
+        raise ValueError('Not found')
 
     @staticmethod
     def _lastNonSpaceChar(block):
@@ -457,9 +449,9 @@ class IndentAlgPython(IndentAlgBase):
         if lineStripped and \
                 lineStripped[-1] in ')]}':
             try:
-                self.backward = self.findBracketBackward(block, spaceLen + len(lineStripped) - 1,
-                                                         lineStripped[-1])
-                foundBlock, foundColumn = self.backward
+                backward = self.findBracketBackward(block, spaceLen + len(lineStripped) - 1,
+                                                    lineStripped[-1])
+                foundBlock, foundColumn = backward
             except ValueError:
                 pass
             else:

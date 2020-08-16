@@ -3,22 +3,24 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
-from PyQt5.QtCore import Qt
-from PyQt5.QtTest import QTest
-
 import sys
 import os
-topLevelPath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.insert(0, topLevelPath)
-sys.path.insert(0, os.path.join(topLevelPath, 'tests'))
 
+from AnyQt.QtCore import Qt
+from AnyQt.QtTest import QTest
 
 from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
 from Orange.widgets.tests.base import WidgetTest
+
+# pylint: disable=protected-access
+
+topLevelPath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, topLevelPath)
+sys.path.insert(0, os.path.join(topLevelPath, 'tests'))
 
 
 class IndentTest(WidgetTest):
@@ -36,7 +38,7 @@ class IndentTest(WidgetTest):
 
     def verifyExpected(self, text):
         lines = self.qpart.text.split('\n')
-        self.assertEqual(text, [l for l in lines])
+        self.assertEqual(text, lines)
 
     def setCursorPosition(self, line, col):
         self.qpart.cursorPosition = line, col
@@ -64,4 +66,3 @@ class IndentTest(WidgetTest):
     def alignAll(self):
         QTest.keyClick(self.qpart, Qt.Key_A, Qt.ControlModifier)
         self.qpart.autoIndentLineAction.trigger()
-

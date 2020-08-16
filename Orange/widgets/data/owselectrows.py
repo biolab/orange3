@@ -56,7 +56,7 @@ class SelectRowsContextHandler(DomainContextHandler):
                 encoded.append((attr, None, op, values))
             else:
                 # check for exact match, pylint: disable=unidiomatic-typecheck
-                if type(attr) is ContinuousVariable \
+                if isinstance(attr, ContinuousVariable) \
                         and values and isinstance(values[0], str):
                     values = [QLocale().toDouble(v)[0] for v in values]
                 elif isinstance(attr, DiscreteVariable):

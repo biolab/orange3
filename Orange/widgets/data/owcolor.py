@@ -15,6 +15,7 @@ from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
+from Orange.widgets.report import colored_square as square
 from orangewidget.settings import IncompatibleContext
 
 ColorRole = next(gui.OrangeUserRole)
@@ -552,8 +553,6 @@ class OWColor(widget.OWWidget):
     def send_report(self):
         """Send report"""
         def _report_variables(variables):
-            from Orange.widgets.report import colored_square as square
-
             def was(n, o):
                 return n if n == o else f"{n} (was: {o})"
 

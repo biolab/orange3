@@ -3,9 +3,9 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import unittest
 
@@ -27,10 +27,18 @@ class Test(WidgetTest):
     def _ws_test(self,
                  text,
                  expectedResult,
-                 drawAny=[True, False],
-                 drawIncorrect=[True, False],
-                 useTab=[True, False],
-                 indentWidth=[1, 2, 3, 4, 8]):
+                 drawAny=None,
+                 drawIncorrect=None,
+                 useTab=None,
+                 indentWidth=None):
+        if drawAny is None:
+            drawAny = [True, False]
+        if drawIncorrect is None:
+            drawIncorrect = [True, False]
+        if useTab is None:
+            useTab = [True, False]
+        if indentWidth is None:
+            indentWidth = [1, 2, 3, 4, 8]
         for drawAnyVal in drawAny:
             self.qpart.drawAnyWhitespace = drawAnyVal
 
@@ -45,15 +53,15 @@ class Test(WidgetTest):
                         try:
                             self._verify(text, expectedResult)
                         except:
-                            print("Failed params:\n\tany {}\n\tincorrect {}\n\ttabs {}\n\twidth {}".format(
-                                self.qpart.drawAnyWhitespace,
-                                self.qpart.drawIncorrectIndentation,
-                                self.qpart.indentUseTabs,
-                                self.qpart.indentWidth))
+                            print("Failed params:\n\tany {}\n\tincorrect {}\n\ttabs {}\n\twidth {}"
+                                  .format(self.qpart.drawAnyWhitespace,
+                                          self.qpart.drawIncorrectIndentation,
+                                          self.qpart.indentUseTabs,
+                                          self.qpart.indentWidth))
                             raise
 
     def _verify(self, text, expectedResult):
-        res = self.qpart._chooseVisibleWhitespace(text)
+        res = self.qpart._chooseVisibleWhitespace(text)  # pylint: disable=protected-access
         for index, value in enumerate(expectedResult):
             if value == '1':
                 if not res[index]:

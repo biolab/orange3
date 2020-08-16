@@ -84,7 +84,7 @@ class OWContinuize(widget.OWWidget):
         layout.addWidget(box, 0, 0, 2, 1)
 
         box = gui.radioButtonsInBox(
-            None, self, "continuous_treatment", box = "Numeric Features",
+            None, self, "continuous_treatment", box= "Numeric Features",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
         box.layout().addStretch(10)
@@ -269,7 +269,9 @@ def continuize_var(var,
                    multinomial_treatment=Continuize.Indicators,
                    continuous_treatment=OWContinuize.Normalize.Leave):
     def continuize_continuous():
-        dist = _ensure_dist(var, data_or_dist) if continuous_treatment != OWContinuize.Normalize.Leave else None
+        dist = _ensure_dist(var, data_or_dist) \
+            if continuous_treatment != OWContinuize.Normalize.Leave \
+            else None
         treatments = [lambda var, _: var,
                       normalize_by_sd, center_to_mean, divide_by_sd,
                       normalize_to_11, normalize_to_01]

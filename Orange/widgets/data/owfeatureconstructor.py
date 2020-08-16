@@ -393,7 +393,7 @@ class OWFeatureConstructor(OWWidget):
 
     class Warning(OWWidget.Warning):
         renamed_var = Msg("Recently added variable has been renamed, "
-                           "to avoid duplicates.\n")
+                          "to avoid duplicates.\n")
 
     def __init__(self):
         super().__init__()

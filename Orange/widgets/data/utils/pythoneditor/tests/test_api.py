@@ -3,9 +3,9 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import unittest
 
@@ -47,6 +47,7 @@ class Selection(_BaseTest):
         self.qpart.text = "a\nb"
         self.qpart.selectedPosition = ((0, 0), (1, 1))
         self.assertEqual(self.qpart.selectedText, "a\nb")
+
 
 class ReplaceText(_BaseTest):
     def test_replaceText1(self):
@@ -124,10 +125,10 @@ class IsCodeOrComment(_BaseTest):
         # Basic case
         self.qpart.text = 'a + b # comment'
         self.assertEqual([self.qpart.isCode(0, i) for i in range(len(self.qpart.text))],
-                          [True, True, True, True, True, True, False, False, False, False, \
-                           False, False, False, False, False])
+                         [True, True, True, True, True, True, False, False, False, False,
+                          False, False, False, False, False])
         self.assertEqual([self.qpart.isComment(0, i) for i in range(len(self.qpart.text))],
-                          [False, False, False, False, False, False, True, True, True, True, \
+                         [False, False, False, False, False, False, True, True, True, True,
                           True, True, True, True, True])
 
     def test_2(self):
@@ -140,8 +141,10 @@ class IsCodeOrComment(_BaseTest):
 class Signals(_BaseTest):
     def test_indent_width_changed(self):
         newValue = [None]
+
         def setNeVal(val):
             newValue[0] = val
+
         self.qpart.indentWidthChanged.connect(setNeVal)
 
         self.qpart.indentWidth = 7
@@ -149,6 +152,7 @@ class Signals(_BaseTest):
 
     def test_use_tabs_changed(self):
         newValue = [None]
+
         def setNeVal(val):
             newValue[0] = val
 
@@ -159,6 +163,7 @@ class Signals(_BaseTest):
 
     def test_eol_changed(self):
         newValue = [None]
+
         def setNeVal(val):
             newValue[0] = val
 
@@ -188,7 +193,8 @@ class Lines(_BaseTest):
         self.assertEqual(self.qpart.lines[3], 'opqr')
         self.assertEqual(self.qpart.lines[-4], 'abcd')
         self.assertEqual(self.qpart.lines[1:4], ['efgh', 'klmn', 'opqr'])
-        self.assertEqual(self.qpart.lines[1:7], ['efgh', 'klmn', 'opqr'])  # Python list behaves this way
+        self.assertEqual(self.qpart.lines[1:7],
+                         ['efgh', 'klmn', 'opqr'])  # Python list behaves this way
         self.assertEqual(self.qpart.lines[0:0], [])
         self.assertEqual(self.qpart.lines[0:1], ['abcd'])
         self.assertEqual(self.qpart.lines[:2], ['abcd', 'efgh'])
@@ -197,9 +203,9 @@ class Lines(_BaseTest):
         self.assertEqual(self.qpart.lines[-4:-2], ['abcd', 'efgh'])
 
         with self.assertRaises(IndexError):
-            self.qpart.lines[4]
+            self.qpart.lines[4]  # pylint: disable=pointless-statement
         with self.assertRaises(IndexError):
-            self.qpart.lines[-5]
+            self.qpart.lines[-5]  # pylint: disable=pointless-statement
 
     def test_setSlice_1(self):
         self.qpart.lines[0] = 'xyz'
@@ -248,6 +254,7 @@ class LinesWin(Lines):
     def setUp(self):
         super(LinesWin, self).setUp()
         self.qpart.eol = '\r\n'
+
 
 if __name__ == '__main__':
     unittest.main()

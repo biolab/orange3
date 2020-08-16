@@ -3,9 +3,9 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import sys
 
@@ -13,9 +13,13 @@ from PyQt5.QtCore import Qt, pyqtSignal, QObject
 from PyQt5.QtWidgets import QTextEdit
 from PyQt5.QtGui import QColor, QTextCursor
 
+# pylint: disable=protected-access
+# pylint: disable=unused-argument
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-branches
 
-""" This magic code sets variables like _a and _A in the global scope
-"""
+# This magic code sets variables like _a and _A in the global scope
+# pylint: disable=undefined-variable
 thismodule = sys.modules[__name__]
 for charCode in range(ord('a'), ord('z') + 1):
     shortName = chr(charCode)
@@ -53,6 +57,7 @@ def code(ev):
     modifiers &= ~Qt.KeypadModifier  # ignore keypad modifier to handle both main and numpad numbers
     return int(modifiers) + ev.key()
 
+
 def isChar(ev):
     """ Check if an event may be a typed character
     """
@@ -85,6 +90,7 @@ MODE_COLORS = {NORMAL: QColor('#33cc33'),
 class _GlobalClipboard:
     def __init__(self):
         self.value = ''
+
 
 _globalClipboard = _GlobalClipboard()
 
@@ -179,6 +185,7 @@ class Vim(QObject):
 
 
 class Mode:
+    # pylint: disable=no-self-use
     color = None
 
     def __init__(self, vim, qpart):
@@ -226,7 +233,8 @@ class ReplaceChar(Mode):
             self._qpart.setOverwriteMode(False)
             line, col = self._qpart.cursorPosition
             if col > 0:
-                self._qpart.cursorPosition = (line, col - 1)  # return the cursor back after replacement
+                # return the cursor back after replacement
+                self._qpart.cursorPosition = (line, col - 1)
             self.switchMode(Normal)
             return True
         else:
@@ -257,6 +265,7 @@ class Replace(Mode):
 class BaseCommandMode(Mode):
     """ Base class for Normal and Visual modes
     """
+
     def __init__(self, *args):
         Mode.__init__(self, *args)
         self._reset()
@@ -334,8 +343,7 @@ class BaseCommandMode(Mode):
                          _Home: QTextCursor.StartOfBlock,
                          'gg': QTextCursor.Start,
                          _G: QTextCursor.End
-                        }
-
+                         }
 
         if motion == _G:
             if count == 0:  # default - go to the end
@@ -361,9 +369,10 @@ class BaseCommandMode(Mode):
                         break
 
                 if cursor.positionInBlock() == len(text):  # at the end of line
-                    cursor.movePosition(QTextCursor.NextCharacter, moveMode)  # move to the next line
+                    # move to the next line
+                    cursor.movePosition(QTextCursor.NextCharacter, moveMode)
 
-                # now move to the end of word
+                    # now move to the end of word
                 if motion == _e:
                     cursor.movePosition(QTextCursor.EndOfWord, moveMode)
                 else:
@@ -377,21 +386,22 @@ class BaseCommandMode(Mode):
         elif motion == _B:
             cursor.movePosition(QTextCursor.WordLeft, moveMode)
             while cursor.positionInBlock() != 0 and \
-                  (not cursor.block().text()[cursor.positionInBlock() - 1].isspace()):
+                    (not cursor.block().text()[cursor.positionInBlock() - 1].isspace()):
                 cursor.movePosition(QTextCursor.WordLeft, moveMode)
         elif motion == _W:
             cursor.movePosition(QTextCursor.WordRight, moveMode)
             while cursor.positionInBlock() != 0 and \
-                  (not cursor.block().text()[cursor.positionInBlock() - 1].isspace()):
+                    (not cursor.block().text()[cursor.positionInBlock() - 1].isspace()):
                 cursor.movePosition(QTextCursor.WordRight, moveMode)
         elif motion == _Percent:
             # Percent move is done only once
             if self._qpart._bracketHighlighter.currentMatchedBrackets is not None:
-                ((startBlock, startCol), (endBlock, endCol)) = self._qpart._bracketHighlighter.currentMatchedBrackets
+                ((startBlock, startCol), (endBlock, endCol)) = \
+                    self._qpart._bracketHighlighter.currentMatchedBrackets
                 startPos = startBlock.position() + startCol
                 endPos = endBlock.position() + endCol
                 if select and \
-                   (endPos > startPos):
+                        (endPos > startPos):
                     endPos += 1  # to select the bracket, not only chars before it
                 cursor.setPosition(endPos, moveMode)
         elif motion == _Caret:
@@ -432,7 +442,8 @@ class BaseCommandMode(Mode):
 
         self._qpart.setTextCursor(cursor)
 
-    def _iterateDocumentCharsForward(self, block, startColumnIndex):
+    @staticmethod
+    def _iterateDocumentCharsForward(block, startColumnIndex):
         """Traverse document forward. Yield (block, columnIndex, char)
         Raise _TimeoutException if time is over
         """
@@ -448,7 +459,8 @@ class BaseCommandMode(Mode):
 
             block = block.next()
 
-    def _iterateDocumentCharsBackward(self, block, startColumnIndex):
+    @staticmethod
+    def _iterateDocumentCharsBackward(block, startColumnIndex):
         """Traverse document forward. Yield (block, columnIndex, char)
         Raise _TimeoutException if time is over
         """
@@ -477,7 +489,6 @@ class BaseCommandMode(Mode):
         anchor = cursor.anchor()
         pos = cursor.position()
 
-
         if pos >= anchor:
             anchorSide = QTextCursor.StartOfBlock
             cursorSide = QTextCursor.EndOfBlock
@@ -485,15 +496,12 @@ class BaseCommandMode(Mode):
             anchorSide = QTextCursor.EndOfBlock
             cursorSide = QTextCursor.StartOfBlock
 
-
         cursor.setPosition(anchor)
         cursor.movePosition(anchorSide)
         cursor.setPosition(pos, QTextCursor.KeepAnchor)
         cursor.movePosition(cursorSide, QTextCursor.KeepAnchor)
 
         self._qpart.setTextCursor(cursor)
-
-
 
 
 class BaseVisual(BaseCommandMode):
@@ -554,15 +562,14 @@ class BaseVisual(BaseCommandMode):
             return True
         elif action in self._MOTIONS:
             if self._selectLines and action in (_k, _Up, _j, _Down):
-                """ There is a bug in visual mode:
-                If a line is wrapped, cursor moves up, but stays on same line. Then selection is expanded
-                and cursor returns to previous position. So user can't move the cursor up.
-                So, in Visual mode we move cursor up until it moved to previous line
-                The same bug when moving down
-                """
+                # There is a bug in visual mode:
+                # If a line is wrapped, cursor moves up, but stays on same line.
+                # Then selection is expanded and cursor returns to previous position.
+                # So user can't move the cursor up. So, in Visual mode we move cursor up until it
+                # moved to previous line. The same bug when moving down
                 cursorLine = self._qpart.cursorPosition[0]
                 if (action in (_k, _Up) and cursorLine > 0) or \
-                   (action in (_j, _Down) and (cursorLine + 1) < len(self._qpart.lines)):
+                        (action in (_j, _Down) and (cursorLine + 1) < len(self._qpart.lines)):
                     while self._qpart.cursorPosition[0] == cursorLine:
                         self._moveCursor(action, typedCount, select=True)
             else:
@@ -576,7 +583,7 @@ class BaseVisual(BaseCommandMode):
             newChar = ev.text()
             if newChar:
                 newChars = [newChar if char != '\n' else '\n' \
-                                for char in self._qpart.selectedText
+                            for char in self._qpart.selectedText
                             ]
                 newText = ''.join(newChars)
                 self._qpart.selectedText = newText
@@ -592,7 +599,7 @@ class BaseVisual(BaseCommandMode):
     def _selectedLinesRange(self):
         """ Selected lines range for line manipulation methods
         """
-        (startLine, startCol), (endLine, endCol) = self._qpart.selectedPosition
+        (startLine, _), (endLine, _) = self._qpart.selectedPosition
         start = min(startLine, endLine)
         end = max(startLine, endLine)
         return start, end
@@ -602,7 +609,8 @@ class BaseVisual(BaseCommandMode):
         self._qpart.selectedPosition = ((start, 0),
                                         (start + repeatLineCount - 1, 0))
         cursor = self._qpart.textCursor()
-        cursor.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)  # expand until the end of line
+        # expand until the end of line
+        cursor.movePosition(QTextCursor.EndOfBlock, QTextCursor.KeepAnchor)
         self._qpart.setTextCursor(cursor)
 
     def _saveLastEditLinesCmd(self, cmd, lineCount):
@@ -619,7 +627,7 @@ class BaseVisual(BaseCommandMode):
         cursor = self._qpart.textCursor()
         if cursor.selectedText():
             if self._selectLines:
-                start, end  = self._selectedLinesRange()
+                start, end = self._selectedLinesRange()
                 self._saveLastEditLinesCmd(cmd, end - start + 1)
                 _globalClipboard.value = self._qpart.lines[start:end + 1]
                 del self._qpart.lines[start:end + 1]
@@ -631,7 +639,7 @@ class BaseVisual(BaseCommandMode):
         if repeatLineCount is not None:
             self._selectRangeForRepeat(repeatLineCount)
 
-        start, end  = self._selectedLinesRange()
+        start, end = self._selectedLinesRange()
         self._saveLastEditLinesCmd(cmd, end - start + 1)
 
         _globalClipboard.value = self._qpart.lines[start:end + 1]
@@ -743,7 +751,7 @@ class BaseVisual(BaseCommandMode):
         if repeatLineCount is not None:
             self._selectRangeForRepeat(repeatLineCount)
         else:
-            start, end  = self._selectedLinesRange()
+            start, end = self._selectedLinesRange()
             self._saveLastEditLinesCmd(cmd, end - start + 1)
 
         self._qpart._indenter.onChangeSelectedBlocksIndent(increase=False, withSpace=False)
@@ -755,7 +763,7 @@ class BaseVisual(BaseCommandMode):
         if repeatLineCount is not None:
             self._selectRangeForRepeat(repeatLineCount)
         else:
-            start, end  = self._selectedLinesRange()
+            start, end = self._selectedLinesRange()
             self._saveLastEditLinesCmd(cmd, end - start + 1)
 
         self._qpart._indenter.onChangeSelectedBlocksIndent(increase=True, withSpace=False)
@@ -767,7 +775,7 @@ class BaseVisual(BaseCommandMode):
         if repeatLineCount is not None:
             self._selectRangeForRepeat(repeatLineCount)
         else:
-            start, end  = self._selectedLinesRange()
+            start, end = self._selectedLinesRange()
             self._saveLastEditLinesCmd(cmd, end - start + 1)
 
         self._qpart._indenter.onAutoIndentTriggered()
@@ -776,27 +784,27 @@ class BaseVisual(BaseCommandMode):
             self._resetSelection(moveToTop=True)
 
     _SIMPLE_COMMANDS = {
-                            _A: cmdAppendAfterChar,
-                            _c: cmdChange,
-                            _C: cmdReplaceSelectedLines,
-                            _d: cmdDelete,
-                            _D: cmdDeleteLines,
-                            _i: cmdInsertMode,
-                            _J: cmdJoinLines,
-                            _R: cmdReplaceSelectedLines,
-                            _p: cmdInternalPaste,
-                            _u: cmdResetSelection,
-                            _x: cmdDelete,
-                            _s: cmdChange,
-                            _S: cmdReplaceSelectedLines,
-                            _v: cmdVisualMode,
-                            _V: cmdVisualLinesMode,
-                            _X: cmdDeleteLines,
-                            _y: cmdYank,
-                            _Less: cmdUnIndent,
-                            _Greater: cmdIndent,
-                            _Equal: cmdAutoIndent,
-                       }
+        _A: cmdAppendAfterChar,
+        _c: cmdChange,
+        _C: cmdReplaceSelectedLines,
+        _d: cmdDelete,
+        _D: cmdDeleteLines,
+        _i: cmdInsertMode,
+        _J: cmdJoinLines,
+        _R: cmdReplaceSelectedLines,
+        _p: cmdInternalPaste,
+        _u: cmdResetSelection,
+        _x: cmdDelete,
+        _s: cmdChange,
+        _S: cmdReplaceSelectedLines,
+        _v: cmdVisualMode,
+        _V: cmdVisualLinesMode,
+        _X: cmdDeleteLines,
+        _y: cmdYank,
+        _Less: cmdUnIndent,
+        _Greater: cmdIndent,
+        _Equal: cmdAutoIndent,
+    }
 
 
 class Visual(BaseVisual):
@@ -900,12 +908,12 @@ class Normal(BaseCommandMode):
                 searchChar = ev.text()
 
             if (action != _z and motion in self._MOTIONS) or \
-               (action, motion) in ((_d, _d),
-                                    (_y, _y),
-                                    (_Less, _Less),
-                                    (_Greater, _Greater),
-                                    (_Equal, _Equal),
-                                    (_z, _z)):
+                    (action, motion) in ((_d, _d),
+                                         (_y, _y),
+                                         (_Less, _Less),
+                                         (_Greater, _Greater),
+                                         (_Equal, _Equal),
+                                         (_z, _z)):
                 cmdFunc = self._COMPOSITE_COMMANDS[action]
                 cmdFunc(self, action, motion, searchChar, count)
 
@@ -914,7 +922,6 @@ class Normal(BaseCommandMode):
             return True  # ignore unknown character
         else:
             return False  # but do not ignore not-a-character keys
-
 
         assert 0  # must StopIteration on if
 
@@ -1017,12 +1024,14 @@ class Normal(BaseCommandMode):
 
     def cmdNewLineAbove(self, cmd, count):
         cursor = self._qpart.textCursor()
+
         def insert():
             cursor.movePosition(QTextCursor.StartOfBlock)
             self._qpart.setTextCursor(cursor)
             self._qpart._insertNewBlock()
             cursor.movePosition(QTextCursor.Up)
             self._qpart._indenter.autoIndentBlock(cursor.block())
+
         self._repeat(count, insert)
         self._qpart.setTextCursor(cursor)
 
@@ -1041,7 +1050,7 @@ class Normal(BaseCommandMode):
                 self._qpart.setTextCursor(cursor)
 
             self._repeat(count,
-                lambda: cursor.insertText(_globalClipboard.value))
+                         lambda: cursor.insertText(_globalClipboard.value))
             cursor.movePosition(QTextCursor.Left)
             self._qpart.setTextCursor(cursor)
 
@@ -1051,7 +1060,7 @@ class Normal(BaseCommandMode):
                 index += 1
 
             self._repeat(count,
-                lambda: self._qpart.lines.insert(index, '\n'.join(_globalClipboard.value)))
+                         lambda: self._qpart.lines.insert(index, '\n'.join(_globalClipboard.value)))
 
         self._saveLastEditSimpleCmd(cmd, count)
 
@@ -1132,7 +1141,6 @@ class Normal(BaseCommandMode):
         self._qpart.copy()
         self._qpart.setTextCursor(oldCursor)
 
-
     _SIMPLE_COMMANDS = {_A: cmdAppendAfterLine,
                         _a: cmdAppendAfterChar,
                         _C: cmdDeleteUntilEndOfBlock,
@@ -1155,7 +1163,7 @@ class Normal(BaseCommandMode):
                         _x: cmdDelete,
                         _X: cmdDelete,
                         _Y: cmdYankUntilEndOfLine,
-                       }
+                        }
 
     #
     # Composite commands
@@ -1276,4 +1284,4 @@ class Normal(BaseCommandMode):
                            _Greater: cmdCompositeIndent,
                            _Equal: cmdCompositeAutoIndent,
                            _z: cmdCompositeScrollView,
-                          }
+                           }

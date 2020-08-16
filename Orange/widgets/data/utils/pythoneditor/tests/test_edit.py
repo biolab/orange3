@@ -3,9 +3,9 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public
-License as published by the Free Software Foundation, version 2.1
-of the license. This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public License
+as published by the Free Software Foundation, version 2.1 of the license.
+This is compatible with Orange3's GPL-3.0 license.
 """
 import unittest
 
@@ -44,9 +44,9 @@ class Test(WidgetTest):
         self.qpart.show()
         self.qpart.text = 'abcd'
         QTest.keyClick(self.qpart, Qt.Key_Insert)
-        for i in range(3):
+        for _ in range(3):
             QTest.keyClick(self.qpart, Qt.Key_Right)
-        for i in range(2):
+        for _ in range(2):
             QTest.keyClick(self.qpart, Qt.Key_Backspace)
         self.assertEqual(self.qpart.text, 'a  d')
 

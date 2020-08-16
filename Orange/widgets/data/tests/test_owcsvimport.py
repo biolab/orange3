@@ -280,12 +280,12 @@ class TestUtils(unittest.TestCase):
             b'?, ., NA'
         )
 
-        class dialect(csv.excel):
+        class Dialect(csv.excel):
             skipinitialspace = True
 
         opts = owcsvimport.Options(
             encoding="ascii",
-            dialect=dialect(),
+            dialect=Dialect(),
             columntypes=[
                 (range(0, 1), ColumnType.Text),
                 (range(1, 2), ColumnType.Categorical),
@@ -303,7 +303,7 @@ class TestUtils(unittest.TestCase):
 
         opts = owcsvimport.Options(
             encoding="ascii",
-            dialect=dialect(),
+            dialect=Dialect(),
             columntypes=[
                 (range(0, 1), ColumnType.Categorical),
                 (range(1, 2), ColumnType.Categorical),

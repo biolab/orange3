@@ -92,7 +92,7 @@ def list_model_move_row_helper(model, parent, src, dst):
 
 
 def list_model_move_rows_helper(model, parent, src, count, dst):
-    assert not (src <= dst < src + count + 1)
+    assert not src <= dst < src + count + 1
     rowdata = [model.itemData(model.index(src + i, 0, parent))
                for i in range(count)]
     removed = model.removeRows(src, count, parent)

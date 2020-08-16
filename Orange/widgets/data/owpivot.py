@@ -869,7 +869,7 @@ class OWPivot(OWWidget):
                                         format_summary_details(self.data))
 
     def init_attr_values(self):
-        domain = self.data.domain if self.data and len(self.data) else None
+        domain = self.data.domain if self.data and len(self.data) > 0 else None
         for attr in ("row_feature", "col_feature", "val_feature"):
             getattr(self.controls, attr).model().set_domain(domain)
             setattr(self, attr, None)
