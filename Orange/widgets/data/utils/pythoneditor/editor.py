@@ -7,6 +7,8 @@ Originally licensed under the terms of GNU Lesser General Public
 License as published by the Free Software Foundation, version 2.1
 of the license. This is compatible with Orange3's GPL-3.0 license.
 """
+import sys
+
 from AnyQt.QtCore import Signal, Qt, QRect, QMimeData
 from AnyQt.QtGui import QColor, QPainter, QPalette, QTextCursor, QKeySequence, QTextBlock, \
     QTextFormat, QBrush, QPen, QKeyEvent, QTextCharFormat
@@ -325,30 +327,17 @@ class PythonEditor(QPlainTextEdit):
             if not blockToMove.isValid():
                 return
 
-            # if operaiton is UnDone, marks are located incorrectly
-            markMargin = self.getMargin("mark_area")
-            if markMargin:
-                markMargin.clearBookmarks(startBlock, endBlock.next())
-
             _moveBlock(blockToMove, startBlockNumber)
 
-            self._selectLines(startBlockNumber + 1, endBlockNumber + 1)
+            # self._selectLines(startBlockNumber + 1, endBlockNumber + 1)
         else:  # move previous block down
             blockToMove = startBlock.previous()
             if not blockToMove.isValid():
                 return
 
-            # if operaiton is UnDone, marks are located incorrectly
-            markMargin = self.getMargin("mark_area")
-            if markMargin:
-                markMargin.clearBookmarks(startBlock, endBlock)
-
             _moveBlock(blockToMove, endBlockNumber)
 
-            self._selectLines(startBlockNumber - 1, endBlockNumber - 1)
-
-        if markMargin:
-            markMargin.update()
+            # self._selectLines(startBlockNumber - 1, endBlockNumber - 1)
 
     def _selectedLinesSlice(self):
         """Get slice of selected lines
@@ -802,6 +791,15 @@ class PythonEditor(QPlainTextEdit):
                     cursor.deleteChar()
                 cursor.insertText(text)
 
+        # mac specific shortcuts,
+        if sys.platform == 'darwin':
+            # it seems weird to delete line on CTRL+Backspace on Windows,
+            # that's for deleting words. But Mac's CMD maps to Qt's CTRL.
+            if event.key() == Qt.Key_Backspace and event.modifiers() == Qt.ControlModifier:
+                self.deleteLineAction.trigger()
+                event.accept()
+                return True
+
         if event.matches(QKeySequence.InsertParagraphSeparator) or event.matches(QKeySequence.InsertLineSeparator):
             if self._vim is not None:
                 if self._vim.keyPressEvent(event):
@@ -860,11 +858,8 @@ class PythonEditor(QPlainTextEdit):
                     action.trigger()
                     break
             else:
-                if event.text() and event.modifiers() == Qt.AltModifier:
-                    return  # alt+letter is a shortcut. Not mine
-                else:
-                    self._lastKeyPressProcessedByParent = True
-                    super(PythonEditor, self).keyPressEvent(event)
+                self._lastKeyPressProcessedByParent = True
+                super(PythonEditor, self).keyPressEvent(event)
 
         if event.key() == Qt.Key_Escape:
             event.accept()
@@ -1450,7 +1445,7 @@ class LineNumberArea(QWidget):
             return
 
         # Build a list of occupied ranges
-        margins = self._editor.getMargins()
+        margins = [self._editor._line_number_margin]
 
         occupiedRanges = []
         for margin in margins:
