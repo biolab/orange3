@@ -333,10 +333,12 @@ class Script:
             OWPythonScript.script_state_manager.scriptRenamed.emit(old_filename, filename)
 
     def reload(self):
-        if self.flags & self.MissingFromFilesystem:
-            raise FileNotFoundError()
+        if not os.path.exists(self.fullname):
+            self.flags = self.MissingFromFilesystem
+            return False
         with open(self.fullname) as f:
             self._script = f.read()
+        return True
 
     def refresh(self, new_script, set_modified=True):
         if self.script != new_script:
@@ -781,7 +783,8 @@ class OWPythonScript(OWWidget):
         actions_box.layout().addWidget(button)
 
         icon = _icon('restore.svg')
-        restoreAction = action = QAction(icon, 'Restore', self)
+        self.restoreAction = action = QAction(icon, 'Restore', self)
+        action.setEnabled(False)
         action.setToolTip("Restore saved script")
         action.triggered.connect(self.restoreSaved)
         button = QToolButton(actions_box)
@@ -824,11 +827,9 @@ class OWPythonScript(OWWidget):
         button.setPopupMode(QToolButton.InstantPopup)
         actions_box.layout().addWidget(button)
 
-        self.saved_script_actions = (restoreAction, remove_script)
-        for a in self.saved_script_actions:
-            a.setEnabled(False)
-
-        self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
+        self.execute_button = gui.button(self.controlArea, self, 'Run',
+                                         toolTip='Run script (⇧⏎)',
+                                         callback=self.commit)
 
         run = QAction("Run script", self, triggered=self.commit,
                       shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
@@ -1111,10 +1112,10 @@ class OWPythonScript(OWWidget):
     def removeScript(self, index):
         script = self.libraryList[index]
         filename = script.filename
-        os.remove(os.path.join(SCRIPTS_FOLDER_PATH, filename))
         del self.libraryList[index]
 
         if not script.flags & Script.MissingFromFilesystem:
+            os.remove(os.path.join(SCRIPTS_FOLDER_PATH, filename))
             self.script_state_manager.scriptRemoved.disconnect(self._handleScriptRemoved)
             self.script_state_manager.scriptRemoved.emit(filename)
             self.script_state_manager.scriptRemoved.connect(self._handleScriptRemoved)
@@ -1134,10 +1135,11 @@ class OWPythonScript(OWWidget):
             current = index[0]
             self.editor.setDocument(self.documentForScript(current))
             script = self.libraryList[current]
-            an_action = self.saved_script_actions[0]
-            if bool(script.flags & Script.MissingFromFilesystem) == an_action.isEnabled():
-                for a in self.saved_script_actions:
-                    a.setEnabled(not script.flags & Script.MissingFromFilesystem)
+            self.update_saved_script_actions(not script.flags & Script.MissingFromFilesystem)
+
+    def update_saved_script_actions(self, enabled):
+        if self.restoreAction.isEnabled() != enabled:
+            self.restoreAction.setEnabled(enabled)
 
     def documentForScript(self, script=0):
         if not isinstance(script, Script):
@@ -1161,9 +1163,7 @@ class OWPythonScript(OWWidget):
             text = self.editor.text
             script = self.libraryList[index]
 
-            if script.flags & Script.MissingFromFilesystem:
-                for a in self.saved_script_actions:
-                    a.setEnabled(True)
+            self.update_saved_script_actions(True)
 
             script.script = text
             self.script_state_manager.scriptSaved.disconnect(self._handleScriptSaved)
@@ -1187,7 +1187,8 @@ class OWPythonScript(OWWidget):
         index = self.selectedScriptIndex()
         if index is not None:
             script = self.libraryList[index]
-            script.reload()
+            file_found = script.reload()
+            self.update_saved_script_actions(file_found)
             self.editor.text = script.script
             self.editor.document().setModified(False)
             # when restoring to an empty string,

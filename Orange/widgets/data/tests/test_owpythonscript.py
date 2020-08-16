@@ -1,8 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import os
 import shutil
 import sys
+import tempfile
 
+import Orange
 from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 
@@ -10,13 +13,14 @@ from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.tests import named_file
 from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content, Script, \
-    SCRIPTS_FOLDER_PATH
+    DEFAULT_FILENAME, SCRIPTS_FOLDER_PATH
 from Orange.widgets.tests.base import WidgetTest, DummySignalManager
 from Orange.widgets.widget import OWWidget
 
 
 class TestOWPythonScript(WidgetTest):
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWPythonScript)
         self.iris = Table("iris")
         self.learner = LogisticRegressionLearner()
@@ -234,6 +238,14 @@ class TestOWPythonScript(WidgetTest):
         widget2.restoreSaved()
         self.assertEqual("42", widget2.editor.text)
 
+    def test_rename_multiple_widgets(self):
+        self.widget.editor.text = "42"
+        self.widget.commitChangesToLibrary()
+        i = self.widget.selectedScriptIndex()
+        widget2 = self.create_widget(OWPythonScript)
+        self.widget.libraryList[i].filename = 'baba.py'
+        self.assertEqual('baba.py', widget2.libraryList[i].filename)
+
     def test_save_name_collision_multiple_widgets(self):
         widget2 = self.create_widget(OWPythonScript)
         self.widget.onAddScript()
@@ -372,6 +384,22 @@ class TestOWPythonScript(WidgetTest):
         self.assertIn("NameError: name 'x' is not defined",
                       self.widget.console._control.toPlainText())
 
+    def test_edit_file_externally(self):
+        self.widget.commitChangesToLibrary()
+        filename = os.path.join(SCRIPTS_FOLDER_PATH, DEFAULT_FILENAME + '.py')
+        with open(filename, 'w') as f:
+            f.write('52')
+        self.widget.restoreSaved()
+        self.assertEqual('52', self.widget.editor.text)
+        index = self.widget.selectedScriptIndex()
+        script = self.widget.libraryList[index]
+        os.remove(filename)
+        self.assertFalse(script.flags & Script.MissingFromFilesystem)
+        self.widget.editor.text = '562'
+        self.widget.restoreSaved()
+        self.assertEqual('52', self.widget.editor.text, )
+        self.assertTrue(script.flags & Script.MissingFromFilesystem)
+
     def test_migrate_0(self):
         class _Script:
             def __init__(self, name, script):
@@ -381,8 +409,8 @@ class TestOWPythonScript(WidgetTest):
             "libraryListSource": [_Script('A', '1')],
             "__version__": 0
         })
-        self.assertEqual(w.editor.text, "1")
-        self.assertEqual(w.libraryList[w.selectedScriptIndex()].filename, 'A.py')
+        self.assertEqual("1", w.editor.text)
+        self.assertEqual('A.py', w.libraryList[w.selectedScriptIndex()].filename)
 
     def test_migrate_2(self):
         w = self.create_widget(OWPythonScript, {
