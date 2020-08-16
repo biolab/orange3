@@ -14,13 +14,11 @@ from typing import Optional, List, TYPE_CHECKING
 
 from jupyter_client import MultiKernelManager
 
-import qutepart
-
 from AnyQt.QtWidgets import (
     QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
     QStyleOptionViewItem, QPlainTextDocumentLayout,
-    QLabel, QWidget, QHBoxLayout, QMessageBox)
+    QLabel, QWidget, QHBoxLayout, QMessageBox, QPlainTextEdit)
 from AnyQt.QtGui import (
     QColor, QPalette, QFont, QTextDocument, QTextCursor, QKeySequence,
     QFontMetrics, QDesktopServices, QPainter)
@@ -28,9 +26,10 @@ from AnyQt.QtCore import Qt, QByteArray, QItemSelectionModel, QSize, \
     Signal, QUrl, QObject, QRectF
 
 import pygments.style
-from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name, Other
+from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
 
 from Orange.canvas import config
+from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from orangecanvas.gui.utils import message_question, message_information
 from qtconsole import styles
 from qtconsole.pygments_highlighter import PygmentsHighlighter
@@ -104,35 +103,6 @@ def make_pygments_style(scheme_name):
 
 
 PygmentsStyle = make_pygments_style('Light')
-
-
-class CodeEditor(qutepart.Qutepart):
-    viewport_margins_updated = Signal(float)
-
-    def setViewportMargins(self, left, top, right, bottom):
-        """
-        Override to align function signature with first character.
-        """
-        super().setViewportMargins(left, top, right, bottom)
-
-        cursor = QTextCursor(self.firstVisibleBlock())
-        qutepart.setPositionInBlock(cursor, 0)
-        cursorRect = self.cursorRect(cursor).translated(0, 0)
-
-        first_char_indent = self._totalMarginWidth + \
-                            self.contentsMargins().left() + \
-                            cursorRect.left()
-
-        self.viewport_margins_updated.emit(first_char_indent)
-
-    def keyPressEvent(self, event):
-        """
-        Eat all ESC keypresses (in case of vim mode)
-        """
-        b = super().keyPressEvent(event)
-        if event.key() == Qt.Key_Escape:
-            event.accept()
-        return b
 
 
 class VimIndicator(QWidget):
@@ -811,15 +781,10 @@ class OWPythonScript(OWWidget):
                                      eFont)
         self.func_sig = func_sig
 
-        editor = CodeEditor(False, True, True, self)
+        editor = PythonEditor(self)
         editor.setFont(eFont)
 
-        # use python autoindent, autocomplete
-        editor.detectSyntax(language='Python')
-        # but clear the highlighting and use our own
-        editor.clearSyntax()
-
-        # TODO should we care about displaying the these warnings?
+        # TODO should we care about displaying these warnings?
         # editor.userWarning.connect()
 
         self.vim_box = gui.hBox(self.editor_controls, spacing=20)

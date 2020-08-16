@@ -3,15 +3,15 @@ Adapted from a code editor component created
 for Enki editor as replacement for QScintilla.
 Copyright (C) 2020  Andrei Kopats
 
-Originally licensed under the terms of GNU Lesser General Public License
-as published by the Free Software Foundation, version 2.1 of the license.
-This is compatible with Orange3's GPL-3.0 license.
+Originally licensed under the terms of GNU Lesser General Public
+License as published by the Free Software Foundation, version 2.1
+of the license. This is compatible with Orange3's GPL-3.0 license.
 """
+from PyQt5.QtGui import QTextCursor
+
 """Lines class.
 list-like object for access text document lines
 """
-
-from PyQt5.QtGui import QTextCursor
 
 
 def _iterateBlocksFrom(block):
@@ -26,6 +26,9 @@ class Lines:
     def __init__(self, qpart):
         self._qpart = qpart
         self._doc = qpart.document()
+
+    def setDocument(self, document):
+        self._doc = document
 
     def _atomicModification(func):
         """Decorator

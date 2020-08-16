@@ -7,15 +7,15 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """
+import time
+
+from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QTextCursor, QColor
+from AnyQt.QtWidgets import QTextEdit
+
 """Bracket highlighter.
 Calculates list of QTextEdit.ExtraSelection
 """
-
-import time
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtWidgets import QTextEdit
 
 
 class _TimeoutException(UserWarning):
@@ -31,6 +31,9 @@ class BracketHighlighter:
     Currently, this class might be just a set of functions.
     Probably, it will contain instance specific selection colors later
     """
+    MATCHED_COLOR = QColor('#0b0')
+    UNMATCHED_COLOR = QColor('#a22')
+
     _MAX_SEARCH_TIME_SEC = 0.02
 
     _START_BRACKETS = '({['
@@ -110,11 +113,12 @@ class BracketHighlighter:
         selection = QTextEdit.ExtraSelection()
 
         if matched:
-            bgColor = Qt.green
+            fgColor = self.MATCHED_COLOR
         else:
-            bgColor = Qt.red
+            fgColor = self.UNMATCHED_COLOR
 
-        selection.format.setBackground(bgColor)
+        selection.format.setForeground(fgColor)
+        selection.format.setBackground(Qt.white)  # repaint hack
         selection.cursor = QTextCursor(block)
         selection.cursor.setPosition(block.position() + columnIndex)
         selection.cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
