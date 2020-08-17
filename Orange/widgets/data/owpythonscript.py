@@ -1155,8 +1155,10 @@ class OWPythonScript(OWWidget):
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
-        self.multi_kernel_manager.shutdown_kernel(self.kernel_id)
         self.console.kernel_client.shutdown()
+        self.console.kernel_client.stop_channels()
+        self.multi_kernel_manager.interrupt_kernel(self.kernel_id)
+        self.multi_kernel_manager.shutdown_kernel(self.kernel_id)
         self.script_state_manager.scriptRemoved.disconnect(self._handleScriptRemoved)
         self.script_state_manager.scriptSaved.disconnect(self._handleScriptSaved)
         self.script_state_manager.scriptRenamed.disconnect(self._handleScriptRenamed)
