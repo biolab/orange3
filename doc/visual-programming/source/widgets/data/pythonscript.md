@@ -1,11 +1,11 @@
 Python Script
 =============
 
-Extends functionalities through Python scripting.
+Write a Python script for infinite possibilities.  
 
 **Inputs**
 
-- Data (Orange.data.Table): input dataset bound to ``in_data`` variable
+- Data (pandas.DataFrame or Orange.data.Table): input dataset bound to either ``in_df`` or ``in_data`` variable
 - Learner (Orange.classification.Learner): input learner bound to ``in_learner`` variable
 - Classifier (Orange.classification.Learner): input classifier bound to ``in_classifier`` variable
 - Object: input Python object bound to ``in_object`` variable
@@ -17,19 +17,18 @@ Extends functionalities through Python scripting.
 - Classifier (Orange.classification.Learner): classifier retrieved from ``out_classifier`` variable
 - Object: Python object retrieved from ``out_object`` variable
 
-**Python Script** widget can be used to run a python script in the input, when a suitable functionality is not implemented in an existing widget. The script has ``in_data``, ``in_distance``, ``in_learner``, ``in_classifier`` and ``in_object`` variables (from input signals) in its local namespace. If a signal is not connected or it did not yet receive any data, those variables contain ``None``.
+The **Python Script** widget can be used to transform, save or load data, learners, classifiers and objects. 
+This is great for when you need functionality not already implemented in an existing widget.
+Connect a signal to the widget's input to access it as a variable;  
+``in_df``/``in_data``, ``in_learner``, ``in_classifier`` and ``in_object`` variables are loaded in the script's local namespace. 
 
-After the script is executed variables from the script’s local namespace are extracted and used as outputs of the widget. The widget can be further connected to other widgets for visualizing the output.
+After the script is executed, ``out_`` variables are extracted and used as outputs of the widget. 
+The widget can be further connected to other widgets for visualizing the output.
+If you want to get fancy with multiple Python Script widgets, you can send objects between them with the ``object`` signal.
 
-For instance the following script would simply pass on all signals it receives:
+For instance, the following script would simply pass on the Data signal it receives:
 
     out_data = in_data
-    out_distance = in_distance
-    out_learner = in_learner
-    out_classifier = in_classifier
-    out_object = in_object
-
-Note: You should not modify the input objects in place.
 
 ![](images/PythonScript-stamped.png)
 
@@ -38,6 +37,25 @@ Note: You should not modify the input objects in place.
 3. Pressing *Execute* in the *Run* box executes the script (keyboard shortcut "Ctrl+R"). Any script output (from ``print``) is captured and displayed in the *Console* below the script.
 4. The *Python script* editor on the left can be used to edit a script (it supports some rudimentary syntax highlighting).
 5. Console displays the output of the script.
+
+Editor keyboard shortcuts
+-------------------------
+
+- **Shift+Enter**: Run script
+- **Ctrl/CMD+Z**: Undo
+- **Ctrl/CMD+Y**: Redo
+- **Alt+Up**: Move line up
+- **Alt+Down**: Move line down
+- **CTRL/CMD+D**: Delete line
+- **Alt+X**: Cut line
+- **Alt+C**: Copy line
+- **Alt+V**: Paste line
+- **Alt+D**: Duplicate line
+- **Tab**: Increase indentation
+- **Shift+Tab**: Decrease indentation
+- **Ctrl/CMD+I**: Auto-indent line
+- **Ctrl/CMD+Shift+Space**: Increase indentation by one space
+- **Ctrl/CMD+Shift+Backspace**: Decrease indentation by one space
 
 Examples
 --------
