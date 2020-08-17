@@ -805,9 +805,10 @@ class PythonEditor(QPlainTextEdit):
                 self.deleteLineAction.trigger()
                 event.accept()
                 return
-
-        if event.matches(QKeySequence.InsertParagraphSeparator) or event.matches(
-                QKeySequence.InsertLineSeparator):
+        if event.matches(QKeySequence.InsertLineSeparator):
+            event.ignore()
+            return
+        elif event.matches(QKeySequence.InsertParagraphSeparator):
             if self._vim is not None:
                 if self._vim.keyPressEvent(event):
                     return

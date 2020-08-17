@@ -424,18 +424,6 @@ def select_row(view, row):
                     QItemSelectionModel.ClearAndSelect)
 
 
-class OrangePythonEditor(PythonEditor):
-    run_event = Signal()
-
-    def keyPressEvent(self, event):
-        if event.matches(QKeySequence.InsertLineSeparator):
-            # run on Shift+Enter, Ctrl+Enter
-            self.run_event.emit()
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-
 # TODO it takes a while for the kernel and client to start up,
 # the default 3 second timeout seems too short.
 # it's likely a bug that it takes that long, but for now,
@@ -652,8 +640,8 @@ class OWPythonScript(OWWidget):
                                          toolTip='Run script (⇧⏎)',
                                          callback=self.commit)
 
-        run = QAction("Run script", self, triggered=self.commit,
-                      shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
+        self.run_action = run = QAction("Run script", self, triggered=self.commit,
+                                        shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
         self.addAction(run)
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
@@ -675,13 +663,11 @@ class OWPythonScript(OWWidget):
                                      eFont)
         self.func_sig = func_sig
 
-        editor = OrangePythonEditor(self)
+        editor = PythonEditor(self)
         editor.setFont(eFont)
 
         # TODO should we care about displaying these warnings?
         # editor.userWarning.connect()
-
-        editor.run_event.connect(self.commit)
 
         self.vim_box = gui.hBox(self.editor_controls, spacing=20)
         self.vim_indicator = VimIndicator(self.vim_box)
@@ -1119,6 +1105,14 @@ class OWPythonScript(OWWidget):
 
             self.return_stmt.update_signal_text(signal, 1)
             output.send(var)
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.InsertLineSeparator):
+            # run on Shift+Enter, Ctrl+Enter
+            self.run_action.trigger()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()
