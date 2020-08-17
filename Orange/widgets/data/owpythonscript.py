@@ -605,6 +605,10 @@ class OWPythonScript(OWWidget):
         action = QAction(icon, "More", self)
         action.setToolTip('More actions')
 
+        open_from_file = QAction("Open", self)
+        open_from_file.setShortcut(QKeySequence.Open)
+        open_from_file.triggered.connect(self.onAddScriptFromFile)
+
         save_to_file = QAction("Save As", self)
         save_to_file.setShortcut(QKeySequence.SaveAs)
         save_to_file.triggered.connect(self.saveScript)
@@ -625,8 +629,9 @@ class OWPythonScript(OWWidget):
         reload_library.triggered.connect(self.reloadLibrary)
 
         menu = QMenu(actions_box)
-        menu.addAction(remove_script)
+        menu.addAction(open_from_file)
         menu.addAction(save_to_file)
+        menu.addAction(remove_script)
         menu.addAction(reveal_folder)
         menu.addAction(reload_library)
         action.setMenu(menu)
@@ -871,13 +876,13 @@ class OWPythonScript(OWWidget):
         self.libraryView.edit(self.libraryList.index(i))
 
     def onAddScriptFromFile(self, *_):
-        filename, _ = QFileDialog.getOpenFileName(
+        filenames, _ = QFileDialog.getOpenFileNames(
             self, 'Open Python Script',
             os.path.expanduser("~/"),
             'Python files (*.py)\nAll files(*.*)'
         )
-        if filename:
-            self.addScriptFromFile(filename)
+        for f in filenames:
+            self.addScriptFromFile(f)
 
     def addScriptFromFile(self, filename):
         name = os.path.basename(filename)
