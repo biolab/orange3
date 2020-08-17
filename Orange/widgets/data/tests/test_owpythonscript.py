@@ -5,7 +5,7 @@ import os
 import shutil
 
 from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
-from AnyQt.QtGui import QDragEnterEvent, QDropEvent
+from AnyQt.QtGui import QDragEnterEvent, QDropEvent, QTextCursor
 
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
@@ -29,15 +29,11 @@ class TestOWPythonScript(WidgetTest):
         self.widget.onDeleteWidget()
         shutil.rmtree(SCRIPTS_FOLDER_PATH)
 
-    def wait_execute_script(self, script):
+    def wait_execute_script(self, script=None):
         """
         Tests that invoke scripts take longer,
         because they wait for the IPython kernel.
         """
-        if not self.widget.console._OrangeConsoleWidget__is_ready:
-            self.process_events(until=lambda: self.widget.console._OrangeConsoleWidget__is_ready,
-                                timeout=30000)
-
         done = False
 
         def results_ready_callback():
@@ -58,8 +54,13 @@ class TestOWPythonScript(WidgetTest):
         def is_done():
             return done
 
-        self.widget.editor.text = script
+        if script is not None:
+            self.widget.editor.text = script
         self.widget.execute_button.click()
+
+        if not self.widget.console._OrangeConsoleWidget__is_ready:
+            self.process_events(until=lambda: self.widget.console._OrangeConsoleWidget__is_ready,
+                                timeout=30000)
         self.process_events(until=is_done)
 
     def test_inputs(self):
@@ -116,7 +117,7 @@ class TestOWPythonScript(WidgetTest):
                 ("Learner", self.learner, lambda a, b: self.assertEqual(type(a), type(b))),
                 ("Classifier", self.model, lambda a, b: self.assertEqual(type(a), type(b)))):
             lsignal = signal.lower()
-            self.send_signal(signal, data, (1, ))
+            self.send_signal(signal, data, (1,))
             self.wait_execute_script("out_{} = 42".format(lsignal))
             assert_method(self.get_output(signal), None)
             self.assertTrue(self.widget.Warning.illegal_var_type.is_shown())
@@ -147,7 +148,7 @@ class TestOWPythonScript(WidgetTest):
         self.wait_execute_script('clear')
 
         # if one data input signal, in_data is iris
-        self.send_signal("Data", self.iris, (1, ))
+        self.send_signal("Data", self.iris, (1,))
         self.wait_execute_script("in_data")
         self.assertIn(repr(self.iris),
                       self.widget.console._control.toPlainText())
@@ -162,7 +163,7 @@ class TestOWPythonScript(WidgetTest):
         self.wait_execute_script('clear')
 
         # if two data input signals, in_data is defined
-        self.send_signal("Data", titanic, (2, ))
+        self.send_signal("Data", titanic, (2,))
         self.wait_execute_script("in_data")
         self.assertNotIn("NameError: name 'in_data' is not defined",
                          self.widget.console._control.toPlainText())
@@ -184,7 +185,7 @@ class TestOWPythonScript(WidgetTest):
         self.wait_execute_script('clear')
 
         # back to one data signal, in_data is titanic
-        self.send_signal("Data", None, (1, ))
+        self.send_signal("Data", None, (1,))
 
         self.wait_execute_script("in_data")
         self.assertIn(repr(titanic),
@@ -200,7 +201,7 @@ class TestOWPythonScript(WidgetTest):
         self.wait_execute_script('clear')
 
         # back to no data signal, in_data is undefined
-        self.send_signal("Data", None, (2, ))
+        self.send_signal("Data", None, (2,))
 
         self.wait_execute_script("in_data")
         self.assertIn("NameError: name 'in_data' is not defined",
@@ -308,14 +309,23 @@ class TestOWPythonScript(WidgetTest):
 
     def test_script_insert_mime_file(self):
         with named_file("test", suffix=".42") as fn:
-            previous = self.widget.editor.text
             mime = QMimeData()
             url = QUrl.fromLocalFile(fn)
             mime.setUrls([url])
+            self.widget.editor.text = 'with open('
+            end_cursor = QTextCursor(self.widget.editor.document())
+            end_cursor.movePosition(QTextCursor.End)
+            self.widget.editor.setTextCursor(end_cursor)
+            previous = self.widget.editor.text
             self.widget.editor.insertFromMimeData(mime)
-            self.assertIn(fn, self.widget.editor.text)
+            self.assertIn(url.toLocalFile(), self.widget.editor.text)
             self.widget.editor.undo()
             self.assertEqual(previous, self.widget.editor.text)
+            self.widget.editor.redo()
+            self.widget.editor.text += """) as f:
+    print(f.read())"""
+            self.wait_execute_script()
+            self.assertIn('test', self.widget.console._control.toPlainText())
 
     def test_dragEnterEvent_accepts_text(self):
         with named_file("Content", suffix=".42") as fn:
@@ -403,6 +413,7 @@ class TestOWPythonScript(WidgetTest):
             def __init__(self, name, script):
                 self.name = name
                 self.script = script
+
         w = self.create_widget(OWPythonScript, {
             "libraryListSource": [_Script('A', '1')],
             "__version__": 0

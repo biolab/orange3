@@ -7,6 +7,7 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """
+import os
 import sys
 
 from AnyQt.QtCore import Signal, Qt, QRect

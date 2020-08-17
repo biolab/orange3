@@ -749,7 +749,7 @@ class OWPythonScript(OWWidget):
 
         self._temp_connection_dir = tempfile.mkdtemp()
         self.multi_kernel_manager.connection_dir = self._temp_connection_dir
-        kernel_id = self.multi_kernel_manager.start_kernel(
+        self.kernel_id = kernel_id = self.multi_kernel_manager.start_kernel(
             extra_arguments=[
                 '--IPKernelApp.kernel_class='
                 'Orange.widgets.data.utils.python_kernel.OrangeIPythonKernel',
@@ -1131,8 +1131,8 @@ class OWPythonScript(OWWidget):
     def dropEvent(self, event):
         """Handle file drops"""
         urls = event.mimeData().urls()
-        if urls:
-            self.addScriptFromFile(urls[0].path())
+        for u in urls:
+            self.addScriptFromFile(u.toLocalFile())
 
     @classmethod
     def migrate_settings(cls, settings, version):
@@ -1156,7 +1156,8 @@ class OWPythonScript(OWWidget):
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
-        self.console.kernel_manager.shutdown_kernel()
+        self.multi_kernel_manager.shutdown_kernel(self.kernel_id)
+        self.console.kernel_client.shutdown()
         self.script_state_manager.scriptRemoved.disconnect(self._handleScriptRemoved)
         self.script_state_manager.scriptSaved.disconnect(self._handleScriptSaved)
         self.script_state_manager.scriptRenamed.disconnect(self._handleScriptRenamed)
