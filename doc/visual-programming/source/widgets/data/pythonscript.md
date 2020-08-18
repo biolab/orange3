@@ -44,6 +44,7 @@ Editor keyboard shortcuts
 - **Shift+Enter**: Run script
 - **Ctrl/CMD+Z**: Undo
 - **Ctrl/CMD+Y**: Redo
+- **CTRL/CMD+/**: Toggle comment
 - **Alt+Up**: Move line up
 - **Alt+Down**: Move line down
 - **CTRL/CMD+D**: Delete line

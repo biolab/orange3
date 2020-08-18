@@ -138,6 +138,26 @@ class IsCodeOrComment(_BaseTest):
         self.assertTrue(self.qpart.isComment(0, 0))
 
 
+class ToggleCommentTest(_BaseTest):
+    def test_single_line(self):
+        self.qpart.text = 'a = 2'
+        self.qpart._onToggleCommentLine()
+        self.assertEqual('# a = 2\n', self.qpart.text)
+        self.qpart._onToggleCommentLine()
+        self.assertEqual('# a = 2\n', self.qpart.text)
+        self.qpart._selectLines(0, 0)
+        self.qpart._onToggleCommentLine()
+        self.assertEqual('a = 2\n', self.qpart.text)
+
+    def test_two_lines(self):
+        self.qpart.text = 'a = 2\nb = 3'
+        self.qpart._selectLines(0, 1)
+        self.qpart._onToggleCommentLine()
+        self.assertEqual('# a = 2\n# b = 3\n', self.qpart.text)
+        self.qpart.undo()
+        self.assertEqual('a = 2\nb = 3', self.qpart.text)
+
+
 class Signals(_BaseTest):
     def test_indent_width_changed(self):
         newValue = [None]

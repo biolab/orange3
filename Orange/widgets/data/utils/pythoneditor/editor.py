@@ -161,6 +161,9 @@ class PythonEditor(QPlainTextEdit):
 
             return action
 
+        # custom Orange actions
+        self.commentLine = createAction('Toggle comment line', 'Ctrl+/', self._onToggleCommentLine)
+
         # scrolling
         self.scrollUpAction = createAction('Scroll up', 'Ctrl+Up',
                                            lambda: self._onShortcutScroll(down=False),
@@ -222,6 +225,63 @@ class PythonEditor(QPlainTextEdit):
                                                 self._onShortcutDuplicateLine)
         self.invokeCompletionAction = createAction('Invoke completion', 'Ctrl+Space',
                                                    self._onCompletion)
+    def _onToggleCommentLine(self):
+        cursor: QTextCursor = self.textCursor()
+        cursor.beginEditBlock()
+
+        startBlock = self.document().findBlock(cursor.selectionStart())
+        endBlock = self.document().findBlock(cursor.selectionEnd())
+
+        def lineIndentationLength(text):
+            return len(text) - len(text.lstrip())
+
+        def isHashCommentSelected(lines):
+            return all(not line.strip() or line.lstrip().startswith('#') for line in lines)
+
+        blocks = []
+        lines = []
+
+        block = startBlock
+        line = block.text()
+        if block != endBlock or line.strip():
+            blocks += [block]
+            lines += [line]
+            while block != endBlock:
+                block = block.next()
+                line = block.text()
+                if line.strip():
+                    blocks += [block]
+                    lines += [line]
+
+        if isHashCommentSelected(lines):
+            # remove the hash comment
+            for block, text in zip(blocks, lines):
+                cursor = QTextCursor(block)
+                cursor.setPosition(block.position() + lineIndentationLength(text))
+                for _ in range(lineIndentationLength(text[lineIndentationLength(text) + 1:]) + 1):
+                    cursor.deleteChar()
+        else:
+            # add a hash comment
+            for block, text in zip(blocks, lines):
+                cursor = QTextCursor(block)
+                cursor.setPosition(block.position() + lineIndentationLength(text))
+                cursor.insertText('# ')
+
+        if endBlock == self.document().lastBlock():
+            if endBlock.text().strip():
+                cursor = QTextCursor(endBlock)
+                cursor.movePosition(QTextCursor.End)
+                self.setTextCursor(cursor)
+                self._insertNewBlock()
+                cursorBlock = endBlock.next()
+            else:
+                cursorBlock = endBlock
+        else:
+            cursorBlock = endBlock.next()
+        cursor = QTextCursor(cursorBlock)
+        cursor.movePosition(QTextCursor.EndOfBlock)
+        self.setTextCursor(cursor)
+        cursor.endEditBlock()
 
     def _onShortcutIndent(self):
         if self.textCursor().hasSelection():
