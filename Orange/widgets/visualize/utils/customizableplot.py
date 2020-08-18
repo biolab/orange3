@@ -169,8 +169,6 @@ class CommonParameterSetter:
         Updater.ANTIALIAS_LABEL: (None, False),
     }
 
-    initial_settings: Dict[str, Dict[str, SettingsType]] = NotImplemented
-
     def __init__(self):
         def update_font_family(**settings):
             for label in self.initial_settings[self.LABELS_BOX]:
@@ -231,7 +229,7 @@ class CommonParameterSetter:
             }
         }
 
-        self.initial_settings = {}
+        self.initial_settings: Dict[str, Dict[str, SettingsType]] = NotImplemented
 
         self.update_setters()
         self._check_setters()
