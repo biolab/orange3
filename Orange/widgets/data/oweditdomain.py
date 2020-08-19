@@ -23,10 +23,12 @@ from AnyQt.QtWidgets import (
     QLineEdit, QAction, QActionGroup, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
-    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox)
+    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
+    QShortcut
+)
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
-    Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex
+    Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
@@ -1100,16 +1102,25 @@ class DiscreteVariableEditor(VariableEditor):
             shortcut=QKeySequence(QKeySequence.Delete),
             shortcutContext=Qt.WidgetShortcut,
         )
-        self.merge_items = QAction(
-            "M", group,
-            objectName="action-merge-item",
+        self.merge_selected_items = QAction(
+            "=", group,
+            objectName="action-merge-selected-items",
             toolTip="Merge selected items.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Equal),
+            shortcutContext=Qt.WidgetShortcut,
+            enabled=False,
+        )
+        self.merge_items = QAction(
+            "ƒM", group,
+            objectName="action-activate-merge-dialog",
+            toolTip="Merge infrequent items.",
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.MetaModifier | Qt.Key_Equal),
             shortcutContext=Qt.WidgetShortcut
         )
 
         self.add_new_item.triggered.connect(self._add_category)
         self.remove_item.triggered.connect(self._remove_category)
+        self.merge_selected_items.triggered.connect(self._merge_selected_categories)
         self.merge_items.triggered.connect(self._merge_categories)
 
         button1 = FixedSizeButton(
@@ -1129,11 +1140,18 @@ class DiscreteVariableEditor(VariableEditor):
             accessibleName="Remove"
         )
         button5 = FixedSizeButton(
-            self, defaultAction=self.merge_items,
-            accessibleName="Merge",
+            self, defaultAction=self.merge_selected_items,
+            accessibleName="Merge selected items"
         )
-        self.values_edit.addActions([self.move_value_up, self.move_value_down,
-                                     self.add_new_item, self.remove_item])
+        button6 = FixedSizeButton(
+            self, defaultAction=self.merge_items,
+            accessibleName="Merge infrequent",
+        )
+
+        self.values_edit.addActions([
+            self.move_value_up, self.move_value_down,
+            self.add_new_item, self.remove_item, self.merge_selected_items
+        ])
         hlayout.addWidget(button1)
         hlayout.addWidget(button2)
         hlayout.addSpacing(3)
@@ -1141,6 +1159,8 @@ class DiscreteVariableEditor(VariableEditor):
         hlayout.addWidget(button4)
         hlayout.addSpacing(3)
         hlayout.addWidget(button5)
+        hlayout.addWidget(button6)
+
         hlayout.addStretch(10)
         vlayout.addLayout(hlayout)
 
@@ -1151,6 +1171,8 @@ class DiscreteVariableEditor(VariableEditor):
         QWidget.setTabOrder(button1, button2)
         QWidget.setTabOrder(button2, button3)
         QWidget.setTabOrder(button3, button4)
+        QWidget.setTabOrder(button4, button5)
+        QWidget.setTabOrder(button5, button6)
 
     def set_data(self, var, transform=()):
         raise NotImplementedError
@@ -1299,6 +1321,7 @@ class DiscreteVariableEditor(VariableEditor):
             len(rows) > 1 and \
             not any(index.data(EditStateRole) != ItemEditState.NoState
                     for index in rows)
+        self.merge_selected_items.setEnabled(enable_merge)
 
         if len(rows) == 1:
             i = rows[0].row()
@@ -1421,6 +1444,66 @@ class DiscreteVariableEditor(VariableEditor):
             complete_merge(
                 dlg.get_merged_value_name(), dlg.get_merge_attributes()
             )
+
+    def _merge_selected_categories(self):
+        """
+        Merge selected categories into one.
+
+        Popup an editable combo box for selection/edit of a new value.
+        """
+        view = self.values_edit
+        model = view.model()  # type: QAbstractItemModel
+        rows = view.selectedIndexes()  # type: List[QModelIndex]
+        if not len(rows) >= 2:
+            return  # pragma: no cover
+        first_row = rows[0]
+
+        def mapRectTo(widget, parent, rect):
+            # type: (QWidget, QWidget, QRect) -> QRect
+            return QRect(
+                widget.mapTo(parent, rect.topLeft()),
+                rect.size(),
+            )
+
+        def mapRectToGlobal(widget, rect):
+            # type: (QWidget, QRect) -> QRect
+            return QRect(
+                widget.mapToGlobal(rect.topLeft()),
+                rect.size(),
+            )
+        view.scrollTo(first_row)
+        vport = view.viewport()
+        vrect = view.visualRect(first_row)
+        vrect = mapRectTo(vport, view, vrect)
+        vrect = vrect.intersected(vport.geometry())
+        vrect = mapRectToGlobal(vport, vrect)
+
+        cb = QComboBox(editable=True, insertPolicy=QComboBox.InsertAtBottom)
+        cb.setAttribute(Qt.WA_DeleteOnClose)
+        sh = QShortcut(QKeySequence(QKeySequence.Cancel), cb)
+        sh.activated.connect(cb.close)
+        cb.setParent(self, Qt.Popup)
+        cb.move(vrect.topLeft())
+
+        cb.addItems(
+            list(unique(str(row.data(Qt.EditRole)) for row in rows)))
+        prows = [QPersistentModelIndex(row) for row in rows]
+
+        def complete_merge(text):
+            # write the new text for edit role in all rows
+            with disconnected(model.dataChanged, self.on_values_changed):
+                for prow in prows:
+                    if prow.isValid():
+                        model.setData(QModelIndex(prow), text, Qt.EditRole)
+            cb.close()
+            self.variable_changed.emit()
+
+        cb.activated[str].connect(complete_merge)
+        size = cb.sizeHint().expandedTo(vrect.size())
+        cb.resize(size)
+        cb.show()
+        cb.raise_()
+        cb.setFocus(Qt.PopupFocusReason)
 
 
 class ContinuousVariableEditor(VariableEditor):
