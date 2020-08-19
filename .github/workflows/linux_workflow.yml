@@ -54,6 +54,7 @@ jobs:
       - name: Run Tox
         run: xvfb-run -a -s "-screen 0 1280x1024x24" tox -e coverage
         env:
+          QT_QPA_PLATFORM: offscreen
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
 
       - name: Upload code coverage
@@ -62,4 +63,5 @@ jobs:
           pip install codecov
           codecov
         env:
+          QT_QPA_PLATFORM: offscreen
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

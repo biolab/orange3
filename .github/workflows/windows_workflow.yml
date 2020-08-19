@@ -30,3 +30,5 @@ jobs:
 
       - name: Run Tox
         run: tox -e py
+        env:
+          QT_QPA_PLATFORM: offscreen

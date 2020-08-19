@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Cleanup workflow
-        uses: styfle/cancel-workflow-action@0.3.1
+        uses: styfle/cancel-workflow-action@0.4.1
         with:
           workflow_id: 685155, 685156, 685157, 685153, 685154
           access_token: ${{ secrets.GITHUB_TOKEN }}
