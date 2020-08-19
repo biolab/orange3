@@ -13,7 +13,7 @@ from collections import namedtuple, Counter
 from functools import singledispatch, partial
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
-    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable
+    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable, cast
 )
 
 import numpy as np
@@ -24,7 +24,7 @@ from AnyQt.QtWidgets import (
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
     QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
-    QShortcut
+    QAbstractItemView
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
@@ -38,6 +38,7 @@ from Orange.preprocess.transformation import Transformation, Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.buttons import FixedSizeButton
+from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
@@ -466,8 +467,6 @@ class DictItemsModel(QStandardItemModel):
             value_item = self.item(row, 1)
             rval[key_item.text()] = value_item.text()
         return rval
-
-
 
 
 class VariableEditor(QWidget):
@@ -999,6 +998,14 @@ class CountedStateModel(CountedListModel):
         return frozenset({Qt.EditRole, EditStateRole})
 
 
+def mapRectTo(widget: QWidget, parent: QWidget, rect: QRect) -> QRect:  # pylint: disable=redefined-outer-name
+    return QRect(widget.mapTo(parent, rect.topLeft()), rect.size())
+
+
+def mapRectToGlobal(widget: QWidget, rect: QRect) -> QRect:  # pylint: disable=redefined-outer-name
+    return QRect(widget.mapToGlobal(rect.topLeft()), rect.size())
+
+
 class CategoriesEditDelegate(QStyledItemDelegate):
     """
     Display delegate for editing categories.
@@ -1029,6 +1036,64 @@ class CategoriesEditDelegate(QStyledItemDelegate):
         if suffix is not None:
             text = text + " " + suffix
         option.text = text
+
+    class CatEditComboBox(QComboBox):
+        prows: List[QPersistentModelIndex]
+
+    def createEditor(
+            self, parent: QWidget, option: 'QStyleOptionViewItem',
+            index: QModelIndex
+    ) -> QWidget:
+        view = option.widget
+        assert isinstance(view, QAbstractItemView)
+        selmodel = view.selectionModel()
+        rows = selmodel.selectedRows(0)
+        if len(rows) < 2:
+            return super().createEditor(parent, option, index)
+        # edit multiple selection
+        cb = CategoriesEditDelegate.CatEditComboBox(
+            editable=True, insertPolicy=QComboBox.InsertAtBottom)
+        cb.setParent(view, Qt.Popup)
+        cb.addItems(
+            list(unique(str(row.data(Qt.EditRole)) for row in rows)))
+        prows = [QPersistentModelIndex(row) for row in rows]
+        cb.prows = prows
+        return cb
+
+    def updateEditorGeometry(
+            self, editor: QWidget, option: 'QStyleOptionViewItem',
+            index: QModelIndex
+    ) -> None:
+        if isinstance(editor, CategoriesEditDelegate.CatEditComboBox):
+            view = cast(QAbstractItemView, option.widget)
+            view.scrollTo(index)
+            vport = view.viewport()
+            vrect = view.visualRect(index)
+            vrect = mapRectTo(vport, view, vrect)
+            vrect = vrect.intersected(vport.geometry())
+            vrect = mapRectToGlobal(vport, vrect)
+            size = editor.sizeHint().expandedTo(vrect.size())
+            editor.resize(size)
+            editor.move(vrect.topLeft())
+        else:
+            super().updateEditorGeometry(editor, option, index)
+
+    def setModelData(
+            self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
+    ) -> None:
+        if isinstance(editor, CategoriesEditDelegate.CatEditComboBox):
+            text = editor.currentText()
+            with signal_blocking(model):
+                for prow in editor.prows:
+                    if prow.isValid():
+                        model.setData(QModelIndex(prow), text, Qt.EditRole)
+            # this could be better
+            model.dataChanged.emit(
+                model.index(0, 0), model.index(model.rowCount() - 1, 0),
+                (Qt.EditRole,)
+            )
+        else:
+            super().setModelData(editor, model, index)
 
 
 class DiscreteVariableEditor(VariableEditor):
@@ -1108,7 +1173,6 @@ class DiscreteVariableEditor(VariableEditor):
             toolTip="Merge selected items.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Equal),
             shortcutContext=Qt.WidgetShortcut,
-            enabled=False,
         )
         self.merge_items = QAction(
             "ƒM", group,
@@ -1315,14 +1379,6 @@ class DiscreteVariableEditor(VariableEditor):
     @Slot()
     def on_value_selection_changed(self):
         rows = self.values_edit.selectionModel().selectedRows()
-        # enable merge if at least 2 selected items and the selection must not
-        # contain any added/dropped items.
-        enable_merge = \
-            len(rows) > 1 and \
-            not any(index.data(EditStateRole) != ItemEditState.NoState
-                    for index in rows)
-        self.merge_selected_items.setEnabled(enable_merge)
-
         if len(rows) == 1:
             i = rows[0].row()
             self.move_value_up.setEnabled(i != 0)
@@ -1452,58 +1508,14 @@ class DiscreteVariableEditor(VariableEditor):
         Popup an editable combo box for selection/edit of a new value.
         """
         view = self.values_edit
-        model = view.model()  # type: QAbstractItemModel
-        rows = view.selectedIndexes()  # type: List[QModelIndex]
-        if not len(rows) >= 2:
-            return  # pragma: no cover
-        first_row = rows[0]
-
-        def mapRectTo(widget, parent, rect):
-            # type: (QWidget, QWidget, QRect) -> QRect
-            return QRect(
-                widget.mapTo(parent, rect.topLeft()),
-                rect.size(),
-            )
-
-        def mapRectToGlobal(widget, rect):
-            # type: (QWidget, QRect) -> QRect
-            return QRect(
-                widget.mapToGlobal(rect.topLeft()),
-                rect.size(),
-            )
-        view.scrollTo(first_row)
-        vport = view.viewport()
-        vrect = view.visualRect(first_row)
-        vrect = mapRectTo(vport, view, vrect)
-        vrect = vrect.intersected(vport.geometry())
-        vrect = mapRectToGlobal(vport, vrect)
-
-        cb = QComboBox(editable=True, insertPolicy=QComboBox.InsertAtBottom)
-        cb.setAttribute(Qt.WA_DeleteOnClose)
-        sh = QShortcut(QKeySequence(QKeySequence.Cancel), cb)
-        sh.activated.connect(cb.close)
-        cb.setParent(self, Qt.Popup)
-        cb.move(vrect.topLeft())
-
-        cb.addItems(
-            list(unique(str(row.data(Qt.EditRole)) for row in rows)))
-        prows = [QPersistentModelIndex(row) for row in rows]
-
-        def complete_merge(text):
-            # write the new text for edit role in all rows
-            with disconnected(model.dataChanged, self.on_values_changed):
-                for prow in prows:
-                    if prow.isValid():
-                        model.setData(QModelIndex(prow), text, Qt.EditRole)
-            cb.close()
-            self.variable_changed.emit()
-
-        cb.activated[str].connect(complete_merge)
-        size = cb.sizeHint().expandedTo(vrect.size())
-        cb.resize(size)
-        cb.show()
-        cb.raise_()
-        cb.setFocus(Qt.PopupFocusReason)
+        selmodel = view.selectionModel()
+        index = view.currentIndex()
+        if not selmodel.isSelected(index):
+            indices = selmodel.selectedRows(0)
+            if indices:
+                index = indices[0]
+        # delegate to the CategoriesEditDelegate
+        view.edit(index)
 
 
 class ContinuousVariableEditor(VariableEditor):

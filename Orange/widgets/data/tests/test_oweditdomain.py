@@ -517,6 +517,33 @@ class TestEditors(GuiTest):
         self.assertEqual(model.index(0, 0).data(Qt.EditRole), "other")
         self.assertEqual(model.index(1, 0).data(Qt.EditRole), "other")
 
+    def test_discrete_editor_rename_selected_items_action(self):
+        w = DiscreteVariableEditor()
+        v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")), False)
+        w.set_data_categorical(v, [])
+        action = w.rename_selected_items
+        view = w.values_edit
+        model = view.model()
+        selmodel = view.selectionModel()  # type: QItemSelectionModel
+        selmodel.select(
+            QItemSelection(model.index(0, 0), model.index(1, 0)),
+            QItemSelectionModel.ClearAndSelect
+        )
+        # trigger the action, then find the active popup, and simulate entry
+        spy = QSignalSpy(w.variable_changed)
+        with patch.object(QComboBox, "setVisible", return_value=None) as m:
+            action.trigger()
+            m.assert_called()
+        cb = view.findChild(QComboBox)
+        cb.setCurrentText("BA")
+        view.commitData(cb)
+        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "BA")
+        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "BA")
+        self.assertSequenceEqual(
+            list(spy), [[]], 'variable_changed should emit exactly once'
+        )
+
     def test_time_editor(self):
         w = TimeVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
