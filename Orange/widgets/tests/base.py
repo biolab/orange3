@@ -825,8 +825,15 @@ class ProjectionWidgetTestMixin:
         self.widget.set_visual_settings(key, value)
         simulate.combobox_activate_item(self.widget.controls.attr_color,
                                         self.data.domain[0].name)
-        simulate.combobox_activate_item(self.widget.controls.attr_shape,
-                                        self.data.domain[4].name)
+        variables = self.data.domain.variables + self.data.domain.metas
+        discrete_var = next(
+            (x for x in variables if isinstance(x, DiscreteVariable)), None
+        )
+        if discrete_var:
+            # activate item only when discrete variable available
+            simulate.combobox_activate_item(
+                self.widget.controls.attr_shape, discrete_var.name
+            )
         font.setPointSize(12)
         self.assertFontEqual(graph.num_legend.items[0][0].font, font)
 
