@@ -24,11 +24,12 @@ from AnyQt.QtWidgets import (
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
     QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
-    QAbstractItemView
+    QAbstractItemView, QMenu
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
-    Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect
+    Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect,
+    QPoint,
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
@@ -1136,7 +1137,8 @@ class DiscreteVariableEditor(VariableEditor):
             self, objectName="action-group-categories", enabled=False
         )
         self.move_value_up = QAction(
-            "\N{UPWARDS ARROW}", group,
+            "Move up", group,
+            iconText="\N{UPWARDS ARROW}",
             toolTip="Move the selected item up.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.AltModifier |
                                   Qt.Key_BracketLeft),
@@ -1145,7 +1147,8 @@ class DiscreteVariableEditor(VariableEditor):
         self.move_value_up.triggered.connect(self.move_up)
 
         self.move_value_down = QAction(
-            "\N{DOWNWARDS ARROW}", group,
+            "Move down", group,
+            iconText="\N{DOWNWARDS ARROW}",
             toolTip="Move the selected item down.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.AltModifier |
                                   Qt.Key_BracketRight),
@@ -1154,28 +1157,32 @@ class DiscreteVariableEditor(VariableEditor):
         self.move_value_down.triggered.connect(self.move_down)
 
         self.add_new_item = QAction(
-            "+", group,
+            "Add", group,
+            iconText="+",
             objectName="action-add-item",
             toolTip="Append a new item.",
             shortcut=QKeySequence(QKeySequence.New),
             shortcutContext=Qt.WidgetShortcut,
         )
         self.remove_item = QAction(
-            "\N{MINUS SIGN}", group,
+            "Remove item", group,
+            iconText="\N{MINUS SIGN}",
             objectName="action-remove-item",
             toolTip="Delete the selected item.",
             shortcut=QKeySequence(QKeySequence.Delete),
             shortcutContext=Qt.WidgetShortcut,
         )
-        self.merge_selected_items = QAction(
-            "=", group,
-            objectName="action-merge-selected-items",
-            toolTip="Merge selected items.",
+        self.rename_selected_items = QAction(
+            "Rename selected items", group,
+            iconText="=",
+            objectName="action-rename-selected-items",
+            toolTip="Rename selected items.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Equal),
             shortcutContext=Qt.WidgetShortcut,
         )
         self.merge_items = QAction(
-            "ƒM", group,
+            "Merge", group,
+            iconText="M",
             objectName="action-activate-merge-dialog",
             toolTip="Merge infrequent items.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.MetaModifier | Qt.Key_Equal),
@@ -1184,7 +1191,7 @@ class DiscreteVariableEditor(VariableEditor):
 
         self.add_new_item.triggered.connect(self._add_category)
         self.remove_item.triggered.connect(self._remove_category)
-        self.merge_selected_items.triggered.connect(self._merge_selected_categories)
+        self.rename_selected_items.triggered.connect(self._rename_selected_categories)
         self.merge_items.triggered.connect(self._merge_categories)
 
         button1 = FixedSizeButton(
@@ -1204,7 +1211,7 @@ class DiscreteVariableEditor(VariableEditor):
             accessibleName="Remove"
         )
         button5 = FixedSizeButton(
-            self, defaultAction=self.merge_selected_items,
+            self, defaultAction=self.rename_selected_items,
             accessibleName="Merge selected items"
         )
         button6 = FixedSizeButton(
@@ -1214,8 +1221,18 @@ class DiscreteVariableEditor(VariableEditor):
 
         self.values_edit.addActions([
             self.move_value_up, self.move_value_down,
-            self.add_new_item, self.remove_item, self.merge_selected_items
+            self.add_new_item, self.remove_item, self.rename_selected_items
         ])
+        self.values_edit.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        def context_menu(pos: QPoint):
+            viewport = self.values_edit.viewport()
+            menu = QMenu(self.values_edit)
+            menu.setAttribute(Qt.WA_DeleteOnClose)
+            menu.addActions([self.rename_selected_items, self.remove_item])
+            menu.popup(viewport.mapToGlobal(pos))
+        self.values_edit.customContextMenuRequested.connect(context_menu)
+
         hlayout.addWidget(button1)
         hlayout.addWidget(button2)
         hlayout.addSpacing(3)
@@ -1501,9 +1518,9 @@ class DiscreteVariableEditor(VariableEditor):
                 dlg.get_merged_value_name(), dlg.get_merge_attributes()
             )
 
-    def _merge_selected_categories(self):
+    def _rename_selected_categories(self):
         """
-        Merge selected categories into one.
+        Rename selected categories and merging them.
 
         Popup an editable combo box for selection/edit of a new value.
         """
