@@ -471,6 +471,7 @@ class OWPythonScript(OWWidget):
 
     vimModeEnabled = Setting(False)
     orangeDataTablesEnabled = Setting(False)
+    auto_invoke_completions = Setting(False)
 
     splitterState: Optional[bytes] = Setting(None)
 
@@ -668,11 +669,47 @@ class OWPythonScript(OWWidget):
                                      eFont)
         self.func_sig = func_sig
 
-        editor = PythonEditor(self)
+        self._temp_connection_dir = tempfile.mkdtemp()
+        self.multi_kernel_manager.connection_dir = self._temp_connection_dir
+        self.kernel_id = kernel_id = self.multi_kernel_manager.start_kernel(
+            extra_arguments=[
+                '--IPKernelApp.kernel_class='
+                'Orange.widgets.data.utils.python_kernel.OrangeIPythonKernel',
+                '--matplotlib='
+                'inline'
+            ]
+        )
+        kernel_manager = self.multi_kernel_manager.get_kernel(kernel_id)
+        kernel_client = kernel_manager.client()
+        kernel_client.start_channels()
+
+        editor = PythonEditor(kernel_manager, kernel_client, self)
         editor.setFont(eFont)
+        editor.setup_completer_appearance((300, 180), eFont)
 
         # TODO should we care about displaying these warnings?
         # editor.userWarning.connect()
+
+        return_stmt = ReturnStatement(self.editorBox,
+                                      syntax_highlighting_scheme,
+                                      eFont)
+        self.return_stmt = return_stmt
+
+        def update_df_label_in_signatures():
+            return_stmt.use_df_data_label(not self.orangeDataTablesEnabled)
+            self.update_fake_function_signature_labels()
+        update_df_label_in_signatures()
+
+        gui.checkBox(self.editor_controls, self, 'orangeDataTablesEnabled',
+                     'Use native data tables',
+                     tooltip='By default, in_df and out_df (pandas.DataFrame) '
+                             'replace in_data and out_data (Orange.data.table).',
+                     callback=update_df_label_in_signatures)
+
+        gui.checkBox(self.editor_controls, self, 'auto_invoke_completions',
+                     'Complete on text typed',
+                     tooltip='Invoke completions whenever text is typed.',
+                     callback=lambda: editor.setAutoComplete(self.auto_invoke_completions))
 
         self.vim_box = gui.hBox(self.editor_controls, spacing=20)
         self.vim_indicator = VimIndicator(self.vim_box)
@@ -692,22 +729,6 @@ class OWPythonScript(OWWidget):
             self.vim_indicator.indicator_color = color
             self.vim_indicator.indicator_text = text
             self.vim_indicator.update()
-
-        return_stmt = ReturnStatement(self.editorBox,
-                                      syntax_highlighting_scheme,
-                                      eFont)
-        self.return_stmt = return_stmt
-
-        def update_df_label_in_signatures():
-            return_stmt.use_df_data_label(not self.orangeDataTablesEnabled)
-            self.update_fake_function_signature_labels()
-        update_df_label_in_signatures()
-
-        gui.checkBox(self.editor_controls, self, 'orangeDataTablesEnabled',
-                     'Use native data tables',
-                     tooltip='By default, in_df and out_df (pandas.DataFrame) '
-                             'replace in_data and out_data (Orange.data.table).',
-                     callback=update_df_label_in_signatures)
 
         textEditBox = QWidget(self.editorBox)
         textEditBox.setLayout(QHBoxLayout())
@@ -737,21 +758,6 @@ class OWPythonScript(OWWidget):
 
         self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
-
-        self._temp_connection_dir = tempfile.mkdtemp()
-        self.multi_kernel_manager.connection_dir = self._temp_connection_dir
-        self.kernel_id = kernel_id = self.multi_kernel_manager.start_kernel(
-            extra_arguments=[
-                '--IPKernelApp.kernel_class='
-                'Orange.widgets.data.utils.python_kernel.OrangeIPythonKernel',
-                '--matplotlib='
-                'inline'
-            ]
-        )
-        kernel_manager = self.multi_kernel_manager.get_kernel(kernel_id)
-
-        kernel_client = kernel_manager.client()
-        kernel_client.start_channels()
 
         jupyter_widget = OrangeConsoleWidget(style_sheet=styles.default_light_style_sheet)
         jupyter_widget.results_ready.connect(self.receive_outputs)

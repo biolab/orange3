@@ -7,21 +7,23 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """
-import os
+import re
 import sys
 
-from AnyQt.QtCore import Signal, Qt, QRect
+from AnyQt.QtCore import Signal, Qt, QRect, QPoint
 from AnyQt.QtGui import QColor, QPainter, QPalette, QTextCursor, QKeySequence, QTextBlock, \
     QTextFormat, QBrush, QPen, QTextCharFormat
 from AnyQt.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QAction, QApplication
-from pygments.token import Token
-from qtconsole.pygments_highlighter import PygmentsHighlighter, PygmentsBlockUserData
 
+from Orange.widgets.data.utils.pythoneditor.completer import Completer
 from Orange.widgets.data.utils.pythoneditor.brackethighlighter import BracketHighlighter
 from Orange.widgets.data.utils.pythoneditor.indenter import Indenter
 from Orange.widgets.data.utils.pythoneditor.lines import Lines
 from Orange.widgets.data.utils.pythoneditor.rectangularselection import RectangularSelection
 from Orange.widgets.data.utils.pythoneditor.vim import Vim, isChar
+
+from pygments.token import Token
+from qtconsole.pygments_highlighter import PygmentsHighlighter, PygmentsBlockUserData
 
 # pylint: disable=protected-access
 # pylint: disable=unused-argument
@@ -69,7 +71,7 @@ class PythonEditor(QPlainTextEdit):
     _DEFAULT_COMPLETION_THRESHOLD = 3
     _DEFAULT_COMPLETION_ENABLED = True
 
-    def __init__(self, *args):
+    def __init__(self, kernel_manager, kernel_client, *args):
         QPlainTextEdit.__init__(self, *args)
 
         self.setAttribute(Qt.WA_KeyCompression, False)  # vim can't process compressed keys
@@ -111,9 +113,11 @@ class PythonEditor(QPlainTextEdit):
 
         self.completionThreshold = self._DEFAULT_COMPLETION_THRESHOLD
         self.completionEnabled = self._DEFAULT_COMPLETION_ENABLED
-        self._completer = None
-        # if needCompleter:
-        # self._completer = Completer(self)
+        self._completer = Completer(self)
+        self._completer.kernel_manager = kernel_manager
+        self._completer.kernel_client = kernel_client
+        self.auto_invoke_completions = False
+        self.dot_invoke_completions = False
 
         doc = self.document()
         highlighter = PygmentsHighlighter(doc)
@@ -223,8 +227,7 @@ class PythonEditor(QPlainTextEdit):
                                             self._onShortcutPasteLine, 'edit-paste')
         self.duplicateLineAction = createAction('Duplicate line', 'Alt+D',
                                                 self._onShortcutDuplicateLine)
-        self.invokeCompletionAction = createAction('Invoke completion', 'Ctrl+Space',
-                                                   self._onCompletion)
+
     def _onToggleCommentLine(self):
         cursor: QTextCursor = self.textCursor()
         cursor.beginEditBlock()
@@ -284,8 +287,11 @@ class PythonEditor(QPlainTextEdit):
         cursor.endEditBlock()
 
     def _onShortcutIndent(self):
-        if self.textCursor().hasSelection():
+        cursor = self.textCursor()
+        if cursor.hasSelection():
             self._indenter.onChangeSelectedBlocksIndent(increase=True)
+        elif cursor.positionInBlock() == cursor.block().length() - 1:
+            self._onCompletion()
         else:
             self._indenter.onShortcutIndentAfterCursor()
 
@@ -978,6 +984,12 @@ class PythonEditor(QPlainTextEdit):
         if lineNumbersMargin:
             lineNumbersMargin.setFont(font)
 
+    def setup_completer_appearance(self, size, font):
+        self._completer.setup_appearance(size, font)
+
+    def setAutoComplete(self, enabled):
+        self.auto_invoke_completions = enabled
+
     def showEvent(self, ev):
         """ Qt 5.big automatically changes font when adding document to workspace.
         Workaround this bug """
@@ -1023,18 +1035,6 @@ class PythonEditor(QPlainTextEdit):
         if self.text.endswith('\n'):  # splitlines ignores last \n
             lines.append('')
         return self.eol.join(lines) + self.eol
-
-    def setCustomCompletions(self, wordSet):
-        """Add a set of custom completions to the editors completions.
-
-        This set is managed independently of the set of keywords and words from
-        the current document, and can thus be changed at any time.
-
-        """
-        if not isinstance(wordSet, set):
-            raise TypeError('"wordSet" is not a set: %s' % type(wordSet))
-        if self._completer:
-            self._completer.setCustomCompletions(wordSet)
 
     def _get_token_at(self, block, column):
         dataObject = block.userData()
@@ -1183,6 +1183,74 @@ class PythonEditor(QPlainTextEdit):
                 self._indenter.autoIndentBlock(cursor.block())
         self.ensureCursorVisible()
 
+    def calculate_real_position(self, point):
+        x = point.x() + self._line_number_margin.width()
+        return QPoint(x, point.y())
+
+    def position_widget_at_cursor(self, widget):
+        # Retrieve current screen height
+        desktop = QApplication.desktop()
+        srect = desktop.availableGeometry(desktop.screenNumber(widget))
+
+        left, top, right, bottom = (srect.left(), srect.top(),
+                                    srect.right(), srect.bottom())
+        ancestor = widget.parent()
+        if ancestor:
+            left = max(left, ancestor.x())
+            top = max(top, ancestor.y())
+            right = min(right, ancestor.x() + ancestor.width())
+            bottom = min(bottom, ancestor.y() + ancestor.height())
+
+        point = self.cursorRect().bottomRight()
+        point = self.calculate_real_position(point)
+        point = self.mapToGlobal(point)
+        # Move to left of cursor if not enough space on right
+        widget_right = point.x() + widget.width()
+        if widget_right > right:
+            point.setX(point.x() - widget.width())
+        # Push to right if not enough space on left
+        if point.x() < left:
+            point.setX(left)
+
+        # Moving widget above if there is not enough space below
+        widget_bottom = point.y() + widget.height()
+        x_position = point.x()
+        if widget_bottom > bottom:
+            point = self.cursorRect().topRight()
+            point = self.mapToGlobal(point)
+            point.setX(x_position)
+            point.setY(point.y() - widget.height())
+
+        if ancestor is not None:
+            # Useful only if we set parent to 'ancestor' in __init__
+            point = ancestor.mapFromGlobal(point)
+
+        widget.move(point)
+
+    def insert_completion(self, completion, completion_position):
+        """Insert a completion into the editor.
+
+        completion_position is where the completion was generated.
+
+        The replacement range is computed using the (LSP) completion's
+        textEdit field if it exists. Otherwise, we replace from the
+        start of the word under the cursor.
+        """
+        if not completion:
+            return
+
+        cursor = self.textCursor()
+
+        start = completion['start']
+        end = completion['end']
+        text = completion['text']
+
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.KeepAnchor)
+        cursor.removeSelectedText()
+        cursor.insertText(text)
+        self.setTextCursor(cursor)
+
     def keyReleaseEvent(self, event):
         if self._lastKeyPressProcessedByParent and self._completer is not None:
             # A hacky way to do not show completion list after a event, processed by vim
@@ -1191,9 +1259,14 @@ class PythonEditor(QPlainTextEdit):
             textTyped = (text and
                          event.modifiers() in (Qt.NoModifier, Qt.ShiftModifier)) and \
                         (text.isalpha() or text.isdigit() or text == '_')
+            dotTyped = text == '.'
 
-            if textTyped or \
-                    (event.key() == Qt.Key_Backspace and self._completer.isVisible()):
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.PreviousWord, QTextCursor.KeepAnchor)
+            importTyped = cursor.selectedText() in ['from ', 'import ']
+
+            if (textTyped and self.auto_invoke_completions) \
+                    or dotTyped or importTyped:
                 self._completer.invokeCompletionIfAvailable()
 
         super(PythonEditor, self).keyReleaseEvent(event)
@@ -1407,6 +1480,88 @@ class PythonEditor(QPlainTextEdit):
         cursor = QTextCursor(block)
         setPositionInBlock(cursor, column)
         return self.cursorRect(cursor).translated(offset, 0)
+
+    def get_current_word_and_position(self, completion=False, help_req=False,
+                                      valid_python_variable=True):
+        """
+        Return current word, i.e. word at cursor position, and the start
+        position.
+        """
+        cursor = self.textCursor()
+        cursor_pos = cursor.position()
+
+        if cursor.hasSelection():
+            # Removes the selection and moves the cursor to the left side
+            # of the selection: this is required to be able to properly
+            # select the whole word under cursor (otherwise, the same word is
+            # not selected when the cursor is at the right side of it):
+            cursor.setPosition(min([cursor.selectionStart(),
+                                    cursor.selectionEnd()]))
+        else:
+            # Checks if the first character to the right is a white space
+            # and if not, moves the cursor one word to the left (otherwise,
+            # if the character to the left do not match the "word regexp"
+            # (see below), the word to the left of the cursor won't be
+            # selected), but only if the first character to the left is not a
+            # white space too.
+            def is_space(move):
+                curs = self.textCursor()
+                curs.movePosition(move, QTextCursor.KeepAnchor)
+                return not str(curs.selectedText()).strip()
+
+            def is_special_character(move):
+                """Check if a character is a non-letter including numbers."""
+                curs = self.textCursor()
+                curs.movePosition(move, QTextCursor.KeepAnchor)
+                text_cursor = str(curs.selectedText()).strip()
+                return len(
+                    re.findall(r'([^\d\W]\w*)', text_cursor, re.UNICODE)) == 0
+
+            if help_req:
+                if is_special_character(QTextCursor.PreviousCharacter):
+                    cursor.movePosition(QTextCursor.NextCharacter)
+                elif is_special_character(QTextCursor.NextCharacter):
+                    cursor.movePosition(QTextCursor.PreviousCharacter)
+            elif not completion:
+                if is_space(QTextCursor.NextCharacter):
+                    if is_space(QTextCursor.PreviousCharacter):
+                        return None
+                    cursor.movePosition(QTextCursor.WordLeft)
+            else:
+                if is_space(QTextCursor.PreviousCharacter):
+                    return None
+                if is_special_character(QTextCursor.NextCharacter):
+                    cursor.movePosition(QTextCursor.WordLeft)
+
+        cursor.select(QTextCursor.WordUnderCursor)
+        text = str(cursor.selectedText())
+        startpos = cursor.selectionStart()
+
+        # Find a valid Python variable name
+        if valid_python_variable:
+            match = re.findall(r'([^\d\W]\w*)', text, re.UNICODE)
+            if not match:
+                return None
+            else:
+                text = match[0]
+
+        if completion:
+            text = text[:cursor_pos - startpos]
+
+        return text, startpos
+
+    def get_current_word(self, completion=False, help_req=False,
+                         valid_python_variable=True):
+        """Return current word, i.e. word at cursor position."""
+        ret = self.get_current_word_and_position(
+            completion=completion,
+            help_req=help_req,
+            valid_python_variable=valid_python_variable
+        )
+
+        if ret is not None:
+            return ret[0]
+        return None
 
 
 class EdgeLine(QWidget):
