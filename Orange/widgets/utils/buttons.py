@@ -32,14 +32,19 @@ class FixedSizeButton(QToolButton):
     def event(self, event: QEvent) -> bool:
         if event.type() == QEvent.ToolTip and self.toolTip():
             action = self.defaultAction()
-            if action is not None:
-                text = "<span>{}</span>&nbsp;&nbsp;<kbd>{}</kbd>".format(
-                    action.toolTip(),
-                    action.shortcut().toString(QKeySequence.NativeText)
-                )
+            if action is not None and action.toolTip():
+                text = tooltip_with_shortcut(action.toolTip(),
+                                             action.shortcut())
                 QToolTip.showText(event.globalPos(), text)
-            else:
-                QToolTip.hideText()
-            return True
-        else:
-            return super().event(event)
+                return True
+        return super().event(event)
+
+
+def tooltip_with_shortcut(tool_tip, shortcut: QKeySequence) -> str:
+    text = []
+    if tool_tip:
+        text.append("<span>{}</span>".format(tool_tip))
+    if not shortcut.isEmpty():
+        text.append("<kbd>{}</kbd>"
+                    .format(shortcut.toString(QKeySequence.NativeText)))
+    return "&nbsp;&nbsp;".join(text)
