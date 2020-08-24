@@ -12,7 +12,8 @@ from httpx import AsyncClient, NetworkError, ReadTimeout, Response
 
 from Orange.misc.utils.embedder_utils import (EmbedderCache,
                                               EmbeddingCancelledException,
-                                              EmbeddingConnectionError)
+                                              EmbeddingConnectionError,
+                                              get_proxies)
 
 log = logging.getLogger(__name__)
 
@@ -150,7 +151,7 @@ class ServerEmbedderCommunicator:
         """
         requests = []
         async with AsyncClient(
-                timeout=self.timeout, base_url=self.server_url
+                timeout=self.timeout, base_url=self.server_url, proxies=get_proxies()
         ) as client:
             for p in data:
                 if self._cancelled:
