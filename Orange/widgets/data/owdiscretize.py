@@ -596,6 +596,7 @@ class OWDiscretize(widget.OWWidget):
         for idx in indices:
             self._set_var_state(idx, state)
         self._update_points()
+        self._copy_to_manual_update_enabled()
         self.commit()
 
     def _copy_to_manual(self):
@@ -617,13 +618,17 @@ class OWDiscretize(widget.OWWidget):
         self._update_points()
         self.commit()
 
+    def _copy_to_manual_update_enabled(self):
+        indices = self.selected_indices()
+        methods = [self.var_state[i].method for i in indices]
+        self.copy_current_to_manual_button.setEnabled(
+            len(indices) == 1 and not isinstance(methods[0], Custom))
+
     def _var_selection_changed(self, *_):
+        self._copy_to_manual_update_enabled()
         indices = self.selected_indices()
         # set of all methods for the current selection
         methods = [self.var_state[i].method for i in indices]
-        self.copy_current_to_manual_button.setEnabled(
-            len(indices) == 1 and not isinstance(methods[0], Custom)
-        )
 
         def key(method):
             if isinstance(method, Default):
