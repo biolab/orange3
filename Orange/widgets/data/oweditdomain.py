@@ -20,13 +20,13 @@ import numpy as np
 import pandas as pd
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QToolButton, QLineEdit, QAction, QActionGroup, QGroupBox,
-    QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
+    QLineEdit, QAction, QActionGroup, QGroupBox,
+    QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
     QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox)
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
-    Qt, QEvent, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex
+    Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
@@ -35,6 +35,7 @@ import Orange.data
 from Orange.preprocess.transformation import Transformation, Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
@@ -465,40 +466,6 @@ class DictItemsModel(QStandardItemModel):
         return rval
 
 
-class FixedSizeButton(QToolButton):
-
-    def __init__(self, *args, defaultAction=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        sh = self.sizePolicy()
-        sh.setHorizontalPolicy(QSizePolicy.Fixed)
-        sh.setVerticalPolicy(QSizePolicy.Fixed)
-        self.setSizePolicy(sh)
-        self.setAttribute(Qt.WA_WState_OwnSizePolicy, True)
-
-        if defaultAction is not None:
-            self.setDefaultAction(defaultAction)
-
-    def sizeHint(self):
-        style = self.style()
-        size = (style.pixelMetric(QStyle.PM_SmallIconSize) +
-                style.pixelMetric(QStyle.PM_ButtonMargin))
-        return QSize(size, size)
-
-    def event(self, event):
-        # type: (QEvent) -> bool
-        if event.type() == QEvent.ToolTip and self.toolTip():
-            action = self.defaultAction()
-            if action is not None:
-                text = "<span>{}</span>&nbsp;&nbsp;<kbd>{}</kbd>".format(
-                    action.toolTip(),
-                    action.shortcut().toString(QKeySequence.NativeText)
-                )
-                QToolTip.showText(event.globalPos(), text)
-            else:
-                QToolTip.hideText()
-            return True
-        else:
-            return super().event(event)
 
 
 class VariableEditor(QWidget):
