@@ -441,6 +441,18 @@ class TestOWPredictions(WidgetTest):
                for index in self.widget.dataview.selectionModel().selectedIndexes()}
         self.assertEqual(sel, {(1, col) for col in range(5)})
 
+    def test_select_data_first(self):
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+
+        pred_model = self.widget.predictionsview.model()
+        pred_model.sort(0)
+        self.widget.predictionsview.selectRow(1)
+        sel = {(index.row(), index.column())
+               for index in self.widget.dataview.selectionModel().selectedIndexes()}
+        self.assertEqual(sel, {(1, col) for col in range(5)})
+
     def test_selection_in_setting(self):
         widget = self.create_widget(OWPredictions,
                                     stored_settings={"selection": [1, 3, 4]})
@@ -489,7 +501,7 @@ class SelectionModelTest(unittest.TestCase):
 class SharedSelectionStoreTest(SelectionModelTest):
     def test_registration(self):
         self.store.unregister(self.model1)
-        self.assertRaises(Exception, self.store.unregister, self.model1)
+        self.store.unregister(self.model1)  # should have no effect and no error
         self.store.unregister(self.model2)
 
     def test_select_rows(self):

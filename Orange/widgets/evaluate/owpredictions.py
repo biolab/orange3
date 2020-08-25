@@ -15,8 +15,8 @@ from AnyQt.QtCore import (
     QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
-from Orange.widgets.utils.state_summary import format_summary_details
 from orangewidget.report import plural
+from Orange.widgets.utils.state_summary import format_summary_details
 
 import Orange
 from Orange.evaluation import Results
@@ -388,15 +388,15 @@ class OWPredictions(OWWidget):
         else:
             model = None
 
+        if self.selection_store is not None:
+            self.selection_store.unregister(
+                self.predictionsview.selectionModel())
+
         predmodel = PredictionsSortProxyModel()
         predmodel.setSourceModel(model)
         predmodel.setDynamicSortFilter(True)
         self.predictionsview.setModel(predmodel)
 
-        prev_sel_model = self.predictionsview.selectionModel()
-        if isinstance(prev_sel_model, SharedSelectionModel) \
-                and self.selection_store is not None:
-            self.selection_store.unregister(prev_sel_model)
         self.predictionsview.setSelectionModel(
             SharedSelectionModel(self.get_selection_store(predmodel),
                                  predmodel, self.predictionsview))
@@ -1030,7 +1030,8 @@ class SharedSelectionStore:
         Args:
             selection_model (SharedSelectionModel): a model to remove
         """
-        self._selection_models.remove(selection_model)
+        if selection_model in self._selection_models:
+            self._selection_models.remove(selection_model)
 
     def select(self, selection: Union[QModelIndex, QItemSelection], flags: int):
         """
