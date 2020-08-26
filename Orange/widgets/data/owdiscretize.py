@@ -5,10 +5,10 @@ from typing import Optional, Tuple, Iterable
 
 from AnyQt.QtWidgets import (
     QListView, QHBoxLayout, QStyledItemDelegate, QButtonGroup, QWidget,
-    QLineEdit
+    QLineEdit, QToolTip, QLabel, QApplication
 )
-from AnyQt.QtGui import QValidator
-from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QValidator, QPalette
+from AnyQt.QtCore import Qt, QTimer, QPoint
 
 import Orange.data
 import Orange.preprocess.discretize as disc
@@ -207,6 +207,51 @@ class IncreasingNumbersListValidator(QValidator):
         return ", ".join(parts)
 
 
+def show_tip(
+        widget: QWidget, pos: QPoint, text: str, timeout=-1,
+        textFormat=Qt.AutoText, wordWrap=None
+):
+    propname = __name__ + "::show_tip_qlabel"
+    if timeout < 0:
+        timeout = widget.toolTipDuration()
+    if timeout < 0:
+        timeout = 5000 + 40 * max(0, len(text) - 100)
+    tip = widget.property(propname)
+    if not text and tip is None:
+        return
+
+    def hide():
+        w = tip.parent()
+        w.setProperty(propname, None)
+        tip.timer.stop()
+        tip.close()
+        tip.deleteLater()
+
+    if not isinstance(tip, QLabel):
+        tip = QLabel(objectName="tip-label", focusPolicy=Qt.NoFocus)
+        tip.setBackgroundRole(QPalette.ToolTipBase)
+        tip.setForegroundRole(QPalette.ToolTipText)
+        tip.setPalette(QToolTip.palette())
+        tip.setFont(QApplication.font("QTipLabel"))
+        tip.timer = QTimer(tip, singleShot=True, objectName="hide-timer")
+        tip.timer.timeout.connect(hide)
+        widget.setProperty(propname, tip)
+        tip.setParent(widget, Qt.ToolTip)
+
+    tip.setText(text)
+    tip.setTextFormat(textFormat)
+    if wordWrap is None:
+        wordWrap = textFormat != Qt.PlainText
+    tip.setWordWrap(wordWrap)
+
+    if not text:
+        hide()
+    else:
+        tip.timer.start(timeout)
+        tip.show()
+        tip.move(pos)
+
+
 class OWDiscretize(widget.OWWidget):
     # pylint: disable=too-many-instance-attributes
     name = "Discretize"
@@ -306,7 +351,33 @@ class OWDiscretize(widget.OWWidget):
                         "separated list of strictly increasing numbers e.g. "
                         "0.0, 0.5, 1.0).",
             )
+            @edit.textChanged.connect
+            def update():
+                validator = edit.validator()
+                if validator is not None:
+                    state, _, _ = validator.validate(edit.text(), 0)
+                else:
+                    state = QValidator.Acceptable
+                palette = edit.palette()
+                colors = {
+                    QValidator.Intermediate: (Qt.yellow, Qt.black),
+                    QValidator.Invalid: (Qt.red, Qt.black),
+                }.get(state, None)
+                if colors is None:
+                    palette = QPalette()
+                else:
+                    palette.setColor(QPalette.Base, colors[0])
+                    palette.setColor(QPalette.Text, colors[1])
+
+                cr = edit.cursorRect()
+                p = edit.mapToGlobal(cr.bottomRight())
+                edit.setPalette(palette)
+                if state != QValidator.Acceptable and edit.isVisible():
+                    show_tip(edit, p, edit.toolTip(), textFormat=Qt.RichText)
+                else:
+                    show_tip(edit, p, "")
             return edit
+
         self.manual_cuts_edit = manual_cut_editline(
             text=", ".join(map(str, self.default_cutpoints))
         )
