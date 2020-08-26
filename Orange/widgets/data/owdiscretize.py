@@ -182,8 +182,7 @@ class IncreasingNumbersListValidator(QValidator):
         for start, end in self.itersplit(string):
             valuestr = string[start:end].strip()
             if not valuestr:
-                state = min(state, QValidator.Intermediate)
-                # Middle element is empty
+                # Middle element is empty (will be fixed by fixup)
                 continue
             value = parse_float(valuestr)
             if value is None:
