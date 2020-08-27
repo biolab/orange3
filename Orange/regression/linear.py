@@ -28,8 +28,10 @@ class _FeatureScorerMixin(LearnerScorer):
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
 
-    def __init__(self, preprocessors=None):
+    # Arguments are needed for signatures, pylint: disable=unused-argument
+    def __init__(self, preprocessors=None, fit_intercept=True):
         super().__init__(preprocessors=preprocessors)
+        self.params = vars()
 
     def fit(self, X, Y, W=None):
         model = super().fit(X, Y, W)
