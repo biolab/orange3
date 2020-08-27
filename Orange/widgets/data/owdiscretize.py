@@ -676,6 +676,8 @@ class OWDiscretize(widget.OWWidget):
             return
         index = indices[0]
         state = self.var_state[index]
+        var = self.varmodel[index]
+        fmt = var.repr_val
         points = state.points
         if points is None:
             points = ()
@@ -685,6 +687,7 @@ class OWDiscretize(widget.OWWidget):
         self._set_var_state(index, state)
         self.method = Methods.Custom
         self.cutpoints = points
+        self.manual_cuts_specific.setText(", ".join(map(fmt, points)))
         self._update_points()
         self.commit()
 
