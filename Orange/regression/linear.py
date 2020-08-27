@@ -116,13 +116,15 @@ class PolynomialLearner(Learner):
     preprocessors = SklLearner.preprocessors
 
     def __init__(self, learner=LinearRegressionLearner(), degree=2,
-                 preprocessors=None):
+                 preprocessors=None, include_bias=True):
         super().__init__(preprocessors=preprocessors)
         self.degree = degree
         self.learner = learner
+        self.include_bias = include_bias
 
     def fit(self, X, Y, W=None):
-        polyfeatures = skl_preprocessing.PolynomialFeatures(self.degree)
+        polyfeatures = skl_preprocessing.PolynomialFeatures(
+            self.degree, include_bias=self.include_bias)
         X = polyfeatures.fit_transform(X)
         clf = self.learner
         if W is None or not self.supports_weights:
