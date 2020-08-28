@@ -381,12 +381,12 @@ class SampleFoldIndices(Reprable):
     def __call__(self, table):
         if self.stratified and table.domain.has_discrete_class:
             splitter = skl.StratifiedKFold(
-                self.folds, random_state=self.random_state)
+                self.folds, shuffle=True, random_state=self.random_state)
             splitter.get_n_splits(table.X, table.Y)
             ind = splitter.split(table.X, table.Y)
         else:
             splitter = skl.KFold(
-                self.folds, random_state=self.random_state)
+                self.folds, shuffle=True, random_state=self.random_state)
             splitter.get_n_splits(table)
             ind = splitter.split(table)
         return tuple(ind)
