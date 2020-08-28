@@ -3,12 +3,17 @@
 import unittest
 from unittest.mock import Mock
 
-from Orange.data import Table
+from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QStyleOptionViewItem
+
+from Orange.data import Table, DiscreteVariable
 from Orange.widgets.data.owdiscretize import OWDiscretize, Default, EqualFreq, \
-    Remove, Leave, Custom, IncreasingNumbersListValidator
+    Remove, Leave, Custom, IncreasingNumbersListValidator, DiscDelegate, MDL, \
+    EqualWidth, DState
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import GuiTest
 from Orange.widgets.utils.state_summary import format_summary_details
-from Orange.widgets.utils.itemmodels import select_row
+from Orange.widgets.utils.itemmodels import select_row, VariableListModel
 
 
 class TestOWDiscretize(WidgetTest):
@@ -134,6 +139,12 @@ class TestOWDiscretize(WidgetTest):
         self.assertEqual(widget.method_for_index(0), Custom(points))
         self.assertEqual(varbg.checkedId(), OWDiscretize.Custom)
 
+    def test_report(self):
+        widget = self.widget
+        data = Table("iris")[::5]
+        self.send_signal(widget.Inputs.data, data)
+        widget.send_report()
+
 
 class TestValidator(unittest.TestCase):
     def test_validate(self):
@@ -156,3 +167,26 @@ class TestValidator(unittest.TestCase):
         self.assertEqual(v.fixup("1,"), "1")
         self.assertEqual(v.fixup(",1"), "1")
         self.assertEqual(v.fixup(","), "")
+
+
+class TestDelegate(GuiTest):
+    def test_delegate(self):
+        cases = (
+            (DState(Default(Leave()), None, None), ""),
+            (DState(Leave(), None, None), "(leave)"),
+            (DState(MDL(), [1], None), "(entropy)"),
+            (DState(MDL(), [], None), "<removed>"),
+            (DState(EqualFreq(2), [1], None), "(equal frequency k=2)"),
+            (DState(EqualWidth(2), [1], None), "(equal width k=2)"),
+            (DState(Remove(), None, None), "(removed)"),
+            (DState(Custom([1]), None, None), "(custom)"),
+        )
+        delegate = DiscDelegate()
+        var = DiscreteVariable("C", ("a", "b"))
+        model = VariableListModel()
+        model.append(var)
+        for state, text in cases:
+            model.setData(model.index(0), state, Qt.UserRole)
+            option = QStyleOptionViewItem()
+            delegate.initStyleOption(option, model.index(0))
+            self.assertIn(text, option.text)
