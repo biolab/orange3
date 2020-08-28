@@ -215,18 +215,25 @@ class TestVariable(unittest.TestCase):
 
     def test_hash_eq(self):
         a = ContinuousVariable("a")
+        a1 = ContinuousVariable("a")
         b1 = ContinuousVariable("b", compute_value=Identity(a))
         b2 = ContinuousVariable("b2", compute_value=Identity(b1))
         b3 = ContinuousVariable("b")
-        self.assertEqual(a, b2)
-        self.assertEqual(b1, b2)
-        self.assertEqual(a, b1)
+        c1 = ContinuousVariable("c", compute_value=Identity(a))
+        c2 = ContinuousVariable("c", compute_value=Identity(a))
+        self.assertNotEqual(a, b2)
+        self.assertNotEqual(b1, b2)
+        self.assertNotEqual(a, b1)
         self.assertNotEqual(b1, b3)
+        self.assertEqual(a, a1)
+        self.assertEqual(c1, c2)
 
-        self.assertEqual(hash(a), hash(b2))
-        self.assertEqual(hash(b1), hash(b2))
-        self.assertEqual(hash(a), hash(b1))
+        self.assertNotEqual(hash(a), hash(b2))
+        self.assertNotEqual(hash(b1), hash(b2))
+        self.assertNotEqual(hash(a), hash(b1))
         self.assertNotEqual(hash(b1), hash(b3))
+        self.assertEqual(hash(a), hash(a1))
+        self.assertEqual(hash(c1), hash(c2))
 
 
 def variabletest(varcls):
