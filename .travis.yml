@@ -12,15 +12,10 @@ addons:
 
 matrix:
     include:
-        - env: RUN_PYLINT=true
-          python: '3.6'
-          cache: {}
+        # remove when we create redirects for old doc on our servers
         - env: BUILD_DOCS=true
           python: '3.6'
           script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
-        - python: '3.6'
-          env: UPLOAD_COVERAGE=true
-        - python: '3.7'
     fast_finish: true
 
 cache:
