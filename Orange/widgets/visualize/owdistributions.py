@@ -280,6 +280,7 @@ class OWDistributions(OWWidget):
     show_probs = settings.Setting(False)
     stacked_columns = settings.Setting(False)
     cumulative_distr = settings.Setting(False)
+    sort_by_freq = settings.Setting(False)
     kde_smoothing = settings.Setting(10)
 
     auto_apply = settings.Setting(True)
@@ -314,11 +315,14 @@ class OWDistributions(OWWidget):
         self.key_operation = None
         self._user_var_bins = {}
 
-        gui.listView(
+        varview = gui.listView(
             self.controlArea, self, "var", box="Variable",
             model=DomainModel(valid_types=DomainModel.PRIMITIVE,
                               separators=False),
             callback=self._on_var_changed)
+        gui.checkBox(
+            varview.box, self, "sort_by_freq", "Sort categories by frequency",
+            callback=self._on_sort_by_freq, stateWhenDisabled=False)
 
         box = self.continuous_box = gui.vBox(self.controlArea, "Distribution")
         slider = gui.hSlider(
@@ -466,6 +470,10 @@ class OWDistributions(OWWidget):
         self.replot()
         self.apply()
 
+    def _on_sort_by_freq(self):
+        self.replot()
+        self.apply()
+
     def _on_bins_changed(self):
         self.reset_select()
         self._set_bin_width_slider_label()
@@ -581,6 +589,7 @@ class OWDistributions(OWWidget):
 
     def _update_controls_state(self):
         assert self.is_valid  # called only from replot, so assumes data is OK
+        self.controls.sort_by_freq.setDisabled(self.var.is_continuous)
         self.continuous_box.setDisabled(self.var.is_discrete)
         self.controls.show_probs.setDisabled(self.cvar is None)
         self.controls.stacked_columns.setDisabled(self.cvar is None)
@@ -610,11 +619,18 @@ class OWDistributions(OWWidget):
 
     def _disc_plot(self):
         var = self.var
-        self.ploti.getAxis("bottom").setTicks([list(enumerate(var.values))])
-        colors = [QColor(0, 128, 255)]
         dist = distribution.get_distribution(self.data, self.var)
-        for i, freq in enumerate(dist):
-            desc = var.values[i]
+        dist = np.array(dist)  # Distribution misbehaves in further operations
+        if self.sort_by_freq:
+            order = np.argsort(dist)[::-1]
+        else:
+            order = np.arange(len(dist))
+
+        ordered_values = np.array(var.values)[order]
+        self.ploti.getAxis("bottom").setTicks([list(enumerate(ordered_values))])
+
+        colors = [QColor(0, 128, 255)]
+        for i, freq, desc in zip(count(), dist[order], ordered_values):
             tooltip = \
                 "<p style='white-space:pre;'>" \
                 f"<b>{escape(desc)}</b>: {int(freq)} " \
@@ -625,13 +641,20 @@ class OWDistributions(OWWidget):
 
     def _disc_split_plot(self):
         var = self.var
-        self.ploti.getAxis("bottom").setTicks([list(enumerate(var.values))])
+        conts = contingency.get_contingency(self.data, self.cvar, self.var)
+        conts = np.array(conts)  # Contingency misbehaves in further operations
+        if self.sort_by_freq:
+            order = np.argsort(conts.sum(axis=1))[::-1]
+        else:
+            order = np.arange(len(conts))
+
+        ordered_values = np.array(var.values)[order]
+        self.ploti.getAxis("bottom").setTicks([list(enumerate(ordered_values))])
+
         gcolors = [QColor(*col) for col in self.cvar.colors]
         gvalues = self.cvar.values
-        conts = contingency.get_contingency(self.data, self.cvar, self.var)
         total = len(self.data)
-        for i, freqs in enumerate(conts):
-            desc = var.values[i]
+        for i, freqs, desc in zip(count(), conts[order], ordered_values):
             self._add_bar(
                 i - 0.5, 1, 0.1, freqs, gcolors,
                 stacked=self.stacked_columns, expanded=self.show_probs,
