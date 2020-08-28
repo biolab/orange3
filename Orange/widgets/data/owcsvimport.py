@@ -1539,7 +1539,7 @@ def pandas_to_table(df):
     columns = []  # type: List[Tuple[Orange.data.Variable, np.ndarray]]
 
     for header, series in df.items():  # type: (Any, pd.Series)
-        if pdtypes.is_categorical(series):
+        if pdtypes.is_categorical_dtype(series):
             coldata = series.values  # type: pd.Categorical
             categories = [str(c) for c in coldata.categories]
             var = Orange.data.DiscreteVariable.make(
