@@ -579,7 +579,8 @@ class ContinuousVariable(Variable):
         """
         Return the value as a string with the prescribed number of decimals.
         """
-        if isnan(val):
+        # Table value can't be inf, but repr_val can be used to print any float
+        if not np.isfinite(val):
             return "?"
         if self.format_str != "%g" \
                 and abs(round(val, self._number_of_decimals) - val) \

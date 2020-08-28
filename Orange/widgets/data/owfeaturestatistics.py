@@ -246,6 +246,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             continuous_f=lambda x: ut.countnans(x, axis=0),
             string_f=lambda x: (x == StringVariable.Unknown).sum(axis=0),
             time_f=lambda x: ut.countnans(x, axis=0),
+            default_val=len(matrices[0]) if matrices else 0
         )
         self._max = self.__compute_stat(
             matrices,
@@ -323,16 +324,6 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         if not matrices:
             return np.array([])
 
-        def _to_float(data):
-            if not np.issubdtype(data.dtype, np.number):
-                data = data.astype(np.float64)
-            return data
-
-        def _to_object(data):
-            if data.dtype is not np.object:
-                data = data.astype(np.object)
-            return data
-
         results = []
         for variables, x in matrices:
             result = np.full(len(variables), default_val)
@@ -340,23 +331,28 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             # While the following caching and checks are messy, the indexing
             # turns out to be a bottleneck for large datasets, so a single
             # indexing operation improves performance
-            disc_idx, cont_idx, time_idx, str_idx = self._attr_indices(variables)
-            if discrete_f:
-                x_ = x[:, disc_idx]
-                if x_.size:
-                    result[disc_idx] = discrete_f(_to_float(x_))
-            if continuous_f:
-                x_ = x[:, cont_idx]
-                if x_.size:
-                    result[cont_idx] = continuous_f(_to_float(x_))
-            if time_f:
-                x_ = x[:, time_idx]
-                if x_.size:
-                    result[time_idx] = time_f(_to_float(x_))
+            *idxs, str_idx = self._attr_indices(variables)
+            for func, idx in zip((discrete_f, continuous_f, time_f), idxs):
+                idx = np.array(idx)
+                if func and idx.size:
+                    x_ = x[:, idx]
+                    if x_.size:
+                        if not np.issubdtype(x_.dtype, np.number):
+                            x_ = x_.astype(np.float64)
+                        try:
+                            finites = np.isfinite(x_)
+                        except TypeError:
+                            result[idx] = func(x_)
+                        else:
+                            mask = np.any(finites, axis=0)
+                            if np.any(mask):
+                                result[idx[mask]] = func(x_[:, mask])
             if string_f:
                 x_ = x[:, str_idx]
                 if x_.size:
-                    result[str_idx] = string_f(_to_object(x_))
+                    if x_.dtype is not np.object:
+                        x_ = x_.astype(np.object)
+                    result[str_idx] = string_f(x_)
 
             results.append(result)
 
@@ -505,6 +501,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             def render_value(value):
                 if np.isnan(value):
                     return ""
+                if np.isinf(value):
+                    return "∞"
 
                 str_val = attribute.str_val(value)
                 if attribute.is_continuous:
