@@ -458,11 +458,12 @@ class TestOWColor(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris, widget=w)
 
     def test_invalid_input_colors(self):
-        a = ContinuousVariable("a")
-        a.attributes["colors"] = "invalid"
-        t = Table.from_domain(Domain([a]))
-
-        self.send_signal(self.widget.Inputs.data, t)
+        # Handling of invalid value in deprecated 'colors': warn, but don't fail
+        with self.assertWarns(DeprecationWarning):
+            a = ContinuousVariable("a")
+            a.attributes["colors"] = "invalid"
+            t = Table.from_domain(Domain([a]))
+            self.send_signal(self.widget.Inputs.data, t)
 
     def test_unconditional_commit_on_new_signal(self):
         with patch.object(self.widget, 'unconditional_commit') as commit:
