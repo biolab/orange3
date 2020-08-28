@@ -58,7 +58,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
     def test_allnan_cv(self):
         # GH 2740
         data = Table(test_filename('datasets/lenses.tab'))
-        cv = CrossValidation()
+        cv = CrossValidation(stratified=False)
         results = cv(data, [self.learner])
         self.assertFalse(any(results.failed))
 
