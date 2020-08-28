@@ -3,13 +3,13 @@
 import unittest
 from unittest.mock import Mock
 
-from AnyQt.QtCore import Qt
-from AnyQt.QtWidgets import QStyleOptionViewItem
+from AnyQt.QtCore import Qt, QPoint
+from AnyQt.QtWidgets import QWidget, QApplication, QStyleOptionViewItem
 
 from Orange.data import Table, DiscreteVariable
 from Orange.widgets.data.owdiscretize import OWDiscretize, Default, EqualFreq, \
     Remove, Leave, Custom, IncreasingNumbersListValidator, DiscDelegate, MDL, \
-    EqualWidth, DState
+    EqualWidth, DState, show_tip
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.base import GuiTest
 from Orange.widgets.utils.state_summary import format_summary_details
@@ -190,3 +190,20 @@ class TestDelegate(GuiTest):
             option = QStyleOptionViewItem()
             delegate.initStyleOption(option, model.index(0))
             self.assertIn(text, option.text)
+
+
+class TestShowTip(GuiTest):
+    def test_show_tip(self):
+        w = QWidget()
+        show_tip(w, QPoint(100, 100), "Ha Ha")
+        app = QApplication.instance()
+        windows = app.topLevelWidgets()
+        label = [tl for tl in windows
+                 if tl.parent() is w and tl.objectName() == "tip-label"][0]
+        self.assertTrue(label.isVisible())
+        self.assertTrue(label.text() == "Ha Ha")
+
+        show_tip(w, QPoint(100, 100), "Ha")
+        self.assertTrue(label.text() == "Ha")
+        show_tip(w, QPoint(100, 100), "")
+        self.assertFalse(label.isVisible())
