@@ -681,7 +681,7 @@ class EntropyMDL(Discretization):
         delta = np.log2(3 ** k - 2) - (k * ES - k1 * ES1 - k2 * ES2)
         N = float(np.sum(S_c))
 
-        if Gain > np.log2(N - 1) / N + delta / N:
+        if N > 1 and Gain > np.log2(N - 1) / N + delta / N:
             # Accept the cut point and recursively split the subsets.
             left, right = [], []
             if k1 > 1 and cut_index > 1:
