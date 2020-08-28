@@ -214,7 +214,8 @@ class TestDataTableMixin(InitTestData):
         header.names = names
         header.types = types
         header.flags = flags
-        adjusted, n = DataTableMixin.adjust_data_width(self.header0, header)
+        with self.assertWarns(UserWarning):
+            adjusted, n = DataTableMixin.adjust_data_width(self.header0, header)
         np.testing.assert_array_equal(
             adjusted, np.array(self.header0, dtype=object)[:, :3])
         self.assertEqual(adjusted.shape, (len(self.header0), 3))

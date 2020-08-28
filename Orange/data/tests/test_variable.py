@@ -508,8 +508,7 @@ class TestDiscreteVariable(VariableTest):
         """
         self.assertLess(Orange.__version__, "3.29.0")
 
-    @staticmethod
-    def test_pickle_backward_compatibility():
+    def test_pickle_backward_compatibility(self):
         """
         Test that pickle made with an older version of Orange are correctly
         loaded after changes in DiscreteVariable
@@ -523,9 +522,11 @@ class TestDiscreteVariable(VariableTest):
                 this_dir, "..", "..", "tests", "datasets"
             )
             # pickle with values as list
-            Table(os.path.join(datasets_dir, "sailing-orange-3-20.pkl"))
+            with self.assertWarns(OrangeDeprecationWarning):
+                Table(os.path.join(datasets_dir, "sailing-orange-3-20.pkl"))
             # pickle with values as tuple list
-            Table(os.path.join(datasets_dir, "iris-orange-3-25.pkl"))
+            with self.assertWarns(OrangeDeprecationWarning):
+                Table(os.path.join(datasets_dir, "iris-orange-3-25.pkl"))
 
 
 @variabletest(ContinuousVariable)
