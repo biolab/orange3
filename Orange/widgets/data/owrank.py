@@ -383,19 +383,22 @@ class OWRank(OWWidget):
         # are handled correctly by the widget
         estimator = method.scorer()
         data = self.data
-        try:
-            scores = np.asarray(estimator(data))
-        except ValueError:
+        # The widget handles infs and nans.
+        # Any errors in scorers need to be detected elsewhere.
+        with np.errstate(all="ignore"):
             try:
-                scores = np.array([estimator(data, attr)
-                                   for attr in data.domain.attributes])
+                    scores = np.asarray(estimator(data))
             except ValueError:
-                log.error("%s doesn't work on this data", method.name)
-                scores = np.full(len(data.domain.attributes), np.nan)
-            else:
-                log.warning("%s had to be computed separately for each "
-                            "variable", method.name)
-        return scores
+                try:
+                    scores = np.array([estimator(data, attr)
+                                       for attr in data.domain.attributes])
+                except ValueError:
+                    log.error("%s doesn't work on this data", method.name)
+                    scores = np.full(len(data.domain.attributes), np.nan)
+                else:
+                    log.warning("%s had to be computed separately for each "
+                                "variable", method.name)
+            return scores
 
     @memoize_method()
     def get_scorer_scores(self, scorer):
