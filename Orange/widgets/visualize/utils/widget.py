@@ -601,10 +601,16 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     @staticmethod
     def _get_annotated_data(data, group_sel, graph_sel):
+        if data is None:
+            return None
         if graph_sel is not None and np.max(graph_sel) > 1:
             return create_groups_table(data, group_sel)
         else:
-            return create_annotated_table(data, np.nonzero(group_sel)[0])
+            if group_sel is None:
+                mask = np.full((len(data), ), False)
+            else:
+                mask = np.nonzero(group_sel)[0]
+            return create_annotated_table(data, mask)
 
     # Report
     def send_report(self):
