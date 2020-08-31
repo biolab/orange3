@@ -347,7 +347,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self._run()
 
     def _run(self):
-        if self.effective_matrix is None:
+        if self.effective_matrix is None \
+                or np.allclose(self.effective_matrix, 0):
             return
         self.graph.pause_drawing_pairs()
         self.run_button.setText("Stop")
