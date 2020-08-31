@@ -17,11 +17,11 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.lenses = data = Table(test_filename("datasets/lenses.tab"))
-        cls.res = Orange.evaluation.TestOnTestData(
-            train_data=data[::2], test_data=data[1::2],
+        test_on_test = Orange.evaluation.TestOnTestData(store_data=True)
+        cls.res = test_on_test(
+            data=data[::2], test_data=data[1::2],
             learners=[Orange.classification.MajorityLearner(),
-                      Orange.classification.KNNLearner()],
-            store_data=True,
+                      Orange.classification.KNNLearner()]
         )
 
     def setUp(self):

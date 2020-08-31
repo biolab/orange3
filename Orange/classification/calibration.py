@@ -74,7 +74,7 @@ class ThresholdLearner(Learner):
                 or len(data.domain.class_var.values) != 2:
             raise ValueError("ThresholdLearner requires a binary class")
 
-        res = TestOnTrainingData(data, [self.base_learner], store_models=True)
+        res = TestOnTrainingData(store_models=True)(data, [self.base_learner])
         model = res.models[0, 0]
         curves = Curves.from_results(res)
         curve = [curves.ca, curves.f1][self.threshold_criterion]()
@@ -160,7 +160,7 @@ class CalibratedLearner(Learner):
         on training data and use scipy's `_SigmoidCalibration` or
         `IsotonicRegression` to prepare calibrators.
         """
-        res = TestOnTrainingData(data, [self.base_learner], store_models=True)
+        res = TestOnTrainingData(store_models=True)(data, [self.base_learner])
         model = res.models[0, 0]
         probabilities = res.probabilities[0]
         return self.get_model(model, res.actual, probabilities)

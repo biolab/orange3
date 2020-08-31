@@ -23,11 +23,10 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         # `data` is defined in WidgetOutputsTestMixin, pylint: disable=no-member
         cls.iris = cls.data
         titanic = Table("titanic")
-        common = dict(k=3, store_data=True)
-        cls.results_1_iris = CrossValidation(cls.iris, [bayes], **common)
-        cls.results_2_iris = CrossValidation(cls.iris, [bayes, tree], **common)
-        cls.results_2_titanic = CrossValidation(titanic, [bayes, tree],
-                                                **common)
+        cv = CrossValidation(k=3, store_data=True)
+        cls.results_1_iris = cv(cls.iris, [bayes])
+        cls.results_2_iris = cv(cls.iris, [bayes, tree])
+        cls.results_2_titanic = cv(titanic, [bayes, tree])
 
         cls.signal_name = "Evaluation Results"
         cls.signal_data = cls.results_1_iris
@@ -64,7 +63,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
     def test_show_error_on_regression(self):
         """On regression data, the widget must show error"""
         housing = Table("housing")
-        results = TestOnTrainingData(housing, [MeanLearner()], store_data=True)
+        results = TestOnTrainingData(store_data=True)(housing, [MeanLearner()])
         self.send_signal(self.widget.Inputs.evaluation_results, results)
         self.assertTrue(self.widget.Error.no_regression.is_shown())
         self.send_signal(self.widget.Inputs.evaluation_results, None)
@@ -76,8 +75,8 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
 
     def test_row_indices(self):
         """Map data instances when using random shuffling"""
-        results = ShuffleSplit(self.iris, [NaiveBayesLearner()],
-                               store_data=True)
+        results = ShuffleSplit(store_data=True
+                               )(self.iris, [NaiveBayesLearner()])
         self.send_signal(self.widget.Inputs.evaluation_results, results)
         self.widget.select_correct()
         selected = self.get_output(self.widget.Outputs.selected_data)
@@ -139,9 +138,8 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
 
     def test_unique_output_domain(self):
         bayes = NaiveBayesLearner()
-        common = dict(k=3, store_data=True)
         data = possible_duplicate_table('iris(Learner #1)')
-        input_data = CrossValidation(data, [bayes], **common)
+        input_data = CrossValidation(k=3, store_data=True)(data, [bayes])
         self.send_signal(self.widget.Inputs.evaluation_results, input_data)
         output = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(output.domain.metas[0].name, 'iris(Learner #1) (1)')
