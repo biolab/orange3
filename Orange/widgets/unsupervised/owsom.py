@@ -4,7 +4,8 @@ from xml.sax.saxutils import escape
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import Qt, QRectF, pyqtSignal as Signal, QObject, QThread
+from AnyQt.QtCore import Qt, QRectF, pyqtSignal as Signal, QObject, QThread, \
+    pyqtSlot as Slot
 from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, \
     QPainterPath, QKeyEvent
 from AnyQt.QtWidgets import \
@@ -498,6 +499,7 @@ class OWSOM(OWWidget):
     def restart_som_pressed(self):
         if self._optimizer_thread is not None:
             self.stop_optimization = True
+            self._optimizer.stop_optimization = True
         else:
             self.start_som()
 
@@ -678,26 +680,29 @@ class OWSOM(OWWidget):
         if self.cont_x is None:
             return
 
+        som = SOM(
+            self.size_x, self.size_y,
+            hexagonal=self.hexagonal,
+            pca_init=self.initialization == 0,
+            random_seed=0 if self.initialization == 2 else None
+        )
+
         class Optimizer(QObject):
             update = Signal(float, np.ndarray, np.ndarray)
             done = Signal(SOM)
             stopped = Signal()
+            stop_optimization = False
 
-            def __init__(self, data, widget):
+            def __init__(self, data, som):
                 super().__init__()
-                self.som = SOM(
-                    widget.size_x, widget.size_y,
-                    hexagonal=widget.hexagonal,
-                    pca_init=widget.initialization == 0,
-                    random_seed=0 if widget.initialization == 2 else None)
+                self.som = som
                 self.data = data
-                self.widget = widget
 
             def callback(self, progress):
                 self.update.emit(
                     progress,
                     self.som.weights.copy(), self.som.ssum_weights.copy())
-                return not self.widget.stop_optimization
+                return not self.stop_optimization
 
             def run(self):
                 try:
@@ -708,34 +713,17 @@ class OWSOM(OWWidget):
                     self.done.emit(self.som)
                     self.stopped.emit()
 
-        def update(_progress, weights, ssum_weights):
-            progressbar.advance()
-            self._assign_instances(weights, ssum_weights)
-            self._redraw()
-
-        def done(som):
-            self.enable_controls(True)
-            progressbar.finish()
-            self._assign_instances(som.weights, som.ssum_weights)
-            self._redraw()
-            # This is the first time we know what was selected (assuming that
-            # initialization is not set to random)
-            if self.__pending_selection is not None:
-                self.on_selection_change(self.__pending_selection)
-                self.__pending_selection = None
-            self.update_output()
-
         def thread_finished():
             self._optimizer = None
             self._optimizer_thread = None
 
-        progressbar = gui.ProgressBar(self, N_ITERATIONS)
+        self.progressBarInit()
 
-        self._optimizer = Optimizer(self.cont_x, self)
+        self._optimizer = Optimizer(self.cont_x, som)
         self._optimizer_thread = QThread()
         self._optimizer_thread.setStackSize(5 * 2 ** 20)
-        self._optimizer.update.connect(update)
-        self._optimizer.done.connect(done)
+        self._optimizer.update.connect(self.__update)
+        self._optimizer.done.connect(self.__done)
         self._optimizer.stopped.connect(self._optimizer_thread.quit)
         self._optimizer.moveToThread(self._optimizer_thread)
         self._optimizer_thread.started.connect(self._optimizer.run)
@@ -743,9 +731,29 @@ class OWSOM(OWWidget):
         self.stop_optimization = False
         self._optimizer_thread.start()
 
+    @Slot(float, object, object)
+    def __update(self, _progress, weights, ssum_weights):
+        self.progressBarSet(_progress)
+        self._assign_instances(weights, ssum_weights)
+        self._redraw()
+
+    @Slot(object)
+    def __done(self, som):
+        self.enable_controls(True)
+        self.progressBarFinished()
+        self._assign_instances(som.weights, som.ssum_weights)
+        self._redraw()
+        # This is the first time we know what was selected (assuming that
+        # initialization is not set to random)
+        if self.__pending_selection is not None:
+            self.on_selection_change(self.__pending_selection)
+            self.__pending_selection = None
+        self.update_output()
+
     def stop_optimization_and_wait(self):
         if self._optimizer_thread is not None:
             self.stop_optimization = True
+            self._optimizer.stop_optimization = True
             self._optimizer_thread.quit()
             self._optimizer_thread.wait()
             self._optimizer_thread = None
