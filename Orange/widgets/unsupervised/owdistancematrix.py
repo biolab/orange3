@@ -256,20 +256,21 @@ class OWDistanceMatrix(widget.OWWidget):
 
         self.items = items = distances is not None and distances.row_items
         annotations = ["None", "Enumerate"]
-        self.annotation_idx = 1
+        pending_idx = 1
         if items and not distances.axis:
             annotations.append("Attribute names")
-            self.annotation_idx = 2
+            pending_idx = 2
         elif isinstance(items, list) and \
                 all(isinstance(item, Variable) for item in items):
             annotations.append("Name")
-            self.annotation_idx = 2
+            pending_idx = 2
         elif isinstance(items, Table):
             annotations.extend(
                 itertools.chain(items.domain.variables, items.domain.metas))
             if items.domain.class_var:
-                self.annotation_idx = 2 + len(items.domain.attributes)
+                pending_idx = 2 + len(items.domain.attributes)
         self.annot_combo.model()[:] = annotations
+        self.annotation_idx = pending_idx
 
         if items:
             self.openContext(distances, annotations)
