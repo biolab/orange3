@@ -20,6 +20,11 @@ class TestOWPythonScript(WidgetTest):
         self.learner = LogisticRegressionLearner()
         self.model = self.learner(self.iris)
 
+    def tearDown(self):
+        # clear sys.last_*, these are set/used by interactive interpreter
+        sys.last_type = sys.last_value = sys.last_traceback = None
+        super().tearDown()
+
     def test_inputs(self):
         """Check widget's inputs"""
         for input_, data in (("Data", self.iris),
