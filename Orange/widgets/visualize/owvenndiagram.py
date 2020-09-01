@@ -289,7 +289,7 @@ class OWVennDiagram(widget.OWWidget):
             self.get_disjoint(set(s.items) for s in self.itemsets.values())
 
         vennitems = []
-        colors = colorpalettes.LimitedDiscretePalette(n, force_hsv=True)
+        colors = colorpalettes.LimitedDiscretePalette(n, force_glasbey=True)
 
         for i, item in enumerate(self.itemsets.values()):
             cnt = len(set(item.items))
@@ -386,7 +386,7 @@ class OWVennDiagram(widget.OWWidget):
         renamed = []
         names = [var.name for val in domain.values() for var in val]
         unique_names = iter(get_unique_names_duplicates(names))
-        
+
         for val in domain.values():
             for n, idx, var in zip(names, count(), val):
                 u = next(unique_names)

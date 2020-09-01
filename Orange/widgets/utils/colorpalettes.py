@@ -173,7 +173,8 @@ class LimitedDiscretePalette(DiscretePalette):
         if force_hsv is not None:
             warnings.warn(
                 "LimitedDiscretePalette: argument 'force_hsv' is deprecated; "
-                "use 'force_glasbey' instead", DeprecationWarning)
+                "use 'force_glasbey' instead", DeprecationWarning,
+                stacklevel=2)
         if force_glasbey or force_hsv \
                 or number_of_colors > len(DefaultRGBColors):
             colors = Glasbey.palette[:number_of_colors]

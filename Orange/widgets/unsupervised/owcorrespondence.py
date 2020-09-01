@@ -11,7 +11,7 @@ from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.statistics import contingency
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.itemmodels import select_rows
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 
@@ -230,7 +230,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.plot.clear()
         points = self.ca
         variables = self.selected_vars()
-        colors = colorpalette.ColorPaletteGenerator(len(variables))
+        colors = colorpalettes.LimitedDiscretePalette(len(variables))
 
         p_axes = self._p_axes()
 
