@@ -12,6 +12,7 @@ from Orange.widgets.tests.utils import simulate
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.tests import test_filename
 
+
 class TestOWLiftCurve(WidgetTest, EvaluateTest):
     @classmethod
     def setUpClass(cls):

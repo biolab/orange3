@@ -256,7 +256,7 @@ def lift_curve(ytrue, ypred, target=1):
         # Undefined TP and FP rate
         return np.array([]), np.array([]), np.array([])
 
-    fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, target)
+    fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, pos_label=target)
     rpp = fpr * (N / (P + N)) + tpr * (P / (P + N))
     return rpp, tpr, thresholds
 
