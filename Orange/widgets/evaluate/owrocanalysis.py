@@ -446,7 +446,6 @@ class OWROCAnalysis(widget.OWWidget):
         self.classifier_names = []
         self.selected_classifiers = []
         self.target_cb.clear()
-        self.target_index = 0
         self.colors = []
         self._curve_data = {}
         self._plot_curves = {}
@@ -471,6 +470,7 @@ class OWROCAnalysis(widget.OWWidget):
 
         class_var = results.data.domain.class_var
         self.target_cb.addItems(class_var.values)
+        self.target_index = 0
         self._set_target_prior()
 
     def _set_target_prior(self):

@@ -504,7 +504,8 @@ class OWTestAndScore(OWWidget):
             combo.clear()
             combo.addItems([scorer.long_name or scorer.name
                             for scorer in self.scorers])
-            self.comparison_criterion = 0
+            if self.scorers:
+                self.comparison_criterion = 0
         if self.__pending_comparison_criterion is not None:
             # Check for the unlikely case that some scorers have been removed
             # from modules

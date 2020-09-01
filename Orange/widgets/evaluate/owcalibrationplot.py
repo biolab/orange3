@@ -247,7 +247,6 @@ class OWCalibrationPlot(widget.OWWidget):
         self.classifier_names = []
         self.selected_classifiers = []
         self.target_cb.clear()
-        self.target_index = 0
         self.colors = []
 
     def target_index_changed(self):
@@ -301,6 +300,7 @@ class OWCalibrationPlot(widget.OWWidget):
 
         self.selected_classifiers = list(range(n))
         self.target_cb.addItems(results.domain.class_var.values)
+        self.target_index = 0
 
     def _rug(self, data, pen_args):
         color = pen_args["pen"].color()
