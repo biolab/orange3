@@ -1114,7 +1114,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         key, value = ('Fonts', 'Axis title', 'Italic'), True
         self.widget.set_visual_settings(key, value)
         font.setPointSize(16)
-        for item in graph.axis_items:
+        for item in graph.parameter_setter.axis_items:
             self.assertFontEqual(item.label.font(), font)
 
         key, value = ('Fonts', 'Axis ticks', 'Font size'), 15
@@ -1122,7 +1122,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         key, value = ('Fonts', 'Axis ticks', 'Italic'), True
         self.widget.set_visual_settings(key, value)
         font.setPointSize(15)
-        for item in graph.axis_items:
+        for item in graph.parameter_setter.axis_items:
             self.assertFontEqual(item.style["tickFont"], font)
 
 

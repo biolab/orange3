@@ -1,9 +1,7 @@
-import sys
 from typing import Tuple, List, Dict, Iterable
 
 from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QFont, QFontDatabase
-from AnyQt.QtWidgets import QApplication
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
@@ -15,62 +13,10 @@ _SettingType = Dict[str, ValueType]
 _LegendItemType = Tuple[ItemSample, pg.LabelItem]
 
 
-def available_font_families() -> List:
-    """
-    Function returns list of available font families.
-    Can be used to instantiate font combo boxes.
-
-    Returns
-    -------
-    fonts: list
-        List of available font families.
-    """
-    if not QApplication.instance():
-        _ = QApplication(sys.argv)
-    return QFontDatabase().families()
-
-
-def default_font_family() -> str:
-    """
-    Function returns default font family used in Qt application.
-    Can be used to instantiate initial dialog state.
-
-    Returns
-    -------
-    font: str
-        Default font family.
-    """
-    if not QApplication.instance():
-        _ = QApplication(sys.argv)
-    return QFont().family()
-
-
-def default_font_size() -> int:
-    """
-    Function returns default font size in points used in Qt application.
-    Can be used to instantiate initial dialog state.
-
-    Returns
-    -------
-    size: int
-        Default font size in points.
-    """
-    if not QApplication.instance():
-        _ = QApplication(sys.argv)
-    return QFont().pointSize()
-
-
 class Updater:
     """ Class with helper functions and constants. """
     FONT_FAMILY_LABEL, SIZE_LABEL, IS_ITALIC_LABEL = \
         "Font family", "Font size", "Italic"
-    FONT_FAMILY_SETTING: SettingsType = {
-        FONT_FAMILY_LABEL: (available_font_families(), default_font_family()),
-    }
-    FONT_SETTING: SettingsType = {
-        SIZE_LABEL: (range(4, 50), default_font_size()),
-        IS_ITALIC_LABEL: (None, False)
-    }
 
     WIDTH_LABEL, ALPHA_LABEL, STYLE_LABEL, ANTIALIAS_LABEL = \
         "Width", "Opacity", "Style", "Antialias"
@@ -80,12 +26,6 @@ class Updater:
                    "Dash dot line": Qt.DashDotLine,
                    "Dash dot dot line": Qt.DashDotDotLine}
     DEFAULT_LINE_STYLE = "Solid line"
-    LINE_SETTING: SettingsType = {
-        WIDTH_LABEL: (range(1, 15), 1),
-        ALPHA_LABEL: (range(0, 255, 5), 255),
-        STYLE_LABEL: (list(LINE_STYLES), DEFAULT_LINE_STYLE),
-        ANTIALIAS_LABEL: (None, False),
-    }
 
     @staticmethod
     def update_plot_title_text(title_item: pg.LabelItem, text: str):
@@ -205,7 +145,7 @@ class Updater:
             item.setPen(pen)
 
 
-class BaseParameterSetter:
+class CommonParameterSetter:
     """ Subclass to add 'setter' functionality to a plot. """
     LABELS_BOX = "Fonts"
     ANNOT_BOX = "Annotations"
@@ -220,7 +160,14 @@ class BaseParameterSetter:
     Y_AXIS_LABEL = "y-axis title"
     TITLE_LABEL = "Title"
 
-    initial_settings: Dict[str, Dict[str, SettingsType]] = NotImplemented
+    FONT_FAMILY_SETTING = None  # set in __init__ because it requires a running QApplication
+    FONT_SETTING = None  # set in __init__ because it requires a running QApplication
+    LINE_SETTING: SettingsType = {
+        Updater.WIDTH_LABEL: (range(1, 15), 1),
+        Updater.ALPHA_LABEL: (range(0, 255, 5), 255),
+        Updater.STYLE_LABEL: (list(Updater.LINE_STYLES), Updater.DEFAULT_LINE_STYLE),
+        Updater.ANTIALIAS_LABEL: (None, False),
+    }
 
     def __init__(self):
         def update_font_family(**settings):
@@ -254,6 +201,15 @@ class BaseParameterSetter:
             Updater.update_axis_title_text(
                 self.getAxis(axis), settings[self.TITLE_LABEL])
 
+        self.FONT_FAMILY_SETTING: SettingsType = {  # pylint: disable=invalid-name
+            Updater.FONT_FAMILY_LABEL: (QFontDatabase().families(), QFont().family()),
+        }
+
+        self.FONT_SETTING: SettingsType = {  # pylint: disable=invalid-name
+            Updater.SIZE_LABEL: (range(4, 50), QFont().pointSize()),
+            Updater.IS_ITALIC_LABEL: (None, False)
+        }
+
         self.label_font = QFont()
         self.legend_settings = {}
 
@@ -272,6 +228,8 @@ class BaseParameterSetter:
                 self.Y_AXIS_LABEL: lambda **kw: update_axis("left", **kw),
             }
         }
+
+        self.initial_settings: Dict[str, Dict[str, SettingsType]] = NotImplemented
 
         self.update_setters()
         self._check_setters()

@@ -19,8 +19,8 @@ from Orange.widgets.evaluate.contexthandlers import \
 from Orange.widgets.evaluate.utils import results_for_preview
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.visualize.utils.customizableplot import Updater, \
-    BaseParameterSetter as Setter
+from Orange.widgets.visualize.utils.customizableplot import \
+    CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
@@ -63,30 +63,32 @@ Metrics = [MetricDefinition(*args) for args in (
 )]
 
 
-class ParameterSetter(Setter):
-    initial_settings = {
-        Setter.LABELS_BOX: {
-            Setter.FONT_FAMILY_LABEL: Updater.FONT_FAMILY_SETTING,
-            Setter.TITLE_LABEL: Updater.FONT_SETTING,
-            Setter.AXIS_TITLE_LABEL: Updater.FONT_SETTING,
-            Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING,
-        },
-        Setter.ANNOT_BOX: {
-            Setter.TITLE_LABEL: {Setter.TITLE_LABEL: ("", "")},
+class ParameterSetter(CommonParameterSetter):
+
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+
+    def update_setters(self):
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TICKS_LABEL: self.FONT_SETTING,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
+            }
         }
-    }
 
     @property
     def title_item(self):
-        return self.titleLabel
+        return self.master.titleLabel
 
     @property
     def axis_items(self):
-        return [value["item"] for value in self.axes.values()]
-
-
-class PlotItem(pg.PlotItem, ParameterSetter):
-    pass
+        return [value["item"] for value in self.master.axes.values()]
 
 
 class OWCalibrationPlot(widget.OWWidget):
@@ -191,7 +193,8 @@ class OWCalibrationPlot(widget.OWWidget):
         self.plotview = pg.GraphicsView(background="w")
         axes = {"bottom": AxisItem(orientation="bottom"),
                 "left": AxisItem(orientation="left")}
-        self.plot = PlotItem(enableMenu=False, axisItems=axes)
+        self.plot = pg.PlotItem(enableMenu=False, axisItems=axes)
+        self.plot.parameter_setter = ParameterSetter(self.plot)
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
 
@@ -211,7 +214,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.mainArea.layout().addWidget(self.plotview)
         self._set_explanation()
 
-        VisualSettingsDialog(self, PlotItem.initial_settings)
+        VisualSettingsDialog(self, self.plot.parameter_setter.initial_settings)
 
     @Inputs.evaluation_results
     def set_results(self, results):
@@ -536,7 +539,7 @@ class OWCalibrationPlot(widget.OWWidget):
             self.report_raw(self.get_info_text(short=False))
 
     def set_visual_settings(self, key, value):
-        self.plot.set_parameter(key, value)
+        self.plot.parameter_setter.set_parameter(key, value)
         self.visual_settings[key] = value
 
 

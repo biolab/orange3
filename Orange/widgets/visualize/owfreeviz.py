@@ -90,7 +90,7 @@ class OWFreeVizGraph(OWGraphWithAnchors):
                 anchor = AnchorItem(line=QLineF(0, 0, *point), text=label)
                 anchor.setVisible(np.linalg.norm(point) > r)
                 anchor.setPen(pg.mkPen((100, 100, 100)))
-                anchor.setFont(self.anchor_font)
+                anchor.setFont(self.parameter_setter.anchor_font)
                 self.plot_widget.addItem(anchor)
                 self.anchor_items.append(anchor)
         else:
@@ -98,7 +98,7 @@ class OWFreeVizGraph(OWGraphWithAnchors):
                 anchor.setLine(QLineF(0, 0, *point))
                 anchor.setText(label)
                 anchor.setVisible(np.linalg.norm(point) > r)
-                anchor.setFont(self.anchor_font)
+                anchor.setFont(self.parameter_setter.anchor_font)
 
     def update_circle(self):
         super().update_circle()

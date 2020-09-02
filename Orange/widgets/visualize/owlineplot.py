@@ -31,7 +31,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owdistributions import LegendItem
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
-    BaseParameterSetter as Setter
+    CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
@@ -192,61 +192,18 @@ class LinePlotViewBox(ViewBox):
         self._graph_state = SELECT
 
 
-class ParameterSetter(Setter):
+class ParameterSetter(CommonParameterSetter):
     MEAN_LABEL = "Mean"
     LINE_LABEL = "Lines"
     SEL_LINE_LABEL = "Selected lines"
     RANGE_LABEL = "Range"
     SEL_RANGE_LABEL = "Selected range"
-    initial_settings = {
-        Setter.LABELS_BOX: {
-            Setter.FONT_FAMILY_LABEL: Updater.FONT_FAMILY_SETTING,
-            Setter.TITLE_LABEL: Updater.FONT_SETTING,
-            Setter.AXIS_TITLE_LABEL: Updater.FONT_SETTING,
-            Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING,
-            Setter.LEGEND_LABEL: Updater.FONT_SETTING,
-        },
-        Setter.ANNOT_BOX: {
-            Setter.TITLE_LABEL: {Setter.TITLE_LABEL: ("", "")},
-            Setter.X_AXIS_LABEL: {Setter.TITLE_LABEL: ("", "")},
-            Setter.Y_AXIS_LABEL: {Setter.TITLE_LABEL: ("", "")},
-        },
-        Setter.PLOT_BOX: {
-            MEAN_LABEL: {
-                Updater.WIDTH_LABEL: (range(1, 15), LinePlotStyle.MEAN_WIDTH),
-                Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
-                                      Updater.DEFAULT_LINE_STYLE),
-            },
-            LINE_LABEL: {
-                Updater.WIDTH_LABEL: (range(1, 15),
-                                      LinePlotStyle.UNSELECTED_LINE_WIDTH),
-                Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
-                                      Updater.DEFAULT_LINE_STYLE),
-                Updater.ALPHA_LABEL: (range(0, 255, 5),
-                                      LinePlotStyle.UNSELECTED_LINE_ALPHA),
-                Updater.ANTIALIAS_LABEL: (None, True),
-            },
-            SEL_LINE_LABEL: {
-                Updater.WIDTH_LABEL: (range(1, 15),
-                                      LinePlotStyle.SELECTED_LINE_WIDTH),
-                Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
-                                      Updater.DEFAULT_LINE_STYLE),
-                Updater.ALPHA_LABEL: (range(0, 255, 5),
-                                      LinePlotStyle.SELECTED_LINE_ALPHA),
-                Updater.ANTIALIAS_LABEL: (None, False),
-            },
-            RANGE_LABEL: {
-                Updater.ALPHA_LABEL: (range(0, 255, 5),
-                                      LinePlotStyle.RANGE_ALPHA),
-            },
-            SEL_RANGE_LABEL: {
-                Updater.ALPHA_LABEL: (range(0, 255, 5),
-                                      LinePlotStyle.SELECTED_RANGE_ALPHA),
-            },
-        }
-    }
 
-    def __init__(self):
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+
+    def update_setters(self):
         self.mean_settings = {
             Updater.WIDTH_LABEL: LinePlotStyle.MEAN_WIDTH,
             Updater.STYLE_LABEL: Updater.DEFAULT_LINE_STYLE,
@@ -269,9 +226,55 @@ class ParameterSetter(Setter):
         self.sel_range_settings = {
             Updater.ALPHA_LABEL: LinePlotStyle.SELECTED_RANGE_ALPHA,
         }
-        super().__init__()
 
-    def update_setters(self):
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TICKS_LABEL: self.FONT_SETTING,
+                self.LEGEND_LABEL: self.FONT_SETTING,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.X_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.Y_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
+            },
+            self.PLOT_BOX: {
+                self.MEAN_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15), LinePlotStyle.MEAN_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          Updater.DEFAULT_LINE_STYLE),
+                },
+                self.LINE_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15),
+                                          LinePlotStyle.UNSELECTED_LINE_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          Updater.DEFAULT_LINE_STYLE),
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.UNSELECTED_LINE_ALPHA),
+                    Updater.ANTIALIAS_LABEL: (None, True),
+                },
+                self.SEL_LINE_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15),
+                                          LinePlotStyle.SELECTED_LINE_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          Updater.DEFAULT_LINE_STYLE),
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.SELECTED_LINE_ALPHA),
+                    Updater.ANTIALIAS_LABEL: (None, False),
+                },
+                self.RANGE_LABEL: {
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.RANGE_ALPHA),
+                },
+                self.SEL_RANGE_LABEL: {
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.SELECTED_RANGE_ALPHA),
+                },
+            }
+        }
+
         def update_mean(**settings):
             self.mean_settings.update(**settings)
             Updater.update_lines(self.mean_lines_items, **self.mean_settings)
@@ -310,40 +313,43 @@ class ParameterSetter(Setter):
 
     @property
     def title_item(self):
-        return self.getPlotItem().titleLabel
+        return self.master.getPlotItem().titleLabel
 
     @property
     def axis_items(self):
-        return [value["item"] for value in self.getPlotItem().axes.values()]
+        return [value["item"] for value in self.master.getPlotItem().axes.values()]
 
     @property
     def legend_items(self):
-        return self.legend.items
+        return self.master.legend.items
 
     @property
     def mean_lines_items(self):
-        return [group.mean for group in self.groups]
+        return [group.mean for group in self.master.groups]
 
     @property
     def lines_items(self):
-        return [group.profiles for group in self.groups]
+        return [group.profiles for group in self.master.groups]
 
     @property
     def sel_lines_items(self):
-        return [group.sel_profiles for group in self.groups] + \
-               [group.sub_profiles for group in self.groups]
+        return [group.sel_profiles for group in self.master.groups] + \
+               [group.sub_profiles for group in self.master.groups]
 
     @property
     def range_items(self):
-        return [group.range for group in self.groups]
+        return [group.range for group in self.master.groups]
 
     @property
     def sel_range_items(self):
-        return [group.sel_range for group in self.groups]
+        return [group.sel_range for group in self.master.groups]
 
+    @property
+    def getAxis(self):
+        return self.master.getAxis
 
 # Customizable plot widget
-class LinePlotGraph(pg.PlotWidget, ParameterSetter):
+class LinePlotGraph(pg.PlotWidget):
     def __init__(self, parent):
         self.groups: List[ProfileGroup] = []
         self.bottom_axis = BottomAxisItem(orientation="bottom")
@@ -359,6 +365,8 @@ class LinePlotGraph(pg.PlotWidget, ParameterSetter):
         self.legend = self._create_legend(((1, 0), (1, 0)))
         self.getPlotItem().buttonsHidden = True
         self.setRenderHint(QPainter.Antialiasing, True)
+
+        self.parameter_setter = ParameterSetter(self)
 
     def _create_legend(self, anchor):
         legend = LegendItem()
@@ -376,7 +384,8 @@ class LinePlotGraph(pg.PlotWidget, ParameterSetter):
                 dots = pg.ScatterPlotItem(pen=c, brush=c, size=10, shape="s")
                 self.legend.addItem(dots, escape(name))
             self.legend.show()
-        Updater.update_legend_font(self.legend_items, **self.legend_settings)
+        Updater.update_legend_font(self.parameter_setter.legend_items,
+                                   **self.parameter_setter.legend_settings)
 
     def select(self, indices):
         keys = QApplication.keyboardModifiers()
@@ -451,17 +460,17 @@ class ProfileGroup:
         x, y, con = self.__get_disconnected_curve_data(self.y_data)
         pen = self.make_pen(self.color)
         curve = pg.PlotCurveItem(x=x, y=y, connect=con, pen=pen)
-        Updater.update_lines([curve], **self.graph.line_settings)
+        Updater.update_lines([curve], **self.graph.parameter_setter.line_settings)
         return curve
 
     def _get_sel_profiles_curve(self):
         curve = pg.PlotCurveItem(x=None, y=None, pen=self.make_pen(self.color))
-        Updater.update_lines([curve], **self.graph.sel_line_settings)
+        Updater.update_lines([curve], **self.graph.parameter_setter.sel_line_settings)
         return curve
 
     def _get_range_curve(self):
         color = QColor(self.color)
-        color.setAlpha(self.graph.range_settings[Updater.ALPHA_LABEL])
+        color.setAlpha(self.graph.parameter_setter.range_settings[Updater.ALPHA_LABEL])
         bottom, top = nanmin(self.y_data, axis=0), nanmax(self.y_data, axis=0)
         return pg.FillBetweenItem(
             pg.PlotDataItem(x=self.x_data, y=bottom),
@@ -470,14 +479,14 @@ class ProfileGroup:
 
     def _get_sel_range_curve(self):
         color = QColor(self.color)
-        color.setAlpha(self.graph.sel_range_settings[Updater.ALPHA_LABEL])
+        color.setAlpha(self.graph.parameter_setter.sel_range_settings[Updater.ALPHA_LABEL])
         curve1 = curve2 = pg.PlotDataItem(x=self.x_data, y=self.__mean)
         return pg.FillBetweenItem(curve1, curve2, brush=color)
 
     def _get_mean_curve(self):
         pen = self.make_pen(self.color.darker(LinePlotStyle.MEAN_DARK_FACTOR))
         curve = pg.PlotCurveItem(x=self.x_data, y=self.__mean, pen=pen)
-        Updater.update_lines([curve], **self.graph.mean_settings)
+        Updater.update_lines([curve], **self.graph.parameter_setter.mean_settings)
         return curve
 
     def _get_error_bar(self):
@@ -528,7 +537,7 @@ class ProfileGroup:
 
     def update_profiles_color(self, selection):
         color = QColor(self.color)
-        alpha = self.graph.line_settings[Updater.ALPHA_LABEL] \
+        alpha = self.graph.parameter_setter.line_settings[Updater.ALPHA_LABEL] \
             if not selection else LinePlotStyle.UNSELECTED_LINE_ALPHA_SEL
         color.setAlpha(alpha)
         pen = self.profiles.opts["pen"]
@@ -542,7 +551,7 @@ class ProfileGroup:
 
     def update_sel_profiles_color(self, subset):
         color = QColor(Qt.black) if subset else QColor(self.color)
-        color.setAlpha(self.graph.sel_line_settings[Updater.ALPHA_LABEL])
+        color.setAlpha(self.graph.parameter_setter.sel_line_settings[Updater.ALPHA_LABEL])
         pen = self.sel_profiles.opts["pen"]
         pen.setColor(color)
         self.sel_profiles.setPen(pen)
@@ -634,7 +643,7 @@ class OWLinePlot(OWWidget):
         self.group_view = None
         self.setup_gui()
 
-        VisualSettingsDialog(self, LinePlotGraph.initial_settings)
+        VisualSettingsDialog(self, self.graph.parameter_setter.initial_settings)
         self.graph.view_box.selection_changed.connect(self.selection_changed)
         self.enable_selection.connect(self.graph.view_box.enable_selection)
 
@@ -946,7 +955,7 @@ class OWLinePlot(OWWidget):
         return collection is not None and obj in collection
 
     def set_visual_settings(self, key, value):
-        self.graph.set_parameter(key, value)
+        self.graph.parameter_setter.set_parameter(key, value)
         self.visual_settings[key] = value
 
 

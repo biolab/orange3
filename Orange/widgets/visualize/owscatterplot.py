@@ -1,4 +1,3 @@
-import copy
 from itertools import chain
 from xml.sax.saxutils import escape
 
@@ -24,9 +23,8 @@ from Orange.widgets.settings import (
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
-    ParameterSetter as Setter
+    ScatterBaseParameterSetter
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
-from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import AttributeList, Msg, Input, Output
 
@@ -98,25 +96,31 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         return [a for _, a in attrs]
 
 
-class ParameterSetter(Setter):
-    initial_settings = copy.deepcopy(Setter.initial_settings)
-    initial_settings[Setter.LABELS_BOX].update({
-        Setter.AXIS_TITLE_LABEL: Updater.FONT_SETTING,
-        Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING
-    })
+class ParameterSetter(ScatterBaseParameterSetter):
+
+    def __init__(self, master):
+        super().__init__(master)
+
+    def update_setters(self):
+        super().update_setters()
+        self.initial_settings[self.LABELS_BOX].update({
+            self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+            self.AXIS_TICKS_LABEL: self.FONT_SETTING
+        })
 
     @property
     def axis_items(self):
         return [value["item"] for value in
-                self.plot_widget.plotItem.axes.values()]
+                self.master.plot_widget.plotItem.axes.values()]
 
 
-class OWScatterPlotGraph(OWScatterPlotBase, ParameterSetter):
+class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
     orthonormal_regression = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
+        self.parameter_setter = ParameterSetter(self)
         self.reg_line_items = []
 
     def clear(self):
