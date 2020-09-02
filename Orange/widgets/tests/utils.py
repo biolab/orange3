@@ -142,11 +142,6 @@ def excepthook_catch(raise_on_exit=True):
     [(<class 'ZeroDivisionError'>, ZeroDivisionError('division by zero',), ...
     """
     excepthook = sys.excepthook
-    if excepthook != sys.__excepthook__:
-        warnings.warn(
-            "sys.excepthook was already patched (is {})"
-            "(just thought you should know this)".format(excepthook),
-            RuntimeWarning, stacklevel=2)
     seen = []
 
     def excepthook_handle(exctype, value, traceback):
