@@ -1,7 +1,9 @@
 import logging
 import hashlib
 import pickle
+from os import environ
 from os.path import join, isfile
+from typing import Optional, Dict
 
 from Orange.canvas.config import cache_dir
 
@@ -72,3 +74,26 @@ class EmbedderCache:
 
     def add(self, cache_key, value):
         self._cache_dict[cache_key] = value
+
+
+def get_proxies() -> Optional[Dict[str, str]]:
+    """
+    Return dict with proxy addresses if they exists.
+
+    Returns
+    -------
+    proxy_dict
+        Dictionary with format {proxy type: proxy address} or None if
+        they not set.
+    """
+    def add_protocol(url: Optional[str], prot: str) -> Optional[str]:
+        if url and not url.startswith(prot):
+            return f"{prot}://{url}"
+        return url
+    http_proxy = add_protocol(environ.get("http_proxy"), "http")
+    https_proxy = add_protocol(environ.get("https_proxy"), "https")
+    if http_proxy and https_proxy:  # both proxy addresses defined
+        return {"http://": https_proxy, "https://": https_proxy}
+    elif any([https_proxy, http_proxy]):  # one of the proxies defined
+        return {"all://": http_proxy or https_proxy}
+    return None  # proxies not defined
