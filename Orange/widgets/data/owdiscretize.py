@@ -333,8 +333,6 @@ class OWDiscretize(widget.OWWidget):
             s.setMaximumWidth(60)
             s.setAlignment(Qt.AlignRight)
             gui.rubber(s.box)
-            sp = box.sizePolicy()
-            sp.setControlType(sp.SpinBox)
             return box.box
 
         self.k_general = _intbox(self.left, "default_k",
