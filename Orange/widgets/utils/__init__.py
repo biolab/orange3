@@ -1,7 +1,7 @@
 import inspect
 import sys
 from collections import deque
-from typing import TypeVar, Deque, Callable, Any, Iterable
+from typing import TypeVar, Callable, Any, Iterable, Optional, Hashable
 
 from AnyQt.QtCore import QObject
 
@@ -81,7 +81,6 @@ def getmembers(obj, predicate=None):
     return inspect.getmembers(obj, mypredicate)
 
 
-
 _T1 = TypeVar("_T1")
 
 
@@ -90,3 +89,30 @@ def apply_all(seq, op):
     """Apply `op` on all elements of `seq`."""
     # from itertools recipes `consume`
     deque(map(op, seq), maxlen=0)
+
+
+def unique_everseen(iterable, key=None):
+    # type: (Iterable[_T1], Optional[Callable[[_T1], Hashable]]) -> Iterable[_T1]
+    """
+    Return an iterator over unique elements of `iterable` preserving order.
+
+    If `key` is supplied it is used as a substitute for determining
+    'uniqueness' of elements.
+
+    Parameters
+    ----------
+    iterable : Iterable[T]
+    key : Callable[[T], Hashable]
+
+    Returns
+    -------
+    unique : Iterable[T]
+    """
+    seen = set()
+    if key is None:
+        key = lambda t: t
+    for el in iterable:
+        el_k = key(el)
+        if el_k not in seen:
+            seen.add(el_k)
+            yield el
