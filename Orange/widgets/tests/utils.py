@@ -6,8 +6,8 @@ import contextlib
 
 from AnyQt.QtCore import Qt, QObject, QEventLoop, QTimer, QLocale, QPoint
 from AnyQt.QtTest import QTest
-from AnyQt.QtGui import QMouseEvent
-from AnyQt.QtWidgets import QApplication
+from AnyQt.QtGui import QMouseEvent, QContextMenuEvent
+from AnyQt.QtWidgets import QApplication, QWidget
 
 from Orange.data import Table, Domain, ContinuousVariable
 
@@ -321,6 +321,25 @@ def mouseMove(widget, pos=QPoint(), delay=-1):  # pragma: no-cover
         QTest.qWait(delay)
 
     QApplication.sendEvent(widget, me)
+
+
+def contextMenu(
+        widget: QWidget, pos=QPoint(), reason=QContextMenuEvent.Mouse,
+        modifiers=Qt.NoModifier, delay=-1
+) -> None:
+    """
+    Simulate a context menu event on `widget`.
+
+    `pos` is the event origin specified in widget's local coordinates. If not
+    specified. Then widget.rect().center() is used instead.
+    """
+    if pos.isNull():
+        pos = widget.rect().center()
+    globalPos = widget.mapToGlobal(pos)
+    ev = QContextMenuEvent(reason, pos, globalPos, modifiers)
+    if delay >= 0:
+        QTest.qWait(delay)
+    QApplication.sendEvent(widget, ev)
 
 
 def table_dense_sparse(test_case):
