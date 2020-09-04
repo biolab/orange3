@@ -446,10 +446,7 @@ class Table(Sequence, Storage):
                 return table
 
             if isinstance(row_indices, slice):
-                start, stop, stride = row_indices.indices(source.X.shape[0])
-                n_rows = (stop - start) // stride
-                if n_rows < 0:
-                    n_rows = 0
+                n_rows = len(range(*row_indices.indices(source.X.shape[0])))
             elif row_indices is ...:
                 n_rows = len(source)
             else:

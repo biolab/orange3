@@ -145,7 +145,7 @@ class TestServerEmbedder(unittest.TestCase):
                 self.embedder.embedd_data(test_data)
             self.setUp()  # to init new embedder
 
-    @patch(_HTTPX_POST_METHOD, side_effect=ReadTimeout)
+    @patch(_HTTPX_POST_METHOD, side_effect=ReadTimeout("", request=None))
     def test_read_error(self, _):
         for num_rows in range(1, 20):
             test_data = Table.from_numpy(

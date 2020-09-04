@@ -102,6 +102,10 @@ class OWMDSGraph(OWScatterPlotBase):
         super().update_coordinates()
         self.update_pairs(reconnect=False)
 
+    def update_jittering(self):
+        super().update_jittering()
+        self.update_pairs(reconnect=False)
+
     def update_pairs(self, reconnect):
         if self.pairs_curve:
             self.plot_widget.removeItem(self.pairs_curve)

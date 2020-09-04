@@ -353,12 +353,15 @@ class Variable(Reprable, metaclass=VariableMeta):
         var1 = self._get_identical_source(self)
         var2 = self._get_identical_source(other)
         # pylint: disable=protected-access
-        return var1.name == var2.name \
-               and var1._compute_value == var2._compute_value
+        return (
+            self.name == other.name
+            and var1.name == var2.name
+            and var1._compute_value == var2._compute_value
+        )
 
     def __hash__(self):
         var = self._get_identical_source(self)
-        return hash((var.name, type(self), var._compute_value))
+        return hash((self.name, var.name, type(self), var._compute_value))
 
     @staticmethod
     def _get_identical_source(var):

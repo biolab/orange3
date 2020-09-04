@@ -221,8 +221,13 @@ class MergeDataContextHandler(ContextHandler):
         context = widget.current_context
         if context is None:
             return
-        pairs = context.values.get("attr_pairs", [])
-        widget.attr_pairs = [self.decode_pair(widget, pair) for pair in pairs]
+        pairs = context.values.get("attr_pairs")
+        if pairs:
+            # attr_pairs is schema only setting which means it is not always
+            # present. When not present leave widgets default.
+            widget.attr_pairs = [
+                self.decode_pair(widget, pair) for pair in pairs
+            ]
 
     def match(self, context, variables1, variables2):
         def matches(part, variables):
@@ -232,9 +237,10 @@ class MergeDataContextHandler(ContextHandler):
         if (variables1, variables2) == (context.variables1, context.variables2):
             return self.PERFECT_MATCH
 
-        left, right = zip(*context.values["attr_pairs"])
-        if matches(left, variables1) and matches(right, variables2):
-            return 0.5
+        if "attr_pairs" in context.values:
+            left, right = zip(*context.values["attr_pairs"])
+            if matches(left, variables1) and matches(right, variables2):
+                return 0.5
 
         return self.NO_MATCH
 

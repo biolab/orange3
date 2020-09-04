@@ -4,6 +4,7 @@
 # pylint: disable=too-many-lines,too-many-public-methods, protected-access
 from itertools import chain
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import numpy as np
@@ -1075,6 +1076,37 @@ class MergeDataContextHandlerTest(unittest.TestCase):
         widget.current_context = None
         handler.settings_from_widget(widget)  # mustn't crash
         handler.settings_to_widget(widget)  # mustn't crash
+
+    def test_attr_pairs_not_present(self):
+        data = Table("iris")
+
+        context = SimpleNamespace(values={})
+        widget = SimpleNamespace(
+            current_context=context, attr_pairs=("a", "b")
+        )
+        handler = MergeDataContextHandler()
+
+        handler.settings_to_widget(widget)  # mustn't crash
+        # no attr_pairs in context -> handler must not change widget.attr_pairs
+        self.assertTupleEqual(widget.attr_pairs, ("a", "b"))
+
+        context = SimpleNamespace(
+            values={
+                "attr_pairs": [((data.domain[0], 100), (data.domain[1], 100))]
+            }
+        )
+        widget = SimpleNamespace(
+            current_context=context,
+            attr_pairs=("a", "b"),
+            data=data,
+            extra_data=data,
+        )
+
+        handler.settings_to_widget(widget)  # mustn't crash
+        # values taken from context
+        self.assertListEqual(
+            widget.attr_pairs, [(data.domain[0], data.domain[1])]
+        )
 
 
 if __name__ == "__main__":

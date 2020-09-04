@@ -6,7 +6,7 @@ import numpy as np
 
 from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QColor, QFont
 
 from Orange.data import (
     Table, Domain, ContinuousVariable, DiscreteVariable, TimeVariable
@@ -1100,6 +1100,30 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
         with self.assertRaises(ValueError):
             float(ticks[0])
+
+    def test_visual_settings(self):
+        super().test_visual_settings()
+
+        graph = self.widget.graph
+        font = QFont()
+        font.setItalic(True)
+        font.setFamily("Helvetica")
+
+        key, value = ('Fonts', 'Axis title', 'Font size'), 16
+        self.widget.set_visual_settings(key, value)
+        key, value = ('Fonts', 'Axis title', 'Italic'), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(16)
+        for item in graph.parameter_setter.axis_items:
+            self.assertFontEqual(item.label.font(), font)
+
+        key, value = ('Fonts', 'Axis ticks', 'Font size'), 15
+        self.widget.set_visual_settings(key, value)
+        key, value = ('Fonts', 'Axis ticks', 'Italic'), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(15)
+        for item in graph.parameter_setter.axis_items:
+            self.assertFontEqual(item.style["tickFont"], font)
 
 
 if __name__ == "__main__":

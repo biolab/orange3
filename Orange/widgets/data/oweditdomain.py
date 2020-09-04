@@ -13,20 +13,23 @@ from collections import namedtuple, Counter
 from functools import singledispatch, partial
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
-    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable
+    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable, cast
 )
 
 import numpy as np
 import pandas as pd
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QToolButton, QLineEdit, QAction, QActionGroup, QGroupBox,
-    QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
+    QLineEdit, QAction, QActionGroup, QGroupBox,
+    QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
-    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox)
+    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
+    QAbstractItemView, QMenu
+)
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
-    Qt, QEvent, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex
+    Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect,
+    QPoint,
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
@@ -35,6 +38,8 @@ import Orange.data
 from Orange.preprocess.transformation import Transformation, Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.buttons import FixedSizeButton
+from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
@@ -463,42 +468,6 @@ class DictItemsModel(QStandardItemModel):
             value_item = self.item(row, 1)
             rval[key_item.text()] = value_item.text()
         return rval
-
-
-class FixedSizeButton(QToolButton):
-
-    def __init__(self, *args, defaultAction=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        sh = self.sizePolicy()
-        sh.setHorizontalPolicy(QSizePolicy.Fixed)
-        sh.setVerticalPolicy(QSizePolicy.Fixed)
-        self.setSizePolicy(sh)
-        self.setAttribute(Qt.WA_WState_OwnSizePolicy, True)
-
-        if defaultAction is not None:
-            self.setDefaultAction(defaultAction)
-
-    def sizeHint(self):
-        style = self.style()
-        size = (style.pixelMetric(QStyle.PM_SmallIconSize) +
-                style.pixelMetric(QStyle.PM_ButtonMargin))
-        return QSize(size, size)
-
-    def event(self, event):
-        # type: (QEvent) -> bool
-        if event.type() == QEvent.ToolTip and self.toolTip():
-            action = self.defaultAction()
-            if action is not None:
-                text = "<span>{}</span>&nbsp;&nbsp;<kbd>{}</kbd>".format(
-                    action.toolTip(),
-                    action.shortcut().toString(QKeySequence.NativeText)
-                )
-                QToolTip.showText(event.globalPos(), text)
-            else:
-                QToolTip.hideText()
-            return True
-        else:
-            return super().event(event)
 
 
 class VariableEditor(QWidget):
@@ -1030,6 +999,14 @@ class CountedStateModel(CountedListModel):
         return frozenset({Qt.EditRole, EditStateRole})
 
 
+def mapRectTo(widget: QWidget, parent: QWidget, rect: QRect) -> QRect:  # pylint: disable=redefined-outer-name
+    return QRect(widget.mapTo(parent, rect.topLeft()), rect.size())
+
+
+def mapRectToGlobal(widget: QWidget, rect: QRect) -> QRect:  # pylint: disable=redefined-outer-name
+    return QRect(widget.mapToGlobal(rect.topLeft()), rect.size())
+
+
 class CategoriesEditDelegate(QStyledItemDelegate):
     """
     Display delegate for editing categories.
@@ -1060,6 +1037,64 @@ class CategoriesEditDelegate(QStyledItemDelegate):
         if suffix is not None:
             text = text + " " + suffix
         option.text = text
+
+    class CatEditComboBox(QComboBox):
+        prows: List[QPersistentModelIndex]
+
+    def createEditor(
+            self, parent: QWidget, option: 'QStyleOptionViewItem',
+            index: QModelIndex
+    ) -> QWidget:
+        view = option.widget
+        assert isinstance(view, QAbstractItemView)
+        selmodel = view.selectionModel()
+        rows = selmodel.selectedRows(0)
+        if len(rows) < 2:
+            return super().createEditor(parent, option, index)
+        # edit multiple selection
+        cb = CategoriesEditDelegate.CatEditComboBox(
+            editable=True, insertPolicy=QComboBox.InsertAtBottom)
+        cb.setParent(view, Qt.Popup)
+        cb.addItems(
+            list(unique(str(row.data(Qt.EditRole)) for row in rows)))
+        prows = [QPersistentModelIndex(row) for row in rows]
+        cb.prows = prows
+        return cb
+
+    def updateEditorGeometry(
+            self, editor: QWidget, option: 'QStyleOptionViewItem',
+            index: QModelIndex
+    ) -> None:
+        if isinstance(editor, CategoriesEditDelegate.CatEditComboBox):
+            view = cast(QAbstractItemView, option.widget)
+            view.scrollTo(index)
+            vport = view.viewport()
+            vrect = view.visualRect(index)
+            vrect = mapRectTo(vport, view, vrect)
+            vrect = vrect.intersected(vport.geometry())
+            vrect = mapRectToGlobal(vport, vrect)
+            size = editor.sizeHint().expandedTo(vrect.size())
+            editor.resize(size)
+            editor.move(vrect.topLeft())
+        else:
+            super().updateEditorGeometry(editor, option, index)
+
+    def setModelData(
+            self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
+    ) -> None:
+        if isinstance(editor, CategoriesEditDelegate.CatEditComboBox):
+            text = editor.currentText()
+            with signal_blocking(model):
+                for prow in editor.prows:
+                    if prow.isValid():
+                        model.setData(QModelIndex(prow), text, Qt.EditRole)
+            # this could be better
+            model.dataChanged.emit(
+                model.index(0, 0), model.index(model.rowCount() - 1, 0),
+                (Qt.EditRole,)
+            )
+        else:
+            super().setModelData(editor, model, index)
 
 
 class DiscreteVariableEditor(VariableEditor):
@@ -1102,7 +1137,8 @@ class DiscreteVariableEditor(VariableEditor):
             self, objectName="action-group-categories", enabled=False
         )
         self.move_value_up = QAction(
-            "\N{UPWARDS ARROW}", group,
+            "Move up", group,
+            iconText="\N{UPWARDS ARROW}",
             toolTip="Move the selected item up.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.AltModifier |
                                   Qt.Key_BracketLeft),
@@ -1111,7 +1147,8 @@ class DiscreteVariableEditor(VariableEditor):
         self.move_value_up.triggered.connect(self.move_up)
 
         self.move_value_down = QAction(
-            "\N{DOWNWARDS ARROW}", group,
+            "Move down", group,
+            iconText="\N{DOWNWARDS ARROW}",
             toolTip="Move the selected item down.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.AltModifier |
                                   Qt.Key_BracketRight),
@@ -1120,29 +1157,41 @@ class DiscreteVariableEditor(VariableEditor):
         self.move_value_down.triggered.connect(self.move_down)
 
         self.add_new_item = QAction(
-            "+", group,
+            "Add", group,
+            iconText="+",
             objectName="action-add-item",
             toolTip="Append a new item.",
             shortcut=QKeySequence(QKeySequence.New),
             shortcutContext=Qt.WidgetShortcut,
         )
         self.remove_item = QAction(
-            "\N{MINUS SIGN}", group,
+            "Remove item", group,
+            iconText="\N{MINUS SIGN}",
             objectName="action-remove-item",
             toolTip="Delete the selected item.",
             shortcut=QKeySequence(QKeySequence.Delete),
             shortcutContext=Qt.WidgetShortcut,
         )
-        self.merge_items = QAction(
-            "M", group,
-            objectName="action-merge-item",
-            toolTip="Merge selected items.",
+        self.rename_selected_items = QAction(
+            "Rename selected items", group,
+            iconText="=",
+            objectName="action-rename-selected-items",
+            toolTip="Rename selected items.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Equal),
+            shortcutContext=Qt.WidgetShortcut,
+        )
+        self.merge_items = QAction(
+            "Merge", group,
+            iconText="M",
+            objectName="action-activate-merge-dialog",
+            toolTip="Merge infrequent items.",
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.MetaModifier | Qt.Key_Equal),
             shortcutContext=Qt.WidgetShortcut
         )
 
         self.add_new_item.triggered.connect(self._add_category)
         self.remove_item.triggered.connect(self._remove_category)
+        self.rename_selected_items.triggered.connect(self._rename_selected_categories)
         self.merge_items.triggered.connect(self._merge_categories)
 
         button1 = FixedSizeButton(
@@ -1162,11 +1211,28 @@ class DiscreteVariableEditor(VariableEditor):
             accessibleName="Remove"
         )
         button5 = FixedSizeButton(
-            self, defaultAction=self.merge_items,
-            accessibleName="Merge",
+            self, defaultAction=self.rename_selected_items,
+            accessibleName="Merge selected items"
         )
-        self.values_edit.addActions([self.move_value_up, self.move_value_down,
-                                     self.add_new_item, self.remove_item])
+        button6 = FixedSizeButton(
+            self, defaultAction=self.merge_items,
+            accessibleName="Merge infrequent",
+        )
+
+        self.values_edit.addActions([
+            self.move_value_up, self.move_value_down,
+            self.add_new_item, self.remove_item, self.rename_selected_items
+        ])
+        self.values_edit.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        def context_menu(pos: QPoint):
+            viewport = self.values_edit.viewport()
+            menu = QMenu(self.values_edit)
+            menu.setAttribute(Qt.WA_DeleteOnClose)
+            menu.addActions([self.rename_selected_items, self.remove_item])
+            menu.popup(viewport.mapToGlobal(pos))
+        self.values_edit.customContextMenuRequested.connect(context_menu)
+
         hlayout.addWidget(button1)
         hlayout.addWidget(button2)
         hlayout.addSpacing(3)
@@ -1174,6 +1240,8 @@ class DiscreteVariableEditor(VariableEditor):
         hlayout.addWidget(button4)
         hlayout.addSpacing(3)
         hlayout.addWidget(button5)
+        hlayout.addWidget(button6)
+
         hlayout.addStretch(10)
         vlayout.addLayout(hlayout)
 
@@ -1184,6 +1252,8 @@ class DiscreteVariableEditor(VariableEditor):
         QWidget.setTabOrder(button1, button2)
         QWidget.setTabOrder(button2, button3)
         QWidget.setTabOrder(button3, button4)
+        QWidget.setTabOrder(button4, button5)
+        QWidget.setTabOrder(button5, button6)
 
     def set_data(self, var, transform=()):
         raise NotImplementedError
@@ -1326,13 +1396,6 @@ class DiscreteVariableEditor(VariableEditor):
     @Slot()
     def on_value_selection_changed(self):
         rows = self.values_edit.selectionModel().selectedRows()
-        # enable merge if at least 2 selected items and the selection must not
-        # contain any added/dropped items.
-        enable_merge = \
-            len(rows) > 1 and \
-            not any(index.data(EditStateRole) != ItemEditState.NoState
-                    for index in rows)
-
         if len(rows) == 1:
             i = rows[0].row()
             self.move_value_up.setEnabled(i != 0)
@@ -1454,6 +1517,22 @@ class DiscreteVariableEditor(VariableEditor):
             complete_merge(
                 dlg.get_merged_value_name(), dlg.get_merge_attributes()
             )
+
+    def _rename_selected_categories(self):
+        """
+        Rename selected categories and merging them.
+
+        Popup an editable combo box for selection/edit of a new value.
+        """
+        view = self.values_edit
+        selmodel = view.selectionModel()
+        index = view.currentIndex()
+        if not selmodel.isSelected(index):
+            indices = selmodel.selectedRows(0)
+            if indices:
+                index = indices[0]
+        # delegate to the CategoriesEditDelegate
+        view.edit(index)
 
 
 class ContinuousVariableEditor(VariableEditor):
@@ -2545,6 +2624,14 @@ class DictMissingConst(dict):
     def __missing__(self, key):
         return self.__missing
 
+    def __eq__(self, other):
+        return super().__eq__(other) and isinstance(other, DictMissingConst) \
+            and (self.__missing == other[()]  # get `__missing`
+                 or np.isnan(self.__missing) and np.isnan(other[()]))
+
+    def __hash__(self):
+        return hash((self.__missing, frozenset(self.items())))
+
 
 def make_dict_mapper(
         mapping: Mapping, dtype: Optional[DType] = None
@@ -2822,6 +2909,14 @@ class LookupMappingTransform(Transformation):
 
     def __reduce_ex__(self, protocol):
         return type(self), (self.variable, self.mapping, self.dtype)
+
+    def __eq__(self, other):
+        return self.variable == other.variable \
+               and self.mapping == other.mapping \
+               and self.dtype == other.dtype
+
+    def __hash__(self):
+        return hash((type(self), self.variable, self.mapping, self.dtype))
 
 
 @singledispatch

@@ -1,7 +1,9 @@
 from collections import namedtuple
+from contextlib import contextmanager
 from functools import partial
 from operator import itemgetter
 from itertools import chain
+from typing import Set, List, Sequence, Union
 
 import numpy
 from AnyQt.QtWidgets import (
@@ -10,9 +12,11 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
-    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer)
+    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer,
+    QItemSelectionModel, QItemSelection)
 
 from orangewidget.report import plural
+from Orange.widgets.utils.state_summary import format_summary_details
 
 import Orange
 from Orange.evaluation import Results
@@ -68,6 +72,7 @@ class OWPredictions(OWWidget):
 
     #: List of selected class value indices in the `class_values` list
     selected_classes = settings.ContextSetting([])
+    selection = settings.Setting([], schema_only=True)
 
     def __init__(self):
         super().__init__()
@@ -77,6 +82,8 @@ class OWPredictions(OWWidget):
         self.class_values = []  # type: List[str]
         self._delegates = []
         self.left_width = 10
+        self.selection_store = None
+        self.__pending_selection = self.selection
 
         gui.listBox(self.controlArea, self, "selected_classes", "class_values",
                     box="Show probabibilities for",
@@ -92,7 +99,7 @@ class OWPredictions(OWWidget):
 
         table_opts = dict(horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
                           horizontalScrollMode=QTableView.ScrollPerPixel,
-                          selectionMode=QTableView.NoSelection,
+                          selectionMode=QTableView.ExtendedSelection,
                           focusPolicy=Qt.StrongFocus)
         self.dataview = TableView(
             sortingEnabled=True,
@@ -114,6 +121,8 @@ class OWPredictions(OWWidget):
             lambda index, _, size:
             self.predictionsview.verticalHeader().resizeSection(index, size))
 
+        self.dataview.setItemDelegate(DataItemDelegate(self.dataview))
+
         self.splitter = QSplitter(
             orientation=Qt.Horizontal, childrenCollapsible=False, handleWidth=2)
         self.splitter.splitterMoved.connect(self.splitter_resized)
@@ -125,11 +134,19 @@ class OWPredictions(OWWidget):
         self.vsplitter.layout().addWidget(self.splitter)
         self.vsplitter.layout().addWidget(self.score_table.view)
 
+    def get_selection_store(self, proxy):
+        # Both proxies map the same, so it doesn't matter which one is used
+        # to initialize SharedSelectionStore
+        if self.selection_store is None:
+            self.selection_store = SharedSelectionStore(proxy)
+        return self.selection_store
+
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
         self.Warning.empty_data(shown=data is not None and not data)
         self.data = data
+        self.selection_store = None
         if not data:
             self.dataview.setModel(None)
             self.predictionsview.setModel(None)
@@ -140,6 +157,16 @@ class OWPredictions(OWWidget):
             modelproxy = SortProxyModel()
             modelproxy.setSourceModel(model)
             self.dataview.setModel(modelproxy)
+            sel_model = SharedSelectionModel(
+                self.get_selection_store(modelproxy), modelproxy, self.dataview)
+            self.dataview.setSelectionModel(sel_model)
+            if self.__pending_selection is not None:
+                self.selection = self.__pending_selection
+                self.__pending_selection = None
+                self.selection_store.select_rows(
+                    set(self.selection), QItemSelectionModel.ClearAndSelect)
+            sel_model.selectionChanged.connect(self.commit)
+            sel_model.selectionChanged.connect(self._store_selection)
 
             self.dataview.model().list_sorted.connect(
                 partial(
@@ -147,6 +174,9 @@ class OWPredictions(OWWidget):
                     self.predictionsview))
 
         self._invalidate_predictions()
+
+    def _store_selection(self):
+        self.selection = list(self.selection_store.rows)
 
     @property
     def class_var(self):
@@ -358,10 +388,19 @@ class OWPredictions(OWWidget):
         else:
             model = None
 
+        if self.selection_store is not None:
+            self.selection_store.unregister(
+                self.predictionsview.selectionModel())
+
         predmodel = PredictionsSortProxyModel()
         predmodel.setSourceModel(model)
         predmodel.setDynamicSortFilter(True)
         self.predictionsview.setModel(predmodel)
+
+        self.predictionsview.setSelectionModel(
+            SharedSelectionModel(self.get_selection_store(predmodel),
+                                 predmodel, self.predictionsview))
+
         hheader = self.predictionsview.horizontalHeader()
         hheader.setSortIndicatorShown(False)
         # SortFilterProxyModel is slow due to large abstraction overhead
@@ -376,8 +415,7 @@ class OWPredictions(OWWidget):
 
         self.predictionsview.resizeColumnsToContents()
 
-    @staticmethod
-    def _update_data_sort_order(sort_source_view, sort_dest_view):
+    def _update_data_sort_order(self, sort_source_view, sort_dest_view):
         sort_dest = sort_dest_view.model()
         sort_source = sort_source_view.model()
         sortindicatorshown = False
@@ -399,6 +437,7 @@ class OWPredictions(OWWidget):
             False)
         sort_source_view.horizontalHeader().setSortIndicatorShown(
             sortindicatorshown)
+        self.commit()
 
     def _reset_order(self):
         datamodel = self.dataview.model()
@@ -478,7 +517,8 @@ class OWPredictions(OWWidget):
                 None if target.is_continuous else self.class_values,
                 colors,
                 shown_probs,
-                target.format_str if target.is_continuous else None
+                target.format_str if target.is_continuous else None,
+                parent=self.predictionsview
             )
             # QAbstractItemView does not take ownership of delegates, so we must
             self._delegates.append(delegate)
@@ -533,6 +573,7 @@ class OWPredictions(OWWidget):
     def _commit_predictions(self):
         if not self.data:
             self.Outputs.predictions.send(None)
+            self.info.set_output_summary(self.info.NoOutput)
             return
 
         newmetas = []
@@ -561,7 +602,26 @@ class OWPredictions(OWWidget):
             newcolumns = numpy.hstack(
                 [numpy.atleast_2d(cols) for cols in newcolumns])
             predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
+
+        index = self.dataview.model().index
+        map_to = self.dataview.model().mapToSource
+        assert self.selection_store is not None
+        rows = None
+        if self.selection_store.rows:
+            rows = [ind.row()
+                    for ind in self.dataview.selectionModel().selectedRows(0)]
+            rows.sort()
+        elif self.dataview.model().isSorted() \
+                or self.predictionsview.model().isSorted():
+            rows = list(range(len(self.data)))
+        if rows:
+            source_rows = [map_to(index(row, 0)).row() for row in rows]
+            predictions = predictions[source_rows]
         self.Outputs.predictions.send(predictions)
+
+        summary = str(len(predictions))
+        details = format_summary_details(predictions)
+        self.info.set_output_summary(summary, details)
 
     @staticmethod
     def _add_classification_out_columns(slot, newmetas, newcolumns):
@@ -633,6 +693,15 @@ class OWPredictions(OWWidget):
         QTimer.singleShot(0, self._update_splitter)
 
 
+class DataItemDelegate(QStyledItemDelegate):
+    def initStyleOption(self, option, index):
+        super().initStyleOption(option, index)
+        if self.parent().selectionModel().isSelected(index):
+            option.state |= QStyle.State_Selected \
+                            | QStyle.State_HasFocus \
+                            | QStyle.State_Active
+
+
 class PredictionsItemDelegate(QStyledItemDelegate):
     """
     A Item Delegate for custom formatting of predictions/probabilities
@@ -685,6 +754,11 @@ class PredictionsItemDelegate(QStyledItemDelegate):
 
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
+        if self.parent().selectionModel().isSelected(index):
+            option.state |= QStyle.State_Selected \
+                            | QStyle.State_HasFocus \
+                            | QStyle.State_Active
+
         if self.class_values is None:
             option.displayAlignment = \
                 (option.displayAlignment & Qt.AlignVertical_Mask) | \
@@ -912,6 +986,217 @@ class PredictionsModel(QAbstractTableModel):
             return (self._header[section] if section < len(self._header)
                     else str(section))
         return None
+
+
+class SharedSelectionStore:
+    """
+    An object shared between multiple selection models
+
+    The object assumes that the underlying models are proxies.
+    - Method `select` and emit refer to indices in proxy.
+    - Internally, the object stores indices into source model (as int). Method
+      `select_rows` also uses internal, source-model indices.
+
+    The class implements method `select` with the same signature as
+    QItemSelectionModel.select. Selection models that share this object
+    must call this method. After changing the selection, this method will
+    call `emit_selection_rows_changed` of all selection models, so they
+    can emit the signal selectionChanged.
+    """
+    def __init__(self, proxy):
+        # indices of selected rows in the original model, not in the proxy
+        self._rows: Set[int] = set()
+        self.proxy: SortProxyModel = proxy
+        self._selection_models: List[SharedSelectionModel] = []
+
+    @property
+    def rows(self) -> Set[int]:
+        """Indices of selected rows in the source model"""
+        return self._rows
+
+    def register(self, selection_model):
+        """
+        Add a selection mode to the list of models
+
+        Args:
+            selection_model (SharedSelectionModel): a new model
+        """
+        self._selection_models.append(selection_model)
+
+    def unregister(self, selection_model):
+        """
+        Remove a selection mode to the list of models
+
+        Args:
+            selection_model (SharedSelectionModel): a model to remove
+        """
+        if selection_model in self._selection_models:
+            self._selection_models.remove(selection_model)
+
+    def select(self, selection: Union[QModelIndex, QItemSelection], flags: int):
+        """
+        (De)Select given rows
+
+        Args:
+            selection (QModelIndex or QItemSelection):
+                rows to select; indices refer to the proxy model, not the source
+            flags (QItemSelectionModel.SelectionFlags):
+                flags that tell whether to Clear, Select, Deselect or Toggle
+        """
+        if isinstance(selection, QModelIndex):
+            rows = {selection.model().mapToSource(selection).row()}
+        else:
+            indices = selection.indexes()
+            if indices:
+                selection = indices[0].model().mapSelectionToSource(selection)
+                rows = {index.row() for index in selection.indexes()}
+            else:
+                rows = set()
+        self.select_rows(rows, flags)
+
+    def select_rows(self, rows: Set[int], flags):
+        """
+        (De)Select given rows
+
+        Args:
+            selection (set of int):
+                rows to select; indices refer to the source model.
+            flags (QItemSelectionModel.SelectionFlags):
+                flags that tell whether to Clear, Select, Deselect or Toggle
+        """
+        with self._emit_changed():
+            if flags & QItemSelectionModel.Clear:
+                self._rows.clear()
+            if flags & QItemSelectionModel.Select:
+                self._rows |= rows
+            if flags & QItemSelectionModel.Deselect:
+                self._rows -= rows
+            if flags & QItemSelectionModel.Toggle:
+                self._rows ^= rows
+
+    def clear_selection(self):
+        """Clear selection and emit changeSelection signal to all models"""
+        with self._emit_changed():
+            self._rows.clear()
+
+    def reset(self):
+        """Clear selection without emiting a signal,"""
+        self._rows.clear()
+
+    @contextmanager
+    def _emit_changed(self):
+        """
+        A context manager that calls `emit_selection_rows_changed after
+        changing a selection.
+        """
+        def map_from_source(rows):
+            from_src = self.proxy.mapFromSource
+            index = self.proxy.sourceModel().index
+            return {from_src(index(row, 0)).row() for row in rows}
+
+        old_rows = self._rows.copy()
+        try:
+            yield
+        finally:
+            deselected = map_from_source(old_rows - self._rows)
+            selected = map_from_source(self._rows - old_rows)
+            if selected or deselected:
+                for model in self._selection_models:
+                    model.emit_selection_rows_changed(selected, deselected)
+
+
+class SharedSelectionModel(QItemSelectionModel):
+    """
+    A selection model that shares the selection with its peers.
+
+    It assumes that the underlying model is a proxy.
+    """
+    def __init__(self, shared_store, proxy, parent):
+        super().__init__(proxy, parent)
+        self.store: SharedSelectionStore = shared_store
+        self.store.register(self)
+
+    def select(self, selection, flags):
+        self.store.select(selection, flags)
+
+    def selection_from_rows(self, rows: Sequence[int],
+                            model=None) -> QItemSelection:
+        """
+        Return selection across all columns for given row indices (as ints)
+
+        Args:
+            rows (sequence of int): row indices (in proxy model)
+
+        Returns: QItemSelection
+        """
+        if model is None:
+            model = self.model()
+        index = model.index
+        last_col = model.columnCount() - 1
+        sel = QItemSelection()
+        for row in rows:
+            sel.select(index(row, 0), index(row, last_col))
+        return sel
+
+    def emit_selection_rows_changed(
+            self, selected: Sequence[int], deselected: Sequence[int]):
+        """
+        Given a sequence of indices of selected and deselected rows,
+        emit a selectionChanged signal. Indices refer to proxy model.
+
+        Args:
+            selected (Sequence[int]): indices of selected rows
+            deselected (Sequence[int]): indices of deselected rows
+        """
+        self.selectionChanged.emit(
+            self.selection_from_rows(selected),
+            self.selection_from_rows(deselected))
+
+    def selection(self):
+        src_sel = self.selection_from_rows(self.store.rows,
+                                           model=self.model().sourceModel())
+        return self.model().mapSelectionFromSource(src_sel)
+
+    def hasSelection(self) -> bool:
+        return bool(self.store.rows)
+
+    def isColumnSelected(self, *_) -> bool:
+        return len(self.store.rows) == self.model().rowCount()
+
+    def isRowSelected(self, row, _parent=None) -> bool:
+        return self.isSelected(self.model().index(row, 0))
+
+    rowIntersectsSelection = isRowSelected
+
+    def isSelected(self, index) -> bool:
+        return self.model().mapToSource(index).row() in self.store.rows
+
+    def selectedColumns(self, row: int):
+        if self.isColumnSelected():
+            index = self.model().index
+            return [index(row, col)
+                    for col in range(self.model().columnCount())]
+        else:
+            return []
+
+    def selectedRows(self, col: int):
+        index = self.model().sourceModel().index
+        map_from = self.model().mapFromSource
+        return [map_from(index(row, col)) for row in self.store.rows]
+
+    def selectedIndexes(self):
+        index = self.model().index
+        rows = [index.row() for index in self.selectedRows(0)]
+        return [index(row, col)
+                for col in range(self.model().columnCount())
+                for row in rows]
+
+    def clearSelection(self):
+        self.store.clear_selection()
+
+    def reset(self):
+        self.store.reset()
+        self.clearCurrentIndex()
 
 
 class TableView(QTableView):

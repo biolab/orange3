@@ -544,6 +544,22 @@ class TestDomainInit(unittest.TestCase):
         self.assertTrue(conversion.sparse_Y)
         self.assertFalse(conversion.sparse_metas)
 
+    def test_get_item_similar_vars(self):
+        a = DiscreteVariable("Cluster", values=["c"])
+        var1 = a.renamed("Cluster x")
+        var2 = DiscreteVariable("Cluster", values=["a", "b"])
+
+        domain = Domain(
+            [],
+            metas=[var1, var2]
+        )
+        # pylint: disable=protected-access
+        self.assertDictEqual(
+            {-1: -1, -2: -2, var1: -1, var2: -2, var1.name: -1, var2.name: -2},
+            domain._indices
+        )
+        self.assertIs(domain[domain.metas[0]], domain.metas[0])
+
 
 class TestDomainFilter(unittest.TestCase):
     def setUp(self):

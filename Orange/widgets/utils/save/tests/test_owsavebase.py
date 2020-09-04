@@ -103,7 +103,8 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             b = b.replace("\\", "/")
         self.assertEqual(a.rstrip("/"), b.rstrip("/"))
 
-    @patch("os.path.exists", lambda name: name == "/home/u/orange/a/b")
+    @patch("os.path.exists",
+           lambda name: name in ["/home/u/orange/a/b", "/foo/bar"])
     def test_open_moved_workflow(self):
         """Stored relative paths are properly changed on load"""
         home = _userhome
@@ -126,6 +127,15 @@ class TestOWSaveBaseWithWriters(WidgetTest):
                                      auto_save=True))
             self.assertPathEqual(w.last_dir, home)
             self.assertPathEqual(w.filename, home_c_foo)
+            self.assertFalse(w.auto_save)
+
+            w = self.create_widget(
+                self.OWSaveMockWriter,
+                stored_settings=dict(stored_path="/foo/bar",
+                                     stored_name="c.foo",
+                                     auto_save=True))
+            self.assertPathEqual(w.last_dir, "/foo/bar")
+            self.assertPathEqual(w.filename, "/foo/bar/c.foo")
             self.assertFalse(w.auto_save)
 
             w = self.create_widget(
@@ -162,9 +172,9 @@ class TestOWSaveBaseWithWriters(WidgetTest):
                 stored_settings=dict(stored_path="a/d",
                                      stored_name="c.foo",
                                      auto_save=True))
-            self.assertPathEqual(w.last_dir, "/home/u/orange/")
-            self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
-            self.assertFalse(w.auto_save)
+            self.assertPathEqual(w.last_dir, "/home/u/orange/a/d")
+            self.assertPathEqual(w.filename, "/home/u/orange/a/d/c.foo")
+            self.assertTrue(w.auto_save)
 
             w = self.create_widget(
                 self.OWSaveMockWriter,
@@ -182,7 +192,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
                                      auto_save=True))
             self.assertPathEqual(w.last_dir, "/home/u/orange/")
             self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
-            self.assertFalse(w.auto_save)
+            self.assertTrue(w.auto_save)
 
             w = self.create_widget(
                 self.OWSaveMockWriter,
@@ -191,7 +201,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
                                      auto_save=True))
             self.assertPathEqual(w.last_dir, "/home/u/orange/")
             self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
-            self.assertFalse(w.auto_save)
+            self.assertTrue(w.auto_save)
 
     def test_move_workflow(self):
         """Widget correctly stores relative paths"""

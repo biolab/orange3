@@ -122,6 +122,59 @@ class TestHelpers(unittest.TestCase):
             self.assertFalse(case_sensitive)
             self.assertTrue(match_beginning)
 
+    def test_valuefromstringsubstring_equality(self):
+        str1 = StringVariable("d1")
+        str1a = StringVariable("d1")
+        str2 = StringVariable("d2")
+        assert str1 == str1a
+
+        t1 = ValueFromStringSubstring(str1, ["abc", "def"])
+        t1a = ValueFromStringSubstring(str1a, ["abc", "def"])
+        t2 = ValueFromStringSubstring(str2, ["abc", "def"])
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
+
+        t1 = ValueFromStringSubstring(str1, ["abc", "def"])
+        t1a = ValueFromStringSubstring(str1a, ["abc", "ghi"])
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        t1 = ValueFromStringSubstring(str1, ["abc", "def"], True)
+        t1a = ValueFromStringSubstring(str1a, ["abc", "def"], False)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        t1 = ValueFromStringSubstring(str1, ["abc", "def"], True, True)
+        t1a = ValueFromStringSubstring(str1a, ["abc", "def"], True, False)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+
+    def test_valuefromsdiscretesubstring_equality(self):
+        str1 = DiscreteVariable("d1", values=("abc", "ghi"))
+        str1a = DiscreteVariable("d1", values=("abc", "ghi"))
+        str2 = DiscreteVariable("d2", values=("abc", "ghi"))
+        assert str1 == str1a
+
+        t1 = ValueFromDiscreteSubstring(str1, ["abc", "def"])
+        t1a = ValueFromDiscreteSubstring(str1a, ["abc", "def"])
+        t2 = ValueFromDiscreteSubstring(str2, ["abc", "def"])
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
+
+        t1 = ValueFromDiscreteSubstring(str1, ["abc", "def"])
+        t1a = ValueFromDiscreteSubstring(str1a, ["abc", "ghi"])
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
 
 class TestOWCreateClass(WidgetTest):
     def setUp(self):

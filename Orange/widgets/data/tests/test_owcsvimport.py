@@ -1,3 +1,4 @@
+# pylint: disable=no-self-use,protected-access
 import unittest
 from unittest import mock
 from contextlib import ExitStack
@@ -145,7 +146,8 @@ class TestOWCSVFileImport(WidgetTest):
             stored_settings={
                 "_session_items": [
                     (path, self.data_csv_types_options.as_dict())
-                ]
+                ],
+                "__version__": 2  # guessing works for versions >= 2
             }
         )
         widget.commit()
@@ -160,9 +162,37 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertIsInstance(domain["numeric2"], ContinuousVariable)
         self.assertIsInstance(domain["string"], StringVariable)
 
+    def test_backward_compatibility(self):
+        """
+        Check that widget have old behaviour on workflows with version < 2
+        """
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-csv-types.tab")
+        widget = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+            stored_settings={
+                "_session_items": [
+                    (path, self.data_csv_types_options.as_dict())
+                ],
+                "__version__": 1  # guessing works for versions >= 2
+            }
+        )
+        widget.commit()
+        self.wait_until_finished(widget)
+        output = self.get_output("Data", widget)
+        domain = output.domain
+
+        self.assertIsInstance(domain["time"], StringVariable)
+        self.assertIsInstance(domain["discrete1"], ContinuousVariable)
+        self.assertIsInstance(domain["discrete2"], StringVariable)
+        self.assertIsInstance(domain["numeric1"], ContinuousVariable)
+        self.assertIsInstance(domain["numeric2"], ContinuousVariable)
+        self.assertIsInstance(domain["string"], StringVariable)
+
 
 class TestImportDialog(GuiTest):
-    def test_dialog(self):
+    @staticmethod
+    def test_dialog():
         dirname = os.path.dirname(__file__)
         path = os.path.join(dirname, "grep_file.txt")
         d = owcsvimport.CSVImportDialog()
@@ -241,7 +271,8 @@ class TestUtils(unittest.TestCase):
             list(df.iloc[:, 1]), ["one", "three"]
         )
 
-    def test_convert(self):
+    @staticmethod
+    def test_convert():
         contents = (
             b'I, J,  K\n'
             b' , A,   \n'
@@ -286,6 +317,69 @@ class TestUtils(unittest.TestCase):
         assert_array_equal(tb.X[:, 0], [np.nan, 0, np.nan])
         assert_array_equal(tb.X[:, 1], [0, np.nan, np.nan])
         assert_array_equal(tb.X[:, 2], [np.nan, 1, np.nan])
+
+    def test_decimal_format(self):
+        class Dialect(csv.excel):
+            delimiter = ";"
+
+        contents = b'3,21;3,37\n4,13;1.000,142'
+        opts = owcsvimport.Options(
+            encoding="ascii",
+            dialect=Dialect(),
+            decimal_separator=",",
+            group_separator=".",
+            columntypes=[
+                (range(0, 2), ColumnType.Numeric),
+            ],
+            rowspec=[],
+        )
+        df = owcsvimport.load_csv(io.BytesIO(contents), opts)
+        assert_array_equal(df.values, np.array([[3.21, 3.37], [4.13, 1000.142]]))
+
+    def test_open_compressed(self):
+        content = 'abc'
+        for ext in ["txt", "gz", "bz2", "xz", "zip"]:
+            with named_file('', suffix=f".{ext}") as fname:
+                with _open_write(fname, "wt", encoding="ascii") as f:
+                    f.write(content)
+                f.close()
+
+                with owcsvimport._open(fname, "rt", encoding="ascii") as f:
+                    self.assertEqual(content, f.read())
+
+
+def _open_write(path, mode, encoding=None):
+    # pylint: disable=import-outside-toplevel
+    if mode not in {'w', 'wb', 'wt'}:
+        raise ValueError('r')
+    _, ext = os.path.splitext(path)
+    ext = ext.lower()
+    if ext == ".gz":
+        import gzip
+        return gzip.open(path, mode, encoding=encoding)
+    elif ext == ".bz2":
+        import bz2
+        return bz2.open(path, mode, encoding=encoding)
+    elif ext == ".xz":
+        import lzma
+        return lzma.open(path, mode, encoding=encoding)
+    elif ext == ".zip":
+        import zipfile
+        arh = zipfile.ZipFile(path, 'w')
+        filename, _ = os.path.splitext(os.path.basename(path))
+        f = arh.open(filename, mode="w")
+        f_close = f.close
+        # patch the f.close to also close the main archive file
+
+        def close_():
+            f_close()
+            arh.close()
+        f.close = close_
+        if 't' in mode:
+            f = io.TextIOWrapper(f, encoding=encoding)
+        return f
+    else:
+        return open(path, mode, encoding=encoding)
 
 
 if __name__ == "__main__":

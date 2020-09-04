@@ -199,9 +199,7 @@ class OWRank(OWWidget):
     selectionMethod = ContextSetting(SelectNBest)
 
     class Information(OWWidget.Information):
-        no_target_var = Msg("Data does not have a single target variable. "
-                            "You can still connect in unsupervised scorers "
-                            "such as PCA.")
+        no_target_var = Msg("Data does not have a (single) target variable.")
         missings_imputed = Msg('Missing values will be imputed as needed.')
 
     class Error(OWWidget.Error):

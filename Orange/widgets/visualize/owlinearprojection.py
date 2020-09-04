@@ -225,7 +225,7 @@ class OWLinProjGraph(OWGraphWithAnchors):
                 anchor._label.setToolTip(f"<b>{label}</b>")
                 label = label[:MAX_LABEL_LEN - 3] + "..." if len(label) > MAX_LABEL_LEN else label
                 anchor.setText(label)
-                anchor.setFont(self.anchor_font)
+                anchor.setFont(self.parameter_setter.anchor_font)
 
                 visible = self.always_show_axes or np.linalg.norm(point) > r
                 anchor.setVisible(visible)
@@ -237,7 +237,7 @@ class OWLinProjGraph(OWGraphWithAnchors):
                 anchor.setLine(QLineF(0, 0, *point))
                 visible = self.always_show_axes or np.linalg.norm(point) > r
                 anchor.setVisible(visible)
-                anchor.setFont(self.anchor_font)
+                anchor.setFont(self.parameter_setter.anchor_font)
 
     def update_circle(self):
         super().update_circle()

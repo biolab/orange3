@@ -2,8 +2,8 @@ import sys
 from typing import Tuple, List, Dict, Iterable
 
 from AnyQt.QtCore import Qt
-from AnyQt.QtGui import QFont, QFontDatabase
 from AnyQt.QtWidgets import QApplication
+from AnyQt.QtGui import QFont, QFontDatabase
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
@@ -77,13 +77,6 @@ class Updater:
     """ Class with helper functions and constants. """
     FONT_FAMILY_LABEL, SIZE_LABEL, IS_ITALIC_LABEL = \
         "Font family", "Font size", "Italic"
-    FONT_FAMILY_SETTING: SettingsType = {
-        FONT_FAMILY_LABEL: (available_font_families(), default_font_family()),
-    }
-    FONT_SETTING: SettingsType = {
-        SIZE_LABEL: (range(4, 50), default_font_size()),
-        IS_ITALIC_LABEL: (None, False)
-    }
 
     WIDTH_LABEL, ALPHA_LABEL, STYLE_LABEL, ANTIALIAS_LABEL = \
         "Width", "Opacity", "Style", "Antialias"
@@ -93,12 +86,6 @@ class Updater:
                    "Dash dot line": Qt.DashDotLine,
                    "Dash dot dot line": Qt.DashDotDotLine}
     DEFAULT_LINE_STYLE = "Solid line"
-    LINE_SETTING: SettingsType = {
-        WIDTH_LABEL: (range(1, 15), 1),
-        ALPHA_LABEL: (range(0, 255, 5), 255),
-        STYLE_LABEL: (list(LINE_STYLES), DEFAULT_LINE_STYLE),
-        ANTIALIAS_LABEL: (None, False),
-    }
 
     @staticmethod
     def update_plot_title_text(title_item: pg.LabelItem, text: str):
@@ -218,7 +205,7 @@ class Updater:
             item.setPen(pen)
 
 
-class BaseParameterSetter:
+class CommonParameterSetter:
     """ Subclass to add 'setter' functionality to a plot. """
     LABELS_BOX = "Fonts"
     ANNOT_BOX = "Annotations"
@@ -233,10 +220,18 @@ class BaseParameterSetter:
     Y_AXIS_LABEL = "y-axis title"
     TITLE_LABEL = "Title"
 
-    initial_settings: Dict[str, Dict[str, SettingsType]] = NotImplemented
+    FONT_FAMILY_SETTING = None  # set in __init__ because it requires a running QApplication
+    FONT_SETTING = None  # set in __init__ because it requires a running QApplication
+    LINE_SETTING: SettingsType = {
+        Updater.WIDTH_LABEL: (range(1, 15), 1),
+        Updater.ALPHA_LABEL: (range(0, 255, 5), 255),
+        Updater.STYLE_LABEL: (list(Updater.LINE_STYLES), Updater.DEFAULT_LINE_STYLE),
+        Updater.ANTIALIAS_LABEL: (None, False),
+    }
 
     def __init__(self):
         def update_font_family(**settings):
+            # false positive, pylint: disable=unsubscriptable-object
             for label in self.initial_settings[self.LABELS_BOX]:
                 if label != self.FONT_FAMILY_LABEL:
                     setter = self._setters[self.LABELS_BOX][label]
@@ -267,6 +262,15 @@ class BaseParameterSetter:
             Updater.update_axis_title_text(
                 self.getAxis(axis), settings[self.TITLE_LABEL])
 
+        self.FONT_FAMILY_SETTING: SettingsType = {  # pylint: disable=invalid-name
+            Updater.FONT_FAMILY_LABEL: (available_font_families(), QFont().family()),
+        }
+
+        self.FONT_SETTING: SettingsType = {  # pylint: disable=invalid-name
+            Updater.SIZE_LABEL: (range(4, 50), QFont().pointSize()),
+            Updater.IS_ITALIC_LABEL: (None, False)
+        }
+
         self.label_font = QFont()
         self.legend_settings = {}
 
@@ -286,6 +290,8 @@ class BaseParameterSetter:
             }
         }
 
+        self.initial_settings: Dict[str, Dict[str, SettingsType]] = NotImplemented
+
         self.update_setters()
         self._check_setters()
 
@@ -293,6 +299,7 @@ class BaseParameterSetter:
         pass
 
     def _check_setters(self):
+        # false positive, pylint: disable=not-an-iterable
         assert all(key in self._setters for key in self.initial_settings)
         for k, inner in self.initial_settings.items():
             assert all(key in self._setters[k] for key in inner)

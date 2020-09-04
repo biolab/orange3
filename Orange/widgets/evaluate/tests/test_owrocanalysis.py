@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 import copy
 import numpy as np
-
+import pyqtgraph as pg
 from AnyQt.QtWidgets import QToolTip
 
 from Orange.data import Table
@@ -27,7 +27,8 @@ class TestROC(unittest.TestCase):
             Orange.classification.LogisticRegressionLearner(),
             Orange.classification.TreeLearner()
         ]
-        res = Orange.evaluation.CrossValidation(data, learners, k=10)
+        cv = Orange.evaluation.CrossValidation(k=10)
+        res = cv(data, learners)
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
@@ -42,7 +43,8 @@ class TestROC(unittest.TestCase):
         # contained only instances of two classes (and the test then fails)
         # Pylint complains about RandomState; pylint: disable=no-member
         data = data[np.random.RandomState(0).choice(len(data), size=20)]
-        res = Orange.evaluation.LeaveOneOut(data, learners)
+        loo = Orange.evaluation.LeaveOneOut()
+        res = loo(data, learners)
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
@@ -57,7 +59,8 @@ class TestROC(unittest.TestCase):
 
         # equivalent test to the LeaveOneOut but from a slightly different
         # constructed Orange.evaluation.Results
-        res = Orange.evaluation.CrossValidation(data, learners, k=20)
+        cv = Orange.evaluation.CrossValidation(k=20)
+        res = cv(data, learners)
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
@@ -72,17 +75,23 @@ class TestROC(unittest.TestCase):
 
 
 class TestOWROCAnalysis(WidgetTest, EvaluateTest):
-
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         cls.lenses = data = Table(test_filename("datasets/lenses.tab"))
-        cls.res = Orange.evaluation.TestOnTestData(
-            train_data=data[::2], test_data=data[1::2],
-            learners=[Orange.classification.MajorityLearner(),
-                      Orange.classification.KNNLearner()],
+        totd = Orange.evaluation.TestOnTestData(
             store_data=True,
         )
+        cls.res = totd(
+            data=data[::2], test_data=data[1::2],
+            learners=[Orange.classification.MajorityLearner(),
+                      Orange.classification.KNNLearner()]
+        )
+        try:
+            # 'mouseRateLimit' interferes with mouse move tests
+            pg.setConfigOption("mouseRateLimit", -1)
+        except KeyError:
+            pass
 
     def setUp(self):
         super().setUp()
@@ -166,10 +175,12 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
     def test_tooltips(self):
         data_in = Orange.data.Table("titanic")
         res = Orange.evaluation.TestOnTrainingData(
+            store_data=True
+        )
+        res = res(
             data=data_in,
             learners=[Orange.classification.KNNLearner(),
-                      Orange.classification.LogisticRegressionLearner()],
-            store_data=True
+                      Orange.classification.LogisticRegressionLearner()]
         )
 
         self.send_signal(self.widget.Inputs.evaluation_results, res)
@@ -230,3 +241,7 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
 
         simulate.combobox_activate_item(w.controls.target_index, "soft")
         self.assertEqual(np.round(5/12 * 100), w.target_prior)
+
+
+if __name__ == "__main__":
+    unittest.main()

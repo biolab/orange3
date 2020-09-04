@@ -26,8 +26,8 @@ from contextlib import ExitStack
 
 import typing
 from typing import (
-    List, Tuple, Dict, Optional, Any, Callable, Iterable, Hashable,
-    Union, AnyStr, BinaryIO
+    List, Tuple, Dict, Optional, Any, Callable, Iterable,
+    Union, AnyStr, BinaryIO, Set
 )
 
 from PyQt5.QtCore import (
@@ -51,7 +51,9 @@ import Orange.data
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.concurrent import PyOwned
-from Orange.widgets.utils import textimport, concurrent as qconcurrent
+from Orange.widgets.utils import (
+    textimport, concurrent as qconcurrent, unique_everseen
+)
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
@@ -486,6 +488,13 @@ class OWCSVFileImport(widget.OWWidget):
         "directory": "",
         "filter": ""
     })  # type: Dict[str, str]
+
+    # we added column type guessing to this widget, which breaks compatibility
+    # with older saved workflows, where types not guessed differently, when
+    # compatibility_mode=True widget have older guessing behaviour
+    settings_version = 2
+    compatibility_mode = settings.Setting(False, schema_only=True)
+
     MaxHistorySize = 50
 
     want_main_area = False
@@ -844,7 +853,7 @@ class OWCSVFileImport(widget.OWWidget):
 
         task.future = self.__executor.submit(
             clear_stack_on_cancel(load_csv),
-            path, opts, progress_,
+            path, opts, progress_, self.compatibility_mode
         )
         task.watcher.setFuture(task.future)
         w = task.watcher
@@ -1026,7 +1035,7 @@ class OWCSVFileImport(widget.OWWidget):
                 sitems.append(item_)
 
         items = sitems + items
-        items = unique(items, key=lambda t: pathnormalize(t[0]))
+        items = unique_everseen(items, key=lambda t: pathnormalize(t[0]))
 
         curr = self.recent_combo.currentIndex()
         if curr != -1:
@@ -1042,6 +1051,11 @@ class OWCSVFileImport(widget.OWWidget):
             idx = self.recent_combo.findData(currentpath, ImportItem.PathRole)
             if idx != -1:
                 self.recent_combo.setCurrentIndex(idx)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if not version or version < 2:
+            settings["compatibility_mode"] = True
 
 
 @singledispatch
@@ -1101,9 +1115,14 @@ def _open(path, mode, encoding=None):
         arh = zipfile.ZipFile(path, 'r')
         filelist = arh.infolist()
         if len(filelist) == 1:
-            filename = filelist[0]
-            zinfo = arh.getinfo(filename)
-            f = arh.open(zinfo.filename, 'r')
+            f = arh.open(filelist[0], 'r')
+            # patch the f.close to also close the main archive file
+            f_close = f.close
+
+            def close_():
+                f_close()
+                arh.close()
+            f.close = close_
             if 't' in mode:
                 f = io.TextIOWrapper(f, encoding=encoding)
             return f
@@ -1160,8 +1179,8 @@ NA_VALUES = {
 }
 
 
-def load_csv(path, opts, progress_callback=None):
-    # type: (Union[AnyStr, BinaryIO], Options, ...) -> pd.DataFrame
+def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
+    # type: (Union[AnyStr, BinaryIO], Options, ..., bool) -> pd.DataFrame
     def dtype(coltype):
         # type: (ColumnType) -> Optional[str]
         if coltype == ColumnType.Numeric:
@@ -1235,6 +1254,14 @@ def load_csv(path, opts, progress_callback=None):
     if opts.group_separator != "":
         numbers_format_kwds["thousands"] = opts.group_separator
 
+    if numbers_format_kwds:
+        # float_precision = "round_trip" cannot handle non c-locale decimal and
+        # thousands sep (https://github.com/pandas-dev/pandas/issues/35365).
+        # Fallback to 'high'.
+        numbers_format_kwds["float_precision"] = "high"
+    else:
+        numbers_format_kwds["float_precision"] = "round_trip"
+
     with ExitStack() as stack:
         if isinstance(path, (str, bytes)):
             f = stack.enter_context(_open(path, 'rb'))
@@ -1253,10 +1280,12 @@ def load_csv(path, opts, progress_callback=None):
             header=header, skiprows=skiprows,
             dtype=dtypes, parse_dates=parse_dates, prefix=prefix,
             na_values=na_values, keep_default_na=False,
-            float_precision="round_trip",
             **numbers_format_kwds
         )
-        df = guess_types(df, dtypes, columns_ignored)
+
+        # for older workflows avoid guessing type guessing
+        if not compatibility_mode:
+            df = guess_types(df, dtypes, columns_ignored)
 
         if columns_ignored:
             # TODO: use 'usecols' parameter in `read_csv` call to
@@ -1270,7 +1299,7 @@ def load_csv(path, opts, progress_callback=None):
 
 
 def guess_types(
-        df: pd.DataFrame, dtypes: Dict[int, str], columns_ignored: List[int]
+        df: pd.DataFrame, dtypes: Dict[int, str], columns_ignored: Set[int]
 ) -> pd.DataFrame:
     """
     Guess data type for variables according to values.
@@ -1463,32 +1492,6 @@ def index_where(iterable, pred):
             return i
     return None
 
-
-def unique(iterable, key=None):
-    # type: (Iterable[T], Optional[Callable[[T], Hashable]]) -> Iterable[T]
-    """
-    Return an iterator over unique elements of `iterable`.
-
-    If `key` is supplied it is used as a substitute for determining
-    'uniqueness' of elements.
-
-    Parameters
-    ----------
-    iterable : Iterable[T]
-    key : Callable[[T], Hashable]
-
-    Returns
-    -------
-    unique : Iterable[T]
-    """
-    seen = set()
-    if key is None:
-        key = lambda t: t
-    for el in iterable:
-        el_k = key(el)
-        if el_k not in seen:
-            seen.add(el_k)
-            yield el
 
 
 def samepath(p1, p2):

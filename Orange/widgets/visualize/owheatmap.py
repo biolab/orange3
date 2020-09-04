@@ -796,12 +796,10 @@ class OWHeatMap(widget.OWWidget):
                     matrix = Orange.distance.Euclidean(subset)
 
                 if cluster is None:
-                    assert len(matrix) < self.MaxClustering
                     cluster = hierarchical.dist_matrix_clustering(
                         matrix, linkage=hierarchical.WARD
                     )
                 if ordered and cluster_ord is None:
-                    assert len(matrix) < self.MaxOrderedClustering
                     cluster_ord = hierarchical.optimal_leaf_ordering(
                         cluster, matrix,
                     )
@@ -833,12 +831,10 @@ class OWHeatMap(widget.OWWidget):
 
                 if cluster is None:
                     assert matrix is not None
-                    assert len(matrix) < self.MaxClustering
                     cluster = hierarchical.dist_matrix_clustering(
                         matrix, linkage=hierarchical.WARD
                     )
                 if ordered and cluster_ord is None:
-                    assert len(matrix) < self.MaxOrderedClustering
                     cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
 
             col_groups.append(col._replace(cluster=cluster, cluster_ordered=cluster_ord))

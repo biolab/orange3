@@ -403,7 +403,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.input_changed.connect(self.set_input_summary)
         self.output_changed.connect(self.set_output_summary)
         self.setup_gui()
-        VisualSettingsDialog(self, self.GRAPH_CLASS.initial_settings)
+        VisualSettingsDialog(self, self.graph.parameter_setter.initial_settings)
 
     # GUI
     def setup_gui(self):
@@ -627,7 +627,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     # Customize plot
     def set_visual_settings(self, key, value):
-        self.graph.set_parameter(key, value)
+        self.graph.parameter_setter.set_parameter(key, value)
         self.visual_settings[key] = value
 
     @staticmethod

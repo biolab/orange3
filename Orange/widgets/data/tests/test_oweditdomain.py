@@ -12,7 +12,7 @@ import pandas as pd
 
 from AnyQt.QtCore import QItemSelectionModel, Qt, QItemSelection
 from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
-    QStyleOptionViewItem, QDialog
+    QStyleOptionViewItem, QDialog, QMenu
 from AnyQt.QtTest import QTest, QSignalSpy
 
 from Orange.widgets.utils import colorpalettes
@@ -38,6 +38,7 @@ from Orange.widgets.data.oweditdomain import (
     GroupItemsDialog)
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
+from Orange.widgets.tests.utils import contextMenu
 from Orange.tests import test_filename, assert_array_nanequal
 from Orange.widgets.utils.state_summary import format_summary_details
 
@@ -517,6 +518,50 @@ class TestEditors(GuiTest):
         self.assertEqual(model.index(0, 0).data(Qt.EditRole), "other")
         self.assertEqual(model.index(1, 0).data(Qt.EditRole), "other")
 
+    def test_discrete_editor_rename_selected_items_action(self):
+        w = DiscreteVariableEditor()
+        v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")), False)
+        w.set_data_categorical(v, [])
+        action = w.rename_selected_items
+        view = w.values_edit
+        model = view.model()
+        selmodel = view.selectionModel()  # type: QItemSelectionModel
+        selmodel.select(
+            QItemSelection(model.index(0, 0), model.index(1, 0)),
+            QItemSelectionModel.ClearAndSelect
+        )
+        # trigger the action, then find the active popup, and simulate entry
+        spy = QSignalSpy(w.variable_changed)
+        with patch.object(QComboBox, "setVisible", return_value=None) as m:
+            action.trigger()
+            m.assert_called()
+        cb = view.findChild(QComboBox)
+        cb.setCurrentText("BA")
+        view.commitData(cb)
+        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "BA")
+        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "BA")
+        self.assertSequenceEqual(
+            list(spy), [[]], 'variable_changed should emit exactly once'
+        )
+
+    def test_discrete_editor_context_menu(self):
+        w = DiscreteVariableEditor()
+        v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")), False)
+        w.set_data_categorical(v, [])
+        view = w.values_edit
+        model = view.model()
+
+        pos = view.visualRect(model.index(0, 0)).center()
+        with patch.object(QMenu, "setVisible", return_value=None) as m:
+            contextMenu(view.viewport(), pos)
+            m.assert_called()
+
+        menu = view.findChild(QMenu)
+        self.assertIsNotNone(menu)
+        menu.close()
+
     def test_time_editor(self):
         w = TimeVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
@@ -932,7 +977,7 @@ class TestUtils(TestCase):
         self.assertEqual(d[1], 1)
         self.assertEqual(d[-1], "<->")
         # must be sufficiently different from defaultdict to warrant existence
-        self.assertEqual(d, {1: 1, 2: 2})
+        self.assertEqual(d, DictMissingConst("<->", {1: 1, 2: 2}))
 
     def test_as_float_or_nan(self):
         a = np.array(["a", "1.1", ".2", "NaN"], object)
@@ -995,6 +1040,42 @@ class TestLookupMappingTransform(TestCase):
         assert_array_equal(r, [np.nan, 0, 1, np.nan])
         r_ = lookup_.transform(c)
         assert_array_equal(r_, [np.nan, 0, 1, np.nan])
+
+    def test_equality(self):
+        v1 = DiscreteVariable("v1", values=tuple("abc"))
+        v2 = DiscreteVariable("v1", values=tuple("abc"))
+        v3 = DiscreteVariable("v3", values=tuple("abc"))
+
+        map1 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map2 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map3 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v2, map2, float)
+        t2 = LookupMappingTransform(v3, map3, float)
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
+
+        map1a = DictMissingConst(np.nan, {"a": 2, "b": 1, "c": 0})
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1a, float)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        map1a = DictMissingConst(2, {"a": 2, "b": 0, "c": 1})
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1a, float)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1, int)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
 
 
 class TestGroupLessFrequentItemsDialog(GuiTest):
