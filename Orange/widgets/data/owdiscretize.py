@@ -339,13 +339,14 @@ class OWDiscretize(widget.OWWidget):
                                  self._default_disc_changed)
         self.k_general.layout().setContentsMargins(0, 0, 0, 0)
 
-        def manual_cut_editline(text="") -> QLineEdit:
+        def manual_cut_editline(text="", enabled=True) -> QLineEdit:
             edit = QLineEdit(
                 text=text,
                 placeholderText="e.g. 0.0, 0.5, 1.0",
                 toolTip="Enter fixed discretization cut points (a comma "
                         "separated list of strictly increasing numbers e.g. "
                         "0.0, 0.5, 1.0).",
+                enabled=enabled,
             )
             @edit.textChanged.connect
             def update():
@@ -375,7 +376,8 @@ class OWDiscretize(widget.OWWidget):
             return edit
 
         self.manual_cuts_edit = manual_cut_editline(
-            text=", ".join(map(str, self.default_cutpoints))
+            text=", ".join(map(str, self.default_cutpoints)),
+            enabled=self.default_method == Methods.Custom,
         )
 
         def set_manual_default_cuts():
@@ -431,7 +433,10 @@ class OWDiscretize(widget.OWWidget):
         gui.appendRadioButton(controlbox, "Remove attribute", id=Methods.Remove)
         b = gui.appendRadioButton(controlbox, "Manual", id=Methods.Custom)
 
-        self.manual_cuts_specific = manual_cut_editline()
+        self.manual_cuts_specific = manual_cut_editline(
+            text=", ".join(map(str, self.cutpoints)),
+            enabled=self.method == Methods.Custom
+        )
         self.manual_cuts_specific.setValidator(validator)
         b.toggled[bool].connect(self.manual_cuts_specific.setEnabled)
 
@@ -487,6 +492,7 @@ class OWDiscretize(widget.OWWidget):
             self.default_method_name = method.name
             self.default_button_group.button(method).setChecked(True)
             self._default_disc_changed()
+        self.manual_cuts_edit.setEnabled(method == Methods.Custom)
 
     @Inputs.data
     def set_data(self, data):
