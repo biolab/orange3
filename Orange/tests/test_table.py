@@ -1138,11 +1138,6 @@ class TableTests(unittest.TestCase):
     nrows = 10
     row_indices = (1, 5, 7, 9)
 
-    data = np.random.random((nrows, len(attributes)))
-    class_data = np.random.random((nrows, len(class_vars)))
-    meta_data = np.random.random((nrows, len(metas)))
-    weight_data = np.random.random((nrows, 1))
-
     def setUp(self):
         self.data = np.random.random((self.nrows, len(self.attributes)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
@@ -1584,11 +1579,13 @@ class CreateTableWithDomainAndTable(TableTests):
         slice(None),  # [:]   - all elements
         slice(None, None, 2),  # [::2] - even elements
         slice(None, None, -1),  # [::-1]- all elements reversed
+        slice(9, 5, -10),  # slice a big negative stride and thus 1 element
     ]
 
     row_indices = [1, 5, 6, 7]
 
     def setUp(self):
+        super().setUp()
         self.domain = self.create_domain(
             self.attributes, self.class_vars, self.metas)
         self.table = data.Table(
@@ -1632,12 +1629,27 @@ class CreateTableWithDomainAndTable(TableTests):
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=indices)
 
-    def test_can_filter_row_with_slice(self):
+    @patch.object(Table, "from_table_rows", wraps=Table.from_table_rows)
+    def test_can_filter_row_with_slice_from_table_rows(self, from_table_rows):
+        # calling from_table with the same domain will forward to from_table_rows
         for slice_ in self.interesting_slices:
+            from_table_rows.reset_mock()
             new_table = data.Table.from_table(
                 self.domain, self.table, row_indices=slice_)
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=slice_)
+            from_table_rows.assert_called()
+
+    @patch.object(Table, "from_table_rows", wraps=Table.from_table_rows)
+    def test_can_filter_row_with_slice_from_table(self, from_table_rows):
+        # calling from_table with a domain copy will use indexing in from_table
+        for slice_ in self.interesting_slices:
+            from_table_rows.reset_mock()
+            new_table = data.Table.from_table(
+                self.domain.copy(), self.table, row_indices=slice_)
+            self.assert_table_with_filter_matches(
+                new_table, self.table, rows=slice_)
+            from_table_rows.assert_not_called()
 
     def test_can_use_attributes_as_new_columns(self):
         a, _, _ = column_sizes(self.table)
