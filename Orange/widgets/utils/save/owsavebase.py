@@ -122,23 +122,21 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         """
         Compute absolute path from `stored_path` from settings.
 
-        Auto save is disabled unless stored_path is relative and exists.
+        Absolute stored path is used only if it exists.
+        Auto save is disabled unless stored_path is relative.
         """
         workflow_dir = self.workflowEnv().get("basedir")
         if os.path.isabs(self.stored_path):
-            path = self.stored_path
-            self.auto_save = False
+            if os.path.exists(self.stored_path):
+                self.auto_save = False
+                return self.stored_path
         elif workflow_dir:
-            path = os.path.join(workflow_dir, self.stored_path)
-        else:
-            path = None
+            return os.path.normpath(
+                os.path.join(workflow_dir, self.stored_path))
 
-        if path and os.path.exists(path):
-            return path
-        else:
-            self.stored_path = workflow_dir or _userhome
-            self.auto_save = False
-            return self.stored_path
+        self.stored_path = workflow_dir or _userhome
+        self.auto_save = False
+        return self.stored_path
 
     @property
     def filename(self):
