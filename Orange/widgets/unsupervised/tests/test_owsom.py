@@ -9,6 +9,7 @@ import scipy.sparse as sp
 from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.unsupervised.owsom import OWSOM, SomView, SOM
 
 
@@ -508,6 +509,11 @@ class TestOWSOM(WidgetTest):
     def test_output(self):
         widget = self.widget
         self.send_signal(self.widget.Inputs.data, self.iris)
+        summary, details = f"{len(self.iris)}", format_summary_details(
+            self.iris)
+        self.assertEqual(widget.info._StateInfo__input_summary.brief, summary)
+        self.assertEqual(widget.info._StateInfo__input_summary.details,
+                         details)
 
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
         out = self.get_output(widget.Outputs.annotated_data)
@@ -520,6 +526,10 @@ class TestOWSOM(WidgetTest):
         widget.on_selection_change(m)
         out = self.get_output(widget.Outputs.selected_data)
         np.testing.assert_equal(out.ids, self.iris.ids[:30])
+        summary, details = f"{len(out)}", format_summary_details(out)
+        self.assertEqual(widget.info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(widget.info._StateInfo__output_summary.details,
+                         details)
 
         out = self.get_output(widget.Outputs.annotated_data)
         np.testing.assert_equal(
@@ -540,6 +550,12 @@ class TestOWSOM(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
         self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+        self.assertEqual(widget.info._StateInfo__input_summary.brief, "")
+        self.assertEqual(widget.info._StateInfo__input_summary.details,
+                         "No data on input")
+        self.assertEqual(widget.info._StateInfo__output_summary.brief, "")
+        self.assertEqual(widget.info._StateInfo__output_summary.details,
+                         "No data on output")
 
 
 if __name__ == "__main__":
