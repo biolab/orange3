@@ -67,6 +67,15 @@ source orange3venv/bin/activate
 pip install orange3
 ```
 
+Installing with winget (Windows only)
+-------------------------------------
+
+To install Orange with [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/), run:
+
+```Shell
+winget install --id  UniversityofLjubljana.Orange 
+```
+
 Starting Orange GUI
 -------------------
 
