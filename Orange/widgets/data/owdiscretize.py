@@ -296,7 +296,6 @@ class OWDiscretize(widget.OWWidget):
         self.method = Methods.Default
         self.k = 5
         self.cutpoints = ()
-        self.default_cutpoints = ()
 
         box = gui.vBox(self.controlArea, self.tr("Default Discretization"))
         self._default_method_ = 0
