@@ -176,7 +176,7 @@ class TreeLearner(Learner):
         best_res[0].value = distribution.Discrete(data, class_var)
         return best_res
 
-    def build_tree(self, data, active_inst, level=1):
+    def _build_tree(self, data, active_inst, level=1):
         """Induce a tree from the given data
 
         Returns:
@@ -194,7 +194,7 @@ class TreeLearner(Learner):
         node.subset = active_inst
         if branches is not None:
             node.children = [
-                self.build_tree(data, active_inst[branches == br], level + 1)
+                self._build_tree(data, active_inst[branches == br], level + 1)
                 for br in range(n_children)]
         return node
 
@@ -209,7 +209,7 @@ class TreeLearner(Learner):
                              format(self.MAX_BINARIZATION))
 
         active_inst = np.nonzero(~np.isnan(data.Y))[0].astype(np.int32)
-        root = self.build_tree(data, active_inst)
+        root = self._build_tree(data, active_inst)
         if root is None:
             distr = distribution.Discrete(data, data.domain.class_var)
             if np.sum(distr) == 0:
