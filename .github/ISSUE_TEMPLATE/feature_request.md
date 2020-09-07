@@ -7,16 +7,21 @@ assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
+<!-- Thanks for taking the time to submit a feature request! -->
+<!-- For the best chance at our team considering your request, let us know the following... -->
 
-**Here**, write a clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+- [ ] **What's your use case?**
+<!-- In other words, what's your pain point? -->
+<!-- Is your request related to a problem, or perhaps a frustration? -->
+<!-- Tell us the story that led you to write this request. -->
 
-**Describe the solution you'd like**
 
-Add a clear and concise description of what you want to happen **here**.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+- [ ] **What's your proposed solution?**
+<!-- Be specific, clear, and concise. -->
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+
+
+- [ ] **Are there any alternative solutions?**
+
+
