@@ -7,12 +7,25 @@ assignees: ''
 
 ---
 
-**Bug reports that do not sufficiently describe a bug are not helpful and will most likely be ignored.**
+<!-- Thanks for taking the time to report a bug! -->
+<!-- To fix the bug, we need to be able to reproduce it, so please let us know the following... -->
 
-- [ ] **A clear and concise description.** "*I'm getting an error when I open a tree viewer*" is far from enough (what kind of error? what kind of data you give it?). "*I'm getting an error*" is even worse.
+- [ ] **What's wrong?**
+<!-- Be specific, clear, and concise. Include screenshots if relevant. -->
+<!-- If you're getting an error message, copy it, and enclose it with three backticks (```). -->
 
-- [ ] **How to reproduce the problem.** Upload a zip with a workflow and data, or describe the steps (open this widget, click there, then add this ...)
 
-- [ ] **Which version of Orange are you using? How did you install it?**
+
+- [ ] **How can we reproduce the problem?** 
+<!-- Upload a zip with the .ows file and data. -->
+<!-- Describe the steps (open this widget, click there, then add this...) -->
+
+
+
+- [ ] **Which version of Orange are you using? How did you install Orange?**
+
+
 
 - [ ] **What is your operating system?**
+
+
