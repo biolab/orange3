@@ -1,6 +1,6 @@
 # Loading your Data
 
-Orange comes with its [own data format](https://docs.biolab.si//3/data-mining-library/tutorial/data.html#data-input), but can also handle native Excel, comma- or tab-delimited data files. The input data set is usually a table, with data instances (samples) in rows and data attributes in columns. Attributes can be of different *types* (numeric, categorical, datetime, and text) and have assigned *roles* (input features, meta attributes, and class). Data attribute type and role can be provided in the data table header. They can also be changed in the [File](../widgets/data/file.md) widget, while data role can also be modified with [Select Columns](../widgets/data/selectcolumns.md) widget.
+Orange comes with its [own data format](https://docs.biolab.si/3/data-mining-library/tutorial/data.html#data-input), but can also handle native Excel, comma- or tab-delimited data files. The input data set is usually a table, with data instances (samples) in rows and data attributes in columns. Attributes can be of different *types* (numeric, categorical, datetime, and text) and have assigned *roles* (input features, meta attributes, and class). Data attribute type and role can be provided in the data table header. They can also be changed in the [File](../widgets/data/file.md) widget, while data role can also be modified with [Select Columns](../widgets/data/selectcolumns.md) widget.
 
 ### In a Nutshell
 
