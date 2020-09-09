@@ -648,9 +648,9 @@ class DiscreteVariable(Variable):
     def ordered(self):
         warnings.warn(
             "ordered is deprecated. It will be removed in future versions.",
-            # FutureWarning warning is used instead of OrangeDeprecation
+            # DeprecationWarning warning is used instead of OrangeDeprecation
             # warning otherwise tests fail (__repr__ still asks for ordered)
-            FutureWarning
+            DeprecationWarning
         )
         return None
 

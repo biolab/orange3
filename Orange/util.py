@@ -384,13 +384,18 @@ class Reprable:
             return False
 
     def _reprable_items(self):
-        for name, default in self._reprable_fields():
-            try:
-                value = getattr(self, name)
-            except AttributeError:
-                value = _undef
-            if not self._reprable_omit_param(name, default, value):
-                yield name, default, value
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            warnings.simplefilter("error", PendingDeprecationWarning)
+            for name, default in self._reprable_fields():
+                try:
+                    value = getattr(self, name)
+                except (DeprecationWarning, PendingDeprecationWarning):
+                    continue
+                except AttributeError:
+                    value = _undef
+                if not self._reprable_omit_param(name, default, value):
+                    yield name, default, value
 
     def _repr_pretty_(self, p, cycle):
         """IPython pretty print hook."""
