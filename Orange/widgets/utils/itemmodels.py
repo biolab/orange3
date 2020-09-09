@@ -2,7 +2,8 @@ from numbers import Number, Integral
 from math import isnan, isinf
 
 import operator
-from collections import namedtuple, Sequence, defaultdict
+from collections import namedtuple, defaultdict
+from collections.abc import Sequence
 from contextlib import contextmanager
 from functools import reduce, partial, lru_cache, wraps
 from itertools import chain

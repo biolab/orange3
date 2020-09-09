@@ -1,6 +1,6 @@
 import logging
 import warnings
-from collections import Iterable
+from collections.abc import Iterable
 from itertools import chain
 
 import numpy as np

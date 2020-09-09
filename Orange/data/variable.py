@@ -1,6 +1,6 @@
 import re
 import warnings
-from collections import Iterable
+from collections.abc import Iterable
 
 from datetime import datetime, timedelta, timezone
 from numbers import Number, Real, Integral
