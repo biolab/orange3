@@ -4,7 +4,7 @@ import threading
 import warnings
 import weakref
 import zlib
-from collections import Iterable, Sequence, Sized
+from collections.abc import Iterable, Sequence, Sized
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral

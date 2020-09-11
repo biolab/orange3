@@ -24,7 +24,7 @@ from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch, \
     possible_duplicate_table
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
+from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 
 
 class TestOWPredictions(WidgetTest):
@@ -373,12 +373,12 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
         self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
         colors = self.widget._get_colors()
-        np.testing.assert_array_equal(colors, ColorPaletteGenerator.palette(3))
+        np.testing.assert_array_equal(colors, LimitedDiscretePalette(3).palette)
 
         # case 4: two domains different values order, matching colors
         idom = self.iris.domain
         # this way we know that default colors are not used
-        colors = ColorPaletteGenerator.palette(5)[2:]
+        colors = LimitedDiscretePalette(5).palette[2:]
         dom1 = Domain(
             idom.attributes,
             DiscreteVariable(idom.class_var.name, idom.class_var.values)

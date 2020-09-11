@@ -21,7 +21,8 @@ from Orange.classification import (
     MajorityLearner,
     RandomForestLearner, SimpleTreeLearner, SoftmaxRegressionLearner,
     SVMLearner, LinearSVMLearner, OneClassSVMLearner, TreeLearner, KNNLearner,
-    SimpleRandomForestLearner, EllipticEnvelopeLearner)
+    SimpleRandomForestLearner, EllipticEnvelopeLearner, ThresholdLearner,
+    CalibratedLearner)
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table)
@@ -214,14 +215,13 @@ class ModelTest(unittest.TestCase):
         """
         iris = Table('iris')
         for learner in all_learners():
+            # calibration, threshold learners' __init__ requires arguments
+            if learner in (ThresholdLearner, CalibratedLearner):
+                continue
+
             with self.subTest(learner.__name__):
                 # model trained on only one value (but three in the domain)
-                try:
-                    model = learner()(iris[0:100])
-                except TypeError as e:
-                    # calibration, threshold learners are skipped
-                    # they have some specifics regarding data
-                    continue
+                model = learner()(iris[0:100])
 
                 res = model(iris[0:50])
                 self.assertTupleEqual((50,), res.shape)
@@ -360,18 +360,18 @@ class UnknownValuesInPrediction(unittest.TestCase):
     def test_missing_class(self):
         table = Table(test_filename("datasets/adult_sample_missing"))
         for learner in all_learners():
-            try:
+            # calibration, threshold learners' __init__ require arguments
+            if learner in (ThresholdLearner, CalibratedLearner):
+                continue
+            # Skip slow tests
+            if isinstance(learner, _RuleLearner):
+                continue
+            with self.subTest(learner.__name__):
                 learner = learner()
                 if isinstance(learner, NuSVMLearner):
                     learner.params["nu"] = 0.01
-                # Skip slow tests
-                if isinstance(learner, _RuleLearner):
-                    continue
                 model = learner(table)
                 model(table)
-            except TypeError:
-                traceback.print_exc()
-                continue
 
 
 class LearnerAccessibility(unittest.TestCase):
@@ -389,48 +389,46 @@ class LearnerAccessibility(unittest.TestCase):
     def test_all_models_work_after_unpickling(self):
         datasets = [Table('iris'), Table('titanic')]
         for learner in list(all_learners()):
-            try:
-                learner = learner()
-            except Exception:
-                print('%s cannot be used with default parameters' % learner.__name__)
-                traceback.print_exc()
+            # calibration, threshold learners' __init__ require arguments
+            if learner in (ThresholdLearner, CalibratedLearner):
                 continue
             # Skip slow tests
             if isinstance(learner, _RuleLearner):
                 continue
+            with self.subTest(learner.__name__):
+                learner = learner()
+                for ds in datasets:
+                    model = learner(ds)
+                    s = pickle.dumps(model, 0)
+                    model2 = pickle.loads(s)
 
-            for ds in datasets:
-                model = learner(ds)
-                s = pickle.dumps(model, 0)
-                model2 = pickle.loads(s)
-
-                np.testing.assert_almost_equal(
-                    Table.from_table(model.domain, ds).X,
-                    Table.from_table(model2.domain, ds).X)
-                np.testing.assert_almost_equal(
-                    model(ds), model2(ds),
-                    err_msg='%s does not return same values when unpickled %s'
-                    % (learner.__class__.__name__, ds.name))
+                    np.testing.assert_almost_equal(
+                        Table.from_table(model.domain, ds).X,
+                        Table.from_table(model2.domain, ds).X)
+                    np.testing.assert_almost_equal(
+                        model(ds), model2(ds),
+                        err_msg='%s does not return same values when unpickled %s'
+                        % (learner.__class__.__name__, ds.name))
 
     def test_adequacy_all_learners(self):
         for learner in all_learners():
-            try:
+            # calibration, threshold learners' __init__ requires arguments
+            if learner in (ThresholdLearner, CalibratedLearner):
+                continue
+            with self.subTest(learner.__name__):
                 learner = learner()
                 table = Table("housing")
                 self.assertRaises(ValueError, learner, table)
-            except TypeError:
-                traceback.print_exc()
-                continue
 
     def test_adequacy_all_learners_multiclass(self):
         for learner in all_learners():
-            try:
+            # calibration, threshold learners' __init__ require arguments
+            if learner in (ThresholdLearner, CalibratedLearner):
+                continue
+            with self.subTest(learner.__name__):
                 learner = learner()
                 table = Table(test_filename("datasets/test8.tab"))
                 self.assertRaises(ValueError, learner, table)
-            except TypeError:
-                traceback.print_exc()
-                continue
 
 
 class LearnerReprs(unittest.TestCase):

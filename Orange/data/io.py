@@ -300,7 +300,13 @@ class ExcelReader(_BaseExcelReader):
     @property
     def workbook(self) -> openpyxl.Workbook:
         if not self._workbook:
-            self._workbook = openpyxl.load_workbook(self.filename,
+            with warnings.catch_warnings():
+                # We don't care about extensions, but we hate warnings
+                warnings.filterwarnings(
+                    "ignore",
+                    ".*extension is not supported and will be removed.*",
+                    UserWarning)
+                self._workbook = openpyxl.load_workbook(self.filename,
                                                     data_only=True)
         return self._workbook
 

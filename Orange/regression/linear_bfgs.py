@@ -9,7 +9,7 @@ __all__ = ["LinearRegressionLearner"]
 
 
 class LinearRegressionLearner(Learner):
-    '''L2 regularized linear regression (a.k.a Ridge regression)
+    r'''L2 regularized linear regression (a.k.a Ridge regression)
 
     This model uses the L-BFGS algorithm to minimize the linear least
     squares penalty with L2 regularization. When using this model you

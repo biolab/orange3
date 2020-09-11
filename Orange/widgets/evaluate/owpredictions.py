@@ -15,6 +15,7 @@ from AnyQt.QtCore import (
     QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
+from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 from orangewidget.report import plural
 from Orange.widgets.utils.state_summary import format_summary_details
 
@@ -27,7 +28,6 @@ from Orange.data.util import get_unique_names
 from Orange.widgets import gui, settings
 from Orange.widgets.evaluate.utils import (
     ScoreTable, usable_scorers, learner_name, scorer_caller)
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
@@ -496,7 +496,7 @@ class OWPredictions(OWWidget):
                 base_values = v
 
         if len(base_color) != len(self.class_values):
-            return ColorPaletteGenerator.palette(len(self.class_values))
+            return LimitedDiscretePalette(len(self.class_values)).palette
         # reorder colors to widgets order
         colors = [None] * len(self.class_values)
         for c, v in zip(base_color, base_values):

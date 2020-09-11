@@ -803,7 +803,9 @@ class OWPaintData(OWWidget):
         self.class_model.rowsInserted.connect(self._class_count_changed)
         self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        if not self.data:
+        # if self.data: raises Deprecation warning in older workflows, where
+        # data could be a np.array. This would raise an error in the future.
+        if self.data is None or len(self.data) == 0:
             self.data = []
             self.__buffer = np.zeros((0, 3))
         elif isinstance(self.data, np.ndarray):

@@ -1,4 +1,5 @@
 import time
+import warnings
 from itertools import chain
 from typing import List
 from functools import singledispatch
@@ -766,7 +767,10 @@ class OWNomogram(OWWidget):
         self.norm_check.setHidden(True)
         self.cont_feature_dim_combo.setEnabled(True)
         if self.domain is not None:
-            self.class_combo.addItems(self.domain.class_vars[0].values)
+            values = self.domain.class_vars[0].values
+            if values:
+                self.class_combo.addItems(values)
+                self.target_class_index = 0
             if len(self.domain.attributes) > self.MAX_N_ATTRS:
                 self.display_index = 1
             if len(self.domain.class_vars[0].values) > 2:
@@ -807,7 +811,6 @@ class OWNomogram(OWWidget):
         self.calculate_log_odds_ratios()
         self.calculate_log_reg_coefficients()
         self.update_controls()
-        self.target_class_index = 0
         self.openContext(self.domain.class_var if self.domain is not None
                          else None)
         self.points = self.log_odds_ratios or self.log_reg_coeffs
@@ -1251,7 +1254,11 @@ class OWNomogram(OWWidget):
                sorted_coefficients[i] * sorted_values[i] * (1 - k)
 
     def reset_settings(self):
-        self._reset_settings()
+        with warnings.catch_warnings():
+            # setting target_class_index will trigger this innocent warning
+            warnings.filterwarnings(
+                "ignore", "combo box 'target_class_index' is empty")
+            self._reset_settings()
         self.update_scene()
 
 

@@ -482,10 +482,10 @@ class TestOWTestAndScore(WidgetTest):
 
     def test_comparison_requires_multiple_models(self):
         w = self.widget
-        w.comparison_criterion = 1
         rbs = w.controls.resampling.buttons
 
         self._set_three_majorities()
+        w.comparison_criterion = 1
 
         rbs[OWTestAndScore.KFold].click()
         self.get_output(self.widget.Outputs.evaluations_results, wait=5000)

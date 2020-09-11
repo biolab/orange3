@@ -26,9 +26,6 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import classdensity
 from Orange.widgets.utils.plot import OWPalette
-from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
-    OWScatterPlotGraph as OWScatterPlotGraphObs
-)
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import (
@@ -36,6 +33,12 @@ from Orange.widgets.visualize.utils.plotutils import (
     PaletteItemSample, SymbolItemSample, AxisItem
 )
 
+with warnings.catch_warnings():
+    # This just loads an obsolete module; proper warning is issued below
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
+        OWScatterPlotGraph as OWScatterPlotGraphObs
+    )
 
 SELECTION_WIDTH = 5
 MAX_N_VALID_SIZE_ANIMATE = 1000

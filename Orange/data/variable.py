@@ -1,6 +1,6 @@
 import re
 import warnings
-from collections import Iterable
+from collections.abc import Iterable
 
 from datetime import datetime, timedelta, timezone
 from numbers import Number, Real, Integral
@@ -579,7 +579,8 @@ class ContinuousVariable(Variable):
         """
         Return the value as a string with the prescribed number of decimals.
         """
-        if isnan(val):
+        # Table value can't be inf, but repr_val can be used to print any float
+        if not np.isfinite(val):
             return "?"
         if self.format_str != "%g" \
                 and abs(round(val, self._number_of_decimals) - val) \
@@ -647,9 +648,9 @@ class DiscreteVariable(Variable):
     def ordered(self):
         warnings.warn(
             "ordered is deprecated. It will be removed in future versions.",
-            # FutureWarning warning is used instead of OrangeDeprecation
+            # DeprecationWarning warning is used instead of OrangeDeprecation
             # warning otherwise tests fail (__repr__ still asks for ordered)
-            FutureWarning
+            DeprecationWarning
         )
         return None
 

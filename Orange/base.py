@@ -1,6 +1,6 @@
 import inspect
 import itertools
-from collections import Iterable
+from collections.abc import Iterable
 import re
 import warnings
 from typing import Callable

@@ -165,7 +165,7 @@ class TestReader(unittest.TestCase):
         """
         with warnings.catch_warnings():
             # in unittests on travis/github actions OrangeDeprecationWarning
-            # is raised as an error. With this statement it si disabled only
+            # is raised as an error. With this statement it is disabled only
             # for this test - when unpickling pickle created with version older
             # than 3.27 ordered parameter in DiscreteVariable which is
             # deprecated still appears - which will raise deprecation warning
@@ -173,12 +173,16 @@ class TestReader(unittest.TestCase):
             # load pickles created with Orange 3.20
             # in next version there is a change in variables.py - line 738
             # which broke back compatibility - tests introduced after the fix
-            data1 = Table("datasets/sailing-orange-3-20.pkl")
-            data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
+            with self.assertWarns(OrangeDeprecationWarning):
+                data1 = Table("datasets/sailing-orange-3-20.pkl")
+            with self.assertWarns(OrangeDeprecationWarning):
+                data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
 
             # load pickles created with Orange 3.21
-            data3 = Table("datasets/sailing-orange-3-21.pkl")
-            data4 = Table("datasets/sailing-orange-3-21.pkl.gz")
+            with self.assertWarns(OrangeDeprecationWarning):
+                data3 = Table("datasets/sailing-orange-3-21.pkl")
+            with self.assertWarns(OrangeDeprecationWarning):
+                data4 = Table("datasets/sailing-orange-3-21.pkl.gz")
 
             examples_count = 20
             self.assertEqual(examples_count, len(data1))

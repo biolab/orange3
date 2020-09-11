@@ -9,7 +9,7 @@ __all__ = ["SoftmaxRegressionLearner"]
 
 
 class SoftmaxRegressionLearner(Learner):
-    """L2 regularized softmax regression classifier.
+    r"""L2 regularized softmax regression classifier.
     Uses the L-BFGS algorithm to minimize the categorical
     cross entropy cost with L2 regularization. This model is suitable
     when dealing with a multi-class classification problem.

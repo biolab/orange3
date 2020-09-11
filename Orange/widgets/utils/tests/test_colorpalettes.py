@@ -749,14 +749,16 @@ class PatchedContinuousVariableTest(unittest.TestCase):
         with patch.object(ContinuousPalette, "from_colors") as from_colors:
             a = ContinuousVariable("a")
             a.attributes["colors"] = ('#0a0b0c', '#0d0e0f', False)
-            palette = a.palette
+            with self.assertWarns(DeprecationWarning):
+                palette = a.palette
             from_colors.assert_called_with((10, 11, 12), (13, 14, 15), False)
             self.assertIs(palette, from_colors.return_value)
 
         with patch.object(ContinuousPalette, "from_colors") as from_colors:
             a = ContinuousVariable("a")
             a.colors = (10, 11, 12), (13, 14, 15), False
-            palette = a.palette
+            with self.assertWarns(DeprecationWarning):
+                palette = a.palette
             from_colors.assert_called_with((10, 11, 12), (13, 14, 15), False)
             self.assertIs(palette, from_colors.return_value)
 
