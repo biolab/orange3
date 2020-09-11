@@ -1,5 +1,4 @@
 import os
-from collections import defaultdict
 from itertools import chain
 import json
 
@@ -28,12 +27,6 @@ StripRole = next(gui.OrangeUserRole)
 
 class InvalidFileFormat(Exception):
     pass
-
-
-def _check_dict_str_str(d):
-    if not isinstance(d, dict) or \
-            not all(isinstance(val, str) for val in chain(d, d.values())):
-        raise InvalidFileFormat
 
 
 class AttrDesc:
@@ -142,6 +135,13 @@ class DiscAttrDesc(AttrDesc):
 
     @classmethod
     def from_dict(cls, var, data):
+
+        def _check_dict_str_str(d):
+            if not isinstance(d, dict) or \
+                    not all(isinstance(val, str)
+                            for val in chain(d, d.values())):
+                raise InvalidFileFormat
+
         obj, warnings = super().from_dict(var, data)
 
         val_map = data.get("renamed_values")
@@ -159,7 +159,7 @@ class DiscAttrDesc(AttrDesc):
         if new_colors is not None:
             _check_dict_str_str(new_colors)
             colors = []
-            for value, def_color in zip(var.values, var.palette):
+            for value, def_color in zip(var.values, var.palette.palette):
                 if value in new_colors:
                     try:
                         color = hex_to_color(new_colors[value])
@@ -552,10 +552,6 @@ class OWColor(widget.OWWidget):
 
     want_main_area = False
 
-    FileFilters = [
-        "Settings for individual variables (*.vdefs)",
-        "General color encoding for values (*.colors)"]
-
     def __init__(self):
         super().__init__()
         self.data = None
@@ -623,16 +619,14 @@ class OWColor(widget.OWWidget):
         self.commit()
 
     def save(self):
-        fname, ffilter = QFileDialog.getSaveFileName(
-            self, "File name", self._start_dir(), ";;".join(self.FileFilters))
+        fname, _ = QFileDialog.getSaveFileName(
+            self, "File name", self._start_dir(),
+            "Variable definitions (*.colors)")
         if not fname:
             return
         QSettings().setValue("colorwidget/last-location",
                              os.path.split(fname)[0])
-        if ffilter == self.FileFilters[0]:
-            self._save_var_defs(fname)
-        else:
-            self._save_value_colors(fname)
+        self._save_var_defs(fname)
 
     def _save_var_defs(self, fname):
         json.dump(
@@ -647,44 +641,29 @@ class OWColor(widget.OWWidget):
             open(fname, "w"),
             indent=4)
 
-    def _save_value_colors(self, fname):
-        color_map = defaultdict(set)
-        for desc in self.disc_descs:
-            if desc.new_colors is None:
-                continue
-            for value, old_color, new_color in zip(
-                    desc.var.values, desc.var.palette.palette, desc.new_colors):
-                old_hex, new_hex = map(color_to_hex, (old_color, new_color))
-                if old_hex != new_hex:
-                    color_map[value].add(new_hex)
-        js = {value: colors.pop()
-              for value, colors in color_map.items()
-              if len(colors) == 1}
-        json.dump(js, open(fname, "w"), indent=4)
-
     def load(self):
+        fname, _ = QFileDialog.getOpenFileName(
+            self, "File name", self._start_dir(),
+            "Variable definitions (*.colors)")
+        if not fname:
+            return
+
         try:
-            fname, ffilter = QFileDialog.getOpenFileName(
-                self, "File name", self._start_dir(),
-                ";;".join(self.FileFilters))
-            if not fname:
-                return
-            try:
-                js = json.load(open(fname))  #: dict
-            except IOError:
-                QMessageBox.critical(self, "File error",
-                                     "File cannot be opened.")
-                return
-            except json.JSONDecodeError as exc:
-                raise InvalidFileFormat from exc
-            if ffilter == self.FileFilters[0]:
-                self._parse_var_defs(js)
-            else:
-                self._parse_value_colors(js)
+            f = open(fname)
+        except IOError:
+            QMessageBox.critical(self, "File error", "File cannot be opened.")
+            return
+
+        try:
+            js = json.load(f)  #: dict
+        except json.JSONDecodeError as exc:
+            raise InvalidFileFormat from exc
+
+        try:
+            self._parse_var_defs(js)
         except InvalidFileFormat:
             QMessageBox.critical(self, "File error", "Invalid file format.")
-        else:
-            self.unconditional_commit()
+            return
 
     def _parse_var_defs(self, js):
         if not isinstance(js, dict):
@@ -738,23 +717,6 @@ class OWColor(widget.OWWidget):
 
         self.disc_model.set_data(self.disc_descs)
         self.cont_model.set_data(self.cont_descs)
-        self.unconditional_commit()
-
-    def _parse_value_colors(self, js):
-        if not isinstance(js, dict) or \
-                any(not isinstance(obj, str) for obj in chain(js, js.values())):
-            raise InvalidFileFormat
-        try:
-            js = {k: hex_to_color(v) for k, v in js.items()}
-        except (ValueError, IndexError) as exc:
-            raise InvalidFileFormat from exc
-
-        for desc in self.disc_descs:
-            for i, value in enumerate(desc.var.values):
-                if value in js:
-                    desc.set_color(i, js[value])
-
-        self.disc_model.set_data(self.disc_descs)
         self.unconditional_commit()
 
     def _start_dir(self):
