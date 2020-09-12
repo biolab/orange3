@@ -10,6 +10,8 @@ import numpy as np
 from AnyQt.QtCore import Qt, QSize, QRect
 from AnyQt.QtGui import QBrush
 
+from orangewidget.tests.base import GuiTest
+
 from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
 from Orange.preprocess.transformation import Identity
 from Orange.util import color_to_hex
@@ -18,7 +20,6 @@ from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.data import owcolor
 from Orange.widgets.data.owcolor import ColorRole
 from Orange.widgets.tests.base import WidgetTest
-from orangewidget.tests.base import GuiTest
 
 
 class AttrDescTest(unittest.TestCase):

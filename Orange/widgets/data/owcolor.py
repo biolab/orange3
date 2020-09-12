@@ -10,6 +10,8 @@ from AnyQt.QtGui import QColor, QFont, QBrush
 from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView, QComboBox, \
     QFileDialog, QMessageBox
 
+from orangewidget.settings import IncompatibleContext
+
 import Orange
 from Orange.preprocess.transformation import Identity
 from Orange.util import color_to_hex, hex_to_color
@@ -18,8 +20,8 @@ from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.report import colored_square as square
 from Orange.widgets.widget import Input, Output
-from orangewidget.settings import IncompatibleContext
 
 ColorRole = next(gui.OrangeUserRole)
 StripRole = next(gui.OrangeUserRole)
@@ -405,7 +407,7 @@ class ColorStripDelegate(HorizontalGridDelegate):
         super().__init__()
         self.view = view
 
-    def createEditor(self, parent, option, index):
+    def createEditor(self, parent, _, index):
         class Combo(QComboBox):
             def __init__(self, parent, initial_data, view):
                 super().__init__(parent)
@@ -756,8 +758,6 @@ class OWColor(widget.OWWidget):
     def send_report(self):
         """Send report"""
         def _report_variables(variables):
-            from Orange.widgets.report import colored_square as square
-
             def was(n, o):
                 return n if n == o else f"{n} (was: {o})"
 
@@ -804,7 +804,7 @@ class OWColor(widget.OWWidget):
             self.report_raw(r"<table>{table}</table>")
 
     @classmethod
-    def migrate_context(cls, context, version):
+    def migrate_context(cls, _, version):
         if not version or version < 2:
             raise IncompatibleContext
 
