@@ -801,7 +801,7 @@ class OWColor(widget.OWWidget):
         table = "".join(f"<tr><th>{name}</th></tr>{rows}"
                         for name, rows in sections if rows)
         if table:
-            self.report_raw(r"<table>{table}</table>")
+            self.report_raw(f"<table>{table}</table>")
 
     @classmethod
     def migrate_context(cls, _, version):
