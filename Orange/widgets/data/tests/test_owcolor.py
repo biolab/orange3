@@ -1,5 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access,unsubscriptable-object
+import json
+import os
+import tempfile
 import unittest
 from unittest.mock import patch, Mock
 
@@ -36,6 +39,29 @@ class AttrDescTest(unittest.TestCase):
         desc.name = "y"
         desc.reset()
         self.assertEqual(desc.name, "x")
+
+    def test_to_dict(self):
+        x = ContinuousVariable("x")
+        desc = owcolor.AttrDesc(x)
+        self.assertEqual(desc.to_dict(), {})
+        desc2, warns = owcolor.AttrDesc.from_dict(x, desc.to_dict())
+        self.assertEqual(warns, [])
+        self.assertIsNone(desc2.new_name)
+
+        desc.name = "y"
+        self.assertEqual(desc.to_dict(), {"rename": "y"})
+
+        desc2, warns = owcolor.AttrDesc.from_dict(x, desc.to_dict())
+        self.assertEqual(warns, [])
+        self.assertEqual(desc2.new_name, "y")
+
+        self.assertRaises(owcolor.InvalidFileFormat,
+                          owcolor.AttrDesc.from_dict, x, {"rename": 42})
+        self.assertRaises(owcolor.InvalidFileFormat,
+                          owcolor.AttrDesc.from_dict, x, [])
+
+        # Additional keys shouldn't cause exceptions
+        owcolor.AttrDesc.from_dict(x, {"foo": 42})
 
 
 class DiscAttrTest(unittest.TestCase):
@@ -88,8 +114,119 @@ class DiscAttrTest(unittest.TestCase):
         np.testing.assert_equal(desc.colors, self.var.colors)
         self.assertEqual(desc.values, self.var.values)
 
+    def test_to_dict(self):
+        desc = owcolor.DiscAttrDesc(self.var)
+        self.assertEqual(desc.to_dict(), {})
+        desc2, warns = owcolor.DiscAttrDesc.from_dict(self.var, desc.to_dict())
+        self.assertEqual(warns, [])
+        self.assertIsNone(desc2.new_name)
+        self.assertIsNone(desc2.new_values)
+        self.assertIsNone(desc2.new_colors)
 
-class ContAttrDesc(unittest.TestCase):
+        desc.name = "y"
+        self.assertEqual(desc.to_dict(), {"rename": "y"})
+
+        desc2, warns = owcolor.DiscAttrDesc.from_dict(self.var, desc.to_dict())
+        self.assertEqual(warns, [])
+        self.assertEqual(desc2.new_name, "y")
+        self.assertIsNone(desc2.new_values)
+        self.assertIsNone(desc2.new_colors)
+
+        desc.set_value(1, "b2")
+        desc.set_color(1, [1, 2, 3])
+        desc.set_color(2, [2, 3, 4])
+        self.assertEqual(desc.to_dict(), {
+            "rename": "y",
+            "renamed_values": {"b": "b2"},
+            "colors": {"a": color_to_hex(desc.colors[0]),
+                       "b": "#010203",
+                       "c": "#020304"}
+        })
+
+        desc2, warns = owcolor.DiscAttrDesc.from_dict(self.var, desc.to_dict())
+        self.assertEqual(warns, [])
+        cols = list(desc.colors)
+        cols[1:] = [[1, 2, 3], [2, 3, 4]]
+        np.testing.assert_equal(desc2.colors, cols)
+        self.assertEqual(desc2.values, ("a", "b2", "c"))
+
+        desc2, warns = owcolor.DiscAttrDesc.from_dict(
+            self.var,
+            {"rename": "y",
+             "renamed_values": {"b": "b2", "d": "x"},  # d is redundant
+             "colors": {"b": "#010203",
+                        "c": "#020304",
+                        "d": "#123456"}  # d is redundant and must be ignored
+            })
+        self.assertEqual(warns, [])
+        cols = list(desc.colors)
+        cols[1:] = [[1, 2, 3], [2, 3, 4]]
+        np.testing.assert_equal(desc2.colors, cols)
+        self.assertEqual(desc2.values, ("a", "b2", "c"))
+
+    def test_from_dict_coliding_values(self):
+        desc2, warns = owcolor.DiscAttrDesc.from_dict(
+            self.var, {"renamed_values": {"a": "b"}})
+        self.assertEqual(len(warns), 1)
+        self.assertTrue("duplicate names" in warns[0])
+        self.assertIsNone(desc2.new_values)
+        self.assertEqual(desc2.values, ("a", "b", "c"))
+
+        desc2, warns = owcolor.DiscAttrDesc.from_dict(
+            self.var, {"renamed_values": {"a": "e", "b": "e"}})
+        self.assertEqual(len(warns), 1)
+        self.assertTrue("duplicate names" in warns[0])
+        self.assertIsNone(desc2.new_values)
+        self.assertEqual(desc2.values, ("a", "b", "c"))
+
+        desc2, warns = owcolor.DiscAttrDesc.from_dict(
+            self.var, {"renamed_values": {"a": "b", "b": "a"}})
+        self.assertEqual(warns, [])
+        self.assertEqual(desc2.values, ("b", "a", "c"))
+
+    def test_from_dict_exceptions(self):
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.AttrDesc.from_dict, self.var, [])
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"rename": 42}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"colors": []}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"colors": {"a": 42}}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"colors": {4: "#000000"}}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"colors": {"a": "#00"}}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"colors": {"a": "#qwerty"}}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"renamed_values": []}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"renamed_values": {"a": 42}}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.DiscAttrDesc.from_dict, self.var, {"renamed_values": {4: "#000000"}}
+        )
+
+
+class ContAttrDescTest(unittest.TestCase):
     def setUp(self):
         x = ContinuousVariable("x")
         self.desc = owcolor.ContAttrDesc(x)
@@ -130,6 +267,42 @@ class ContAttrDesc(unittest.TestCase):
             colorpalettes.ContinuousPalettes[palette_name]).name
         desc.reset()
         np.testing.assert_equal(desc.palette_name, palette_name)
+
+    def test_to_dict(self):
+        x = ContinuousVariable("x")
+        desc = owcolor.ContAttrDesc(x)
+        self.assertEqual(desc.to_dict(), {})
+        desc2, warns = owcolor.ContAttrDesc.from_dict(x, desc.to_dict())
+        self.assertEqual(warns, [])
+        self.assertIsNone(desc2.new_name)
+        self.assertIsNone(desc2.new_palette_name)
+
+        desc.name = "y"
+        self.assertEqual(desc.to_dict(), {"rename": "y"})
+
+        desc2, warns = owcolor.ContAttrDesc.from_dict(x, desc.to_dict())
+        self.assertEqual(warns, [])
+        self.assertEqual(desc2.new_name, "y")
+        self.assertIsNone(desc2.new_palette_name)
+
+        desc = owcolor.ContAttrDesc(x)
+        desc.palette_name = "linear_viridis"
+        self.assertEqual(desc.to_dict(), {"colors": "linear_viridis"})
+
+    def test_from_dict_exceptions(self):
+        x = ContinuousVariable("x")
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.ContAttrDesc.from_dict, x, []
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.ContAttrDesc.from_dict, x, {"colors": 42}
+        )
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            owcolor.ContAttrDesc.from_dict, x, {"colors": "no such palette"}
+        )
 
 
 class BaseTestColorTableModel:
@@ -562,6 +735,176 @@ class TestOWColor(WidgetTest):
             outp.domain[0].name, self.iris.domain[0].name)
         self.assertEqual(
             outp.domain.class_var.name, self.iris.domain.class_var.name)
+
+    def test_save(self):
+        self.widget._save_var_defs = Mock()
+        with patch.object(owcolor.QFileDialog, "getSaveFileName",
+                          return_value=("", "")):
+            self.widget.save()
+            self.widget._save_var_defs.assert_not_called()
+        with patch.object(owcolor.QFileDialog, "getSaveFileName",
+                          return_value=("foo", "bar")):
+            self.widget.save()
+            self.widget._save_var_defs.assert_called_with("foo")
+
+    def test_save_low(self):
+        descA = owcolor.DiscAttrDesc(
+            DiscreteVariable("varA", values=tuple("abc")))
+        descA.name = "a2"
+        descB = owcolor.DiscAttrDesc(
+            DiscreteVariable("varB", values=tuple("abc")))
+        descB.set_value(1, "X")
+        descC = owcolor.ContAttrDesc(ContinuousVariable("varC"))
+        descC.name = "c2"
+        descD = owcolor.ContAttrDesc(ContinuousVariable("varD"))
+        descD.palette_name = "linear_viridis"
+        descE = owcolor.ContAttrDesc(ContinuousVariable("varE"))
+        self.widget.disc_descs = [descA, descB]
+        self.widget.cont_descs = [descC, descD, descE]
+
+        with tempfile.TemporaryDirectory() as path:
+            fname = os.path.join(path, "foo.colors")
+            self.widget._save_var_defs(fname)
+            with open(fname) as f:
+                js = json.load(f)
+            self.assertEqual(js["categorical"],
+                             {"varA": {"rename": "a2"},
+                              "varB": {"renamed_values": {"b": "X"}}})
+            self.assertEqual(js["numeric"],
+                             {"varC": {"rename": "c2"},
+                              "varD": {"colors": "linear_viridis"}})
+
+    @patch("Orange.widgets.data.owcolor.QMessageBox.critical")
+    def test_load(self, msg_box):
+        self.widget._parse_var_defs = Mock()
+        self.widget._save_var_defs = Mock()
+        with patch.object(owcolor.QFileDialog, "getOpenFileName",
+                          return_value=("", "")):
+            with patch("builtins.open"):
+                self.widget.load()
+                open.assert_not_called()
+                self.widget._parse_var_defs.assert_not_called()
+
+        with patch.object(owcolor.QFileDialog, "getOpenFileName",
+                          return_value=("foo.colors", "*.colors")):
+            with patch("json.load") as json_load, \
+                    patch("builtins.open", side_effect=IOError):
+                self.widget.load()
+                msg_box.assert_called()
+                msg_box.reset_mock()
+                json_load.assert_not_called()
+                self.widget._parse_var_defs.assert_not_called()
+
+        with patch.object(owcolor.QFileDialog, "getOpenFileName",
+                          return_value=("foo.colors", "*.colors")):
+            with patch("json.load", side_effect=json.JSONDecodeError("err", "d", 42)), \
+                    patch("builtins.open"):
+                self.widget.load()
+                msg_box.assert_called()
+                msg_box.reset_mock()
+                self.widget._parse_var_defs.assert_not_called()
+
+        with patch.object(owcolor.QFileDialog, "getOpenFileName",
+                          return_value=("foo.colors", "*.colors")):
+            with patch("json.load"), patch("builtins.open"):
+                self.widget.load()
+                msg_box.assert_not_called()
+                msg_box.reset_mock()
+                self.widget._parse_var_defs.assert_called_with(json.load.return_value)
+
+    def _create_descs(self):
+        disc_vars = [DiscreteVariable(f"var{c}", values=("a", "b", "c"))
+                     for c in "AB"]
+        cont_vars = [ContinuousVariable(f"var{c}") for c in "CDE"]
+        self.widget.disc_descs = [owcolor.DiscAttrDesc(v) for v in disc_vars]
+        self.widget.cont_descs = [owcolor.ContAttrDesc(v) for v in cont_vars]
+        return disc_vars, cont_vars
+
+    def test_parse_var_defs(self):
+        js = {"categorical": {"varA": {"rename": "a2"},
+                              "varB": {"renamed_values": {"b": "X"}}},
+              "numeric": {"varC": {"rename": "c2"},
+                          "varD": {"colors": "linear_viridis"}}}
+
+        self._create_descs()
+        descE = self.widget.cont_descs[-1]
+
+        self.widget._parse_var_defs(js)
+        self.assertEqual(len(self.widget.disc_descs), 2)
+        descA = self.widget.disc_descs[0]
+        self.assertEqual(descA.name, "a2")
+        self.assertIsNone(descA.new_values)
+        self.assertIsNone(descA.new_colors)
+
+        descB = self.widget.disc_descs[1]
+        self.assertIsNone(descB.new_name)
+        self.assertEqual(descB.new_values, ["a", "X", "c"])
+        self.assertIsNone(descB.new_colors)
+
+        self.assertEqual(len(self.widget.cont_descs), 3)
+        descC = self.widget.cont_descs[0]
+        self.assertEqual(descC.name, "c2")
+        self.assertIsNone(descC.new_palette_name)
+
+        descD = self.widget.cont_descs[1]
+        self.assertIsNone(descD.new_name)
+        self.assertEqual(descD.new_palette_name, "linear_viridis")
+
+        self.assertIs(self.widget.cont_descs[2], descE)
+
+    def test_parse_var_defs_invalid(self):
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            self.widget._parse_var_defs, 42)
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            self.widget._parse_var_defs,
+            {"categorical": {"a": 42}, "numeric": {}})
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            self.widget._parse_var_defs,
+            {"categorical": {"a": {"rename": 4}}, "numeric": {}})
+        self.assertRaises(
+            owcolor.InvalidFileFormat,
+            self.widget._parse_var_defs,
+            {"categorical": {42: {"rename": "b"}}, "numeric": {}})
+
+    @patch("Orange.widgets.data.owcolor.QMessageBox.warning")
+    def test_parse_var_defs_shows_warnings(self, msg_box):
+        self._create_descs()
+        self.widget._parse_var_defs(
+            {"categorical": {"varA": {"renamed_values": {"a": "b"}}},
+             "numeric": {}})
+        msg_box.assert_called()
+        self.assertTrue("duplicate names" in msg_box.call_args[0][2])
+
+    @patch("Orange.widgets.data.owcolor.QMessageBox.warning")
+    def test_parse_var_defs_no_rename(self, msg_box):
+        self._create_descs()
+
+        self.widget._parse_var_defs(
+            {"categorical": {"varA": {"rename": "varB"}},
+             "numeric": {}})
+        msg_box.assert_called()
+        self.assertTrue("duplicated names" in msg_box.call_args[0][2])
+        msg_box.reset_mock()
+
+        self.widget._parse_var_defs(
+            {"categorical": {"varA": {"rename": "X"}},
+             "numeric": {"varD": {"rename": "X"}}})
+        msg_box.assert_called()
+        self.assertTrue("duplicated names" in msg_box.call_args[0][2])
+        msg_box.reset_mock()
+
+        self.widget._parse_var_defs(
+            {"categorical": {"varA": {"rename": "varD"}},
+             "numeric": {"varD": {"rename": "varA"}}})
+        msg_box.assert_not_called()
+
+        self.widget._parse_var_defs(
+            {"categorical": {"varA": {"rename": "X"}},
+             "numeric": {"var not": {"rename": "X"}}})
+        msg_box.assert_not_called()
 
 
 if __name__ == "__main__":

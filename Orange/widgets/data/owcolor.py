@@ -63,9 +63,11 @@ class AttrDesc:
     @classmethod
     def from_dict(cls, var, data):
         desc = cls(var)
+        if not isinstance(data, dict):
+            raise InvalidFileFormat
         new_name = data.get("rename")
         if new_name is not None:
-            if not isinstance(desc.name, str):
+            if not isinstance(new_name, str):
                 raise InvalidFileFormat
             desc.name = new_name
         return desc, []
@@ -163,7 +165,7 @@ class DiscAttrDesc(AttrDesc):
                 if value in new_colors:
                     try:
                         color = hex_to_color(new_colors[value])
-                    except (IndexError, ValueError) as exc:
+                    except ValueError as exc:
                         raise InvalidFileFormat from exc
                     colors.append(color)
                 else:
@@ -629,17 +631,18 @@ class OWColor(widget.OWWidget):
         self._save_var_defs(fname)
 
     def _save_var_defs(self, fname):
-        json.dump(
-            {vartype: {
-                 var.name: var_data
-                 for var, var_data in (
-                    (desc.var, desc.to_dict()) for desc in repo)
-                 if var_data}
-             for vartype, repo in (("categorical", self.disc_descs),
-                                   ("numeric", self.cont_descs))
-            },
-            open(fname, "w"),
-            indent=4)
+        with open(fname, "w") as f:
+            json.dump(
+                {vartype: {
+                    var.name: var_data
+                    for var, var_data in (
+                        (desc.var, desc.to_dict()) for desc in repo)
+                    if var_data}
+                 for vartype, repo in (("categorical", self.disc_descs),
+                                       ("numeric", self.cont_descs))
+                },
+                f,
+                indent=4)
 
     def load(self):
         fname, _ = QFileDialog.getOpenFileName(
@@ -656,23 +659,24 @@ class OWColor(widget.OWWidget):
 
         try:
             js = json.load(f)  #: dict
-        except json.JSONDecodeError as exc:
-            raise InvalidFileFormat from exc
-
-        try:
             self._parse_var_defs(js)
-        except InvalidFileFormat:
+        except (json.JSONDecodeError, InvalidFileFormat):
             QMessageBox.critical(self, "File error", "Invalid file format.")
-            return
 
     def _parse_var_defs(self, js):
-        if not isinstance(js, dict):
+        if not isinstance(js, dict) or set(js) != {"categorical", "numeric"}:
             raise InvalidFileFormat
-        renames = {
-            var_name: desc["rename"]
-            for repo in js.values() for var_name, desc in repo.items()
-            if "rename" in desc
-        }
+        try:
+            renames = {
+                var_name: desc["rename"]
+                for repo in js.values() for var_name, desc in repo.items()
+                if "rename" in desc
+            }
+        # js is an object coming from json file that can be manipulated by
+        # the user, so there are too many things that can go wrong.
+        # Catch all exceptions, therefore.
+        except Exception as exc:
+            raise InvalidFileFormat from exc
         if not all(isinstance(val, str)
                    for val in chain(renames, renames.values())):
             raise InvalidFileFormat
@@ -709,7 +713,7 @@ class OWColor(widget.OWWidget):
 
         self.disc_descs = [both_descs[0].get(desc.var.name, desc)
                            for desc in self.disc_descs]
-        self.cont_descs = [both_descs[0].get(desc.var.name, desc)
+        self.cont_descs = [both_descs[1].get(desc.var.name, desc)
                            for desc in self.cont_descs]
         if warnings:
             QMessageBox.warning(
