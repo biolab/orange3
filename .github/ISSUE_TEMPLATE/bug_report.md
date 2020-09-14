@@ -1,18 +1,24 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a bug to help us improve
 title: ''
 labels: bug report
 assignees: ''
 
 ---
 
-<!-- Thanks for taking the time to report a bug! -->
-<!-- To fix the bug, we need to be able to reproduce it, so please let us know the following... -->
+<!-- 
+Thanks for taking the time to report a bug!
+If you're raising an issue about an add-on (i.e., installed via Options > Add-ons), raise an issue in the relevant add-on's issue tracker instead. See: https://github.com/biolab?q=orange3
+To fix the bug, we need to be able to reproduce it. Please answer the following questions to the best of your ability.
+-->
+
 
 - [ ] **What's wrong?**
 <!-- Be specific, clear, and concise. Include screenshots if relevant. -->
 <!-- If you're getting an error message, copy it, and enclose it with three backticks (```). -->
+
+
 
 
 
@@ -22,10 +28,18 @@ assignees: ''
 
 
 
+
+
 - [ ] **Which version of Orange are you using? How did you install Orange?**
+<!-- See "Help → About → Version" or `Orange.version.full_version` in code -->
+
+
 
 
 
 - [ ] **What is your operating system?**
+
+
+
 
 

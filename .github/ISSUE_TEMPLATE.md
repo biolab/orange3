@@ -1,31 +1,7 @@
 <!--
-This is an issue template. Please fill in the relevant details in the
-sections below.
+If something's not right with Orange, fill out the bug report template at:
+https://github.com/biolab/orange3/issues/new?assignees=&labels=bug+report&template=bug_report.md&title=
 
-Wrap code and verbatim terminal window output into triple backticks, see:
-https://help.github.com/articles/basic-writing-and-formatting-syntax/#quoting-code
-
-If you're raising an issue about an add-on (e.g. installed via
-Options > Add-ons), raise an issue on the relevant add-on's issue
-tracker instead. See: https://github.com/biolab?q=orange3
+If you have an idea for a new feature, fill out the feature request template at:
+https://github.com/biolab/orange3/issues/new?assignees=&labels=&template=feature_request.md&title=
 -->
-
-##### Orange version
-<!-- From menu _Help→About→Version_ or code `Orange.version.full_version` -->
-
-
-##### Expected behavior
-
-
-
-##### Actual behavior
-
-
-
-##### Steps to reproduce the behavior
-
-
-
-##### Additional info (worksheets, data, screenshots, ...)
-
-
