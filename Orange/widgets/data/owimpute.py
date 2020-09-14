@@ -162,7 +162,7 @@ class OWImpute(OWWidget):
         super().__init__()
         self.data = None  # type: Optional[Orange.data.Table]
         self.learner = None  # type: Optional[Learner]
-        self.default_learner = SimpleTreeLearner()
+        self.default_learner = SimpleTreeLearner(min_instances=10, max_depth=10)
         self.modified = False
         self.executor = qconcurrent.ThreadExecutor(self)
         self.__task = None
