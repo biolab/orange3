@@ -1,16 +1,76 @@
+import sys
 from typing import Tuple, List, Dict, Iterable
 
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QApplication
 from AnyQt.QtGui import QFont, QFontDatabase
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
 
 from orangewidget.utils.visual_settings_dlg import KeyType, ValueType, \
-    SettingsType
+    SettingsType, FontList
 
 _SettingType = Dict[str, ValueType]
 _LegendItemType = Tuple[ItemSample, pg.LabelItem]
+
+
+def available_font_families() -> List:
+    """
+    Function returns list of available font families.
+    Can be used to instantiate font combo boxes.
+
+    Returns
+    -------
+    fonts: list
+        List of available font families.
+    """
+    if not QApplication.instance():
+        _ = QApplication(sys.argv)
+    fonts = QFontDatabase().families()
+    default = fonts.pop(fonts.index(default_font_family()))
+    defaults = [default]
+
+    guessed_name = default.split()[0]
+    i = 0
+    while i < len(fonts):
+        if fonts[i].startswith(guessed_name):
+            defaults.append(fonts.pop(i))
+        else:
+            i += 1
+    return FontList(defaults
+                    + [""]
+                    + sorted(fonts, key=lambda s: s.replace(".", "")))
+
+
+def default_font_family() -> str:
+    """
+    Function returns default font family used in Qt application.
+    Can be used to instantiate initial dialog state.
+
+    Returns
+    -------
+    font: str
+        Default font family.
+    """
+    if not QApplication.instance():
+        _ = QApplication(sys.argv)
+    return QFont().family()
+
+
+def default_font_size() -> int:
+    """
+    Function returns default font size in points used in Qt application.
+    Can be used to instantiate initial dialog state.
+
+    Returns
+    -------
+    size: int
+        Default font size in points.
+    """
+    if not QApplication.instance():
+        _ = QApplication(sys.argv)
+    return QFont().pointSize()
 
 
 class Updater:
@@ -171,6 +231,7 @@ class CommonParameterSetter:
 
     def __init__(self):
         def update_font_family(**settings):
+            # false positive, pylint: disable=unsubscriptable-object
             for label in self.initial_settings[self.LABELS_BOX]:
                 if label != self.FONT_FAMILY_LABEL:
                     setter = self._setters[self.LABELS_BOX][label]
@@ -202,7 +263,7 @@ class CommonParameterSetter:
                 self.getAxis(axis), settings[self.TITLE_LABEL])
 
         self.FONT_FAMILY_SETTING: SettingsType = {  # pylint: disable=invalid-name
-            Updater.FONT_FAMILY_LABEL: (QFontDatabase().families(), QFont().family()),
+            Updater.FONT_FAMILY_LABEL: (available_font_families(), QFont().family()),
         }
 
         self.FONT_SETTING: SettingsType = {  # pylint: disable=invalid-name
@@ -238,6 +299,7 @@ class CommonParameterSetter:
         pass
 
     def _check_setters(self):
+        # false positive, pylint: disable=not-an-iterable
         assert all(key in self._setters for key in self.initial_settings)
         for k, inner in self.initial_settings.items():
             assert all(key in self._setters[k] for key in inner)
