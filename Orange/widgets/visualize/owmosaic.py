@@ -12,7 +12,7 @@ from AnyQt.QtGui import QColor, QPainter, QPen, QStandardItem
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsLineItem, QGraphicsItemGroup)
 
-from Orange.data import Table, filter, Variable, Domain
+from Orange.data import Table, filter, Variable, Domain, DiscreteVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -307,11 +307,11 @@ class OWMosaicDisplay(OWWidget):
     vizrank = SettingProvider(MosaicVizRank)
     settings_version = 2
     use_boxes = Setting(True)
-    variable1 = ContextSetting(None)
-    variable2 = ContextSetting(None)
-    variable3 = ContextSetting(None)
-    variable4 = ContextSetting(None)
-    variable_color = ContextSetting(None)
+    variable1: Variable = ContextSetting(None)
+    variable2: Variable = ContextSetting(None)
+    variable3: Variable = ContextSetting(None)
+    variable4: Variable = ContextSetting(None)
+    variable_color: DiscreteVariable = ContextSetting(None)
     selection = Setting(set(), schema_only=True)
 
     BAR_WIDTH = 5
