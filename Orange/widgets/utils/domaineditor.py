@@ -179,6 +179,7 @@ class VarTypeDelegate(ComboDelegate):
         ind = items.index(index.data())
         combo.addItems(items)
         combo.setCurrentIndex(ind)
+        combo.showPopup()
 
 
 class PlaceDelegate(ComboDelegate):
@@ -188,6 +189,7 @@ class PlaceDelegate(ComboDelegate):
             index.row()][Column.tpe].is_primitive()
         combo.addItems(self.items[2 * to_meta:])
         combo.setCurrentIndex(self.items.index(index.data()) - 2 * to_meta)
+        combo.showPopup()
 
 
 class DomainEditor(QTableView):
@@ -392,6 +394,14 @@ class DomainEditor(QTableView):
     def reset_domain(self):
         self.model().reset_variables()
         self.variables = self.model().variables
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            index = self.indexAt(event.pos())
+            self.edit(index)
+            event.accept()
+        else:
+            super().mousePressEvent(event)
 
     @staticmethod
     def parse_domain(domain):
