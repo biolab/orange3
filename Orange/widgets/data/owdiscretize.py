@@ -9,6 +9,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import QValidator, QPalette
 from AnyQt.QtCore import Qt, QTimer, QPoint
+from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
 import Orange.preprocess.discretize as disc
@@ -406,7 +407,7 @@ class OWDiscretize(widget.OWWidget):
         )
 
         # List view with all attributes
-        self.varview = QListView(
+        self.varview = ListViewSearch(
             selectionMode=QListView.ExtendedSelection,
             uniformItemSizes=True,
         )

@@ -6,10 +6,11 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsItemGroup, QGraphicsLineItem,
-    QGraphicsPathItem, QGraphicsRectItem, QSizePolicy,
-    QListView)
+    QGraphicsPathItem, QGraphicsRectItem, QSizePolicy
+)
 from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSize, QSortFilterProxyModel
+from orangewidget.utils.listview import ListViewSearch
 
 import scipy.special
 from scipy.stats import f_oneway, chi2_contingency
@@ -201,7 +202,7 @@ class OWBoxPlot(widget.OWWidget):
         sorted_model.setSourceModel(self.attrs)
         sorted_model.sort(0)
         box = gui.vBox(self.controlArea, "Variable")
-        view = self.attr_list = QListView()
+        view = self.attr_list = ListViewSearch()
         view.setModel(sorted_model)
         view.setSelectionMode(view.SingleSelection)
         view.selectionModel().selectionChanged.connect(self.attr_changed)
@@ -223,7 +224,7 @@ class OWBoxPlot(widget.OWWidget):
         sorted_model.sort(0)
 
         box = gui.vBox(self.controlArea, "Subgroups")
-        view = self.group_list = QListView()
+        view = self.group_list = ListViewSearch()
         view.setModel(sorted_model)
         view.selectionModel().selectionChanged.connect(self.grouping_changed)
         view.setMinimumSize(QSize(30, 30))

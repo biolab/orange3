@@ -6,12 +6,13 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QSize, QLineF, pyqtSignal as Signal
 from AnyQt.QtGui import QPainter, QPen, QColor
-from AnyQt.QtWidgets import QApplication, QGraphicsLineItem
+from AnyQt.QtWidgets import QApplication, QGraphicsLineItem, QSizePolicy
 
 import pyqtgraph as pg
 from pyqtgraph.functions import mkPen
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 
+from orangewidget.utils.listview import ListViewSearch
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from Orange.data import Table, DiscreteVariable
@@ -676,13 +677,14 @@ class OWLinePlot(OWWidget):
         self.group_view = gui.listView(
             self.controlArea, self, "group_var", box="Group by",
             model=self.group_vars, callback=self.__group_var_changed,
-            sizeHint=QSize(30, 100))
+            sizeHint=QSize(30, 100), viewType=ListViewSearch,
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        )
         self.group_view.setEnabled(False)
 
         plot_gui = OWPlotGUI(self)
         plot_gui.box_zoom_select(self.controlArea)
 
-        gui.rubber(self.controlArea)
         gui.auto_send(self.controlArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)

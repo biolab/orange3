@@ -8,6 +8,7 @@ from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 from AnyQt.QtWidgets import QGraphicsRectItem
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
+from orangewidget.utils.listview import ListViewSearch
 import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
@@ -319,7 +320,9 @@ class OWDistributions(OWWidget):
             self.controlArea, self, "var", box="Variable",
             model=DomainModel(valid_types=DomainModel.PRIMITIVE,
                               separators=False),
-            callback=self._on_var_changed)
+            callback=self._on_var_changed,
+            viewType=ListViewSearch
+        )
         gui.checkBox(
             varview.box, self, "sort_by_freq", "Sort categories by frequency",
             callback=self._on_sort_by_freq, stateWhenDisabled=False)
