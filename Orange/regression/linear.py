@@ -28,8 +28,10 @@ class _FeatureScorerMixin(LearnerScorer):
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
 
-    def __init__(self, preprocessors=None):
+    # Arguments are needed for signatures, pylint: disable=unused-argument
+    def __init__(self, preprocessors=None, fit_intercept=True):
         super().__init__(preprocessors=preprocessors)
+        self.params = vars()
 
     def fit(self, X, Y, W=None):
         model = super().fit(X, Y, W)
@@ -39,6 +41,7 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
 class RidgeRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Ridge
 
+    # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, fit_intercept=True,
                  normalize=False, copy_X=True, max_iter=None,
                  tol=0.001, solver='auto', preprocessors=None):
@@ -49,6 +52,7 @@ class RidgeRegressionLearner(LinearRegressionLearner):
 class LassoRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Lasso
 
+    # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
                  tol=0.0001, warm_start=False, positive=False,
@@ -60,6 +64,7 @@ class LassoRegressionLearner(LinearRegressionLearner):
 class ElasticNetLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNet
 
+    # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
                  normalize=False, precompute=False, max_iter=1000,
                  copy_X=True, tol=0.0001, warm_start=False, positive=False,
@@ -71,6 +76,7 @@ class ElasticNetLearner(LinearRegressionLearner):
 class ElasticNetCVLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNetCV
 
+    # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=None,
                  fit_intercept=True, normalize=False, precompute='auto',
                  max_iter=1000, tol=0.0001, cv=5, copy_X=True,
@@ -83,6 +89,7 @@ class SGDRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.SGDRegressor
     preprocessors = SklLearner.preprocessors + [Normalize()]
 
+    # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, loss='squared_loss', penalty='l2', alpha=0.0001,
                  l1_ratio=0.15, fit_intercept=True, max_iter=5, tol=1e-3,
                  shuffle=True, epsilon=0.1, n_jobs=1, random_state=None,
@@ -109,13 +116,15 @@ class PolynomialLearner(Learner):
     preprocessors = SklLearner.preprocessors
 
     def __init__(self, learner=LinearRegressionLearner(), degree=2,
-                 preprocessors=None):
+                 preprocessors=None, include_bias=True):
         super().__init__(preprocessors=preprocessors)
         self.degree = degree
         self.learner = learner
+        self.include_bias = include_bias
 
     def fit(self, X, Y, W=None):
-        polyfeatures = skl_preprocessing.PolynomialFeatures(self.degree)
+        polyfeatures = skl_preprocessing.PolynomialFeatures(
+            self.degree, include_bias=self.include_bias)
         X = polyfeatures.fit_transform(X)
         clf = self.learner
         if W is None or not self.supports_weights:
@@ -140,6 +149,7 @@ class LinearModel(SklModel):
 
 class PolynomialModel(Model):
     def __init__(self, model, polyfeatures):
+        super().__init__()
         self.model = model
         self.polyfeatures = polyfeatures
 
