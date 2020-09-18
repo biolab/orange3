@@ -1,24 +1,34 @@
+import os
 from itertools import chain
+import json
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QSize, QAbstractTableModel, QModelIndex, QTimer
+from AnyQt.QtCore import Qt, QSize, QAbstractTableModel, QModelIndex, QTimer, \
+    QSettings
 from AnyQt.QtGui import QColor, QFont, QBrush
-from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView, QComboBox
+from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView, QComboBox, \
+    QFileDialog, QMessageBox
+
+from orangewidget.settings import IncompatibleContext
 
 import Orange
 from Orange.preprocess.transformation import Identity
-from Orange.util import color_to_hex
+from Orange.util import color_to_hex, hex_to_color
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.report import colored_square as square
 from Orange.widgets.widget import Input, Output
-from orangewidget.settings import IncompatibleContext
 
 ColorRole = next(gui.OrangeUserRole)
 StripRole = next(gui.OrangeUserRole)
+
+
+class InvalidFileFormat(Exception):
+    pass
 
 
 class AttrDesc:
@@ -45,6 +55,24 @@ class AttrDesc:
     @name.setter
     def name(self, name):
         self.new_name = name
+
+    def to_dict(self):
+        d = {}
+        if self.new_name is not None:
+            d["rename"] = self.new_name
+        return d
+
+    @classmethod
+    def from_dict(cls, var, data):
+        desc = cls(var)
+        if not isinstance(data, dict):
+            raise InvalidFileFormat
+        new_name = data.get("rename")
+        if new_name is not None:
+            if not isinstance(new_name, str):
+                raise InvalidFileFormat
+            desc.name = new_name
+        return desc, []
 
 
 class DiscAttrDesc(AttrDesc):
@@ -96,6 +124,57 @@ class DiscAttrDesc(AttrDesc):
         new_var.colors = np.asarray(self.colors)
         return new_var
 
+    def to_dict(self):
+        d = super().to_dict()
+        if self.new_values is not None:
+            d["renamed_values"] = \
+                {k: v
+                 for k, v in zip(self.var.values, self.new_values)
+                 if k != v}
+        if self.new_colors is not None:
+            d["colors"] = {
+                value: color_to_hex(color)
+                for value, color in zip(self.var.values, self.colors)}
+        return d
+
+    @classmethod
+    def from_dict(cls, var, data):
+
+        def _check_dict_str_str(d):
+            if not isinstance(d, dict) or \
+                    not all(isinstance(val, str)
+                            for val in chain(d, d.values())):
+                raise InvalidFileFormat
+
+        obj, warnings = super().from_dict(var, data)
+
+        val_map = data.get("renamed_values")
+        if val_map is not None:
+            _check_dict_str_str(val_map)
+            mapped_values = [val_map.get(value, value) for value in var.values]
+            if len(set(mapped_values)) != len(mapped_values):
+                warnings.append(
+                    f"{var.name}: "
+                    "renaming of values ignored due to duplicate names")
+            else:
+                obj.new_values = mapped_values
+
+        new_colors = data.get("colors")
+        if new_colors is not None:
+            _check_dict_str_str(new_colors)
+            colors = []
+            for value, def_color in zip(var.values, var.palette.palette):
+                if value in new_colors:
+                    try:
+                        color = hex_to_color(new_colors[value])
+                    except ValueError as exc:
+                        raise InvalidFileFormat from exc
+                    colors.append(color)
+                else:
+                    colors.append(def_color)
+                obj.new_colors = colors
+        return obj, warnings
+
 
 class ContAttrDesc(AttrDesc):
     """
@@ -135,6 +214,22 @@ class ContAttrDesc(AttrDesc):
                                 compute_value=Identity(self.var))
         new_var.attributes["palette"] = self.palette_name
         return new_var
+
+    def to_dict(self):
+        d = super().to_dict()
+        if self.new_palette_name is not None:
+            d["colors"] = self.palette_name
+        return d
+
+    @classmethod
+    def from_dict(cls, var, data):
+        obj, warnings = super().from_dict(var, data)
+        colors = data.get("colors")
+        if colors is not None:
+            if colors not in colorpalettes.ContinuousPalettes:
+                raise InvalidFileFormat
+            obj.palette_name = colors
+        return obj, warnings
 
 
 class ColorTableModel(QAbstractTableModel):
@@ -312,7 +407,7 @@ class ColorStripDelegate(HorizontalGridDelegate):
         super().__init__()
         self.view = view
 
-    def createEditor(self, parent, option, index):
+    def createEditor(self, parent, _, index):
         class Combo(QComboBox):
             def __init__(self, parent, initial_data, view):
                 super().__init__(parent)
@@ -454,7 +549,6 @@ class OWColor(widget.OWWidget):
         match_values=settings.PerfectDomainContextHandler.MATCH_VALUES_ALL)
     disc_descs = settings.ContextSetting([])
     cont_descs = settings.ContextSetting([])
-    color_settings = settings.Setting(None)
     selected_schema_index = settings.Setting(0)
     auto_apply = settings.Setting(True)
 
@@ -481,9 +575,13 @@ class OWColor(widget.OWWidget):
 
         box = gui.auto_apply(self.controlArea, self, "auto_apply")
         box.button.setFixedWidth(180)
+        save = gui.button(None, self, "Save", callback=self.save)
+        load = gui.button(None, self, "Load", callback=self.load)
         reset = gui.button(None, self, "Reset", callback=self.reset)
-        box.layout().insertWidget(0, reset)
-        box.layout().insertStretch(1)
+        box.layout().insertWidget(0, save)
+        box.layout().insertWidget(0, load)
+        box.layout().insertWidget(2, reset)
+        box.layout().insertStretch(3)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -524,6 +622,114 @@ class OWColor(widget.OWWidget):
         self.cont_model.reset()
         self.commit()
 
+    def save(self):
+        fname, _ = QFileDialog.getSaveFileName(
+            self, "File name", self._start_dir(),
+            "Variable definitions (*.colors)")
+        if not fname:
+            return
+        QSettings().setValue("colorwidget/last-location",
+                             os.path.split(fname)[0])
+        self._save_var_defs(fname)
+
+    def _save_var_defs(self, fname):
+        with open(fname, "w") as f:
+            json.dump(
+                {vartype: {
+                    var.name: var_data
+                    for var, var_data in (
+                        (desc.var, desc.to_dict()) for desc in repo)
+                    if var_data}
+                 for vartype, repo in (("categorical", self.disc_descs),
+                                       ("numeric", self.cont_descs))
+                },
+                f,
+                indent=4)
+
+    def load(self):
+        fname, _ = QFileDialog.getOpenFileName(
+            self, "File name", self._start_dir(),
+            "Variable definitions (*.colors)")
+        if not fname:
+            return
+
+        try:
+            f = open(fname)
+        except IOError:
+            QMessageBox.critical(self, "File error", "File cannot be opened.")
+            return
+
+        try:
+            js = json.load(f)  #: dict
+            self._parse_var_defs(js)
+        except (json.JSONDecodeError, InvalidFileFormat):
+            QMessageBox.critical(self, "File error", "Invalid file format.")
+
+    def _parse_var_defs(self, js):
+        if not isinstance(js, dict) or set(js) != {"categorical", "numeric"}:
+            raise InvalidFileFormat
+        try:
+            renames = {
+                var_name: desc["rename"]
+                for repo in js.values() for var_name, desc in repo.items()
+                if "rename" in desc
+            }
+        # js is an object coming from json file that can be manipulated by
+        # the user, so there are too many things that can go wrong.
+        # Catch all exceptions, therefore.
+        except Exception as exc:
+            raise InvalidFileFormat from exc
+        if not all(isinstance(val, str)
+                   for val in chain(renames, renames.values())):
+            raise InvalidFileFormat
+        renamed_vars = {
+            renames.get(desc.var.name, desc.var.name)
+            for desc in chain(self.disc_descs, self.cont_descs)
+        }
+        if len(renamed_vars) != len(self.disc_descs) + len(self.cont_descs):
+            QMessageBox.warning(
+                self,
+                "Duplicated variable names",
+                "Variables will not be renamed due to duplicated names.")
+            for repo in js.values():
+                for desc in repo.values():
+                    desc.pop("rename", None)
+
+        # First, construct all descriptions; assign later, after we know
+        # there won't be exceptions due to invalid file format
+        both_descs = []
+        warnings = []
+        for old_desc, repo, desc_type in (
+                (self.disc_descs, "categorical", DiscAttrDesc),
+                (self.cont_descs, "numeric", ContAttrDesc)):
+            var_by_name = {desc.var.name: desc.var for desc in old_desc}
+            new_descs = {}
+            for var_name, var_data in js[repo].items():
+                var = var_by_name.get(var_name)
+                if var is None:
+                    continue
+                # This can throw InvalidFileFormat
+                new_descs[var_name], warn = desc_type.from_dict(var, var_data)
+                warnings += warn
+            both_descs.append(new_descs)
+
+        self.disc_descs = [both_descs[0].get(desc.var.name, desc)
+                           for desc in self.disc_descs]
+        self.cont_descs = [both_descs[1].get(desc.var.name, desc)
+                           for desc in self.cont_descs]
+        if warnings:
+            QMessageBox.warning(
+                self, "Invalid definitions", "\n".join(warnings))
+
+        self.disc_model.set_data(self.disc_descs)
+        self.cont_model.set_data(self.cont_descs)
+        self.unconditional_commit()
+
+    def _start_dir(self):
+        return self.workflowEnv().get("basedir") \
+               or QSettings().value("colorwidget/last-location") \
+               or os.path.expanduser(f"~{os.sep}")
+
     def commit(self):
         def make(variables):
             new_vars = []
@@ -552,8 +758,6 @@ class OWColor(widget.OWWidget):
     def send_report(self):
         """Send report"""
         def _report_variables(variables):
-            from Orange.widgets.report import colored_square as square
-
             def was(n, o):
                 return n if n == o else f"{n} (was: {o})"
 
@@ -597,10 +801,10 @@ class OWColor(widget.OWWidget):
         table = "".join(f"<tr><th>{name}</th></tr>{rows}"
                         for name, rows in sections if rows)
         if table:
-            self.report_raw(r"<table>{table}</table>")
+            self.report_raw(f"<table>{table}</table>")
 
     @classmethod
-    def migrate_context(cls, context, version):
+    def migrate_context(cls, _, version):
         if not version or version < 2:
             raise IncompatibleContext
 
