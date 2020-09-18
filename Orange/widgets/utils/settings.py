@@ -1,10 +1,10 @@
 import typing
-from typing import Any, Union, Tuple, Dict, List
+from typing import Any, Union, Tuple, Dict, List, Mapping, Sequence
 
 from PyQt5.QtCore import QSettings
 
 if typing.TYPE_CHECKING:  # pragma: no cover
-    _T = typing.TypeVar("T")
+    _T = typing.TypeVar("_T")
     #: Specification for an value in the return value of readArray
     #: Can be single type or a tuple of (type, defaultValue) where default
     #: value is used where a stored entry is missing.
@@ -14,7 +14,7 @@ if typing.TYPE_CHECKING:  # pragma: no cover
 
 
 def QSettings_readArray(settings, key, scheme):
-    # type: (QSettings, str, Dict[str, ValueSpec]) -> List[Dict[str, Any]]
+    # type: (QSettings, str, Mapping[str, ValueSpec]) -> List[Dict[str, Any]]
     """
     Read the whole array from a QSettings instance.
 
@@ -61,7 +61,7 @@ def QSettings_readArray(settings, key, scheme):
 
 
 def QSettings_writeArray(settings, key, values):
-    # type: (QSettings, str, List[Dict[str, Any]]) -> None
+    # type: (QSettings, str, Sequence[Mapping[str, Any]]) -> None
     """
     Write an array of values to a QSettings instance.
 
@@ -87,7 +87,7 @@ def QSettings_writeArray(settings, key, values):
 
 
 def QSettings_writeArrayItem(settings, key, index, item, arraysize):
-    # type: (QSettings, str, int, Dict[str, Any], int) -> None
+    # type: (QSettings, str, int, Mapping[str, Any], int) -> None
     """
     Write/update an array item at index.
 
