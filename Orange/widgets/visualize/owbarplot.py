@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 from functools import lru_cache
 from xml.sax.saxutils import escape
 
@@ -27,7 +27,7 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owscatterplotgraph import LegendItem
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
-    BaseParameterSetter as Setter
+    CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import AxisItem, \
     HelpEventDelegate
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
@@ -65,40 +65,79 @@ class BarPlotViewBox(pg.ViewBox):
             ev.accept()
 
 
-class BarPlotGraph(gui.OWComponent, pg.PlotWidget, Setter):
+class ParameterSetter(CommonParameterSetter):
     GRID_LABEL, SHOW_GRID_LABEL = "Gridlines", "Show"
     DEFAULT_ALPHA_GRID, DEFAULT_SHOW_GRID = 80, True
     BOTTOM_AXIS_LABEL, IS_VERTICAL_LABEL = "Bottom axis", "Vertical tick text"
-    initial_settings = {
-        Setter.LABELS_BOX: {
-            Setter.FONT_FAMILY_LABEL: Updater.FONT_FAMILY_SETTING,
-            Setter.TITLE_LABEL: Updater.FONT_SETTING,
-            Setter.AXIS_TITLE_LABEL: Updater.FONT_SETTING,
-            Setter.AXIS_TICKS_LABEL: Updater.FONT_SETTING,
-            Setter.LEGEND_LABEL: Updater.FONT_SETTING,
-        },
-        Setter.ANNOT_BOX: {
-            Setter.TITLE_LABEL: {Setter.TITLE_LABEL: ("", "")},
-        },
-        Setter.PLOT_BOX: {
-            GRID_LABEL: {
-                SHOW_GRID_LABEL: (None, True),
-                Updater.ALPHA_LABEL: (range(0, 255, 5), DEFAULT_ALPHA_GRID),
+
+    def __init__(self, master):
+        self.grid_settings: Dict = None
+        self.master: BarPlotGraph = master
+        super().__init__()
+
+    def update_setters(self):
+        self.grid_settings = {
+            Updater.ALPHA_LABEL: self.DEFAULT_ALPHA_GRID,
+            self.SHOW_GRID_LABEL: self.DEFAULT_SHOW_GRID,
+        }
+
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TICKS_LABEL: self.FONT_SETTING,
+                self.LEGEND_LABEL: self.FONT_SETTING,
             },
-            BOTTOM_AXIS_LABEL: {
-                IS_VERTICAL_LABEL: (None, True),
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
             },
-        },
-    }
+            self.PLOT_BOX: {
+                self.GRID_LABEL: {
+                    self.SHOW_GRID_LABEL: (None, True),
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          self.DEFAULT_ALPHA_GRID),
+                },
+                self.BOTTOM_AXIS_LABEL: {
+                    self.IS_VERTICAL_LABEL: (None, True),
+                },
+            },
+        }
+
+        def update_grid(**settings):
+            self.grid_settings.update(**settings)
+            self.master.showGrid(y=self.grid_settings[self.SHOW_GRID_LABEL],
+                          alpha=self.grid_settings[Updater.ALPHA_LABEL] / 255)
+
+        def update_bottom_axis(**settings):
+            axis = self.master.getAxis("bottom")
+            axis.setRotateTicks(settings[self.IS_VERTICAL_LABEL])
+
+        self._setters[self.PLOT_BOX] = {
+            self.GRID_LABEL: update_grid,
+            self.BOTTOM_AXIS_LABEL: update_bottom_axis,
+        }
+
+    @property
+    def title_item(self):
+        return self.master.getPlotItem().titleLabel
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in
+                self.master.getPlotItem().axes.values()]
+
+    @property
+    def legend_items(self):
+        return self.master.legend.items
+
+
+class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
     selection_changed = Signal(list)
     bar_width = 0.8
 
     def __init__(self, master, parent=None):
         gui.OWComponent.__init__(self, master)
-        self.grid_settings = {
-            Updater.ALPHA_LABEL: self.DEFAULT_ALPHA_GRID,
-            self.SHOW_GRID_LABEL: self.DEFAULT_SHOW_GRID,
-        }
         self.selection = []
         self.master: OWBarPlot = master
         self.state: int = SELECT
@@ -115,13 +154,16 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget, Setter):
         self.hideAxis("bottom")
         self.getPlotItem().buttonsHidden = True
         self.getPlotItem().setContentsMargins(10, 0, 0, 10)
-        self.showGrid(y=self.DEFAULT_SHOW_GRID,
-                      alpha=self.DEFAULT_ALPHA_GRID / 255)
         self.getViewBox().setMouseMode(pg.ViewBox.PanMode)
         self.legend = self._create_legend()
 
         self.tooltip_delegate = HelpEventDelegate(self.help_event)
         self.scene().installEventFilter(self.tooltip_delegate)
+
+        self.parameter_setter = ParameterSetter(self)
+
+        self.showGrid(y=self.parameter_setter.DEFAULT_SHOW_GRID,
+                      alpha=self.parameter_setter.DEFAULT_ALPHA_GRID / 255)
 
     def _create_legend(self):
         legend = LegendItem()
@@ -140,7 +182,8 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget, Setter):
             )
             self.legend.addItem(dot, escape(text))
             self.legend.show()
-        Updater.update_legend_font(self.legend.items, **self.legend_settings)
+        Updater.update_legend_font(self.legend.items,
+                                   **self.parameter_setter.legend_settings)
 
     def reset_graph(self):
         self.clear()
@@ -275,33 +318,6 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget, Setter):
         else:
             return False
 
-    @property
-    def title_item(self):
-        return self.getPlotItem().titleLabel
-
-    @property
-    def axis_items(self):
-        return [value["item"] for value in self.getPlotItem().axes.values()]
-
-    @property
-    def legend_items(self):
-        return self.legend.items
-
-    def update_setters(self):
-        def update_grid(**settings):
-            self.grid_settings.update(**settings)
-            self.showGrid(y=self.grid_settings[self.SHOW_GRID_LABEL],
-                          alpha=self.grid_settings[Updater.ALPHA_LABEL] / 255)
-
-        def update_bottom_axis(**settings):
-            axis = self.getAxis("bottom")
-            axis.setRotateTicks(settings[self.IS_VERTICAL_LABEL])
-
-        self._setters[self.PLOT_BOX] = {
-            self.GRID_LABEL: update_grid,
-            self.BOTTOM_AXIS_LABEL: update_bottom_axis,
-        }
-
 
 class OWBarPlot(OWWidget):
     name = "Bar Plot"
@@ -353,7 +369,9 @@ class OWBarPlot(OWWidget):
         self.__pending_selection = self.selection
 
         self.setup_gui()
-        VisualSettingsDialog(self, BarPlotGraph.initial_settings)
+        VisualSettingsDialog(
+            self, self.graph.parameter_setter.initial_settings
+        )
 
     def setup_gui(self):
         self._add_graph()
@@ -613,7 +631,7 @@ class OWBarPlot(OWWidget):
         self.report_plot()
 
     def set_visual_settings(self, key: KeyType, value: ValueType):
-        self.graph.set_parameter(key, value)
+        self.graph.parameter_setter.set_parameter(key, value)
         self.visual_settings[key] = value
 
     def sizeHint(self):  # pylint: disable=no-self-use
