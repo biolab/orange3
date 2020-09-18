@@ -4,8 +4,8 @@ import code
 import keyword
 import itertools
 import unicodedata
+import weakref
 from functools import reduce
-from collections import defaultdict
 from unittest.mock import patch
 
 from typing import Optional, List, TYPE_CHECKING
@@ -437,7 +437,7 @@ class OWPythonScript(OWWidget):
     # anyway. If this causes any problems in the future, replace this with
     # shared_namespaces = {} and thus use a common namespace for all instances
     # of # PythonScript even if they are in different schemata.
-    shared_namespaces = defaultdict(dict)
+    shared_namespaces = weakref.WeakKeyDictionary()
 
     class Error(OWWidget.Error):
         pass
@@ -727,7 +727,7 @@ class OWPythonScript(OWWidget):
             f.close()
 
     def initial_locals_state(self):
-        d = self.shared_namespaces[self.signalManager].copy()
+        d = self.shared_namespaces.setdefault(self.signalManager, {}).copy()
         for name in self.signal_names:
             value = getattr(self, name)
             all_values = list(value.values())
@@ -740,7 +740,7 @@ class OWPythonScript(OWWidget):
         not_saved = reduce(set.union,
                            ({f"in_{name}s", f"in_{name}", f"out_{name}"}
                             for name in self.signal_names))
-        self.shared_namespaces[self.signalManager].update(
+        self.shared_namespaces.setdefault(self.signalManager, {}).update(
             {name: value for name, value in namespace.items()
              if name not in not_saved})
 
