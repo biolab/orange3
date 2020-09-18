@@ -78,7 +78,7 @@ class SimpleTreeLearner(Learner):
 
     name = 'simple tree'
 
-    def __init__(self, min_instances=2, max_depth=1024, max_majority=1.0,
+    def __init__(self, min_instances=2, max_depth=32, max_majority=0.95,
                  skip_prob=0.0, bootstrap=False, seed=42):
         super().__init__()
         self.min_instances = min_instances
