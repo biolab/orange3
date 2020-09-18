@@ -1,5 +1,4 @@
 # pylint: disable=missing-docstring,protected-access
-import time
 import unittest
 from unittest.mock import patch
 
@@ -361,25 +360,6 @@ class MosaicVizRankTests(WidgetTest):
         self.assertEqual(
             item.data(self.vizrank._AttrRole),
             tuple(self.vizrank.attr_ordering[i] for i in [0, 1, 3]))
-
-    def test_does_not_crash(self):
-        """MosaicVizrank computes rankings without crashing"""
-        widget = self.widget
-        vizrank = self.vizrank
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        vizrank.max_attrs = 2
-
-        widget.interior_coloring = widget.PEARSON
-        vizrank.toggle()
-        time.sleep(0.5)
-        self.assertEqual(vizrank.rank_model.rowCount(), 10)  # 4x5 / 2
-        widget.interior_coloring = widget.CLASS_DISTRIBUTION
-        vizrank.toggle()
-        time.sleep(0.5)
-        self.assertEqual(vizrank.rank_model.rowCount(), 10)  # 4 + 4x5 / 2
-
-        self.send_signal(self.widget.Inputs.data, self.iris_no_class)
-        vizrank.toggle()
 
     def test_does_not_crash_cont_class(self):
         """MosaicVizrank computes rankings without crashing"""
