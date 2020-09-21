@@ -117,9 +117,13 @@ class ServerEmbedderCommunicator:
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        embeddings = asyncio.get_event_loop().run_until_complete(
-            self.embedd_batch(data, processed_callback)
-        )
+        try:
+            embeddings = asyncio.get_event_loop().run_until_complete(
+                self.embedd_batch(data, processed_callback)
+            )
+        except Exception:
+            loop.close()
+            raise
 
         loop.close()
         return embeddings
@@ -278,7 +282,7 @@ class ServerEmbedderCommunicator:
         }
         try:
             response = await client.post(url, headers=headers, data=data)
-        except ReadTimeout:
+        except ReadTimeout as ex:
             log.debug("Read timeout", exc_info=True)
             # it happens when server do not respond in 60 seconds, in
             # this case we return None and items will be resend later
@@ -289,9 +293,9 @@ class ServerEmbedderCommunicator:
 
             if self.count_read_errors >= self.max_errors:
                 self.num_parallel_requests = 0  # for safety reasons
-                raise EmbeddingConnectionError
+                raise EmbeddingConnectionError from ex
             return None
-        except (OSError, NetworkError):
+        except (OSError, NetworkError) as ex:
             log.debug("Network error", exc_info=True)
             # it happens when no connection and items cannot be sent to the
             # server
@@ -301,11 +305,11 @@ class ServerEmbedderCommunicator:
             self.count_connection_errors += 1
             if self.count_connection_errors >= self.max_errors:
                 self.num_parallel_requests = 0  # for safety reasons
-                raise EmbeddingConnectionError
+                raise EmbeddingConnectionError from ex
             return None
-        except Exception as e:
+        except Exception:
             log.debug("Embedding error", exc_info=True)
-            raise e
+            raise
         # we reset the counter at successful embedding
         self.count_connection_errors = 0
         self.count_read_errors = 0
