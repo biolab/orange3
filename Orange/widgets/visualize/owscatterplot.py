@@ -289,7 +289,8 @@ class OWScatterPlot(OWDataProjectionWidget):
             callback=self.graph.update_regression_line,
             tooltip=
             "If checked, fit line to group (minimize distance from points);\n"
-            "otherwise fit y as a function of x (minimize vertical distances)")
+            "otherwise fit y as a function of x (minimize vertical distances)",
+            disabledBy=self.cb_reg_line)
 
     def _add_controls_axis(self):
         common_options = dict(
