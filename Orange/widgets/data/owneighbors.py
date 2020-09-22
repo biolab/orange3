@@ -41,6 +41,11 @@ class OWNeighbors(OWWidget):
     class Outputs:
         data = Output("Neighbors", Table)
 
+    class Info(OWWidget.Warning):
+        removed_references = \
+            Msg("Input data includes reference instance(s).\n"
+                "Reference instances are excluded from the output.")
+
     class Warning(OWWidget.Warning):
         all_data_as_reference = \
             Msg("Every data instance is same as some reference")
@@ -52,8 +57,8 @@ class OWNeighbors(OWWidget):
     distance_index: int
 
     n_neighbors = Setting(10)
+    limit_neighbors = Setting(True)
     distance_index = Setting(0)
-    exclude_reference = Setting(True)
     auto_apply = Setting(True)
 
     want_main_area = False
@@ -70,17 +75,13 @@ class OWNeighbors(OWWidget):
         box = gui.vBox(self.controlArea, box=True)
         gui.comboBox(
             box, self, "distance_index", orientation=Qt.Horizontal,
-            label="Distance: ", items=[d[0] for d in METRICS],
+            label="Distance metric: ", items=[d[0] for d in METRICS],
             callback=self.recompute)
         gui.spin(
-            box, self, "n_neighbors", label="Number of neighbors:",
-            step=1, spinType=int, minv=0, maxv=100,
+            box, self, "n_neighbors", label="Limit number of neighbors to:",
+            step=1, spinType=int, minv=0, maxv=100, checked='limit_neighbors',
             # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
-            callback=lambda: self.apply())
-        gui.checkBox(
-            box, self, "exclude_reference",
-            label="Exclude rows (equal to) references",
-            # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
+            checkCallback=lambda: self.apply(),
             callback=lambda: self.apply())
 
         self.apply_button = gui.auto_apply(self.controlArea, self, commit=self.apply)
@@ -104,6 +105,7 @@ class OWNeighbors(OWWidget):
 
     @Inputs.data
     def set_data(self, data):
+        self.controls.n_neighbors.setMaximum(len(data) if data else 100)
         self.data = data
 
     @Inputs.reference
@@ -157,21 +159,24 @@ class OWNeighbors(OWWidget):
 
     def _compute_indices(self):
         self.Warning.all_data_as_reference.clear()
-        dist = self.distances
-        if dist is None:
+        self.Info.removed_references.clear()
+
+        if self.distances is None:
             return None
-        if self.exclude_reference:
-            non_ref = dist > 1e-5
-            skip = len(dist) - non_ref.sum()
-            up_to = min(self.n_neighbors + skip, len(dist))
-            if skip >= up_to:
-                self.Warning.all_data_as_reference()
-                return None
-            indices = np.argpartition(dist, up_to - 1)[:up_to]
-            return indices[non_ref[indices]]
-        else:
-            up_to = min(self.n_neighbors, len(dist))
-            return np.argpartition(dist, up_to - 1)[:up_to]
+
+        inrefs = np.isin(self.data.ids, self.reference.ids)
+        if np.all(inrefs):
+            self.Warning.all_data_as_reference()
+            return None
+        if np.any(inrefs):
+            self.Info.removed_references()
+
+        dist = np.copy(self.distances)
+        dist[inrefs] = np.max(dist) + 1
+        up_to = len(dist) - np.sum(inrefs)
+        if self.limit_neighbors and self.n_neighbors < up_to:
+            up_to = self.n_neighbors
+        return np.argpartition(dist, up_to - 1)[:up_to]
 
     def _data_with_similarity(self, indices):
         data = self.data
