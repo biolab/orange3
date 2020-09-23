@@ -15,7 +15,8 @@ from AnyQt.QtWidgets import (
     QSizePolicy, QDesktopWidget,
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
-from AnyQt.QtCore import Qt, QRectF, QSize
+from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
+    pyqtProperty
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.statistics.util import nanmin, nanmax, nanmean, unique
@@ -65,6 +66,9 @@ class MovableToolTip(QLabel):
         super().show()
 
 
+DOT_COLOR = QColor(170, 220, 255, 255)
+
+
 class DotItem(QGraphicsEllipseItem):
     TOOLTIP_STYLE = """ul {margin-top: 1px; margin-bottom: 1px;}"""
     TOOLTIP_TEMPLATE = """<html><head><style type="text/css">{}</style>
@@ -79,7 +83,7 @@ class DotItem(QGraphicsEllipseItem):
         self._offset = offset
         self.setPos(0, - radius / 2)
         self.setFlag(QGraphicsItem.ItemIsMovable)
-        self.setBrush(QColor(170, 220, 255, 255))
+        self.setBrush(DOT_COLOR)
         self.setPen(QPen(QBrush(QColor(20, 130, 250, 255)), 2))
         self.setZValue(100)
         self.tool_tip = MovableToolTip()
@@ -147,6 +151,7 @@ class MovableDotItem(DotItem):
         self._total_dot = None
         self._probs_dot = None
         self._vertical_line = None
+        self._mousePressFunc = None
 
     @property
     def vertical_line(self):
@@ -184,7 +189,13 @@ class MovableDotItem(DotItem):
         self._probs_dot = dot
         self._probs_dot.movable_dot_items.append(self)
 
+    def hookOnMousePress(self, func):
+        self._mousePressFunc = func
+
     def mousePressEvent(self, event):
+        if self._mousePressFunc:
+            self._mousePressFunc()
+            self._mousePressFunc = None
         self.tool_tip.show(event.screenPos(), self.get_tooltip_text(), False)
         self._x = event.pos().x()
         self.setBrush(QColor(50, 180, 250, 255))
@@ -241,6 +252,46 @@ class DiscreteMovableDotItem(MovableDotItem):
         p1 = 0 if diff < 1e-6 else (-self.value + self.tooltip_values[i]) / diff
         return [(self.tooltip_labels[i - 1].replace("<", "&lt;"), abs(p1)),
                 (self.tooltip_labels[i].replace("<", "&lt;"), abs(1 - p1))]
+
+
+class GraphicsColorAnimator(QObject):
+    @pyqtProperty(QColor)
+    def brushColor(self):
+        return self.__brushColor
+
+    @brushColor.setter
+    def brushColor(self, value):
+        self.__brushColor = value
+        for item in self.__items:
+            item.setBrush(value)
+
+    def __init__(self, parent, duration, keyValues):
+        super().__init__(parent)
+        self.__items = []
+        self.__defaultColor = defaultColor = keyValues[0][1]
+        self.__brushColor = defaultColor
+
+        self.__animation = QPropertyAnimation(self, b'brushColor', self)
+        self.__animation.setStartValue(defaultColor)
+        self.__animation.setEndValue(defaultColor)
+        self.__animation.setDuration(duration)
+        self.__animation.setKeyValues(keyValues)
+        self.__animation.setLoopCount(-1)
+
+    def setGraphicsItems(self, items):
+        if self.__animation.state() == QPropertyAnimation.Running:
+            self.__animation.stop()
+        self.__items = items
+
+    def start(self):
+        self.__animation.start()
+
+    def stop(self):
+        if self.__animation.state() != QPropertyAnimation.Running:
+            return
+        self.__animation.stop()
+        for item in self.__items:
+            item.setBrush(self.__defaultColor)
 
 
 class ContinuousItemMixin:
@@ -745,6 +796,17 @@ class OWNomogram(OWWidget):
         for view in (top_view, mid_view, bottom_view):
             self.mainArea.layout().addWidget(view)
 
+        self.dot_animator = GraphicsColorAnimator(
+            self, 3000,
+            [
+                (0.9, DOT_COLOR),
+                (0.925, DOT_COLOR.lighter(115)),
+                (0.95, DOT_COLOR),
+                (0.975, DOT_COLOR.lighter(115)),
+                (1.0, DOT_COLOR)
+            ]
+        )
+
     def _class_combo_changed(self):
         with np.errstate(invalid='ignore'):
             coeffs = [np.nan_to_num(p[self.target_class_index] /
@@ -920,6 +982,12 @@ class OWNomogram(OWWidget):
             item.dot.point_dot = point_item.dot
             item.dot.probs_dot = probs_item.dot
             item.dot.vertical_line = self.hidden_vertical_line
+            item.dot.hookOnMousePress(self.dot_animator.stop)
+
+        self.dot_animator.setGraphicsItems(
+            [item.dot for item in self.feature_items.values()]
+        )
+        self.dot_animator.start()
 
         self.nomogram = nomogram = NomogramItem()
         nomogram.add_items([nomogram_head, self.nomogram_main, nomogram_foot])
