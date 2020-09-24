@@ -17,7 +17,6 @@ from AnyQt.QtCore import (
 
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 from orangewidget.report import plural
-from Orange.widgets.utils.state_summary import format_summary_details
 
 import Orange
 from Orange.evaluation import Results
@@ -32,6 +31,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 # Input slot for the Predictors channel
@@ -84,6 +84,9 @@ class OWPredictions(OWWidget):
         self.left_width = 10
         self.selection_store = None
         self.__pending_selection = self.selection
+
+        self._set_input_summary()
+        self._set_output_summary(None)
 
         gui.listBox(self.controlArea, self, "selected_classes", "class_values",
                     box="Show probabibilities for",
@@ -220,7 +223,7 @@ class OWPredictions(OWWidget):
         self._update_predictions_model()
         self._update_prediction_delegate()
         self._set_errors()
-        self._update_info()
+        self._set_input_summary()
         self.commit()
 
     def _call_predictors(self):
@@ -326,29 +329,39 @@ class OWPredictions(OWWidget):
         else:
             self.Warning.wrong_targets.clear()
 
-    def _update_info(self):
+    def _set_input_summary(self):
         if not self.data and not self.predictors:
             self.info.set_input_summary(self.info.NoInput)
             return
 
-        summary = str(len(self.data)) if self.data else "0"
+        summary = len(self.data) if self.data else 0
         details = self._get_details()
-        self.info.set_input_summary(summary, details)
+        self.info.set_input_summary(summary, details, format=Qt.RichText)
 
     def _get_details(self):
+        details = "Data:<br>"
+        details += format_summary_details(self.data).replace('\n', '<br>') if \
+            self.data else "No data on input."
+        details += "<hr>"
+        pred_names = [v.name for v in self.predictors.values()]
         n_predictors = len(self.predictors)
-        if self.data:
-            details = plural("{number} instance{s}", len(self.data))
-        else:
-            details = "No data"
         if n_predictors:
             n_valid = len(self._non_errored_predictors())
-            details += plural("\n{number} model{s}", n_predictors)
+            details += plural("Model: {number} model{s}", n_predictors)
             if n_valid != n_predictors:
-                details += plural(" ({number} failed)", n_predictors - n_valid)
+                details += f" ({n_predictors - n_valid} failed)"
+            details += "<ul>"
+            for name in pred_names:
+                details += f"<li>{name}</li>"
+            details += "</ul>"
         else:
-            details += "\nNo models"
+            details += "Model:<br>No model on input."
         return details
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def _invalidate_predictions(self):
         for inputid, pred in list(self.predictors.items()):
@@ -572,8 +585,8 @@ class OWPredictions(OWWidget):
 
     def _commit_predictions(self):
         if not self.data:
+            self._set_output_summary(None)
             self.Outputs.predictions.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
             return
 
         newmetas = []
@@ -618,10 +631,7 @@ class OWPredictions(OWWidget):
             source_rows = [map_to(index(row, 0)).row() for row in rows]
             predictions = predictions[source_rows]
         self.Outputs.predictions.send(predictions)
-
-        summary = str(len(predictions))
-        details = format_summary_details(predictions)
-        self.info.set_output_summary(summary, details)
+        self._set_output_summary(predictions)
 
     @staticmethod
     def _add_classification_out_columns(slot, newmetas, newcolumns):
