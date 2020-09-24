@@ -12,7 +12,7 @@ from AnyQt.QtGui import QColor, QPainter, QPen, QStandardItem
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsLineItem, QGraphicsItemGroup)
 
-from Orange.data import Table, filter, Variable, Domain
+from Orange.data import Table, filter, Variable, Domain, DiscreteVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -37,7 +37,7 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output
 class MosaicVizRank(VizRankDialog, OWComponent):
     """VizRank dialog for Mosaic"""
     captionTitle = "Mosaic Ranking"
-    max_attrs = Setting(3)
+    max_attrs = ContextSetting(6)
 
     pairSelected = Signal(Variable, Variable, Variable, Variable)
     _AttrRole = next(gui.OrangeUserRole)
@@ -48,10 +48,11 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         OWComponent.__init__(self, master)
 
         box = gui.hBox(self)
-        self.max_attr_spin = gui.spin(
-            box, self, "max_attrs", 2, 4,
-            label="Limit the number of attributes to: ",
-            controlWidth=50, alignment=Qt.AlignRight,
+        self.max_attr_combo = gui.comboBox(
+            box, self, "max_attrs",
+            label="Number of variables:", orientation=Qt.Horizontal,
+            items=["one", "two", "three", "four",
+                   "at most two", "at most three", "at most four"],
             callback=self.max_attr_changed)
         gui.rubber(box)
         self.layout().addWidget(self.button)
@@ -87,10 +88,10 @@ class MosaicVizRank(VizRankDialog, OWComponent):
             self.rank_model.clear()
         self.compute_attr_order()
         self.last_run_max_attr = self.max_attrs
-        self.max_attr_spin.setDisabled(True)
+        self.max_attr_combo.setDisabled(True)
 
     def stopped(self):
-        self.max_attr_spin.setDisabled(False)
+        self.max_attr_combo.setDisabled(False)
 
     def max_attr_changed(self):
         """
@@ -106,6 +107,15 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.button.setEnabled(self.check_preconditions())
 
     def coloring_changed(self):
+        item = self.max_attr_combo.model().item(0)
+        actflags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+        if self._compute_class_dists():
+            item.setFlags(item.flags() | actflags)
+        else:
+            item.setFlags(item.flags() & ~actflags)
+            if self.max_attrs == 0:
+                self.max_attrs = 1
+
         self.stop_and_reset(self.initialize_keep_ordering)
 
     def check_preconditions(self):
@@ -145,14 +155,22 @@ class MosaicVizRank(VizRankDialog, OWComponent):
     def _compute_class_dists(self):
         return self.master.variable_color is not None
 
+    def attr_range(self):
+        n_attrs = len(self.master.discrete_data.domain.attributes)
+        mm = 1 if self._compute_class_dists() else 2
+        max_attrs = min(n_attrs, [mm, 2, 3, 4, 2, 3, 4][self.max_attrs])
+        min_attrs = [mm, 2, 3, 4, mm, mm, mm][self.max_attrs]
+        return min_attrs, max_attrs
+
     def state_count(self):
         """
         Return the number of combinations, starting with a single attribute
         if Mosaic is colored by class distributions, and two if by Pearson
         """
         n_attrs = len(self.master.discrete_data.domain.attributes)
-        min_attrs = 1 if self._compute_class_dists() else 2
-        max_attrs = min(n_attrs, self.max_attrs)
+        min_attrs, max_attrs = self.attr_range()
+        if min_attrs > max_attrs:
+            return 0
         return sum(comb(n_attrs, k, exact=True)
                    for k in range(min_attrs, max_attrs + 1))
 
@@ -166,16 +184,19 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         # `score_heuristic` would be run on every call to master's `set_data`.
         master = self.master
         data = master.discrete_data
+        min_attrs, max_attrs = self.attr_range()
+        if min_attrs > max_attrs:
+            return
         if state is None:  # on the first call, compute order
             if self._compute_class_dists():
                 self.marginal = get_distribution(data, data.domain.class_var)
                 self.marginal.normalize()
-                state = [0]
+                state = list(range(min_attrs))
             else:
                 self.marginal = get_distributions(data)
                 for dist in self.marginal:
                     dist.normalize()
-                state = [0, 1]
+                state = list(range(min_attrs))
         n_attrs = len(data.domain.attributes)
         while True:
             yield state
@@ -188,7 +209,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                     break
                 state[up] = up
             if state[-1] == len(self.attr_ordering):
-                if len(state) < min(self.max_attrs, n_attrs):
+                if len(state) < min(max_attrs, n_attrs):
                     state = list(range(len(state) + 1))
                 else:
                     break
@@ -286,11 +307,11 @@ class OWMosaicDisplay(OWWidget):
     vizrank = SettingProvider(MosaicVizRank)
     settings_version = 2
     use_boxes = Setting(True)
-    variable1 = ContextSetting(None)
-    variable2 = ContextSetting(None)
-    variable3 = ContextSetting(None)
-    variable4 = ContextSetting(None)
-    variable_color = ContextSetting(None)
+    variable1: Variable = ContextSetting(None)
+    variable2: Variable = ContextSetting(None)
+    variable3: Variable = ContextSetting(None)
+    variable4: Variable = ContextSetting(None)
+    variable_color: DiscreteVariable = ContextSetting(None)
     selection = Setting(set(), schema_only=True)
 
     BAR_WIDTH = 5
