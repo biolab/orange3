@@ -1168,7 +1168,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.density_img = classdensity.class_density_image(
                 min_x, max_x, min_y, max_y, self.resolution,
                 x_data[mask], y_data[mask], rgb_data)
-            self.plot_widget.addItem(self.density_img)
+            self.plot_widget.addItem(self.density_img, ignoreBounds=True)
 
     def update_selection_colors(self):
         """
