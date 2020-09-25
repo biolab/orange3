@@ -554,7 +554,7 @@ class TestOWTestAndScore(WidgetTest):
             scores = w._scores_by_folds(slots)
             self.assertIsNone(scores[0])
             self.assertEqual(scores[1][0], 1)
-            self.assertAlmostEqual(scores[2][0], 1 / 11)
+            self.assertAlmostEqual(scores[2][0], 1 / 6)
 
     def test_comparison_binary_score(self):
         # false warning at call_arg.kwargs

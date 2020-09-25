@@ -169,7 +169,7 @@ class OWTestAndScore(OWWidget):
     #: Selected resampling type
     resampling = settings.Setting(0)
     #: Number of folds for K-fold cross validation
-    n_folds = settings.Setting(3)
+    n_folds = settings.Setting(2)
     #: Stratified sampling for K-fold
     cv_stratified = settings.Setting(True)
     #: Number of repeats for ShuffleSplit sampling
