@@ -124,12 +124,12 @@ class OWLouvainClustering(widget.OWWidget):
             graph_box, self, "metric_idx", label="Distance metric",
             items=[m[0] for m in METRICS], callback=self._invalidate_graph,
             orientation=Qt.Horizontal,
-        )  # type: gui.OrangeComboBox
+        )
         self.k_neighbors_spin = gui.spin(
             graph_box, self, "k_neighbors", minv=1, maxv=_MAX_K_NEIGBOURS,
             label="k neighbors", controlWidth=80, alignment=Qt.AlignRight,
             callback=self._invalidate_graph,
-        )  # type: gui.SpinBoxWFocusOut
+        )
         self.resolution_spin = gui.hSlider(
             graph_box, self, "resolution", minValue=0, maxValue=5., step=1e-1,
             label="Resolution", intOnly=False, labelFormat="%.1f",
