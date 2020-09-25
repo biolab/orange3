@@ -192,6 +192,9 @@ class MovableDotItem(DotItem):
     def hookOnMousePress(self, func):
         self._mousePressFunc = func
 
+    def unhookOnMousePress(self):
+        self._mousePressFunc = None
+
     def mousePressEvent(self, event):
         if self._mousePressFunc:
             self._mousePressFunc()
@@ -282,6 +285,8 @@ class GraphicsColorAnimator(QObject):
         if self.__animation.state() == QPropertyAnimation.Running:
             self.__animation.stop()
         self.__items = items
+        for item in items:
+            item.hookOnMousePress(self.stop)
 
     def start(self):
         self.__animation.start()
@@ -292,6 +297,12 @@ class GraphicsColorAnimator(QObject):
         self.__animation.stop()
         for item in self.__items:
             item.setBrush(self.__defaultColor)
+
+    def clear(self):
+        for item in self.__items:
+            item.unhookOnMousePress()
+        self.__items = []
+
 
 
 class ContinuousItemMixin:
@@ -982,7 +993,6 @@ class OWNomogram(OWWidget):
             item.dot.point_dot = point_item.dot
             item.dot.probs_dot = probs_item.dot
             item.dot.vertical_line = self.hidden_vertical_line
-            item.dot.hookOnMousePress(self.dot_animator.stop)
 
         self.dot_animator.setGraphicsItems(
             [item.dot for item in self.feature_items.values()]
@@ -1262,6 +1272,7 @@ class OWNomogram(OWWidget):
         self.nomogram_main = None
         self.vertical_line = None
         self.hidden_vertical_line = None
+        self.dot_animator.clear()
         self.scene.clear()
 
     def send_report(self):
