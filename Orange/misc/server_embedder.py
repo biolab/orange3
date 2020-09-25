@@ -74,7 +74,7 @@ class ServerEmbedderCommunicator:
         self._cache = EmbedderCache(model_name)
 
         # default embedding timeouts are too small we need to increase them
-        self.timeout = 60
+        self.timeout = 180
         self.num_parallel_requests = 0
         self.max_parallel = max_parallel_requests
         self.content_type = None  # need to be set in a class inheriting
