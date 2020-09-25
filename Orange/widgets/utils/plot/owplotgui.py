@@ -599,9 +599,9 @@ class OWPlotGUI:
         '''
         self._check_box(widget, 'use_antialiasing', 'Use antialiasing', 'update_antialiasing')
 
-    def jitter_size_slider(self, widget):
+    def jitter_size_slider(self, widget, label="Jittering: "):
         return self.add_control(
-            widget, gui.valueSlider, "Jittering",
+            widget, gui.valueSlider, label,
             master=self._plot, value='jitter_size',
             values=getattr(self._plot, "jitter_sizes", self.JITTER_SIZES),
             callback=self._plot.update_jittering)
@@ -676,7 +676,7 @@ class OWPlotGUI:
             maxValue=max_value, step=step, createLabel=show_number,
             callback=self._get_callback(cb_name, self._master))
 
-    def point_size_slider(self, widget, label="Symbol size:   "):
+    def point_size_slider(self, widget, label="Symbol size: "):
         '''
             Creates a slider that controls point size
         '''
