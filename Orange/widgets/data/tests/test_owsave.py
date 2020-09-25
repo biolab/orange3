@@ -7,6 +7,8 @@ import sys
 import scipy.sparse as sp
 from AnyQt.QtWidgets import QFileDialog
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.data.io import TabReader, PickleReader, ExcelReader, FileFormat
 from Orange.tests import named_file
@@ -75,7 +77,7 @@ class TestOWSave(OWSaveTestBase):
         insum.reset_mock()
         self.send_signal(datasig, None)
         insum.assert_called_once()
-        self.assertEqual(insum.call_args[0][0].brief, "")
+        self.assertIsInstance(insum.call_args[0][0], StateInfo.Empty)
 
     def test_initial_start_dir(self):
         widget = self.widget

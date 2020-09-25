@@ -534,7 +534,7 @@ class TestOWDistributions(WidgetTest):
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self._set_slider(0)
@@ -546,9 +546,9 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_sort_by_freq_no_split(self):

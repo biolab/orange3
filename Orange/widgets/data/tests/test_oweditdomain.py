@@ -15,6 +15,8 @@ from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
     QStyleOptionViewItem, QDialog, QMenu
 from AnyQt.QtTest import QTest, QSignalSpy
 
+from orangewidget.widget import StateInfo
+
 from Orange.widgets.utils import colorpalettes
 from orangewidget.tests.utils import simulate
 from orangewidget.utils.itemmodels import PyListModel
@@ -345,15 +347,15 @@ class TestOWEditDomain(WidgetTest):
         enter_text(editor.name_edit, "sepal width")
         self.widget.commit()
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
         input_sum.reset_mock()
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 class TestEditors(GuiTest):

@@ -8,6 +8,8 @@ import numpy.testing as npt
 
 from AnyQt.QtCore import Qt
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.tests import test_filename
 from Orange.widgets.data.owcorrelations import (
@@ -317,9 +319,9 @@ class TestOWCorrelations(WidgetTest):
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 class TestCorrelationRank(WidgetTest):

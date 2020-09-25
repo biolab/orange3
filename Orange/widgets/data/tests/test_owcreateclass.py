@@ -477,17 +477,17 @@ class TestOWCreateClass(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.widget.class_name = ""
         self.widget.apply()
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self.widget.class_name = "type"
         self.widget.apply()
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 if __name__ == "__main__":

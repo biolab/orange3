@@ -550,10 +550,10 @@ class TestOWSOM(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
         self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
-        self.assertEqual(widget.info._StateInfo__input_summary.brief, "")
+        self.assertEqual(widget.info._StateInfo__input_summary.brief, "-")
         self.assertEqual(widget.info._StateInfo__input_summary.details,
                          "No data on input")
-        self.assertEqual(widget.info._StateInfo__output_summary.brief, "")
+        self.assertEqual(widget.info._StateInfo__output_summary.brief, "-")
         self.assertEqual(widget.info._StateInfo__output_summary.details,
                          "No data on output")
 

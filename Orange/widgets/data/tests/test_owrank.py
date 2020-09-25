@@ -10,6 +10,9 @@ from sklearn.exceptions import ConvergenceWarning
 from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtWidgets import QCheckBox
 
+from orangewidget.widget import StateInfo
+from orangewidget.settings import Context, IncompatibleContext
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.modelling import RandomForestLearner, SGDLearner
 from Orange.preprocess.score import Scorer
@@ -20,7 +23,6 @@ from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCOR
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 from Orange.widgets.utils.state_summary import format_summary_details
-from orangewidget.settings import Context, IncompatibleContext
 
 
 class SlowScorer(Scorer):
@@ -488,9 +490,9 @@ class TestOWRank(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.wait_until_finished()
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_concurrent_cancel(self):
         """

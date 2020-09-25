@@ -292,7 +292,7 @@ class TestOWNomogram(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
 
     def test_dots_stop_flashing(self):

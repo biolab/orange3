@@ -540,9 +540,9 @@ class TestOWKMeans(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 

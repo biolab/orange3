@@ -147,5 +147,5 @@ class TestOWBaseLearner(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
         self.send_signal(widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)

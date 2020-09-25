@@ -125,7 +125,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         no_output = "No data on output"
 
         self.send_signal(self.widget.Inputs.evaluation_results, self.results_1_iris)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -133,7 +133,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.brief, summary)
         self.assertEqual(info._StateInfo__output_summary.details, details)
         self.send_signal(self.widget.Inputs.evaluation_results, None)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_unique_output_domain(self):
