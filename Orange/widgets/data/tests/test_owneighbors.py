@@ -54,11 +54,14 @@ class TestOWNeighbors(WidgetTest):
         """Check if neighbors are on the output after apply"""
         widget = self.widget
         self.assertIsNone(self.get_output("Neighbors"))
-        self.send_signal(widget.Inputs.data, self.iris)
-        self.send_signal(widget.Inputs.reference, self.iris[:10])
+        self.send_signals(((widget.Inputs.data, self.iris),
+                           (widget.Inputs.reference, self.iris[:10])))
         widget.apply_button.button.click()
         self.assertIsNotNone(self.get_output("Neighbors"))
         self.assertIsInstance(self.get_output("Neighbors"), Table)
+        self.assertTrue(all([i in self.iris.ids for i in
+                             self.get_output(widget.Outputs.data).ids])
+                        )
 
     def test_settings(self):
         """Check neighbors for various distance metrics"""

@@ -182,6 +182,7 @@ class OWNeighbors(OWWidget):
         if data.domain.metas:
             data_metas = np.hstack((data.metas[indices], data_metas))
         neighbors = Table(domain, data.X[indices], data.Y[indices], data_metas)
+        neighbors.ids = data.ids[indices]
         neighbors.attributes = self.data.attributes
         return neighbors
 
