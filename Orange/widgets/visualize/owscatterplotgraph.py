@@ -256,9 +256,25 @@ def _define_symbols():
     path.lineTo(0.5, 0.5)
     Symbols["?"] = path
 
+    path = QPainterPath()
+    plusCoords = [
+        (-0.5, -0.1), (-0.5, 0.1), (-0.1, 0.1), (-0.1, 0.5),
+        (0.1, 0.5), (0.1, 0.1), (0.5, 0.1), (0.5, -0.1),
+        (0.1, -0.1), (0.1, -0.5), (-0.1, -0.5), (-0.1, -0.1)
+    ]
+    path.moveTo(*plusCoords[0])
+    for x, y in plusCoords[1:]:
+        path.lineTo(x, y)
+    path.closeSubpath()
+    Symbols["+"] = path
+
     tr = QTransform()
     tr.rotate(180)
     Symbols['t'] = tr.map(Symbols['t'])
+
+    tr = QTransform()
+    tr.rotate(45)
+    Symbols['x'] = tr.map(Symbols["+"])
 
 
 _define_symbols()
