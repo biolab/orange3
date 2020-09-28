@@ -8,7 +8,7 @@ import weakref
 from functools import reduce
 from unittest.mock import patch
 
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
@@ -20,8 +20,11 @@ from AnyQt.QtGui import (
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
 )
 from AnyQt.QtCore import (
-    Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize
+    Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize,
+    QMimeDatabase
 )
+
+from orangewidget.workflow.drophandler import SingleFileDropHandler
 
 from Orange.data import Table
 from Orange.base import Learner, Model
@@ -798,6 +801,33 @@ class OWPythonScript(OWWidget):
             library = [dict(name=s.name, script=s.script, filename=s.filename)
                        for s in scripts]  # type: List[_ScriptData]
             settings["scriptLibrary"] = library
+
+
+class OWPythonScriptDropHandler(SingleFileDropHandler):
+    WIDGET = OWPythonScript
+
+    def canDropFile(self, path: str) -> bool:
+        md = QMimeDatabase()
+        mt = md.mimeTypeForFile(path)
+        return mt.inherits("text/x-python")
+
+    def parametersFromFile(self, path: str) -> Dict[str, Any]:
+        with open(path, "rt") as f:
+            content = f.read()
+
+        item: '_ScriptData' = {
+            "name": os.path.basename(path),
+            "script": content,
+            "filename": path,
+        }
+        params = {
+            "__version__": OWPythonScript.settings_version,
+            "scriptLibrary": [
+                item,
+            ],
+            "scriptText": content
+        }
+        return params
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -11,7 +11,7 @@ import numpy as np
 from orangewidget.utils.filedialogs import RecentPath
 from Orange.data import Table
 from Orange.classification.naive_bayes import NaiveBayesLearner
-from Orange.widgets.model.owloadmodel import OWLoadModel
+from Orange.widgets.model.owloadmodel import OWLoadModel, OWLoadModelDropHandler
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -134,6 +134,18 @@ class TestOWLoadModel(WidgetTest):
             self.assertEqual(args.name, file_name.replace("\\", "/"))
         finally:
             os.remove(file_name)
+
+
+class TestOWLoadModelDropHandler(unittest.TestCase):
+    def test_canDropFile(self):
+        handler = OWLoadModelDropHandler()
+        self.assertTrue(handler.canDropFile("test.pkcls"))
+        self.assertFalse(handler.canDropFile("test.txt"))
+
+    def test_parametersFromFile(self):
+        handler = OWLoadModelDropHandler()
+        res = handler.parametersFromFile("test.pkcls")
+        self.assertEqual(res["recent_paths"][0].basename, "test.pkcls")
 
 
 if __name__ == "__main__":

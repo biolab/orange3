@@ -97,6 +97,12 @@ ENTRY_POINTS = {
     "orange.canvas.help": (
         "html-index = Orange.widgets:WIDGET_HELP_PATH",
     ),
+    "orangecanvas.document.interactions.DropHandler": (
+        "File = Orange.widgets.data.owfile:OWFileDropHandler",
+        "Load Model = Orange.widgets.model.owloadmodel:OWLoadModelDropHandler",
+        "Distance File = Orange.widgets.unsupervised.owdistancefile:OWDistanceFileDropHandler",
+        "Python Script = Orange.widgets.data.owpythonscript:OWPythonScriptDropHandler",
+    ),
     "gui_scripts": (
         "orange-canvas = Orange.canvas.__main__:main",
     ),

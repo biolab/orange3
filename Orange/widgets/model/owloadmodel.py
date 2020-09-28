@@ -1,13 +1,16 @@
 import os
 import pickle
+from typing import Any, Dict
 
 from AnyQt.QtWidgets import QSizePolicy, QStyle, QFileDialog
 from AnyQt.QtCore import QTimer
 
+from orangewidget.workflow.drophandler import SingleFileDropHandler
+
 from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.model import owsavemodel
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath
 from Orange.widgets.utils import stdpaths
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Output
@@ -86,6 +89,19 @@ class OWLoadModel(widget.OWWidget, RecentPathsWComboMixin):
             self.Outputs.model.send(None)
         else:
             self.Outputs.model.send(model)
+
+
+class OWLoadModelDropHandler(SingleFileDropHandler):
+    WIDGET = OWLoadModel
+
+    def canDropFile(self, path: str) -> bool:
+        return path.endswith(".pkcls")
+
+    def parametersFromFile(self, path: str) -> Dict[str, Any]:
+        r = RecentPath(os.path.abspath(path), None, None,
+                       os.path.basename(path))
+        parameters = {"recent_paths": [r]}
+        return parameters
 
 
 if __name__ == "__main__":  # pragma: no cover

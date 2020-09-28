@@ -2,13 +2,15 @@ import os
 import logging
 from itertools import chain
 from urllib.parse import urlparse
-from typing import List
+from typing import List, Dict, Any
 
 import numpy as np
 from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy, QCompleter
-from AnyQt.QtCore import Qt, QTimer, QSize
+from AnyQt.QtCore import Qt, QTimer, QSize, QUrl
+
+from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
@@ -27,7 +29,6 @@ from Orange.widgets.widget import Output, Msg
 # and it is used in saved (pickled) settings. It must be imported into the
 # module's namespace so that old saved settings still work
 from Orange.widgets.utils.filedialogs import RecentPath
-
 
 log = logging.getLogger(__name__)
 
@@ -569,6 +570,35 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         (e.g. relative file paths are changed)
         """
         self.update_file_list(key, value, oldvalue)
+
+
+class OWFileDropHandler(SingleUrlDropHandler):
+    WIDGET = OWFile
+
+    def canDropUrl(self, url: QUrl) -> bool:
+        if url.isLocalFile():
+            try:
+                FileFormat.get_reader(url.toLocalFile())
+                return True
+            except Exception:  # noqa # pylint:disable=broad-except
+                return False
+        else:
+            return url.scheme().lower() in ("http", "https", "ftp")
+
+    def parametersFromUrl(self, url: QUrl) -> Dict[str, Any]:
+        if url.isLocalFile():
+            path = url.toLocalFile()
+            r = RecentPath(os.path.abspath(path), None, None,
+                           os.path.basename(path))
+            return {
+                "recent_paths": [r],
+                "source": OWFile.LOCAL_FILE,
+            }
+        else:
+            return {
+                "recent_urls": [url.toString()],
+                "source": OWFile.URL,
+            }
 
 
 if __name__ == "__main__":  # pragma: no cover
