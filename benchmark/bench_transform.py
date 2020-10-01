@@ -4,6 +4,8 @@ import numpy as np
 import scipy.sparse
 
 from Orange.data import Table, ContinuousVariable, Domain
+from Orange.tests.test_table import preprocess_domain_single, preprocess_domain_shared
+
 from .base import Benchmark, benchmark
 
 
@@ -51,3 +53,53 @@ class BenchTransform(Benchmark):
     def bench_copy_sparse_wide(self):
         t = add_unknown_attribute(self.table)
         self.assertIsInstance(t.X, scipy.sparse.csr_matrix)
+
+    def setup_dense_transforms(self, rows, cols, transforms):
+        self.setup_dense(rows, cols)
+        self.domains = []  # pylint: disable=attribute-defined-outside-init
+        self.callbacks = []  # pylint: disable=attribute-defined-outside-init
+        domain = self.table.domain
+        for t in transforms:
+            if t == "single":
+                call_cv = Mock()
+                domain = preprocess_domain_single(domain, call_cv)
+                self.callbacks.append((call_cv,))
+            elif t == "shared":
+                call_cv, call_shared = Mock(), Mock()
+                domain = preprocess_domain_shared(domain, call_cv, call_shared)
+                self.callbacks.append((call_cv, call_shared))
+            else:
+                raise RuntimeError
+            self.domains.append(domain)
+
+    @benchmark(setup=partial(setup_dense_transforms, rows=1000, cols=100,
+                             transforms=["single"]), number=5)
+    def bench_transform_single(self):
+        t = self.table.transform(self.domains[-1])
+        np.testing.assert_almost_equal(t.X, self.table.X * 2)
+
+    @benchmark(setup=partial(setup_dense_transforms, rows=1000, cols=100,
+                             transforms=["single", "single"]), number=5)
+    def bench_transform_single_single(self):
+        t = self.table.transform(self.domains[-1])
+        np.testing.assert_almost_equal(t.X, self.table.X * 2**2)
+
+    @benchmark(setup=partial(setup_dense_transforms, rows=1000, cols=100,
+                             transforms=["shared"]), number=5)
+    def bench_transform_shared(self):
+        t = self.table.transform(self.domains[-1])
+        np.testing.assert_almost_equal(t.X, self.table.X * 2)
+
+    @benchmark(setup=partial(setup_dense_transforms, rows=1000, cols=100,
+                             transforms=["single", "single", "shared", "single"]), number=5)
+    def bench_transform_single_single_shared_single(self):
+        t = self.table.transform(self.domains[-1])
+        np.testing.assert_almost_equal(t.X, self.table.X * 2**4)
+
+
+    @benchmark(setup=partial(setup_dense_transforms, rows=1000, cols=100,
+                             transforms=["single", "single", "shared",
+                                         "single", "shared", "single"]), number=5)
+    def bench_transform_single_single_shared_single_shared_single(self):
+        t = self.table.transform(self.domains[-1])
+        np.testing.assert_almost_equal(t.X, self.table.X * 2**6)
