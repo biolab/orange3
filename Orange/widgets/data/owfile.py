@@ -2,7 +2,7 @@ import os
 import logging
 from itertools import chain
 from urllib.parse import urlparse
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 from AnyQt.QtWidgets import \
@@ -14,8 +14,9 @@ from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import Setting, ContextSetting, \
-    PerfectDomainContextHandler, SettingProvider
+from Orange.widgets.settings import \
+    Setting, PerfectDomainContextHandler, SettingProvider
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
@@ -23,12 +24,7 @@ from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Output, Msg
-
-# Backward compatibility: class RecentPath used to be defined in this module,
-# and it is used in saved (pickled) settings. It must be imported into the
-# module's namespace so that old saved settings still work
 from Orange.widgets.utils.filedialogs import RecentPath
-
 
 log = logging.getLogger(__name__)
 
@@ -95,10 +91,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     LOCAL_FILE, URL = range(2)
 
     settingsHandler = PerfectDomainContextHandler(
-        match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
-    )
+            match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL)
 
     # pylint seems to want declarations separated from definitions
+    # This must be in the widget, not the mixin - otherwise all widgets will
+    # share the same paths
     recent_paths: List[RecentPath]
     recent_urls: List[str]
     variables: list
@@ -114,10 +111,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     ])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
-    sheet_names = Setting({})
+    sheet_names: Dict[str, str] = Setting({})
     url = Setting("")
-
-    variables = ContextSetting([])
 
     domain_editor = SettingProvider(DomainEditor)
 
@@ -471,13 +466,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 f"Last entry: {table[-1, 'Timestamp']}</p>"
         return text
 
-    def storeSpecificSettings(self):
-        self.current_context.modified_variables = self.variables[:]
-
-    def retrieveSpecificSettings(self):
-        if hasattr(self.current_context, "modified_variables"):
-            self.variables[:] = self.current_context.modified_variables
-
     def reset_domain_edit(self):
         self.domain_editor.reset_domain()
         self.apply_domain_edit()
@@ -577,6 +565,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         (e.g. relative file paths are changed)
         """
         self.update_file_list(key, value, oldvalue)
+
+    @classmethod
+    def migrate_context(cls, context, _):
+        if hasattr(context, "modified_variables"):
+            delattr(context, "modified_variables")
+            de_vars = context.values["domain_editor"]["variables"]
+            de_vars[:] = [(x[0], vartype(x[1]), *x[2:]) for x in de_vars]
 
 
 if __name__ == "__main__":  # pragma: no cover

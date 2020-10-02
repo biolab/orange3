@@ -23,13 +23,15 @@ class DomainEditorTest(GuiTest):
         self.widget = MockWidget()
         self.editor = self.widget.domain_editor
 
+        discrete, continuous, string, time = range(1, 5)
+
         self.orig_variables = [
-            ["d1", DiscreteVariable, 0, "x, y, z, ...", False],
-            ["d2", DiscreteVariable, 0, "1, 2, 3, ...", True],
-            ["c1", ContinuousVariable, 0, "", True],
-            ["d3", DiscreteVariable, 1, "4, 3, 6, ...", True],
-            ["s", StringVariable, 2, "", False],
-            ["t", TimeVariable, 2, "", True]
+            ("d1", discrete, 0, "x, y, z, ...", False),
+            ("d2", discrete, 0, "1, 2, 3, ...", True),
+            ("c1", continuous, 0, "", True),
+            ("d3", discrete, 1, "4, 3, 6, ...", True),
+            ("s", string, 2, "", False),
+            ("t", time, 2, "", True)
         ]
         self.domain = Domain(
             [DiscreteVariable("d1", values=list("xyzw")),
@@ -51,7 +53,7 @@ class DomainEditorTest(GuiTest):
 
         # No duplicates
 
-        domain, _ = \
+        domain, *_ = \
             editor.get_domain(self.domain, data)
         self.assertEqual([var.name for var in domain.attributes],
                          ["d1", "d2", "c1"])
