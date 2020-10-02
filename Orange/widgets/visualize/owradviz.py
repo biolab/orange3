@@ -339,8 +339,6 @@ class OWRadviz(OWAnchorProjectionWidget):
             None, self, "Suggest features", self.vizrank_set_attrs)
         self.controlArea.layout().addWidget(self.btn_vizrank)
         super()._add_controls()
-        self.controlArea.layout().removeWidget(self.control_area_stretch)
-        self.control_area_stretch.setParent(None)
 
     @property
     def primitive_variables(self):

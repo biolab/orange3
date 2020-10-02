@@ -428,9 +428,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self._point_box = self.gui.point_properties_box(area)
         self._effects_box = self.gui.effects_box(area)
         self._plot_box = self.gui.plot_properties_box(area)
-        self.control_area_stretch = gui.widgetBox(area)
-        self.control_area_stretch.layout().addStretch(100)
-        self.gui.box_zoom_select(area)
+
+        self.gui.box_zoom_select(self.buttonsArea)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
     @property
