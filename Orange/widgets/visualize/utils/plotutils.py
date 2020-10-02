@@ -486,10 +486,56 @@ class SymbolItemSample(ItemSample):
 
 
 class AxisItem(pg.AxisItem):
+    def __init__(self, orientation, rotate_ticks=False, **kwargs):
+        super().__init__(orientation, **kwargs)
+        self.style["rotateTicks"] = rotate_ticks
+
+    def setRotateTicks(self, rotate):
+        self.style["rotateTicks"] = rotate
+        self.picture = None  # pylint: disable=attribute-defined-outside-init
+        self.prepareGeometryChange()
+        self.update()
+
     def generateDrawSpecs(self, p):
         if self.style["tickFont"]:
             p.setFont(self.style["tickFont"])
         return super().generateDrawSpecs(p)
+
+    def drawPicture(self, p, axisSpec, tickSpecs, textSpecs):
+        if self.orientation in ["bottom", "top"] and self.style["rotateTicks"]:
+            p.setRenderHint(p.Antialiasing, False)
+            p.setRenderHint(p.TextAntialiasing, True)
+
+            # draw long line along axis
+            pen, p1, p2 = axisSpec
+            p.setPen(pen)
+            p.drawLine(p1, p2)
+            p.translate(0.5, 0)  # resolves some damn pixel ambiguity
+
+            # draw ticks
+            for pen, p1, p2 in tickSpecs:
+                p.setPen(pen)
+                p.drawLine(p1, p2)
+
+            # draw all text
+            if self.style['tickFont'] is not None:
+                p.setFont(self.style['tickFont'])
+            p.setPen(self.pen())
+
+            offset = self.style["tickTextOffset"][0]
+            max_text_size = 0
+            for rect, flags, text in textSpecs:
+                p.save()
+                p.translate(rect.x() + rect.width() / 2
+                            - rect.y() - rect.height() / 2,
+                            rect.x() + rect.width() + offset)
+                p.rotate(-90)
+                p.drawText(rect, flags, text)
+                p.restore()
+                max_text_size = max(max_text_size, rect.width())
+            self._updateMaxTextSize(max_text_size + offset)
+        else:
+            super().drawPicture(p, axisSpec, tickSpecs, textSpecs)
 
     def _updateMaxTextSize(self, x):
         if self.orientation in ["left", "right"]:
