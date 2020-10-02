@@ -1,4 +1,3 @@
-from AnyQt.QtCore import Qt
 from scipy.sparse import issparse
 import bottleneck as bn
 
@@ -77,7 +76,6 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
     want_main_area = False
     resizing_enabled = False
-    buttons_area_orientation = Qt.Vertical
 
     class Error(OWWidget.Error):
         no_continuous_features = Msg("No numeric features")
@@ -122,7 +120,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         _, metric = METRICS[self.metric_idx]
         self.normalization_check.setEnabled(metric.supports_normalization)
 
-        gui.auto_apply(self.controlArea, self, "autocommit")
+        gui.auto_apply(self.buttonsArea, self, "autocommit")
 
     @Inputs.data
     @check_sql_input
