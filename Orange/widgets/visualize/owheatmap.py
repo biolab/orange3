@@ -444,8 +444,7 @@ class OWHeatMap(widget.OWWidget):
                      "Keep aspect ratio", box="Resize",
                      callback=self.__aspect_mode_changed)
 
-        gui.rubber(self.controlArea)
-        gui.auto_send(self.controlArea, self, "auto_commit")
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # Scene with heatmap
         class HeatmapScene(QGraphicsScene):
