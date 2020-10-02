@@ -253,8 +253,6 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
     priority = 1102
     keywords = []
 
-    buttons_area_orientation = Qt.Vertical
-
     class Inputs:
         data = Input("Data", Table)
         scorer = Input("Scorer", score.Scorer, multiple=True)
@@ -372,7 +370,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
         selMethBox.layout().addLayout(grid)
 
-        gui.auto_send(selMethBox, self, "auto_apply", box=False)
+        gui.auto_send(self.buttonsArea, self, "auto_apply")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
