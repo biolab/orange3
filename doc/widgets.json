@@ -342,6 +342,15 @@
     "keywords": []
    },
    {
+    "text": "Bar Plot",
+    "doc": null,
+    "icon": "../Orange/widgets/visualize/icons/BarPlot.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "chart"
+    ]
+   },
+   {
     "text": "Sieve Diagram",
     "doc": "visual-programming/source/widgets/visualize/sievediagram.md",
     "icon": "../Orange/widgets/visualize/icons/SieveDiagram.svg",
