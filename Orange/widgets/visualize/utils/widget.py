@@ -431,7 +431,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.control_area_stretch = gui.widgetBox(area)
         self.control_area_stretch.layout().addStretch(100)
         self.gui.box_zoom_select(area)
-        gui.auto_send(area, self, "auto_commit")
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
     @property
     def effective_variables(self):
