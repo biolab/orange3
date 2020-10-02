@@ -1,4 +1,3 @@
-from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QFrame
 
 from Orange.data import Table
@@ -37,7 +36,6 @@ class OWPurgeDomain(widget.OWWidget):
 
     want_main_area = False
     resizing_enabled = False
-    buttons_area_orientation = Qt.Vertical
 
     feature_options = (('sortValues', 'Sort categorical feature values'),
                        ('removeValues', 'Remove unused feature values'),
@@ -113,7 +111,6 @@ class OWPurgeDomain(widget.OWWidget):
                   "Reduced: %(reducedMetas)s, removed: %(removedMetas)s")
 
         gui.auto_send(self.buttonsArea, self, "autoSend")
-        gui.rubber(self.controlArea)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
