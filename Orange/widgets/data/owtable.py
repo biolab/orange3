@@ -177,14 +177,14 @@ class OWDataTable(OWWidget):
     priority = 50
     keywords = []
 
-    buttons_area_orientation = Qt.Vertical
-
     class Inputs:
         data = Input("Data", Table, multiple=True)
 
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
+
+    buttons_area_orientation = Qt.Vertical
 
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
@@ -235,10 +235,10 @@ class OWDataTable(OWWidget):
 
         gui.rubber(self.controlArea)
 
-        reset = gui.button(
-            None, self, "Restore Original Order", callback=self.restore_order,
-            tooltip="Show rows in the original order", autoDefault=False)
-        self.buttonsArea.layout().insertWidget(0, reset)
+        gui.button(self.buttonsArea, self, "Restore Original Order",
+                   callback=self.restore_order,
+                   tooltip="Show rows in the original order",
+                   autoDefault=False)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # GUI with tabs
