@@ -99,7 +99,6 @@ class OWSilhouettePlot(widget.OWWidget):
                  ("Cosine", Orange.distance.Cosine)]
 
     graph_name = "scene"
-    buttons_area_orientation = Qt.Vertical
 
     class Error(widget.OWWidget.Error):
         need_two_clusters = Msg("Need at least two non-empty clusters")
@@ -179,10 +178,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        box = gui.vBox(self.buttonsArea, box=True)
-        gui.auto_send(box, self, "auto_commit", box=False)
-        # Ensure that the controlArea is not narrower than buttonsArea
-        self.controlArea.layout().addWidget(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.scene = QGraphicsScene(self)
         self.view = StickyGraphicsView(self.scene)
