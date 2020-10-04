@@ -168,13 +168,13 @@ class OWHeatMap(widget.OWWidget):
     legend: bool = settings.Setting(True)
     # Annotations
     #: text row annotation (row names)
-    annotation_var = settings.ContextSetting(None)
+    annotation_var: Variable = settings.ContextSetting(None)
     #: color row annotation
-    annotation_color_var = settings.ContextSetting(None)
+    annotation_color_var: Variable = settings.ContextSetting(None)
     column_annotation_color_key: Optional[Tuple[str, str]] = settings.ContextSetting(None)
 
     # Discrete variable used to split that data/heatmaps (vertically)
-    split_by_var = settings.ContextSetting(None)
+    split_by_var: DiscreteVariable = settings.ContextSetting(None)
     # Split heatmap columns by 'key' (horizontal)
     split_columns_key: Optional[Tuple[str, str]] = settings.ContextSetting(None)
     # Selected row/column clustering method (name)

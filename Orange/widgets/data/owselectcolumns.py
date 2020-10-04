@@ -166,7 +166,7 @@ class OWSelectAttributes(widget.OWWidget):
     want_control_area = True
 
     settingsHandler = SelectAttributesDomainContextHandler(first_match=False)
-    domain_role_hints = ContextSetting({})
+    domain_role_hints: Dict[Tuple[str, int], Tuple[str, int]] = ContextSetting({})
     use_input_features = Setting(False)
     ignore_new_features = Setting(False)
     auto_commit = Setting(True)

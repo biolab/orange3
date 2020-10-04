@@ -1,5 +1,6 @@
 from collections import namedtuple
 from itertools import chain, product
+from typing import List, Tuple, Dict
 
 import numpy as np
 
@@ -7,6 +8,8 @@ from AnyQt.QtCore import Qt, QModelIndex, pyqtSignal as Signal
 from AnyQt.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout
 )
+
+from orangewidget.settings import Context
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
@@ -173,11 +176,18 @@ class DomainModelWithTooltips(DomainModel):
         return super().data(index, role)
 
 
+class MergeDataContext(Context):
+    variables1: Dict[str, int]
+    variables2: Dict[str, int]
+
+
 class MergeDataContextHandler(ContextHandler):
     # `widget` is used as an argument in most methods
     # pylint: disable=redefined-outer-name
     # context handlers override methods using different signatures
     # pylint: disable=arguments-differ
+
+    ContextType = MergeDataContext
 
     def new_context(self, variables1, variables2):
         context = super().new_context()
@@ -286,7 +296,8 @@ class OWMergeData(widget.OWWidget):
             "merging_types")]
 
     settingsHandler = MergeDataContextHandler()
-    attr_pairs = ContextSetting(None, schema_only=True)
+    attr_pairs: List[Tuple[Variable, Variable]] \
+        = ContextSetting([], schema_only=True)
     merging = Setting(LeftJoin)
     auto_apply = Setting(True)
     settings_version = 2

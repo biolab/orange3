@@ -1,5 +1,6 @@
 # pylint: disable=missing-docstring
-from typing import Iterable, Set
+from enum import IntEnum
+from typing import Iterable, Set, Tuple
 from collections import defaultdict
 from itertools import product, chain
 
@@ -20,7 +21,6 @@ from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
 from Orange.statistics.util import (nanmin, nanmax, nanunique, nansum, nanvar,
                                     nanmean, nanmedian, nanmode, bincount)
-from Orange.util import Enum
 from Orange.widgets import gui
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
@@ -36,7 +36,7 @@ BorderRole = next(gui.OrangeUserRole)
 BorderColorRole = next(gui.OrangeUserRole)
 
 
-class AggregationFunctionsEnum(Enum):
+class AggregationFunctionsEnum(IntEnum):
     (Count, Count_defined, Sum, Mean, Min, Max,
      Mode, Median, Var, Majority) = range(10)
 
@@ -45,7 +45,7 @@ class AggregationFunctionsEnum(Enum):
         self.func = None
 
     @property
-    def value(self):
+    def value(self):  # pylint: disable=invalid-overridden-method
         return self._value_
 
     def __call__(self, *args):
@@ -748,11 +748,11 @@ class OWPivot(OWWidget):
         too_many_values = Msg("Selected variable has too many values.")
 
     settingsHandler = DomainContextHandler()
-    row_feature = ContextSetting(None)
-    col_feature = ContextSetting(None)
-    val_feature = ContextSetting(None)
-    sel_agg_functions = Setting(set([Pivot.Count]))
-    selection = Setting(set(), schema_only=True)
+    row_feature: Variable = ContextSetting(None)
+    col_feature: DiscreteVariable = ContextSetting(None)
+    val_feature: Variable = ContextSetting(None)
+    sel_agg_functions: Set[AggregationFunctionsEnum] = Setting({Pivot.Count})
+    selection: Set[Tuple[int, int]] = Setting(set(), schema_only=True)
     auto_commit = Setting(True)
 
     AGGREGATIONS = (Pivot.Count,

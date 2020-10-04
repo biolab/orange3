@@ -1,5 +1,6 @@
 from functools import partial, reduce
 from itertools import count, groupby, repeat
+from typing import Set
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -11,7 +12,8 @@ from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 from orangewidget.utils.listview import ListViewSearch
 import pyqtgraph as pg
 
-from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
+from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain, \
+    Variable
 from Orange.preprocess.discretize import decimal_binnings, time_binnings, \
     short_time_units
 from Orange.statistics import distribution, contingency
@@ -270,9 +272,9 @@ class OWDistributions(OWWidget):
         ignored_nans = Msg("Data instances with missing values are ignored")
 
     settingsHandler = settings.DomainContextHandler()
-    var = settings.ContextSetting(None)
-    cvar = settings.ContextSetting(None)
-    selection = settings.ContextSetting(set(), schema_only=True)
+    var: Variable = settings.ContextSetting(None)
+    cvar: DiscreteVariable = settings.ContextSetting(None)
+    selection: Set[int] = settings.ContextSetting(set(), schema_only=True)
     # number_of_bins must be a context setting because selection depends on it
     number_of_bins = settings.ContextSetting(5, schema_only=True)
 

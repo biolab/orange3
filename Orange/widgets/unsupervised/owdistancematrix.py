@@ -1,5 +1,6 @@
 import itertools
 import math
+from typing import List
 
 import numpy as np
 
@@ -8,15 +9,18 @@ from AnyQt.QtWidgets import QTableView, QItemDelegate, QHeaderView, QStyle, \
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtCore import Qt, QAbstractTableModel, QSize
 
+from orangewidget.settings import Context
+
 from Orange.data import Table, Variable, StringVariable
 from Orange.misc import DistMatrix
-from Orange.widgets import widget, gui
+
+from Orange.widgets import gui
 from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.itemselectionmodel import SymmetricSelectionModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
 
 
 class DistanceMatrixModel(QAbstractTableModel):
@@ -147,7 +151,16 @@ class TableView(gui.HScrollStepMixin, QTableView):
         return hint + 1 if self.showGrid() else hint
 
 
+class DistanceMatrixContext(Context):
+    dim: int
+    annotations: List[str]
+    annotation: str
+    selection: List[int]
+
+
 class DistanceMatrixContextHandler(ContextHandler):
+    ContextType = DistanceMatrixContext
+
     @staticmethod
     def _var_names(annotations):
         return [a.name if isinstance(a, Variable) else a for a in annotations]
@@ -180,7 +193,7 @@ class DistanceMatrixContextHandler(ContextHandler):
         widget.tableview.selectionModel().setSelectedItems(context.selection)
 
 
-class OWDistanceMatrix(widget.OWWidget):
+class OWDistanceMatrix(OWWidget):
     name = "Distance Matrix"
     description = "View distance matrix."
     icon = "icons/DistanceMatrix.svg"
@@ -197,7 +210,7 @@ class OWDistanceMatrix(widget.OWWidget):
     settingsHandler = DistanceMatrixContextHandler()
     auto_commit = Setting(True)
     annotation_idx = ContextSetting(1)
-    selection = ContextSetting([])
+    selection: List[int] = ContextSetting([])
 
     want_control_area = True
     want_main_area = False
@@ -288,7 +301,7 @@ class OWDistanceMatrix(widget.OWWidget):
             attr = self.distances.row_items.domain.attributes
             labels = [str(attr[i]) for i in range(self.distances.shape[0])]
         elif self.annotation_idx == 2 and \
-                isinstance(self.items, widget.AttributeList):
+                isinstance(self.items, AttributeList):
             labels = [v.name for v in self.items]
         elif isinstance(self.items, Table):
             var = self.annot_combo.model()[self.annotation_idx]

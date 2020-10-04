@@ -180,7 +180,7 @@ class OWDataSets(OWWidget):
         data = Output("Data", Orange.data.Table)
 
     #: Selected dataset id
-    selected_id = settings.Setting(None)   # type: Optional[str]
+    selected_id: Optional[str] = settings.Setting(None)
 
     #: main area splitter state
     splitter_state = settings.Setting(b'')  # type: bytes

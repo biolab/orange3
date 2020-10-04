@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -6,6 +6,7 @@ import numpy as np
 from AnyQt.QtCore import QSize, Signal, Qt
 from AnyQt.QtWidgets import QApplication
 
+from orangewidget.utils import visual_settings_dlg as vissettings
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from Orange.data import (
@@ -385,7 +386,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     settingsHandler = DomainContextHandler()
     selection: List[Tuple[int, int]] = Setting(None, schema_only=True)
-    visual_settings = Setting({}, schema_only=True)
+    visual_settings: Dict[vissettings.KeyType, vissettings.ValueType] \
+        = Setting({}, schema_only=True)
     auto_commit = Setting(True)
 
     GRAPH_CLASS = OWScatterPlotBase
