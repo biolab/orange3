@@ -31,8 +31,6 @@ class OWSGD(OWBaseLearner):
 
     LEARNER = SGDLearner
 
-    left_side_scrolling = True
-
     class Outputs(OWBaseLearner.Outputs):
         coefficients = Output("Coefficients", Table, explicit=True)
 
