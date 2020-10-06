@@ -27,7 +27,7 @@ class SlowScorer(Scorer):
     name = "Slow scorer"
 
     def score_data(self, data, feature=None):
-        time.sleep(3)
+        time.sleep(1)
         return np.ones((1, len(data.domain.attributes)))
 
 
