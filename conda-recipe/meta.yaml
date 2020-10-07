@@ -43,7 +43,7 @@ requirements:
     - xlrd >=0.9.2
     - xlsxwriter
     - anyqt >=0.0.8
-    - pyqt >=5.12
+    - pyqt >=5.12,!=5.15.1
     - pyqtgraph ~=0.10.0|~=0.11.0
     - joblib >=0.9.4
     - keyring
