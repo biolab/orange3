@@ -643,8 +643,8 @@ def main(argv=None):
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
     else:
-        canvas_window.ask_load_swp_if_exists()
-        if want_welcome:
+        swp_loaded = canvas_window.ask_load_swp_if_exists()
+        if not swp_loaded and want_welcome:
             canvas_window.welcome_dialog()
 
     # local references prevent destruction
