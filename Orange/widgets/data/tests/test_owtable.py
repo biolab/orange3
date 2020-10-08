@@ -169,5 +169,11 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         self.assertEqual(info._StateInfo__output_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
+    def test_info(self):
+        info_text = self.widget.info_text
+        no_input = "No data."
+        self.assertEqual(info_text.text(), no_input)
+
+
 if __name__ == "__main__":
     unittest.main()
