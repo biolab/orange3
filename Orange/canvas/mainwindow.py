@@ -2,7 +2,7 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import (
     QFormLayout, QCheckBox, QLineEdit, QWidget, QVBoxLayout, QLabel
 )
-from orangecanvas.application.settings import UserSettingsDialog
+from orangecanvas.application.settings import UserSettingsDialog, FormLayout
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.utils.overlay import NotificationOverlay
 
@@ -26,7 +26,7 @@ class OUserSettingsDialog(UserSettingsDialog):
         self.addTab(tab, self.tr("Reporting"),
                     toolTip="Settings related to reporting")
 
-        form = QFormLayout()
+        form = FormLayout()
         line_edit_mid = QLineEdit()
         self.bind(line_edit_mid, "text", "reporting/machine-id")
         form.addRow("Machine ID:", line_edit_mid)
@@ -58,7 +58,7 @@ class OUserSettingsDialog(UserSettingsDialog):
         self.addTab(tab, self.tr("Notifications"),
                     toolTip="Settings related to notifications")
 
-        form = QFormLayout()
+        form = FormLayout()
 
         box = QWidget()
         layout = QVBoxLayout()
