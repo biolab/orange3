@@ -743,7 +743,7 @@ class OWDataTable(OWWidget):
                 return f"{n} {part}s"
 
         if slot is None:
-            return "No data."
+            return ["No data."]
         summary = slot.summary
         text = []
         if isinstance(summary, ApproxSummary):
