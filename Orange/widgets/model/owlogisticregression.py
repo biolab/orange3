@@ -40,6 +40,7 @@ class OWLogisticRegression(OWBaseLearner):
     tol = 0.0001
     fit_intercept = True
     intercept_scaling = 1.0
+    max_iter = 10000
 
     penalty_types = ("Lasso (L1)", "Ridge (L2)")
     penalty_types_short = ["l1", "l2"]
@@ -79,6 +80,7 @@ class OWLogisticRegression(OWBaseLearner):
             C=self.strength_C,
             fit_intercept=self.fit_intercept,
             intercept_scaling=self.intercept_scaling,
+            max_iter=self.max_iter,
             preprocessors=self.preprocessors,
             random_state=0
         )
