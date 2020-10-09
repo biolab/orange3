@@ -138,24 +138,6 @@ class DomainContextHandler(ContextHandler):
                 and not self._var_exists(setting, value, attrs, metas):
             del data[setting.name]
 
-    def settings_to_widget(self, widget, domain, *args):
-        # TODO: If https://github.com/biolab/orange-widget-base/pull/56 is:
-        #  - merged, remove this method.
-        #  - rejected, remove this comment.
-        context = widget.current_context
-        if context is None:
-            return
-
-        widget.retrieveSpecificSettings()
-
-        for setting, data, instance in \
-                self.provider.traverse_settings(data=context.values, instance=widget):
-            if not isinstance(setting, ContextSetting) or setting.name not in data:
-                continue
-
-            value = self.decode_setting(setting, data[setting.name], domain)
-            _apply_setting(setting, instance, value)
-
     @staticmethod
     def encode_variable(var):
         return var.name, 100 + vartype(var)

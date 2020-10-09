@@ -54,11 +54,14 @@ class TestOWNeighbors(WidgetTest):
         """Check if neighbors are on the output after apply"""
         widget = self.widget
         self.assertIsNone(self.get_output("Neighbors"))
-        self.send_signal(widget.Inputs.data, self.iris)
-        self.send_signal(widget.Inputs.reference, self.iris[:10])
+        self.send_signals(((widget.Inputs.data, self.iris),
+                           (widget.Inputs.reference, self.iris[:10])))
         widget.apply_button.button.click()
         self.assertIsNotNone(self.get_output("Neighbors"))
         self.assertIsInstance(self.get_output("Neighbors"), Table)
+        self.assertTrue(all([i in self.iris.ids for i in
+                             self.get_output(widget.Outputs.data).ids])
+                        )
 
     def test_settings(self):
         """Check neighbors for various distance metrics"""
@@ -87,18 +90,6 @@ class TestOWNeighbors(WidgetTest):
         neighbors = self.get_output(widget.Outputs.data)
         for inst in reference:
             self.assertNotIn(inst, neighbors)
-
-    def test_include_reference(self):
-        """Check neighbors when reference is included"""
-        widget = self.widget
-        widget.controls.exclude_reference.setChecked(False)
-        reference = self.iris[:5]
-        self.send_signal(widget.Inputs.data, self.iris)
-        self.send_signal(widget.Inputs.reference, reference)
-        widget.apply_button.button.click()
-        neighbors = self.get_output("Neighbors")
-        for inst in reference:
-            self.assertIn(inst, neighbors)
 
     def test_similarity(self):
         widget = self.widget
@@ -189,7 +180,7 @@ class TestOWNeighbors(WidgetTest):
     def test_compute_distances_calls_distance(self):
         widget = self.widget
         widget.distance_index = 2
-        dists = np.random.random((5, 10))
+        dists = np.random.random((10, 5))
         distance = Mock(return_value=dists)
         try:
             orig_metrics = METRICS[widget.distance_index]
@@ -239,75 +230,44 @@ class TestOWNeighbors(WidgetTest):
         finally:
             METRICS[widget.distance_index] = orig_metrics
 
-    def test_compute_indices_with_reference(self):
-        widget = self.widget
-        # Indices for easier reading: 0  1  2  3  4  5  6  7  8  9 10 11 12
-        widget.distances = np.array([4., 1, 7, 0, 5, 2, 4, 0, 2, 2, 2, 9, 8])
-
-        widget.exclude_reference = False
-        widget.n_neighbors = 3
-        self.assertEqual(sorted(widget._compute_indices()), [1, 3, 7])
-
-        widget.n_neighbors = 1
-        self.assertIn(list(widget._compute_indices()), ([3], [7]))
-
-        widget.n_neighbors = 5
-        ind = set(widget._compute_indices())
-        self.assertEqual(len(ind), 5)
-        self.assertTrue({1, 3, 7} < ind)
-        self.assertTrue(len({5, 8, 9, 10} & ind) == 2)
-
-        widget.n_neighbors = 100
-        self.assertEqual(sorted(widget._compute_indices()), list(range(13)))
-
-        widget.n_neighbors = 13
-        self.assertEqual(sorted(widget._compute_indices()), list(range(13)))
-
-        widget.n_neighbors = 14
-        self.assertEqual(sorted(widget._compute_indices()), list(range(13)))
-
-        widget.n_neighbors = 12
-        self.assertEqual(
-            sorted(widget._compute_indices()),
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12])
-
     def test_compute_indices_without_reference(self):
         widget = self.widget
-        # Indices for easier reading: 0  1  2  3  4  5  6  7  8  9 10 11 12
-        widget.distances = np.array([4., 1, 7, 0, 5, 2, 4, 0, 2, 2, 2, 9, 8])
+        widget.limit_neighbours = True
 
-        widget.exclude_reference = True
+        # Indices for easier reading: 0 1  2  3  4  5  6  7  8  9 10 11 12
+        widget.distances = np.array([4, 1, 7, 0, 5, 2, 4, 0, 2, 2, 2, 9, 8])
+
+        widget.data = Mock()
+        widget.data.ids = np.arange(13)
+        widget.reference = Mock()
+        widget.reference.ids = np.array([1, 3])
+
         widget.n_neighbors = 5
-        self.assertEqual(sorted(widget._compute_indices()), [1, 5, 8, 9, 10])
+        self.assertEqual(sorted(widget._compute_indices()), [5, 7, 8, 9, 10])
 
         widget.n_neighbors = 1
-        self.assertEqual(list(widget._compute_indices()), [1])
+        self.assertEqual(list(widget._compute_indices()), [7])
 
         widget.n_neighbors = 3
         ind = set(widget._compute_indices())
         self.assertEqual(len(ind), 3)
-        self.assertIn(1, ind)
+        self.assertIn(7, ind)
         self.assertTrue(len({5, 8, 9, 10} & ind) == 2)
 
         widget.n_neighbors = 100
         self.assertEqual(
             sorted(widget._compute_indices()),
-            [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12])
-
-        widget.n_neighbors = 11
-        self.assertEqual(
-            sorted(widget._compute_indices()),
-            [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12])
-
-        widget.n_neighbors = 12
-        self.assertEqual(
-            sorted(widget._compute_indices()),
-            [0, 1, 2, 4, 5, 6, 8, 9, 10, 11, 12])
+            [0, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12])
 
         widget.n_neighbors = 10
         self.assertEqual(
             sorted(widget._compute_indices()),
-            [0, 1, 2, 4, 5, 6, 8, 9, 10, 12])
+            [0, 2, 4, 5, 6, 7, 8, 9, 10, 12])
+
+        widget.limit_neighbours = False
+        self.assertEqual(
+            sorted(widget._compute_indices()),
+            [0, 2, 4, 5, 6, 7, 8, 9, 10, 12])
 
     def test_data_with_similarity(self):
         widget = self.widget
@@ -356,18 +316,16 @@ class TestOWNeighbors(WidgetTest):
         widget.auto_apply = True
 
         data = Table("iris")
-        self.send_signal(widget.Inputs.data, data)
-        self.send_signal(widget.Inputs.reference, data[42:43])
-
-        orig_distances = widget.distances
-        widget.distances = np.zeros(len(data), dtype=float)
-        widget.apply()
+        self.send_signal(widget.Inputs.data, data[:10])
+        self.send_signal(widget.Inputs.reference, data[:10])
         self.assertTrue(widget.Warning.all_data_as_reference.is_shown())
+        self.assertFalse(widget.Info.removed_references.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
-        widget.distances = orig_distances
+        self.send_signal(widget.Inputs.data, data[:15])
         widget.apply()
         self.assertFalse(widget.Warning.all_data_as_reference.is_shown())
+        self.assertTrue(widget.Info.removed_references.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
     def test_different_domains(self):
@@ -512,6 +470,17 @@ class TestOWNeighbors(WidgetTest):
         self.assertFalse(w.Error.diff_domains.is_shown())
         output = self.get_output(w.Outputs.data)
         self.assertEqual(10, len(output))
+
+    def test_n_neighbours_spin_max(self):
+        w = self.widget
+        sb = w.controls.n_neighbors
+        default = sb.maximum()
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertEqual(sb.maximum(), len(self.iris))
+        self.send_signal(w.Inputs.data, self.iris[:20])
+        self.assertEqual(sb.maximum(), 20)
+        self.send_signal(w.Inputs.data, None)
+        self.assertEqual(sb.maximum(), default)
 
 
 if __name__ == "__main__":

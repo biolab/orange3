@@ -14,6 +14,6 @@ class TestUrlReader(unittest.TestCase):
     def test_zipped(self):
         """ Test zipped files with two extensions"""
         data = UrlReader(
-            "http://datasets.orange.biolab.si/core/philadelphia-crime.csv.xz"
+            "http://datasets.biolab.si/core/philadelphia-crime.csv.xz"
         ).read()
         self.assertEqual(9666, len(data))

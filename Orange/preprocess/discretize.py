@@ -83,6 +83,12 @@ class Discretizer(Transformation):
         dvar.to_sql = to_sql
         return dvar
 
+    def __eq__(self, other):
+        return super().__eq__(other) and self.points == other.points
+
+    def __hash__(self):
+        return hash((type(self), self.variable, tuple(self.points)))
+
 
 class BinSql:
     def __init__(self, var, points):
@@ -166,8 +172,11 @@ class EqualWidth(Discretization):
             else:
                 values = data[:, attribute]
                 values = values.X if values.X.size else values.Y
-                min, max = ut.nanmin(values), ut.nanmax(values)
-                points = self._split_eq_width(min, max)
+                if values.size:
+                    min, max = ut.nanmin(values), ut.nanmax(values)
+                    points = self._split_eq_width(min, max)
+                else:
+                    points = []
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
 
@@ -672,7 +681,7 @@ class EntropyMDL(Discretization):
         delta = np.log2(3 ** k - 2) - (k * ES - k1 * ES1 - k2 * ES2)
         N = float(np.sum(S_c))
 
-        if Gain > np.log2(N - 1) / N + delta / N:
+        if N > 1 and Gain > np.log2(N - 1) / N + delta / N:
             # Accept the cut point and recursively split the subsets.
             left, right = [], []
             if k1 > 1 and cut_index > 1:

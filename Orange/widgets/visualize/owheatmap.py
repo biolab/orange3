@@ -2,7 +2,7 @@ import enum
 from collections import defaultdict
 from itertools import islice
 from typing import (
-    Iterable, Mapping, Any, TypeVar, Type, NamedTuple, Sequence, Optional,
+    Iterable, Mapping, Any, TypeVar, NamedTuple, Sequence, Optional,
     Union, Tuple, List, Callable
 )
 
@@ -23,7 +23,7 @@ from Orange.data.sql.table import SqlTable
 import Orange.distance
 
 from Orange.clustering import hierarchical, kmeans
-from Orange.widgets.utils import colorpalettes, apply_all, itemmodels
+from Orange.widgets.utils import colorpalettes, apply_all, enum_get, itemmodels
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils.graphicsview import GraphicsWidgetView
@@ -130,20 +130,6 @@ def create_list_model(
             sitem.setData(value, role)
         model.appendRow([sitem])
     return model
-
-
-E = TypeVar("E", bound=enum.Enum)  # pylint: disable=invalid-name
-
-
-def enum_get(etype: Type[E], name: str, default: E) -> E:
-    """
-    Return an Enum member by `name`. If no such member exists in `etype`
-    return `default`.
-    """
-    try:
-        return etype[name]
-    except LookupError:
-        return default
 
 
 class OWHeatMap(widget.OWWidget):
@@ -796,12 +782,10 @@ class OWHeatMap(widget.OWWidget):
                     matrix = Orange.distance.Euclidean(subset)
 
                 if cluster is None:
-                    assert len(matrix) < self.MaxClustering
                     cluster = hierarchical.dist_matrix_clustering(
                         matrix, linkage=hierarchical.WARD
                     )
                 if ordered and cluster_ord is None:
-                    assert len(matrix) < self.MaxOrderedClustering
                     cluster_ord = hierarchical.optimal_leaf_ordering(
                         cluster, matrix,
                     )
@@ -833,12 +817,10 @@ class OWHeatMap(widget.OWWidget):
 
                 if cluster is None:
                     assert matrix is not None
-                    assert len(matrix) < self.MaxClustering
                     cluster = hierarchical.dist_matrix_clustering(
                         matrix, linkage=hierarchical.WARD
                     )
                 if ordered and cluster_ord is None:
-                    assert len(matrix) < self.MaxOrderedClustering
                     cluster_ord = hierarchical.optimal_leaf_ordering(cluster, matrix)
 
             col_groups.append(col._replace(cluster=cluster, cluster_ordered=cluster_ord))

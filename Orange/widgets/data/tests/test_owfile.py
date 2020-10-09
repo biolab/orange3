@@ -374,22 +374,11 @@ a
         def open_iris_with_no_spec_format(_a, _b, _c, filters, _e):
             return iris.__file__, filters.split(";;")[0]
 
-        """
-        orangewidgets.utils.filedialogs.open_filename_dialog changed behaviour
-        in https://github.com/biolab/orange-widget-base/pull/53. Until it is
-        released, one of the following tests fails, so this test is disabled.
-        If you read this and orange-widget-base has already been released,
-        uncomment this code and remove the first test
-
         with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
                    open_iris_with_no_spec_format):
             self.widget.browse_file()
 
-        # Worked before
         self.assertIsNone(self.widget.recent_paths[0].file_format)
-        # Works after
-        self.assertEqual(self.widget.recent_paths[0].file_format, "Orange.data.io.TabReader")
-        """
 
         def open_iris_with_tab(*_):
             return iris.__file__, format_filter(TabReader)

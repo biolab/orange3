@@ -62,13 +62,18 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_information_message(self):
         self.widget.set_row_clustering(Clustering.OrderedClustering)
-        continuizer = Continuize()
-        cont_titanic = continuizer(self.titanic)
-        self.widget.MaxClustering = 1000
-        self.send_signal(self.widget.Inputs.data, cont_titanic)
-        self.assertTrue(self.widget.Information.active)
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.MaxClustering = 20
+        self.widget.MaxOrderedClustering = 15
+        data = self.brown_selected[:, :10]
+        self.send_signal(self.widget.Inputs.data, data[:15])
         self.assertFalse(self.widget.Information.active)
+        self.send_signal(self.widget.Inputs.data, data[:16])
+        self.assertTrue(self.widget.Information.active)
+        self.assertEqual(self.widget.row_clustering, Clustering.Clustering)
+        self.send_signal(self.widget.Inputs.data, data[:20])
+        self.assertFalse(self.widget.Information.active)
+        self.send_signal(self.widget.Inputs.data, data[:21])
+        self.assertTrue(self.widget.Information.active)
 
     def test_settings_changed(self):
         self.send_signal(self.widget.Inputs.data, self.data)

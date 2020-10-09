@@ -76,8 +76,6 @@ data instances:
            [ 0.17428279,  0.20342097,  0.62229625],
            [ 0.18633359,  0.79518516,  0.01848125]])
 
-For datasets that include continuous attributes,
-
 .. _`Naive Bayes`: http://en.wikipedia.org/wiki/Naive_Bayes_classifier
 .. _`scikit-learn`: http://scikit-learn.org
 
@@ -118,7 +116,29 @@ Classification Tree
 Orange includes three implemenations of classification trees. `TreeLearner`
 is home-grown and properly handles multinominal and missing values.
 The one from scikit-learn, `SklTreeLearner`, is faster. Another home-grown,
-`SimpleTreeLearner`, is simpler and stil faster.
+`SimpleTreeLearner`, is simpler and still faster.
+
+The following code loads iris dataset (four numeric attributes and discrete
+class), constructs a decision tree learner, uses it on the entire dataset
+to construct a classifier, and then prints the tree:
+
+    >>> import Orange
+    >>> iris = Orange.data.Table('iris')
+    >>> tr = Orange.classification.TreeLearner()
+    >>> classifier = tr(data)
+    >>> printed_tree = classifier.print_tree()
+    >>> for i in printed_tree.split('\n'):
+    >>>     print(i)
+    [50.  0.  0.] petal length ≤ 1.9
+    [ 0. 50. 50.] petal length > 1.9
+    [ 0. 49.  5.]     petal width ≤ 1.7
+    [ 0. 47.  1.]         petal length ≤ 4.9
+       [0. 2. 4.]         petal length > 4.9
+       [0. 0. 3.]             petal width ≤ 1.5
+       [0. 2. 1.]             petal width > 1.5
+       [0. 2. 0.]                 sepal length ≤ 6.7
+       [0. 0. 1.]                 sepal length > 6.7
+    [ 0.  1. 45.]     petal width > 1.7
 
 .. autoclass:: TreeLearner
    :members:

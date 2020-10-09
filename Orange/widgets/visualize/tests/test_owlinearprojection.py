@@ -164,7 +164,7 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.widget.setup_plot.assert_called_once()
 
         self.widget.setup_plot.reset_mock()
-        self.widget.selected_vars[:] = self.data.domain[2:]
+        self.widget.selected_vars[:] = self.data.domain[2:3]
         model.selection_changed.emit()
         self.widget.setup_plot.assert_called_once()
 
@@ -172,7 +172,7 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
         self.widget.setup_plot.assert_not_called()
 
-        self.widget.selected_vars[:] = self.data.domain[3:]
+        self.widget.selected_vars[:] = [self.data.domain[3]]
         model.selection_changed.emit()
         self.widget.setup_plot.assert_called_once()
 

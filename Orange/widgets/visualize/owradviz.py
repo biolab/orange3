@@ -264,6 +264,7 @@ class OWRadvizGraph(OWGraphWithAnchors):
                     label = label[:MAX_LABEL_LEN - 3] + "..."
 
             anchor.setText(label)
+            anchor.setFont(self.parameter_setter.anchor_font)
             label_len = min(MAX_LABEL_LEN, len(label))
             anchor.setColor(QColor(0, 0, 0))
 
@@ -352,6 +353,10 @@ class OWRadviz(OWAnchorProjectionWidget):
     @property
     def effective_variables(self):
         return self.selected_vars
+
+    @property
+    def effective_data(self):
+        return self.data.transform(Domain(self.effective_variables))
 
     def vizrank_set_attrs(self, *attrs):
         if not attrs:

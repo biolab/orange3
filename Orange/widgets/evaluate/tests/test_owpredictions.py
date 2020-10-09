@@ -1,14 +1,20 @@
 """Tests for OWPredictions"""
+# pylint: disable=protected-access
 import io
+import unittest
 from unittest.mock import Mock
 
 import numpy as np
+
+from AnyQt.QtCore import QItemSelectionModel, QItemSelection
+from AnyQt.QtGui import QStandardItemModel
 
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner
 from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.evaluate.owpredictions import OWPredictions
+from Orange.widgets.evaluate.owpredictions import (
+    OWPredictions, SortProxyModel, SharedSelectionModel, SharedSelectionStore)
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
@@ -19,7 +25,8 @@ from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch, \
     possible_duplicate_table
-from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
+from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
+from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWPredictions(WidgetTest):
@@ -368,12 +375,12 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, predictor_iris1)
         self.send_signal(self.widget.Inputs.predictors, predictor_iris2, 1)
         colors = self.widget._get_colors()
-        np.testing.assert_array_equal(colors, ColorPaletteGenerator.palette(3))
+        np.testing.assert_array_equal(colors, LimitedDiscretePalette(3).palette)
 
         # case 4: two domains different values order, matching colors
         idom = self.iris.domain
         # this way we know that default colors are not used
-        colors = ColorPaletteGenerator.palette(5)[2:]
+        colors = LimitedDiscretePalette(5).palette[2:]
         dom1 = Domain(
             idom.attributes,
             DiscreteVariable(idom.class_var.name, idom.class_var.values)
@@ -424,7 +431,331 @@ class TestOWPredictions(WidgetTest):
         output = self.get_output(self.widget.Outputs.predictions)
         self.assertEqual(output.domain.metas[0].name, 'constant (1)')
 
+    def test_select(self):
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+
+        pred_model = self.widget.predictionsview.model()
+        pred_model.sort(0)
+        self.widget.predictionsview.selectRow(1)
+        sel = {(index.row(), index.column())
+               for index in self.widget.dataview.selectionModel().selectedIndexes()}
+        self.assertEqual(sel, {(1, col) for col in range(5)})
+
+    def test_select_data_first(self):
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+
+        pred_model = self.widget.predictionsview.model()
+        pred_model.sort(0)
+        self.widget.predictionsview.selectRow(1)
+        sel = {(index.row(), index.column())
+               for index in self.widget.dataview.selectionModel().selectedIndexes()}
+        self.assertEqual(sel, {(1, col) for col in range(5)})
+
+    def test_selection_in_setting(self):
+        widget = self.create_widget(OWPredictions,
+                                    stored_settings={"selection": [1, 3, 4]})
+        self.send_signal(widget.Inputs.data, self.iris)
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(widget.Inputs.predictors, log_reg_iris)
+        sel = {(index.row(), index.column())
+               for index in widget.dataview.selectionModel().selectedIndexes()}
+        self.assertEqual(sel, {(row, col)
+                               for row in [1, 3, 4] for col in range(5)})
+        out = self.get_output(widget.Outputs.predictions)
+        exp = self.iris[np.array([1, 3, 4])]
+        np.testing.assert_equal(out.X, exp.X)
+
+    def test_unregister_prediction_model(self):
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.widget.selection_store.unregister = Mock()
+        prev_model = self.widget.predictionsview.model()
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+        self.widget.selection_store.unregister.called_with(prev_model)
+
+    def test_summary(self):
+        """Check if the status bar updates when data is recieved"""
+        data = self.iris
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+        predictor1 = ConstantLearner()(self.iris)
+        predictor2 = LogisticRegressionLearner()(self.iris)
+
+        self.send_signal(self.widget.Inputs.predictors, predictor1)
+        details = f"Data:<br>{no_input}.<hr>" + \
+                  "Model: 1 model (1 failed)<ul><li>constant</li></ul>"
+        self.assertEqual(info._StateInfo__input_summary.brief, "0")
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        details = "Data:<br>" + \
+                  format_summary_details(data).replace('\n', '<br>') + \
+                  "<hr>Model: 1 model<ul><li>constant</li></ul>"
+        self.assertEqual(info._StateInfo__input_summary.brief, "150")
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.predictions)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.predictors, predictor2, 1)
+        details = "Data:<br>"+ \
+                  format_summary_details(data).replace('\n', '<br>') + \
+                  "<hr>Model: 2 models<ul><li>constant</li>" + \
+                  "<li>logistic regression</li></ul>"
+        self.assertEqual(info._StateInfo__input_summary.brief, "150")
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.predictions)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.predictors, None)
+        self.send_signal(self.widget.Inputs.predictors, None, 1)
+        details = "Data:<br>" + \
+                  format_summary_details(data).replace('\n', '<br>') + \
+                  "<hr>Model:<br>No model on input."
+        self.assertEqual(info._StateInfo__input_summary.brief, "150")
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        output = self.get_output(self.widget.Outputs.predictions)
+        summary, details = f"{len(output)}", format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+
+class SelectionModelTest(unittest.TestCase):
+    def setUp(self):
+        self.sourceModel1 = QStandardItemModel(5, 2)
+        self.proxyModel1 = SortProxyModel()
+        self.proxyModel1.setSourceModel(self.sourceModel1)
+        self.store = SharedSelectionStore(self.proxyModel1)
+        self.model1 = SharedSelectionModel(self.store, self.proxyModel1, None)
+
+        self.sourceModel2 = QStandardItemModel(5, 3)
+        self.proxyModel2 = SortProxyModel()
+        self.proxyModel2.setSourceModel(self.sourceModel2)
+        self.model2 = SharedSelectionModel(self.store, self.proxyModel2, None)
+
+    def itsel(self, rows):
+        sel = QItemSelection()
+        for row in rows:
+            index = self.store.proxy.index(row, 0)
+            sel.select(index, index)
+        return sel
+
+
+class SharedSelectionStoreTest(SelectionModelTest):
+    def test_registration(self):
+        self.store.unregister(self.model1)
+        self.store.unregister(self.model1)  # should have no effect and no error
+        self.store.unregister(self.model2)
+
+    def test_select_rows(self):
+        emit1 = self.model1.emit_selection_rows_changed = Mock()
+        emit2 = self.model2.emit_selection_rows_changed = Mock()
+
+        store = self.store
+        store.select_rows({1, 2}, QItemSelectionModel.Select)
+        self.assertEqual(store.rows, {1, 2})
+        emit1.assert_called_with({1, 2}, set())
+        emit2.assert_called_with({1, 2}, set())
+
+        store.select_rows({1, 2, 4}, QItemSelectionModel.Select)
+        self.assertEqual(store.rows, {1, 2, 4})
+        emit1.assert_called_with({4}, set())
+        emit2.assert_called_with({4}, set())
+
+        store.select_rows({3, 4}, QItemSelectionModel.Toggle)
+        self.assertEqual(store.rows, {1, 2, 3})
+        emit1.assert_called_with({3}, {4})
+        emit2.assert_called_with({3}, {4})
+
+        store.select_rows({0, 2}, QItemSelectionModel.Deselect)
+        self.assertEqual(store.rows, {1, 3})
+        emit1.assert_called_with(set(), {2})
+        emit2.assert_called_with(set(), {2})
+
+        store.select_rows({2, 3, 4}, QItemSelectionModel.ClearAndSelect)
+        self.assertEqual(store.rows, {2, 3, 4})
+        emit1.assert_called_with({2, 4}, {1})
+        emit2.assert_called_with({2, 4}, {1})
+
+        store.select_rows({2, 3, 4}, QItemSelectionModel.Clear)
+        self.assertEqual(store.rows, set())
+        emit1.assert_called_with(set(), {2, 3, 4})
+        emit2.assert_called_with(set(), {2, 3, 4})
+
+        store.select_rows({2, 3, 4}, QItemSelectionModel.ClearAndSelect)
+        emit1.reset_mock()
+        emit2.reset_mock()
+        store.select_rows({2, 4}, QItemSelectionModel.Select)
+        emit1.assert_not_called()
+        emit2.assert_not_called()
+
+    def test_select_maps_from_proxy(self):
+        store = self.store
+        store.select_rows = Mock()
+
+        # Map QItemSelection
+        store.proxy.setSortIndices([1, 2, 3, 4, 0])
+        store.select(self.itsel([1, 2]), QItemSelectionModel.Select)
+        store.select_rows.assert_called_with({0, 1}, QItemSelectionModel.Select)
+
+        # Map QModelIndex
+        store.proxy.setSortIndices([1, 2, 3, 4, 0])
+        store.select(store.proxy.index(0, 0), QItemSelectionModel.Select)
+        store.select_rows.assert_called_with({4}, QItemSelectionModel.Select)
+
+        # Map empty selection
+        store.select(self.itsel([]), QItemSelectionModel.Select)
+        store.select_rows.assert_called_with(set(), QItemSelectionModel.Select)
+
+    def test_clear(self):
+        store = self.store
+
+        store.select_rows({1, 2, 4}, QItemSelectionModel.Select)
+        self.assertEqual(store.rows, {1, 2, 4})
+
+        emit1 = self.model1.emit_selection_rows_changed = Mock()
+        emit2 = self.model2.emit_selection_rows_changed = Mock()
+
+        store.clear_selection()
+        self.assertEqual(store.rows, set())
+        emit1.assert_called_with(set(), {1, 2, 4})
+        emit2.assert_called_with(set(), {1, 2, 4})
+
+    def test_reset(self):
+        store = self.store
+
+        store.select_rows({1, 2, 4}, QItemSelectionModel.Select)
+        self.assertEqual(store.rows, {1, 2, 4})
+
+        emit1 = self.model1.emit_selection_rows_changed = Mock()
+        emit2 = self.model2.emit_selection_rows_changed = Mock()
+
+        store.reset()
+        self.assertEqual(store.rows, set())
+        emit1.assert_not_called()
+        emit2.assert_not_called()
+
+    def test_emit_changed_maps_to_proxy(self):
+        store = self.store
+        emit1 = self.model1.emit_selection_rows_changed = Mock()
+
+        store.proxy.setSortIndices([1, 2, 3, 4, 0])
+        store.select_rows({3, 4}, QItemSelectionModel.Select)
+        emit1.assert_called_with({4, 0}, set())
+
+        store.proxy.setSortIndices(None)
+        store.select_rows({4}, QItemSelectionModel.Deselect)
+        emit1.assert_called_with(set(), {0})
+
+        store.proxy.setSortIndices([1, 0, 3, 4, 2])
+        store.proxy.setSortIndices(None)
+        self.proxyModel1.sort(-1)
+        store.select_rows({2, 3}, QItemSelectionModel.Deselect)
+        emit1.assert_called_with(set(), {3})
+
+
+class SharedSelectionModelTest(SelectionModelTest):
+    def test_select(self):
+        self.store.select = Mock()
+        sel = self.itsel({1, 2})
+        self.model1.select(sel, QItemSelectionModel.Deselect)
+        self.store.select.assert_called_with(sel, QItemSelectionModel.Deselect)
+
+    def test_selection_from_rows(self):
+        sel = self.model1.selection_from_rows({1, 2})
+        self.assertEqual(len(sel), 2)
+        ind1 = sel[0]
+        self.assertIs(ind1.model(), self.proxyModel1)
+        self.assertEqual(ind1.left(), 0)
+        self.assertEqual(ind1.right(), self.proxyModel1.columnCount() - 1)
+        self.assertEqual(ind1.top(), 1)
+        self.assertEqual(ind1.bottom(), 1)
+
+    def test_emit_selection_rows_changed(self):
+        m1 = Mock()
+        m2 = Mock()
+        self.model1.selectionChanged.connect(m1)
+        self.model2.selectionChanged.connect(m2)
+        self.proxyModel1.setSortIndices([1, 0, 2, 4, 3])
+        self.model1.select(self.itsel({1, 3}), QItemSelectionModel.Select)
+        self.assertEqual(self.store.rows, {0, 4})
+
+        for model, m in zip((self.proxyModel1, self.proxyModel2), (m1, m2)):
+            sel = m.call_args[0][0]
+            self.assertEqual(len(sel), 2)
+            for ind, row in zip(sel, (1, 3)):
+                self.assertIs(ind.model(), model)
+                self.assertEqual(ind.left(), 0)
+                self.assertEqual(ind.right(), model.columnCount() - 1)
+                self.assertEqual(ind.top(), row)
+                self.assertEqual(ind.bottom(), row)
+
+    def test_methods(self):
+        def rowcol(sel):
+            return {(index.row(), index.column()) for index in sel}
+        self.proxyModel1.setSortIndices([1, 0, 2, 4, 3])
+        self.proxyModel2.setSortIndices([1, 0, 2, 4, 3])
+
+        self.assertFalse(self.model1.hasSelection())
+        self.assertFalse(self.model1.isColumnSelected(1))
+        self.assertFalse(self.model1.isRowSelected(1))
+        self.assertEqual(self.model1.selectedColumns(1), [])
+        self.assertEqual(self.model1.selectedRows(1), [])
+        self.assertEqual(self.model1.selectedIndexes(), [])
+
+        self.model1.select(self.itsel({1, 3}), QItemSelectionModel.Select)
+
+        self.assertEqual(rowcol(self.model1.selection().indexes()),
+                         {(1, 0), (1, 1), (3, 0), (3, 1)})
+        self.assertEqual(rowcol(self.model2.selection().indexes()),
+                         {(1, 0), (1, 1), (1, 2), (3, 0), (3, 1), (3, 2)})
+
+        self.assertTrue(self.model1.hasSelection())
+        self.assertFalse(self.model1.isColumnSelected(1))
+        self.assertTrue(self.model1.isRowSelected(1))
+        self.assertFalse(self.model1.isRowSelected(2))
+        self.assertEqual(self.model1.selectedColumns(1), [])
+        self.assertEqual(rowcol(self.model1.selectedRows(1)), {(1, 1), (3, 1)})
+        self.assertEqual(rowcol(self.model1.selectedIndexes()),
+                         {(1, 0), (1, 1), (3, 0), (3, 1)})
+
+        self.model1.select(self.itsel({0, 1, 2, 4}), QItemSelectionModel.Select)
+        self.assertTrue(self.model1.isColumnSelected(1))
+        self.assertEqual(rowcol(self.model1.selectedColumns(1)),
+                         {(1, 0), (1, 1)})
+
+        self.model1.clearSelection()
+        self.assertFalse(self.model1.hasSelection())
+        self.assertFalse(self.model1.isColumnSelected(1))
+        self.assertEqual(self.model1.selectedColumns(1), [])
+        self.assertEqual(self.model1.selectedRows(1), [])
+        self.assertEqual(self.model1.selectedIndexes(), [])
+
+        self.model1.select(self.itsel({0, 1, 2, 3, 4}),
+                           QItemSelectionModel.Select)
+        self.model1.reset()
+        self.assertFalse(self.model1.hasSelection())
+        self.assertFalse(self.model1.isColumnSelected(1))
+        self.assertEqual(self.model1.selectedColumns(1), [])
+        self.assertEqual(self.model1.selectedRows(1), [])
+        self.assertEqual(self.model1.selectedIndexes(), [])
+
 
 if __name__ == "__main__":
-    import unittest
     unittest.main()

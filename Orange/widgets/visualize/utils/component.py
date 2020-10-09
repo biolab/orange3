@@ -1,13 +1,36 @@
 """Common gui.OWComponent components."""
+
 from AnyQt.QtCore import Qt, QRectF
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QColor, QFont
 from AnyQt.QtWidgets import QGraphicsEllipseItem
 
 import pyqtgraph as pg
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+from Orange.widgets.visualize.owscatterplotgraph import (
+    OWScatterPlotBase, ScatterBaseParameterSetter
+)
+from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.plotutils import (
     MouseEventDelegate, DraggableItemsViewBox
 )
+
+class AnchorParameterSetter(ScatterBaseParameterSetter):
+    ANCHOR_LABEL = "Anchor"
+
+    def __init__(self, master):
+        super().__init__(master)
+        self.anchor_font = QFont()
+
+    def update_setters(self):
+        super().update_setters()
+        self.initial_settings[self.LABELS_BOX].update({
+            self.ANCHOR_LABEL: self.FONT_SETTING
+        })
+
+        def update_anchors(**settings):
+            self.anchor_font = Updater.change_font(self.anchor_font, settings)
+            self.master.update_anchors()
+
+        self._setters[self.LABELS_BOX][self.ANCHOR_LABEL] = update_anchors
 
 
 class OWGraphWithAnchors(OWScatterPlotBase):
@@ -25,6 +48,7 @@ class OWGraphWithAnchors(OWScatterPlotBase):
         self._tooltip_delegate = MouseEventDelegate(self.help_event,
                                                     self.show_indicator_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
+        self.parameter_setter = AnchorParameterSetter(self)
 
     def clear(self):
         super().clear()

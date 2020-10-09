@@ -128,7 +128,7 @@ class TestTableBuilder(InitTestData):
         np.testing.assert_array_equal(column.orig_values,
                                       ["red", "red", "green"])
         self.assertEqual(column.coltype, DiscreteVariable)
-        self.assertDictEqual(column.coltype_kwargs, {'ordered': True})
+        self.assertDictEqual(column.coltype_kwargs, {})
 
     def test_unknown_type_column(self):
         data = np.array(self.header0)
@@ -214,7 +214,8 @@ class TestDataTableMixin(InitTestData):
         header.names = names
         header.types = types
         header.flags = flags
-        adjusted, n = DataTableMixin.adjust_data_width(self.header0, header)
+        with self.assertWarns(UserWarning):
+            adjusted, n = DataTableMixin.adjust_data_width(self.header0, header)
         np.testing.assert_array_equal(
             adjusted, np.array(self.header0, dtype=object)[:, :3])
         self.assertEqual(adjusted.shape, (len(self.header0), 3))

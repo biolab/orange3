@@ -39,6 +39,7 @@ class OWLinearRegression(OWBaseLearner):
     reg_type = settings.Setting(OLS)
     alpha_index = settings.Setting(0)
     l2_ratio = settings.Setting(0.5)
+    fit_intercept = settings.Setting(True)
     autosend = settings.Setting(True)
 
     alphas = list(chain([x / 10000 for x in range(1, 10)],
@@ -51,6 +52,11 @@ class OWLinearRegression(OWBaseLearner):
 
     def add_main_layout(self):
         # this is part of init, pylint: disable=attribute-defined-outside-init
+        box = gui.hBox(self.controlArea, "Parameters")
+        gui.checkBox(box, self, "fit_intercept",
+                     "Fit intercept (unchecking it fixes it to zero)",
+                     callback=self._intercept_changed)
+
         box = gui.hBox(self.controlArea, "Regularization")
         gui.radioButtons(box, self, "reg_type",
                          btnLabels=self.REGULARIZATION_TYPES,
@@ -93,6 +99,9 @@ class OWLinearRegression(OWBaseLearner):
     def handleNewSignals(self):
         self.apply()
 
+    def _intercept_changed(self):
+        self.apply()
+
     def _reg_type_changed(self):
         self.controls.alpha_index.setEnabled(self.reg_type != self.OLS)
         self.l2_ratio_slider.setEnabled(self.reg_type == self.Elastic)
@@ -116,7 +125,8 @@ class OWLinearRegression(OWBaseLearner):
     def create_learner(self):
         alpha = self.alphas[self.alpha_index]
         preprocessors = self.preprocessors
-        args = {"preprocessors": preprocessors}
+        args = dict(preprocessors=preprocessors,
+                    fit_intercept=self.fit_intercept)
         if self.reg_type == OWLinearRegression.OLS:
             learner = LinearRegressionLearner(**args)
         elif self.reg_type == OWLinearRegression.Ridge:
@@ -134,9 +144,11 @@ class OWLinearRegression(OWBaseLearner):
         if self.model is not None:
             domain = Domain(
                 [ContinuousVariable("coef")], metas=[StringVariable("name")])
-            coefs = [self.model.intercept] + list(self.model.coefficients)
-            names = ["intercept"] + \
-                    [attr.name for attr in self.model.domain.attributes]
+            coefs = list(self.model.coefficients)
+            names = [attr.name for attr in self.model.domain.attributes]
+            if self.fit_intercept:
+                coefs.insert(0, self.model.intercept)
+                names.insert(0, "intercept")
             coef_table = Table.from_list(domain, list(zip(coefs, names)))
             coef_table.name = "coefficients"
         self.Outputs.coefficients.send(coef_table)
@@ -155,7 +167,10 @@ class OWLinearRegression(OWBaseLearner):
                               .format(self.alphas[self.alpha_index],
                                       self.l2_ratio,
                                       1 - self.l2_ratio))
-        return (("Regularization", regularization), )
+        return (
+            ("Regularization", regularization),
+            ("Fit intercept", ["No", "Yes"][self.fit_intercept])
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

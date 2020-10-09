@@ -1,7 +1,11 @@
+import enum
 import inspect
 import sys
 from collections import deque
-from typing import TypeVar, Deque, Callable, Any, Iterable
+from typing import (
+    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union
+)
+from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import QObject
 
@@ -23,7 +27,7 @@ def vartype(var):
 
 
 def progress_bar_milestones(count, iterations=100):
-    return set([int(i*count/float(iterations)) for i in range(iterations)])
+    return {int(i * count / float(iterations)) for i in range(iterations)}
 
 
 def getdeepattr(obj, attr, *arg, **kwarg):
@@ -32,9 +36,10 @@ def getdeepattr(obj, attr, *arg, **kwarg):
     return deepgetattr(obj, attr, *arg, **kwarg)
 
 
-def to_html(str):
-    return str.replace("<=", "&#8804;").replace(">=", "&#8805;").\
+def to_html(s):
+    return s.replace("<=", "&#8804;").replace(">=", "&#8805;"). \
         replace("<", "&#60;").replace(">", "&#62;").replace("=\\=", "&#8800;")
+
 
 getHtmlCompatibleString = to_html
 
@@ -81,8 +86,13 @@ def getmembers(obj, predicate=None):
     return inspect.getmembers(obj, mypredicate)
 
 
+def qname(type_: type) -> str:
+    """Return the fully qualified name for a `type_`."""
+    return "{0.__module__}.{0.__qualname__}".format(type_)
 
-_T1 = TypeVar("_T1")
+
+_T1 = TypeVar("_T1")  # pylint: disable=invalid-name
+_E = TypeVar("_E", bound=enum.Enum)  # pylint: disable=invalid-name
 
 
 def apply_all(seq, op):
@@ -90,3 +100,62 @@ def apply_all(seq, op):
     """Apply `op` on all elements of `seq`."""
     # from itertools recipes `consume`
     deque(map(op, seq), maxlen=0)
+
+
+def unique_everseen(iterable, key=None):
+    # type: (Iterable[_T1], Optional[Callable[[_T1], Hashable]]) -> Iterable[_T1]
+    """
+    Return an iterator over unique elements of `iterable` preserving order.
+
+    If `key` is supplied it is used as a substitute for determining
+    'uniqueness' of elements.
+
+    Parameters
+    ----------
+    iterable : Iterable[T]
+    key : Callable[[T], Hashable]
+
+    Returns
+    -------
+    unique : Iterable[T]
+    """
+    seen = set()
+    if key is None:
+        key = lambda t: t
+    for el in iterable:
+        el_k = key(el)
+        if el_k not in seen:
+            seen.add(el_k)
+            yield el
+
+
+def enum_get(etype: Type[_E], name: str, default: _T1) -> Union[_E, _T1]:
+    """
+    Return an Enum member by `name`. If no such member exists in `etype`
+    return `default`.
+    """
+    try:
+        return etype[name]
+    except LookupError:
+        return default
+
+
+def instance_tooltip(domain, row, skip_attrs=()):
+    def show_part(_point_data, singular, plural, max_shown, _vars):
+        cols = [escape('{} = {}'.format(var.name, _point_data[var]))
+                for var in _vars[:max_shown + len(skip_attrs)]
+                if _vars is domain.class_vars
+                or var not in skip_attrs][:max_shown]
+        if not cols:
+            return ""
+        n_vars = len(_vars)
+        if n_vars > max_shown:
+            cols[-1] = "... and {} others".format(n_vars - max_shown + 1)
+        return \
+            "<b>{}</b>:<br/>".format(singular if n_vars < 2 else plural) \
+            + "<br/>".join(cols)
+
+    parts = (("Class", "Classes", 4, domain.class_vars),
+             ("Meta", "Metas", 4, domain.metas),
+             ("Feature", "Features", 10, domain.attributes))
+    return "<br/>".join(show_part(row, *columns) for columns in parts)

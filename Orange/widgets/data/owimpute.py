@@ -15,6 +15,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtCore import Qt, QThread, QModelIndex
 from AnyQt.QtCore import pyqtSlot as Slot
+from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
 from Orange.preprocess import impute
@@ -27,7 +28,6 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
-
 
 DisplayMethodRole = Qt.UserRole
 StateRole = DisplayMethodRole + 0xf4
@@ -162,7 +162,7 @@ class OWImpute(OWWidget):
         super().__init__()
         self.data = None  # type: Optional[Orange.data.Table]
         self.learner = None  # type: Optional[Learner]
-        self.default_learner = SimpleTreeLearner()
+        self.default_learner = SimpleTreeLearner(min_instances=10, max_depth=10)
         self.modified = False
         self.executor = qconcurrent.ThreadExecutor(self)
         self.__task = None
@@ -195,7 +195,7 @@ class OWImpute(OWWidget):
         horizontal_layout = QHBoxLayout(box)
         main_layout.addWidget(box)
 
-        self.varview = QListView(
+        self.varview = ListViewSearch(
             selectionMode=QListView.ExtendedSelection,
             uniformItemSizes=True
         )

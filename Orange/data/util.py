@@ -10,7 +10,7 @@ import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
 
-RE_FIND_INDEX = r"(^{} \()(\d{{1,}})(\)$)"
+RE_FIND_INDEX = r"(^{})( \((\d{{1,}})\))?$"
 
 
 def one_hot(
@@ -167,11 +167,11 @@ def get_indices(names, name):
     :param name: str
     :return: list of indices
     """
-    return [int(a.group(2)) for x in filter(None, names)
+    return [int(a.group(3) or 0) for x in filter(None, names)
             for a in re.finditer(RE_FIND_INDEX.format(re.escape(name)), x)]
 
 
-def get_unique_names(names, proposed):
+def get_unique_names(names, proposed, equal_numbers=True):
     """
     Returns unique names for variables
 
@@ -189,13 +189,15 @@ def get_unique_names(names, proposed):
     list.
 
     The method is used in widgets like MDS, which adds two variables (`x` and
-    `y`). It is desired that they have the same index. If `x`, `x (1)` and
-    `x (2)` and `y` (but no other `y`'s already exist in the domain, MDS
-    should append `x (3)` and `y (3)`, not `x (3)` and y (1)`.
+    `y`). It is desired that they have the same index. In case when
+    equal_numbers=True, if `x`, `x (1)` and `x (2)` and `y` (but no other
+    `y`'s already exist in the domain, MDS should append `x (3)` and `y (3)`,
+    not `x (3)` and y (1)`.
 
     Args:
         names (Domain or list of str): used names
         proposed (str or list of str): proposed name
+        equal_numbers (bool): Add same number to all proposed names
 
     Return:
         str or list of str
@@ -206,13 +208,16 @@ def get_unique_names(names, proposed):
         names = [var.name for var in chain(names.variables, names.metas)]
     if isinstance(proposed, str):
         return get_unique_names(names, [proposed])[0]
-    indicess = [indices
-                for indices in (get_indices(names, name) for name in proposed)
-                if indices]
-    if not (set(proposed) & set(names) or indicess):
+    indices = {name: get_indices(names, name) for name in proposed}
+    indices = {name: max(ind) + 1 for name, ind in indices.items() if ind}
+    if not (set(proposed) & set(names) or indices):
         return proposed
-    max_index = max(map(max, indicess), default=0) + 1
-    return [f"{name} ({max_index})" for name in proposed]
+    if equal_numbers:
+        max_index = max(indices.values())
+        return [f"{name} ({max_index})" for name in proposed]
+    else:
+        return [f"{name} ({indices[name]})" if name in indices else name
+                for name in proposed]
 
 
 def get_unique_names_duplicates(proposed: list, return_duplicated=False) -> list:

@@ -482,10 +482,10 @@ class TestOWTestAndScore(WidgetTest):
 
     def test_comparison_requires_multiple_models(self):
         w = self.widget
-        w.comparison_criterion = 1
         rbs = w.controls.resampling.buttons
 
         self._set_three_majorities()
+        w.comparison_criterion = 1
 
         rbs[OWTestAndScore.KFold].click()
         self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
@@ -554,7 +554,7 @@ class TestOWTestAndScore(WidgetTest):
             scores = w._scores_by_folds(slots)
             self.assertIsNone(scores[0])
             self.assertEqual(scores[1][0], 1)
-            self.assertAlmostEqual(scores[2][0], 1 / 11)
+            self.assertAlmostEqual(scores[2][0], 1 / 6)
 
     def test_comparison_binary_score(self):
         # false warning at call_arg.kwargs

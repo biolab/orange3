@@ -116,6 +116,8 @@ class OWPCA(widget.OWWidget):
         self.clear()
         self.information()
         self.data = None
+        if not data:
+            self.clear_outputs()
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)

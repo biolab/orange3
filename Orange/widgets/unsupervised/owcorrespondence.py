@@ -1,3 +1,4 @@
+import warnings
 from collections import namedtuple, OrderedDict
 
 import numpy as np
@@ -5,15 +6,17 @@ import numpy as np
 from AnyQt.QtWidgets import QListView, QApplication
 from AnyQt.QtGui import QBrush, QColor, QPainter
 from AnyQt.QtCore import QEvent
+from orangewidget.utils.listview import ListViewSearch
 
 import pyqtgraph as pg
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.statistics import contingency
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.itemmodels import select_rows
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
 from Orange.widgets.widget import Input, Output
@@ -59,9 +62,12 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.component_x = 0
         self.component_y = 1
 
+        self._set_input_summary(None)
+        self._set_output_summary(None)
+
         box = gui.vBox(self.controlArea, "Variables")
         self.varlist = itemmodels.VariableListModel()
-        self.varview = view = QListView(
+        self.varview = view = ListViewSearch(
             selectionMode=QListView.MultiSelection,
             uniformItemSizes=True
         )
@@ -104,6 +110,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             data = None
 
         self.data = data
+        self._set_input_summary(self.data)
         if data is not None:
             self.varlist[:] = [var for var in data.domain.variables
                                if var.is_discrete]
@@ -112,8 +119,17 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                 self.data = None
             else:
                 self.selected_var_indices = [0, 1][:len(self.varlist)]
-                self.component_x = 0
-                self.component_y = int(len(self.varlist[self.selected_var_indices[-1]].values) > 1)
+                # This widget's update flow is broken in many ways, starting
+                # from using context domain handler without having any valid
+                # context settings. Getting rid of these warnings would require
+                # rewriting large portins; @ales-erjavec is doing it and will
+                # finish it eventually, so let us these warnings are
+                # uninformative and would better be silenced.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore", "combo box 'component_[xy]' .*", UserWarning)
+                    self.component_x = 0
+                    self.component_y = int(len(self.varlist[self.selected_var_indices[-1]].values) > 1)
                 self.openContext(data)
                 self._restore_selection()
         self._update_CA()
@@ -134,6 +150,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                               StringVariable("Value")]),
                 rf, metas=vars_data
             )
+        self._set_output_summary(output_table)
         self.Outputs.coordinates.send(output_table)
 
     def clear(self):
@@ -141,6 +158,16 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.ca = None
         self.plot.clear()
         self.varlist[:] = []
+
+    def _set_input_summary(self, data):
+        summary = len(data) if data else self.info.NoInput
+        details = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, details)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def selected_vars(self):
         rows = sorted(
@@ -186,7 +213,12 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
     def _update_CA(self):
         self.update_XY()
-        self.component_x, self.component_y = self.component_x, self.component_y
+        # See the comment about catch_warnings above.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", "combo box 'component_[xy]' .*", UserWarning)
+            self.component_x, self.component_y = \
+                self.component_x, self.component_y
 
         self._setup_plot()
         self._update_info()
@@ -230,7 +262,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.plot.clear()
         points = self.ca
         variables = self.selected_vars()
-        colors = colorpalette.ColorPaletteGenerator(len(variables))
+        colors = colorpalettes.LimitedDiscretePalette(len(variables))
 
         p_axes = self._p_axes()
 

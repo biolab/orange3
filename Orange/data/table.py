@@ -4,7 +4,7 @@ import threading
 import warnings
 import weakref
 import zlib
-from collections import Iterable, Sequence, Sized
+from collections.abc import Iterable, Sequence, Sized
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
@@ -446,10 +446,7 @@ class Table(Sequence, Storage):
                 return table
 
             if isinstance(row_indices, slice):
-                start, stop, stride = row_indices.indices(source.X.shape[0])
-                n_rows = (stop - start) // stride
-                if n_rows < 0:
-                    n_rows = 0
+                n_rows = len(range(*row_indices.indices(source.X.shape[0])))
             elif row_indices is ...:
                 n_rows = len(source)
             else:
@@ -1751,6 +1748,8 @@ def _check_arrays(*arrays, dtype=None, shape_1=None):
                              % (ninstances(array), shape_1))
 
         if sp.issparse(array):
+            if not (sp.isspmatrix_csr(array) or sp.isspmatrix_csc(array)):
+                array = array.tocsr()
             array.data = np.asarray(array.data)
             has_inf = _check_inf(array.data)
         else:

@@ -33,14 +33,6 @@ from orangewidget.gui import (
     ControlGetter, VerticalScrollArea, ProgressBar,
     ControlledCallback, ControlledCallFront, ValueCallback, connectControl,
 )
-# exposed for backcompat. Should not be imported from here, or not
-# imported at all
-from orangewidget.gui import (
-    SpinBoxWFocusOut, DoubleSpinBoxWFocusOut, LineEditWFocusOut, OrangeComboBox
-)  # pylint: disable=unused-import
-from Orange.widgets.utils.buttons import (
-    VariableTextPushButton
-)  # pylint: disable=unused-import
 
 
 try:

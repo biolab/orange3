@@ -9,19 +9,14 @@ from time import gmtime
 import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
     QObject
-from AnyQt.QtGui import (
-    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter
-)
-from AnyQt.QtWidgets import (
-    QApplication, QToolTip, QGraphicsTextItem, QGraphicsRectItem
-)
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
+    QPainter
+from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
+    QGraphicsRectItem
 
 import pyqtgraph as pg
-import pyqtgraph.functions as fn
-from pyqtgraph.graphicsItems.ScatterPlotItem import Symbols, drawSymbol
-from pyqtgraph.graphicsItems.LegendItem import (
-    LegendItem as PgLegendItem, ItemSample
-)
+from pyqtgraph.graphicsItems.ScatterPlotItem import Symbols
+from pyqtgraph.graphicsItems.LegendItem import LegendItem as PgLegendItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 
 from Orange.preprocess.discretize import _time_binnings
@@ -31,75 +26,22 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import classdensity
 from Orange.widgets.utils.plot import OWPalette
-from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
-    OWScatterPlotGraph as OWScatterPlotGraphObs
-)
+from Orange.widgets.visualize.utils.customizableplot import Updater, \
+    CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import (
-    HelpEventDelegate as EventDelegate,
-    InteractiveViewBox as ViewBox
+    HelpEventDelegate as EventDelegate, InteractiveViewBox as ViewBox,
+    PaletteItemSample, SymbolItemSample, AxisItem
 )
 
+with warnings.catch_warnings():
+    # This just loads an obsolete module; proper warning is issued below
+    warnings.simplefilter("ignore", DeprecationWarning)
+    from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
+        OWScatterPlotGraph as OWScatterPlotGraphObs
+    )
 
 SELECTION_WIDTH = 5
 MAX_N_VALID_SIZE_ANIMATE = 1000
-
-
-class PaletteItemSample(ItemSample):
-    """A color strip to insert into legends for discretized continuous values"""
-
-    def __init__(self, palette, scale, label_formatter=None):
-        """
-        :param palette: palette used for showing continuous values
-        :type palette: BinnedContinuousPalette
-        :param scale: an instance of DiscretizedScale that defines the
-                      conversion of values into bins
-        :type scale: DiscretizedScale
-        """
-        super().__init__(None)
-        self.palette = palette
-        self.scale = scale
-        if label_formatter is None:
-            label_formatter = "{{:.{}f}}".format(scale.decimals).format
-        cuts = [label_formatter(scale.offset + i * scale.width)
-                for i in range(scale.bins + 1)]
-        self.labels = [QStaticText("{} - {}".format(fr, to))
-                       for fr, to in zip(cuts, cuts[1:])]
-        font = self.font()
-        font.setPixelSize(11)
-        for label in self.labels:
-            label.prepare(font=font)
-        self.text_width = max(label.size().width() for label in self.labels)
-
-    def boundingRect(self):
-        return QRectF(0, 0, 40 + self.text_width, 20 + self.scale.bins * 15)
-
-    def paint(self, p, *args):
-        p.setRenderHint(p.Antialiasing)
-        p.translate(5, 5)
-        font = p.font()
-        font.setPixelSize(11)
-        p.setFont(font)
-        colors = self.palette.qcolors
-        for i, color, label in zip(itertools.count(), colors, self.labels):
-            p.setPen(Qt.NoPen)
-            p.setBrush(QBrush(color))
-            p.drawRect(0, i * 15, 15, 15)
-            p.setPen(QPen(Qt.black))
-            p.drawStaticText(20, i * 15 + 1, label)
-
-
-class SymbolItemSample(ItemSample):
-    """Adjust position for symbols"""
-    def __init__(self, pen, brush, size, symbol):
-        super().__init__(None)
-        self.__pen = fn.mkPen(pen)
-        self.__brush = fn.mkBrush(brush)
-        self.__size = size
-        self.__symbol = symbol
-
-    def paint(self, p, *args):
-        p.translate(8, 12)
-        drawSymbol(p, self.__symbol, self.__size, self.__pen, self.__brush)
 
 
 class LegendItem(PgLegendItem):
@@ -314,9 +256,25 @@ def _define_symbols():
     path.lineTo(0.5, 0.5)
     Symbols["?"] = path
 
+    path = QPainterPath()
+    plusCoords = [
+        (-0.5, -0.1), (-0.5, 0.1), (-0.1, 0.1), (-0.1, 0.5),
+        (0.1, 0.5), (0.1, 0.1), (0.5, 0.1), (0.5, -0.1),
+        (0.1, -0.1), (0.1, -0.5), (-0.1, -0.5), (-0.1, -0.1)
+    ]
+    path.moveTo(*plusCoords[0])
+    for x, y in plusCoords[1:]:
+        path.lineTo(x, y)
+    path.closeSubpath()
+    Symbols["+"] = path
+
     tr = QTransform()
     tr.rotate(180)
     Symbols['t'] = tr.map(Symbols['t'])
+
+    tr = QTransform()
+    tr.rotate(45)
+    Symbols['x'] = tr.map(Symbols["+"])
 
 
 _define_symbols()
@@ -328,7 +286,7 @@ def _make_pen(color, width):
     return p
 
 
-class AxisItem(pg.AxisItem):
+class AxisItem(AxisItem):
     """
     Axis that if needed displays ticks appropriate for time data.
     """
@@ -397,6 +355,69 @@ class AxisItem(pg.AxisItem):
         # which cause exceptions for edge cases
         return [datetime.fromtimestamp(x, tz=timezone.utc).strftime(fmt)
                 for x in values]
+
+
+class ScatterBaseParameterSetter(CommonParameterSetter):
+    CAT_LEGEND_LABEL = "Categorical legend"
+    NUM_LEGEND_LABEL = "Numerical legend"
+    NUM_LEGEND_SETTING = {
+        Updater.SIZE_LABEL: (range(4, 50), 11),
+        Updater.IS_ITALIC_LABEL: (None, False),
+    }
+
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+        self.cat_legend_settings = {}
+        self.num_legend_settings = {}
+
+    def update_setters(self):
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
+                self.LABEL_LABEL: self.FONT_SETTING,
+                self.CAT_LEGEND_LABEL: self.FONT_SETTING,
+                self.NUM_LEGEND_LABEL: self.NUM_LEGEND_SETTING,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
+            }
+        }
+
+        def update_cat_legend(**settings):
+            self.cat_legend_settings.update(**settings)
+            Updater.update_legend_font(self.cat_legend_items, **settings)
+
+        def update_num_legend(**settings):
+            self.num_legend_settings.update(**settings)
+            Updater.update_num_legend_font(self.num_legend, **settings)
+
+        labels = self.LABELS_BOX
+        self._setters[labels][self.CAT_LEGEND_LABEL] = update_cat_legend
+        self._setters[labels][self.NUM_LEGEND_LABEL] = update_num_legend
+
+    @property
+    def title_item(self):
+        return self.master.plot_widget.getPlotItem().titleLabel
+
+    @property
+    def cat_legend_items(self):
+        items = self.master.color_legend.items
+        if items and items[0] and isinstance(items[0][0], PaletteItemSample):
+            items = []
+        return itertools.chain(self.master.shape_legend.items, items)
+
+    @property
+    def num_legend(self):
+        items = self.master.color_legend.items
+        if items and items[0] and isinstance(items[0][0], PaletteItemSample):
+            return self.master.color_legend
+        return None
+
+    @property
+    def labels(self):
+        return self.master.labels
 
 
 class OWScatterPlotBase(gui.OWComponent, QObject):
@@ -566,6 +587,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.view_box.sigRangeChangedManually.connect(self.update_labels)
 
         self.timer = None
+
+        self.parameter_setter = ScatterBaseParameterSetter(self)
 
     def _create_legend(self, anchor):
         legend = LegendItem()
@@ -837,6 +860,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         x, y = self.get_coordinates()
         if x is None or len(x) == 0:
             return
+
+        self._reset_view(x, y)
         if self.scatterplot_item is None:
             if self.sample_indices is None:
                 indices = np.arange(self.n_valid)
@@ -854,7 +879,6 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.update_labels()
 
         self.update_density()  # Todo: doesn't work: try MDS with density on
-        self._reset_view(x, y)
 
     # Sizes
     def get_sizes(self):
@@ -1160,7 +1184,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.density_img = classdensity.class_density_image(
                 min_x, max_x, min_y, max_y, self.resolution,
                 x_data[mask], y_data[mask], rgb_data)
-            self.plot_widget.addItem(self.density_img)
+            self.plot_widget.addItem(self.density_img, ignoreBounds=True)
 
     def update_selection_colors(self):
         """
@@ -1257,6 +1281,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             ti.setPos(xp, yp)
             self.plot_widget.addItem(ti)
             self.labels.append(ti)
+            ti.setFont(self.parameter_setter.label_font)
 
     def _signal_too_many_labels(self, too_many):
         if self._too_many_labels != too_many:
@@ -1423,6 +1448,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             else:
                 self._update_color_legend(color_labels)
         self.update_legend_visibility()
+        Updater.update_legend_font(self.parameter_setter.cat_legend_items,
+                                   **self.parameter_setter.cat_legend_settings)
+        Updater.update_num_legend_font(self.parameter_setter.num_legend,
+                                       **self.parameter_setter.num_legend_settings)
 
     def _update_shape_legend(self, labels):
         self.shape_legend.clear()

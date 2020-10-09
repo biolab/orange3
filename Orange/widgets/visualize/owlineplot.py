@@ -1,3 +1,4 @@
+from typing import List
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -5,11 +6,14 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QSize, QLineF, pyqtSignal as Signal
 from AnyQt.QtGui import QPainter, QPen, QColor
-from AnyQt.QtWidgets import QApplication, QGraphicsLineItem
+from AnyQt.QtWidgets import QApplication, QGraphicsLineItem, QSizePolicy
 
 import pyqtgraph as pg
 from pyqtgraph.functions import mkPen
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
+
+from orangewidget.utils.listview import ListViewSearch
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from Orange.data import Table, DiscreteVariable
 from Orange.data.sql.table import SqlTable
@@ -27,6 +31,9 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owdistributions import LegendItem
+from Orange.widgets.visualize.utils.customizableplot import Updater, \
+    CommonParameterSetter
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -79,8 +86,9 @@ class LinePlotStyle:
     SELECTION_LINE_COLOR = QColor(Qt.black)
     SELECTION_LINE_WIDTH = 2
 
+    UNSELECTED_LINE_WIDTH = 1
     UNSELECTED_LINE_ALPHA = 100
-    UNSELECTED_LINE_ALPHA_SEL = 50
+    UNSELECTED_LINE_ALPHA_SEL = 50  # unselected lines, when selection exists
 
     SELECTED_LINE_WIDTH = 3
     SELECTED_LINE_ALPHA = 170
@@ -92,15 +100,17 @@ class LinePlotStyle:
     MEAN_DARK_FACTOR = 110
 
 
-class LinePlotAxisItem(pg.AxisItem):
+class BottomAxisItem(AxisItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._ticks = {}
 
     def set_ticks(self, ticks):
         self._ticks = dict(enumerate(ticks, 1)) if ticks else {}
+        if not ticks:
+            self.setTicks(None)
 
-    def tickStrings(self, values, scale, spacing):
+    def tickStrings(self, values, scale, _):
         return [self._ticks.get(v * scale, "") for v in values]
 
 
@@ -152,29 +162,29 @@ class LinePlotViewBox(ViewBox):
     def remove_profiles(self):
         self._profile_items = None
 
-    def mouseDragEvent(self, event, axis=None):
+    def mouseDragEvent(self, ev, axis=None):
         if self._graph_state == SELECT and axis is None and self._can_select:
-            event.accept()
-            if event.button() == Qt.LeftButton:
-                self.update_selection_line(event.buttonDownPos(), event.pos())
-                if event.isFinish():
+            ev.accept()
+            if ev.button() == Qt.LeftButton:
+                self.update_selection_line(ev.buttonDownPos(), ev.pos())
+                if ev.isFinish():
                     self.selection_line.hide()
                     p1 = self.childGroup.mapFromParent(
-                        event.buttonDownPos(event.button()))
-                    p2 = self.childGroup.mapFromParent(event.pos())
+                        ev.buttonDownPos(ev.button()))
+                    p2 = self.childGroup.mapFromParent(ev.pos())
                     self.selection_changed.emit(self.get_selected(p1, p2))
         elif self._graph_state == ZOOMING or self._graph_state == PANNING:
-            event.ignore()
-            super().mouseDragEvent(event, axis=axis)
+            ev.ignore()
+            super().mouseDragEvent(ev, axis=axis)
         else:
-            event.ignore()
+            ev.ignore()
 
-    def mouseClickEvent(self, event):
-        if event.button() == Qt.RightButton:
+    def mouseClickEvent(self, ev):
+        if ev.button() == Qt.RightButton:
             self.autoRange()
             self.enableAutoRange()
         else:
-            event.accept()
+            ev.accept()
             self.selection_changed.emit(np.array(False))
 
     def reset(self):
@@ -183,17 +193,181 @@ class LinePlotViewBox(ViewBox):
         self._graph_state = SELECT
 
 
+class ParameterSetter(CommonParameterSetter):
+    MEAN_LABEL = "Mean"
+    LINE_LABEL = "Lines"
+    SEL_LINE_LABEL = "Selected lines"
+    RANGE_LABEL = "Range"
+    SEL_RANGE_LABEL = "Selected range"
+
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+
+    def update_setters(self):
+        self.mean_settings = {
+            Updater.WIDTH_LABEL: LinePlotStyle.MEAN_WIDTH,
+            Updater.STYLE_LABEL: Updater.DEFAULT_LINE_STYLE,
+        }
+        self.line_settings = {
+            Updater.WIDTH_LABEL: LinePlotStyle.UNSELECTED_LINE_WIDTH,
+            Updater.ALPHA_LABEL: LinePlotStyle.UNSELECTED_LINE_ALPHA,
+            Updater.STYLE_LABEL: Updater.DEFAULT_LINE_STYLE,
+            Updater.ANTIALIAS_LABEL: True,
+        }
+        self.sel_line_settings = {
+            Updater.WIDTH_LABEL: LinePlotStyle.SELECTED_LINE_WIDTH,
+            Updater.ALPHA_LABEL: LinePlotStyle.SELECTED_LINE_ALPHA,
+            Updater.STYLE_LABEL: Updater.DEFAULT_LINE_STYLE,
+            Updater.ANTIALIAS_LABEL: False,
+        }
+        self.range_settings = {
+            Updater.ALPHA_LABEL: LinePlotStyle.RANGE_ALPHA,
+        }
+        self.sel_range_settings = {
+            Updater.ALPHA_LABEL: LinePlotStyle.SELECTED_RANGE_ALPHA,
+        }
+
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TICKS_LABEL: self.FONT_SETTING,
+                self.LEGEND_LABEL: self.FONT_SETTING,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.X_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.Y_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
+            },
+            self.PLOT_BOX: {
+                self.MEAN_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15), LinePlotStyle.MEAN_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          Updater.DEFAULT_LINE_STYLE),
+                },
+                self.LINE_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15),
+                                          LinePlotStyle.UNSELECTED_LINE_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          Updater.DEFAULT_LINE_STYLE),
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.UNSELECTED_LINE_ALPHA),
+                    Updater.ANTIALIAS_LABEL: (None, True),
+                },
+                self.SEL_LINE_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15),
+                                          LinePlotStyle.SELECTED_LINE_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          Updater.DEFAULT_LINE_STYLE),
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.SELECTED_LINE_ALPHA),
+                    Updater.ANTIALIAS_LABEL: (None, False),
+                },
+                self.RANGE_LABEL: {
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.RANGE_ALPHA),
+                },
+                self.SEL_RANGE_LABEL: {
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.SELECTED_RANGE_ALPHA),
+                },
+            }
+        }
+
+        def update_mean(**settings):
+            self.mean_settings.update(**settings)
+            Updater.update_lines(self.mean_lines_items, **self.mean_settings)
+
+        def update_lines(**settings):
+            self.line_settings.update(**settings)
+            Updater.update_lines(self.lines_items, **self.line_settings)
+
+        def update_sel_lines(**settings):
+            self.sel_line_settings.update(**settings)
+            Updater.update_lines(self.sel_lines_items, **self.sel_line_settings)
+
+        def _update_brush(items, **settings):
+            for item in items:
+                brush = item.brush()
+                color = brush.color()
+                color.setAlpha(settings[Updater.ALPHA_LABEL])
+                brush.setColor(color)
+                item.setBrush(brush)
+
+        def update_range(**settings):
+            self.range_settings.update(**settings)
+            _update_brush(self.range_items, **settings)
+
+        def update_sel_range(**settings):
+            self.sel_range_settings.update(**settings)
+            _update_brush(self.sel_range_items, **settings)
+
+        self._setters[self.PLOT_BOX] = {
+            self.MEAN_LABEL: update_mean,
+            self.LINE_LABEL: update_lines,
+            self.SEL_LINE_LABEL: update_sel_lines,
+            self.RANGE_LABEL: update_range,
+            self.SEL_RANGE_LABEL: update_sel_range,
+        }
+
+    @property
+    def title_item(self):
+        return self.master.getPlotItem().titleLabel
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in self.master.getPlotItem().axes.values()]
+
+    @property
+    def legend_items(self):
+        return self.master.legend.items
+
+    @property
+    def mean_lines_items(self):
+        return [group.mean for group in self.master.groups]
+
+    @property
+    def lines_items(self):
+        return [group.profiles for group in self.master.groups]
+
+    @property
+    def sel_lines_items(self):
+        return [group.sel_profiles for group in self.master.groups] + \
+               [group.sub_profiles for group in self.master.groups]
+
+    @property
+    def range_items(self):
+        return [group.range for group in self.master.groups]
+
+    @property
+    def sel_range_items(self):
+        return [group.sel_range for group in self.master.groups]
+
+    @property
+    def getAxis(self):
+        return self.master.getAxis
+
+# Customizable plot widget
 class LinePlotGraph(pg.PlotWidget):
     def __init__(self, parent):
-        self.bottom_axis = LinePlotAxisItem(orientation="bottom")
+        self.groups: List[ProfileGroup] = []
+        self.bottom_axis = BottomAxisItem(orientation="bottom")
+        self.bottom_axis.setLabel("")
+        left_axis = AxisItem(orientation="left")
+        left_axis.setLabel("")
         super().__init__(parent, viewBox=LinePlotViewBox(),
                          background="w", enableMenu=False,
-                         axisItems={"bottom": self.bottom_axis})
+                         axisItems={"bottom": self.bottom_axis,
+                                    "left": left_axis})
         self.view_box = self.getViewBox()
         self.selection = set()
         self.legend = self._create_legend(((1, 0), (1, 0)))
         self.getPlotItem().buttonsHidden = True
         self.setRenderHint(QPainter.Antialiasing, True)
+
+        self.parameter_setter = ParameterSetter(self)
 
     def _create_legend(self, anchor):
         legend = LegendItem()
@@ -211,6 +385,8 @@ class LinePlotGraph(pg.PlotWidget):
                 dots = pg.ScatterPlotItem(pen=c, brush=c, size=10, shape="s")
                 self.legend.addItem(dots, escape(name))
             self.legend.show()
+        Updater.update_legend_font(self.parameter_setter.legend_items,
+                                   **self.parameter_setter.legend_settings)
 
     def select(self, indices):
         keys = QApplication.keyboardModifiers()
@@ -230,6 +406,7 @@ class LinePlotGraph(pg.PlotWidget):
         self.clear()
         self.getAxis('bottom').set_ticks(None)
         self.legend.hide()
+        self.groups = []
 
     def select_button_clicked(self):
         self.view_box.set_graph_state(SELECT)
@@ -282,20 +459,19 @@ class ProfileGroup:
 
     def _get_profiles_curve(self):
         x, y, con = self.__get_disconnected_curve_data(self.y_data)
-        color = QColor(self.color)
-        color.setAlpha(LinePlotStyle.UNSELECTED_LINE_ALPHA)
-        pen = self.make_pen(color)
-        return pg.PlotCurveItem(x=x, y=y, connect=con, pen=pen, antialias=True)
+        pen = self.make_pen(self.color)
+        curve = pg.PlotCurveItem(x=x, y=y, connect=con, pen=pen)
+        Updater.update_lines([curve], **self.graph.parameter_setter.line_settings)
+        return curve
 
     def _get_sel_profiles_curve(self):
-        color = QColor(self.color)
-        color.setAlpha(LinePlotStyle.SELECTED_LINE_ALPHA)
-        pen = self.make_pen(color, LinePlotStyle.SELECTED_LINE_WIDTH)
-        return pg.PlotCurveItem(x=None, y=None, pen=pen, antialias=False)
+        curve = pg.PlotCurveItem(x=None, y=None, pen=self.make_pen(self.color))
+        Updater.update_lines([curve], **self.graph.parameter_setter.sel_line_settings)
+        return curve
 
     def _get_range_curve(self):
         color = QColor(self.color)
-        color.setAlpha(LinePlotStyle.RANGE_ALPHA)
+        color.setAlpha(self.graph.parameter_setter.range_settings[Updater.ALPHA_LABEL])
         bottom, top = nanmin(self.y_data, axis=0), nanmax(self.y_data, axis=0)
         return pg.FillBetweenItem(
             pg.PlotDataItem(x=self.x_data, y=bottom),
@@ -304,15 +480,15 @@ class ProfileGroup:
 
     def _get_sel_range_curve(self):
         color = QColor(self.color)
-        color.setAlpha(LinePlotStyle.SELECTED_RANGE_ALPHA)
+        color.setAlpha(self.graph.parameter_setter.sel_range_settings[Updater.ALPHA_LABEL])
         curve1 = curve2 = pg.PlotDataItem(x=self.x_data, y=self.__mean)
         return pg.FillBetweenItem(curve1, curve2, brush=color)
 
     def _get_mean_curve(self):
-        pen = self.make_pen(self.color.darker(LinePlotStyle.MEAN_DARK_FACTOR),
-                            LinePlotStyle.MEAN_WIDTH)
-        return pg.PlotCurveItem(x=self.x_data, y=self.__mean,
-                                pen=pen, antialias=True)
+        pen = self.make_pen(self.color.darker(LinePlotStyle.MEAN_DARK_FACTOR))
+        curve = pg.PlotCurveItem(x=self.x_data, y=self.__mean, pen=pen)
+        Updater.update_lines([curve], **self.graph.parameter_setter.mean_settings)
+        return curve
 
     def _get_error_bar(self):
         std = nanstd(self.y_data, axis=0)
@@ -362,11 +538,12 @@ class ProfileGroup:
 
     def update_profiles_color(self, selection):
         color = QColor(self.color)
-        alpha = LinePlotStyle.UNSELECTED_LINE_ALPHA if not selection \
-            else LinePlotStyle.UNSELECTED_LINE_ALPHA_SEL
+        alpha = self.graph.parameter_setter.line_settings[Updater.ALPHA_LABEL] \
+            if not selection else LinePlotStyle.UNSELECTED_LINE_ALPHA_SEL
         color.setAlpha(alpha)
-        x, y = self.profiles.getData()
-        self.profiles.setData(x=x, y=y, pen=self.make_pen(color))
+        pen = self.profiles.opts["pen"]
+        pen.setColor(color)
+        self.profiles.setPen(pen)
 
     def update_sel_profiles(self, y_data):
         x, y, connect = self.__get_disconnected_curve_data(y_data) \
@@ -375,10 +552,10 @@ class ProfileGroup:
 
     def update_sel_profiles_color(self, subset):
         color = QColor(Qt.black) if subset else QColor(self.color)
-        color.setAlpha(LinePlotStyle.SELECTED_LINE_ALPHA)
-        pen = self.make_pen(color, LinePlotStyle.SELECTED_LINE_WIDTH)
-        x, y = self.sel_profiles.getData()
-        self.sel_profiles.setData(x=x, y=y, pen=pen)
+        color.setAlpha(self.graph.parameter_setter.sel_line_settings[Updater.ALPHA_LABEL])
+        pen = self.sel_profiles.opts["pen"]
+        pen.setColor(color)
+        self.sel_profiles.setPen(pen)
 
     def update_sub_profiles(self, y_data):
         x, y, connect = self.__get_disconnected_curve_data(y_data) \
@@ -437,6 +614,7 @@ class OWLinePlot(OWWidget):
     show_error = Setting(False)
     auto_commit = Setting(True)
     selection = Setting(None, schema_only=True)
+    visual_settings = Setting({}, schema_only=True)
 
     graph_name = "graph.plotItem"
 
@@ -461,8 +639,12 @@ class OWLinePlot(OWWidget):
         self.subset_indices = None
         self.__pending_selection = self.selection
         self.graph_variables = []
+        self.graph = None
+        self.group_vars = None
+        self.group_view = None
         self.setup_gui()
 
+        VisualSettingsDialog(self, self.graph.parameter_setter.initial_settings)
         self.graph.view_box.selection_changed.connect(self.selection_changed)
         self.enable_selection.connect(self.graph.view_box.enable_selection)
 
@@ -495,13 +677,14 @@ class OWLinePlot(OWWidget):
         self.group_view = gui.listView(
             self.controlArea, self, "group_var", box="Group by",
             model=self.group_vars, callback=self.__group_var_changed,
-            sizeHint=QSize(30, 100))
+            sizeHint=QSize(30, 100), viewType=ListViewSearch,
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        )
         self.group_view.setEnabled(False)
 
         plot_gui = OWPlotGUI(self)
         plot_gui.box_zoom_select(self.controlArea)
 
-        gui.rubber(self.controlArea)
         gui.auto_send(self.controlArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)
@@ -632,12 +815,14 @@ class OWLinePlot(OWWidget):
                 group_data = self.data[indices, self.graph_variables]
                 self._plot_group(group_data, indices, index)
         self.graph.update_legend(self.group_var)
+        self.graph.groups = self.__groups
         self.graph.view_box.add_profiles(data.X)
 
     def _remove_groups(self):
         for group in self.__groups:
             group.remove_items()
         self.graph.view_box.remove_profiles()
+        self.graph.groups = []
         self.__groups = []
 
     def _plot_group(self, data, indices, index=None):
@@ -771,7 +956,11 @@ class OWLinePlot(OWWidget):
     def __in(obj, collection):
         return collection is not None and obj in collection
 
+    def set_visual_settings(self, key, value):
+        self.graph.parameter_setter.set_parameter(key, value)
+        self.visual_settings[key] = value
+
 
 if __name__ == "__main__":
-    data = Table("brown-selected")
-    WidgetPreview(OWLinePlot).run(set_data=data, set_subset_data=data[:30])
+    brown = Table("brown-selected")
+    WidgetPreview(OWLinePlot).run(set_data=brown, set_subset_data=brown[:30])

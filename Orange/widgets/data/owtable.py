@@ -441,6 +441,8 @@ class OWDataTable(OWWidget):
 
         self.dist_color = QColor(*self.dist_color_RGB)
 
+        info_box = gui.vBox(self.controlArea, "Info")
+        self.info_text = gui.widgetLabel(info_box)
         self._set_input_summary(None)
         self._set_output_summary(None)
         gui.separator(self.controlArea)
@@ -711,6 +713,67 @@ class OWDataTable(OWWidget):
             summary = format_summary(slot.summary)
             details = format_summary_details(slot.table)
         self.info.set_input_summary(summary, details)
+
+        self.info_text.setText("\n".join(self._info_box_text(slot)))
+
+    @staticmethod
+    def _info_box_text(slot):
+        def format_part(part):
+            if isinstance(part, DenseArray):
+                if not part.nans:
+                    return ""
+                perc = 100 * part.nans / (part.nans + part.non_nans)
+                return f" ({perc:.1f} % missing data)"
+
+            if isinstance(part, SparseArray):
+                tag = "sparse"
+            elif isinstance(part, SparseBoolArray):
+                tag = "tags"
+            else:  # isinstance(part, NotAvailable)
+                return ""
+            dens = 100 * part.non_nans / (part.nans + part.non_nans)
+            return f" ({tag}, density {dens:.2f} %)"
+
+        def desc(n, part):
+            if n == 0:
+                return f"No {part}s"
+            elif n == 1:
+                return f"1 {part}"
+            else:
+                return f"{n} {part}s"
+
+        if slot is None:
+            return ["No data."]
+        summary = slot.summary
+        text = []
+        if isinstance(summary, ApproxSummary):
+            if summary.len.done():
+                text.append(f"{summary.len.result()} instances")
+            else:
+                text.append(f"~{summary.approx_len} instances")
+        elif isinstance(summary, Summary):
+            text.append(f"{summary.len} instances")
+            if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
+                text[-1] += " (no missing data)"
+
+        text.append(desc(len(summary.domain.attributes), "feature")
+                    + format_part(summary.X))
+
+        if not summary.domain.class_vars:
+            text.append("No target variable.")
+        else:
+            if len(summary.domain.class_vars) > 1:
+                c_text = desc(len(summary.domain.class_vars), "outcome")
+            elif summary.domain.has_continuous_class:
+                c_text = "Numeric outcome"
+            else:
+                c_text = "Target with " \
+                    + desc(len(summary.domain.class_var.values), "value")
+            text.append(c_text + format_part(summary.Y))
+
+        text.append(desc(len(summary.domain.metas), "meta attribute")
+                    + format_part(summary.M))
+        return text
 
     def _set_output_summary(self, output):
         summary = len(output) if output else self.info.NoOutput

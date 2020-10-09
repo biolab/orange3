@@ -135,7 +135,7 @@ class OWDataSets(OWWidget):
     icon = "icons/DataSets.svg"
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
-    keywords = ["online"]
+    keywords = ["online", "data sets"]
 
     want_control_area = False
 

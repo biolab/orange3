@@ -12,6 +12,7 @@ from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
 from Orange.projection.manifold import TSNEModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets import gui
@@ -249,6 +250,9 @@ class OWManifoldLearning(OWWidget):
             items=[m.name for m in self.MANIFOLD_METHODS],
             callback=self.manifold_method_changed)
 
+        self._set_input_summary()
+        self._set_output_summary(None)
+
         self.params_box = gui.vBox(self.controlArea, "Parameters")
 
         self.tsne_editor = TSNEParametersEditor(self)
@@ -285,6 +289,7 @@ class OWManifoldLearning(OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.data = data
+        self._set_input_summary()
         self.n_components_spin.setMaximum(len(self.data.domain.attributes)
                                           if self.data else 10)
         self.unconditional_apply()
@@ -339,7 +344,18 @@ class OWManifoldLearning(OWWidget):
             finally:
                 warnings.warn = builtin_warn
 
+        self._set_output_summary(out)
         self.Outputs.transformed_data.send(out)
+
+    def _set_input_summary(self):
+        summary = len(self.data) if self.data else self.info.NoInput
+        details = format_summary_details(self.data) if self.data else ""
+        self.info.set_input_summary(summary, details)
+
+    def _set_output_summary(self, output):
+        summary = len(output) if output else self.info.NoOutput
+        details = format_summary_details(output) if output else ""
+        self.info.set_output_summary(summary, details)
 
     def get_method_parameters(self, data, method):
         parameters = dict(n_components=self.n_components)

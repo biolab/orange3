@@ -7,6 +7,8 @@ from AnyQt.QtWidgets import QListWidget, QSizePolicy
 
 import pyqtgraph as pg
 
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
+
 from Orange.base import Model
 from Orange.classification import ThresholdClassifier, CalibratedLearner
 from Orange.evaluation import Results
@@ -17,6 +19,9 @@ from Orange.widgets.evaluate.contexthandlers import \
 from Orange.widgets.evaluate.utils import results_for_preview
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.customizableplot import \
+    CommonParameterSetter
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
 
@@ -56,6 +61,34 @@ Metrics = [MetricDefinition(*args) for args in (
      "<p><b>True and false positive rate</b> are proportions of detected "
      "and omitted positive instances</p>"),
 )]
+
+
+class ParameterSetter(CommonParameterSetter):
+
+    def __init__(self, master):
+        super().__init__()
+        self.master = master
+
+    def update_setters(self):
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TICKS_LABEL: self.FONT_SETTING,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
+            }
+        }
+
+    @property
+    def title_item(self):
+        return self.master.titleLabel
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in self.master.axes.values()]
 
 
 class OWCalibrationPlot(widget.OWWidget):
@@ -100,6 +133,7 @@ class OWCalibrationPlot(widget.OWWidget):
     fold_curves = settings.Setting(False)
     display_rug = settings.Setting(True)
     threshold = settings.Setting(0.5)
+    visual_settings = settings.Setting({}, schema_only=True)
     auto_commit = settings.Setting(True)
 
     graph_name = "plot"
@@ -157,7 +191,10 @@ class OWCalibrationPlot(widget.OWWidget):
         gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
 
         self.plotview = pg.GraphicsView(background="w")
-        self.plot = pg.PlotItem(enableMenu=False)
+        axes = {"bottom": AxisItem(orientation="bottom"),
+                "left": AxisItem(orientation="left")}
+        self.plot = pg.PlotItem(enableMenu=False, axisItems=axes)
+        self.plot.parameter_setter = ParameterSetter(self.plot)
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
 
@@ -176,6 +213,8 @@ class OWCalibrationPlot(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.plotview)
         self._set_explanation()
+
+        VisualSettingsDialog(self, self.plot.parameter_setter.initial_settings)
 
     @Inputs.evaluation_results
     def set_results(self, results):
@@ -208,7 +247,6 @@ class OWCalibrationPlot(widget.OWWidget):
         self.classifier_names = []
         self.selected_classifiers = []
         self.target_cb.clear()
-        self.target_index = 0
         self.colors = []
 
     def target_index_changed(self):
@@ -262,6 +300,7 @@ class OWCalibrationPlot(widget.OWWidget):
 
         self.selected_classifiers = list(range(n))
         self.target_cb.addItems(results.domain.class_var.values)
+        self.target_index = 0
 
     def _rug(self, data, pen_args):
         color = pen_args["pen"].color()
@@ -435,6 +474,7 @@ class OWCalibrationPlot(widget.OWWidget):
                 text += "</tr>"
             text += "<table>"
             return text
+        return None
 
     def _update_info(self):
         self.info_label.setText(self.get_info_text(short=True))
@@ -497,6 +537,10 @@ class OWCalibrationPlot(widget.OWWidget):
 
         if self.score != 0:
             self.report_raw(self.get_info_text(short=False))
+
+    def set_visual_settings(self, key, value):
+        self.plot.parameter_setter.set_parameter(key, value)
+        self.visual_settings[key] = value
 
 
 def gaussian_smoother(x, y, sigma=1.0):

@@ -2,20 +2,19 @@
 # pylint: disable=missing-docstring,unsubscriptable-object
 import time
 from unittest.mock import Mock, patch
+import numpy as np
 
-from AnyQt.QtCore import QLocale, Qt
+from AnyQt.QtCore import QLocale, Qt, QDate
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit, QComboBox
 
-import numpy as np
-
 from Orange.data import (
     Table, Variable, ContinuousVariable, StringVariable, DiscreteVariable,
-    Domain)
+    Domain, TimeVariable)
 from Orange.preprocess import discretize
 from Orange.widgets.data import owselectrows
 from Orange.widgets.data.owselectrows import (
-    OWSelectRows, FilterDiscreteType, SelectRowsContextHandler)
+    OWSelectRows, FilterDiscreteType, SelectRowsContextHandler, DateTimeWidget)
 from Orange.widgets.tests.base import WidgetTest, datasets
 
 from Orange.data.filter import FilterContinuous, FilterString
@@ -60,6 +59,18 @@ DFValues = {
     FilterDiscreteType.IsDefined: [],
 }
 
+TFValues = {
+    FilterContinuous.Equal: [QDate(2013, 5, 5)],
+    FilterContinuous.NotEqual: [QDate(2013, 5, 5)],
+    FilterContinuous.Less: [QDate(2013, 5, 5)],
+    FilterContinuous.LessEqual: [QDate(2013, 5, 5)],
+    FilterContinuous.Greater: [QDate(2013, 5, 5)],
+    FilterContinuous.GreaterEqual: [QDate(2013, 5, 5)],
+    FilterContinuous.Between: [QDate(2013, 5, 5), QDate(2015, 5, 5)],
+    FilterContinuous.Outside: [QDate(2013, 5, 5), QDate(2015, 5, 5)],
+    FilterContinuous.IsDefined: [],
+}
+
 
 class TestOWSelectRows(WidgetTest):
     def setUp(self):
@@ -73,6 +84,17 @@ class TestOWSelectRows(WidgetTest):
         for i, (op, _) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
             self.widget.remove_all()
             self.widget.add_row(iris.domain[0], i, CFValues[op])
+            self.widget.conditions_changed()
+            self.widget.unconditional_commit()
+
+        # continuous var in metas
+        iris = Table.from_table(
+            Domain([], metas=[iris.domain.attributes[0]]), iris
+        )
+        self.widget.set_data(iris)
+        for i, (op, _) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
+            self.widget.remove_all()
+            self.widget.add_row(iris.domain.metas[0], i, CFValues[op])
             self.widget.conditions_changed()
             self.widget.unconditional_commit()
 
@@ -94,6 +116,39 @@ class TestOWSelectRows(WidgetTest):
         for i, (op, _) in enumerate(OWSelectRows.Operators[DiscreteVariable]):
             self.widget.remove_all()
             self.widget.add_row(0, i, DFValues[op])
+            self.widget.conditions_changed()
+            self.widget.unconditional_commit()
+
+        # discrete var in metas
+        lenses = Table.from_table(
+            Domain([], metas=[lenses.domain.attributes[0]]), lenses
+        )
+        self.widget.set_data(lenses)
+        for i, (op, _) in enumerate(OWSelectRows.Operators[DiscreteVariable]):
+            self.widget.remove_all()
+            self.widget.add_row(lenses.domain.metas[0], i, DFValues[op])
+            self.widget.conditions_changed()
+            self.widget.unconditional_commit()
+
+    def test_filter_time(self):
+        data = Table(test_filename("datasets/cyber-security-breaches.tab"))
+        self.widget.auto_commit = False
+        self.widget.set_data(data)
+
+        for i, (op, _) in enumerate(OWSelectRows.Operators[TimeVariable]):
+            self.widget.remove_all()
+            self.widget.add_row(data.domain["breach_start"], i, TFValues[op])
+            self.widget.conditions_changed()
+            self.widget.unconditional_commit()
+
+        # time var in metas
+        data = Table.from_table(
+            Domain([], metas=[data.domain["breach_start"]]), data
+        )
+        self.widget.set_data(data)
+        for i, (op, _) in enumerate(OWSelectRows.Operators[TimeVariable]):
+            self.widget.remove_all()
+            self.widget.add_row(data.domain.metas[0], i, TFValues[op])
             self.widget.conditions_changed()
             self.widget.unconditional_commit()
 
@@ -430,6 +485,42 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(
             self.widget.cond_list.cellWidget(0, 1).currentText(), "is")
 
+    def test_calendar_dates(self):
+        data = Table(test_filename("datasets/cyber-security-breaches.tab"))
+        self.send_signal(self.widget.Inputs.data, data)
+        simulate.combobox_activate_item(
+            self.widget.cond_list.cellWidget(0, 0), "Date_Posted_or_Updated",
+            delay=0)
+        value_combo = self.widget.cond_list.cellWidget(0, 2).children()[1]
+        self.assertIsInstance(value_combo, DateTimeWidget)
+
+        # first displayed date is min date
+        self.assertEqual(value_combo.date(), QDate(2014, 1, 23))
+        self.assertEqual(len(self.get_output("Matching Data")), 691)
+        self.widget.remove_all_button.click()
+        self.enterFilter("Date_Posted_or_Updated", "is below",
+                         QDate(2014, 4, 17))
+        self.assertEqual(len(self.get_output("Matching Data")), 840)
+        self.enterFilter("Date_Posted_or_Updated", "is greater than",
+                         QDate(2014, 6, 30))
+        self.assertIsNone(self.get_output("Matching Data"))
+        self.widget.remove_all_button.click()
+        # date is in range min-max date
+        self.enterFilter("Date_Posted_or_Updated", "equals", QDate(2013, 1, 1))
+        self.assertEqual(self.widget.conditions[0][2][0], QDate(2014, 1, 23))
+        self.enterFilter("Date_Posted_or_Updated", "equals", QDate(2015, 1, 1))
+        self.assertEqual(self.widget.conditions[1][2][0], QDate(2014, 6, 30))
+        self.widget.remove_all_button.click()
+        # no date crossings
+        self.enterFilter("Date_Posted_or_Updated", "is between",
+                         QDate(2014, 4, 17), QDate(2014, 1, 23))
+        self.assertEqual(self.widget.conditions[0][2],
+                         (QDate(2014, 4, 17), QDate(2014, 4, 17)))
+        self.widget.remove_all_button.click()
+        self.enterFilter("Date_Posted_or_Updated", "is between",
+                         QDate(2014, 4, 17), QDate(2014, 4, 30))
+        self.assertEqual(len(self.get_output("Matching Data")), 58)
+
     @patch.object(owselectrows.QMessageBox, "question",
                   return_value=owselectrows.QMessageBox.Ok)
     def test_add_all(self, msgbox):
@@ -581,9 +672,13 @@ Basically, revert this commit.
             if isinstance(value_inputs, QComboBox):
                 value_inputs = [value_inputs]
             else:
-                value_inputs = [
-                    w for w in value_inputs.children()
-                    if isinstance(w, QLineEdit)]
+                value_input = []
+                for widget in value_inputs.children():
+                    if isinstance(widget, QLineEdit):
+                        value_input.append(widget)
+                    elif isinstance(widget, DateTimeWidget):
+                        value_input.append(widget)
+                return value_input
         return value_inputs
 
     @staticmethod
@@ -594,5 +689,7 @@ Basically, revert this commit.
             QTest.keyClick(widget, Qt.Key_Enter)
         elif isinstance(widget, QComboBox):
             simulate.combobox_activate_item(widget, value)
+        elif isinstance(widget, DateTimeWidget):
+            widget.setDate(value)
         else:
             raise ValueError("Unsupported widget {}".format(widget))

@@ -189,6 +189,12 @@ class WeightedIndicator(Indicator):
             t *= self.weight
         return t
 
+    def __eq__(self, other):
+        return super().__eq__(other) and self.weight == other.weight
+
+    def __hash__(self):
+        return hash((type(self), self.variable, self.value, self.weight))
+
 
 def make_indicator_var(source, value_ind, weight=None):
     if weight is None:

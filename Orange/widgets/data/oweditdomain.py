@@ -13,20 +13,23 @@ from collections import namedtuple, Counter
 from functools import singledispatch, partial
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
-    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable
+    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable, cast
 )
 
 import numpy as np
 import pandas as pd
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QToolButton, QLineEdit, QAction, QActionGroup, QGroupBox,
-    QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
+    QLineEdit, QAction, QActionGroup, QGroupBox,
+    QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
-    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox)
+    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
+    QAbstractItemView, QMenu
+)
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
-    Qt, QEvent, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex
+    Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect,
+    QPoint,
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
@@ -35,6 +38,8 @@ import Orange.data
 from Orange.preprocess.transformation import Transformation, Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.buttons import FixedSizeButton
+from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
@@ -77,7 +82,6 @@ class _DataType:
         """
         type_number = {
             "Categorical": 0,
-            "Ordered": 1,
             "Real": 2,
             "Time": 3,
             "String": 4
@@ -96,11 +100,8 @@ class Categorical(
         ("name", str),
         ("categories", Tuple[str, ...]),
         ("annotations", AnnotationsType),
+        ("linked", bool)
     ])): pass
-
-
-class Ordered(Categorical):
-    pass
 
 
 class Real(
@@ -109,6 +110,7 @@ class Real(
         # a precision (int, and a format specifier('f', 'g', or '')
         ("format", Tuple[int, str]),
         ("annotations", AnnotationsType),
+        ("linked", bool)
     ])): pass
 
 
@@ -116,6 +118,7 @@ class String(
     _DataType, NamedTuple("String", [
         ("name", str),
         ("annotations", AnnotationsType),
+        ("linked", bool)
     ])): pass
 
 
@@ -123,6 +126,7 @@ class Time(
     _DataType, NamedTuple("Time", [
         ("name", str),
         ("annotations", AnnotationsType),
+        ("linked", bool)
     ])): pass
 
 
@@ -180,16 +184,14 @@ class Annotate(_DataType, namedtuple("Annotate", ["annotations"])):
         return var._replace(annotations=self.annotations)
 
 
-class ChangeOrdered(_DataType, NamedTuple("ChangeOrdered", [("ordered", bool)])):
-    """
-    Change Categorical <-> Ordered
-    """
+class Unlink(_DataType, namedtuple("Unlink", [])):
+    """Unlink variable from its source, that is, remove compute_value"""
 
 
-Transform = Union[Rename, CategoriesMapping, Annotate, ChangeOrdered]
-TransformTypes = (Rename, CategoriesMapping, Annotate, ChangeOrdered)
+Transform = Union[Rename, CategoriesMapping, Annotate, Unlink]
+TransformTypes = (Rename, CategoriesMapping, Annotate, Unlink)
 
-CategoricalTransformTypes = (CategoriesMapping, ChangeOrdered)
+CategoricalTransformTypes = (CategoriesMapping, Unlink)
 
 
 # Reinterpret vector transformations.
@@ -232,7 +234,7 @@ class AsString(_DataType, NamedTuple("AsString", [])):
         if isinstance(var, String):
             return vector
         return StringVector(
-            String(var.name, var.annotations),
+            String(var.name, var.annotations, False),
             lambda: as_string(vector.data()),
         )
 
@@ -252,11 +254,11 @@ class AsContinuous(_DataType, NamedTuple("AsContinuous", [])):
                 a = categorical_to_string_vector(d, var.values)
                 return MArray(as_float_or_nan(a, where=a.mask), mask=a.mask)
             return RealVector(
-                Real(var.name, (6, 'g'), var.annotations), data
+                Real(var.name, (6, 'g'), var.annotations, var.linked), data
             )
         elif isinstance(var, Time):
             return RealVector(
-                Real(var.name, (6, 'g'), var.annotations),
+                Real(var.name, (6, 'g'), var.annotations, var.linked),
                 lambda: vector.data().astype(float)
             )
         elif isinstance(var, String):
@@ -264,7 +266,7 @@ class AsContinuous(_DataType, NamedTuple("AsContinuous", [])):
                 s = vector.data()
                 return MArray(as_float_or_nan(s, where=s.mask), mask=s.mask)
             return RealVector(
-                Real(var.name, (6, "g"), var.annotations), data
+                Real(var.name, (6, "g"), var.annotations, var.linked), data
             )
         raise AssertionError
 
@@ -277,22 +279,10 @@ class AsCategorical(_DataType, namedtuple("AsCategorical", [])):
         var, _ = vector
         if isinstance(var, Categorical):
             return vector
-        if isinstance(var, Real):
+        if isinstance(var, (Real, Time, String)):
             data, values = categorical_from_vector(vector.data())
             return CategoricalVector(
-                Categorical(var.name, values, var.annotations),
-                lambda: data
-            )
-        elif isinstance(var, Time):
-            data, values = categorical_from_vector(vector.data())
-            return CategoricalVector(
-                Categorical(var.name, values, var.annotations),
-                lambda: data
-            )
-        elif isinstance(var, String):
-            data, values = categorical_from_vector(vector.data())
-            return CategoricalVector(
-                Categorical(var.name, values, var.annotations),
+                Categorical(var.name, values, var.annotations, var.linked),
                 lambda: data
             )
         raise AssertionError
@@ -306,7 +296,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
             return vector
         elif isinstance(var, Real):
             return TimeVector(
-                Time(var.name, var.annotations),
+                Time(var.name, var.annotations, var.linked),
                 lambda: vector.data().astype("M8[us]")
             )
         elif isinstance(var, Categorical):
@@ -316,7 +306,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
                 dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
                 return MArray(dt, mask=d.mask)
             return TimeVector(
-                Time(var.name, var.annotations), data
+                Time(var.name, var.annotations, var.linked), data
             )
         elif isinstance(var, String):
             def data():
@@ -324,7 +314,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
                 dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
                 return MArray(dt, mask=s.mask)
             return TimeVector(
-                Time(var.name, var.annotations), data
+                Time(var.name, var.annotations, var.linked), data
             )
         raise AssertionError
 
@@ -480,42 +470,6 @@ class DictItemsModel(QStandardItemModel):
         return rval
 
 
-class FixedSizeButton(QToolButton):
-
-    def __init__(self, *args, defaultAction=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        sh = self.sizePolicy()
-        sh.setHorizontalPolicy(QSizePolicy.Fixed)
-        sh.setVerticalPolicy(QSizePolicy.Fixed)
-        self.setSizePolicy(sh)
-        self.setAttribute(Qt.WA_WState_OwnSizePolicy, True)
-
-        if defaultAction is not None:
-            self.setDefaultAction(defaultAction)
-
-    def sizeHint(self):
-        style = self.style()
-        size = (style.pixelMetric(QStyle.PM_SmallIconSize) +
-                style.pixelMetric(QStyle.PM_ButtonMargin))
-        return QSize(size, size)
-
-    def event(self, event):
-        # type: (QEvent) -> bool
-        if event.type() == QEvent.ToolTip and self.toolTip():
-            action = self.defaultAction()
-            if action is not None:
-                text = "<span>{}</span>&nbsp;&nbsp;<kbd>{}</kbd>".format(
-                    action.toolTip(),
-                    action.shortcut().toString(QKeySequence.NativeText)
-                )
-                QToolTip.showText(event.globalPos(), text)
-            else:
-                QToolTip.hideText()
-            return True
-        else:
-            return super().event(event)
-
-
 class VariableEditor(QWidget):
     """
     An editor widget for a variable.
@@ -542,6 +496,17 @@ class VariableEditor(QWidget):
             lambda: self.name_edit.isModified() and self.on_name_changed()
         )
         form.addRow("Name:", self.name_edit)
+
+        self.unlink_var_cb = QCheckBox(
+            "Unlink variable from its source variable", self,
+            toolTip="Make Orange forget that the variable is derived from "
+                    "another.\n"
+                    "Use this for instance when you want to consider variables "
+                    "with the same name but from different sources as the same "
+                    "variable."
+        )
+        self.unlink_var_cb.toggled.connect(self._set_unlink)
+        form.addRow("", self.unlink_var_cb)
 
         vlayout = QVBoxLayout(margin=0, spacing=1)
         self.labels_edit = view = QTreeView(
@@ -627,16 +592,22 @@ class VariableEditor(QWidget):
         if var is not None:
             name = var.name
             annotations = var.annotations
+            unlink = False
             for tr in transform:
                 if isinstance(tr, Rename):
                     name = tr.name
                 elif isinstance(tr, Annotate):
                     annotations = tr.annotations
+                elif isinstance(tr, Unlink):
+                    unlink = True
             self.name_edit.setText(name)
             self.labels_model.set_dict(dict(annotations))
             self.add_label_action.actionGroup().setEnabled(True)
+            self.unlink_var_cb.setChecked(unlink)
         else:
             self.add_label_action.actionGroup().setEnabled(False)
+
+        self.unlink_var_cb.setDisabled(var is None or not var.linked)
 
     def get_data(self):
         """Retrieve the modified variable.
@@ -650,6 +621,8 @@ class VariableEditor(QWidget):
             tr.append(Rename(name))
         if self.var.annotations != labels:
             tr.append(Annotate(labels))
+        if self.var.linked and self.unlink_var_cb.isChecked():
+            tr.append(Unlink())
         return self.var, tr
 
     def clear(self):
@@ -658,6 +631,7 @@ class VariableEditor(QWidget):
         self.var = None
         self.name_edit.setText("")
         self.labels_model.setRowCount(0)
+        self.unlink_var_cb.setChecked(False)
 
     @Slot()
     def on_name_changed(self):
@@ -671,6 +645,10 @@ class VariableEditor(QWidget):
     def on_label_selection_changed(self):
         selected = self.labels_edit.selectionModel().selectedRows()
         self.remove_label_action.setEnabled(bool(len(selected)))
+
+    def _set_unlink(self, unlink):
+        self.unlink_var_cb.setChecked(unlink)
+        self.variable_changed.emit()
 
 
 class GroupItemsDialog(QDialog):
@@ -1021,6 +999,14 @@ class CountedStateModel(CountedListModel):
         return frozenset({Qt.EditRole, EditStateRole})
 
 
+def mapRectTo(widget: QWidget, parent: QWidget, rect: QRect) -> QRect:  # pylint: disable=redefined-outer-name
+    return QRect(widget.mapTo(parent, rect.topLeft()), rect.size())
+
+
+def mapRectToGlobal(widget: QWidget, rect: QRect) -> QRect:  # pylint: disable=redefined-outer-name
+    return QRect(widget.mapToGlobal(rect.topLeft()), rect.size())
+
+
 class CategoriesEditDelegate(QStyledItemDelegate):
     """
     Display delegate for editing categories.
@@ -1052,6 +1038,64 @@ class CategoriesEditDelegate(QStyledItemDelegate):
             text = text + " " + suffix
         option.text = text
 
+    class CatEditComboBox(QComboBox):
+        prows: List[QPersistentModelIndex]
+
+    def createEditor(
+            self, parent: QWidget, option: 'QStyleOptionViewItem',
+            index: QModelIndex
+    ) -> QWidget:
+        view = option.widget
+        assert isinstance(view, QAbstractItemView)
+        selmodel = view.selectionModel()
+        rows = selmodel.selectedRows(0)
+        if len(rows) < 2:
+            return super().createEditor(parent, option, index)
+        # edit multiple selection
+        cb = CategoriesEditDelegate.CatEditComboBox(
+            editable=True, insertPolicy=QComboBox.InsertAtBottom)
+        cb.setParent(view, Qt.Popup)
+        cb.addItems(
+            list(unique(str(row.data(Qt.EditRole)) for row in rows)))
+        prows = [QPersistentModelIndex(row) for row in rows]
+        cb.prows = prows
+        return cb
+
+    def updateEditorGeometry(
+            self, editor: QWidget, option: 'QStyleOptionViewItem',
+            index: QModelIndex
+    ) -> None:
+        if isinstance(editor, CategoriesEditDelegate.CatEditComboBox):
+            view = cast(QAbstractItemView, option.widget)
+            view.scrollTo(index)
+            vport = view.viewport()
+            vrect = view.visualRect(index)
+            vrect = mapRectTo(vport, view, vrect)
+            vrect = vrect.intersected(vport.geometry())
+            vrect = mapRectToGlobal(vport, vrect)
+            size = editor.sizeHint().expandedTo(vrect.size())
+            editor.resize(size)
+            editor.move(vrect.topLeft())
+        else:
+            super().updateEditorGeometry(editor, option, index)
+
+    def setModelData(
+            self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex
+    ) -> None:
+        if isinstance(editor, CategoriesEditDelegate.CatEditComboBox):
+            text = editor.currentText()
+            with signal_blocking(model):
+                for prow in editor.prows:
+                    if prow.isValid():
+                        model.setData(QModelIndex(prow), text, Qt.EditRole)
+            # this could be better
+            model.dataChanged.emit(
+                model.index(0, 0), model.index(model.rowCount() - 1, 0),
+                (Qt.EditRole,)
+            )
+        else:
+            super().setModelData(editor, model, index)
+
 
 class DiscreteVariableEditor(VariableEditor):
     """An editor widget for editing a discrete variable.
@@ -1066,10 +1110,6 @@ class DiscreteVariableEditor(VariableEditor):
 
         form = self.layout().itemAt(0)
         assert isinstance(form, QFormLayout)
-        self.ordered_cb = QCheckBox(
-            "Ordered", self, toolTip="Is this an ordered categorical."
-        )
-        self.ordered_cb.toggled.connect(self._set_ordered)
         #: A list model of discrete variable's values.
         self.values_model = CountedStateModel(
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
@@ -1097,7 +1137,8 @@ class DiscreteVariableEditor(VariableEditor):
             self, objectName="action-group-categories", enabled=False
         )
         self.move_value_up = QAction(
-            "\N{UPWARDS ARROW}", group,
+            "Move up", group,
+            iconText="\N{UPWARDS ARROW}",
             toolTip="Move the selected item up.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.AltModifier |
                                   Qt.Key_BracketLeft),
@@ -1106,7 +1147,8 @@ class DiscreteVariableEditor(VariableEditor):
         self.move_value_up.triggered.connect(self.move_up)
 
         self.move_value_down = QAction(
-            "\N{DOWNWARDS ARROW}", group,
+            "Move down", group,
+            iconText="\N{DOWNWARDS ARROW}",
             toolTip="Move the selected item down.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.AltModifier |
                                   Qt.Key_BracketRight),
@@ -1115,29 +1157,41 @@ class DiscreteVariableEditor(VariableEditor):
         self.move_value_down.triggered.connect(self.move_down)
 
         self.add_new_item = QAction(
-            "+", group,
+            "Add", group,
+            iconText="+",
             objectName="action-add-item",
             toolTip="Append a new item.",
             shortcut=QKeySequence(QKeySequence.New),
             shortcutContext=Qt.WidgetShortcut,
         )
         self.remove_item = QAction(
-            "\N{MINUS SIGN}", group,
+            "Remove item", group,
+            iconText="\N{MINUS SIGN}",
             objectName="action-remove-item",
             toolTip="Delete the selected item.",
             shortcut=QKeySequence(QKeySequence.Delete),
             shortcutContext=Qt.WidgetShortcut,
         )
-        self.merge_items = QAction(
-            "M", group,
-            objectName="action-merge-item",
-            toolTip="Merge selected items.",
+        self.rename_selected_items = QAction(
+            "Rename selected items", group,
+            iconText="=",
+            objectName="action-rename-selected-items",
+            toolTip="Rename selected items.",
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Equal),
+            shortcutContext=Qt.WidgetShortcut,
+        )
+        self.merge_items = QAction(
+            "Merge", group,
+            iconText="M",
+            objectName="action-activate-merge-dialog",
+            toolTip="Merge infrequent items.",
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.MetaModifier | Qt.Key_Equal),
             shortcutContext=Qt.WidgetShortcut
         )
 
         self.add_new_item.triggered.connect(self._add_category)
         self.remove_item.triggered.connect(self._remove_category)
+        self.rename_selected_items.triggered.connect(self._rename_selected_categories)
         self.merge_items.triggered.connect(self._merge_categories)
 
         button1 = FixedSizeButton(
@@ -1157,11 +1211,28 @@ class DiscreteVariableEditor(VariableEditor):
             accessibleName="Remove"
         )
         button5 = FixedSizeButton(
-            self, defaultAction=self.merge_items,
-            accessibleName="Merge",
+            self, defaultAction=self.rename_selected_items,
+            accessibleName="Merge selected items"
         )
-        self.values_edit.addActions([self.move_value_up, self.move_value_down,
-                                     self.add_new_item, self.remove_item])
+        button6 = FixedSizeButton(
+            self, defaultAction=self.merge_items,
+            accessibleName="Merge infrequent",
+        )
+
+        self.values_edit.addActions([
+            self.move_value_up, self.move_value_down,
+            self.add_new_item, self.remove_item, self.rename_selected_items
+        ])
+        self.values_edit.setContextMenuPolicy(Qt.CustomContextMenu)
+
+        def context_menu(pos: QPoint):
+            viewport = self.values_edit.viewport()
+            menu = QMenu(self.values_edit)
+            menu.setAttribute(Qt.WA_DeleteOnClose)
+            menu.addActions([self.rename_selected_items, self.remove_item])
+            menu.popup(viewport.mapToGlobal(pos))
+        self.values_edit.customContextMenuRequested.connect(context_menu)
+
         hlayout.addWidget(button1)
         hlayout.addWidget(button2)
         hlayout.addSpacing(3)
@@ -1169,19 +1240,20 @@ class DiscreteVariableEditor(VariableEditor):
         hlayout.addWidget(button4)
         hlayout.addSpacing(3)
         hlayout.addWidget(button5)
+        hlayout.addWidget(button6)
+
         hlayout.addStretch(10)
         vlayout.addLayout(hlayout)
 
-        form.insertRow(1, "", self.ordered_cb)
         form.insertRow(2, "Values:", vlayout)
 
-        QWidget.setTabOrder(self.name_edit, self.ordered_cb)
-        QWidget.setTabOrder(self.ordered_cb, self.values_edit)
-
+        QWidget.setTabOrder(self.name_edit, self.values_edit)
         QWidget.setTabOrder(self.values_edit, button1)
         QWidget.setTabOrder(button1, button2)
         QWidget.setTabOrder(button2, button3)
         QWidget.setTabOrder(button3, button4)
+        QWidget.setTabOrder(button4, button5)
+        QWidget.setTabOrder(button5, button6)
 
     def set_data(self, var, transform=()):
         raise NotImplementedError
@@ -1197,12 +1269,9 @@ class DiscreteVariableEditor(VariableEditor):
         super().set_data(var, transform=transform)
         self._values = values
         tr = None  # type: Optional[CategoriesMapping]
-        ordered = None  # type: Optional[ChangeOrdered]
         for tr_ in transform:
             if isinstance(tr_, CategoriesMapping):
                 tr = tr_
-            if isinstance(tr_, ChangeOrdered):
-                ordered = tr_
 
         items = []
         if tr is not None:
@@ -1254,10 +1323,7 @@ class DiscreteVariableEditor(VariableEditor):
                     self.values_model.index(i, 0),
                     item
                 )
-        if ordered is not None:
-            self.ordered_cb.setChecked(ordered.ordered)
-        elif var is not None:
-            self.ordered_cb.setChecked(isinstance(var, Ordered))
+
         self.add_new_item.actionGroup().setEnabled(var is not None)
 
     def __categories_mapping(self):
@@ -1297,9 +1363,6 @@ class DiscreteVariableEditor(VariableEditor):
         if any(_1 != _2 or _2 != _3
                for (_1, _2), _3 in zip_longest(mapping, var.categories)):
             tr.append(CategoriesMapping(mapping))
-        ordered = self.ordered_cb.isChecked()
-        if ordered != isinstance(var, Ordered):
-            tr.append(ChangeOrdered(ordered))
         return var, tr
 
     def clear(self):
@@ -1333,13 +1396,6 @@ class DiscreteVariableEditor(VariableEditor):
     @Slot()
     def on_value_selection_changed(self):
         rows = self.values_edit.selectionModel().selectedRows()
-        # enable merge if at least 2 selected items and the selection must not
-        # contain any added/dropped items.
-        enable_merge = \
-            len(rows) > 1 and \
-            not any(index.data(EditStateRole) != ItemEditState.NoState
-                    for index in rows)
-
         if len(rows) == 1:
             i = rows[0].row()
             self.move_value_up.setEnabled(i != 0)
@@ -1462,9 +1518,21 @@ class DiscreteVariableEditor(VariableEditor):
                 dlg.get_merged_value_name(), dlg.get_merge_attributes()
             )
 
-    def _set_ordered(self, ordered):
-        self.ordered_cb.setChecked(ordered)
-        self.variable_changed.emit()
+    def _rename_selected_categories(self):
+        """
+        Rename selected categories and merging them.
+
+        Popup an editable combo box for selection/edit of a new value.
+        """
+        view = self.values_edit
+        selmodel = view.selectionModel()
+        index = view.currentIndex()
+        if not selmodel.isSelected(index):
+            indices = selmodel.selectedRows(0)
+            if indices:
+                index = indices[0]
+        # delegate to the CategoriesEditDelegate
+        view.edit(index)
 
 
 class ContinuousVariableEditor(VariableEditor):
@@ -1482,7 +1550,7 @@ def variable_icon(var):
     if not isinstance(var, type):
         var = type(var)
 
-    if issubclass(var, (Categorical, Ordered, AsCategorical)):
+    if issubclass(var, (Categorical, AsCategorical)):
         return gui.attributeIconDict[1]
     elif issubclass(var, (Real, AsContinuous)):
         return gui.attributeIconDict[2]
@@ -1569,7 +1637,7 @@ class ReinterpretVariableEditor(VariableEditor):
     A 'compound' variable editor capable of variable type reinterpretations.
     """
     _editors = {
-        Categorical: 0, Ordered: 0,
+        Categorical: 0,
         Real: 1,
         String: 2,
         Time: 3,
@@ -2061,23 +2129,32 @@ class OWEditDomain(widget.OWWidget):
                     model.data(midx, TransformRole))
 
         state = [state(i) for i in range(model.rowCount())]
-        if all(tr is None or not tr for _, tr in state) \
-                and self.output_table_name in ("", data.name):
+        input_vars = data.domain.variables + data.domain.metas
+        if self.output_table_name in ("", data.name) \
+                and not any(requires_transform(var, trs)
+                            for var, (_, trs) in zip(input_vars, state)):
             self.Outputs.data.send(data)
             self.info.set_output_summary(len(data),
                                          format_summary_details(data))
             return
 
-        output_vars = []
-        input_vars = data.domain.variables + data.domain.metas
         assert all(v_.vtype.name == v.name
                    for v, (v_, _) in zip(input_vars, state))
+        output_vars = []
+        unlinked_vars = []
+        unlink_domain = False
         for (_, tr), v in zip(state, input_vars):
             if tr:
                 var = apply_transform(v, data, tr)
+                if requires_unlink(v, tr):
+                    unlinked_var = var.copy(compute_value=None)
+                    unlink_domain = True
+                else:
+                    unlinked_var = var
             else:
-                var = v
+                unlinked_var = var = v
             output_vars.append(var)
+            unlinked_vars.append(unlinked_var)
 
         if len(output_vars) != len({v.name for v in output_vars}):
             self.Error.duplicate_var_name()
@@ -2089,15 +2166,23 @@ class OWEditDomain(widget.OWWidget):
         nx = len(domain.attributes)
         ny = len(domain.class_vars)
 
-        Xs = output_vars[:nx]
-        Ys = output_vars[nx: nx + ny]
-        Ms = output_vars[nx + ny:]
-        # Move non primitive Xs, Ys to metas (if they were changed)
-        Ms += [v for v in Xs + Ys if not v.is_primitive()]
-        Xs = [v for v in Xs if v.is_primitive()]
-        Ys = [v for v in Ys if v.is_primitive()]
-        domain = Orange.data.Domain(Xs, Ys, Ms)
+        def construct_domain(vars_list):
+            # Move non primitive Xs, Ys to metas (if they were changed)
+            Xs = [v for v in vars_list[:nx] if v.is_primitive()]
+            Ys = [v for v in vars_list[nx: nx + ny] if v.is_primitive()]
+            Ms = vars_list[nx + ny:] + \
+                 [v for v in vars_list[:nx + ny] if not  v.is_primitive()]
+            return Orange.data.Domain(Xs, Ys, Ms)
+
+        domain = construct_domain(output_vars)
         new_data = data.transform(domain)
+        if unlink_domain:
+            unlinked_domain = construct_domain(unlinked_vars)
+            new_data = new_data.from_numpy(
+                unlinked_domain,
+                new_data.X, new_data.Y, new_data.metas, new_data.W,
+                new_data.attributes, new_data.ids
+            )
         if self.output_table_name:
             new_data.name = self.output_table_name
         self.Outputs.data.send(new_data)
@@ -2267,7 +2352,7 @@ def report_transform(var, trs):
     def text(text):
         return "<span>{}</span>".format(escape(text))
     assert trs
-    rename = annotate = catmap = ordered = None
+    rename = annotate = catmap = unlink = None
     reinterpret = None
 
     for tr in trs:
@@ -2277,8 +2362,8 @@ def report_transform(var, trs):
             annotate = tr
         elif isinstance(tr, CategoriesMapping):
             catmap = tr
-        elif isinstance(tr, ChangeOrdered):
-            ordered = tr
+        elif isinstance(tr, Unlink):
+            unlink = tr
         elif isinstance(tr, ReinterpretTransformTypes):
             reinterpret = tr
 
@@ -2291,9 +2376,9 @@ def report_transform(var, trs):
         header = "{} → {}".format(var.name, rename.name)
     else:
         header = var.name
-    if ordered is not None:
-        header += " (changed to {})".format(
-            "ordered" if ordered.ordered else "unordered")
+    if unlink is not None:
+        header += "(unlinked from source)"
+
     values_section = None
     if catmap is not None:
         values_section = ("Values", [])
@@ -2358,17 +2443,15 @@ def abstract(var):
         (key, str(value))
         for key, value in var.attributes.items()
     ))
+    linked = var.compute_value is not None
     if isinstance(var, Orange.data.DiscreteVariable):
-        if var.ordered:
-            return Ordered(var.name, tuple(var.values), annotations)
-        else:
-            return Categorical(var.name, tuple(var.values), annotations)
+        return Categorical(var.name, tuple(var.values), annotations, linked)
     elif isinstance(var, Orange.data.TimeVariable):
-        return Time(var.name, annotations)
+        return Time(var.name, annotations, linked)
     elif isinstance(var, Orange.data.ContinuousVariable):
-        return Real(var.name, (var.number_of_decimals, 'f'), annotations)
+        return Real(var.name, (var.number_of_decimals, 'f'), annotations, linked)
     elif isinstance(var, Orange.data.StringVariable):
-        return String(var.name, annotations)
+        return String(var.name, annotations, linked)
     else:
         raise TypeError
 
@@ -2397,6 +2480,24 @@ def apply_transform(var, table, trs):
         return var
 
 
+def requires_unlink(var: Orange.data.Variable, trs: List[Transform]) -> bool:
+    # Variable is only unlinked if it has compute_value  or if it has other
+    # transformations (that might had added compute_value)
+    return trs is not None \
+           and any(isinstance(tr, Unlink) for tr in trs) \
+           and (var.compute_value is not None or len(trs) > 1)
+
+
+def requires_transform(var: Orange.data.Variable, trs: List[Transform]) -> bool:
+    # Unlink is treated separately: Unlink is required only if the variable
+    # has compute_value. Hence tranform is required if it has any
+    # transformations other than Unlink, or if unlink is indeed required.
+    return trs is not None and (
+        not all(isinstance(tr, Unlink) for tr in trs)
+        or requires_unlink(var, trs)
+    )
+
+
 @singledispatch
 def apply_transform_var(var, trs):
     # type: (Orange.data.Variable, List[Transform]) -> Orange.data.Variable
@@ -2409,7 +2510,6 @@ def apply_transform_discete(var, trs):
     # pylint: disable=too-many-branches
     name, annotations = var.name, var.attributes
     mapping = None
-    ordered = var.ordered
     for tr in trs:
         if isinstance(tr, Rename):
             name = tr.name
@@ -2417,8 +2517,6 @@ def apply_transform_discete(var, trs):
             mapping = tr.mapping
         elif isinstance(tr, Annotate):
             annotations = _parse_attributes(tr.annotations)
-        elif isinstance(tr, ChangeOrdered):
-            ordered = tr.ordered
 
     source_values = var.values
     if mapping is not None:
@@ -2443,7 +2541,8 @@ def apply_transform_discete(var, trs):
     else:
         lookup = Identity(var)
     variable = Orange.data.DiscreteVariable(
-        name, values=dest_values, compute_value=lookup, ordered=ordered)
+        name, values=dest_values, compute_value=lookup
+    )
     variable.attributes.update(annotations)
     return variable
 
@@ -2524,6 +2623,14 @@ class DictMissingConst(dict):
 
     def __missing__(self, key):
         return self.__missing
+
+    def __eq__(self, other):
+        return super().__eq__(other) and isinstance(other, DictMissingConst) \
+            and (self.__missing == other[()]  # get `__missing`
+                 or np.isnan(self.__missing) and np.isnan(other[()]))
+
+    def __hash__(self):
+        return hash((self.__missing, frozenset(self.items())))
 
 
 def make_dict_mapper(
@@ -2802,6 +2909,14 @@ class LookupMappingTransform(Transformation):
 
     def __reduce_ex__(self, protocol):
         return type(self), (self.variable, self.mapping, self.dtype)
+
+    def __eq__(self, other):
+        return self.variable == other.variable \
+               and self.mapping == other.mapping \
+               and self.dtype == other.dtype
+
+    def __hash__(self):
+        return hash((type(self), self.variable, self.mapping, self.dtype))
 
 
 @singledispatch

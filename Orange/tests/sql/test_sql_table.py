@@ -4,6 +4,7 @@
 import pickle
 import contextlib
 import unittest.mock
+import unittest
 import string
 
 import numpy as np
@@ -674,7 +675,7 @@ class TestSqlTable(unittest.TestCase, dbt):
     @dbt.run_on(["postgres"])
     def test_contingencies(self):
         iris = SqlTable(self.conn, self.iris, inspect_values=True)
-        iris.domain = Domain(iris.domain[:2] + (EqualWidth()(iris, iris.domain['sepal width']),),
+        iris.domain = Domain(iris.domain[2:4] + (EqualWidth()(iris, iris.domain['sepal width']),),
                              iris.domain['iris'])
 
         conts = get_contingencies(iris)
@@ -715,3 +716,6 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertGreater(len(table.domain.metas), 0)
         attr = table.domain[-1]
         self.assertIsInstance(attr, variable_type)
+
+if __name__ == "__main__":
+    unittest.main()

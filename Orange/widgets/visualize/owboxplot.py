@@ -6,10 +6,11 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsItemGroup, QGraphicsLineItem,
-    QGraphicsPathItem, QGraphicsRectItem, QSizePolicy,
-    QListView)
+    QGraphicsPathItem, QGraphicsRectItem, QSizePolicy
+)
 from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSize, QSortFilterProxyModel
+from orangewidget.utils.listview import ListViewSearch
 
 import scipy.special
 from scipy.stats import f_oneway, chi2_contingency
@@ -174,17 +175,16 @@ class OWBoxPlot(widget.OWWidget):
     _pen_axis_tick.setCapStyle(Qt.FlatCap)
 
     _box_brush = QBrush(QColor(0x33, 0x88, 0xff, 0xc0))
-
-    _axis_font = QFont()
-    _axis_font.setPixelSize(12)
-    _label_font = QFont()
-    _label_font.setPixelSize(11)
     _attr_brush = QBrush(QColor(0x33, 0x00, 0xff))
 
     graph_name = "box_scene"
 
     def __init__(self):
         super().__init__()
+        self._axis_font = QFont()
+        self._axis_font.setPixelSize(12)
+        self._label_font = QFont()
+        self._label_font.setPixelSize(11)
         self.dataset = None
         self.stats = []
         self.dist = self.conts = None
@@ -202,7 +202,7 @@ class OWBoxPlot(widget.OWWidget):
         sorted_model.setSourceModel(self.attrs)
         sorted_model.sort(0)
         box = gui.vBox(self.controlArea, "Variable")
-        view = self.attr_list = QListView()
+        view = self.attr_list = ListViewSearch()
         view.setModel(sorted_model)
         view.setSelectionMode(view.SingleSelection)
         view.selectionModel().selectionChanged.connect(self.attr_changed)
@@ -224,7 +224,7 @@ class OWBoxPlot(widget.OWWidget):
         sorted_model.sort(0)
 
         box = gui.vBox(self.controlArea, "Subgroups")
-        view = self.group_list = QListView()
+        view = self.group_list = ListViewSearch()
         view.setModel(sorted_model)
         view.selectionModel().selectionChanged.connect(self.grouping_changed)
         view.setMinimumSize(QSize(30, 30))

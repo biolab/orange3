@@ -32,7 +32,7 @@ class TestDiscreteDistribution(unittest.TestCase):
             data.Domain(
                 attributes=[
                     data.DiscreteVariable('rgb', values=('r', 'g', 'b', 'a')),
-                    data.DiscreteVariable('num', values=('1', '2', '3'), ordered=True),
+                    data.DiscreteVariable('num', values=('1', '2', '3')),
                 ]
             ),
             X=np.array([
@@ -201,8 +201,8 @@ class TestDiscreteDistribution(unittest.TestCase):
         self.assertEqual(self.rgb.min(), None)
         self.assertEqual(self.rgb.max(), None)
         # Min and max should work for ordinal variables
-        self.assertEqual(self.num.min(), '1')
-        self.assertEqual(self.num.max(), '3')
+        self.assertEqual(self.num.min(), None)
+        self.assertEqual(self.num.max(), None)
 
     def test_array_with_unknowns(self):
         d = data.Table("zoo")

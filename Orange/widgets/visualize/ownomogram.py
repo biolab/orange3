@@ -1,4 +1,5 @@
 import time
+import warnings
 from itertools import chain
 from typing import List
 from functools import singledispatch
@@ -14,7 +15,8 @@ from AnyQt.QtWidgets import (
     QSizePolicy, QDesktopWidget,
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
-from AnyQt.QtCore import Qt, QRectF, QSize
+from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
+    pyqtProperty
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.statistics.util import nanmin, nanmax, nanmean, unique
@@ -64,6 +66,9 @@ class MovableToolTip(QLabel):
         super().show()
 
 
+DOT_COLOR = QColor(170, 220, 255, 255)
+
+
 class DotItem(QGraphicsEllipseItem):
     TOOLTIP_STYLE = """ul {margin-top: 1px; margin-bottom: 1px;}"""
     TOOLTIP_TEMPLATE = """<html><head><style type="text/css">{}</style>
@@ -78,7 +83,7 @@ class DotItem(QGraphicsEllipseItem):
         self._offset = offset
         self.setPos(0, - radius / 2)
         self.setFlag(QGraphicsItem.ItemIsMovable)
-        self.setBrush(QColor(170, 220, 255, 255))
+        self.setBrush(DOT_COLOR)
         self.setPen(QPen(QBrush(QColor(20, 130, 250, 255)), 2))
         self.setZValue(100)
         self.tool_tip = MovableToolTip()
@@ -146,6 +151,7 @@ class MovableDotItem(DotItem):
         self._total_dot = None
         self._probs_dot = None
         self._vertical_line = None
+        self._mousePressFunc = None
 
     @property
     def vertical_line(self):
@@ -183,7 +189,16 @@ class MovableDotItem(DotItem):
         self._probs_dot = dot
         self._probs_dot.movable_dot_items.append(self)
 
+    def hookOnMousePress(self, func):
+        self._mousePressFunc = func
+
+    def unhookOnMousePress(self):
+        self._mousePressFunc = None
+
     def mousePressEvent(self, event):
+        if self._mousePressFunc:
+            self._mousePressFunc()
+            self._mousePressFunc = None
         self.tool_tip.show(event.screenPos(), self.get_tooltip_text(), False)
         self._x = event.pos().x()
         self.setBrush(QColor(50, 180, 250, 255))
@@ -240,6 +255,54 @@ class DiscreteMovableDotItem(MovableDotItem):
         p1 = 0 if diff < 1e-6 else (-self.value + self.tooltip_values[i]) / diff
         return [(self.tooltip_labels[i - 1].replace("<", "&lt;"), abs(p1)),
                 (self.tooltip_labels[i].replace("<", "&lt;"), abs(1 - p1))]
+
+
+class GraphicsColorAnimator(QObject):
+    @pyqtProperty(QColor)
+    def brushColor(self):
+        return self.__brushColor
+
+    @brushColor.setter
+    def brushColor(self, value):
+        self.__brushColor = value
+        for item in self.__items:
+            item.setBrush(value)
+
+    def __init__(self, parent, duration, keyValues):
+        super().__init__(parent)
+        self.__items = []
+        self.__defaultColor = defaultColor = keyValues[0][1]
+        self.__brushColor = defaultColor
+
+        self.__animation = QPropertyAnimation(self, b'brushColor', self)
+        self.__animation.setStartValue(defaultColor)
+        self.__animation.setEndValue(defaultColor)
+        self.__animation.setDuration(duration)
+        self.__animation.setKeyValues(keyValues)
+        self.__animation.setLoopCount(-1)
+
+    def setGraphicsItems(self, items):
+        if self.__animation.state() == QPropertyAnimation.Running:
+            self.__animation.stop()
+        self.__items = items
+        for item in items:
+            item.hookOnMousePress(self.stop)
+
+    def start(self):
+        self.__animation.start()
+
+    def stop(self):
+        if self.__animation.state() != QPropertyAnimation.Running:
+            return
+        self.__animation.stop()
+        for item in self.__items:
+            item.setBrush(self.__defaultColor)
+
+    def clear(self):
+        for item in self.__items:
+            item.unhookOnMousePress()
+        self.__items = []
+
 
 
 class ContinuousItemMixin:
@@ -744,6 +807,17 @@ class OWNomogram(OWWidget):
         for view in (top_view, mid_view, bottom_view):
             self.mainArea.layout().addWidget(view)
 
+        self.dot_animator = GraphicsColorAnimator(
+            self, 3000,
+            [
+                (0.9, DOT_COLOR),
+                (0.925, DOT_COLOR.lighter(115)),
+                (0.95, DOT_COLOR),
+                (0.975, DOT_COLOR.lighter(115)),
+                (1.0, DOT_COLOR)
+            ]
+        )
+
     def _class_combo_changed(self):
         with np.errstate(invalid='ignore'):
             coeffs = [np.nan_to_num(p[self.target_class_index] /
@@ -766,7 +840,10 @@ class OWNomogram(OWWidget):
         self.norm_check.setHidden(True)
         self.cont_feature_dim_combo.setEnabled(True)
         if self.domain is not None:
-            self.class_combo.addItems(self.domain.class_vars[0].values)
+            values = self.domain.class_vars[0].values
+            if values:
+                self.class_combo.addItems(values)
+                self.target_class_index = 0
             if len(self.domain.attributes) > self.MAX_N_ATTRS:
                 self.display_index = 1
             if len(self.domain.class_vars[0].values) > 2:
@@ -807,7 +884,6 @@ class OWNomogram(OWWidget):
         self.calculate_log_odds_ratios()
         self.calculate_log_reg_coefficients()
         self.update_controls()
-        self.target_class_index = 0
         self.openContext(self.domain.class_var if self.domain is not None
                          else None)
         self.points = self.log_odds_ratios or self.log_reg_coeffs
@@ -917,6 +993,11 @@ class OWNomogram(OWWidget):
             item.dot.point_dot = point_item.dot
             item.dot.probs_dot = probs_item.dot
             item.dot.vertical_line = self.hidden_vertical_line
+
+        self.dot_animator.setGraphicsItems(
+            [item.dot for item in self.feature_items.values()]
+        )
+        self.dot_animator.start()
 
         self.nomogram = nomogram = NomogramItem()
         nomogram.add_items([nomogram_head, self.nomogram_main, nomogram_foot])
@@ -1191,6 +1272,7 @@ class OWNomogram(OWWidget):
         self.nomogram_main = None
         self.vertical_line = None
         self.hidden_vertical_line = None
+        self.dot_animator.clear()
         self.scene.clear()
 
     def send_report(self):
@@ -1251,7 +1333,11 @@ class OWNomogram(OWWidget):
                sorted_coefficients[i] * sorted_values[i] * (1 - k)
 
     def reset_settings(self):
-        self._reset_settings()
+        with warnings.catch_warnings():
+            # setting target_class_index will trigger this innocent warning
+            warnings.filterwarnings(
+                "ignore", "combo box 'target_class_index' is empty")
+            self._reset_settings()
         self.update_scene()
 
 

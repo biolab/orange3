@@ -248,6 +248,10 @@ class TestOWPCA(WidgetTest):
         self.assertEqual(trans.domain.attributes, outdom.metas[1:])
         np.testing.assert_equal(trans.X, output.metas[:, 1:])
 
+        self.send_signal(widget.Inputs.data, None)
+        output = self.get_output(widget.Outputs.data)
+        self.assertIsNone(output)
+
 
 if __name__ == "__main__":
     unittest.main()

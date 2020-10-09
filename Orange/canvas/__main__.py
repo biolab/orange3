@@ -63,16 +63,12 @@ statistics_server_url = os.getenv(
 
 
 def ua_string():
-    settings = QSettings()
-
     is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
-    machine_id = settings.value("reporting/machine-id", "", str)
-    return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}:{uuid}'.format(
+    return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}'.format(
         orange_version=current,
         py_version='.'.join(str(a) for a in sys.version_info[:3]),
         platform=sys.platform,
-        conda='Anaconda' if is_anaconda else '',
-        uuid=machine_id if settings.value("reporting/send-statistics", False, bool) else ''
+        conda='Anaconda' if is_anaconda else ''
     )
 
 
@@ -647,8 +643,8 @@ def main(argv=None):
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
     else:
-        canvas_window.ask_load_swp_if_exists()
-        if want_welcome:
+        swp_loaded = canvas_window.ask_load_swp_if_exists()
+        if not swp_loaded and want_welcome:
             canvas_window.welcome_dialog()
 
     # local references prevent destruction

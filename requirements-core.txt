@@ -18,9 +18,9 @@ serverfiles		# for Data Sets synchronization
 networkx
 python-louvain>=0.13
 requests
-openTSNE>=0.3.11
+openTSNE>=0.4.3
 baycomp>=1.0.2
 pandas
 pyyaml
 openpyxl
-httpx~=0.12
+httpx~=0.14.0

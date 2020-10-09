@@ -20,7 +20,7 @@ from AnyQt import QtGui
 from AnyQt.QtCore import Qt, QSize, QThread
 from AnyQt.QtCore import pyqtSlot as Slot
 from AnyQt.QtGui import QStandardItem, QDoubleValidator
-from AnyQt.QtWidgets import QHeaderView, QTableWidget, QLabel, QApplication
+from AnyQt.QtWidgets import QHeaderView, QTableWidget, QLabel
 
 from Orange.base import Learner
 import Orange.classification
@@ -169,7 +169,7 @@ class OWTestAndScore(OWWidget):
     #: Selected resampling type
     resampling = settings.Setting(0)
     #: Number of folds for K-fold cross validation
-    n_folds = settings.Setting(3)
+    n_folds = settings.Setting(2)
     #: Stratified sampling for K-fold
     cv_stratified = settings.Setting(True)
     #: Number of repeats for ShuffleSplit sampling
@@ -504,7 +504,8 @@ class OWTestAndScore(OWWidget):
             combo.clear()
             combo.addItems([scorer.long_name or scorer.name
                             for scorer in self.scorers])
-            self.comparison_criterion = 0
+            if self.scorers:
+                self.comparison_criterion = 0
         if self.__pending_comparison_criterion is not None:
             # Check for the unlikely case that some scorers have been removed
             # from modules
@@ -1111,24 +1112,14 @@ class OWTestAndScore(OWWidget):
             task.cancel()
             task.progress_changed.disconnect(self.setProgressValue)
             task.watcher.finished.disconnect(self.__task_complete)
-            add_task_to_dispose_queue(task)
 
             self.progressBarFinished()
             self.setStatusMessage("")
 
     def onDeleteWidget(self):
         self.cancel()
-        self.__executor.shutdown(True)
+        self.__executor.shutdown(wait=False)
         super().onDeleteWidget()
-
-
-def add_task_to_dispose_queue(task: TaskState):
-    # transfer ownership of task to Qt, and delete it after completion
-    # all other signals from task should be disconnected.
-    assert task.parent() is None
-    app = QApplication.instance()
-    task.setParent(app)
-    task.watcher.finished.connect(task.deleteLater)
 
 
 class UserInterrupt(BaseException):

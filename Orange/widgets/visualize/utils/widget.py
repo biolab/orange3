@@ -5,6 +5,8 @@ import numpy as np
 from AnyQt.QtCore import QSize, Signal
 from AnyQt.QtWidgets import QApplication
 
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
+
 from Orange.data import (
     Table, ContinuousVariable, Domain, Variable, StringVariable
 )
@@ -379,6 +381,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
+    visual_settings = Setting({}, schema_only=True)
     auto_commit = Setting(True)
 
     GRAPH_CLASS = OWScatterPlotBase
@@ -400,6 +403,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.input_changed.connect(self.set_input_summary)
         self.output_changed.connect(self.set_output_summary)
         self.setup_gui()
+        VisualSettingsDialog(self, self.graph.parameter_setter.initial_settings)
 
     # GUI
     def setup_gui(self):
@@ -597,10 +601,16 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     @staticmethod
     def _get_annotated_data(data, group_sel, graph_sel):
+        if data is None:
+            return None
         if graph_sel is not None and np.max(graph_sel) > 1:
             return create_groups_table(data, group_sel)
         else:
-            return create_annotated_table(data, np.nonzero(group_sel)[0])
+            if group_sel is None:
+                mask = np.full((len(data), ), False)
+            else:
+                mask = np.nonzero(group_sel)[0]
+            return create_annotated_table(data, mask)
 
     # Report
     def send_report(self):
@@ -620,6 +630,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             ("Size", self._get_caption_var_name(self.attr_size)),
             ("Jittering", self.graph.jitter_size != 0 and
              "{} %".format(self.graph.jitter_size))))
+
+    # Customize plot
+    def set_visual_settings(self, key, value):
+        self.graph.parameter_setter.set_parameter(key, value)
+        self.visual_settings[key] = value
 
     @staticmethod
     def _get_caption_var_name(var):
@@ -657,8 +672,8 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
         proj_error = Msg("An error occurred while projecting data.\n{}")
 
     def __init__(self):
-        super().__init__()
         self.projector = self.projection = None
+        super().__init__()
         self.graph.view_box.started.connect(self._manual_move_start)
         self.graph.view_box.moved.connect(self._manual_move)
         self.graph.view_box.finished.connect(self._manual_move_finish)
@@ -738,7 +753,9 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     def send_components(self):
         components = None
         if self.data is not None and self.projection is not None:
-            meta_attrs = [StringVariable(name='component')]
+            proposed = [var.name for var in self.effective_variables]
+            comp_name = get_unique_names(proposed, 'component')
+            meta_attrs = [StringVariable(name=comp_name)]
             domain = Domain(self.effective_variables, metas=meta_attrs)
             components = Table(domain, self._send_components_x(),
                                metas=self._send_components_metas())

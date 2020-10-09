@@ -1,14 +1,14 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 # pylint: disable=protected-access
-
+import os
 import sys
 import math
 import unittest
 import pickle
 import pkgutil
+import warnings
 from datetime import datetime, timezone
-from distutils.version import LooseVersion
 
 from io import StringIO
 
@@ -17,7 +17,7 @@ import scipy.sparse as sp
 
 import Orange
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
-    StringVariable, TimeVariable, Unknown, Value
+    StringVariable, TimeVariable, Unknown, Value, Table
 from Orange.data.io import CSVReader
 from Orange.preprocess.transformation import Identity
 from Orange.tests.base import create_pickling_tests
@@ -215,18 +215,25 @@ class TestVariable(unittest.TestCase):
 
     def test_hash_eq(self):
         a = ContinuousVariable("a")
+        a1 = ContinuousVariable("a")
         b1 = ContinuousVariable("b", compute_value=Identity(a))
         b2 = ContinuousVariable("b2", compute_value=Identity(b1))
         b3 = ContinuousVariable("b")
-        self.assertEqual(a, b2)
-        self.assertEqual(b1, b2)
-        self.assertEqual(a, b1)
+        c1 = ContinuousVariable("c", compute_value=Identity(a))
+        c2 = ContinuousVariable("c", compute_value=Identity(a))
+        self.assertNotEqual(a, b2)
+        self.assertNotEqual(b1, b2)
+        self.assertNotEqual(a, b1)
         self.assertNotEqual(b1, b3)
+        self.assertEqual(a, a1)
+        self.assertEqual(c1, c2)
 
-        self.assertEqual(hash(a), hash(b2))
-        self.assertEqual(hash(b1), hash(b2))
-        self.assertEqual(hash(a), hash(b1))
+        self.assertNotEqual(hash(a), hash(b2))
+        self.assertNotEqual(hash(b1), hash(b2))
+        self.assertNotEqual(hash(a), hash(b1))
         self.assertNotEqual(hash(b1), hash(b3))
+        self.assertEqual(hash(a), hash(a1))
+        self.assertEqual(hash(c1), hash(c2))
 
 
 def variabletest(varcls):
@@ -279,15 +286,12 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(
             repr(var),
             "DiscreteVariable(name='a', values=('F', 'M'))")
-        var.ordered = True
-        self.assertEqual(
-            repr(var),
-            "DiscreteVariable(name='a', values=('F', 'M'), ordered=True)")
 
         var = DiscreteVariable.make("a", values="1234567")
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=('1', '2', '3', '4', '5', '6', '7'))")
+            "DiscreteVariable(name='a', values=('1', '2', '3', '4', '5', '6', '7'))"
+        )
 
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=("a", 42))
@@ -299,19 +303,6 @@ class TestDiscreteVariable(VariableTest):
         a.add_value("b")
         self.assertEqual(list(a.values), ["a", "b", "c"])
         self.assertEqual(list(a._value_index), ["a", "b", "c"])
-
-    def test_tuple_list_warning(self):
-        if LooseVersion(Orange.version.short_version) >= LooseVersion("3.27"):
-            self.fail("Remove class TupleList; replace it with tuple.")
-
-        d1 = DiscreteVariable("A", values=("one", "two"))
-        with self.assertWarns(DeprecationWarning):
-            val = d1.values + ["three", ]
-        self.assertEqual(val, ["one", "two", "three"])
-        with self.assertWarns(DeprecationWarning):
-            val = d1.values.copy()
-        self.assertIsInstance(val, list)
-        self.assertSequenceEqual(val, d1.values)
 
     def test_unpickle(self):
         d1 = DiscreteVariable("A", values=("two", "one"))
@@ -488,7 +479,6 @@ class TestDiscreteVariable(VariableTest):
         var = super().varcls_modified(name)
         var.add_value("A")
         var.add_value("B")
-        var.ordered = True
         return var
 
     def test_copy_checks_len_values(self):
@@ -507,6 +497,36 @@ class TestDiscreteVariable(VariableTest):
 
         var2 = var.copy(values=("W", "M"))
         self.assertEqual(var2.values, ("W", "M"))
+
+    def test_remove_ordered(self):
+        """
+        ordered is deprecated when this test starts to fail remove ordered
+        parameter. Remove also this test.
+        Ordered parameter should still be allowed in __init__ for backward
+        compatibilities in data-sets pickled with older versions, I suggest
+        adding **kwargs which is ignored
+        """
+        self.assertLess(Orange.__version__, "3.29.0")
+
+    def test_pickle_backward_compatibility(self):
+        """
+        Test that pickle made with an older version of Orange are correctly
+        loaded after changes in DiscreteVariable
+        """
+        with warnings.catch_warnings():
+            # travis/gh-action tests change OrangeDeprecationWarning to error
+            # temporary disable it
+            warnings.simplefilter('default', OrangeDeprecationWarning)
+            this_dir = os.path.dirname(os.path.realpath(__file__))
+            datasets_dir = os.path.join(
+                this_dir, "..", "..", "tests", "datasets"
+            )
+            # pickle with values as list
+            with self.assertWarns(OrangeDeprecationWarning):
+                Table(os.path.join(datasets_dir, "sailing-orange-3-20.pkl"))
+            # pickle with values as tuple list
+            with self.assertWarns(OrangeDeprecationWarning):
+                Table(os.path.join(datasets_dir, "iris-orange-3-25.pkl"))
 
 
 @variabletest(ContinuousVariable)
@@ -697,10 +717,7 @@ PickleDiscreteVariable = create_pickling_tests(
     "PickleDiscreteVariable",
     ("with_name", lambda: DiscreteVariable(name="Feature 0")),
     ("with_str_value", lambda: DiscreteVariable(name="Feature 0",
-                                                values=("F", "M"))),
-    ("ordered", lambda: DiscreteVariable(name="Feature 0",
-                                         values=("F", "M"),
-                                         ordered=True)),
+                                                values=("F", "M")))
 )
 
 
@@ -712,7 +729,7 @@ PickleStringVariable = create_pickling_tests(
 
 class VariableTestMakeProxy(unittest.TestCase):
     def test_make_proxy_disc(self):
-        abc = DiscreteVariable("abc", values="abc", ordered=True)
+        abc = DiscreteVariable("abc", values="abc")
         abc1 = abc.make_proxy()
         abc2 = abc1.make_proxy()
         self.assertEqual(abc, abc1)
@@ -721,7 +738,7 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(hash(abc), hash(abc1))
         self.assertEqual(hash(abc1), hash(abc2))
 
-        abcx = DiscreteVariable("abc", values="abc", ordered=True)
+        abcx = DiscreteVariable("abc", values="abc")
         self.assertEqual(abc, abcx)
         self.assertIsNot(abc, abcx)
 

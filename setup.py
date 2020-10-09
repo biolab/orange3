@@ -36,7 +36,7 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.26.0'
+VERSION = '3.27.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -235,7 +235,7 @@ class LintCommand(Command):
                     awk '/[@\/]github.com[:\/]biolab\/orange3[\. ]/{ print $1; exit }')"
         git fetch -q $upstream master
         best_ancestor=$(git merge-base HEAD refs/remotes/$upstream/master)
-        .travis/check_pylint_diff $best_ancestor
+        .github/workflows/check_pylint_diff.sh $best_ancestor
         ''', shell=True, cwd=os.path.dirname(os.path.abspath(__file__))))
 
 class CoverageCommand(Command):

@@ -42,7 +42,7 @@ Note: You should not modify the input objects in place.
 Examples
 --------
 
-Python Script widget is intended to extend functionalities for advanced users. Classes from Orange library are described in the [documentation](https://docs.biolab.si//3/data-mining-library/#reference). To find further information about orange Table class see [Table](https://docs.biolab.si//3/data-mining-library/reference/data.table.html), [Domain](https://docs.biolab.si//3/data-mining-library/reference/data.domain.html), and [Variable](https://docs.biolab.si//3/data-mining-library/reference/data.variable.html) documentation.
+Python Script widget is intended to extend functionalities for advanced users. Classes from Orange library are described in the [documentation](https://docs.biolab.si/3/data-mining-library/#reference). To find further information about orange Table class see [Table](https://docs.biolab.si/3/data-mining-library/reference/data.table.html), [Domain](https://docs.biolab.si/3/data-mining-library/reference/data.domain.html), and [Variable](https://docs.biolab.si/3/data-mining-library/reference/data.variable.html) documentation.
 
 One can, for example, do batch filtering by attributes. We used zoo.tab for the example and we filtered out all the attributes that have more than 5 discrete values. This in our case removed only 'leg' attribute, but imagine an example where one would have many such attributes.
 

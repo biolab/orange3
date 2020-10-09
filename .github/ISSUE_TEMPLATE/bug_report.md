@@ -1,35 +1,45 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a bug to help us improve
 title: ''
 labels: bug report
 assignees: ''
 
 ---
 
-**Describe the bug**
+<!-- 
+Thanks for taking the time to report a bug!
+If you're raising an issue about an add-on (i.e., installed via Options > Add-ons), raise an issue in the relevant add-on's issue tracker instead. See: https://github.com/biolab?q=orange3
+To fix the bug, we need to be able to reproduce it. Please answer the following questions to the best of your ability.
+-->
 
-**Here**, provide a clear and concise description of what the bug is.
 
-**To Reproduce**
+- [ ] **What's wrong?**
+<!-- Be specific, clear, and concise. Include screenshots if relevant. -->
+<!-- If you're getting an error message, copy it, and enclose it with three backticks (```). -->
 
-Steps to reproduce the behavior go **here**:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
 
-**Orange version:**
-Orange - About - version number.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
 
-**Operating system:**
-Windows, OSX or Linux? Which version?
+- [ ] **How can we reproduce the problem?** 
+<!-- Upload a zip with the .ows file and data. -->
+<!-- Describe the steps (open this widget, click there, then add this...) -->
 
-**Additional context**
-Add any other context about the problem here.
+
+
+
+
+- [ ] **Which version of Orange are you using? How did you install Orange?**
+<!-- See "Help → About → Version" or `Orange.version.full_version` in code -->
+
+
+
+
+
+- [ ] **What is your operating system?**
+
+
+
+
+

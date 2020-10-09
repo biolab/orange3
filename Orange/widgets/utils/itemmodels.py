@@ -2,7 +2,8 @@ from numbers import Number, Integral
 from math import isnan, isinf
 
 import operator
-from collections import namedtuple, Sequence, defaultdict
+from collections import namedtuple, defaultdict
+from collections.abc import Sequence
 from contextlib import contextmanager
 from functools import reduce, partial, lru_cache, wraps
 from itertools import chain
@@ -269,6 +270,8 @@ class PyTableModel(AbstractSortTableModel):
             stop -= 1
         else:
             start = stop = i = i if i >= 0 else len(self) + i
+        if stop < start:
+            return
         self._check_sort_order()
         self.beginRemoveRows(QModelIndex(), start, stop)
         del self._table[i]
@@ -282,6 +285,8 @@ class PyTableModel(AbstractSortTableModel):
         if isinstance(i, slice):
             start, stop, _ = _as_contiguous_range(i, len(self))
             self.removeRows(start, stop - start)
+            if len(value) == 0:
+                return
             self.beginInsertRows(QModelIndex(), start, start + len(value) - 1)
             self._table[start:start] = value
             self._rows = self._table_dim()[0]

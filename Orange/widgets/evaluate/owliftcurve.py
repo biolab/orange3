@@ -150,7 +150,6 @@ class OWLiftCurve(widget.OWWidget):
         self.plot.clear()
         self.results = None
         self.target_cb.clear()
-        self.target_index = 0
         self.classifier_names = []
         self.colors = []
         self._curve_data = {}
@@ -171,6 +170,7 @@ class OWLiftCurve(widget.OWWidget):
             item.setIcon(colorpalettes.ColorIcon(self.colors[i]))
 
         self.target_cb.addItems(results.data.domain.class_var.values)
+        self.target_index = 0
 
     def plot_curves(self, target, clf_idx):
         if (target, clf_idx) not in self._curve_data:
@@ -256,7 +256,7 @@ def lift_curve(ytrue, ypred, target=1):
         # Undefined TP and FP rate
         return np.array([]), np.array([]), np.array([])
 
-    fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, target)
+    fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, pos_label=target)
     rpp = fpr * (N / (P + N)) + tpr * (P / (P + N))
     return rpp, tpr, thresholds
 

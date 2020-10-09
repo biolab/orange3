@@ -12,7 +12,7 @@ import pandas as pd
 
 from AnyQt.QtCore import QItemSelectionModel, Qt, QItemSelection
 from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
-    QStyleOptionViewItem, QDialog
+    QStyleOptionViewItem, QDialog, QMenu
 from AnyQt.QtTest import QTest, QSignalSpy
 
 from Orange.widgets.utils import colorpalettes
@@ -28,7 +28,7 @@ from Orange.widgets.data.oweditdomain import (
     OWEditDomain,
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
     TimeVariableEditor, Categorical, Real, Time, String,
-    Rename, Annotate, CategoriesMapping, ChangeOrdered, report_transform,
+    Rename, Annotate, Unlink, CategoriesMapping, report_transform,
     apply_transform, apply_transform_var, apply_reinterpret, MultiplicityRole,
     AsString, AsCategorical, AsContinuous, AsTime,
     table_column_data, ReinterpretVariableEditor, CategoricalVector,
@@ -38,6 +38,7 @@ from Orange.widgets.data.oweditdomain import (
     GroupItemsDialog)
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
+from Orange.widgets.tests.utils import contextMenu
 from Orange.tests import test_filename, assert_array_nanequal
 from Orange.widgets.utils.state_summary import format_summary_details
 
@@ -46,21 +47,26 @@ MArray = np.ma.MaskedArray
 
 class TestReport(TestCase):
     def test_rename(self):
-        var = Real("X", (-1, ""), ())
+        var = Real("X", (-1, ""), (), False)
         tr = Rename("Y")
         val = report_transform(var, [tr])
         self.assertIn("X", val)
         self.assertIn("Y", val)
 
     def test_annotate(self):
-        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")))
+        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")), False)
         tr = Annotate((("a", "2"), ("j", "z")))
         r = report_transform(var, [tr])
         self.assertIn("a", r)
         self.assertIn("b", r)
 
+    def test_unlinke(self):
+        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")), True)
+        r = report_transform(var, [Unlink()])
+        self.assertIn("unlinked", r)
+
     def test_categories_mapping(self):
-        var = Categorical("C", ("a", "b", "c"), ())
+        var = Categorical("C", ("a", "b", "c"), (), False)
         tr = CategoriesMapping(
             (("a", "aa"),
              ("b", None),
@@ -74,7 +80,7 @@ class TestReport(TestCase):
         self.assertIn("<s>", r)
 
     def test_categorical_merge_mapping(self):
-        var = Categorical("C", ("a", "b1", "b2"), ())
+        var = Categorical("C", ("a", "b1", "b2"), (), False)
         tr = CategoriesMapping(
             (("a", "a"),
              ("b1", "b"),
@@ -84,14 +90,8 @@ class TestReport(TestCase):
         r = report_transform(var, [tr])
         self.assertIn('b', r)
 
-    def test_change_ordered(self):
-        var = Categorical("C", ("a", "b"), ())
-        tr = ChangeOrdered(True)
-        r = report_transform(var, [tr])
-        self.assertIn("ordered", r)
-
     def test_reinterpret(self):
-        var = String("T", ())
+        var = String("T", (), False)
         for tr in (AsContinuous(), AsCategorical(), AsTime()):
             t = report_transform(var, [tr])
             self.assertIn("→ (", t)
@@ -249,6 +249,34 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(output, Table)
 
+    def test_unlink(self):
+        var0, var1, var2 = [ContinuousVariable("x", compute_value=Mock()),
+                            ContinuousVariable("y", compute_value=Mock()),
+                            ContinuousVariable("z")]
+        domain = Domain([var0, var1, var2], None)
+        table = Table.from_numpy(domain, np.zeros((5, 3)), np.zeros((5, 0)))
+        self.send_signal(self.widget.Inputs.data, table)
+
+        index = self.widget.domain_view.model().index
+        for i in range(3):
+            self.widget.domain_view.setCurrentIndex(index(i))
+            editor = self.widget.findChild(ContinuousVariableEditor)
+            self.assertIs(editor.unlink_var_cb.isEnabled(), i < 2)
+            editor._set_unlink(i == 1)
+
+        self.widget.commit()
+        out = self.get_output(self.widget.Outputs.data)
+        out0, out1, out2 = out.domain.variables
+        self.assertIs(out0, domain[0])
+        self.assertIsNot(out1, domain[1])
+        self.assertIs(out2, domain[2])
+
+        self.assertIsNotNone(out0.compute_value)
+        self.assertIsNone(out1.compute_value)
+        self.assertIsNone(out2.compute_value)
+
+
+
     def test_time_variable_preservation(self):
         """Test if time variables preserve format specific attributes"""
         table = Table(test_filename("datasets/cyber-security-breaches.tab"))
@@ -265,26 +293,12 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
 
-    def test_change_ordered(self):
-        """Test categorical ordered flag change"""
-        table = Table.from_domain(Domain(
-            [DiscreteVariable("A", values=("a", "b"), ordered=True)]))
-        self.send_signal(self.widget.Inputs.data, table)
-        output = self.get_output(self.widget.Outputs.data)
-        self.assertTrue(output.domain[0].ordered)
-
-        editor = self.widget.findChild(DiscreteVariableEditor)
-        assert isinstance(editor, DiscreteVariableEditor)
-        editor.ordered_cb.setChecked(False)
-        self.widget.commit()
-        output = self.get_output(self.widget.Outputs.data)
-        self.assertFalse(output.domain[0].ordered)
-
     def test_restore(self):
         iris = self.iris
         viris = (
             "Categorical",
-            ("iris", ("Iris-setosa", "Iris-versicolor", "Iris-virginica"), ())
+            ("iris", ("Iris-setosa", "Iris-versicolor", "Iris-virginica"), (),
+             False)
         )
         w = self.widget
 
@@ -347,7 +361,7 @@ class TestEditors(GuiTest):
         w = VariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = String("S", (("A", "1"), ("B", "b")))
+        v = String("S", (("A", "1"), ("B", "b")), False)
         w.set_data(v, [])
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -372,7 +386,7 @@ class TestEditors(GuiTest):
         w = ContinuousVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")))
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), False)
         w.set_data(v, [])
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -387,12 +401,11 @@ class TestEditors(GuiTest):
         w = DiscreteVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Categorical("C", ("a", "b", "c"), (("A", "1"), ("B", "b")))
+        v = Categorical("C", ("a", "b", "c"), (("A", "1"), ("B", "b")), False)
         values = [0, 0, 0, 1, 1, 2]
         w.set_data_categorical(v, values)
 
         self.assertEqual(w.name_edit.text(), v.name)
-        self.assertFalse(w.ordered_cb.isChecked())
         self.assertEqual(w.labels_model.get_dict(), dict(v.annotations))
         self.assertEqual(w.get_data(), (v, []))
         w.set_data_categorical(None, None)
@@ -409,13 +422,6 @@ class TestEditors(GuiTest):
         w.grab()  # run delegate paint method
         self.assertEqual(w.get_data(), (v, [CategoriesMapping(mapping)]))
 
-        w.set_data_categorical(
-            v, values, [CategoriesMapping(mapping), ChangeOrdered(True)]
-        )
-        self.assertTrue(w.ordered_cb.isChecked())
-        self.assertEqual(
-            w.get_data()[1], [CategoriesMapping(mapping), ChangeOrdered(True)]
-        )
         # test selection/deselection in the view
         w.set_data_categorical(v, values)
         view = w.values_edit
@@ -447,7 +453,7 @@ class TestEditors(GuiTest):
     def test_discrete_editor_add_remove_action(self):
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")))
+                        (("A", "1"), ("B", "b")), False)
         values = [0, 0, 0, 1, 1, 2]
         w.set_data_categorical(v, values)
         action_add = w.add_new_item
@@ -495,7 +501,7 @@ class TestEditors(GuiTest):
         """
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")))
+                        (("A", "1"), ("B", "b")), False)
         w.set_data_categorical(v, [0, 0, 0, 1, 1, 2])
 
         view = w.values_edit
@@ -512,11 +518,55 @@ class TestEditors(GuiTest):
         self.assertEqual(model.index(0, 0).data(Qt.EditRole), "other")
         self.assertEqual(model.index(1, 0).data(Qt.EditRole), "other")
 
+    def test_discrete_editor_rename_selected_items_action(self):
+        w = DiscreteVariableEditor()
+        v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")), False)
+        w.set_data_categorical(v, [])
+        action = w.rename_selected_items
+        view = w.values_edit
+        model = view.model()
+        selmodel = view.selectionModel()  # type: QItemSelectionModel
+        selmodel.select(
+            QItemSelection(model.index(0, 0), model.index(1, 0)),
+            QItemSelectionModel.ClearAndSelect
+        )
+        # trigger the action, then find the active popup, and simulate entry
+        spy = QSignalSpy(w.variable_changed)
+        with patch.object(QComboBox, "setVisible", return_value=None) as m:
+            action.trigger()
+            m.assert_called()
+        cb = view.findChild(QComboBox)
+        cb.setCurrentText("BA")
+        view.commitData(cb)
+        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "BA")
+        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "BA")
+        self.assertSequenceEqual(
+            list(spy), [[]], 'variable_changed should emit exactly once'
+        )
+
+    def test_discrete_editor_context_menu(self):
+        w = DiscreteVariableEditor()
+        v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")), False)
+        w.set_data_categorical(v, [])
+        view = w.values_edit
+        model = view.model()
+
+        pos = view.visualRect(model.index(0, 0)).center()
+        with patch.object(QMenu, "setVisible", return_value=None) as m:
+            contextMenu(view.viewport(), pos)
+            m.assert_called()
+
+        menu = view.findChild(QMenu)
+        self.assertIsNotNone(menu)
+        menu.close()
+
     def test_time_editor(self):
         w = TimeVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Time("T", (("A", "1"), ("B", "b")))
+        v = Time("T", (("A", "1"), ("B", "b")), False)
         w.set_data(v,)
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -529,19 +579,19 @@ class TestEditors(GuiTest):
 
     DataVectors = [
         CategoricalVector(
-            Categorical("A", ("a", "aa"), ()), lambda:
+            Categorical("A", ("a", "aa"), (), False), lambda:
                 MArray([0, 1, 2], mask=[False, False, True])
         ),
         RealVector(
-            Real("B", (6, "f"), ()), lambda:
+            Real("B", (6, "f"), (), False), lambda:
                 MArray([0.1, 0.2, 0.3], mask=[True, False, True])
         ),
         TimeVector(
-            Time("T", ()), lambda:
+            Time("T", (), False), lambda:
                 MArray([0, 100, 200], dtype="M8[us]", mask=[True, False, True])
         ),
         StringVector(
-            String("S", ()), lambda:
+            String("S", (), False), lambda:
                 MArray(["0", "1", "2"], dtype=object, mask=[True, False, True])
         ),
     ]
@@ -584,6 +634,44 @@ class TestEditors(GuiTest):
             w.set_data(vec, [Rename("Z")])
             simulate.combobox_run_through_all(tc, callback=cb)
 
+    def test_unlink(self):
+        w = ContinuousVariableEditor()
+        cbox = w.unlink_var_cb
+        self.assertEqual(w.get_data(), (None, []))
+
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), False)
+        w.set_data(v, [])
+        self.assertFalse(cbox.isEnabled())
+
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), True)
+        w.set_data(v, [Unlink()])
+        self.assertTrue(cbox.isEnabled())
+        self.assertTrue(cbox.isChecked())
+
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), True)
+        w.set_data(v, [])
+        self.assertTrue(cbox.isEnabled())
+        self.assertFalse(cbox.isChecked())
+
+        cbox.setChecked(True)
+        self.assertEqual(w.get_data()[1], [Unlink()])
+
+        w.set_data(v, [Unlink()])
+        self.assertTrue(cbox.isChecked())
+
+        cbox.setChecked(False)
+        self.assertEqual(w.get_data()[1], [])
+
+        cbox.setChecked(True)
+        w.clear()
+        self.assertFalse(cbox.isChecked())
+        self.assertEqual(w.get_data()[1], [])
+
+        w._set_unlink(True)
+        self.assertTrue(cbox.isChecked())
+        w._set_unlink(False)
+        self.assertFalse(cbox.isChecked())
+
 
 class TestDelegates(GuiTest):
     def test_delegate(self):
@@ -597,7 +685,7 @@ class TestDelegates(GuiTest):
             delegate.initStyleOption(opt, model.index(0))
             return opt
 
-        set_item({Qt.EditRole: Categorical("a", (), ())})
+        set_item({Qt.EditRole: Categorical("a", (), (), False)})
         delegate = VariableEditDelegate()
         opt = get_style_option()
         self.assertEqual(opt.text, "a")
@@ -652,11 +740,6 @@ class TestTransforms(TestCase):
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([2, 3, 1, 0]))
         )
-
-    def test_ordered_change(self):
-        D = DiscreteVariable("D", values=("a", "b"), ordered=True)
-        Do = apply_transform_var(D, [ChangeOrdered(False)])
-        self.assertFalse(Do.ordered)
 
     def test_discrete_add_drop(self):
         D = DiscreteVariable("D", values=("2", "3", "1", "0"))
@@ -821,8 +904,8 @@ class TestReinterpretTransforms(TestCase):
         domain = table.domain
         tvars = []
         for v in domain.metas:
-            for tr in [AsContinuous(), AsCategorical(), AsTime(), AsString()]:
-                tr = apply_reinterpret(v, tr, table_column_data(table, v))
+            for i, tr in enumerate([AsContinuous(), AsCategorical(), AsTime(), AsString()]):
+                tr = apply_reinterpret(v, tr, table_column_data(table, v)).renamed(f'{v.name}_{i}')
                 tvars.append(tr)
         tdomain = Domain([], metas=tvars)
         ttable = table.transform(tdomain)
@@ -894,7 +977,7 @@ class TestUtils(TestCase):
         self.assertEqual(d[1], 1)
         self.assertEqual(d[-1], "<->")
         # must be sufficiently different from defaultdict to warrant existence
-        self.assertEqual(d, {1: 1, 2: 2})
+        self.assertEqual(d, DictMissingConst("<->", {1: 1, 2: 2}))
 
     def test_as_float_or_nan(self):
         a = np.array(["a", "1.1", ".2", "NaN"], object)
@@ -958,11 +1041,47 @@ class TestLookupMappingTransform(TestCase):
         r_ = lookup_.transform(c)
         assert_array_equal(r_, [np.nan, 0, 1, np.nan])
 
+    def test_equality(self):
+        v1 = DiscreteVariable("v1", values=tuple("abc"))
+        v2 = DiscreteVariable("v1", values=tuple("abc"))
+        v3 = DiscreteVariable("v3", values=tuple("abc"))
+
+        map1 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map2 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map3 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v2, map2, float)
+        t2 = LookupMappingTransform(v3, map3, float)
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
+
+        map1a = DictMissingConst(np.nan, {"a": 2, "b": 1, "c": 0})
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1a, float)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        map1a = DictMissingConst(2, {"a": 2, "b": 0, "c": 1})
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1a, float)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        t1 = LookupMappingTransform(v1, map1, float)
+        t1a = LookupMappingTransform(v1, map1, int)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
 
 class TestGroupLessFrequentItemsDialog(GuiTest):
     def setUp(self) -> None:
         self.v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")))
+                        (("A", "1"), ("B", "b")), False)
         self.data = [0, 0, 0, 1, 1, 2]
 
     def test_dialog_open(self):

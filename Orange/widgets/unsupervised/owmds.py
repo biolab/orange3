@@ -102,6 +102,10 @@ class OWMDSGraph(OWScatterPlotBase):
         super().update_coordinates()
         self.update_pairs(reconnect=False)
 
+    def update_jittering(self):
+        super().update_jittering()
+        self.update_pairs(reconnect=False)
+
     def update_pairs(self, reconnect):
         if self.pairs_curve:
             self.plot_widget.removeItem(self.pairs_curve)
@@ -343,7 +347,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self._run()
 
     def _run(self):
-        if self.effective_matrix is None:
+        if self.effective_matrix is None \
+                or np.allclose(self.effective_matrix, 0):
             return
         self.graph.pause_drawing_pairs()
         self.run_button.setText("Stop")

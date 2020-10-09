@@ -6,6 +6,47 @@ Change Log
 * ...
 
 
+[3.27.0] - 2020-10-09
+--------------------
+##### Enhancements
+* Table: Re-add info box about data properties ([#5011](../../pull/5011))
+* Rank widget computation in a separate thread ([#4908](../../pull/4908))
+* Neighbors: improve exclusion of references, checkbox to (un)limit output data ([#4997](../../pull/4997))
+* Bar Plot: New widget ([#4923](../../pull/4923))
+* Replace listViews with searchable listViews ([#4924](../../pull/4924))
+* Add an option to set intercept in linear regression to 0 ([#4958](../../pull/4958))
+* CSV File Import: Add support for explicit workflow relative paths ([#4872](../../pull/4872))
+* OWColor: Saving and loading color schemata ([#4977](../../pull/4977))
+* Distributions: Add sorting by category size ([#4959](../../pull/4959))
+* Proxy support for embeddings ([#4953](../../pull/4953))
+* Discretize: Manual cut points entry ([#4929](../../pull/4929))
+* Predictions: Allow selecting a subset of rows ([#4871](../../pull/4871))
+* Projection plots: Customize labels ([#4828](../../pull/4828))
+* get_unique_names: Handle more independent names ([#4866](../../pull/4866))
+* Edit Domain: Add option to unlink variable from source variable ([#4863](../../pull/4863))
+* Louvain Clustering: Add cosine similarity ([#4864](../../pull/4864))
+
+##### Bugfixes
+* Fix line plot's send_report ([#5018](../../pull/5018))
+* Scatter Plot: fix unzoom with density plot ([#5004](../../pull/5004))
+* ownomogram: Fix wrapped C++ obj error ([#5005](../../pull/5005))
+* Fix slicing in from_table ([#4963](../../pull/4963))
+* Edit Domain: Multiple item rename/merge ([#4949](../../pull/4949))
+* ProjectionWidgetMixinTests: set shape attribute only when discrete var available ([#4946](../../pull/4946))
+* Fix variables equality and hashes  ([#4957](../../pull/4957))
+* Fix wrong assert in heatmap ([#4955](../../pull/4955))
+* Edit Domain (and perhaps other widgets) could cause missing data later in the workflow ([#4922](../../pull/4922))
+* OWScatterPlotBase: Reset view before labels update ([#4907](../../pull/4907))
+* owcsvimport: Fix a type error in _open for zip archive ([#4921](../../pull/4921))
+* Line Plot: Reset axis ticks on data change ([#4873](../../pull/4873))
+* MDS: Move lines when points are jittered ([#4920](../../pull/4920))
+* owcsvimport: Handle decimal and thousand separator ([#4915](../../pull/4915))
+* Select Rows: fix fail when time variable in metas ([#4912](../../pull/4912))
+* Re-add TupleList to DiscreteVariable ([#4879](../../pull/4879))
+* concurrent: Use a workaround for QObject wrapper deletion ([#4635](../../pull/4635))
+* normalize: Adjust number_of_decimals after scaling ([#4779](../../pull/4779))
+
+
 [3.26.0] - 2020-06-12
 --------------------
 ##### Enhancements
@@ -1437,7 +1478,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.26.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.27.0...HEAD
+[3.26.0]: https://github.com/biolab/orange3/compare/3.26.0...3.27.0
 [3.26.0]: https://github.com/biolab/orange3/compare/3.25.1...3.26.0
 [3.25.1]: https://github.com/biolab/orange3/compare/3.25.0...3.25.1
 [3.25.0]: https://github.com/biolab/orange3/compare/3.24.1...3.25.0

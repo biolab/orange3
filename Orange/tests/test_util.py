@@ -143,7 +143,10 @@ class TestUtil(unittest.TestCase):
     def test_csc_array_equal(self):
         a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
         a2 = sp.csc_matrix(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
-        a2[0, 1] = 0  # explicitly setting to 0
+        with warnings.catch_warnings():
+            # this is just inefficiency in tests, not the tested code
+            warnings.filterwarnings("ignore", ".*", sp.SparseEfficiencyWarning)
+            a2[0, 1] = 0  # explicitly setting to 0
         self.assertTrue(array_equal(a1, a2))
 
     def test_csc_scr_equal(self):

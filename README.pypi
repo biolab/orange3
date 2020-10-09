@@ -26,9 +26,6 @@ To install Orange with pip, run the following.
     # ... and make it the active one
     source orange3venv/bin/activate
 
-    # Install Qt dependencies for the GUI
-    pip install PyQt5 PyQtWebEngine
-
     # Install Orange
     pip install orange3
 

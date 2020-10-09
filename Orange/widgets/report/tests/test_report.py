@@ -102,10 +102,8 @@ class TestReportWidgets(WidgetTest):
         rep = OWReport.get_instance()
         data = Table("zoo")
         widgets = self.eval_widgets
-        results = CrossValidation(data,
-                                  [LogisticRegressionLearner()],
-                                  store_data=True,
-                                  k=3)
+        cv = CrossValidation(k=3, store_data=True)
+        results = cv(data, [LogisticRegressionLearner()])
         results.learner_names = ["LR l2"]
 
         w = self.create_widget(OWTestAndScore)

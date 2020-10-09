@@ -44,6 +44,13 @@ def matrix_to_knn_graph(data, k_neighbors, metric, progress_callback=None):
 
     """
     # We do k + 1 because each point is closest to itself, which is not useful
+    if metric == "cosine":
+        # Cosine distance on row-normalized data has the same ranking as
+        # Euclidean distance, so we use the latter, which is more efficient
+        # because it uses ball trees. We do not need actual distances. If we
+        # would, the N * k distances can be recomputed later.
+        data = data / np.linalg.norm(data, axis=1)[:, None]
+        metric = "euclidean"
     knn = NearestNeighbors(n_neighbors=k_neighbors, metric=metric).fit(data)
     nearest_neighbors = knn.kneighbors(data, return_distance=False)
     # Convert to list of sets so jaccard can be computed efficiently

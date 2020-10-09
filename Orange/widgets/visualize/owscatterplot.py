@@ -22,7 +22,8 @@ from Orange.widgets.settings import (
     Setting, ContextSetting, SettingProvider, IncompatibleContext)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
+    ScatterBaseParameterSetter
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import AttributeList, Msg, Input, Output
@@ -95,12 +96,31 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         return [a for _, a in attrs]
 
 
+class ParameterSetter(ScatterBaseParameterSetter):
+
+    def __init__(self, master):
+        super().__init__(master)
+
+    def update_setters(self):
+        super().update_setters()
+        self.initial_settings[self.LABELS_BOX].update({
+            self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+            self.AXIS_TICKS_LABEL: self.FONT_SETTING
+        })
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in
+                self.master.plot_widget.plotItem.axes.values()]
+
+
 class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
     orthonormal_regression = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
+        self.parameter_setter = ParameterSetter(self)
         self.reg_line_items = []
 
     def clear(self):
@@ -302,6 +322,13 @@ class OWScatterPlot(OWDataProjectionWidget):
     @property
     def effective_variables(self):
         return [self.attr_x, self.attr_y] if self.attr_x and self.attr_y else []
+
+    @property
+    def effective_data(self):
+        eff_var = self.effective_variables
+        if eff_var and self.attr_x.name == self.attr_y.name:
+            eff_var = [self.attr_x]
+        return self.data.transform(Domain(eff_var))
 
     def _vizrank_color_change(self):
         self.vizrank.initialize()

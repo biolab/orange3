@@ -376,35 +376,40 @@ class TestOWDistributions(WidgetTest):
         cont = self.iris.domain[0]
         disc = self.iris.domain.class_var
         cont_box = widget.continuous_box
+        sort_by_freq = widget.controls.sort_by_freq
         show_probs = widget.controls.show_probs
         stacked = widget.controls.stacked_columns
 
         self._set_var(cont)
         self._set_cvar(disc)
+        self.assertFalse(sort_by_freq.isEnabled())
         self.assertTrue(cont_box.isEnabled())
         self.assertTrue(show_probs.isEnabled())
         self.assertTrue(stacked.isEnabled())
 
         self._set_var(cont)
         self._set_cvar(None)
+        self.assertFalse(sort_by_freq.isEnabled())
         self.assertTrue(cont_box.isEnabled())
         self.assertFalse(show_probs.isEnabled())
         self.assertFalse(stacked.isEnabled())
 
         self._set_var(disc)
         self._set_cvar(None)
+        self.assertTrue(sort_by_freq.isEnabled())
         self.assertFalse(cont_box.isEnabled())
         self.assertFalse(show_probs.isEnabled())
         self.assertFalse(stacked.isEnabled())
 
         self._set_var(disc)
         self._set_cvar(disc)
+        self.assertTrue(sort_by_freq.isEnabled())
         self.assertFalse(cont_box.isEnabled())
         self.assertTrue(show_probs.isEnabled())
         self.assertTrue(stacked.isEnabled())
 
     if os.getenv("CI"):
-        # Testing all combinations takes 10-15 seconds; this should take < 2s
+        # Testing all combinations takes almost a minute; this should take < 2s
         # Code for fitter, stacked_columns and show_probs is independent, so
         # changing them simultaneously doesn't significantly degrade the tests
         def test_plot_types_combinations(self):
@@ -424,6 +429,7 @@ class TestOWDistributions(WidgetTest):
                         self._set_fitter(2 * b)
                         self._set_check(c.stacked_columns, b)
                         self._set_check(c.show_probs, b)
+                        self._set_check(c.sort_by_freq, b)
                         qApp.processEvents()
     else:
         def test_plot_types_combinations(self):
@@ -433,6 +439,7 @@ class TestOWDistributions(WidgetTest):
 
             widget = self.widget
             c = widget.controls
+            set_chk = self._set_check
             self.send_signal(widget.Inputs.data, self.iris)
             cont = self.iris.domain[0]
             disc = self.iris.domain.class_var
@@ -442,14 +449,15 @@ class TestOWDistributions(WidgetTest):
                         for cumulative in [False, True]:
                             for stack in [False, True]:
                                 for show_probs in [False, True]:
-                                    self._set_var(var)
-                                    self._set_cvar(cvar)
-                                    self._set_fitter(fitter)
-                                    self._set_check(c.cumulative_distr,
-                                                    cumulative)
-                                    self._set_check(c.stacked_columns, stack)
-                                    self._set_check(c.show_probs, show_probs)
-                                    qApp.processEvents()
+                                    for sort_by_freq in [False, True]:
+                                        self._set_var(var)
+                                        self._set_cvar(cvar)
+                                        self._set_fitter(fitter)
+                                        set_chk(c.cumulative_distr, cumulative)
+                                        set_chk(c.stacked_columns, stack)
+                                        set_chk(c.show_probs, show_probs)
+                                        set_chk(c.sort_by_freq, sort_by_freq)
+                                        qApp.processEvents()
 
     def test_selection_grouping(self):
         """Widget groups consecutive selected bars"""
@@ -542,6 +550,56 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         self.assertEqual(info._StateInfo__output_summary.brief, "")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+    def test_sort_by_freq_no_split(self):
+        data = Table("heart_disease")
+        domain = data.domain
+        sort_by_freq = self.widget.controls.sort_by_freq
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self._set_var(domain["gender"])
+        self._set_cvar(None)
+
+        self._set_check(sort_by_freq, False)
+        out = self.get_output(self.widget.Outputs.histogram_data)
+        self.assertEqual(out[0][0], "female")
+        self.assertEqual(out[0][1], 97)
+        self.assertEqual(out[1][0], "male")
+        self.assertEqual(out[1][1], 206)
+
+        self._set_check(sort_by_freq, True)
+        out = self.get_output(self.widget.Outputs.histogram_data)
+        self.assertEqual(out[0][0], "male")
+        self.assertEqual(out[0][1], 206)
+        self.assertEqual(out[1][0], "female")
+        self.assertEqual(out[1][1], 97)
+
+    def test_sort_by_freq_split(self):
+        data = Table("heart_disease")
+        domain = data.domain
+        sort_by_freq = self.widget.controls.sort_by_freq
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self._set_var(domain["gender"])
+        self._set_cvar(domain["rest ECG"])
+
+        self._set_check(sort_by_freq, False)
+        out = self.get_output(self.widget.Outputs.histogram_data)
+        self.assertEqual(out[0][0], "female")
+        self.assertEqual(out[0][1], "normal")
+        self.assertEqual(out[0][2], 49)
+        self.assertEqual(out[4][0], "male")
+        self.assertEqual(out[4][1], "left vent hypertrophy")
+        self.assertEqual(out[4][2], 103)
+
+        self._set_check(sort_by_freq, True)
+        out = self.get_output(self.widget.Outputs.histogram_data)
+        self.assertEqual(out[0][0], "male")
+        self.assertEqual(out[0][1], "normal")
+        self.assertEqual(out[0][2], 102)
+        self.assertEqual(out[4][0], "female")
+        self.assertEqual(out[4][1], "left vent hypertrophy")
+        self.assertEqual(out[4][2], 45)
 
 
 if __name__ == "__main__":

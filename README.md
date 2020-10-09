@@ -63,11 +63,17 @@ virtualenv --python=python3 --system-site-packages orange3venv
 # ... and make it the active one
 source orange3venv/bin/activate
 
-# Install Qt dependencies for the GUI
-pip install PyQt5 PyQtWebEngine
-
 # Install Orange
 pip install orange3
+```
+
+Installing with winget (Windows only)
+-------------------------------------
+
+To install Orange with [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/), run:
+
+```Shell
+winget install --id  UniversityofLjubljana.Orange 
 ```
 
 Starting Orange GUI

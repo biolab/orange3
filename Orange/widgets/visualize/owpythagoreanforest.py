@@ -220,12 +220,12 @@ class OWPythagoreanForest(OWWidget):
             box_display, self, 'target_class_index', label='Target class',
             orientation=Qt.Horizontal, items=[], contentsLength=8,
             searchable=True
-        )  # type: gui.OrangeComboBox
+        )
         self.ui_size_calc_combo = gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
             orientation=Qt.Horizontal,
             items=list(zip(*self.SIZE_CALCULATION))[0], contentsLength=8,
-        )  # type: gui.OrangeComboBox
+        )
         self.ui_zoom_slider = gui.hSlider(
             box_display, self, 'zoom', label='Zoom', ticks=False, minValue=100,
             maxValue=400, createLabel=False, intOnly=False,

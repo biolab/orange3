@@ -2,7 +2,7 @@ import sys
 import copy
 import math
 from numbers import Number
-from collections import Iterable
+from typing import Iterable
 import warnings
 
 import numpy as np

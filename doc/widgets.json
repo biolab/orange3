@@ -33,7 +33,8 @@
     "icon": "../Orange/widgets/data/icons/DataSets.svg",
     "background": "#FFD39F",
     "keywords": [
-     "online"
+     "online",
+     "data sets"
     ]
    },
    {
@@ -322,7 +323,9 @@
     "doc": "visual-programming/source/widgets/visualize/distributions.md",
     "icon": "../Orange/widgets/visualize/icons/Distribution.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "histogram"
+    ]
    },
    {
     "text": "Scatter Plot",
@@ -337,6 +340,15 @@
     "icon": "../Orange/widgets/visualize/icons/LinePlot.svg",
     "background": "#FFB7B1",
     "keywords": []
+   },
+   {
+    "text": "Bar Plot",
+    "doc": null,
+    "icon": "../Orange/widgets/visualize/icons/BarPlot.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "chart"
+    ]
    },
    {
     "text": "Sieve Diagram",
