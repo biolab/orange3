@@ -1,15 +1,18 @@
-from typing import Optional
+from typing import Optional, Callable, List, Union
 from collections import namedtuple
 from functools import singledispatch
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QSortFilterProxyModel, QSize
-from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon
+from AnyQt.QtCore import Qt, QSortFilterProxyModel, QSize, QDateTime, \
+    QModelIndex, Signal
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter, \
+    QDoubleValidator
 from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, QHeaderView, \
-    QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit
+    QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
+    QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem
 
-from Orange.data import Variable, DiscreteVariable, ContinuousVariable, \
+from Orange.data import DiscreteVariable, ContinuousVariable, \
     TimeVariable, Table
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -23,103 +26,242 @@ ValuesRole = next(gui.OrangeUserRole)
 ValueRole = next(gui.OrangeUserRole)
 
 
+class VariableEditor(QWidget):
+    value_changed = Signal(float)
+
+    def __init__(self, parent: QWidget, callback: Callable):
+        super().__init__(parent)
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+        self.value_changed.connect(callback)
+
+    @property
+    def value(self) -> Union[int, float]:
+        return NotImplemented
+
+    @value.setter
+    def value(self, value: float):
+        raise NotImplementedError
+
+
+class DiscreteVariableEditor(VariableEditor):
+    value_changed = Signal(int)
+
+    def __init__(self, parent: QWidget, items: List[str], callback: Callable):
+        super().__init__(parent, callback)
+        self._combo = QComboBox(parent)
+        self._combo.addItems(items)
+        self._combo.currentIndexChanged.connect(self.value_changed)
+        self.layout().addWidget(self._combo)
+
+    @property
+    def value(self) -> int:
+        return self._combo.currentIndex()
+
+    @value.setter
+    def value(self, value: float):
+        assert value == int(value)
+        self._combo.setCurrentIndex(int(value))
+
+
+class ContinuousVariableEditor(VariableEditor):
+    class Validator(QDoubleValidator):
+        def validate(self, string: str, pos: int):
+            if string == "":
+                return QDoubleValidator.Acceptable, "0", 1
+            try:
+                float(string)
+            except ValueError:
+                return QDoubleValidator.Invalid, string, pos
+            return super().validate(string, pos)
+
+    def __init__(self, parent: QWidget, variable: ContinuousVariable,
+                 min_value: float, max_value: float, callback: Callable):
+        super().__init__(parent, callback)
+        self._value: float = min_value
+        self._min_value: float = min_value
+        self._max_value: float = max_value
+        self._n_decimals: int = variable.number_of_decimals
+
+        kwargs = {"singleStep": 1,
+                  "minimum": self.__map_to_slider(self.min_value),
+                  "maximum": self.__map_to_slider(self.max_value),
+                  "orientation": Qt.Horizontal}
+        self._slider = QSlider(parent, **kwargs)
+        self._slider.setMinimumWidth(100)
+
+        kwargs = {"singleStep": 10 ** (-self._n_decimals),
+                  "minimum": self.min_value,
+                  "maximum": self.max_value,
+                  "decimals": self._n_decimals}
+        self._spin = QDoubleSpinBox(parent, **kwargs)
+        self._spin.setFixedWidth(80)
+
+        self._min_edit = QLineEdit(
+            parent, text=variable.repr_val(min_value),
+            frame=False, alignment=Qt.AlignRight, maximumWidth=80
+        )
+        self._min_edit.setValidator(self.Validator(decimals=self._n_decimals))
+
+        self._max_edit = QLineEdit(
+            parent, text=variable.repr_val(max_value),
+            frame=False, alignment=Qt.AlignLeft, maximumWidth=80
+        )
+        self._max_edit.setValidator(self.Validator(decimals=self._n_decimals))
+
+        self._slider.valueChanged.connect(self._apply_slider_value)
+        self._spin.valueChanged.connect(self._apply_spin_value)
+        self._min_edit.editingFinished.connect(
+            lambda: setattr(self, "min_value", float(self._min_edit.text()))
+        )
+        self._max_edit.editingFinished.connect(
+            lambda: setattr(self, "max_value", float(self._max_edit.text()))
+        )
+
+        self._min_edit.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self._slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._max_edit.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self._spin.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        self.layout().addWidget(self._min_edit)
+        self.layout().addWidget(self._slider)
+        self.layout().addWidget(self._max_edit)
+        self.layout().addWidget(self._spin)
+        self.layout().setContentsMargins(0, 0, 10, 0)
+
+    @property
+    def value(self) -> float:
+        return self.__round_value(self._value)
+
+    @value.setter
+    def value(self, value):
+        value = min(self._max_value, max(self._min_value, value))
+        if self._value is None or self.__round_value(value) != self.value:
+            self._value = value
+            self.value_changed.emit(self.value)
+            self._value_to_slider()
+            self._value_to_spin()
+
+    @property
+    def min_value(self):
+        return self.__round_value(self._min_value)
+
+    @min_value.setter
+    def min_value(self, value):
+        self._min_value = value
+        self._slider.setMinimum(self.__map_to_slider(self.min_value))
+        self._spin.setMinimum(self.min_value)
+
+    @property
+    def max_value(self):
+        return self.__round_value(self._max_value)
+
+    @max_value.setter
+    def max_value(self, value):
+        self._max_value = value
+        self._slider.setMaximum(self.__map_to_slider(self.max_value))
+        self._spin.setMaximum(self.max_value)
+
+    def _value_to_slider(self):
+        self._slider.setValue(self.__map_to_slider(self.value))
+
+    def _apply_slider_value(self):
+        self.value = self.__map_from_slider(self._slider.value())
+
+    def _value_to_spin(self):
+        self._spin.setValue(self.value)
+
+    def _apply_spin_value(self):
+        self.value = self._spin.value()
+
+    def __round_value(self, value):
+        return round(value, self._n_decimals)
+
+    def __map_to_slider(self, value: float) -> int:
+        return round(value * 10 ** self._n_decimals)
+
+    def __map_from_slider(self, value: int) -> float:
+        return value * 10 ** (-self._n_decimals)
+
+
+# TODO
+class TimeVariableEditor(VariableEditor):
+    def __init__(self, parent: QWidget, have_date: bool,
+                 have_time: bool, callback: Callable):
+        super().__init__(parent)
+        self._editor = QDateTimeEdit(parent)
+        date_format = "yyyy-MM-dd hh:mm:ss"
+        if have_date and not have_time:
+            date_format = "yyyy-MM-dd"
+        elif not have_date and have_time:
+            date_format = "hh:mm:ss"
+        self._editor.setDisplayFormat(date_format)
+        self._editor.dateChanged.connect(callback)
+        self.layout().addWidget(self._editor)
+
+    @property
+    def value(self):
+        return self._editor.date()
+
+    @value.setter
+    def value(self, value):
+        self._editor.setDateTime(QDateTime(value))
+
+
 class VariableDelegate(QStyledItemDelegate):
-    def paint(self, painter, option, index):
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem,
+              index: QModelIndex):
         self.parent().view.openPersistentEditor(index)
         super().paint(painter, option, index)
 
-    def createEditor(self, parent, option, index):
-        # TODO: check ordering (proxy)
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem,
+                     index: QModelIndex) -> VariableEditor:
         variable = index.data(VariableRole)
         values = index.data(ValuesRole)
         return _create_editor(variable, values, parent, self._commit_data)
 
     def _commit_data(self):
-        self.commitData.emit(self.sender())
+        editor = self.sender()
+        assert isinstance(editor, VariableEditor)
+        self.commitData.emit(editor)
 
-    def setEditorData(self, widget, index):
-        _set_value(widget, index.model().data(index, ValueRole))
+    def setEditorData(self, editor: VariableEditor, index: QModelIndex):
+        editor.value = index.model().data(index, ValueRole)
 
-    def setModelData(self, widget, model, index):
-        model.setData(index, _get_value(widget), ValueRole)
+    def setModelData(self, editor: VariableEditor,
+                     model: QSortFilterProxyModel, index: QModelIndex):
+        model.setData(index, editor.value, ValueRole)
+
+    def sizeHint(self, option: QStyleOptionViewItem,
+                 index: QModelIndex) -> QSize:
+        sh = super().sizeHint(option, index)
+        return QSize(sh.width(), sh.height() + 20)
 
 
 @singledispatch
-def _create_editor(_: Variable, __: np.ndarray, ___: QWidget, cb) -> QWidget:
+def _create_editor(*_) -> VariableEditor:
     raise NotImplementedError
 
 
 @_create_editor.register(DiscreteVariable)
-def _(variable: DiscreteVariable, _: np.ndarray, parent: QWidget, cb) -> QComboBox:
-    combo = QComboBox(parent)
-    combo.addItems(variable.values)
-    combo.currentIndexChanged.connect(cb)
-    return combo
+def _(variable: DiscreteVariable, _: np.ndarray,
+      parent: QWidget, callback: Callable) -> DiscreteVariableEditor:
+    return DiscreteVariableEditor(parent, variable.values, callback)
 
 
 @_create_editor.register(ContinuousVariable)
-def _(_: ContinuousVariable, __: np.ndarray, parent: QWidget, cb) -> QSlider:
-    slider = QSlider(parent, orientation=Qt.Horizontal)
-    slider.valueChanged.connect(cb)
-    return slider
+def _(variable: ContinuousVariable, values: np.ndarray,
+      parent: QWidget, callback: Callable) -> ContinuousVariableEditor:
+    return ContinuousVariableEditor(parent, variable, np.nanmin(values),
+                                    np.nanmax(values), callback)
 
 
 @_create_editor.register(TimeVariable)
-def _(variable: TimeVariable, _: np.ndarray, parent: QWidget, cb) -> QDateTimeEdit:
-    edit = QDateTimeEdit(parent)
-    date_format = "yyyy-MM-dd hh:mm:ss"
-    if variable.have_date and not variable.have_time:
-        date_format = "yyyy-MM-dd"
-    elif not variable.have_date and variable.have_time:
-        date_format = "hh:mm:ss"
-    edit.setDisplayFormat(date_format)
-    edit.dateChanged.connect(cb)
-    return edit
-
-
-@singledispatch
-def _set_value(_: QWidget, __: float):
-    raise NotImplementedError
-
-
-@_set_value.register(QComboBox)
-def _(widget: QComboBox, value: str):
-    if isinstance(value, str):
-        widget.setCurrentText(value)
-    else:
-        widget.setCurrentIndex(int(value))
-
-
-@_set_value.register(QSlider)
-def _(widget: QSlider, value: float):
-    widget.setValue(int(value))
-
-
-@_set_value.register(QDateTimeEdit)
-def _(widget: QDateTimeEdit, value: float):
-    # TODO
-    widget.setDate(value)
-
-
-@singledispatch
-def _get_value(_: QWidget):
-    raise NotImplementedError
-
-
-@_get_value.register(QComboBox)
-def _(widget: QComboBox):
-    return widget.currentText()
-
-
-@_get_value.register(QSlider)
-def _(widget: QSlider):
-    return widget.value()
-
-
-@_get_value.register(QDateTimeEdit)
-def _(widget: QDateTimeEdit):
-    # TODO
-    return widget.date()
+def _(variable: TimeVariable, _: np.ndarray,
+      parent: QWidget, callback: Callable) -> TimeVariableEditor:
+    return TimeVariableEditor(parent, variable.have_date,
+                              variable.have_time, callback)
 
 
 class OWCreateInstance(OWWidget):
@@ -231,6 +373,7 @@ class OWCreateInstance(OWWidget):
             var_item = QStandardItem()
             var_item.setData(var.name, Qt.DisplayRole)
             var_item.setIcon(variable_icon())
+            var_item.setEditable(False)
 
             control_item = QStandardItem()
             values = self.data.get_column_view(var)[0]
@@ -251,6 +394,7 @@ class OWCreateInstance(OWWidget):
             if var.is_primitive():
                 add_row()
         self.view.resizeColumnsToContents()
+        self.view.resizeRowsToContents()
 
     @Inputs.reference
     def set_reference(self, data: Table):

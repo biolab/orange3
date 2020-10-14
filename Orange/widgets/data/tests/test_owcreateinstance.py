@@ -1,6 +1,14 @@
 # pylint: disable=missing-docstring
+from unittest.mock import Mock
+
+import numpy as np
+
+from AnyQt.QtWidgets import QWidget
+
+from orangewidget.tests.base import GuiTest
 from Orange.data import Table
-from Orange.widgets.data.owcreateinstance import OWCreateInstance
+from Orange.widgets.data.owcreateinstance import OWCreateInstance, \
+    DiscreteVariableEditor, ContinuousVariableEditor
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.utils.state_summary import format_summary_details, \
     format_multiple_summaries
@@ -82,6 +90,111 @@ class TestOWCreateInstance(WidgetTest):
     def test_datasets(self):
         for ds in datasets.datasets():
             self.send_signal(self.widget.Inputs.data, ds)
+
+
+class TestDiscreteVariableEditor(GuiTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.parent = QWidget()
+
+    def setUp(self):
+        self.callback = Mock()
+        self.editor = DiscreteVariableEditor(
+            self.parent, ["Foo", "Bar"], self.callback
+        )
+
+    def test_init(self):
+        self.assertEqual(self.editor.value, 0)
+        self.assertEqual(self.editor._combo.currentText(), "Foo")
+        self.callback.assert_not_called()
+
+    def test_edit(self):
+        """ Edit combo by user. """
+        self.editor._combo.setCurrentText("Bar")
+        self.assertEqual(self.editor.value, 1)
+        self.assertEqual(self.editor._combo.currentText(), "Bar")
+        self.callback.assert_called_once()
+
+    def test_set_value(self):
+        """ Programmatically set combo box value. """
+        self.editor.value = 1
+        self.assertEqual(self.editor.value, 1)
+        self.assertEqual(self.editor._combo.currentText(), "Bar")
+        self.callback.assert_called_once()
+
+
+class TestContinuousVariableEditor(GuiTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.parent = QWidget()
+
+    def setUp(self):
+        self.callback = Mock()
+        self.data = Table("iris")
+        self.variable = self.data.domain[0]
+        values = self.data.get_column_view(self.variable)[0]
+        self.min_value = np.nanmin(values)
+        self.max_value = np.nanmax(values)
+        self.editor = ContinuousVariableEditor(
+            self.parent, self.variable, self.min_value,
+            self.max_value, self.callback
+        )
+
+    def test_init(self):
+        self.assertEqual(self.editor.value, self.min_value)
+        self.assertEqual(self.editor._slider.value(), self.min_value * 10)
+        self.assertEqual(self.editor._spin.value(), self.min_value)
+        self.callback.assert_not_called()
+
+    def test_edit_slider(self):
+        """ Edit slider by user. """
+        self.editor._slider.setValue(self.max_value * 10)
+        self.assertEqual(self.editor.value, self.max_value)
+        self.assertEqual(self.editor._slider.value(), self.max_value * 10)
+        self.assertEqual(self.editor._spin.value(), self.max_value)
+        self.callback.assert_called_once()
+
+        self.callback.reset_mock()
+        value = self.min_value + (self.max_value - self.min_value) / 2
+        self.editor._slider.setValue(value * 10)
+        self.assertEqual(self.editor.value, value)
+        self.assertEqual(self.editor._slider.value(), value * 10)
+        self.assertEqual(self.editor._spin.value(), value)
+        self.callback.assert_called_once()
+
+    def test_edit_spin(self):
+        """ Edit spin by user. """
+        self.editor._spin.setValue(self.max_value)
+        self.assertEqual(self.editor.value, self.max_value)
+        self.assertEqual(self.editor._slider.value(), self.max_value * 10)
+        self.assertEqual(self.editor._spin.value(), self.max_value)
+        self.callback.assert_called_once()
+
+        self.callback.reset_mock()
+        value = self.min_value + (self.max_value - self.min_value) / 2
+        self.editor._spin.setValue(value)
+        self.assertEqual(self.editor.value, value)
+        self.assertEqual(self.editor._slider.value(), value * 10)
+        self.assertEqual(self.editor._spin.value(), value)
+        self.callback.assert_called_once()
+
+    def test_set_value(self):
+        """ Programmatically set slider/spin value. """
+        self.editor.value = -2
+        self.assertEqual(self.editor._slider.value(), self.min_value * 10)
+        self.assertEqual(self.editor._spin.value(), self.min_value)
+        self.assertEqual(self.editor.value, self.min_value)
+        self.callback.assert_not_called()
+
+        self.callback.reset_mock()
+        value = self.min_value + (self.max_value - self.min_value) / 4
+        self.editor.value = value
+        self.assertEqual(self.editor._slider.value(), value * 10)
+        self.assertEqual(self.editor._spin.value(), value)
+        self.assertEqual(self.editor.value, value)
+        self.callback.assert_called_once()
 
 
 if __name__ == "__main__":
