@@ -1209,7 +1209,7 @@ class SharedSelectionModel(QItemSelectionModel):
         self.clearCurrentIndex()
 
 
-class TableView(QTableView):
+class TableView(gui.HScrollStepMixin, QTableView):
     MaxSizeHintSamples = 1000
 
     def sizeHintForColumn(self, column):
