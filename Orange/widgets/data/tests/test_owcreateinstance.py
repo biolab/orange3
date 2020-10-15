@@ -1,6 +1,6 @@
 # pylint: disable=missing-docstring
 from Orange.data import Table
-from Orange.widgets.data.owsimulator import OWCreateInstance
+from Orange.widgets.data.owcreateinstance import OWCreateInstance
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.utils.state_summary import format_summary_details, \
     format_multiple_summaries
