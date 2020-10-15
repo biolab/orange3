@@ -363,7 +363,7 @@ def table_selection_to_list(table):
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
-class TableView(QTableView):
+class TableView(gui.HScrollStepMixin, QTableView):
     #: Signal emitted when selection finished. It is not emitted during
     #: mouse drag selection updates.
     selectionFinished = Signal()
