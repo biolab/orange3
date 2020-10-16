@@ -630,21 +630,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     def update_tooltip(self, modifiers=Qt.NoModifier):
         modifiers &= Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier
         text = self.tiptexts.get(int(modifiers), self.tiptexts[0])
-        self.tip_textitem.setHtml(text + self._get_jittering_tooltip())
-
-    def _get_jittering_tooltip(self):
-        warn_jittered = ""
-        if self.jitter_size:
-            warn_jittered = \
-                '<br/><br/>' \
-                '<span style="background-color: red; color: white; ' \
-                'font-weight: 500;">' \
-                '&nbsp;Warning: Selection is applied to unjittered data&nbsp;' \
-                '</span>'
-        return warn_jittered
+        self.tip_textitem.setHtml(text)
 
     def update_jittering(self):
-        self.update_tooltip()
         x, y = self.get_coordinates()
         if x is None or len(x) == 0 or self.scatterplot_item is None:
             return
