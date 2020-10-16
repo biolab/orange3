@@ -604,7 +604,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
              format("Cmd" if sys.platform == "darwin" else "Ctrl")),
             (Qt.AltModifier, "Alt: Remove")
         ]
-        all_parts = ", ".join(part for _, part in tip_parts)
+        all_parts = "<center>" + \
+                    ", ".join(part for _, part in tip_parts) + \
+                    "</center>"
         self.tiptexts = {
             int(modifier): all_parts.replace(part, "<b>{}</b>".format(part))
             for modifier, part in tip_parts
@@ -616,6 +618,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         text.setHtml(self.tiptexts[Qt.ControlModifier])
         text.setPos(4, 2)
         r = text.boundingRect()
+        text.setTextWidth(r.width())
         rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
         rect.setBrush(QColor(224, 224, 224, 212))
         rect.setPen(QPen(Qt.NoPen))
