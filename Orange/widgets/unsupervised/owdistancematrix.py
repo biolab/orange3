@@ -153,6 +153,10 @@ class SymmetricSelectionModel(QItemSelectionModel):
         self.select(selection, QItemSelectionModel.ClearAndSelect)
 
 
+class TableView(gui.HScrollStepMixin, QTableView):
+    pass
+
+
 class DistanceMatrixContextHandler(ContextHandler):
     @staticmethod
     def _var_names(annotations):
@@ -213,7 +217,7 @@ class OWDistanceMatrix(widget.OWWidget):
         self.items = None
 
         self.tablemodel = DistanceMatrixModel()
-        view = self.tableview = QTableView()
+        view = self.tableview = TableView()
         view.setEditTriggers(QTableView.NoEditTriggers)
         view.setItemDelegate(TableBorderItem())
         view.setModel(self.tablemodel)
