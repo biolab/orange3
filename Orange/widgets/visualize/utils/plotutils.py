@@ -270,7 +270,7 @@ class InteractiveViewBox(pg.ViewBox):
     def mouseClickEvent(self, ev):
         if ev.button() == Qt.RightButton:  # undo zoom
             self.scaleHistory(-1)
-        else:
+        elif ev.modifiers() == Qt.NoModifier:
             ev.accept()
             self.graph.unselect_all()
 
