@@ -30,9 +30,13 @@ class OWRandomForest(OWBaseLearner):
     min_samples_split = settings.Setting(5)
     use_min_samples_split = settings.Setting(True)
     index_output = settings.Setting(0)
+    class_weight = settings.Setting(False)
 
     class Error(OWBaseLearner.Error):
         not_enough_features = Msg("Insufficient number of attributes ({})")
+
+    class Warning(OWBaseLearner.Warning):
+        class_weights_used = Msg("Weighting by class may decrease performance.")
 
     def add_main_layout(self):
         # this is part of init, pylint: disable=attribute-defined-outside-init
@@ -49,6 +53,12 @@ class OWRandomForest(OWBaseLearner):
         self.random_state = gui.checkBox(
             box, self, "use_random_state", label="Replicable training",
             callback=self.settings_changed)
+        self.weights = gui.checkBox(
+            box, self,
+            "class_weight", label="Balance class distribution",
+            callback=self.settings_changed,
+            tooltip="Weigh classes inversely proportional to their frequencies."
+        )
 
         box = gui.vBox(self.controlArea, "Growth Control")
         self.max_depth_spin = gui.spin(
@@ -63,6 +73,7 @@ class OWRandomForest(OWBaseLearner):
             checkCallback=self.settings_changed, alignment=Qt.AlignRight)
 
     def create_learner(self):
+        self.Warning.class_weights_used.clear()
         common_args = {"n_estimators": self.n_estimators}
         if self.use_max_features:
             common_args["max_features"] = self.max_features
@@ -72,6 +83,9 @@ class OWRandomForest(OWBaseLearner):
             common_args["max_depth"] = self.max_depth
         if self.use_min_samples_split:
             common_args["min_samples_split"] = self.min_samples_split
+        if self.class_weight:
+            common_args["class_weight"] = "balanced"
+            self.Warning.class_weights_used()
 
         return self.LEARNER(preprocessors=self.preprocessors, **common_args)
 
@@ -94,7 +108,9 @@ class OWRandomForest(OWBaseLearner):
             ("Maximal tree depth",
              self.max_depth if self.use_max_depth else "unlimited"),
             ("Stop splitting nodes with maximum instances",
-             self.min_samples_split if self.use_min_samples_split else "unlimited")
+             self.min_samples_split if self.use_min_samples_split else
+             "unlimited"),
+            ("Class weights", self.class_weight)
         )
 
 
