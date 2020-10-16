@@ -6,11 +6,10 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel, QSize, QDateTime, \
     QModelIndex, Signal
-from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter, \
-    QDoubleValidator
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter
 from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, QHeaderView, \
     QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
-    QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem
+    QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel
 
 from Orange.data import DiscreteVariable, ContinuousVariable, \
     TimeVariable, Table
@@ -66,111 +65,102 @@ class DiscreteVariableEditor(VariableEditor):
 
 
 class ContinuousVariableEditor(VariableEditor):
-    class Validator(QDoubleValidator):
-        def validate(self, string: str, pos: int):
-            if string == "":
-                return QDoubleValidator.Acceptable, "0", 1
-            try:
-                float(string)
-            except ValueError:
-                return QDoubleValidator.Invalid, string, pos
-            return super().validate(string, pos)
+    MAX_FLOAT = 2147483647
 
     def __init__(self, parent: QWidget, variable: ContinuousVariable,
                  min_value: float, max_value: float, callback: Callable):
         super().__init__(parent, callback)
+
+        if np.isnan(min_value) or np.isnan(max_value):
+            raise ValueError("Min/Max cannot be NaN.")
+
+        n_decimals = variable.number_of_decimals
+        abs_max = max(abs(min_value), max_value)
+        if abs_max * 10 ** n_decimals > self.MAX_FLOAT:
+            n_decimals = int(np.log10(self.MAX_FLOAT / abs_max))
+
         self._value: float = min_value
-        self._min_value: float = min_value
-        self._max_value: float = max_value
-        self._n_decimals: int = variable.number_of_decimals
+        self._n_decimals: int = n_decimals
+        self._min_value: float = self.__round_value(min_value)
+        self._max_value: float = self.__round_value(max_value)
 
-        kwargs = {"singleStep": 1,
-                  "minimum": self.__map_to_slider(self.min_value),
-                  "maximum": self.__map_to_slider(self.max_value),
-                  "orientation": Qt.Horizontal}
-        self._slider = QSlider(parent, **kwargs)
-        self._slider.setMinimumWidth(100)
+        sp_spin = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sp_slider = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sp_slider.setHorizontalStretch(5)
+        sp_edit = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sp_edit.setHorizontalStretch(1)
 
-        kwargs = {"singleStep": 10 ** (-self._n_decimals),
-                  "minimum": self.min_value,
-                  "maximum": self.max_value,
-                  "decimals": self._n_decimals}
-        self._spin = QDoubleSpinBox(parent, **kwargs)
-        self._spin.setFixedWidth(80)
-
-        self._min_edit = QLineEdit(
-            parent, text=variable.repr_val(min_value),
-            frame=False, alignment=Qt.AlignRight, maximumWidth=80
+        self._spin = QDoubleSpinBox(
+            parent,
+            value=self._min_value,
+            minimum=-np.inf,
+            maximum=np.inf,
+            singleStep=10 ** (-self._n_decimals),
+            decimals=self._n_decimals,
+            minimumWidth=70,
+            sizePolicy=sp_spin,
         )
-        self._min_edit.setValidator(self.Validator(decimals=self._n_decimals))
-
-        self._max_edit = QLineEdit(
-            parent, text=variable.repr_val(max_value),
-            frame=False, alignment=Qt.AlignLeft, maximumWidth=80
+        self._slider = QSlider(
+            parent,
+            minimum=self.__map_to_slider(self._min_value),
+            maximum=self.__map_to_slider(self._max_value),
+            singleStep=1,
+            orientation=Qt.Horizontal,
+            minimumWidth=20,
+            sizePolicy=sp_slider,
         )
-        self._max_edit.setValidator(self.Validator(decimals=self._n_decimals))
+        self._label_min = QLabel(
+            parent,
+            text=variable.repr_val(min_value),
+            alignment=Qt.AlignRight,
+            minimumWidth=60,
+            sizePolicy=sp_edit,
+        )
+        self._label_max = QLabel(
+            parent,
+            text=variable.repr_val(max_value),
+            alignment=Qt.AlignLeft,
+            minimumWidth=60,
+            sizePolicy=sp_edit,
+        )
 
         self._slider.valueChanged.connect(self._apply_slider_value)
         self._spin.valueChanged.connect(self._apply_spin_value)
-        self._min_edit.editingFinished.connect(
-            lambda: setattr(self, "min_value", float(self._min_edit.text()))
-        )
-        self._max_edit.editingFinished.connect(
-            lambda: setattr(self, "max_value", float(self._max_edit.text()))
-        )
 
-        self._min_edit.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        self._slider.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._max_edit.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        self._spin.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        self.layout().addWidget(self._min_edit)
-        self.layout().addWidget(self._slider)
-        self.layout().addWidget(self._max_edit)
         self.layout().addWidget(self._spin)
-        self.layout().setContentsMargins(0, 0, 10, 0)
+        self.layout().addWidget(self._label_min)
+        self.layout().addWidget(self._slider)
+        self.layout().addWidget(self._label_max)
+        self.layout().setContentsMargins(4, 0, 0, 4)
+        self.setMinimumWidth(200)
+
+        self.setFocusProxy(self._spin)
+
+        # FIXME: after setting focus proxy to the spin, the text is highlighted
+
+        def deselect():
+            self._spin.lineEdit().deselect()
+            try:
+                self._spin.lineEdit().selectionChanged.disconnect(deselect)
+            except TypeError:
+                pass
+
+        self._spin.lineEdit().selectionChanged.connect(deselect)
 
     @property
     def value(self) -> float:
         return self.__round_value(self._value)
 
     @value.setter
-    def value(self, value):
-        value = min(self._max_value, max(self._min_value, value))
+    def value(self, value: float):
         if self._value is None or self.__round_value(value) != self.value:
             self._value = value
             self.value_changed.emit(self.value)
-            self._value_to_slider()
-            self._value_to_spin()
-
-    @property
-    def min_value(self):
-        return self.__round_value(self._min_value)
-
-    @min_value.setter
-    def min_value(self, value):
-        self._min_value = value
-        self._slider.setMinimum(self.__map_to_slider(self.min_value))
-        self._spin.setMinimum(self.min_value)
-
-    @property
-    def max_value(self):
-        return self.__round_value(self._max_value)
-
-    @max_value.setter
-    def max_value(self, value):
-        self._max_value = value
-        self._slider.setMaximum(self.__map_to_slider(self.max_value))
-        self._spin.setMaximum(self.max_value)
-
-    def _value_to_slider(self):
-        self._slider.setValue(self.__map_to_slider(self.value))
+            self._spin.setValue(self.value)
+            self._slider.setValue(self.__map_to_slider(self.value))
 
     def _apply_slider_value(self):
         self.value = self.__map_from_slider(self._slider.value())
-
-    def _value_to_spin(self):
-        self._spin.setValue(self.value)
 
     def _apply_spin_value(self):
         self.value = self._spin.value()
@@ -179,6 +169,7 @@ class ContinuousVariableEditor(VariableEditor):
         return round(value, self._n_decimals)
 
     def __map_to_slider(self, value: float) -> int:
+        value = min(self._max_value, max(self._min_value, value))
         return round(value * 10 ** self._n_decimals)
 
     def __map_from_slider(self, value: int) -> float:
@@ -331,7 +322,8 @@ class OWCreateInstance(OWWidget):
             textChanged=self.__filter_edit_changed,
             placeholderText="Filter..."
         )
-        self.view = QTableView(sortingEnabled=True)
+        self.view = QTableView(sortingEnabled=True,
+                               selectionMode=QTableView.NoSelection)
         self.view.setItemDelegateForColumn(
             self.Header.variable, VariableDelegate(self)
         )

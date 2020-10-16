@@ -132,13 +132,12 @@ class TestContinuousVariableEditor(GuiTest):
 
     def setUp(self):
         self.callback = Mock()
-        self.data = Table("iris")
-        self.variable = self.data.domain[0]
-        values = self.data.get_column_view(self.variable)[0]
-        self.min_value = np.nanmin(values)
-        self.max_value = np.nanmax(values)
+        data = Table("iris")
+        values = data.get_column_view(data.domain[0])[0]
+        self.min_value = np.min(values)
+        self.max_value = np.max(values)
         self.editor = ContinuousVariableEditor(
-            self.parent, self.variable, self.min_value,
+            self.parent, data.domain[0], self.min_value,
             self.max_value, self.callback
         )
 
@@ -150,7 +149,7 @@ class TestContinuousVariableEditor(GuiTest):
 
     def test_edit_slider(self):
         """ Edit slider by user. """
-        self.editor._slider.setValue(self.max_value * 10)
+        self.editor._slider.setValue(int(self.max_value * 10))
         self.assertEqual(self.editor.value, self.max_value)
         self.assertEqual(self.editor._slider.value(), self.max_value * 10)
         self.assertEqual(self.editor._spin.value(), self.max_value)
@@ -158,7 +157,7 @@ class TestContinuousVariableEditor(GuiTest):
 
         self.callback.reset_mock()
         value = self.min_value + (self.max_value - self.min_value) / 2
-        self.editor._slider.setValue(value * 10)
+        self.editor._slider.setValue(int(value * 10))
         self.assertEqual(self.editor.value, value)
         self.assertEqual(self.editor._slider.value(), value * 10)
         self.assertEqual(self.editor._spin.value(), value)
@@ -173,6 +172,13 @@ class TestContinuousVariableEditor(GuiTest):
         self.callback.assert_called_once()
 
         self.callback.reset_mock()
+        self.editor._spin.setValue(self.max_value + 1)
+        self.assertEqual(self.editor.value, self.max_value + 1)
+        self.assertEqual(self.editor._slider.value(), self.max_value * 10)
+        self.assertEqual(self.editor._spin.value(), self.max_value + 1)
+        self.callback.assert_called_once()
+
+        self.callback.reset_mock()
         value = self.min_value + (self.max_value - self.min_value) / 2
         self.editor._spin.setValue(value)
         self.assertEqual(self.editor.value, value)
@@ -184,9 +190,9 @@ class TestContinuousVariableEditor(GuiTest):
         """ Programmatically set slider/spin value. """
         self.editor.value = -2
         self.assertEqual(self.editor._slider.value(), self.min_value * 10)
-        self.assertEqual(self.editor._spin.value(), self.min_value)
-        self.assertEqual(self.editor.value, self.min_value)
-        self.callback.assert_not_called()
+        self.assertEqual(self.editor._spin.value(), -2)
+        self.assertEqual(self.editor.value, -2)
+        self.callback.assert_called_once()
 
         self.callback.reset_mock()
         value = self.min_value + (self.max_value - self.min_value) / 4
@@ -195,6 +201,12 @@ class TestContinuousVariableEditor(GuiTest):
         self.assertEqual(self.editor._spin.value(), value)
         self.assertEqual(self.editor.value, value)
         self.callback.assert_called_once()
+
+    def test_missing_values(self):
+        domain = Domain([ContinuousVariable("var")])
+        data = Table(domain, np.array([[np.nan], [np.nan]]))
+        self.assertRaises(ValueError, ContinuousVariableEditor, self.parent,
+                          data.domain[0], np.nan, np.nan, Mock())
 
 
 if __name__ == "__main__":
