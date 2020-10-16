@@ -599,8 +599,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     def _create_drag_tooltip(self, scene):
         tip_parts = [
             (Qt.ShiftModifier, "Shift: Add group"),
-            (Qt.ShiftModifier + Qt.ControlModifier,
-             "Shift-{}: Append to group".
+            (Qt.ControlModifier,
+             "{}: Append to group".
              format("Cmd" if sys.platform == "darwin" else "Ctrl")),
             (Qt.AltModifier, "Alt: Remove")
         ]
@@ -613,7 +613,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
         self.tip_textitem = text = QGraphicsTextItem()
         # Set to the longest text
-        text.setHtml(self.tiptexts[Qt.ShiftModifier + Qt.ControlModifier])
+        text.setHtml(self.tiptexts[Qt.ControlModifier])
         text.setPos(4, 2)
         r = text.boundingRect()
         rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
@@ -1552,7 +1552,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         keys = QApplication.keyboardModifiers()
         if keys & Qt.AltModifier:
             self.selection_remove(indices)
-        elif keys & Qt.ShiftModifier and keys & Qt.ControlModifier:
+        elif keys & Qt.ControlModifier:
             self.selection_append(indices)
         elif keys & Qt.ShiftModifier:
             self.selection_new_group(indices)
