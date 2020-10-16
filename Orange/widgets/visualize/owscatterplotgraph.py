@@ -1556,7 +1556,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self._update_after_selection()
 
     def selection_append(self, indices):
-        self.selection[indices] = np.max(self.selection)
+        self.selection[indices] = max(np.max(self.selection), 1)
         self._update_after_selection()
 
     def selection_new_group(self, indices):
