@@ -599,10 +599,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
     def _create_drag_tooltip(self):
         tip_parts = [
-            (Qt.ShiftModifier, "Shift: Add group"),
             (Qt.ControlModifier,
              "{}: Append to group".
              format("Cmd" if sys.platform == "darwin" else "Ctrl")),
+            (Qt.ShiftModifier, "Shift: Add group"),
             (Qt.AltModifier, "Alt: Remove")
         ]
         all_parts = "<center>" + \
@@ -631,8 +631,13 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         return tooltip_group
 
     def update_tooltip(self, modifiers=Qt.NoModifier):
-        modifiers &= Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier
-        text = self.tiptexts.get(int(modifiers), self.tiptexts[0])
+        text = self.tiptexts[0]
+        for mod in [Qt.ControlModifier,
+                    Qt.ShiftModifier,
+                    Qt.AltModifier]:
+            if modifiers & mod:
+                text = self.tiptexts.get(int(mod))
+                break
         self.tip_textitem.setHtml(text)
 
     def update_jittering(self):
@@ -1544,12 +1549,12 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         if self.selection is None:
             self.selection = np.zeros(self.n_valid, dtype=np.uint8)
         keys = QApplication.keyboardModifiers()
-        if keys & Qt.AltModifier:
-            self.selection_remove(indices)
-        elif keys & Qt.ControlModifier:
+        if keys & Qt.ControlModifier:
             self.selection_append(indices)
         elif keys & Qt.ShiftModifier:
             self.selection_new_group(indices)
+        elif keys & Qt.AltModifier:
+            self.selection_remove(indices)
         else:
             self.selection_select(indices)
 
