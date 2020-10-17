@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtGui import QFont
+from AnyQt.QtGui import QFont, QTextDocumentFragment
 from AnyQt.QtCore import QRectF, QPointF
 from AnyQt.QtTest import QSignalSpy
 from AnyQt.QtWidgets import (
@@ -676,11 +676,9 @@ class ProjectionWidgetTestMixin:
 
     def test_dragging_tooltip(self):
         """Dragging tooltip depends on data being jittered"""
-        text = self.widget.graph.tiptexts[0]
+        text = QTextDocumentFragment.fromHtml(self.widget.graph.tiptexts[0]).toPlainText()
         self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
         self.assertEqual(self.widget.graph.tip_textitem.toPlainText(), text)
-        self.widget.graph.controls.jitter_size.setValue(1)
-        self.assertGreater(self.widget.graph.tip_textitem.toPlainText(), text)
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
