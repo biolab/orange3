@@ -28,8 +28,11 @@ def available_font_families() -> List:
     if not QApplication.instance():
         _ = QApplication(sys.argv)
     fonts = QFontDatabase().families()
-    default = fonts.pop(fonts.index(default_font_family()))
+    default = default_font_family()
+
     defaults = [default]
+    if default in fonts:
+        fonts.remove(default)
 
     guessed_name = default.split()[0]
     i = 0
@@ -263,7 +266,7 @@ class CommonParameterSetter:
                 self.getAxis(axis), settings[self.TITLE_LABEL])
 
         self.FONT_FAMILY_SETTING: SettingsType = {  # pylint: disable=invalid-name
-            Updater.FONT_FAMILY_LABEL: (available_font_families(), QFont().family()),
+            Updater.FONT_FAMILY_LABEL: (available_font_families(), default_font_family()),
         }
 
         self.FONT_SETTING: SettingsType = {  # pylint: disable=invalid-name
