@@ -12,7 +12,7 @@ from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
     QPainter
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
-    QGraphicsRectItem
+    QGraphicsRectItem, QGraphicsItemGroup
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import Symbols
@@ -557,7 +557,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.labels = []
 
         self.master = scatter_widget
-        self._create_drag_tooltip(self.plot_widget.scene())
+        tooltip = self._create_drag_tooltip()
+        self.view_box.setDragTooltip(tooltip)
 
         self.selection = None  # np.ndarray
 
@@ -596,7 +597,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         legend.restoreAnchor(anchor)
         return legend
 
-    def _create_drag_tooltip(self, scene):
+    def _create_drag_tooltip(self):
         tip_parts = [
             (Qt.ShiftModifier, "Shift: Add group"),
             (Qt.ControlModifier,
@@ -624,8 +625,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         rect.setPen(QPen(Qt.NoPen))
         self.update_tooltip()
 
-        scene.drag_tooltip = scene.createItemGroup([rect, text])
-        scene.drag_tooltip.hide()
+        tooltip_group = QGraphicsItemGroup()
+        tooltip_group.addToGroup(rect)
+        tooltip_group.addToGroup(text)
+        return tooltip_group
 
     def update_tooltip(self, modifiers=Qt.NoModifier):
         modifiers &= Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier

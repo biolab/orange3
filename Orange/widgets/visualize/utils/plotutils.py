@@ -158,6 +158,13 @@ class InteractiveViewBox(pg.ViewBox):
     def _dragtip_pos():
         return 10, 10
 
+    def setDragTooltip(self, tooltip):
+        scene = self.scene()
+        scene.addItem(tooltip)
+        tooltip.setPos(*self._dragtip_pos())
+        tooltip.hide()
+        scene.drag_tooltip = tooltip
+
     def updateScaleBox(self, p1, p2):
         """
         Overload to use ViewBox.mapToView instead of mapRectFromParent
@@ -184,6 +191,12 @@ class InteractiveViewBox(pg.ViewBox):
             y += 1
         self.updateScaleBox(buttonDownPos, pg.Point(x, y))
 
+    def _updateDragtipShown(self, enabled):
+        scene = self.scene()
+        dragtip = scene.drag_tooltip
+        if enabled != dragtip.isVisible():
+            dragtip.setVisible(enabled)
+
     # noinspection PyPep8Naming,PyMethodOverriding
     def mouseDragEvent(self, ev, axis=None):
         def get_mapped_rect():
@@ -196,16 +209,13 @@ class InteractiveViewBox(pg.ViewBox):
             ev.accept()
             if ev.button() == Qt.LeftButton:
                 self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
-                scene = self.scene()
-                dragtip = scene.drag_tooltip
                 if ev.isFinish():
-                    dragtip.hide()
+                    self._updateDragtipShown(False)
                     self.rbScaleBox.hide()
                     value_rect = get_mapped_rect()
                     self.graph.select_by_rectangle(value_rect)
                 else:
-                    dragtip.setPos(*self._dragtip_pos())
-                    dragtip.show()  # although possibly already shown
+                    self._updateDragtipShown(True)
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
 
         def zoom():
