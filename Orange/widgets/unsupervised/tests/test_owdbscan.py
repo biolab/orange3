@@ -68,9 +68,9 @@ class TestOWDBSCAN(WidgetTest):
         self.send_signal(w.Inputs.data, self.iris)
 
         # change parameters
-        self.widget.controls.eps.valueChanged.emit(0.5)
+        self.widget.controls.eps.setValue(0.5)
         output1 = self.get_output(w.Outputs.annotated_data)
-        self.widget.controls.eps.valueChanged.emit(1)
+        self.widget.controls.eps.setValue(1)
         output2 = self.get_output(w.Outputs.annotated_data)
 
         # on this data higher eps has greater sum of clusters - less nan
@@ -80,7 +80,7 @@ class TestOWDBSCAN(WidgetTest):
 
         # try when no data
         self.send_signal(w.Inputs.data, None)
-        self.widget.controls.eps.valueChanged.emit(0.5)
+        self.widget.controls.eps.setValue(0.5)
         output = self.get_output(w.Outputs.annotated_data)
         self.assertIsNone(output)
 
@@ -91,9 +91,9 @@ class TestOWDBSCAN(WidgetTest):
         self.send_signal(w.Inputs.data, self.iris)
 
         # change parameters
-        self.widget.controls.min_samples.valueChanged.emit(5)
+        self.widget.controls.min_samples.setValue(5)
         output1 = self.get_output(w.Outputs.annotated_data)
-        self.widget.controls.min_samples.valueChanged.emit(1)
+        self.widget.controls.min_samples.setValue(1)
         output2 = self.get_output(w.Outputs.annotated_data)
 
         # on this data lower min_samples has greater sum of clusters - less nan
@@ -103,7 +103,7 @@ class TestOWDBSCAN(WidgetTest):
 
         # try when no data
         self.send_signal(w.Inputs.data, None)
-        self.widget.controls.min_samples.valueChanged.emit(3)
+        self.widget.controls.min_samples.setValue(3)
         output = self.get_output(w.Outputs.annotated_data)
         self.assertIsNone(output)
 
