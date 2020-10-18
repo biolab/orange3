@@ -227,13 +227,13 @@ class TestOWNomogram(WidgetTest):
 
         # Output more attributer than there are -> output all
         self.widget.n_attributes = 5
-        self.widget.n_spin.valueChanged.emit(5)
+        self.widget.n_spin.setValue(5)
         attrs = self.get_output(self.widget.Outputs.features)
         self.assertEqual(attrs, [age, sex, status])
 
         # Output the first two
         self.widget.n_attributes = 2
-        self.widget.n_spin.valueChanged.emit(2)
+        self.widget.n_spin.setValue(2)
         attrs = self.get_output(self.widget.Outputs.features)
         self.assertEqual(attrs, [age, sex])
 
@@ -250,7 +250,7 @@ class TestOWNomogram(WidgetTest):
 
     def test_reset_settings(self):
         self.widget.n_attributes = 5
-        self.widget.n_spin.valueChanged.emit(5)
+        self.widget.n_spin.setValue(5)
         self.widget.reset_settings()
         self.assertEqual(10, self.widget.n_attributes)
 
