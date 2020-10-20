@@ -196,28 +196,54 @@ class StringVariableEditor(VariableEditor):
         self._edit.setText(value)
 
 
-# TODO
 class TimeVariableEditor(VariableEditor):
-    def __init__(self, parent: QWidget, have_date: bool,
-                 have_time: bool, callback: Callable):
-        super().__init__(parent)
-        self._editor = QDateTimeEdit(parent)
-        date_format = "yyyy-MM-dd hh:mm:ss"
-        if have_date and not have_time:
-            date_format = "yyyy-MM-dd"
-        elif not have_date and have_time:
-            date_format = "hh:mm:ss"
-        self._editor.setDisplayFormat(date_format)
-        self._editor.dateChanged.connect(callback)
-        self.layout().addWidget(self._editor)
+    DATE_FORMAT = "yyyy-MM-dd"
+    TIME_FORMAT = "hh:mm:ss"
+
+    def __init__(self, parent: QWidget, variable: TimeVariable,
+                 callback: Callable):
+        super().__init__(parent, callback)
+        self._value: float = 0
+        self._variable: TimeVariable = variable
+
+        if variable.have_date and not variable.have_time:
+            self._format = TimeVariableEditor.DATE_FORMAT
+        elif not variable.have_date and variable.have_time:
+            self._format = TimeVariableEditor.TIME_FORMAT
+        else:
+            self._format = f"{TimeVariableEditor.DATE_FORMAT} " \
+                           f"{TimeVariableEditor.TIME_FORMAT}"
+
+        self._edit = QDateTimeEdit(
+            parent,
+            dateTime=self.__map_to_datetime(self._value),
+            displayFormat=self._format,
+        )
+        self._edit.dateTimeChanged.connect(self._apply_edit_value)
+
+        self.layout().addWidget(self._edit)
+        self.setFocusProxy(self._edit)
 
     @property
-    def value(self):
-        return self._editor.date()
+    def value(self) -> float:
+        return self._value
 
     @value.setter
-    def value(self, value):
-        self._editor.setDateTime(QDateTime(value))
+    def value(self, value: float):
+        if value != self.value:
+            self._value = value
+            self.value_changed.emit(self.value)
+            self._edit.setDateTime(self.__map_to_datetime(self.value))
+
+    def _apply_edit_value(self):
+        self.value = self.__map_from_datetime(self._edit.dateTime())
+
+    def __map_from_datetime(self, date_time: QDateTime) -> float:
+        return self._variable.to_val(date_time.toString(self._format))
+
+    def __map_to_datetime(self, value: float) -> QDateTime:
+        return QDateTime.fromString(self._variable.repr_val(value),
+                                    self._format)
 
 
 class VariableDelegate(QStyledItemDelegate):
@@ -226,7 +252,7 @@ class VariableDelegate(QStyledItemDelegate):
         self.parent().view.openPersistentEditor(index)
         super().paint(painter, option, index)
 
-    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem,
+    def createEditor(self, parent: QWidget, _: QStyleOptionViewItem,
                      index: QModelIndex) -> VariableEditor:
         variable = index.data(VariableRole)
         values = index.data(ValuesRole)
@@ -237,11 +263,13 @@ class VariableDelegate(QStyledItemDelegate):
         assert isinstance(editor, VariableEditor)
         self.commitData.emit(editor)
 
-    def setEditorData(self, editor: VariableEditor, index: QModelIndex):
+    @staticmethod
+    def setEditorData(editor: VariableEditor, index: QModelIndex):
         editor.value = index.model().data(index, ValueRole)
 
-    def setModelData(self, editor: VariableEditor,
-                     model: QSortFilterProxyModel, index: QModelIndex):
+    @staticmethod
+    def setModelData(editor: VariableEditor, model: QSortFilterProxyModel,
+                     index: QModelIndex):
         model.setData(index, editor.value, ValueRole)
 
     def sizeHint(self, option: QStyleOptionViewItem,
@@ -277,8 +305,7 @@ def _(_: StringVariable, __: np.ndarray, parent: QWidget,
 @_create_editor.register(TimeVariable)
 def _(variable: TimeVariable, _: np.ndarray,
       parent: QWidget, callback: Callable) -> TimeVariableEditor:
-    return TimeVariableEditor(parent, variable.have_date,
-                              variable.have_time, callback)
+    return TimeVariableEditor(parent, variable, callback)
 
 
 def majority(values: np.ndarray) -> int:
@@ -317,6 +344,9 @@ class OWCreateInstance(OWWidget):
         ['name', "Variable"],
         ['variable', "Value"],
     ]
+    Header = namedtuple(
+        "header", [tag for tag, _ in HEADER]
+    )(*range(len(HEADER)))
 
     auto_commit = Setting(True)
 
@@ -324,11 +354,6 @@ class OWCreateInstance(OWWidget):
         super().__init__()
         self.data: Optional[Table] = None
         self.reference: Optional[Table] = None
-        self.Header = \
-            namedtuple("header", [tag for tag, _ in self.HEADER])(
-                *range(len(self.HEADER))
-            )
-
         self.model: Optional[QStandardItemModel] = None
         self.proxy_model: Optional[QSortFilterProxyModel] = None
         self.view: Optional[QTableView] = None

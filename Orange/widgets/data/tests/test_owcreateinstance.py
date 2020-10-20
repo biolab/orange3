@@ -3,12 +3,15 @@ from unittest.mock import Mock
 
 import numpy as np
 
+from AnyQt.QtCore import QDateTime, QDate, QTime
 from AnyQt.QtWidgets import QWidget
 
 from orangewidget.tests.base import GuiTest
-from Orange.data import Table, ContinuousVariable, Domain, DiscreteVariable
+from Orange.data import Table, ContinuousVariable, Domain, DiscreteVariable, \
+    TimeVariable
 from Orange.widgets.data.owcreateinstance import OWCreateInstance, \
-    DiscreteVariableEditor, ContinuousVariableEditor, StringVariableEditor
+    DiscreteVariableEditor, ContinuousVariableEditor, StringVariableEditor, \
+    TimeVariableEditor
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.utils.state_summary import format_summary_details, \
     format_multiple_summaries
@@ -294,6 +297,89 @@ class TestStringVariableEditor(GuiTest):
         self.assertEqual(self.editor.value, "Foo")
         self.assertEqual(self.editor._edit.text(), "Foo")
         self.callback.assert_called_once()
+
+
+class TestTimeVariableEditor(GuiTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.parent = QWidget()
+
+    def setUp(self):
+        self.callback = Mock()
+        self.editor = TimeVariableEditor(
+            self.parent, TimeVariable("var", have_date=1), self.callback
+        )
+
+    def test_init(self):
+        self.assertEqual(self.editor.value, 0)
+        self.assertEqual(self.editor._edit.dateTime(),
+                         QDateTime(QDate(1970, 1, 1)))
+        self.callback.assert_not_called()
+
+    def test_edit(self):
+        """ Edit datetimeedit by user. """
+        datetime = QDateTime(QDate(2001, 9, 9))
+        self.editor._edit.setDateTime(datetime)
+        self.assertEqual(self.editor.value, 999993600)
+        self.assertEqual(self.editor._edit.dateTime(), datetime)
+        self.callback.assert_called_once()
+
+    def test_set_value(self):
+        """ Programmatically set datetimeedit value. """
+        value = 999993600
+        self.editor.value = value
+        self.assertEqual(self.editor._edit.dateTime(),
+                         QDateTime(QDate(2001, 9, 9)))
+        self.assertEqual(self.editor.value, value)
+        self.callback.assert_called_once()
+
+    def test_have_date_have_time(self):
+        callback = Mock()
+        editor = TimeVariableEditor(
+            self.parent, TimeVariable("var", have_date=1, have_time=1),
+            callback
+        )
+        self.assertEqual(editor.value, 0)
+        self.assertEqual(self.editor._edit.dateTime(),
+                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.callback.assert_not_called()
+
+        datetime = QDateTime(QDate(2001, 9, 9), QTime(1, 2, 3))
+        editor._edit.setDateTime(datetime)
+        self.assertEqual(editor._edit.dateTime(), datetime)
+        self.assertEqual(editor.value, 999993600 + 3723)
+        callback.assert_called_once()
+
+    def test_have_time(self):
+        callback = Mock()
+        editor = TimeVariableEditor(
+            self.parent, TimeVariable("var", have_time=1), callback
+        )
+        self.assertEqual(editor.value, 0)
+        self.assertEqual(self.editor._edit.dateTime(),
+                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.callback.assert_not_called()
+
+        datetime = QDateTime(QDate(1900, 1, 1), QTime(1, 2, 3))
+        editor._edit.setDateTime(datetime)
+        self.assertEqual(editor._edit.dateTime(), datetime)
+        self.assertEqual(editor.value, 3723)
+        callback.assert_called_once()
+
+    def test_no_date_no_time(self):
+        callback = Mock()
+        editor = TimeVariableEditor(self.parent, TimeVariable("var"), callback)
+        self.assertEqual(editor.value, 0)
+        self.assertEqual(self.editor._edit.dateTime(),
+                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.callback.assert_not_called()
+
+        datetime = QDateTime(QDate(2001, 9, 9), QTime(1, 2, 3))
+        editor._edit.setDateTime(datetime)
+        self.assertEqual(editor._edit.dateTime(), datetime)
+        self.assertEqual(editor.value, 999993600 + 3723)
+        callback.assert_called_once()
 
 
 if __name__ == "__main__":
