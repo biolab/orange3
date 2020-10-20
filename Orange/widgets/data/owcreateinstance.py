@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, QHeaderView, \
     QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel
 
 from Orange.data import DiscreteVariable, ContinuousVariable, \
-    TimeVariable, Table
+    TimeVariable, Table, StringVariable
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.state_summary import format_summary_details, \
@@ -176,6 +176,26 @@ class ContinuousVariableEditor(VariableEditor):
         return value * 10 ** (-self._n_decimals)
 
 
+class StringVariableEditor(VariableEditor):
+    value_changed = Signal()
+
+    def __init__(self, parent: QWidget, callback: Callable):
+        super().__init__(parent, callback)
+        self._edit = QLineEdit(parent)
+        self._edit.textChanged.connect(self.value_changed)
+        self._edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.layout().addWidget(self._edit)
+        self.setFocusProxy(self._edit)
+
+    @property
+    def value(self) -> str:
+        return self._edit.text()
+
+    @value.setter
+    def value(self, value: str):
+        self._edit.setText(value)
+
+
 # TODO
 class TimeVariableEditor(VariableEditor):
     def __init__(self, parent: QWidget, have_date: bool,
@@ -246,6 +266,12 @@ def _(variable: ContinuousVariable, values: np.ndarray,
       parent: QWidget, callback: Callable) -> ContinuousVariableEditor:
     return ContinuousVariableEditor(parent, variable, np.nanmin(values),
                                     np.nanmax(values), callback)
+
+
+@_create_editor.register(StringVariable)
+def _(_: StringVariable, __: np.ndarray, parent: QWidget,
+      callback: Callable) -> StringVariableEditor:
+    return StringVariableEditor(parent, callback)
 
 
 @_create_editor.register(TimeVariable)
@@ -388,6 +414,8 @@ class OWCreateInstance(OWWidget):
                 return gui.attributeIconDict[4]
             elif variable.is_continuous:
                 return gui.attributeIconDict[2]
+            elif variable.is_string:
+                return gui.attributeIconDict[3]
             else:
                 return gui.attributeIconDict[-1]
 
@@ -414,7 +442,9 @@ class OWCreateInstance(OWWidget):
                 if all(np.isnan(vals)):
                     self.Information.nans_removed()
                     continue
-                add_row(var, vals)
+            else:
+                vals = np.array([])
+            add_row(var, vals)
 
         self.model.dataChanged.connect(self.__table_data_changed)
         self._initialize_values("median")

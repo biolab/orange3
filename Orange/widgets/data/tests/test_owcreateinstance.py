@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import QWidget
 from orangewidget.tests.base import GuiTest
 from Orange.data import Table, ContinuousVariable, Domain, DiscreteVariable
 from Orange.widgets.data.owcreateinstance import OWCreateInstance, \
-    DiscreteVariableEditor, ContinuousVariableEditor
+    DiscreteVariableEditor, ContinuousVariableEditor, StringVariableEditor
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.utils.state_summary import format_summary_details, \
     format_multiple_summaries
@@ -104,7 +104,7 @@ class TestOWCreateInstance(WidgetTest):
 
         data = Table("zoo")
         self.send_signal(self.widget.Inputs.data, data)
-        self.assertEqual(self.widget.view.model().rowCount(), 17)
+        self.assertEqual(self.widget.view.model().rowCount(), 18)
         self.assertEqual(self.widget.view.horizontalHeader().count(), 2)
 
         self.send_signal(self.widget.Inputs.data, None)
@@ -131,7 +131,7 @@ class TestOWCreateInstance(WidgetTest):
         self.send_signal(self.widget.Inputs.reference, reference)
         output1 = self.get_output(self.widget.Outputs.data)
         default_box = self.widget.controlArea.layout().itemAt(0).widget()
-        default_box.children()[1:][2].click()
+        default_box.children()[1:][3].click()  # Input
         output2 = self.get_output(self.widget.Outputs.data)
         self.assert_table_equal(output1, output2)
 
@@ -264,6 +264,36 @@ class TestContinuousVariableEditor(GuiTest):
         data = Table(domain, np.array([[np.nan], [np.nan]]))
         self.assertRaises(ValueError, ContinuousVariableEditor, self.parent,
                           data.domain[0], np.nan, np.nan, Mock())
+
+
+class TestStringVariableEditor(GuiTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.parent = QWidget()
+
+    def setUp(self):
+        self.callback = Mock()
+        self.editor = StringVariableEditor(self.parent, self.callback)
+
+    def test_init(self):
+        self.assertEqual(self.editor.value, "")
+        self.assertEqual(self.editor._edit.text(), "")
+        self.callback.assert_not_called()
+
+    def test_edit(self):
+        """ Set lineedit by user. """
+        self.editor._edit.setText("Foo")
+        self.assertEqual(self.editor.value, "Foo")
+        self.assertEqual(self.editor._edit.text(), "Foo")
+        self.callback.assert_called_once()
+
+    def test_set_value(self):
+        """ Programmatically set lineedit value. """
+        self.editor.value = "Foo"
+        self.assertEqual(self.editor.value, "Foo")
+        self.assertEqual(self.editor._edit.text(), "Foo")
+        self.callback.assert_called_once()
 
 
 if __name__ == "__main__":
