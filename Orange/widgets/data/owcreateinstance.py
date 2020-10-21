@@ -31,7 +31,7 @@ class VariableEditor(QWidget):
     def __init__(self, parent: QWidget, callback: Callable):
         super().__init__(parent)
         layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(4, 0, 4, 0)
         self.setLayout(layout)
         self.value_changed.connect(callback)
 
@@ -53,6 +53,7 @@ class DiscreteVariableEditor(VariableEditor):
         self._combo.addItems(items)
         self._combo.currentIndexChanged.connect(self.value_changed)
         self.layout().addWidget(self._combo)
+        self.layout().setContentsMargins(0, 1, 0, 0)
 
     @property
     def value(self) -> int:
@@ -84,13 +85,19 @@ class ContinuousVariableEditor(VariableEditor):
         self._min_value: float = self.__round_value(min_value)
         self._max_value: float = self.__round_value(max_value)
 
-        sp_spin = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sp_spin = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sp_spin.setHorizontalStretch(1)
         sp_slider = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sp_slider.setHorizontalStretch(5)
+        sp_slider.setHorizontalStretch(6)
         sp_edit = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sp_edit.setHorizontalStretch(1)
+        sp_edit.setHorizontalStretch(2)
 
-        self._spin = QDoubleSpinBox(
+        class DoubleSpinBox(QDoubleSpinBox):
+            def sizeHint(self) -> QSize:
+                size: QSize = super().sizeHint()
+                return QSize(size.width(), size.height() + 2)
+
+        self._spin = DoubleSpinBox(
             parent,
             value=self._min_value,
             minimum=-np.inf,
@@ -131,7 +138,6 @@ class ContinuousVariableEditor(VariableEditor):
         self.layout().addWidget(self._label_min)
         self.layout().addWidget(self._slider)
         self.layout().addWidget(self._label_max)
-        self.layout().setContentsMargins(4, 0, 0, 4)
         self.setMinimumWidth(200)
 
         self.setFocusProxy(self._spin)
@@ -183,8 +189,9 @@ class StringVariableEditor(VariableEditor):
         super().__init__(parent, callback)
         self._edit = QLineEdit(parent)
         self._edit.textChanged.connect(self.value_changed)
-        self._edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.layout().addWidget(self._edit)
+        self.layout().setContentsMargins(5, 0, 5, 0)
         self.setFocusProxy(self._edit)
 
     @property
@@ -214,7 +221,12 @@ class TimeVariableEditor(VariableEditor):
             self._format = f"{TimeVariableEditor.DATE_FORMAT} " \
                            f"{TimeVariableEditor.TIME_FORMAT}"
 
-        self._edit = QDateTimeEdit(
+        class DateTimeEdit(QDateTimeEdit):
+            def sizeHint(self) -> QSize:
+                size: QSize = super().sizeHint()
+                return QSize(size.width(), size.height() + 2)
+
+        self._edit = DateTimeEdit(
             parent,
             dateTime=self.__map_to_datetime(self._value),
             displayFormat=self._format,
@@ -275,7 +287,7 @@ class VariableDelegate(QStyledItemDelegate):
     def sizeHint(self, option: QStyleOptionViewItem,
                  index: QModelIndex) -> QSize:
         sh = super().sizeHint(option, index)
-        return QSize(sh.width(), sh.height() + 20)
+        return QSize(sh.width(), 40)
 
 
 @singledispatch
@@ -398,7 +410,7 @@ class OWCreateInstance(OWWidget):
         nans_removed = Msg("Variables with only missing values were "
                            "removed from the list.")
 
-    want_main_area = True
+    want_main_area = False
     HEADER = [
         ['name', "Variable"],
         ['variable', "Value"],
@@ -415,30 +427,8 @@ class OWCreateInstance(OWWidget):
         super().__init__()
         self.data: Optional[Table] = None
         self.reference: Optional[Table] = None
-        self.model: Optional[VariableItemModel] = None
-        self.proxy_model: Optional[QSortFilterProxyModel] = None
-        self.view: Optional[QTableView] = None
-        self.filter_edit: Optional[QLineEdit] = None
         self.__pending_values: Dict[str, Union[float, str]] = self.values
-        self.setup_gui()
 
-    def setup_gui(self):
-        self._add_controls()
-        self._add_table()
-        self._set_input_summary()
-        self._set_output_summary()
-
-    def _add_controls(self):
-        box = gui.vBox(self.controlArea, "Initialize values")
-        kwargs = {"autoDefault": False}
-        gui.button(box, self, "Median", self.__median_button_clicked, **kwargs)
-        gui.button(box, self, "Mean", self.__mean_button_clicked, **kwargs)
-        gui.button(box, self, "Random", self.__random_button_clicked, **kwargs)
-        gui.button(box, self, "Input", self.__input_button_clicked, **kwargs)
-        gui.rubber(self.controlArea)
-        gui.auto_apply(self.controlArea, self, "auto_commit")
-
-    def _add_table(self):
         self.filter_edit = QLineEdit(textChanged=self.__filter_edit_changed,
                                      placeholderText="Filter...")
         self.view = QTableView(sortingEnabled=True,
@@ -460,8 +450,31 @@ class OWCreateInstance(OWWidget):
         self.proxy_model.setSourceModel(self.model)
         self.view.setModel(self.proxy_model)
 
-        self.mainArea.layout().addWidget(self.filter_edit)
-        self.mainArea.layout().addWidget(self.view)
+        vbox = gui.vBox(self.controlArea, box=True)
+        vbox.layout().addWidget(self.filter_edit)
+        vbox.layout().addWidget(self.view)
+
+        box = gui.hBox(vbox)
+        gui.rubber(box)
+        kwargs = {"autoDefault": False}
+        gui.button(box, self, "Median", self.__median_button_clicked, **kwargs)
+        gui.button(box, self, "Mean", self.__mean_button_clicked, **kwargs)
+        gui.button(box, self, "Random", self.__random_button_clicked, **kwargs)
+        gui.button(box, self, "Input", self.__input_button_clicked, **kwargs)
+        gui.rubber(box)
+
+        box = gui.auto_apply(self.controlArea, self, "auto_commit")
+        box.button.setFixedWidth(180)
+        box.layout().insertStretch(0)
+
+        self._set_input_summary()
+        self._set_output_summary()
+
+    def __filter_edit_changed(self):
+        self.proxy_model.setFilterFixedString(self.filter_edit.text().strip())
+
+    def __table_data_changed(self):
+        self.commit()
 
     def __median_button_clicked(self):
         self._initialize_values("median")
@@ -519,12 +532,6 @@ class OWCreateInstance(OWWidget):
             self.model.setData(index, value, ValueRole)
         self.model.dataChanged.connect(self.__table_data_changed)
         self.commit()
-
-    def __table_data_changed(self):
-        self.commit()
-
-    def __filter_edit_changed(self):
-        self.proxy_model.setFilterFixedString(self.filter_edit.text().strip())
 
     @Inputs.data
     def set_data(self, data: Table):

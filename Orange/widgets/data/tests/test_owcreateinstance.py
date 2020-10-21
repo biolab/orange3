@@ -69,13 +69,18 @@ class TestOWCreateInstance(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.brief, "")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
 
+    def _get_init_buttons(self, widget=None):
+        if not widget:
+            widget = self.widget
+        box = widget.controlArea.layout().itemAt(0).widget().children()[3]
+        return box.children()[1:]
+
     def test_initialize_buttons(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.reference, self.data[:1])
         output = self.get_output(self.widget.Outputs.data)
 
-        default_box = self.widget.controlArea.layout().itemAt(0).widget()
-        buttons = default_box.children()[1:]
+        buttons = self._get_init_buttons()
 
         buttons[3].click()  # Input
         output_input = self.get_output(self.widget.Outputs.data)
@@ -99,6 +104,17 @@ class TestOWCreateInstance(WidgetTest):
         buttons[2].click()  # Random
         output_random = self.get_output(self.widget.Outputs.data)
         self.assert_table_equal(output_random, self.data[9:10])
+
+    def test_initialize_buttons_commit_once(self):
+        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.reference, self.data[:1])
+        self.widget.unconditional_commit.assert_called_once()
+
+        self.widget.commit.reset_mock()
+        buttons = self._get_init_buttons()
+        buttons[3].click()  # Input
+        self.widget.commit.assert_called_once()
 
     def test_table(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -137,8 +153,8 @@ class TestOWCreateInstance(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.reference, reference)
         output1 = self.get_output(self.widget.Outputs.data)
-        default_box = self.widget.controlArea.layout().itemAt(0).widget()
-        default_box.children()[1:][3].click()  # Input
+        buttons = self._get_init_buttons()
+        buttons[3].click()  # Input
         output2 = self.get_output(self.widget.Outputs.data)
         self.assert_table_equal(output1, output2)
 
@@ -146,8 +162,8 @@ class TestOWCreateInstance(WidgetTest):
         data = self.data
         data.X[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
-        default_box = self.widget.controlArea.layout().itemAt(0).widget()
-        default_box.children()[1:][2].click()  # Random
+        buttons = self._get_init_buttons()
+        buttons[2].click()  # Random
         output1 = self.get_output(self.widget.Outputs.data)
 
         settings = self.widget.settingsHandler.pack_data(self.widget)
