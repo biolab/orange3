@@ -126,6 +126,10 @@ class TestOWCreateInstance(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(self.widget.Outputs.data)
         self.assert_table_equal(output, data[:1])
+        self.assertTrue(self.widget.Information.nans_removed.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Information.nans_removed.is_shown())
 
     def test_missing_values_reference(self):
         reference = self.data[:1].copy()

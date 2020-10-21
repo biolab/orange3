@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, QHeaderView, \
     QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel
 
 from Orange.data import DiscreteVariable, ContinuousVariable, \
-    TimeVariable, Table, StringVariable
+    TimeVariable, Table, StringVariable, Variable
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.state_summary import format_summary_details, \
@@ -320,6 +320,65 @@ def cont_random(values: np.ndarray) -> float:
     return np.random.uniform(low=np.nanmin(values), high=np.nanmax(values))
 
 
+class VariableItemModel(QStandardItemModel):
+    dataHasNanColumn = Signal()
+
+    def set_data(self, data: Table, saved_values={}):
+        for variable in data.domain.variables + data.domain.metas:
+            if variable.is_primitive():
+                values = data.get_column_view(variable)[0].astype(float)
+                if all(np.isnan(values)):
+                    self.dataHasNanColumn.emit()
+                    continue
+            else:
+                values = np.array([])
+            self._add_row(variable, values, saved_values.get(variable.name))
+
+    def _add_row(self, variable: Variable, values: np.ndarray,
+                 saved_value: Optional[Union[int, float, str]]):
+        var_item = QStandardItem()
+        var_item.setData(variable.name, Qt.DisplayRole)
+        var_item.setIcon(self._variable_icon(variable))
+        var_item.setEditable(False)
+
+        control_item = QStandardItem()
+        control_item.setData(variable, VariableRole)
+        control_item.setData(values, ValuesRole)
+
+        value = self._default_for_variable(variable, values)
+        if saved_value is not None and not \
+                (variable.is_discrete and saved_value >= len(variable.values)):
+            value = saved_value
+        control_item.setData(value, ValueRole)
+
+        self.appendRow([var_item, control_item])
+
+    @staticmethod
+    def _default_for_variable(variable: Variable, values: np.ndarray) \
+            -> Union[float, int, str]:
+        if variable.is_continuous:
+            return round(np.nanmedian(values), variable.number_of_decimals)
+        elif variable.is_discrete:
+            return majority(values)
+        elif variable.is_string:
+            return ""
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def _variable_icon(variable: Variable) -> QIcon:
+        if variable.is_discrete:
+            return gui.attributeIconDict[1]
+        elif variable.is_time:
+            return gui.attributeIconDict[4]
+        elif variable.is_continuous:
+            return gui.attributeIconDict[2]
+        elif variable.is_string:
+            return gui.attributeIconDict[3]
+        else:
+            return gui.attributeIconDict[-1]
+
+
 class OWCreateInstance(OWWidget):
     name = "Create Instance"
     description = "Interactively create a data instance from sample dataset."
@@ -356,7 +415,7 @@ class OWCreateInstance(OWWidget):
         super().__init__()
         self.data: Optional[Table] = None
         self.reference: Optional[Table] = None
-        self.model: Optional[QStandardItemModel] = None
+        self.model: Optional[VariableItemModel] = None
         self.proxy_model: Optional[QSortFilterProxyModel] = None
         self.view: Optional[QTableView] = None
         self.filter_edit: Optional[QLineEdit] = None
@@ -379,31 +438,9 @@ class OWCreateInstance(OWWidget):
         gui.rubber(self.controlArea)
         gui.auto_apply(self.controlArea, self, "auto_commit")
 
-    def __median_button_clicked(self):
-        self._initialize_values("median")
-        self.commit()
-
-    def __mean_button_clicked(self):
-        self._initialize_values("mean")
-        self.commit()
-
-    def __random_button_clicked(self):
-        self._initialize_values("random")
-        self.commit()
-
-    def __input_button_clicked(self):
-        if not self.reference:
-            return
-        self._initialize_values("input")
-        self.commit()
-
     def _add_table(self):
-        self.model = QStandardItemModel(self)
-        # self.model.dataChanged.connect(self.__table_data_changed)
-        self.filter_edit = QLineEdit(
-            textChanged=self.__filter_edit_changed,
-            placeholderText="Filter..."
-        )
+        self.filter_edit = QLineEdit(textChanged=self.__filter_edit_changed,
+                                     placeholderText="Filter...")
         self.view = QTableView(sortingEnabled=True,
                                selectionMode=QTableView.NoSelection)
         self.view.setItemDelegateForColumn(
@@ -413,72 +450,32 @@ class OWCreateInstance(OWWidget):
         header: QHeaderView = self.view.horizontalHeader()
         header.setStretchLastSection(True)
         header.setMaximumSectionSize(300)
+
+        self.model = VariableItemModel(self)
+        self.model.dataChanged.connect(self.__table_data_changed)
+        self.model.dataHasNanColumn.connect(self.Information.nans_removed)
         self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setFilterKeyColumn(-1)
         self.proxy_model.setFilterCaseSensitivity(False)
         self.proxy_model.setSourceModel(self.model)
         self.view.setModel(self.proxy_model)
+
         self.mainArea.layout().addWidget(self.filter_edit)
         self.mainArea.layout().addWidget(self.view)
 
-    def __table_data_changed(self):
-        self.commit()
-
-    def __filter_edit_changed(self):
-        self.proxy_model.setFilterFixedString(self.filter_edit.text().strip())
-
-    @Inputs.data
-    def set_data(self, data: Table):
-        self.data = data
-        self._set_input_summary()
-        self._set_model_data()
-        self.unconditional_commit()
-
-    def _set_model_data(self):
-        def variable_icon(variable) -> QIcon:
-            if variable.is_discrete:
-                return gui.attributeIconDict[1]
-            elif variable.is_time:
-                return gui.attributeIconDict[4]
-            elif variable.is_continuous:
-                return gui.attributeIconDict[2]
-            elif variable.is_string:
-                return gui.attributeIconDict[3]
-            else:
-                return gui.attributeIconDict[-1]
-
-        def add_row(variable, values):
-            var_item = QStandardItem()
-            var_item.setData(variable.name, Qt.DisplayRole)
-            var_item.setIcon(variable_icon(variable))
-            var_item.setEditable(False)
-
-            control_item = QStandardItem()
-            control_item.setData(variable, VariableRole)
-            control_item.setData(values, ValuesRole)
-
-            self.model.appendRow([var_item, control_item])
-
-        self.Information.nans_removed.clear()
-        self.model.clear()
-        self.model.setHorizontalHeaderLabels([x for _, x in self.HEADER])
-        if not self.data:
-            return
-        for var in self.data.domain.variables + self.data.domain.metas:
-            if var.is_primitive():
-                vals = self.data.get_column_view(var)[0].astype(float)
-                if all(np.isnan(vals)):
-                    self.Information.nans_removed()
-                    continue
-            else:
-                vals = np.array([])
-            add_row(var, vals)
-
-        self.model.dataChanged.connect(self.__table_data_changed)
+    def __median_button_clicked(self):
         self._initialize_values("median")
-        self.__pending_values = {}
-        self.view.resizeColumnsToContents()
-        self.view.resizeRowsToContents()
+
+    def __mean_button_clicked(self):
+        self._initialize_values("mean")
+
+    def __random_button_clicked(self):
+        self._initialize_values("random")
+
+    def __input_button_clicked(self):
+        if not self.reference:
+            return
+        self._initialize_values("input")
 
     def _initialize_values(self, fun: str):
         cont_fun = {"median": np.nanmedian,
@@ -493,7 +490,6 @@ class OWCreateInstance(OWWidget):
         if not self.data:
             return
 
-        # do not commit between initialization
         self.model.dataChanged.disconnect(self.__table_data_changed)
         for row in range(self.model.rowCount()):
             index = self.model.index(row, self.Header.variable)
@@ -520,15 +516,37 @@ class OWCreateInstance(OWWidget):
             else:
                 raise NotImplementedError
 
-            if self.__pending_values:  # read values from settings
-                saved_value = self.__pending_values.get(variable.name)
-                if saved_value is not None and not (
-                        variable.is_discrete and
-                        saved_value >= len(variable.values)):
-                    value = saved_value
-
             self.model.setData(index, value, ValueRole)
         self.model.dataChanged.connect(self.__table_data_changed)
+        self.commit()
+
+    def __table_data_changed(self):
+        self.commit()
+
+    def __filter_edit_changed(self):
+        self.proxy_model.setFilterFixedString(self.filter_edit.text().strip())
+
+    @Inputs.data
+    def set_data(self, data: Table):
+        self.data = data
+        self._set_input_summary()
+        self._clear()
+        self._set_model_data()
+        self.unconditional_commit()
+
+    def _clear(self):
+        self.Information.nans_removed.clear()
+        self.model.clear()
+        self.model.setHorizontalHeaderLabels([x for _, x in self.HEADER])
+
+    def _set_model_data(self):
+        if not self.data:
+            return
+
+        self.model.set_data(self.data, self.__pending_values)
+        self.__pending_values = {}
+        self.view.resizeColumnsToContents()
+        self.view.resizeRowsToContents()
 
     @Inputs.reference
     def set_reference(self, data: Table):
