@@ -604,7 +604,17 @@ class OWCreateInstance(OWWidget):
         return data
 
     def send_report(self):
-        pass
+        if not self.data:
+            return
+        self.report_domain("Input", self.data.domain)
+        self.report_domain("Output", self.data.domain)
+        items = []
+        for var in self.data.domain.variables + self.data.domain.metas:
+            val = self.values.get(var.name, np.nan)
+            if var.is_primitive():
+                val = var.repr_val(val)
+            items.append([f"{var.name}:", val])
+        self.report_table("Values", items)
 
     @staticmethod
     def sizeHint():

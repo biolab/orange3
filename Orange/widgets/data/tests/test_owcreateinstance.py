@@ -185,6 +185,18 @@ class TestOWCreateInstance(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.commit.assert_called_once()
 
+    def test_report(self):
+        self.widget.send_report()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.send_report()
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.send_report()
+
+    def test_sparse(self):
+        data = self.data.to_sparse()
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.reference, data)
+
 
 class TestDiscreteVariableEditor(GuiTest):
     @classmethod
