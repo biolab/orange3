@@ -1,4 +1,4 @@
-from typing import Optional, Callable, List, Union
+from typing import Optional, Callable, List, Union, Dict
 from collections import namedtuple
 from functools import singledispatch
 
@@ -348,6 +348,8 @@ class OWCreateInstance(OWWidget):
         "header", [tag for tag, _ in HEADER]
     )(*range(len(HEADER)))
 
+    values = Setting(
+        {}, schema_only=True)  # type: Dict[str, Union[float, str]]
     auto_commit = Setting(True)
 
     def __init__(self):
@@ -358,6 +360,7 @@ class OWCreateInstance(OWWidget):
         self.proxy_model: Optional[QSortFilterProxyModel] = None
         self.view: Optional[QTableView] = None
         self.filter_edit: Optional[QLineEdit] = None
+        self.__pending_values: Dict[str, Union[float, str]] = self.values
         self.setup_gui()
 
     def setup_gui(self):
@@ -473,6 +476,7 @@ class OWCreateInstance(OWWidget):
 
         self.model.dataChanged.connect(self.__table_data_changed)
         self._initialize_values("median")
+        self.__pending_values = {}
         self.view.resizeColumnsToContents()
         self.view.resizeRowsToContents()
 
@@ -516,6 +520,13 @@ class OWCreateInstance(OWWidget):
             else:
                 raise NotImplementedError
 
+            if self.__pending_values:  # read values from settings
+                saved_value = self.__pending_values.get(variable.name)
+                if saved_value is not None and not (
+                        variable.is_discrete and
+                        saved_value >= len(variable.values)):
+                    value = saved_value
+
             self.model.setData(index, value, ValueRole)
         self.model.dataChanged.connect(self.__table_data_changed)
 
@@ -557,11 +568,14 @@ class OWCreateInstance(OWWidget):
         self.Outputs.data.send(data)
 
     def _set_values(self, data: Table) -> Table:
+        self.values = {}
         for row in range(self.model.rowCount()):
             model: QStandardItemModel = self.model
             index = model.index(row, self.Header.variable)
             var = model.data(index, VariableRole)
-            data[:, var] = model.data(index, ValueRole)
+            value = model.data(index, ValueRole)
+            data[:, var] = value
+            self.values[model.data(index, VariableRole).name] = value
         return data
 
     def send_report(self):

@@ -138,6 +138,20 @@ class TestOWCreateInstance(WidgetTest):
         output2 = self.get_output(self.widget.Outputs.data)
         self.assert_table_equal(output1, output2)
 
+    def test_saved_workflow(self):
+        data = self.data
+        data.X[:, 0] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        default_box = self.widget.controlArea.layout().itemAt(0).widget()
+        default_box.children()[1:][2].click()  # Random
+        output1 = self.get_output(self.widget.Outputs.data)
+
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        widget = self.create_widget(OWCreateInstance, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        output2 = self.get_output(widget.Outputs.data)
+        self.assert_table_equal(output1, output2)
+
     def test_commit_once(self):
         self.widget.commit = self.widget.unconditional_commit = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
