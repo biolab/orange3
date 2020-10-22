@@ -1,17 +1,17 @@
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 from unittest.mock import Mock
 
 import numpy as np
 
-from AnyQt.QtCore import QDateTime, QDate, QTime
-from AnyQt.QtWidgets import QWidget
+from AnyQt.QtCore import QDateTime, QDate, QTime, QPoint
+from AnyQt.QtWidgets import QWidget, QLineEdit, QStyleOptionViewItem, QMenu
 
 from orangewidget.tests.base import GuiTest
 from Orange.data import Table, ContinuousVariable, Domain, DiscreteVariable, \
     TimeVariable
 from Orange.widgets.data.owcreateinstance import OWCreateInstance, \
     DiscreteVariableEditor, ContinuousVariableEditor, StringVariableEditor, \
-    TimeVariableEditor
+    TimeVariableEditor, VariableDelegate, VariableItemModel, ValueRole
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.utils.state_summary import format_summary_details, \
     format_multiple_summaries
@@ -105,6 +105,11 @@ class TestOWCreateInstance(WidgetTest):
         output_random = self.get_output(self.widget.Outputs.data)
         self.assert_table_equal(output_random, self.data[9:10])
 
+        self.send_signal(self.widget.Inputs.reference, None)
+        buttons[3].click()  # Input
+        output = self.get_output(self.widget.Outputs.data)
+        self.assert_table_equal(output_random, output)
+
     def test_initialize_buttons_commit_once(self):
         self.widget.commit = self.widget.unconditional_commit = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -184,6 +189,19 @@ class TestOWCreateInstance(WidgetTest):
         self.widget.commit.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.commit.assert_called_once()
+
+    def test_context_menu(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.reference, self.data[:1])
+        output1 = self.get_output(self.widget.Outputs.data)
+        self.widget.view.customContextMenuRequested.emit(QPoint(0, 0))
+        menu = [w for w in self.widget.children() if isinstance(w, QMenu)][0]
+        self.assertEqual(len(menu.actions()), 4)
+
+        menu.actions()[3].trigger()  # Input
+        output2 = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_array_equal(output2.X[:, 1:], output1.X[:, 1:])
+        np.testing.assert_array_equal(output2.X[:, :1], self.data.X[:1, :1])
 
     def test_report(self):
         self.widget.send_report()
@@ -309,10 +327,22 @@ class TestContinuousVariableEditor(GuiTest):
         self.callback.assert_called_once()
 
     def test_missing_values(self):
-        domain = Domain([ContinuousVariable("var")])
-        data = Table(domain, np.array([[np.nan], [np.nan]]))
+        var = ContinuousVariable("var")
         self.assertRaises(ValueError, ContinuousVariableEditor, self.parent,
-                          data.domain[0], np.nan, np.nan, Mock())
+                          var, np.nan, np.nan, Mock())
+
+    def test_overflow(self):
+        var = ContinuousVariable("var", number_of_decimals=10)
+        editor = ContinuousVariableEditor(
+            self.parent, var, -100000, 1, self.callback
+        )
+        self.assertLess(editor._n_decimals, 10)
+
+    def test_spin_selection_after_init(self):
+        edit: QLineEdit = self.editor._spin.lineEdit()
+        edit.selectAll()
+        self.assertEqual(edit.selectedText(), "")
+        self.assertIs(self.editor.focusProxy(), edit.parent())
 
 
 class TestStringVariableEditor(GuiTest):
@@ -426,6 +456,50 @@ class TestTimeVariableEditor(GuiTest):
         self.assertEqual(editor._edit.dateTime(), datetime)
         self.assertEqual(editor.value, 999993600 + 3723)
         callback.assert_called_once()
+
+
+class TestVariableDelegate(GuiTest):
+    def setUp(self):
+        self.data = Table("iris")
+        self.model = model = VariableItemModel()
+        model.set_data(self.data)
+        widget = OWCreateInstance()
+        self.delegate = VariableDelegate(widget)
+        self.parent = QWidget()
+        self.opt = QStyleOptionViewItem()
+
+    def test_create_editor(self):
+        index = self.model.index(0, 1)
+        editor = self.delegate.createEditor(self.parent, self.opt, index)
+        self.assertIsInstance(editor, ContinuousVariableEditor)
+
+        index = self.model.index(4, 1)
+        editor = self.delegate.createEditor(self.parent, self.opt, index)
+        self.assertIsInstance(editor, DiscreteVariableEditor)
+
+    def test_set_editor_data(self):
+        index = self.model.index(0, 1)
+        editor = self.delegate.createEditor(self.parent, self.opt, index)
+        self.delegate.setEditorData(editor, index)
+        self.assertEqual(editor.value, np.median(self.data.X[:, 0]))
+
+    def test_set_model_data(self):
+        index = self.model.index(0, 1)
+        editor = self.delegate.createEditor(self.parent, self.opt, index)
+        editor.value = 7.5
+        self.delegate.setModelData(editor, self.model, index)
+        self.assertEqual(self.model.data(index, ValueRole), 7.5)
+
+    def test_editor_geometry(self):
+        index = self.model.index(0, 1)
+        editor = self.delegate.createEditor(self.parent, self.opt, index)
+        self.delegate.updateEditorGeometry(editor, self.opt, index)
+        self.assertGreaterEqual(editor.geometry().width(),
+                                self.opt.rect.width())
+
+        size = self.delegate.sizeHint(self.opt, index)
+        self.assertEqual(size.width(), editor.geometry().width())
+        self.assertEqual(size.height(), 40)
 
 
 if __name__ == "__main__":

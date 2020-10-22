@@ -5,9 +5,9 @@ from functools import singledispatch
 import numpy as np
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel, QSize, QDateTime, \
-    QModelIndex, Signal, QPoint
+    QModelIndex, Signal, QPoint, QRect
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter
-from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, QHeaderView, \
+from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, \
     QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
     QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel, QMenu, QAction
 
@@ -31,17 +31,21 @@ class VariableEditor(QWidget):
     def __init__(self, parent: QWidget, callback: Callable):
         super().__init__(parent)
         layout = QHBoxLayout()
-        layout.setContentsMargins(4, 0, 4, 0)
+        layout.setContentsMargins(6, 0, 6, 0)
+        layout.setAlignment(Qt.AlignLeft)
         self.setLayout(layout)
         self.value_changed.connect(callback)
 
     @property
-    def value(self) -> Union[int, float]:
+    def value(self) -> Union[int, float, str]:
         return NotImplemented
 
     @value.setter
-    def value(self, value: float):
+    def value(self, value: Union[float, str]):
         raise NotImplementedError
+
+    def sizeHint(self):
+        return QSize(super().sizeHint().width(), 40)
 
 
 class DiscreteVariableEditor(VariableEditor):
@@ -49,11 +53,14 @@ class DiscreteVariableEditor(VariableEditor):
 
     def __init__(self, parent: QWidget, items: List[str], callback: Callable):
         super().__init__(parent, callback)
-        self._combo = QComboBox(parent)
+        self._combo = QComboBox(
+            parent,
+            maximumWidth=180,
+            sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        )
         self._combo.addItems(items)
         self._combo.currentIndexChanged.connect(self.value_changed)
         self.layout().addWidget(self._combo)
-        self.layout().setContentsMargins(0, 1, 0, 0)
 
     @property
     def value(self) -> int:
@@ -88,9 +95,9 @@ class ContinuousVariableEditor(VariableEditor):
         sp_spin = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         sp_spin.setHorizontalStretch(1)
         sp_slider = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sp_slider.setHorizontalStretch(6)
+        sp_slider.setHorizontalStretch(5)
         sp_edit = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sp_edit.setHorizontalStretch(2)
+        sp_edit.setHorizontalStretch(1)
 
         class DoubleSpinBox(QDoubleSpinBox):
             def sizeHint(self) -> QSize:
@@ -113,7 +120,6 @@ class ContinuousVariableEditor(VariableEditor):
             maximum=self.__map_to_slider(self._max_value),
             singleStep=1,
             orientation=Qt.Horizontal,
-            minimumWidth=20,
             sizePolicy=sp_slider,
         )
         self._label_min = QLabel(
@@ -138,11 +144,8 @@ class ContinuousVariableEditor(VariableEditor):
         self.layout().addWidget(self._label_min)
         self.layout().addWidget(self._slider)
         self.layout().addWidget(self._label_max)
-        self.setMinimumWidth(200)
 
         self.setFocusProxy(self._spin)
-
-        # FIXME: after setting focus proxy to the spin, the text is highlighted
 
         def deselect():
             self._spin.lineEdit().deselect()
@@ -151,6 +154,13 @@ class ContinuousVariableEditor(VariableEditor):
             except TypeError:
                 pass
 
+        # Invoking self.setFocusProxy(self._spin), causes the
+        # self._spin.lineEdit()s to have selected texts (focus is set to
+        # provide keyboard functionality, i.e.: pressing ESC after changing
+        # spinbox value). Since the spin text is selected only after the
+        # delegate draws it, it cannot be deselected during initialization.
+        # Therefore connect the deselect() function to
+        # self._spin.lineEdit().selectionChanged only for editor creation.
         self._spin.lineEdit().selectionChanged.connect(deselect)
 
     @property
@@ -163,7 +173,11 @@ class ContinuousVariableEditor(VariableEditor):
             self._value = value
             self.value_changed.emit(self.value)
             self._spin.setValue(self.value)
-            self._slider.setValue(self.__map_to_slider(self.value))
+            # prevent emitting self.value_changed again, due to slider change
+            slider_value = self.__map_to_slider(self.value)
+            self._value = self.__map_from_slider(slider_value)
+            self._slider.setValue(slider_value)
+            self._value = value
 
     def _apply_slider_value(self):
         self.value = self.__map_from_slider(self._slider.value())
@@ -187,11 +201,12 @@ class StringVariableEditor(VariableEditor):
 
     def __init__(self, parent: QWidget, callback: Callable):
         super().__init__(parent, callback)
-        self._edit = QLineEdit(parent)
+        self._edit = QLineEdit(
+            parent,
+            sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        )
         self._edit.textChanged.connect(self.value_changed)
-        self._edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.layout().addWidget(self._edit)
-        self.layout().setContentsMargins(5, 0, 5, 0)
         self.setFocusProxy(self._edit)
 
     @property
@@ -230,6 +245,7 @@ class TimeVariableEditor(VariableEditor):
             parent,
             dateTime=self.__map_to_datetime(self._value),
             displayFormat=self._format,
+            sizePolicy=QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         )
         self._edit.dateTimeChanged.connect(self._apply_edit_value)
 
@@ -275,19 +291,29 @@ class VariableDelegate(QStyledItemDelegate):
         assert isinstance(editor, VariableEditor)
         self.commitData.emit(editor)
 
-    @staticmethod
-    def setEditorData(editor: VariableEditor, index: QModelIndex):
+    # pylint: disable=no-self-use
+    def setEditorData(self, editor: VariableEditor, index: QModelIndex):
         editor.value = index.model().data(index, ValueRole)
 
-    @staticmethod
-    def setModelData(editor: VariableEditor, model: QSortFilterProxyModel,
-                     index: QModelIndex):
+    # pylint: disable=no-self-use
+    def setModelData(self, editor: VariableEditor,
+                     model: QSortFilterProxyModel, index: QModelIndex):
         model.setData(index, editor.value, ValueRole)
 
-    def sizeHint(self, option: QStyleOptionViewItem,
-                 index: QModelIndex) -> QSize:
-        sh = super().sizeHint(option, index)
-        return QSize(sh.width(), 40)
+    # pylint: disable=no-self-use
+    def updateEditorGeometry(self, editor: VariableEditor,
+                             option: QStyleOptionViewItem, _: QModelIndex):
+        rect: QRect = option.rect
+        if isinstance(editor, ContinuousVariableEditor):
+            width = editor.sizeHint().width()
+            if width > rect.width():
+                rect.setWidth(width)
+        editor.setGeometry(rect)
+
+    # pylint: disable=no-self-use
+    def sizeHint(self, _: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        return _create_editor(index.data(role=VariableRole), np.array([0]),
+                              None, lambda: 1).sizeHint()
 
 
 @singledispatch
@@ -335,6 +361,7 @@ def cont_random(values: np.ndarray) -> float:
 class VariableItemModel(QStandardItemModel):
     dataHasNanColumn = Signal()
 
+    # pylint: disable=dangerous-default-value
     def set_data(self, data: Table, saved_values={}):
         for variable in data.domain.variables + data.domain.metas:
             if variable.is_primitive():
@@ -350,6 +377,7 @@ class VariableItemModel(QStandardItemModel):
                  saved_value: Optional[Union[int, float, str]]):
         var_item = QStandardItem()
         var_item.setData(variable.name, Qt.DisplayRole)
+        var_item.setToolTip(variable.name)
         var_item.setIcon(self._variable_icon(variable))
         var_item.setEditable(False)
 
@@ -438,11 +466,11 @@ class OWCreateInstance(OWWidget):
             self.Header.variable, VariableDelegate(self)
         )
         self.view.verticalHeader().hide()
-        header: QHeaderView = self.view.horizontalHeader()
-        header.setStretchLastSection(True)
-        header.setMaximumSectionSize(300)
+        self.view.horizontalHeader().setStretchLastSection(True)
+        self.view.horizontalHeader().setMaximumSectionSize(350)
 
         self.model = VariableItemModel(self)
+        self.model.setHorizontalHeaderLabels([x for _, x in self.HEADER])
         self.model.dataChanged.connect(self.__table_data_changed)
         self.model.dataHasNanColumn.connect(self.Information.nans_removed)
         self.proxy_model = QSortFilterProxyModel()
@@ -546,23 +574,21 @@ class OWCreateInstance(OWWidget):
     def set_data(self, data: Table):
         self.data = data
         self._set_input_summary()
-        self._clear()
         self._set_model_data()
         self.unconditional_commit()
 
-    def _clear(self):
-        self.Information.nans_removed.clear()
-        self.model.clear()
-        self.model.setHorizontalHeaderLabels([x for _, x in self.HEADER])
-
     def _set_model_data(self):
+        self.Information.nans_removed.clear()
+        self.model.removeRows(0, self.model.rowCount())
         if not self.data:
             return
 
         self.model.set_data(self.data, self.__pending_values)
         self.__pending_values = {}
+        self.view.horizontalHeader().setStretchLastSection(False)
         self.view.resizeColumnsToContents()
         self.view.resizeRowsToContents()
+        self.view.horizontalHeader().setStretchLastSection(True)
 
     @Inputs.reference
     def set_reference(self, data: Table):
@@ -627,10 +653,10 @@ class OWCreateInstance(OWWidget):
 
     @staticmethod
     def sizeHint():
-        return QSize(800, 500)
+        return QSize(600, 500)
 
 
 if __name__ == "__main__":  # pragma: no cover
-    table = Table("heart_disease")
+    table = Table("housing")
     WidgetPreview(OWCreateInstance).run(set_data=table,
-                                        set_reference=table[::2])
+                                        set_reference=table[:1])
