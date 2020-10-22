@@ -5,11 +5,11 @@ from functools import singledispatch
 import numpy as np
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel, QSize, QDateTime, \
-    QModelIndex, Signal
+    QModelIndex, Signal, QPoint
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter
 from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, QHeaderView, \
     QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
-    QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel
+    QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel, QMenu, QAction
 
 from Orange.data import DiscreteVariable, ContinuousVariable, \
     TimeVariable, Table, StringVariable, Variable
@@ -411,10 +411,9 @@ class OWCreateInstance(OWWidget):
                            "removed from the list.")
 
     want_main_area = False
-    HEADER = [
-        ['name', "Variable"],
-        ['variable', "Value"],
-    ]
+    ACTIONS = ["median", "mean", "random", "input"]
+    HEADER = [["name", "Variable"],
+              ["variable", "Value"]]
     Header = namedtuple(
         "header", [tag for tag, _ in HEADER]
     )(*range(len(HEADER)))
@@ -432,7 +431,9 @@ class OWCreateInstance(OWWidget):
         self.filter_edit = QLineEdit(textChanged=self.__filter_edit_changed,
                                      placeholderText="Filter...")
         self.view = QTableView(sortingEnabled=True,
+                               contextMenuPolicy=Qt.CustomContextMenu,
                                selectionMode=QTableView.NoSelection)
+        self.view.customContextMenuRequested.connect(self.__menu_requested)
         self.view.setItemDelegateForColumn(
             self.Header.variable, VariableDelegate(self)
         )
@@ -456,11 +457,12 @@ class OWCreateInstance(OWWidget):
 
         box = gui.hBox(vbox)
         gui.rubber(box)
-        kwargs = {"autoDefault": False}
-        gui.button(box, self, "Median", self.__median_button_clicked, **kwargs)
-        gui.button(box, self, "Mean", self.__mean_button_clicked, **kwargs)
-        gui.button(box, self, "Random", self.__random_button_clicked, **kwargs)
-        gui.button(box, self, "Input", self.__input_button_clicked, **kwargs)
+        for name in self.ACTIONS:
+            gui.button(
+                box, self, name.capitalize(),
+                lambda *args, fun=name: self._initialize_values(fun),
+                autoDefault=False
+            )
         gui.rubber(box)
 
         box = gui.auto_apply(self.controlArea, self, "auto_commit")
@@ -476,21 +478,26 @@ class OWCreateInstance(OWWidget):
     def __table_data_changed(self):
         self.commit()
 
-    def __median_button_clicked(self):
-        self._initialize_values("median")
+    def __menu_requested(self, point: QPoint):
+        index = self.view.indexAt(point)
+        model: QSortFilterProxyModel = index.model()
+        source_index = model.mapToSource(index)
+        menu = QMenu(self)
+        for action in self._create_actions(source_index):
+            menu.addAction(action)
+        menu.popup(self.view.viewport().mapToGlobal(point))
 
-    def __mean_button_clicked(self):
-        self._initialize_values("mean")
+    def _create_actions(self, index: QModelIndex) -> List[QAction]:
+        actions = []
+        for name in self.ACTIONS:
+            action = QAction(name.capitalize(), self)
+            action.triggered.connect(
+                lambda *args, fun=name: self._initialize_values(fun, [index])
+            )
+            actions.append(action)
+        return actions
 
-    def __random_button_clicked(self):
-        self._initialize_values("random")
-
-    def __input_button_clicked(self):
-        if not self.reference:
-            return
-        self._initialize_values("input")
-
-    def _initialize_values(self, fun: str):
+    def _initialize_values(self, fun: str, indices: List[QModelIndex] = None):
         cont_fun = {"median": np.nanmedian,
                     "mean": np.nanmean,
                     "random": cont_random,
@@ -500,11 +507,13 @@ class OWCreateInstance(OWWidget):
                     "random": disc_random,
                     "input": majority}.get(fun, NotImplemented)
 
-        if not self.data:
+        if not self.data or fun == "input" and not self.reference:
             return
 
         self.model.dataChanged.disconnect(self.__table_data_changed)
-        for row in range(self.model.rowCount()):
+        rows = range(self.proxy_model.rowCount()) if indices is None else \
+            [index.row() for index in indices]
+        for row in rows:
             index = self.model.index(row, self.Header.variable)
             variable = self.model.data(index, VariableRole)
 
