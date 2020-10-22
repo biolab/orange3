@@ -10,6 +10,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -98,6 +99,9 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
         self.data = None
 
+        self._set_input_summary(None)
+        self._set_output_summary(None)
+
         gui.radioButtons(
             self.controlArea, self, "axis", ["Rows", "Columns"],
             box="Distances between", callback=self._invalidate
@@ -125,6 +129,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     def set_data(self, data):
         self.cancel()
         self.data = data
+        self._set_input_summary(data)
         self.refresh_metrics()
         self.unconditional_commit()
 
@@ -210,6 +215,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
     def on_done(self, result: Orange.misc.DistMatrix):
         assert isinstance(result, Orange.misc.DistMatrix) or result is None
+        self._set_output_summary(result)
         self.Outputs.distances.send(result)
 
     def on_exception(self, ex):
@@ -221,6 +227,18 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             pass
         else:
             raise ex
+
+    def _set_input_summary(self, data):
+        summary = len(data) if data else self.info.NoInput
+        details = format_summary_details(data) if data else ""
+        self.info.set_input_summary(summary, details)
+
+    def _set_output_summary(self, output):
+        if output is None:
+            self.info.set_output_summary(self.info.NoOutput)
+        else:
+            summary = f"{output.shape[0]}×{output.shape[1]}"
+            self.info.set_output_summary(summary, summary)
 
     def onDeleteWidget(self):
         self.shutdown()
