@@ -540,6 +540,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         gui.OWComponent.__init__(self, scatter_widget)
 
         self.subset_is_shown = False
+        self.jittering_suspended = False
 
         self.view_box = view_box(self)
         _axis = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
@@ -639,6 +640,14 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 text = self.tiptexts.get(int(mod))
                 break
         self.tip_textitem.setHtml(text)
+
+    def suspend_jittering(self):
+        self.jittering_suspended = True
+        self.update_jittering()
+
+    def unsuspend_jittering(self):
+        self.jittering_suspended = False
+        self.update_jittering()
 
     def update_jittering(self):
         x, y = self.get_coordinates()
@@ -809,7 +818,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         Display coordinates to random positions within ellipses with
         radiuses of `self.jittter_size` percents of spans
         """
-        if self.jitter_size == 0:
+        if self.jitter_size == 0 or self.jittering_suspended:
             return x, y
         return self._jitter_data(x, y)
 

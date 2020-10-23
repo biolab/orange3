@@ -211,11 +211,13 @@ class InteractiveViewBox(pg.ViewBox):
                 self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
                 if ev.isFinish():
                     self._updateDragtipShown(False)
+                    self.graph.unsuspend_jittering()
                     self.rbScaleBox.hide()
                     value_rect = get_mapped_rect()
                     self.graph.select_by_rectangle(value_rect)
                 else:
                     self._updateDragtipShown(True)
+                    self.graph.suspend_jittering()
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
 
         def zoom():
