@@ -6,6 +6,13 @@ Change Log
 * ...
 
 
+[3.27.1] - 2020-10-23
+--------------------
+##### Bugfixes
+* customizableplot.available_font_families: Fix for non-existent default family ([#5037](../../pull/5037))
+* Raise canvas-core version to fix some problems with Qt 5.9 ([#5045](../../pull/5045))
+
+
 [3.27.0] - 2020-10-09
 --------------------
 ##### Enhancements
@@ -1478,8 +1485,9 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.27.0...HEAD
-[3.26.0]: https://github.com/biolab/orange3/compare/3.26.0...3.27.0
+[next]: https://github.com/biolab/orange3/compare/3.27.1...HEAD
+[3.27.1]: https://github.com/biolab/orange3/compare/3.27.0...3.27.1
+[3.27.0]: https://github.com/biolab/orange3/compare/3.26.0...3.27.0
 [3.26.0]: https://github.com/biolab/orange3/compare/3.25.1...3.26.0
 [3.25.1]: https://github.com/biolab/orange3/compare/3.25.0...3.25.1
 [3.25.0]: https://github.com/biolab/orange3/compare/3.24.1...3.25.0
