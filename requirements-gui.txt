@@ -1,9 +1,9 @@
-orange-canvas-core>=0.1.16,<0.2a
+orange-canvas-core>=0.1.18,<0.2a
 orange-widget-base>=4.8.1
 
 PyQt5>=5.12,!=5.15.1  # 5.15.1 skipped because of QTBUG-87057 - affects select columns
 PyQtWebEngine>=5.12
-AnyQt>=0.0.8
+AnyQt>=0.0.11
 
 pyqtgraph>=0.11.0
 matplotlib>=2.0.0
