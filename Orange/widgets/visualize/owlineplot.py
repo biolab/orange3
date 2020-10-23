@@ -133,8 +133,8 @@ class LinePlotViewBox(ViewBox):
         self.addItem(self.selection_line, ignoreBounds=True)
 
     def update_selection_line(self, button_down_pos, current_pos):
-        p1 = self.childGroup.mapFromParent(button_down_pos)
-        p2 = self.childGroup.mapFromParent(current_pos)
+        p1 = self.childGroup.mapFromView(button_down_pos)
+        p2 = self.childGroup.mapFromView(current_pos)
         self.selection_line.setLine(QLineF(p1, p2))
         self.selection_line.resetTransform()
         self.selection_line.show()
@@ -169,9 +169,9 @@ class LinePlotViewBox(ViewBox):
                 self.update_selection_line(ev.buttonDownPos(), ev.pos())
                 if ev.isFinish():
                     self.selection_line.hide()
-                    p1 = self.childGroup.mapFromParent(
+                    p1 = self.childGroup.mapFromView(
                         ev.buttonDownPos(ev.button()))
-                    p2 = self.childGroup.mapFromParent(ev.pos())
+                    p2 = self.childGroup.mapFromView(ev.pos())
                     self.selection_changed.emit(self.get_selected(p1, p2))
         elif self._graph_state == ZOOMING or self._graph_state == PANNING:
             ev.ignore()
