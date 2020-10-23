@@ -42,7 +42,7 @@ requirements:
     - docutils
     - xlrd >=0.9.2
     - xlsxwriter
-    - anyqt >=0.0.8
+    - anyqt >=0.0.11
     - pyqt >=5.12,!=5.15.1
     - pyqtgraph >=0.11.0
     - joblib >=0.9.4
@@ -57,7 +57,7 @@ requirements:
     - openTSNE >=0.4.3
     - pandas
     - pyyaml
-    - orange-canvas-core >=0.1.15,<0.2a
+    - orange-canvas-core >=0.1.18,<0.2a
     - orange-widget-base >=4.8.1
     - openpyxl
     - httpx >=0.12
