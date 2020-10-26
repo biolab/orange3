@@ -5,7 +5,7 @@ from functools import singledispatch
 import numpy as np
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel, QSize, QDateTime, \
-    QModelIndex, Signal, QPoint, QRect
+    QModelIndex, Signal, QPoint, QRect, QEvent
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter
 from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, \
     QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
@@ -163,6 +163,9 @@ class ContinuousVariableEditor(VariableEditor):
         # self._spin.lineEdit().selectionChanged only for editor creation.
         self._spin.lineEdit().selectionChanged.connect(deselect)
 
+        self._slider.installEventFilter(self)
+        self._spin.installEventFilter(self)
+
     @property
     def value(self) -> float:
         return self.__round_value(self._value)
@@ -194,6 +197,12 @@ class ContinuousVariableEditor(VariableEditor):
 
     def __map_from_slider(self, value: int) -> float:
         return value * 10 ** (-self._n_decimals)
+
+    def eventFilter(self, obj: Union[QSlider, QDoubleSpinBox], event: QEvent) \
+            -> bool:
+        if event.type() == QEvent.Wheel:
+            return True
+        return super().eventFilter(obj, event)
 
 
 class StringVariableEditor(VariableEditor):
@@ -252,6 +261,8 @@ class TimeVariableEditor(VariableEditor):
         self.layout().addWidget(self._edit)
         self.setFocusProxy(self._edit)
 
+        self._edit.installEventFilter(self)
+
     @property
     def value(self) -> float:
         return self._value
@@ -272,6 +283,11 @@ class TimeVariableEditor(VariableEditor):
     def __map_to_datetime(self, value: float) -> QDateTime:
         return QDateTime.fromString(self._variable.repr_val(value),
                                     self._format)
+
+    def eventFilter(self, obj: QDateTimeEdit, event: QEvent) -> bool:
+        if event.type() == QEvent.Wheel:
+            return True
+        return super().eventFilter(obj, event)
 
 
 class VariableDelegate(QStyledItemDelegate):
