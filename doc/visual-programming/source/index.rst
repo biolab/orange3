@@ -68,6 +68,7 @@ Visualize
    widgets/visualize/heatmap
    widgets/visualize/scatterplot
    widgets/visualize/lineplot
+   widgets/visualize/barplot
    widgets/visualize/venndiagram
    widgets/visualize/linearprojection
    widgets/visualize/sievediagram
