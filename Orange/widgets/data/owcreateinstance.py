@@ -462,15 +462,13 @@ class OWCreateInstance(OWWidget):
         "header", [tag for tag, _ in HEADER]
     )(*range(len(HEADER)))
 
-    values = Setting(
-        {}, schema_only=True)  # type: Dict[str, Union[float, str]]
+    values: Dict[str, Union[float, str]] = Setting({}, schema_only=True)
     auto_commit = Setting(True)
 
     def __init__(self):
         super().__init__()
         self.data: Optional[Table] = None
         self.reference: Optional[Table] = None
-        self.__pending_values: Dict[str, Union[float, str]] = self.values
 
         self.filter_edit = QLineEdit(textChanged=self.__filter_edit_changed,
                                      placeholderText="Filter...")
@@ -515,6 +513,7 @@ class OWCreateInstance(OWWidget):
 
         self._set_input_summary()
         self._set_output_summary()
+        self.settingsAboutToBePacked.connect(self.pack_settings)
 
     def __filter_edit_changed(self):
         self.proxy_model.setFilterFixedString(self.filter_edit.text().strip())
@@ -599,8 +598,8 @@ class OWCreateInstance(OWWidget):
         if not self.data:
             return
 
-        self.model.set_data(self.data, self.__pending_values)
-        self.__pending_values = {}
+        self.model.set_data(self.data, self.values)
+        self.values = {}
         self.view.horizontalHeader().setStretchLastSection(False)
         self.view.resizeColumnsToContents()
         self.view.resizeRowsToContents()
@@ -634,25 +633,29 @@ class OWCreateInstance(OWWidget):
     def commit(self):
         data = None
         if self.data:
-            data = Table.from_domain(self.data.domain, 1)
-            data.X[:] = np.nan
-            data.Y[:] = np.nan
-            for i, m in enumerate(self.data.domain.metas):
-                data.metas[:, i] = "" if m.is_string else np.nan
-            data = self._set_values(data)
+            data = self._create_data_from_values()
         self._set_output_summary(data)
         self.Outputs.data.send(data)
 
-    def _set_values(self, data: Table) -> Table:
-        self.values = {}
-        for row in range(self.model.rowCount()):
-            model: QStandardItemModel = self.model
-            index = model.index(row, self.Header.variable)
-            var = model.data(index, VariableRole)
-            value = model.data(index, ValueRole)
-            data[:, var] = value
-            self.values[model.data(index, VariableRole).name] = value
+    def _create_data_from_values(self) -> Table:
+        data = Table.from_domain(self.data.domain, 1)
+        data.X[:] = np.nan
+        data.Y[:] = np.nan
+        for i, m in enumerate(self.data.domain.metas):
+            data.metas[:, i] = "" if m.is_string else np.nan
+
+        values = self._get_values()
+        for var_name, value in values.items():
+            data[:, var_name] = value
         return data
+
+    def _get_values(self) -> Dict[str, Union[str, float]]:
+        values = {}
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, self.Header.variable)
+            values[self.model.data(index, VariableRole).name] = \
+                self.model.data(index, ValueRole)
+        return values
 
     def send_report(self):
         if not self.data:
@@ -660,8 +663,9 @@ class OWCreateInstance(OWWidget):
         self.report_domain("Input", self.data.domain)
         self.report_domain("Output", self.data.domain)
         items = []
+        values: Dict = self._get_values()
         for var in self.data.domain.variables + self.data.domain.metas:
-            val = self.values.get(var.name, np.nan)
+            val = values.get(var.name, np.nan)
             if var.is_primitive():
                 val = var.repr_val(val)
             items.append([f"{var.name}:", val])
@@ -670,6 +674,9 @@ class OWCreateInstance(OWWidget):
     @staticmethod
     def sizeHint():
         return QSize(600, 500)
+
+    def pack_settings(self):
+        self.values: Dict[str, Union[str, float]] = self._get_values()
 
 
 if __name__ == "__main__":  # pragma: no cover
