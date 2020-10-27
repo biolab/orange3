@@ -343,7 +343,7 @@
    },
    {
     "text": "Bar Plot",
-    "doc": null,
+    "doc": "visual-programming/source/widgets/visualize/barplot.md",
     "icon": "../Orange/widgets/visualize/icons/BarPlot.svg",
     "background": "#FFB7B1",
     "keywords": [
