@@ -135,6 +135,14 @@ class TestOWCreateInstance(WidgetTest):
         self.assertEqual(self.widget.view.model().rowCount(), 0)
         self.assertEqual(self.widget.view.horizontalHeader().count(), 2)
 
+    def test_table_data_changed(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        index = self.widget.model.index(0, 1)
+        self.widget.model.setData(index, 7, role=ValueRole)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 1)
+        self.assertEqual(output.X[0, 0], 7)
+
     def test_datasets(self):
         for ds in datasets.datasets():
             self.send_signal(self.widget.Inputs.data, ds)

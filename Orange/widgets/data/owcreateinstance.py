@@ -26,7 +26,7 @@ ValueRole = next(gui.OrangeUserRole)
 
 
 class VariableEditor(QWidget):
-    value_changed = Signal(float)
+    valueChanged = Signal(float)
 
     def __init__(self, parent: QWidget, callback: Callable):
         super().__init__(parent)
@@ -34,7 +34,7 @@ class VariableEditor(QWidget):
         layout.setContentsMargins(6, 0, 6, 0)
         layout.setAlignment(Qt.AlignLeft)
         self.setLayout(layout)
-        self.value_changed.connect(callback)
+        self.valueChanged.connect(callback)
 
     @property
     def value(self) -> Union[int, float, str]:
@@ -49,7 +49,7 @@ class VariableEditor(QWidget):
 
 
 class DiscreteVariableEditor(VariableEditor):
-    value_changed = Signal(int)
+    valueChanged = Signal(int)
 
     def __init__(self, parent: QWidget, items: List[str], callback: Callable):
         super().__init__(parent, callback)
@@ -59,7 +59,7 @@ class DiscreteVariableEditor(VariableEditor):
             sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         )
         self._combo.addItems(items)
-        self._combo.currentIndexChanged.connect(self.value_changed)
+        self._combo.currentIndexChanged.connect(self.valueChanged)
         self.layout().addWidget(self._combo)
 
     @property
@@ -174,9 +174,9 @@ class ContinuousVariableEditor(VariableEditor):
     def value(self, value: float):
         if self._value is None or self.__round_value(value) != self.value:
             self._value = value
-            self.value_changed.emit(self.value)
+            self.valueChanged.emit(self.value)
             self._spin.setValue(self.value)
-            # prevent emitting self.value_changed again, due to slider change
+            # prevent emitting self.valueChanged again, due to slider change
             slider_value = self.__map_to_slider(self.value)
             self._value = self.__map_from_slider(slider_value)
             self._slider.setValue(slider_value)
@@ -206,7 +206,7 @@ class ContinuousVariableEditor(VariableEditor):
 
 
 class StringVariableEditor(VariableEditor):
-    value_changed = Signal()
+    valueChanged = Signal()
 
     def __init__(self, parent: QWidget, callback: Callable):
         super().__init__(parent, callback)
@@ -214,7 +214,7 @@ class StringVariableEditor(VariableEditor):
             parent,
             sizePolicy=QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         )
-        self._edit.textChanged.connect(self.value_changed)
+        self._edit.textChanged.connect(self.valueChanged)
         self.layout().addWidget(self._edit)
         self.setFocusProxy(self._edit)
 
@@ -271,7 +271,7 @@ class TimeVariableEditor(VariableEditor):
     def value(self, value: float):
         if value != self.value:
             self._value = value
-            self.value_changed.emit(self.value)
+            self.valueChanged.emit(self.value)
             self._edit.setDateTime(self.__map_to_datetime(self.value))
 
     def _apply_edit_value(self):
