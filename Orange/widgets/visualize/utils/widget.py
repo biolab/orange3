@@ -554,6 +554,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             self.__pending_selection = None
             self.graph.selection = selection
             self.graph.update_selection_colors()
+            if self.graph.label_only_selected:
+                self.graph.update_labels()
 
     def selection_changed(self):
         sel = None if self.data and isinstance(self.data, SqlTable) \
