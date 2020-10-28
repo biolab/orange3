@@ -13,7 +13,7 @@ from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, \
     QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel, QMenu, QAction
 
 from Orange.data import DiscreteVariable, ContinuousVariable, \
-    TimeVariable, Table, StringVariable, Variable
+    TimeVariable, Table, StringVariable, Variable, Domain
 from Orange.widgets import gui
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.settings import Setting
@@ -475,6 +475,7 @@ class OWCreateInstance(OWWidget):
     )(*range(len(HEADER)))
 
     values: Dict[str, Union[float, str]] = Setting({}, schema_only=True)
+    append_to_data = Setting(True)
     auto_commit = Setting(True)
 
     def __init__(self):
@@ -522,6 +523,10 @@ class OWCreateInstance(OWWidget):
         box = gui.auto_apply(self.controlArea, self, "auto_commit")
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
+        # pylint: disable=unnecessary-lambda
+        append = gui.checkBox(None, self, "append_to_data", "Append to data",
+                              callback=lambda: self.commit())
+        box.layout().insertWidget(0, append)
 
         self._set_input_summary()
         self._set_output_summary()
@@ -643,14 +648,17 @@ class OWCreateInstance(OWWidget):
         self.info.set_output_summary(summary, details)
 
     def commit(self):
-        data = None
+        output_data = None
         if self.data:
-            data = self._create_data_from_values()
-        self._set_output_summary(data)
-        self.Outputs.data.send(data)
+            output_data = self._create_data_from_values()
+            if self.append_to_data:
+                output_data = self._append_to_data(output_data)
+        self._set_output_summary(output_data)
+        self.Outputs.data.send(output_data)
 
     def _create_data_from_values(self) -> Table:
         data = Table.from_domain(self.data.domain, 1)
+        data.name = "created"
         data.X[:] = np.nan
         data.Y[:] = np.nan
         for i, m in enumerate(self.data.domain.metas):
@@ -659,6 +667,19 @@ class OWCreateInstance(OWWidget):
         values = self._get_values()
         for var_name, value in values.items():
             data[:, var_name] = value
+        return data
+
+    def _append_to_data(self, data: Table) -> Table:
+        assert self.data
+        assert len(data) == 1
+
+        var = DiscreteVariable("Source ID", values=(self.data.name, data.name))
+        data = Table.concatenate([self.data, data], axis=0)
+        domain = Domain(data.domain.attributes, data.domain.class_vars,
+                        data.domain.metas + (var,))
+        data = data.transform(domain)
+        data.metas[: len(self.data), -1] = 0
+        data.metas[len(self.data):, -1] = 1
         return data
 
     def _get_values(self) -> Dict[str, Union[str, float]]:

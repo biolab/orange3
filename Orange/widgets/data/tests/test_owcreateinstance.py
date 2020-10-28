@@ -24,11 +24,36 @@ class TestOWCreateInstance(WidgetTest):
 
     def test_output(self):
         self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.controls.append_to_data.setChecked(False)
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(output), 1)
+        self.assertEqual(output.name, "created")
         self.assertEqual(output.domain, self.data.domain)
         array = np.round(np.median(self.data.X, axis=0), 1).reshape(1, 4)
         np.testing.assert_array_equal(output.X, array)
+
+    def test_output_append_data(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.controls.append_to_data.setChecked(True)
+
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 151)
+
+        np.testing.assert_array_equal(output.X[:150], self.data.X)
+        np.testing.assert_array_equal(output.Y[:150], self.data.Y)
+        array = np.zeros((150, 1), dtype=object)
+        np.testing.assert_array_equal(output.metas[:150], array)
+
+        array = np.round(np.median(self.data.X, axis=0), 1).reshape(1, 4)
+        np.testing.assert_array_equal(output.X[150:], array)
+        np.testing.assert_array_equal(output.Y[150:], np.array([0]))
+        np.testing.assert_array_equal(output.metas[150:], np.array([[1]]))
+
+        self.assertEqual(output.domain.attributes, self.data.domain.attributes)
+        self.assertEqual(output.domain.class_vars, self.data.domain.class_vars)
+        self.assertIn("Source ID", [m.name for m in output.domain.metas])
+        self.assertTupleEqual(output.domain.metas[0].values,
+                              ("iris", "created"))
 
     def test_summary(self):
         info = self.widget.info
@@ -47,8 +72,8 @@ class TestOWCreateInstance(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.details, details)
 
         output = self.get_output(self.widget.Outputs.data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        details = format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, "151")
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.reference, reference)
@@ -76,6 +101,7 @@ class TestOWCreateInstance(WidgetTest):
         return box.children()[1:]
 
     def test_initialize_buttons(self):
+        self.widget.controls.append_to_data.setChecked(False)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.reference, self.data[:1])
         output = self.get_output(self.widget.Outputs.data)
@@ -140,8 +166,8 @@ class TestOWCreateInstance(WidgetTest):
         index = self.widget.model.index(0, 1)
         self.widget.model.setData(index, 7, role=ValueRole)
         output = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(len(output), 1)
-        self.assertEqual(output.X[0, 0], 7)
+        self.assertEqual(len(output), 151)
+        self.assertEqual(output.X[150, 0], 7)
 
     def test_datasets(self):
         for ds in datasets.datasets():
@@ -152,6 +178,7 @@ class TestOWCreateInstance(WidgetTest):
                         class_vars=[DiscreteVariable("m", ("a", "b"))])
         data = Table(domain, np.array([[np.nan], [np.nan]]),
                      np.array([np.nan, np.nan]))
+        self.widget.controls.append_to_data.setChecked(False)
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(self.widget.Outputs.data)
         self.assert_table_equal(output, data[:1])
@@ -209,7 +236,7 @@ class TestOWCreateInstance(WidgetTest):
         menu.actions()[3].trigger()  # Input
         output2 = self.get_output(self.widget.Outputs.data)
         np.testing.assert_array_equal(output2.X[:, 1:], output1.X[:, 1:])
-        np.testing.assert_array_equal(output2.X[:, :1], self.data.X[:1, :1])
+        np.testing.assert_array_equal(output2.X[150:, :1], self.data.X[:1, :1])
 
     def test_report(self):
         self.widget.send_report()
