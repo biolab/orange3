@@ -6,7 +6,8 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QSortFilterProxyModel, QSize, QDateTime, \
     QModelIndex, Signal, QPoint, QRect, QEvent
-from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QIcon, QPainter, \
+    QColor
 from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, \
     QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
     QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel, QMenu, QAction
@@ -14,6 +15,7 @@ from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, \
 from Orange.data import DiscreteVariable, ContinuousVariable, \
     TimeVariable, Table, StringVariable, Variable
 from Orange.widgets import gui
+from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.state_summary import format_summary_details, \
     format_multiple_summaries
@@ -379,7 +381,11 @@ class VariableItemModel(QStandardItemModel):
 
     # pylint: disable=dangerous-default-value
     def set_data(self, data: Table, saved_values={}):
-        for variable in data.domain.variables + data.domain.metas:
+        domain = data.domain
+        variables = [(TableModel.Attribute, a) for a in domain.attributes] + \
+                    [(TableModel.ClassVar, c) for c in domain.class_vars] + \
+                    [(TableModel.Meta, m) for m in domain.metas]
+        for place, variable in variables:
             if variable.is_primitive():
                 values = data.get_column_view(variable)[0].astype(float)
                 if all(np.isnan(values)):
@@ -387,19 +393,25 @@ class VariableItemModel(QStandardItemModel):
                     continue
             else:
                 values = np.array([])
-            self._add_row(variable, values, saved_values.get(variable.name))
+            color = TableModel.ColorForRole.get(place)
+            self._add_row(variable, values, color,
+                          saved_values.get(variable.name))
 
-    def _add_row(self, variable: Variable, values: np.ndarray,
+    def _add_row(self, variable: Variable, values: np.ndarray, color: QColor,
                  saved_value: Optional[Union[int, float, str]]):
         var_item = QStandardItem()
         var_item.setData(variable.name, Qt.DisplayRole)
         var_item.setToolTip(variable.name)
         var_item.setIcon(self._variable_icon(variable))
         var_item.setEditable(False)
+        if color:
+            var_item.setBackground(color)
 
         control_item = QStandardItem()
         control_item.setData(variable, VariableRole)
         control_item.setData(values, ValuesRole)
+        if color:
+            control_item.setBackground(color)
 
         value = self._default_for_variable(variable, values)
         if saved_value is not None and not \
