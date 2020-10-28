@@ -524,7 +524,8 @@ class OWCreateInstance(OWWidget):
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
         # pylint: disable=unnecessary-lambda
-        append = gui.checkBox(None, self, "append_to_data", "Append to data",
+        append = gui.checkBox(None, self, "append_to_data",
+                              "Append this instance to input data",
                               callback=lambda: self.commit())
         box.layout().insertWidget(0, append)
 
