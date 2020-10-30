@@ -116,6 +116,9 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
         return decoded
 
     def match(self, context, domain, attrs, metas):
+        if context.attributes == attrs and context.metas == metas:
+            return self.PERFECT_MATCH
+
         if not "domain_role_hints" in context.values:
             return self.NO_MATCH
 
