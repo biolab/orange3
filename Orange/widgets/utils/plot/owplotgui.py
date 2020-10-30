@@ -279,6 +279,7 @@ class OWToolbar(OrientedWidget):
                         self.buttons.update(s.buttons)
                         self.groups[buttons[i+1]] = s
                         i = j
+                        self.layout().addStretch()
                         break
                     else:
                         state_buttons.append(buttons[j])
@@ -291,7 +292,6 @@ class OWToolbar(OrientedWidget):
             else:
                 self.buttons[buttons[i][0]] = gui.tool_button(buttons[i], self)
             i = i + 1
-        self.layout().addStretch()
 
     def select_state(self, state):
         # SELECT_RECTANGLE = SELECT

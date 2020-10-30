@@ -12,7 +12,7 @@ from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
     QPainter
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
-    QGraphicsRectItem
+    QGraphicsRectItem, QGraphicsItemGroup
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import Symbols
@@ -540,6 +540,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         gui.OWComponent.__init__(self, scatter_widget)
 
         self.subset_is_shown = False
+        self.jittering_suspended = False
 
         self.view_box = view_box(self)
         _axis = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
@@ -557,7 +558,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.labels = []
 
         self.master = scatter_widget
-        self._create_drag_tooltip(self.plot_widget.scene())
+        tooltip = self._create_drag_tooltip()
+        self.view_box.setDragTooltip(tooltip)
 
         self.selection = None  # np.ndarray
 
@@ -596,15 +598,17 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         legend.restoreAnchor(anchor)
         return legend
 
-    def _create_drag_tooltip(self, scene):
+    def _create_drag_tooltip(self):
         tip_parts = [
-            (Qt.ShiftModifier, "Shift: Add group"),
-            (Qt.ShiftModifier + Qt.ControlModifier,
-             "Shift-{}: Append to group".
+            (Qt.ControlModifier,
+             "{}: Append to group".
              format("Cmd" if sys.platform == "darwin" else "Ctrl")),
+            (Qt.ShiftModifier, "Shift: Add group"),
             (Qt.AltModifier, "Alt: Remove")
         ]
-        all_parts = ", ".join(part for _, part in tip_parts)
+        all_parts = "<center>" + \
+                    ", ".join(part for _, part in tip_parts) + \
+                    "</center>"
         self.tiptexts = {
             int(modifier): all_parts.replace(part, "<b>{}</b>".format(part))
             for modifier, part in tip_parts
@@ -613,35 +617,39 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
         self.tip_textitem = text = QGraphicsTextItem()
         # Set to the longest text
-        text.setHtml(self.tiptexts[Qt.ShiftModifier + Qt.ControlModifier])
+        text.setHtml(self.tiptexts[Qt.ControlModifier])
         text.setPos(4, 2)
         r = text.boundingRect()
+        text.setTextWidth(r.width())
         rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
         rect.setBrush(QColor(224, 224, 224, 212))
         rect.setPen(QPen(Qt.NoPen))
         self.update_tooltip()
 
-        scene.drag_tooltip = scene.createItemGroup([rect, text])
-        scene.drag_tooltip.hide()
+        tooltip_group = QGraphicsItemGroup()
+        tooltip_group.addToGroup(rect)
+        tooltip_group.addToGroup(text)
+        return tooltip_group
 
     def update_tooltip(self, modifiers=Qt.NoModifier):
-        modifiers &= Qt.ShiftModifier + Qt.ControlModifier + Qt.AltModifier
-        text = self.tiptexts.get(int(modifiers), self.tiptexts[0])
-        self.tip_textitem.setHtml(text + self._get_jittering_tooltip())
+        text = self.tiptexts[0]
+        for mod in [Qt.ControlModifier,
+                    Qt.ShiftModifier,
+                    Qt.AltModifier]:
+            if modifiers & mod:
+                text = self.tiptexts.get(int(mod))
+                break
+        self.tip_textitem.setHtml(text)
 
-    def _get_jittering_tooltip(self):
-        warn_jittered = ""
-        if self.jitter_size:
-            warn_jittered = \
-                '<br/><br/>' \
-                '<span style="background-color: red; color: white; ' \
-                'font-weight: 500;">' \
-                '&nbsp;Warning: Selection is applied to unjittered data&nbsp;' \
-                '</span>'
-        return warn_jittered
+    def suspend_jittering(self):
+        self.jittering_suspended = True
+        self.update_jittering()
+
+    def unsuspend_jittering(self):
+        self.jittering_suspended = False
+        self.update_jittering()
 
     def update_jittering(self):
-        self.update_tooltip()
         x, y = self.get_coordinates()
         if x is None or len(x) == 0 or self.scatterplot_item is None:
             return
@@ -810,7 +818,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         Display coordinates to random positions within ellipses with
         radiuses of `self.jittter_size` percents of spans
         """
-        if self.jitter_size == 0:
+        if self.jitter_size == 0 or self.jittering_suspended:
             return x, y
         return self._jitter_data(x, y)
 
@@ -1550,12 +1558,12 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         if self.selection is None:
             self.selection = np.zeros(self.n_valid, dtype=np.uint8)
         keys = QApplication.keyboardModifiers()
-        if keys & Qt.AltModifier:
-            self.selection_remove(indices)
-        elif keys & Qt.ShiftModifier and keys & Qt.ControlModifier:
+        if keys & Qt.ControlModifier:
             self.selection_append(indices)
         elif keys & Qt.ShiftModifier:
             self.selection_new_group(indices)
+        elif keys & Qt.AltModifier:
+            self.selection_remove(indices)
         else:
             self.selection_select(indices)
 
@@ -1565,7 +1573,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self._update_after_selection()
 
     def selection_append(self, indices):
-        self.selection[indices] = np.max(self.selection)
+        self.selection[indices] = max(np.max(self.selection), 1)
         self._update_after_selection()
 
     def selection_new_group(self, indices):
