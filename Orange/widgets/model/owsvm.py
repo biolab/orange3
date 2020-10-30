@@ -54,7 +54,7 @@ class OWSVM(OWBaseLearner):
     #: gamma
     gamma = Setting(0.0)
     #: coef0 (adative constant)
-    coef0 = Setting(0.0)
+    coef0 = Setting(1.0)
 
     #: numerical tolerance
     tol = Setting(0.001)
