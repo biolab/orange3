@@ -30,6 +30,7 @@ from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
 from AnyQt.QtCore import (
     Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
 )
+from AnyQt.QtWidgets import QApplication
 import pyqtgraph
 
 import orangecanvas
@@ -88,6 +89,34 @@ def make_stdout_handler(level, fmt=None):
     return handler
 
 
+def open_orange_update_menu():
+    from orangecanvas.application import addons
+    from orangecanvas.utils import findf
+    from orangecanvas.application.addons import Command
+
+    if not addons.have_install_permissions():
+        QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
+        return
+
+    dlg = addons.AddonManagerDialog(
+        windowTitle="Installer", modal=True
+    )
+    dlg.setStyle(QApplication.style())
+    dlg.setAttribute(Qt.WA_DeleteOnClose)
+    @dlg.stateChanged.connect
+    def _():
+        dlg.stateChanged.disconnect(_)
+
+        items = dlg.items()
+        item = findf(items, lambda i: i.normalized_name == "orange3")
+        if not item:
+            return
+        dlg.setItemState([(Command.Upgrade, item)])
+
+    dlg.start(canvasconfig.default)
+    return dlg.exec_()
+
+
 def check_for_updates():
     settings = QSettings()
     check_updates = settings.value('startup/check-updates', True, type=bool)
@@ -133,7 +162,7 @@ def check_for_updates():
                 if role == notif.RejectRole:
                     settings.setValue('startup/latest-skipped-version', latest)
                 if role == notif.AcceptRole:
-                    QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
+                    open_orange_update_menu()
 
             notif.clicked.connect(handle_click)
             canvas.notification_server_instance.registerNotification(notif)
