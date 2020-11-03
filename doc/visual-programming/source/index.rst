@@ -35,6 +35,7 @@ Data
    widgets/data/transpose
    widgets/data/discretize
    widgets/data/continuize
+   widgets/data/createinstance
    widgets/data/createclass
    widgets/data/randomize
    widgets/data/concatenate

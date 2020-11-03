@@ -229,6 +229,15 @@
     ]
    },
    {
+    "text": "Create Instance",
+    "doc": "visual-programming/source/widgets/data/createinstance.md",
+    "icon": "../Orange/widgets/data/icons/CreateInstance.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "simulator"
+    ]
+   },
+   {
     "text": "Color",
     "doc": "visual-programming/source/widgets/data/color.md",
     "icon": "../Orange/widgets/data/icons/Colors.svg",
