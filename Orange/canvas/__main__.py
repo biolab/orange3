@@ -20,10 +20,12 @@ import optparse
 import pickle
 import shlex
 import shutil
-from unittest.mock import patch
+import json
 from urllib.request import urlopen, Request
-
 import pkg_resources
+import requests
+from unittest.mock import patch
+
 import yaml
 
 from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
@@ -36,10 +38,13 @@ import pyqtgraph
 import orangecanvas
 from orangecanvas import config as canvasconfig
 from orangecanvas.registry import qt, WidgetRegistry, set_global_registry, cache
+from orangecanvas.application import addons
+from orangecanvas.application.addons import Command
 from orangecanvas.application.application import CanvasApplication
 from orangecanvas.application.outputview import TextStream, ExceptHook
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.gui.splashscreen import SplashScreen
+from orangecanvas.utils import findf
 from orangecanvas.utils.overlay import Notification, NotificationServer
 from orangecanvas.main import (
     fix_win_pythonw_std_stream, fix_set_proxy_env, fix_macos_nswindow_tabbing,
@@ -90,10 +95,6 @@ def make_stdout_handler(level, fmt=None):
 
 
 def open_orange_update_menu():
-    from orangecanvas.application import addons
-    from orangecanvas.utils import findf
-    from orangecanvas.application.addons import Command
-
     if not addons.have_install_permissions():
         QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
         return
@@ -114,7 +115,7 @@ def open_orange_update_menu():
         dlg.setItemState([(Command.Upgrade, item)])
 
     dlg.start(canvasconfig.default)
-    return dlg.exec_()
+    dlg.exec_()
 
 
 def check_for_updates():
@@ -337,8 +338,6 @@ def pull_notifications():
 def send_usage_statistics():
     def send_statistics(url):
         """Send the statistics to the remote at `url`"""
-        import json
-        import requests
         settings = QSettings()
         if not settings.value("reporting/send-statistics", False,
                               type=bool):
@@ -365,7 +364,7 @@ def send_usage_statistics():
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
                 log.warning("Error communicating with server while attempting to send "
-                            "usage statistics. Status code " + str(r.status_code))
+                            "usage statistics. Status code %d" % r.status_code)
                 return
             # success - wipe statistics file
             log.info("Usage statistics sent.")
