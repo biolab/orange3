@@ -24,6 +24,7 @@ from unittest.mock import patch
 from urllib.request import urlopen, Request
 
 import pkg_resources
+import psutil
 import yaml
 
 from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
@@ -39,6 +40,7 @@ from orangecanvas.application.application import CanvasApplication
 from orangecanvas.application.outputview import TextStream, ExceptHook
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.gui.splashscreen import SplashScreen
+from orangecanvas.utils.after_exit import run_after_exit
 from orangecanvas.utils.overlay import Notification, NotificationServer
 from orangecanvas.main import (
     fix_win_pythonw_std_stream, fix_set_proxy_env, fix_macos_nswindow_tabbing,
@@ -360,6 +362,7 @@ def send_usage_statistics():
     return thread
 
 
+# pylint: disable=too-many-locals
 def main(argv=None):
     # Allow termination with CTRL + C
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -699,6 +702,11 @@ def main(argv=None):
     gc.collect()
 
     del app
+
+    if status == 96:
+        log.info('Restarting via exit code 96.')
+        run_after_exit([sys.executable, sys.argv[0]])
+
     return status
 
 
