@@ -20,6 +20,7 @@ import gzip
 import lzma
 import bz2
 import zipfile
+from itertools import chain
 
 from xml.sax.saxutils import escape
 from functools import singledispatch
@@ -51,6 +52,7 @@ import pandas as pd
 from pandas.api import types as pdtypes
 
 import Orange.data
+from Orange.data import Table
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui, settings
@@ -59,6 +61,7 @@ from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get, qname
 )
 from Orange.widgets.utils.combobox import ItemStyledComboBox
+from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.pathutils import (
     PathItem, VarPath, AbsPath, samepath, prettyfypath, isprefixed,
 )
@@ -637,6 +640,12 @@ class OWCSVFileImport(widget.OWWidget):
             "might be binary"
         )
 
+    class Warning(widget.OWWidget.Warning):
+        performance_warning = widget.Msg(
+            "Categorical variables with >100 values may decrease performance.")
+        renamed_vars = widget.Msg("Some variables have been renamed "
+                                  "to avoid duplicates.\n{}")
+
     #: Paths and options of files accessed in a 'session'
     _session_items = settings.Setting(
         [], schema_only=True)  # type: List[Tuple[str, dict]]
@@ -671,9 +680,10 @@ class OWCSVFileImport(widget.OWWidget):
         self.__executor = qconcurrent.ThreadExecutor()
         self.__watcher = None  # type: Optional[qconcurrent.FutureWatcher]
 
-        self.controlArea.layout().setSpacing(-1)  # reset spacing
+        self.data = None
 
         grid = QGridLayout()
+        self.controlArea.layout().setSpacing(-1)  # reset spacing
 
         #############
         # File select
@@ -730,6 +740,16 @@ class OWCSVFileImport(widget.OWWidget):
         box.layout().addWidget(self.summary_text)
 
         self.info.set_output_summary(self.info.NoOutput)
+
+        ###############
+        # Domain editor
+        ###############
+        box = gui.widgetBox(self.controlArea, "Columns (click to edit)")
+        self.domain_editor = DomainEditor(self)
+        self.editor_model = self.domain_editor.model()
+        box.layout().addWidget(self.domain_editor)
+
+        self.editor_model.dataChanged.connect(self.__handle_domain_edit)
 
         #########
         # Buttons
@@ -1153,6 +1173,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.setText(
             "<div>Loading: <i>{}</i><br/>".format(prettyfypath(path))
         )
+        self.domain_editor.setEnabled(False)
 
     def __clear_running_state(self, ):
         self.progressBarFinished()
@@ -1160,6 +1181,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.setBlocking(False)
         self.cancel_button.setEnabled(False)
         self.load_button.setText("Reload")
+        self.domain_editor.setEnabled(True)
 
     def __set_error_state(self, err):
         self.Error.clear()
@@ -1220,13 +1242,49 @@ class OWCSVFileImport(widget.OWWidget):
 
         if df is not None:
             table = pandas_to_table(df)
+            domain = table.domain
+            self._inspect_discrete_variables(domain)
             filename = self.current_item().path()
             table.name = os.path.splitext(os.path.split(filename)[-1])[0]
         else:
             table = None
+            domain = None
+
+        self.data = table
+        self.domain_editor.set_domain(domain)
+
         self.Outputs.data_frame.send(df)
         self.Outputs.data.send(table)
+        
         self._update_status_messages(table)
+
+    def __handle_domain_edit(self):
+        if self.data is None:
+            table = None
+        else:
+            domain, cols, renamed = \
+                self.domain_editor.get_domain(self.data.domain, self.data,
+                                              deduplicate=True)
+            if not (domain.variables or domain.metas):
+                table = None
+            elif domain is self.data.domain:
+                table = self.data
+            else:
+                X, y, m = cols
+                table = Table.from_numpy(domain, X, y, m, self.data.W)
+                table.name = self.data.name
+                table.ids = np.array(self.data.ids)
+                table.attributes = getattr(self.data, 'attributes', {})
+                self._inspect_discrete_variables(domain)
+            if renamed:
+                self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
+        self.Outputs.data.send(table)
+        self._update_status_messages(table)
+
+    def _inspect_discrete_variables(self, domain):
+        for var in chain(domain.variables, domain.metas):
+            if var.is_discrete and len(var.values) > 100:
+                self.Warning.performance_warning()
 
     def _update_status_messages(self, data):
         if data is None:
