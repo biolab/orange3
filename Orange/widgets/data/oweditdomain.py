@@ -1458,25 +1458,6 @@ class DiscreteVariableEditor(VariableEditor):
             view.edit(index)
         self.on_values_changed()
 
-    def _reset_name_merge(self) -> None:
-        """
-        This function resets renamed and merged variables in the model.
-        """
-        view = self.values_edit
-        model = view.model()  # type: QAbstractItemModel
-        prows = [
-            QPersistentModelIndex(model.index(i, 0))
-            for i in range(model.rowCount())
-        ]
-        with disconnected(model.dataChanged, self.on_values_changed):
-            for prow in prows:
-                if prow.isValid():
-                    model.setData(
-                        QModelIndex(prow), prow.data(SourceNameRole),
-                        Qt.EditRole
-                    )
-        self.variable_changed.emit()
-
     def _merge_categories(self) -> None:
         """
         Merge less common categories into one with the dialog for merge
@@ -1485,8 +1466,8 @@ class DiscreteVariableEditor(VariableEditor):
         view = self.values_edit
         model = view.model()  # type: QAbstractItemModel
 
-        selected_attributes = [ind.data() for ind in view.selectedIndexes()]
-
+        selected_attributes = [ind.data(SourceNameRole)
+                               for ind in view.selectedIndexes()]
         dlg = GroupItemsDialog(
             self.var, self._values, selected_attributes,
             self.merge_dialog_settings.get(self.var, {}), self,
@@ -1498,19 +1479,14 @@ class DiscreteVariableEditor(VariableEditor):
         dlg.deleteLater()
         self.merge_dialog_settings[self.var] = dlg.get_dialog_settings()
 
-        prows = [
-            QPersistentModelIndex(model.index(i, 0))
-            for i in range(model.rowCount())
-        ]
+        rows = (model.index(i, 0) for i in range(model.rowCount()))
 
         def complete_merge(text, merge_attributes):
             # write the new text for edit role in all rows
-            self._reset_name_merge()
             with disconnected(model.dataChanged, self.on_values_changed):
-                for prow in prows:
-                    if (prow.isValid()
-                            and prow.data(SourceNameRole) in merge_attributes):
-                        model.setData(QModelIndex(prow), text, Qt.EditRole)
+                for row in rows:
+                    if row.data(SourceNameRole) in merge_attributes:
+                        model.setData(row, text, Qt.EditRole)
             self.variable_changed.emit()
 
         if status == QDialog.Accepted:

@@ -502,7 +502,13 @@ class TestEditors(GuiTest):
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
                         (("A", "1"), ("B", "b")), False)
-        w.set_data_categorical(v, [0, 0, 0, 1, 1, 2])
+
+        w.set_data_categorical(
+            v, [0, 0, 0, 1, 1, 2],
+            [CategoriesMapping([
+                ("a", "AA"), ("b", "BB"), ("c", "CC"),
+            ])]
+        )
 
         view = w.values_edit
         model = view.model()
@@ -511,12 +517,16 @@ class TestEditors(GuiTest):
             QItemSelection(model.index(0, 0), model.index(1, 0)),
             QItemSelectionModel.ClearAndSelect
         )
-
-        # trigger the action, then find the active popup, and simulate entry
+        spy = QSignalSpy(w.variable_changed)
         w.merge_items.trigger()
 
         self.assertEqual(model.index(0, 0).data(Qt.EditRole), "other")
         self.assertEqual(model.index(1, 0).data(Qt.EditRole), "other")
+        self.assertEqual(model.index(2, 0).data(Qt.EditRole), "CC")
+
+        self.assertSequenceEqual(
+            list(spy), [[]], 'variable_changed should emit exactly once'
+        )
 
     def test_discrete_editor_rename_selected_items_action(self):
         w = DiscreteVariableEditor()
