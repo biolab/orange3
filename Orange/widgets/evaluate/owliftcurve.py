@@ -1,8 +1,3 @@
-"""
-Lift Curve Widget
------------------
-
-"""
 from enum import IntEnum
 from typing import NamedTuple, Dict, Tuple
 
@@ -29,7 +24,7 @@ from Orange.widgets import report
 
 
 CurveData = NamedTuple(
-    "CurvePoints",
+    "CurveData",
     [("contacted", np.ndarray),    # classified as positive
      ("respondents", np.ndarray),  # true positive rate
      ("thresholds", np.ndarray)]
@@ -42,7 +37,6 @@ PointsAndHull = NamedTuple(
     [("points", CurveData),
      ("hull", CurveData)]
 )
-PointsAndHull.is_valid = property(lambda self: self.points.is_valid)
 
 
 class CurveTypes(IntEnum):
@@ -55,16 +49,19 @@ class OWLiftCurve(widget.OWWidget):
                   "from the evaluation of classifiers."
     icon = "icons/LiftCurve.svg"
     priority = 1020
-    keywords = []
+    keywords = ["lift", "cumulative gain"]
 
     class Inputs:
-        evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
+        evaluation_results = Input(
+            "Evaluation Results", Orange.evaluation.Results)
 
     class Warning(widget.OWWidget.Warning):
-        undefined_curves = Msg("Some curves are undefined; check models and data")
+        undefined_curves = Msg(
+            "Some curves are undefined; check models and data")
 
     class Error(widget.OWWidget.Error):
-        undefined_curves = Msg("No defined curves; check models and data")
+        undefined_curves = Msg(
+            "No defined curves; check models and data")
 
     settingsHandler = EvaluationResultsContextHandler()
     target_index = settings.ContextSetting(0)
@@ -136,7 +133,6 @@ class OWLiftCurve(widget.OWWidget):
 
     @Inputs.evaluation_results
     def set_results(self, results):
-        """Set the input evaluation results."""
         self.closeContext()
         self.clear()
         self.results = check_results_adequacy(results, self.Error)
@@ -147,7 +143,6 @@ class OWLiftCurve(widget.OWWidget):
             self._setup_plot()
 
     def clear(self):
-        """Clear the widget state."""
         self.plot.clear()
         self.Warning.clear()
         self.Error.clear()
@@ -158,22 +153,21 @@ class OWLiftCurve(widget.OWWidget):
         self._points_hull = {}
 
     def _initialize(self, results):
-        N = len(results.predicted)
+        n_models = len(results.predicted)
 
-        names = getattr(results, "learner_names", None)
-        if names is None:
-            names = ["#{}".format(i + 1) for i in range(N)]
+        self.classifier_names = getattr(results, "learner_names", None) \
+                                or [f"#{i}" for i in range(n_models)]
+        self.selected_classifiers = list(range(n_models))
 
-        self.colors = colorpalettes.get_default_curve_colors(N)
-
-        self.classifier_names = names
-        self.selected_classifiers = list(range(N))
-        for i in range(N):
+        self.colors = colorpalettes.get_default_curve_colors(n_models)
+        for i, color in enumerate(self.colors):
             item = self.classifiers_list_box.item(i)
-            item.setIcon(colorpalettes.ColorIcon(self.colors[i]))
+            item.setIcon(colorpalettes.ColorIcon(color))
 
-        self.target_cb.addItems(results.data.domain.class_var.values)
-        self.target_index = 0
+        class_values = results.data.domain.class_var.values
+        self.target_cb.addItems(class_values)
+        if class_values:
+            self.target_index = 0
 
     def _replot(self):
         self.plot.clear()
@@ -229,10 +223,8 @@ class OWLiftCurve(widget.OWWidget):
     def _plot_default_line(self):
         pen = QPen(QColor(20, 20, 20), 1, Qt.DashLine)
         pen.setCosmetic(True)
-        if self.curve_type == CurveTypes.LiftCurve:
-            self.plot.plot([0, 1], [1, 1], pen=pen, antialias=True)
-        else:
-            self.plot.plot([0, 1], [0, 1], pen=pen, antialias=True)
+        y0 = 1 if self.curve_type == CurveTypes.LiftCurve else 0
+        self.plot.plot([0, 1], [y0, 1], pen=pen, antialias=True)
 
     def _set_undefined_curves_err_warn(self, is_valid):
         self.Error.undefined_curves.clear()

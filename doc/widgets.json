@@ -638,7 +638,10 @@
     "doc": "visual-programming/source/widgets/evaluate/liftcurve.md",
     "icon": "../Orange/widgets/evaluate/icons/LiftCurve.svg",
     "background": "#C3F3F3",
-    "keywords": []
+    "keywords": [
+     "lift",
+     "cumulative gain"
+    ]
    },
    {
     "text": "Calibration Plot",
