@@ -7,7 +7,7 @@ from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, \
     QItemSelectionModel, QItemSelection, QSize
 
-from Orange.data import Table, Variable
+from Orange.data import Table, Variable, StringVariable
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owtable import ranges
@@ -46,7 +46,8 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.labels = labels
         self.variable = variable
         self.values = values
-        if self.values is not None:
+        if self.values is not None and not isinstance(self.variable,
+                                                      StringVariable):
             self.label_colors = variable.palette.values_to_qcolors(values)
         else:
             self.label_colors = None
