@@ -672,7 +672,12 @@ class OWCSVFileImport(widget.OWWidget):
         self.__watcher = None  # type: Optional[qconcurrent.FutureWatcher]
 
         self.controlArea.layout().setSpacing(-1)  # reset spacing
+
         grid = QGridLayout()
+
+        #############
+        # File select
+        #############
         grid.addWidget(QLabel("File:", self), 0, 0, 1, 1)
 
         self.import_items_model = VarPathItemModel(self)
@@ -724,6 +729,11 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.viewport().setAutoFillBackground(False)
         box.layout().addWidget(self.summary_text)
 
+        self.info.set_output_summary(self.info.NoOutput)
+
+        #########
+        # Buttons
+        #########
         button_box = QDialogButtonBox(
             orientation=Qt.Horizontal,
             standardButtons=QDialogButtonBox.Cancel | QDialogButtonBox.Retry
