@@ -168,7 +168,7 @@ class OWDataInfo(widget.OWWidget):
         if SqlTable is not None and isinstance(data, SqlTable):
             connection_string = ' '.join(
                 '{}={}'.format(key, value)
-                for key, value in data.connection_params.items()
+                for key, value in data.backend.connection_params.items()
                 if value is not None and key != 'password')
             self.location = "Table '{}', using connection:\n{}"\
                             .format(data.table_name, connection_string)

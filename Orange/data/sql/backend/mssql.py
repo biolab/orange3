@@ -17,7 +17,7 @@ def parse_ex(ex: Exception) -> str:
 
 
 class PymssqlBackend(Backend):
-    display_name = "SQL Server"
+    display_name = "Ms SQL Server"
 
     def __init__(self, connection_params):
         connection_params["server"] = connection_params.pop("host", None)
@@ -78,6 +78,7 @@ class PymssqlBackend(Backend):
 
     @contextmanager
     def execute_sql_query(self, query, params=()):
+        print(query)
         try:
             with self.connection.cursor() as cur:
                 cur.execute(query, *params)
@@ -152,3 +153,21 @@ class PymssqlBackend(Backend):
                     warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
                     return None
                 raise BackendError(parse_ex(ex)) from ex
+
+    def create_table(self, name: str, sql: str) -> None:
+        query = f"SELECT * INTO {name} FROM ({sql}) source_table"
+        with self.execute_sql_query(query):
+            pass
+
+    def drop_table(self, name):
+        query = f"DROP TABLE IF EXISTS {name}"
+        with self.execute_sql_query(query):
+            pass
+
+    def table_exists(self, name: str) -> bool:
+        stmt = (
+            f"SELECT * FROM INFORMATION_SCHEMA.TABLES " 
+            f"WHERE TABLE_NAME = '{name}'"
+        )
+        with self.execute_sql_query(stmt) as cur:
+            return bool(cur.fetchone())

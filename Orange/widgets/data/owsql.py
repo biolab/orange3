@@ -228,16 +228,12 @@ class OWSql(OWBaseSql):
                         "Specify a table name to materialize the query")
                     return None
                 try:
-                    with self.backend.execute_sql_query("DROP TABLE IF EXISTS " +
-                                                        self.materialize_table_name):
-                        pass
-                    with self.backend.execute_sql_query("CREATE TABLE " +
-                                                        self.materialize_table_name +
-                                                        " AS " + self.sql):
-                        pass
-                    with self.backend.execute_sql_query("ANALYZE " + self.materialize_table_name):
-                        pass
+                    self.backend.drop_table(self.materialize_table_name)
+                    self.backend.create_table(self.materialize_table_name, self.sql)
+                    if not self.backend.table_exists(self.materialize_table_name):
+                        raise ValueError(f"Table {self.materialize_table_name} was not created")
                 except BackendError as ex:
+                    raise ex
                     self.Error.connection(str(ex))
                     return None
 

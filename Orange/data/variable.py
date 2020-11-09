@@ -2,7 +2,7 @@ import re
 import warnings
 from collections.abc import Iterable
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time, date
 from numbers import Number, Real, Integral
 from math import isnan, floor
 from pickle import PickleError
@@ -992,6 +992,37 @@ class TimeVariable(ContinuousVariable):
 
     str_val = repr_val
 
+    def parse_datetime(self, dt):
+        if isinstance(dt, date):
+            dt = datetime.combine(dt, datetime.min.time())
+        elif isinstance(dt, time):
+            # date(1900, 1, 1) is also used by strptime
+            dt = datetime.combine(date(1900, 1, 1), dt)
+
+        # Remember UTC offset. If not all parsed values share the same offset,
+        # remember none of it.
+        offset = dt.utcoffset()
+        if self.utc_offset is not False:
+            if offset and self.utc_offset is None:
+                self.utc_offset = offset
+                self.timezone = timezone(offset)
+            elif self.utc_offset != offset:
+                self.utc_offset = False
+                self.timezone = timezone.utc
+
+        # Convert time to UTC timezone. In dates without timezone,
+        # localtime is assumed. See also:
+        # https://docs.python.org/3.4/library/datetime.html#datetime.datetime.timestamp
+        if dt.tzinfo:
+            dt -= dt.utcoffset()
+        dt = dt.replace(tzinfo=timezone.utc)
+
+        # Unix epoch is the origin, older dates are negative
+        try:
+            return dt.timestamp()
+        except OverflowError:
+            return -(self.UNIX_EPOCH - dt).total_seconds()
+
     def parse(self, datestr):
         """
         Return `datestr`, a datetime provided in one of ISO 8601 formats,
@@ -1041,29 +1072,7 @@ class TimeVariable(ContinuousVariable):
         else:
             raise self.InvalidDateTimeFormatError(datestr)
 
-        # Remember UTC offset. If not all parsed values share the same offset,
-        # remember none of it.
-        offset = dt.utcoffset()
-        if self.utc_offset is not False:
-            if offset and self.utc_offset is None:
-                self.utc_offset = offset
-                self.timezone = timezone(offset)
-            elif self.utc_offset != offset:
-                self.utc_offset = False
-                self.timezone = timezone.utc
-
-        # Convert time to UTC timezone. In dates without timezone,
-        # localtime is assumed. See also:
-        # https://docs.python.org/3.4/library/datetime.html#datetime.datetime.timestamp
-        if dt.tzinfo:
-            dt -= dt.utcoffset()
-        dt = dt.replace(tzinfo=timezone.utc)
-
-        # Unix epoch is the origin, older dates are negative
-        try:
-            return dt.timestamp()
-        except OverflowError:
-            return -(self.UNIX_EPOCH - dt).total_seconds()
+        return self.parse_datetime(dt)
 
     def parse_exact_iso(self, datestr):
         """
@@ -1081,5 +1090,7 @@ class TimeVariable(ContinuousVariable):
         """
         if isinstance(s, str):
             return self.parse(s)
+        elif isinstance(s, (date, time)):
+            return self.parse_datetime(s)
         else:
             return super().to_val(s)

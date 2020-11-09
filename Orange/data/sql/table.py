@@ -11,9 +11,9 @@ from time import strftime
 
 import numpy as np
 from Orange.data import (
-    Table, Domain, Value, Instance, filter)
+    Table, Domain, Value, Instance, filter, DiscreteVariable)
 from Orange.data.sql import filter as sql_filter
-from Orange.data.sql.backend import Backend
+from Orange.data.sql.backend import Backend, MSSqlAlchemy
 from Orange.data.sql.backend.base import TableDesc, BackendError
 
 LARGE_TABLE = 100000
@@ -92,11 +92,6 @@ class SqlTable(Table):
             self.table_name = table
             self.domain = self.get_domain(type_hints, inspect_values)
             self.name = table
-
-    @property
-    def connection_params(self):
-        warnings.warn("Use backend.connection_params", DeprecationWarning)
-        return self.backend.connection_params
 
     def get_domain(self, type_hints=None, inspect_values=False):
         table_name = self.table_name
@@ -185,7 +180,6 @@ class SqlTable(Table):
         then yields resulting rows as SqlRowInstances as they are requested.
         """
         attributes = self.domain.variables + self.domain.metas
-
         for row in self._query(attributes):
             yield SqlRowInstance(self.domain, row)
 
@@ -222,6 +216,12 @@ class SqlTable(Table):
                 row = cur.fetchone()
                 if row is None:
                     break
+                if attributes:
+                    # Discrete variable needs str to map it correctly
+                    row = tuple(
+                        str(el) if isinstance(attr, DiscreteVariable) else el
+                        for el, attr in zip(row, attributes)
+                    )
                 yield row
 
     def copy(self):
@@ -666,3 +666,17 @@ class SqlRowInstance(Instance):
         super().__init__(domain, data[:nvar])
         if len(data) > nvar:
             self._metas = np.asarray(data[nvar:], dtype=object)
+
+
+if __name__ == "__main__":
+    table = SqlTable(
+        dict(host="localhost",
+                  port="1433",
+                  database="TestDB",
+                  user="SA",
+                  password="1a2B3@4c5d"),
+             "Inventory",
+             backend=MSSqlAlchemy,
+             inspect_values=False)
+    print(table.domain)
+    print(table[0])

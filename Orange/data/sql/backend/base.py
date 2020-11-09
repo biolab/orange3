@@ -28,7 +28,10 @@ class Backend(metaclass=Registry):
     @classmethod
     def available_backends(cls):
         """Return a list of all available backends"""
-        return cls.registry.values()
+        return [
+            c for c in cls.registry.values()
+            if c.__name__ != "SQLAlchemyBackend"
+        ]
 
     # "meta" methods
 
@@ -220,6 +223,36 @@ class Backend(metaclass=Registry):
         """
         raise NotImplementedError
 
+    def create_table(self, name: str, sql: str) -> None:
+        """
+        Create new SQL table with provided name form the SQL query
+
+        Parameters
+        ----------
+        name
+            The name of the new table
+        sql
+            The sql query
+        """
+        raise NotImplementedError
+
+    def drop_table(self, name):
+        """
+        Drops table from the database
+
+        Parameters
+        ----------
+        name
+            Database name
+        """
+        raise NotImplementedError
+
+    def table_exists(self, name: str) -> bool:
+        """
+        Check if table exists in the database
+        """
+        raise NotImplementedError
+
 
 class TableDesc:
     def __init__(self, name, schema, sql):
@@ -229,6 +262,7 @@ class TableDesc:
 
     def __str__(self):
         return self.name
+
 
 class ToSql:
     def __init__(self, sql):

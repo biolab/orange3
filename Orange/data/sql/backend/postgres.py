@@ -177,8 +177,26 @@ class Psycopg2Backend(Backend):
     def count_approx(self, query):
         sql = "EXPLAIN " + query
         with self.execute_sql_query(sql) as cur:
-            s = ''.join(row[0] for row in cur.fetchall())
+            s = ''.join(  w[0] for row in cur.fetchall())
         return int(re.findall(r'rows=(\d*)', s)[0])
+
+    def create_table(self, name: str, sql: str) -> None:
+        query = f"CREATE TABLE {name} AS {sql}"
+        with self.execute_sql_query(query):
+            pass
+
+    def drop_table(self, name):
+        query = f"DROP TABLE IF EXISTS {name}"
+        with self.execute_sql_query(query):
+            pass
+
+    def table_exists(self, name: str) -> bool:
+        stmt = (
+            f"SELECT * FROM information_schema.tables " 
+            f"WHERE TABLE_NAME = '{name}'"
+        )
+        with self.execute_sql_query(stmt) as cur:
+            return bool(cur.fetchone())
 
     def __getstate__(self):
         # Drop connection_pool from state as it cannot be pickled

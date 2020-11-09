@@ -1,3 +1,4 @@
+import os
 from typing import Type
 from collections import OrderedDict
 
@@ -5,6 +6,7 @@ from AnyQt.QtWidgets import QLineEdit, QSizePolicy
 
 from Orange.data import Table
 from Orange.data.sql.backend import Backend
+from Orange.data.sql.backend.alchemy_base import SqliteAlchemy
 from Orange.data.sql.backend.base import BackendError
 from Orange.widgets import gui, report
 from Orange.widgets.credentials import CredentialManager
@@ -109,14 +111,23 @@ class OWBaseSql(OWWidget, openclass=True):
 
     def _check_db_settings(self):
         self._parse_host_port()
-        self.database, _, self.schema = self.databasetext.text().partition("/")
+        if self.get_backend() == SqliteAlchemy:
+            self.database = self.databasetext.text()
+            if os.path.isfile(self.database):
+                # no schema provided together with the name
+                self.schema = ""
+            else:
+                # schema as a last part of the name
+                self.database, _, self.schema = self.database.partition("/")
+        else:
+            self.database, _, self.schema = self.databasetext.text().partition("/")
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
 
     def connect(self):
         self.clear()
         self._check_db_settings()
-        if not self.host or not self.database:
+        if not self.database:
             return
         try:
             backend = self.get_backend()
