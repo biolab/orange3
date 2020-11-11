@@ -229,9 +229,12 @@ class TestModel(unittest.TestCase):
         domain = data.Domain(
             (data.DiscreteVariable("A", values=("0", "1", "2")),
              data.ContinuousVariable("B"),
-             data.ContinuousVariable("C"))
+             data.ContinuousVariable("C")),
+            # the class is here to ensure the backmapper in model does not
+            # run and raise exception
+            data.DiscreteVariable("Z", values=("P", "M"))
         )
-        table = data.Table.from_numpy(domain, np.array(X))
+        table = data.Table.from_numpy(domain, np.array(X), [0,] * 3)
 
         v = impute.Model(MajorityLearner())(table, domain[0])
         self.assertTrue(np.all(np.isfinite(v.compute_value(table))))

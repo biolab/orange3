@@ -160,19 +160,20 @@ class ReplaceUnknownsModel(Reprable):
 
     def __call__(self, data):
         if isinstance(data, Orange.data.Instance):
-            column = np.array([float(data[self.variable])])
-        else:
-            column = np.array(data.get_column_view(self.variable)[0],
-                              copy=True)
+            data = Orange.data.Table.from_list(data.domain, [data])
+        domain = data.domain
+        column = np.array(data.get_column_view(self.variable)[0], copy=True)
 
         mask = np.isnan(column)
         if not np.any(mask):
             return column
 
-        if isinstance(data, Orange.data.Instance):
-            predicted = self.model(data)
-        else:
-            predicted = self.model(data[mask])
+        if domain.class_vars:
+            # cannot have class var in domain (due to backmappers in model)
+            data = data.transform(
+                Orange.data.Domain(domain.attributes, None, domain.metas)
+            )
+        predicted = self.model(data[mask])
         column[mask] = predicted
         return column
 
