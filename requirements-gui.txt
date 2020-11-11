@@ -5,5 +5,5 @@ PyQt5>=5.12,!=5.15.1  # 5.15.1 skipped because of QTBUG-87057 - affects select c
 PyQtWebEngine>=5.12
 AnyQt>=0.0.11
 
-pyqtgraph>=0.11.0
+pyqtgraph==0.11.0
 matplotlib>=2.0.0
