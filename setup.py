@@ -3,18 +3,21 @@
 import os
 import sys
 import subprocess
-from setuptools import find_packages, Command
+from setuptools import setup, find_packages, Command
+
+from distutils.command import install_data, sdist
+from distutils.command.build_ext import build_ext
+from distutils.command import config, build
+from distutils.core import Extension
 
 if sys.version_info < (3, 4):
     sys.exit('Orange requires Python >= 3.4')
 
 try:
-    from numpy.distutils.core import setup
+    import numpy
     have_numpy = True
 except ImportError:
-    from setuptools import setup
     have_numpy = False
-
 
 try:
     # need sphinx and recommonmark for build_htmlhelp command
@@ -25,14 +28,12 @@ try:
 except ImportError:
     have_sphinx = False
 
-from distutils.command import install_data, sdist
 try:
-
-    from numpy.distutils.command.build_ext import build_ext
-    from numpy.distutils.command import config, build
+    from Cython.Distutils.build_ext import new_build_ext as build_ext
+    have_cython = True
 except ImportError:
-    from distutils.command.build_ext import build_ext
-    from distutils.command import config, build
+    have_cython = False
+
 
 NAME = 'Orange3'
 
@@ -171,24 +172,6 @@ if not release:
         a.close()
 
 
-def configuration(parent_package='', top_path=None):
-    if os.path.exists('MANIFEST'):
-        os.remove('MANIFEST')
-
-    from numpy.distutils.misc_util import Configuration
-    config = Configuration(None, parent_package, top_path)
-
-    # Avoid non-useful msg:
-    # "Ignoring attempt to set 'name' (from ... "
-    config.set_options(ignore_setup_xxx_py=True,
-                       assume_default_configuration=True,
-                       delegate_options_to_subpackages=True,
-                       quiet=True)
-
-    config.add_subpackage('Orange')
-    return config
-
-
 PACKAGES = find_packages()
 
 # Extra non .py, .{so,pyd} files that are installed within the package dir
@@ -259,7 +242,8 @@ class CoverageCommand(Command):
 class build_ext_error(build_ext):
     def initialize_options(self):
         raise SystemExit(
-            "Cannot compile extensions. numpy is required to build Orange."
+            "Cannot compile extensions. numpy and cython are required to "
+            "build Orange."
         )
 
 
@@ -431,6 +415,46 @@ else:
             self.distribution.data_files.extend(files)
 
 
+def ext_modules():
+    includes = []
+    libraries = []
+    if have_numpy:
+        includes.append(numpy.get_include())
+
+    if os.name == 'posix':
+        libraries.append("m")
+
+    return [
+        # Cython extensions. Will be automatically cythonized.
+        Extension(
+            "*",
+            ["Orange/*/*.pyx"],
+            include_dirs=includes,
+            libraries=libraries,
+        ),
+        Extension(
+            "Orange.classification._simple_tree",
+            sources=[
+                "Orange/classification/_simple_tree.c",
+            ],
+            include_dirs=includes,
+            libraries=libraries,
+            export_symbols=[
+                "build_tree", "destroy_tree", "new_node",
+                "predict_classification", "predict_regression"
+            ]
+        ),
+        Extension(
+            "Orange.widgets.utils._grid_density",
+            sources=["Orange/widgets/utils/_grid_density.cpp"],
+            language="c++",
+            include_dirs=includes,
+            libraries=libraries,
+            export_symbols=["compute_density"],
+        ),
+    ]
+
+
 def setup_package():
     write_version_py()
     cmdclass = {
@@ -444,10 +468,9 @@ def setup_package():
         # numpy.distutils insist all data files are installed in site-packages
         'install_data': install_data.install_data
     }
-    if have_numpy:
-        extra_args = {
-            "configuration": configuration
-        }
+    if have_numpy and have_cython:
+        extra_args = {}
+        cmdclass["build_ext"] = build_ext
     else:
         # substitute a build_ext command with one that raises an error when
         # building. In order to fully support `pip install` we need to
@@ -469,6 +492,7 @@ def setup_package():
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
         packages=PACKAGES,
+        ext_modules=ext_modules(),
         package_data=PACKAGE_DATA,
         data_files=DATA_FILES,
         install_requires=INSTALL_REQUIRES,

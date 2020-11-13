@@ -1,3 +1,4 @@
+#distutils: language = c++
 #cython: boundscheck=False
 #cython: wraparound=False
 #cython: initializedcheck=False

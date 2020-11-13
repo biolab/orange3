@@ -2,6 +2,7 @@
 requires = [
     "setuptools>=40.8.0,<50.0",
     "wheel",
+    "cython",
     "oldest-supported-numpy",
     "sphinx",
     "recommonmark",
