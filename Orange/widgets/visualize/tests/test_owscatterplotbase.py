@@ -46,14 +46,30 @@ class MockWidget(OWWidget):
         else:
             return colorpalettes.DefaultDiscretePalette
 
+    @staticmethod
+    def reset_mocks():
+        for m in MockWidget.__dict__.values():
+            if isinstance(m, Mock):
+                m.reset_mock()
+
 
 class TestOWScatterPlotBase(WidgetTest):
     def setUp(self):
+        super().setUp()
         self.master = MockWidget()
         self.graph = OWScatterPlotBase(self.master)
 
         self.xy = (np.arange(10, dtype=float), np.arange(10, dtype=float))
         self.master.get_coordinates_data = lambda: self.xy
+
+    def tearDown(self):
+        self.master.onDeleteWidget()
+        self.master.deleteLater()
+        # Clear mocks as they keep ref to widget instance when called
+        MockWidget.reset_mocks()
+        del self.master
+        del self.graph
+        super().tearDown()
 
     # pylint: disable=keyword-arg-before-vararg
     def setRange(self, rect=None, *_, **__):
