@@ -1054,7 +1054,10 @@ class SharedSelectionStore:
                 flags that tell whether to Clear, Select, Deselect or Toggle
         """
         if isinstance(selection, QModelIndex):
-            rows = {selection.model().mapToSource(selection).row()}
+            if selection.model() is not None:
+                rows = {selection.model().mapToSource(selection).row()}
+            else:
+                rows = set()
         else:
             indices = selection.indexes()
             if indices:
@@ -1074,15 +1077,16 @@ class SharedSelectionStore:
             flags (QItemSelectionModel.SelectionFlags):
                 flags that tell whether to Clear, Select, Deselect or Toggle
         """
-        with self._emit_changed():
-            if flags & QItemSelectionModel.Clear:
-                self._rows.clear()
-            if flags & QItemSelectionModel.Select:
-                self._rows |= rows
-            if flags & QItemSelectionModel.Deselect:
-                self._rows -= rows
-            if flags & QItemSelectionModel.Toggle:
-                self._rows ^= rows
+        if len(rows) !=0:
+            with self._emit_changed():
+                if flags & QItemSelectionModel.Clear:
+                    self._rows.clear()
+                if flags & QItemSelectionModel.Select:
+                    self._rows |= rows
+                if flags & QItemSelectionModel.Deselect:
+                    self._rows -= rows
+                if flags & QItemSelectionModel.Toggle:
+                    self._rows ^= rows
 
     def clear_selection(self):
         """Clear selection and emit changeSelection signal to all models"""
