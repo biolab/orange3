@@ -24,7 +24,6 @@ from unittest.mock import patch
 from urllib.request import urlopen, Request
 
 import pkg_resources
-import psutil
 import yaml
 
 from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
@@ -362,7 +361,7 @@ def send_usage_statistics():
     return thread
 
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals,too-many-branches
 def main(argv=None):
     # Allow termination with CTRL + C
     signal.signal(signal.SIGINT, signal.SIG_DFL)
