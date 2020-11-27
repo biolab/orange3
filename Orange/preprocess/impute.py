@@ -7,7 +7,7 @@ from Orange.util import Reprable
 from .transformation import Transformation, Lookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
-           "Model", "AsValue", "Random", "Default"]
+           "Model", "AsValue", "Random", "Default", "FixedValueByType"]
 
 
 class ReplaceUnknowns(Transformation):
@@ -124,7 +124,7 @@ class ImputeSql(Reprable):
 
 
 class Default(BaseImputeMethod):
-    name = "Value"
+    name = "Fixed value"
     short_name = "value"
     description = ""
     columns_only = True
@@ -140,6 +140,32 @@ class Default(BaseImputeMethod):
 
     def copy(self):
         return Default(self.default)
+
+
+class FixedValueByType(BaseImputeMethod):
+    name = "Fixed value"
+    short_name = "Fixed Value"
+    format = "{var.name}"
+
+    def __init__(self,
+                 default_discrete=np.nan, default_continuous=np.nan,
+                 default_string=None, default_time=np.nan):
+        # If you change the order of args or in dict, also fix method copy
+        self.defaults = {
+            Orange.data.DiscreteVariable: default_discrete,
+            Orange.data.ContinuousVariable: default_continuous,
+            Orange.data.StringVariable: default_string,
+            Orange.data.TimeVariable: default_time
+        }
+
+    def __call__(self, data, variable, *, default=None):
+        variable = data.domain[variable]
+        if default is None:
+            default = self.defaults[type(variable)]
+        return variable.copy(compute_value=ReplaceUnknowns(variable, default))
+
+    def copy(self):
+        return FixedValueByType(*self.defaults.values())
 
 
 class ReplaceUnknownsModel(Reprable):
