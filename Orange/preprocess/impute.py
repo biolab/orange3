@@ -113,6 +113,10 @@ class Average(BaseImputeMethod):
         a.to_sql = ImputeSql(variable, value)
         return a
 
+    @staticmethod
+    def supports_variable(variable):
+        return variable.is_primitive()
+
 
 class ImputeSql(Reprable):
     def __init__(self, var, default):
@@ -298,6 +302,9 @@ class AsValue(BaseImputeMethod):
         else:
             raise TypeError(type(variable))
 
+    @staticmethod
+    def supports_variable(variable):
+        return variable.is_primitive()
 
 class ReplaceUnknownsRandom(Transformation):
     """
@@ -380,3 +387,7 @@ class Random(BaseImputeMethod):
             dist[1, :] += 1 / dist.shape[1]
         return variable.copy(
             compute_value=ReplaceUnknownsRandom(variable, dist))
+
+    @staticmethod
+    def supports_variable(variable):
+        return variable.is_primitive()
