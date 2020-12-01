@@ -267,3 +267,15 @@ class SqliteAlchemy(SQLAlchemyBackend):
     # requirement sqlite3 - included in the standard module
     dialect_driver = "sqlite+pysqlite"
     connection_string = "{dialect_driver}:///{database}"
+
+
+class OracleAlchemy(SQLAlchemyBackend):
+    display_name = "Oracle Alchemy"
+    # installed via: pip install cx-oracle
+    import cx_Oracle
+    cx_Oracle.init_oracle_client(lib_dir=r'/Users/primoz/instantclient_19_8/')
+    dialect_driver = "oracle+cx_oracle"
+    connection_string = (
+        "{dialect_driver}://{user}:{password}@{host}:"
+        "{port}/{database}?encoding=UTF-8&nencoding=UTF-8"
+    )
