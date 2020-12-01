@@ -27,7 +27,8 @@ from Orange.widgets.settings import (Setting, ContextSetting,
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -761,8 +762,8 @@ class OWPivot(OWWidget):
         gui.rubber(self.controlArea)
         gui.auto_apply(self.controlArea, self, "auto_commit")
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
+        self.set_input_summary()
+        self.set_output_summary(None, None, None)
 
     def __add_aggregation_controls(self):
         def new_inbox():
@@ -861,12 +862,9 @@ class OWPivot(OWWidget):
 
     def check_data(self):
         self.clear_messages()
+        self.set_input_summary()
         if not self.data:
             self.table_view.clear()
-            self.info.set_input_summary(self.info.NoInput)
-        else:
-            self.info.set_input_summary(len(self.data),
-                                        format_summary_details(self.data))
 
     def init_attr_values(self):
         domain = self.data.domain if self.data and len(self.data) else None
@@ -896,16 +894,38 @@ class OWPivot(OWWidget):
             self.Warning.cannot_aggregate(self.skipped_aggs)
         self._update_graph()
         filtered_data = self.get_filtered_data()
-        self.Outputs.grouped_data.send(self.pivot.group_table)
-        self.Outputs.pivot_table.send(self.pivot.pivot_table)
+        grouped_data = self.pivot.group_table
+        pivot_table = self.pivot.pivot_table
+        self.Outputs.grouped_data.send(grouped_data)
+        self.Outputs.pivot_table.send(pivot_table)
         self.Outputs.filtered_data.send(filtered_data)
 
-        summary = len(filtered_data) if filtered_data else self.info.NoOutput
-        details = format_summary_details(filtered_data) if filtered_data else ""
-        self.info.set_output_summary(summary, details)
+        self.set_output_summary(pivot_table, filtered_data, grouped_data)
 
         if self.pivot.renamed:
             self.Warning.renamed_vars(self.pivot.renamed)
+
+    def set_input_summary(self):
+        summary = len(self.data) if self.data else self.info.NoInput
+        details = format_summary_details(self.data) if self.data else ""
+        self.info.set_input_summary(summary, details)
+
+    def set_output_summary(self, pivot: Table, filtered: Table, grouped: Table):
+        summary, detail, kwargs = self.info.NoOutput, "", {}
+        if pivot or filtered or grouped:
+            n_pivot = len(pivot) if pivot else 0
+            n_filtered = len(filtered) if filtered else 0
+            n_grouped = len(grouped) if grouped else 0
+            summary = f"{self.info.format_number(n_pivot)}, " \
+                      f"{self.info.format_number(n_filtered)}, " \
+                      f"{self.info.format_number(n_grouped)}"
+            detail = format_multiple_summaries([
+                ("Pivot table", pivot),
+                ("Filtered data", filtered),
+                ("Grouped data", grouped)
+            ])
+            kwargs = {"format": Qt.RichText}
+        self.info.set_output_summary(summary, detail, **kwargs)
 
     def _update_graph(self):
         self.table_view.clear()
