@@ -8,7 +8,6 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QPoint
 from AnyQt.QtTest import QTest
-from AnyQt.QtWidgets import QCheckBox
 
 from Orange.data import (Table, Domain, ContinuousVariable as Cv,
                          StringVariable as sv, DiscreteVariable as Dv)
@@ -156,9 +155,10 @@ class TestOWPivot(WidgetTest):
         simulate.combobox_activate_item(self.widget.controls.val_feature,
                                         "(None)")
         self.assertTrue(self.widget.Warning.cannot_aggregate.is_shown())
+        # agg: Count, Majority, feature: None, row: Continuous
         simulate.combobox_activate_item(self.widget.controls.row_feature,
                                         self.iris.domain.attributes[1].name)
-        self.assertTrue(self.widget.Warning.cannot_aggregate.is_shown())
+        self.assertFalse(self.widget.Warning.cannot_aggregate.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.cannot_aggregate.is_shown())
 
@@ -274,6 +274,15 @@ class TestOWPivot(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+
+    @patch("Orange.widgets.data.owpivot.OWPivot.MAX_VALUES", 2)
+    def test_max_values(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Warning.too_many_values.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.too_many_values.is_shown())
+
 
 class TestAggregationFunctionsEnum(unittest.TestCase):
     def test_pickle(self):

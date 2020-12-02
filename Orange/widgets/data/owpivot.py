@@ -613,7 +613,7 @@ class PivotTableView(QTableView):
 
     def _set_values(self, table):
         for i, j in product(range(len(table)), range(len(table[0]))):
-            item = self._create_value_item(str(table[i, j]))
+            item = self._create_value_item(str(table.X[i, j]))
             self.table_model.setItem(i + self._n_leading_rows,
                                      j + self._n_leading_cols, item)
 
@@ -711,6 +711,7 @@ class OWPivot(OWWidget):
         cannot_aggregate = Msg("Some aggregations ({}) cannot be computed.")
         renamed_vars = Msg("Some variables have been renamed in some tables"
                            "to avoid duplicates.\n{}")
+        too_many_values = Msg("Selected variable has too many values.")
 
     settingsHandler = DomainContextHandler()
     row_feature = ContextSetting(None)
@@ -733,6 +734,8 @@ class OWPivot(OWWidget):
                     Pivot.Max,
                     None,
                     Pivot.Majority)
+
+    MAX_VALUES = 100
 
     def __init__(self):
         super().__init__()
@@ -863,8 +866,6 @@ class OWPivot(OWWidget):
     def check_data(self):
         self.clear_messages()
         self.set_input_summary()
-        if not self.data:
-            self.table_view.clear()
 
     def init_attr_values(self):
         domain = self.data.domain if self.data and len(self.data) else None
@@ -880,27 +881,44 @@ class OWPivot(OWWidget):
                 if domain.variables[0] in model else model[2]
 
     def commit(self):
+        def send_outputs(pivot_table, filtered_data, grouped_data):
+            self.Outputs.grouped_data.send(grouped_data)
+            self.Outputs.pivot_table.send(pivot_table)
+            self.Outputs.filtered_data.send(filtered_data)
+            self.set_output_summary(pivot_table, filtered_data, grouped_data)
+
         self.Warning.renamed_vars.clear()
+        self.Warning.too_many_values.clear()
+        self.Warning.cannot_aggregate.clear()
+        self.Warning.no_col_feature.clear()
+
         if self.pivot is None:
-            self.Warning.no_col_feature.clear()
             if self.no_col_feature:
+                self.table_view.clear()
                 self.Warning.no_col_feature()
+                send_outputs(None, None, None)
                 return
+
+            if self.data:
+                col_var = self.col_feature or self.row_feature
+                col = self.data.get_column_view(col_var)[0].astype(np.float)
+                if len(nanunique(col)) >= self.MAX_VALUES:
+                    self.table_view.clear()
+                    self.Warning.too_many_values()
+                    send_outputs(None, None, None)
+                    return
+
             self.pivot = Pivot(self.data, self.sel_agg_functions,
                                self.row_feature,
                                self.col_feature, self.val_feature)
-        self.Warning.cannot_aggregate.clear()
+
         if self.skipped_aggs:
             self.Warning.cannot_aggregate(self.skipped_aggs)
         self._update_graph()
-        filtered_data = self.get_filtered_data()
-        grouped_data = self.pivot.group_table
-        pivot_table = self.pivot.pivot_table
-        self.Outputs.grouped_data.send(grouped_data)
-        self.Outputs.pivot_table.send(pivot_table)
-        self.Outputs.filtered_data.send(filtered_data)
 
-        self.set_output_summary(pivot_table, filtered_data, grouped_data)
+        send_outputs(self.pivot.pivot_table,
+                     self.get_filtered_data(),
+                     self.pivot.group_table)
 
         if self.pivot.renamed:
             self.Warning.renamed_vars(self.pivot.renamed)
