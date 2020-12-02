@@ -718,7 +718,7 @@ class OWPivot(OWWidget):
     col_feature = ContextSetting(None)
     val_feature = ContextSetting(None)
     sel_agg_functions = Setting(set([Pivot.Count]))
-    selection = ContextSetting(set())
+    selection = Setting(set(), schema_only=True)
     auto_commit = Setting(True)
 
     AGGREGATIONS = (Pivot.Count,
@@ -741,6 +741,7 @@ class OWPivot(OWWidget):
         super().__init__()
         self.data = None  # type: Table
         self.pivot = None  # type: Pivot
+        self.__pending_selection = self.selection  # type: Set
         self._add_control_area_controls()
         self._add_main_area_controls()
 
@@ -856,6 +857,7 @@ class OWPivot(OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.closeContext()
+        self.selection = set()
         self.data = data
         self.pivot = None
         self.check_data()
@@ -952,7 +954,10 @@ class OWPivot(OWWidget):
             self.table_view.update_table(col_feature.name,
                                          self.row_feature.name,
                                          *self.pivot.pivot_tables)
-            self.table_view.set_selection(self.selection)
+            selection = self.__pending_selection or self.selection
+            self.table_view.set_selection(selection)
+            self.selection = self.table_view.get_selection()
+            self.__pending_selection = set()
 
     def get_filtered_data(self):
         if not self.data or not self.selection or not self.pivot.pivot_table:
