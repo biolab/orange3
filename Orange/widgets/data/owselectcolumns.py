@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Optional
+from typing import Optional, Dict, Tuple
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
 from AnyQt.QtWidgets import QListView
@@ -8,6 +8,7 @@ from AnyQt.QtCore import (
     QMimeData, QAbstractItemModel
 )
 
+from Orange.data import Domain, Variable
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import (
     ContextSetting, Setting, DomainContextHandler
@@ -167,6 +168,7 @@ class OWSelectAttributes(widget.OWWidget):
     settingsHandler = SelectAttributesDomainContextHandler(first_match=False)
     domain_role_hints = ContextSetting({})
     use_input_features = Setting(False)
+    select_new_features = Setting(True)
     auto_commit = Setting(True)
 
     class Warning(widget.OWWidget.Warning):
@@ -286,7 +288,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.down_class_button = gui.button(bbox, self, "Down",
                                             callback=partial(self.move_down, self.class_attrs_view))
 
-        bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.vBox(self.controlArea, addToLayout=False)
         layout.addWidget(bbox, 2, 1, 1, 1)
         self.up_meta_button = gui.button(bbox, self, "Up",
                                          callback=partial(self.move_up, self.meta_attrs_view))
@@ -297,8 +299,14 @@ class OWSelectAttributes(widget.OWWidget):
         self.down_meta_button = gui.button(bbox, self, "Down",
                                            callback=partial(self.move_down, self.meta_attrs_view))
 
+        bbox = gui.vBox(self.controlArea, "Additional settings", addToLayout=False)
+        gui.checkBox(
+            bbox, self, "select_new_features", "Automatically select additional/new features"
+        )
+        layout.addWidget(bbox, 3, 0, 1, 3)
+
         autobox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(autobox, 3, 0, 1, 3)
+        layout.addWidget(autobox, 4, 0, 1, 3)
         reset = gui.button(None, self, "Reset", callback=self.reset, width=120)
         autobox.layout().insertWidget(0, reset)
         autobox.layout().insertStretch(1, 20)
@@ -370,18 +378,49 @@ class OWSelectAttributes(widget.OWWidget):
             ]
             return sorted(selected_attrs, key=lambda attr: domain_hints[attr][1])
 
-        domain = data.domain
-        domain_hints = {}
-        domain_hints.update(self._hints_from_seq("attribute", domain.attributes))
-        domain_hints.update(self._hints_from_seq("meta", domain.metas))
-        domain_hints.update(self._hints_from_seq("class", domain.class_vars))
-        domain_hints.update(self.domain_role_hints)
-
+        domain_hints = self.restore_hints(data.domain)
         self.used_attrs[:] = attrs_for_role("attribute")
         self.class_attrs[:] = attrs_for_role("class")
         self.meta_attrs[:] = attrs_for_role("meta")
         self.available_attrs[:] = attrs_for_role("available")
         self.info.set_input_summary(len(data), format_summary_details(data))
+
+    def restore_hints(self, domain: Domain) -> Dict[Variable, Tuple[str, int]]:
+        """
+        Define hints for selected/unselected features.
+        Rules:
+        - if context available, restore new features based on checked/unchecked
+          select_new_features, context hint should be took into account
+        - in no context, restore features based on the domain (as selected)
+
+        Parameters
+        ----------
+        domain
+            Data domain
+
+        Returns
+        -------
+        Dictionary with hints about order and model in which each feature
+        should appear
+        """
+        domain_hints = {}
+        if self.select_new_features or len(self.domain_role_hints) == 0:
+            # select_new_features selected or no context - restore based on domain
+            domain_hints.update(
+                self._hints_from_seq("attribute", domain.attributes)
+            )
+            domain_hints.update(self._hints_from_seq("meta", domain.metas))
+            domain_hints.update(
+                self._hints_from_seq("class", domain.class_vars)
+            )
+        else:
+            # if context restored and select_new_features unselected - restore
+            # new features as available
+            d = domain.attributes + domain.metas + domain.class_vars
+            domain_hints.update(self._hints_from_seq("available", d))
+
+        domain_hints.update(self.domain_role_hints)
+        return domain_hints
 
     def update_domain_role_hints(self):
         """ Update the domain hints to be stored in the widgets settings.

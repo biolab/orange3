@@ -1,4 +1,5 @@
 # pylint: disable=unsubscriptable-object
+import unittest
 from unittest import TestCase
 from unittest.mock import Mock
 
@@ -411,3 +412,88 @@ class TestOWSelectAttributes(WidgetTest):
             data.Y
         )
         self.send_signal(self.widget.Inputs.data, data1)
+
+    def test_select_new_features(self):
+        """
+        When select_new_features checked new attributes must appear in one of
+        selected columns. Test with fist make context remember attributes of
+        reduced domain and then testing with full domain. Features in missing
+        in reduced domain must appears as seleceted.
+        """
+        data = Table("iris")
+        domain = data.domain
+
+        # data with one feature missing
+        new_domain = Domain(
+            domain.attributes[:-1], domain.class_var, domain.metas
+        )
+        new_data = Table.from_table(new_domain, data)
+
+        # make context remember features in reduced domain
+        self.send_signal(self.widget.Inputs.data, new_data)
+        output = self.get_output(self.widget.Outputs.data)
+
+        self.assertTupleEqual(
+            new_data.domain.attributes, output.domain.attributes
+        )
+        self.assertTupleEqual(new_data.domain.metas, output.domain.metas)
+        self.assertEqual(new_data.domain.class_var, output.domain.class_var)
+
+        # send full domain
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+
+        # if select_new_features checked all new features goes in the selected
+        # features columns - domain equal original
+        self.assertTrue(self.widget.select_new_features)
+        self.assertTupleEqual(data.domain.attributes, output.domain.attributes)
+        self.assertTupleEqual(data.domain.metas, output.domain.metas)
+        self.assertEqual(data.domain.class_var, output.domain.class_var)
+
+    def test_unselect_new_features(self):
+        """
+        When select_new_features not checked new attributes must appear in one
+        available attributes column. Test with fist make context remember
+        attributes of reduced domain and then testing with full domain.
+        Features in missing in reduced domain must appears as not seleceted.
+        """
+        data = Table("iris")
+        domain = data.domain
+
+        # data with one feature missing
+        new_domain = Domain(
+            domain.attributes[:-1], domain.class_var, domain.metas
+        )
+        new_data = Table.from_table(new_domain, data)
+
+        # make context remember features in reduced domain
+        self.send_signal(self.widget.Inputs.data, new_data)
+        # unselect select_new_features
+        self.widget.controls.select_new_features.click()
+        self.assertFalse(self.widget.select_new_features)
+        output = self.get_output(self.widget.Outputs.data)
+
+        self.assertTupleEqual(
+            new_data.domain.attributes, output.domain.attributes
+        )
+        self.assertTupleEqual(new_data.domain.metas, output.domain.metas)
+        self.assertEqual(new_data.domain.class_var, output.domain.class_var)
+
+        # send full domain
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+
+        # if select_new_features not checked all new features goes in the
+        # available attributes column
+        self.assertFalse(self.widget.select_new_features)
+        self.assertTupleEqual(new_domain.attributes, output.domain.attributes)
+        self.assertTupleEqual(new_domain.metas, output.domain.metas)
+        self.assertEqual(new_domain.class_var, output.domain.class_var)
+        # test if new attribute was added to unselected attributes
+        self.assertEqual(
+            domain.attributes[-1], list(self.widget.available_attrs)[0]
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
