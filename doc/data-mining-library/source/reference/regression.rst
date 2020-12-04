@@ -126,3 +126,16 @@ Neural Network
 --------------
 .. autoclass:: NNRegressionLearner
    :members:
+
+
+
+Gradient Boosted Trees
+----------------------
+
+.. automodule:: Orange.regression.xgb
+
+.. autoclass:: XGBRegressor
+   :members:
+
+.. autoclass:: XGBRFRegressor
+   :members:

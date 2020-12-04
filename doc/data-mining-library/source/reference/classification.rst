@@ -212,3 +212,15 @@ Calibration and threshold optimization
 
 .. autoclass:: CalibratedLearner
    :members:
+
+
+Gradient Boosted Trees
+----------------------
+
+.. automodule:: Orange.classification.xgb
+
+.. autoclass:: XGBClassifier
+   :members:
+
+.. autoclass:: XGBRFClassifier
+   :members:
