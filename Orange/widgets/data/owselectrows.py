@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel, QHBoxLayout, QDateTimeEdit, QCalendarWidget)
+    QLabel, QHBoxLayout, QDateTimeEdit)
 from AnyQt.QtGui import (QDoubleValidator, QStandardItemModel, QStandardItem,
                          QFontMetrics, QPalette)
 from AnyQt.QtCore import Qt, QPoint, QPersistentModelIndex, QLocale, \
@@ -151,31 +151,6 @@ def _plural(s):
         s = s.replace(word, word[:-1])
     return s
 
-
-class CalendarWidgetWithTime(QCalendarWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.timeedit = QDateTimeEdit(displayFormat="hh:mm:ss")
-        self.timeedit.setTime(self.parent().min_datetime.time())
-
-        self._time_layout = sublay = QHBoxLayout()
-        sublay.setContentsMargins(6, 6, 6, 6)
-        sublay.addStretch(1)
-        sublay.addWidget(QLabel("Time: "))
-        sublay.addWidget(self.timeedit)
-        sublay.addStretch(1)
-        self.layout().addLayout(sublay)
-
-    def minimumSize(self):
-        return self.sizeHint()
-
-    def sizeHint(self):
-        size = super().sizeHint()
-        size.setHeight(
-            size.height()
-            + self._time_layout.sizeHint().height()
-            + self.layout().spacing())
-        return size
 
 class OWSelectRows(widget.OWWidget):
     name = "Select Rows"
@@ -908,7 +883,8 @@ class DateTimeWidget(QDateTimeEdit):
             self.min_datetime = QDateTime.fromString(min_datetime, str_format)
             self.max_datetime = QDateTime.fromString(max_datetime, str_format)
             self.setCalendarPopup(True)
-            self.calendarWidget = CalendarWidgetWithTime(self)
+            self.calendarWidget = gui.CalendarWidgetWithTime(
+                self, time=self.min_datetime.time())
             self.calendarWidget.timeedit.timeChanged.connect(
                 self.set_datetime)
             self.setCalendarWidget(self.calendarWidget)

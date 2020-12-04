@@ -31,6 +31,7 @@ from orangewidget.gui import (
     VerticalLabel, tabWidget, createTabPage, table, tableItem,
     VisibleHeaderSectionContextEventFilter,
     checkButtonOffsetHint, toolButtonSizeHint, FloatSlider,
+    CalendarWidgetWithTime, DateTimeEditWCalendarTime,
     ControlGetter, VerticalScrollArea, ProgressBar,
     ControlledCallback, ControlledCallFront, ValueCallback, connectControl,
 )
@@ -62,6 +63,7 @@ __all__ = [
     "VerticalLabel", "tabWidget", "createTabPage", "table", "tableItem",
     "VisibleHeaderSectionContextEventFilter", "checkButtonOffsetHint",
     "toolButtonSizeHint", "FloatSlider", "ControlGetter",  "VerticalScrollArea",
+    "CalendarWidgetWithTime", "DateTimeEditWCalendarTime",
     "BarRatioRole", "BarBrushRole", "SortOrderRole", "LinkRole",
     "BarItemDelegate", "IndicatorItemDelegate", "LinkStyledItemDelegate",
     "ColoredBarItemDelegate", "HorizontalGridDelegate", "VerticalItemDelegate",
