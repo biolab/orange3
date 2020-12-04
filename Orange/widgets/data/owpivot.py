@@ -27,7 +27,8 @@ from Orange.widgets.settings import (Setting, ContextSetting,
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -612,7 +613,7 @@ class PivotTableView(QTableView):
 
     def _set_values(self, table):
         for i, j in product(range(len(table)), range(len(table[0]))):
-            item = self._create_value_item(str(table[i, j]))
+            item = self._create_value_item(str(table.X[i, j]))
             self.table_model.setItem(i + self._n_leading_rows,
                                      j + self._n_leading_cols, item)
 
@@ -710,13 +711,14 @@ class OWPivot(OWWidget):
         cannot_aggregate = Msg("Some aggregations ({}) cannot be computed.")
         renamed_vars = Msg("Some variables have been renamed in some tables"
                            "to avoid duplicates.\n{}")
+        too_many_values = Msg("Selected variable has too many values.")
 
     settingsHandler = DomainContextHandler()
     row_feature = ContextSetting(None)
     col_feature = ContextSetting(None)
     val_feature = ContextSetting(None)
     sel_agg_functions = Setting(set([Pivot.Count]))
-    selection = ContextSetting(set())
+    selection = Setting(set(), schema_only=True)
     auto_commit = Setting(True)
 
     AGGREGATIONS = (Pivot.Count,
@@ -733,10 +735,13 @@ class OWPivot(OWWidget):
                     None,
                     Pivot.Majority)
 
+    MAX_VALUES = 100
+
     def __init__(self):
         super().__init__()
         self.data = None  # type: Table
         self.pivot = None  # type: Pivot
+        self.__pending_selection = self.selection  # type: Set
         self._add_control_area_controls()
         self._add_main_area_controls()
 
@@ -761,8 +766,8 @@ class OWPivot(OWWidget):
         gui.rubber(self.controlArea)
         gui.auto_apply(self.controlArea, self, "auto_commit")
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
+        self.set_input_summary()
+        self.set_output_summary(None, None, None)
 
     def __add_aggregation_controls(self):
         def new_inbox():
@@ -852,6 +857,7 @@ class OWPivot(OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.closeContext()
+        self.selection = set()
         self.data = data
         self.pivot = None
         self.check_data()
@@ -861,12 +867,7 @@ class OWPivot(OWWidget):
 
     def check_data(self):
         self.clear_messages()
-        if not self.data:
-            self.table_view.clear()
-            self.info.set_input_summary(self.info.NoInput)
-        else:
-            self.info.set_input_summary(len(self.data),
-                                        format_summary_details(self.data))
+        self.set_input_summary()
 
     def init_attr_values(self):
         domain = self.data.domain if self.data and len(self.data) else None
@@ -882,30 +883,69 @@ class OWPivot(OWWidget):
                 if domain.variables[0] in model else model[2]
 
     def commit(self):
+        def send_outputs(pivot_table, filtered_data, grouped_data):
+            self.Outputs.grouped_data.send(grouped_data)
+            self.Outputs.pivot_table.send(pivot_table)
+            self.Outputs.filtered_data.send(filtered_data)
+            self.set_output_summary(pivot_table, filtered_data, grouped_data)
+
         self.Warning.renamed_vars.clear()
+        self.Warning.too_many_values.clear()
+        self.Warning.cannot_aggregate.clear()
+        self.Warning.no_col_feature.clear()
+
         if self.pivot is None:
-            self.Warning.no_col_feature.clear()
             if self.no_col_feature:
+                self.table_view.clear()
                 self.Warning.no_col_feature()
+                send_outputs(None, None, None)
                 return
+
+            if self.data:
+                col_var = self.col_feature or self.row_feature
+                col = self.data.get_column_view(col_var)[0].astype(np.float)
+                if len(nanunique(col)) >= self.MAX_VALUES:
+                    self.table_view.clear()
+                    self.Warning.too_many_values()
+                    send_outputs(None, None, None)
+                    return
+
             self.pivot = Pivot(self.data, self.sel_agg_functions,
                                self.row_feature,
                                self.col_feature, self.val_feature)
-        self.Warning.cannot_aggregate.clear()
+
         if self.skipped_aggs:
             self.Warning.cannot_aggregate(self.skipped_aggs)
         self._update_graph()
-        filtered_data = self.get_filtered_data()
-        self.Outputs.grouped_data.send(self.pivot.group_table)
-        self.Outputs.pivot_table.send(self.pivot.pivot_table)
-        self.Outputs.filtered_data.send(filtered_data)
 
-        summary = len(filtered_data) if filtered_data else self.info.NoOutput
-        details = format_summary_details(filtered_data) if filtered_data else ""
-        self.info.set_output_summary(summary, details)
+        send_outputs(self.pivot.pivot_table,
+                     self.get_filtered_data(),
+                     self.pivot.group_table)
 
         if self.pivot.renamed:
             self.Warning.renamed_vars(self.pivot.renamed)
+
+    def set_input_summary(self):
+        summary = len(self.data) if self.data else self.info.NoInput
+        details = format_summary_details(self.data) if self.data else ""
+        self.info.set_input_summary(summary, details)
+
+    def set_output_summary(self, pivot: Table, filtered: Table, grouped: Table):
+        summary, detail, kwargs = self.info.NoOutput, "", {}
+        if pivot or filtered or grouped:
+            n_pivot = len(pivot) if pivot else 0
+            n_filtered = len(filtered) if filtered else 0
+            n_grouped = len(grouped) if grouped else 0
+            summary = f"{self.info.format_number(n_pivot)}, " \
+                      f"{self.info.format_number(n_filtered)}, " \
+                      f"{self.info.format_number(n_grouped)}"
+            detail = format_multiple_summaries([
+                ("Pivot table", pivot),
+                ("Filtered data", filtered),
+                ("Grouped data", grouped)
+            ])
+            kwargs = {"format": Qt.RichText}
+        self.info.set_output_summary(summary, detail, **kwargs)
 
     def _update_graph(self):
         self.table_view.clear()
@@ -914,7 +954,10 @@ class OWPivot(OWWidget):
             self.table_view.update_table(col_feature.name,
                                          self.row_feature.name,
                                          *self.pivot.pivot_tables)
-            self.table_view.set_selection(self.selection)
+            selection = self.__pending_selection or self.selection
+            self.table_view.set_selection(selection)
+            self.selection = self.table_view.get_selection()
+            self.__pending_selection = set()
 
     def get_filtered_data(self):
         if not self.data or not self.selection or not self.pivot.pivot_table:

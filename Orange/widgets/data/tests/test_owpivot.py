@@ -8,7 +8,6 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QPoint
 from AnyQt.QtTest import QTest
-from AnyQt.QtWidgets import QCheckBox
 
 from Orange.data import (Table, Domain, ContinuousVariable as Cv,
                          StringVariable as sv, DiscreteVariable as Dv)
@@ -16,7 +15,8 @@ from Orange.widgets.data.owpivot import (OWPivot, Pivot,
                                          AggregationFunctionsEnum)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 
 
 class TestOWPivot(WidgetTest):
@@ -155,9 +155,10 @@ class TestOWPivot(WidgetTest):
         simulate.combobox_activate_item(self.widget.controls.val_feature,
                                         "(None)")
         self.assertTrue(self.widget.Warning.cannot_aggregate.is_shown())
+        # agg: Count, Majority, feature: None, row: Continuous
         simulate.combobox_activate_item(self.widget.controls.row_feature,
                                         self.iris.domain.attributes[1].name)
-        self.assertTrue(self.widget.Warning.cannot_aggregate.is_shown())
+        self.assertFalse(self.widget.Warning.cannot_aggregate.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.cannot_aggregate.is_shown())
 
@@ -247,9 +248,15 @@ class TestOWPivot(WidgetTest):
                                         self.iris.domain.class_var.name)
         self.widget.table_view.set_selection(set([(11, 0), (11, 1), (12, 0)]))
         self.widget.table_view.selection_changed.emit()
-        output = self.get_output(self.widget.Outputs.filtered_data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
+        filtered = self.get_output(self.widget.Outputs.filtered_data)
+        pivot = self.get_output(self.widget.Outputs.pivot_table)
+        grouped = self.get_output(self.widget.Outputs.grouped_data)
+        output_sum.assert_called_with(
+            f"{len(pivot)}, {len(filtered)}, {len(grouped)}",
+            format_multiple_summaries([("Pivot table", pivot),
+                                       ("Filtered data", filtered),
+                                       ("Grouped data", grouped)]),
+            format=1)
         input_sum.reset_mock()
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
@@ -267,6 +274,15 @@ class TestOWPivot(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+
+    @patch("Orange.widgets.data.owpivot.OWPivot.MAX_VALUES", 2)
+    def test_max_values(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Warning.too_many_values.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.too_many_values.is_shown())
+
 
 class TestAggregationFunctionsEnum(unittest.TestCase):
     def test_pickle(self):
