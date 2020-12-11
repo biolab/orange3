@@ -270,27 +270,6 @@ class _BaseExcelReader(FileFormat, DataTableMixin):
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table
 
-    @classmethod
-    def write_file(cls, filename, data):
-        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
-                          data.domain.attributes,
-                          data.domain.class_vars,
-                          data.domain.metas))
-        formatters = [cls.formatter(v) for v in vars]
-        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
-                               data.X,
-                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
-                               data.metas)
-        headers = cls.header_names(data)
-        workbook = xlsxwriter.Workbook(filename)
-        sheet = workbook.add_worksheet()
-        for c, header in enumerate(headers):
-            sheet.write(0, c, header)
-        for i, row in enumerate(zipped_list_data, 1):
-            for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
-                sheet.write(i, j, fmt(v))
-        workbook.close()
-
 
 class ExcelReader(_BaseExcelReader):
     """Reader for .xlsx files"""
@@ -331,6 +310,27 @@ class ExcelReader(_BaseExcelReader):
             return self.workbook[self.sheet]
         else:
             return self.workbook.active
+
+    @classmethod
+    def write_file(cls, filename, data):
+        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+        formatters = [cls.formatter(v) for v in vars]
+        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                               data.X,
+                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                               data.metas)
+        headers = cls.header_names(data)
+        workbook = xlsxwriter.Workbook(filename)
+        sheet = workbook.add_worksheet()
+        for c, header in enumerate(headers):
+            sheet.write(0, c, header)
+        for i, row in enumerate(zipped_list_data, 1):
+            for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
+                sheet.write(i, j, fmt(v))
+        workbook.close()
 
 
 class XlsReader(_BaseExcelReader):
