@@ -16,11 +16,11 @@ def get_dataset(name):
 
 
 def get_xlsx_reader(name: str) -> io.ExcelReader:
-    return io.ExcelReader(get_dataset(name))
+    return io.ExcelReader(get_dataset(name + ".xlsx"))
 
 
 def get_xls_reader(name: str) -> io.XlsReader:
-    return io.XlsReader(get_dataset(name))
+    return io.XlsReader(get_dataset(name + ".xls"))
 
 
 def read_file(reader: Callable, name: str) -> Table:
@@ -37,7 +37,7 @@ def test_xlsx_xls(f):
 
 class TestExcelReader(unittest.TestCase):
     def test_read_round_floats(self):
-        table = read_file(get_xlsx_reader, "round_floats.xlsx")
+        table = read_file(get_xlsx_reader, "round_floats")
         domain = table.domain
         self.assertIsNone(domain.class_var)
         self.assertEqual(len(domain.metas), 0)
@@ -50,7 +50,7 @@ class TestExcelReader(unittest.TestCase):
 class TestExcelHeader0(unittest.TestCase):
     @test_xlsx_xls
     def test_read(self, reader: Callable[[str], io.FileFormat]):
-        table = read_file(reader, "header_0.xlsx")
+        table = read_file(reader, "header_0")
         domain = table.domain
         self.assertIsNone(domain.class_var)
         self.assertEqual(len(domain.metas), 0)
@@ -68,13 +68,13 @@ class TestExcelHeader0(unittest.TestCase):
 class TextExcelSheets(unittest.TestCase):
     @test_xlsx_xls
     def test_sheets(self, reader: Callable[[str], io.FileFormat]):
-        reader = reader("header_0_sheet.xlsx")
+        reader = reader("header_0_sheet")
         self.assertSequenceEqual(reader.sheets,
                                  ["Sheet1", "my_sheet", "Sheet3"])
 
     @test_xlsx_xls
     def test_named_sheet(self, reader: Callable[[str], io.FileFormat]):
-        reader = reader("header_0_sheet.xlsx")
+        reader = reader("header_0_sheet")
         reader.select_sheet("my_sheet")
         table = reader.read()
         self.assertEqual(len(table.domain.attributes), 4)
@@ -96,7 +96,7 @@ class TextExcelSheets(unittest.TestCase):
 class TestExcelHeader1(unittest.TestCase):
     @test_xlsx_xls
     def test_no_flags(self, reader: Callable[[str], io.FileFormat]):
-        table = read_file(reader, "header_1_no_flags.xlsx")
+        table = read_file(reader, "header_1_no_flags")
         domain = table.domain
         self.assertEqual(len(domain.metas), 0)
         self.assertEqual(len(domain.attributes), 4)
@@ -115,7 +115,7 @@ class TestExcelHeader1(unittest.TestCase):
 
     @test_xlsx_xls
     def test_flags(self, reader: Callable[[str], io.FileFormat]):
-        table = read_file(reader, "header_1_flags.xlsx")
+        table = read_file(reader, "header_1_flags")
         domain = table.domain
 
         self.assertEqual(len(domain.attributes), 1)
@@ -146,7 +146,7 @@ class TestExcelHeader1(unittest.TestCase):
 class TestExcelHeader3(unittest.TestCase):
     @test_xlsx_xls
     def test_read(self, reader: Callable[[str], io.FileFormat]):
-        table = read_file(reader, "header_3.xlsx")
+        table = read_file(reader, "header_3")
         domain = table.domain
 
         self.assertEqual(len(domain.attributes), 2)
