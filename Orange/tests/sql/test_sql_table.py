@@ -415,6 +415,20 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
+        # test if NULL is transformed to emtpy string
+        table = np.array(list("ABCDEFGHIJKLMNOPQRSTUVW") + [None]).reshape(
+            -1, 1
+        )
+        conn, table_name = self.create_sql_table(table, ["char(1)"])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertEqual("", sql_table.metas[-1, 0])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertEqual("", sql_table.metas[-1, 0])
+
     @dbt.run_on(["postgres", "mssql"])
     def test_discrete_varchar(self):
         table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
@@ -716,6 +730,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertGreater(len(table.domain.metas), 0)
         attr = table.domain[-1]
         self.assertIsInstance(attr, variable_type)
+
 
 if __name__ == "__main__":
     unittest.main()
