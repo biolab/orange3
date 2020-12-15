@@ -7,25 +7,35 @@ Displays value distributions for a single attribute.
 
 - Data: input dataset
 
+**Outputs**
+
+- Selected Data: instances selected from the plot
+- Data: data with an additional column showing whether an instance is selected
+- Histogram Data: bins and instance counts from histogram
+
 The **Distributions** widget displays the [value distribution](https://en.wikipedia.org/wiki/Frequency_distribution) of discrete or continuous attributes. If the data contains a class variable, distributions may be conditioned on the class.
 
-For discrete attributes, the graph displayed by the widget shows how many times (e.g., in how many instances) each attribute value appears in the data. If the data contains a class variable, class distributions for each of the attribute values will be displayed as well (like in the snapshot below). In order to create this graph, we used the *Zoo* dataset.
+The graph shows how many times (e.g., in how many instances) each attribute value appears in the data. If the data contains a class variable, class distributions for each of the attribute values will be displayed as well (like in the snapshot below). In order to create this graph, we used the *Zoo* dataset.
 
-![](images/Distributions-Disc-stamped.png)
+![](images/Distributions-Discrete.png)
 
-1. A list of variables for distributions display
-2. If *Bin continuous variables* is ticked, the widget will discretize continuous variables by assigning them to intervals. The number of intervals is set by precision scale. Alternatively, you can set smoothness for the distribution curves of continuous variables.
-3. The widget may be requested to display value distributions only for instances of certain class (*Group by*). *Show relative frequencies* will scale the data by percentage of the dataset.
-4. Show probabilities.
-5. *Save image* saves the graph to your computer in a .svg or .png format.
-6. Produce a report.
+1. A list of variables for display. *Sort categories by frequency* orders displayed values by frequency.
+2. Set *Bin width* with the slider. Precision scale is set to sensible intervals. *Fitted distribution* fits selected distribution to the plot. Options are [Normal](https://en.wikipedia.org/wiki/Normal_distribution), [Beta](https://en.wikipedia.org/wiki/Beta_distribution), [Gamma](https://en.wikipedia.org/wiki/Gamma_distribution), [Rayleigh](https://en.wikipedia.org/wiki/Rayleigh_distribution), [Pareto](https://en.wikipedia.org/wiki/Pareto_distribution), [Exponential](https://en.wikipedia.org/wiki/Exponential_distribution), [Kernel density](https://en.wikipedia.org/wiki/Kernel_density_estimation).
+3. Columns:
 
-For continuous attributes, the attribute values are displayed as a function graph. Class probabilities for continuous attributes are obtained with Gaussian kernel density estimation, while the appearance of the curve is set with the *Precision* bar (smooth or precise).
+- *Split by* displays value distributions for instances of certain class.
+- *Stack columns* displays one column per bin, colored by proportions of class values.
+- *Show probabilities* shows probabilities of class values at selected variable.
+- *Show cumulative distribution* cumulatively stacks frequencies.
+
+4. If *Apply Automatically* is ticked, changes are communicated automatically. Alternatively, click *Apply*.
+
+For continuous attributes, the attribute values are also displayed as a histogram. It is possible to fit various distributions to the data, for example a Gaussian kernel density estimation. *Hide bars* hides histogram bars and shows only distribution (old behavior of Distributions).
 
 For the purpose of this example, we used the *Iris* dataset.
 
-![](images/Distributions-Cont.png)
+![](images/Distributions-Continuous.png)
 
-In class-less domains, the bars are displayed in gray. Here we set *Bin continuous variables into 10 bins*, which distributes variables into 10 intervals and displays averages of these intervals as histograms (see 2. above). We used the *Housing* dataset.
+In class-less domains, the bars are displayed in blue. We used the *Housing* dataset.
 
 ![](images/Distributions-NoClass.png)
