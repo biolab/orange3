@@ -12,26 +12,29 @@ Shows distribution of attribute values.
 - Selected Data: instances selected from the plot
 - Data: data with an additional column showing whether a point is selected
 
-The **Box Plot** widget shows the distributions of attribute values. It is a good practice to check any new data with this widget to quickly discover any anomalies, such as duplicated values (e.g. gray and grey), outliers, and alike.
+The **Box Plot** widget shows the distributions of attribute values. It is a good practice to check any new data with this widget to quickly discover any anomalies, such as duplicated values (e.g. gray and grey), outliers, and alike. Bars can be selected - for example values for categorical data or the quantile range for numeric data.
 
-![](images/BoxPlot-Continuous-stamped.png)
+![](images/BoxPlot-Continuous.png)
 
-1. Select the variable you want to plot. Tick *Order by relevance* to order variables by Chi2 or ANOVA over the selected subgroup.
-2. Choose *Subgroups* to see [box plots](https://en.wikipedia.org/wiki/Box_plot) displayed by a discrete subgroup.
+1. Select the variable you want to plot. Tick *Order by relevance to subgroups* to order variables by Chi2 or ANOVA over the selected subgroup.
+2. Choose *Subgroups* to see [box plots](https://en.wikipedia.org/wiki/Box_plot) displayed by a discrete subgroup. Tick *Order by relevance to variable* to order subgroups by Chi2 or ANOVA over the selected variable.
 3. When instances are grouped by a subgroup, you can change the display mode. Annotated boxes will display the end values, the mean and the median, while compare medians and compare means will, naturally, compare the selected value between subgroups.
 ![continuous](images/BoxPlot-Continuous-small.png)
 4. The mean (the dark blue vertical line). The thin blue line represents the [standard deviation](http://mathworld.wolfram.com/StandardDeviation.html).
 5. Values of the first (25%) and the third (75%) quantile. The blue  highlighted area represents the values between the first and the third quartile.
 6. The median (yellow vertical line).
-7. If *Send automatically* is ticked, changes are communicated automatically. Alternatively, press *Send*.
-8. Access help, save image or produce a report.
 
 For discrete attributes, the bars represent the number of instances with each particular attribute value. The plot shows the number of different animal types in the *Zoo* dataset: there are 41 mammals, 13 fish, 20 birds and so on.
 
+Display shows:
+- *Stretch bars*: Shows relative values (proportions) of data instances. Unticked box shows absolute values.
+- *Show box labels*: Display discrete values above each bar.
+- *Sort by subgroup frequencies*: Sort subgroups by their descending frequency.
+
 ![](images/BoxPlot-Discrete.png)
 
-Example
--------
+Examples
+--------
 
 The **Box Plot** widget is most commonly used immediately after the [File](../data/file.md) widget to observe the statistical properties of a dataset. In the first example, we have used *heart-disease* data to inspect our variables.
 
