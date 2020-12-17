@@ -1,8 +1,10 @@
 import itertools
+import math
 
 import numpy as np
 
-from AnyQt.QtWidgets import QTableView, QItemDelegate, QHeaderView
+from AnyQt.QtWidgets import QTableView, QItemDelegate, QHeaderView, QStyle, \
+    QStyleOptionViewItem
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, \
     QItemSelectionModel, QItemSelection, QSize
@@ -29,13 +31,15 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.values = None
         self.label_colors = None
         self.zero_diag = True
+        self.span = None
 
     def set_data(self, distances):
         self.beginResetModel()
         self.distances = distances
         if distances is None:
             return
-        span = distances.max()
+        self.span = span = distances.max()
+
         self.colors = \
             (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
         self.zero_diag = all(distances.diagonal() < 1e-6)
@@ -155,7 +159,25 @@ class SymmetricSelectionModel(QItemSelectionModel):
 
 
 class TableView(gui.HScrollStepMixin, QTableView):
-    pass
+    def sizeHintForColumn(self, column: int) -> int:
+        model = self.model()
+        if model is None:  # pragma: no cover
+            return -1
+        assert isinstance(model, DistanceMatrixModel)
+        template = "00.000"
+        if model.span is not None:
+            # number of digits (integer part)
+            ndigits = int(math.ceil(math.log10(model.span + 1)))
+            ndecimal = 3
+            template = "0" * ndigits + "." + "0" * ndecimal
+
+        opt = self.viewOptions()
+        opt.text = template
+        opt.features |= QStyleOptionViewItem.HasDisplay
+        style = self.style()
+        sh = style.sizeFromContents(
+            QStyle.CT_ItemViewItem, opt, QSize(), self)
+        return sh.width()
 
 
 class DistanceMatrixContextHandler(ContextHandler):
@@ -224,6 +246,7 @@ class OWDistanceMatrix(widget.OWWidget):
         view.setModel(self.tablemodel)
         view.setShowGrid(False)
         for header in (view.horizontalHeader(), view.verticalHeader()):
+            header.setResizeContentsPrecision(1)
             header.setSectionResizeMode(QHeaderView.ResizeToContents)
             header.setHighlightSections(True)
             header.setSectionsClickable(False)
