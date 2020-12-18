@@ -410,11 +410,13 @@ class OWROCAnalysis(widget.OWWidget):
         axis.setTickFont(tickfont)
         axis.setPen(pen)
         axis.setLabel("FP Rate (1-Specificity)")
+        axis.setGrid(16)
 
         axis = self.plot.getAxis("left")
         axis.setTickFont(tickfont)
         axis.setPen(pen)
         axis.setLabel("TP Rate (Sensitivity)")
+        axis.setGrid(16)
 
         self.plot.showGrid(True, True, alpha=0.1)
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0), padding=0.05)
@@ -618,6 +620,8 @@ class OWROCAnalysis(widget.OWWidget):
         if self.roc_averaging == OWROCAnalysis.Merge:
             self._update_perf_line()
 
+        self._update_axes_ticks()
+
         warning = ""
         if not all(c.is_valid for c in hull_curves):
             if any(c.is_valid for c in hull_curves):
@@ -625,6 +629,22 @@ class OWROCAnalysis(widget.OWWidget):
             else:
                 warning = "All ROC curves are undefined"
         self.warning(warning)
+
+    def _update_axes_ticks(self):
+        def enumticks(a):
+            a = np.unique(a)
+            if len(a) > 15:
+                return None
+            return [[(x, f"{x:.2f}") for x in a[::-1]]]
+
+        data = self.curve_data(self.target_index, self.selected_classifiers[0])
+        points = data.merged.points
+
+        axis = self.plot.getAxis("bottom")
+        axis.setTicks(enumticks(points.fpr))
+
+        axis = self.plot.getAxis("left")
+        axis.setTicks(enumticks(points.tpr))
 
     def _on_mouse_moved(self, pos):
         target = self.target_index
@@ -799,8 +819,10 @@ def roc_curve_for_fold(res, fold, clf_idx, target):
         return np.array([]), np.array([]), np.array([])
 
     fold_probs = res.probabilities[clf_idx][fold][:, target]
-    return skl_metrics.roc_curve(
-        fold_actual, fold_probs, pos_label=target
+    drop_intermediate = len(fold_actual) > 20
+    fpr, tpr, thresholds = skl_metrics.roc_curve(
+        fold_actual, fold_probs, pos_label=target,
+        drop_intermediate=drop_intermediate
     )
 
 
