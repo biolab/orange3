@@ -668,8 +668,8 @@ class OWDistributions(OWWidget):
     def _cont_plot(self):
         self._set_cont_ticks()
         data = self.valid_data
-        y, x = np.histogram(
-            data, bins=self.binnings[self.number_of_bins].thresholds)
+        binning = self.binnings[self.number_of_bins]
+        y, x = np.histogram(data, bins=binning.thresholds)
         total = len(data)
         colors = [QColor(0, 128, 255)]
         if self.fitted_distribution:
@@ -677,15 +677,18 @@ class OWDistributions(OWWidget):
 
         tot_freq = 0
         lasti = len(y) - 1
+        width = np.min(x[1:] - x[:-1])
+        unique = self.number_of_bins == 0 and binning.width is None
         for i, (x0, x1), freq in zip(count(), zip(x, x[1:]), y):
             tot_freq += freq
-            desc = self.str_int(x0, x1, not i, i == lasti)
+            desc = self.str_int(x0, x1, not i, i == lasti, unique)
             tooltip = \
                 "<p style='white-space:pre;'>" \
                 f"<b>{escape(desc)}</b>: " \
                 f"{freq} ({100 * freq / total:.2f} %)</p>"
+            bar_width = width if unique else x1 - x0
             self._add_bar(
-                x0, x1 - x0, 0, [tot_freq if self.cumulative_distr else freq],
+                x0, bar_width, 0, [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip,
                 desc=desc, hidden=self.hide_bars)
 
@@ -697,8 +700,8 @@ class OWDistributions(OWWidget):
     def _cont_split_plot(self):
         self._set_cont_ticks()
         data = self.valid_data
-        _, bins = np.histogram(
-            data, bins=self.binnings[self.number_of_bins].thresholds)
+        binning = self.binnings[self.number_of_bins]
+        _, bins = np.histogram(data, bins=binning.thresholds)
         gvalues = self.cvar.values
         varcolors = [QColor(*col) for col in self.cvar.colors]
         if self.fitted_distribution:
@@ -720,12 +723,15 @@ class OWDistributions(OWWidget):
         tot_freqs = np.zeros(len(ys))
 
         lasti = len(ys[0]) - 1
+        width = np.min(bins[1:] - bins[:-1])
+        unique = self.number_of_bins == 0 and binning.width is None
         for i, x0, x1, freqs in zip(count(), bins, bins[1:], zip(*ys)):
             tot_freqs += freqs
             plotfreqs = tot_freqs.copy() if self.cumulative_distr else freqs
-            desc = self.str_int(x0, x1, not i, i == lasti)
+            desc = self.str_int(x0, x1, not i, i == lasti, unique)
+            bar_width = width if unique else x1 - x0
             self._add_bar(
-                x0, x1 - x0, 0 if self.stacked_columns else 0.1, plotfreqs,
+                x0, bar_width, 0 if self.stacked_columns else 0.1, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 hidden=self.hide_bars,
                 tooltip=self._split_tooltip(
@@ -899,12 +905,12 @@ class OWDistributions(OWWidget):
             return 0
         return 10 ** -var.number_of_decimals
 
-    def str_int(self, x0, x1, first, last):
+    def str_int(self, x0, x1, first, last, unique=False):
         var = self.var
         sx0, sx1 = var.repr_val(x0), var.repr_val(x1)
         if self.cumulative_distr:
             return f"{var.name} < {sx1}"
-        elif first and last:
+        elif first and last or unique:
             return f"{var.name} = {sx0}"
         elif first:
             return f"{var.name} < {sx1}"
