@@ -177,7 +177,8 @@ class TableView(gui.HScrollStepMixin, QTableView):
         style = self.style()
         sh = style.sizeFromContents(
             QStyle.CT_ItemViewItem, opt, QSize(), self)
-        return sh.width()
+        hint = sh.width()
+        return hint + 1 if self.showGrid() else hint
 
 
 class DistanceMatrixContextHandler(ContextHandler):
