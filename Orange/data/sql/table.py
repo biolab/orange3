@@ -178,7 +178,7 @@ class SqlTable(Table):
         if not values:
             raise IndexError('Could not retrieve row {} from table {}'.format(
                 row_index, self.name))
-        return SqlRowInstance(self.domain, values[0])
+        return Instance(self.domain, values[0])
 
     def __iter__(self):
         """ Iterating through the rows executes the query using a cursor and
@@ -187,7 +187,7 @@ class SqlTable(Table):
         attributes = self.domain.variables + self.domain.metas
 
         for row in self._query(attributes):
-            yield SqlRowInstance(self.domain, row)
+            yield Instance(self.domain, row)
 
     def _query(self, attributes=None, filters=(), rows=None):
         if attributes is not None:
@@ -653,16 +653,3 @@ class SqlTable(Table):
 
     def checksum(self, include_metas=True):
         return np.nan
-
-
-class SqlRowInstance(Instance):
-    """
-    Extends :obj:`Orange.data.Instance` to correctly handle values of meta
-    attributes.
-    """
-
-    def __init__(self, domain, data=None):
-        nvar = len(domain.variables)
-        super().__init__(domain, data[:nvar])
-        if len(data) > nvar:
-            self._metas = np.asarray(data[nvar:], dtype=object)
