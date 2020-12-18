@@ -93,11 +93,11 @@ def roc_data_from_results(results, clf_index, target):
     :rval ROCData:
         A instance holding the computed curves.
     """
-    merged = roc_curve_for_fold(results, slice(0, -1), clf_index, target)
+    merged = roc_curve_for_fold(results, ..., clf_index, target)
     merged_curve = ROCCurve(ROCPoints(*merged),
                             ROCPoints(*roc_curve_convex_hull(merged)))
 
-    folds = results.folds if results.folds is not None else [slice(0, -1)]
+    folds = results.folds if results.folds is not None else [...]
     fold_curves = []
     for fold in folds:
         points = roc_curve_for_fold(results, fold, clf_index, target)
