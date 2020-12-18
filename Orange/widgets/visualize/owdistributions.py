@@ -679,6 +679,7 @@ class OWDistributions(OWWidget):
         lasti = len(y) - 1
         width = np.min(x[1:] - x[:-1])
         unique = self.number_of_bins == 0 and binning.width is None
+        xoff = -width / 2 if unique else 0
         for i, (x0, x1), freq in zip(count(), zip(x, x[1:]), y):
             tot_freq += freq
             desc = self.str_int(x0, x1, not i, i == lasti, unique)
@@ -688,7 +689,8 @@ class OWDistributions(OWWidget):
                 f"{freq} ({100 * freq / total:.2f} %)</p>"
             bar_width = width if unique else x1 - x0
             self._add_bar(
-                x0, bar_width, 0, [tot_freq if self.cumulative_distr else freq],
+                x0 + xoff, bar_width, 0,
+                [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip,
                 desc=desc, hidden=self.hide_bars)
 
@@ -725,13 +727,15 @@ class OWDistributions(OWWidget):
         lasti = len(ys[0]) - 1
         width = np.min(bins[1:] - bins[:-1])
         unique = self.number_of_bins == 0 and binning.width is None
+        xoff = -width / 2 if unique else 0
         for i, x0, x1, freqs in zip(count(), bins, bins[1:], zip(*ys)):
             tot_freqs += freqs
             plotfreqs = tot_freqs.copy() if self.cumulative_distr else freqs
             desc = self.str_int(x0, x1, not i, i == lasti, unique)
             bar_width = width if unique else x1 - x0
             self._add_bar(
-                x0, bar_width, 0 if self.stacked_columns else 0.1, plotfreqs,
+                x0 + xoff, bar_width, 0 if self.stacked_columns else 0.1,
+                plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 hidden=self.hide_bars,
                 tooltip=self._split_tooltip(
