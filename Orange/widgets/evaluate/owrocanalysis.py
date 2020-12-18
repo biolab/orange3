@@ -1,8 +1,3 @@
-"""
-ROC Analysis Widget
--------------------
-
-"""
 import operator
 from functools import reduce, wraps
 from collections import namedtuple, deque, OrderedDict
@@ -11,7 +6,7 @@ import numpy as np
 import sklearn.metrics as skl_metrics
 
 from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction, \
-    QToolTip, QSizePolicy
+    QToolTip
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont, \
     QCursor, QFontMetrics
 from AnyQt.QtCore import Qt, QSize
@@ -21,12 +16,14 @@ import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
-from Orange.widgets.evaluate.utils import \
-    check_results_adequacy, results_for_preview
+from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 from Orange.widgets import report
+
+from Orange.widgets.evaluate.utils import results_for_preview
+from Orange.evaluation.testing import Results
 
 
 #: Points on a ROC curve
@@ -969,5 +966,19 @@ def roc_iso_performance_slope(fp_cost, fn_cost, p):
         return (fp_cost * (1. - p)) / (fn_cost * p)
 
 
+def _create_results():  # pragma: no cover
+    probs1 = [0.984, 0.907, 0.881, 0.865, 0.815, 0.741, 0.735, 0.635,
+              0.582, 0.554, 0.413, 0.317, 0.287, 0.225, 0.216, 0.183]
+    probs = np.array([[[1 - x, x] for x in probs1]])
+    preds = (probs > 0.5).astype(float)
+    return Results(
+        data=Orange.data.Table("heart_disease")[:16],
+        row_indices=np.arange(16),
+        actual=np.array(list(map(int, "1100111001001000"))),
+        probabilities=probs, predicted=preds
+    )
+
+
 if __name__ == "__main__":  # pragma: no cover
+    # WidgetPreview(OWROCAnalysis).run(_create_results())
     WidgetPreview(OWROCAnalysis).run(results_for_preview())
