@@ -825,6 +825,13 @@ def roc_curve_for_fold(res, fold, clf_idx, target):
         drop_intermediate=drop_intermediate
     )
 
+    # skl sets the first threshold to the highest threshold in the data + 1
+    # since we deal with probabilities, we (carefully) set it to 1
+    # Unrelated comparisons, thus pylint: disable=chained-comparison
+    if len(thresholds) > 1 and thresholds[1] <= 1:
+        thresholds[0] = 1
+    return fpr, tpr, thresholds
+
 
 def roc_curve_vertical_average(curves, samples=10):
     if not curves:

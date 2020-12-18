@@ -214,7 +214,7 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
             pos = view.mapFromScene(pos)
             mouseMove(view.viewport(), pos)
             (_, text), _ = show_text.call_args
-            self.assertIn("(#1) 1.800\n(#2) 1.893", text)
+            self.assertIn("(#1) 1.000\n(#2) 1.000", text)
 
             # test that cache is invalidated when changing averaging mode
             self.widget.roc_averaging = OWROCAnalysis.Threshold
