@@ -32,6 +32,7 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.label_colors = None
         self.zero_diag = True
         self.span = None
+        self.ndecimals = 3
 
     def set_data(self, distances):
         self.beginResetModel()
@@ -85,7 +86,7 @@ class DistanceMatrixModel(QAbstractTableModel):
                 return self.color_for_label(row, 200)
             return
         if role == Qt.DisplayRole:
-            return "{:.3f}".format(self.distances[row, col])
+            return "{:.{}f}".format(self.distances[row, col], self.ndecimals)
         if role == Qt.BackgroundColorRole:
             return self.color_for_cell(row, col)
 
@@ -168,7 +169,7 @@ class TableView(gui.HScrollStepMixin, QTableView):
         if model.span is not None:
             # number of digits (integer part)
             ndigits = int(math.ceil(math.log10(model.span + 1)))
-            ndecimal = 3
+            ndecimal = model.ndecimals
             template = "X" * ndigits + "." + "X" * ndecimal
 
         opt = self.viewOptions()
