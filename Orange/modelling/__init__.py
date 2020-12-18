@@ -11,3 +11,4 @@ from .neural_network import *
 from .randomforest import *
 from .svm import *
 from .tree import *
+from .catgb import *

@@ -20,3 +20,4 @@ from .rules import *
 from .sgd import *
 from .neural_network import *
 from .calibration import *
+from .catgb import *
