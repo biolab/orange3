@@ -164,12 +164,12 @@ class TableView(gui.HScrollStepMixin, QTableView):
         if model is None:  # pragma: no cover
             return -1
         assert isinstance(model, DistanceMatrixModel)
-        template = "00.000"
+        template = "XX.XXX"
         if model.span is not None:
             # number of digits (integer part)
             ndigits = int(math.ceil(math.log10(model.span + 1)))
             ndecimal = 3
-            template = "0" * ndigits + "." + "0" * ndecimal
+            template = "X" * ndigits + "." + "X" * ndecimal
 
         opt = self.viewOptions()
         opt.text = template
@@ -241,6 +241,8 @@ class OWDistanceMatrix(widget.OWWidget):
 
         self.tablemodel = DistanceMatrixModel()
         view = self.tableview = TableView()
+        view.setWordWrap(False)
+        view.setTextElideMode(Qt.ElideNone)
         view.setEditTriggers(QTableView.NoEditTriggers)
         view.setItemDelegate(TableBorderItem())
         view.setModel(self.tablemodel)
