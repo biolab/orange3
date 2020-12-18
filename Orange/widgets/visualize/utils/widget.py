@@ -250,6 +250,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
 
     def colors_changed(self):
         self.graph.update_colors()
+        self._update_opacity_warning()
         self.cb_class_density.setEnabled(self.can_draw_density())
 
     # Labels
@@ -378,6 +379,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             "input data")
         subset_independent = Msg(
             "No subset data instances appear in input data")
+        transparent_subset = Msg(
+            "Increase opacity if subset is difficult to see")
 
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
@@ -473,7 +476,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     @check_sql_input
     def set_subset_data(self, subset):
         self.subset_data = subset
-        self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
         self._handle_subset_data()
@@ -482,6 +484,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             self.setup_plot()
         else:
             self.graph.update_point_props()
+        self._update_opacity_warning()
         self.unconditional_commit()
 
     def _handle_subset_data(self):
@@ -496,6 +499,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
                 self.Warning.subset_independent()
             elif self.subset_indices - ids:
                 self.Warning.subset_not_subset()
+
+    def _update_opacity_warning(self):
+        self.Warning.transparent_subset(
+            shown=self.subset_indices and self.graph.alpha_value < 128)
 
     def set_input_summary(self, data):
         summary = len(data) if data else self.info.NoInput

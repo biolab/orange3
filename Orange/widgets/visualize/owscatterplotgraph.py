@@ -531,7 +531,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
     COLOR_NOT_SUBSET = (128, 128, 128, 0)
     COLOR_SUBSET = (128, 128, 128, 255)
-    COLOR_DEFAULT = (128, 128, 128, 0)
+    COLOR_DEFAULT = (128, 128, 128, 255)
 
     MAX_VISIBLE_LABELS = 500
 
@@ -1048,15 +1048,19 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         """
         color = self.plot_widget.palette().color(OWPalette.Data)
         pen = [_make_pen(color, 1.5)] * self.n_shown  # use a single QPen instance
+
+        # Prepare all brushes; we use the first two or the last
+        brushes = []
+        for c in (self.COLOR_SUBSET, self.COLOR_NOT_SUBSET, self.COLOR_DEFAULT):
+            color = QColor(*c)
+            if color.alpha():
+                color.setAlpha(self.alpha_value)
+            brushes.append(QBrush(color))
+
         if subset is not None:
-            brush = np.where(
-                subset,
-                *(QBrush(QColor(*col))
-                  for col in (self.COLOR_SUBSET, self.COLOR_NOT_SUBSET)))
+            brush = np.where(subset, *brushes[:2])
         else:
-            color = QColor(*self.COLOR_DEFAULT)
-            color.setAlpha(self.alpha_value)
-            brush = [QBrush(color)] * self.n_shown  # use a single QBrush instance
+            brush = brushes[-1:] * self.n_shown  # use a single QBrush instance
         return pen, brush
 
     def _get_continuous_colors(self, c_data, subset):
@@ -1102,7 +1106,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
         if subset is not None:
             brush[:, 3] = 0
-            brush[subset, 3] = 255
+            brush[subset, 3] = self.alpha_value
 
         cached_brushes = {}
         brush = np.array([reuse(cached_brushes, create_brush, *col)
@@ -1133,7 +1137,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         pens = np.array(
             [_make_pen(col.darker(self.DarkerValue), 1.5) for col in colors])
         pen = pens[c_data]
-        if subset is None and self.alpha_value < 255:
+        if self.alpha_value < 255:
             for col in colors:
                 col.setAlpha(self.alpha_value)
         brushes = np.array([QBrush(col) for col in colors])
@@ -1504,7 +1508,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         for color, label, symbol in zip(colors, labels, symbols):
             color = QColor(*color)
             pen = _make_pen(color.darker(self.DarkerValue), 1.5)
-            color.setAlpha(255 if self.subset_is_shown else self.alpha_value)
+            color.setAlpha(self.alpha_value)
             brush = QBrush(color)
             legend.addItem(
                 SymbolItemSample(pen=pen, brush=brush, size=10, symbol=symbol),
