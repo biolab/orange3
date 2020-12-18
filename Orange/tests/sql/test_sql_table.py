@@ -296,6 +296,20 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertEqual(iris.domain.class_vars[0].name, 'iris')
 
     @dbt.run_on(["postgres", "mssql"])
+    def test_meta_type_hints(self):
+        iris = SqlTable(
+            self.conn,
+            self.iris,
+            type_hints=Domain([], metas=[self.IRIS_VARIABLE]),
+        )
+
+        self.assertEqual(len(iris.domain.metas), 1)
+        self.assertEqual(iris.domain.metas[0].name, "iris")
+        np.testing.assert_array_equal(
+            iris.metas.flatten(), [0] * 50 + [2] * 50 + [1] * 50
+        )
+
+    @dbt.run_on(["postgres", "mssql"])
     def test_metas_type_hints(self):
         iris = SqlTable(self.conn, self.iris,
                         type_hints=Domain([], [], metas=[self.IRIS_VARIABLE]))
