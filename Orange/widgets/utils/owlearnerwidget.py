@@ -136,7 +136,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.set_input_summary()
 
         if data is not None and data.domain.class_var is None:
-            self.Error.data_error("Data has no target variable.")
+            self.Error.data_error("Data has no target variable.\n"
+                                  "You can set a target variable with the Select Columns widget.")
             self.data = None
 
         self.update_model()
