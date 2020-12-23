@@ -32,9 +32,9 @@ class TestOWPythonScript(WidgetTest):
                              ("Classifier", self.model),
                              ("Object", "object")):
             self.assertEqual(getattr(self.widget, input_.lower()), {})
-            self.send_signal(input_, data, (1,))
+            self.send_signal(input_, data, 1)
             self.assertEqual(getattr(self.widget, input_.lower()), {1: data})
-            self.send_signal(input_, None, (1,))
+            self.send_signal(input_, None, 1)
             self.assertEqual(getattr(self.widget, input_.lower()), {})
 
     def test_outputs(self):
@@ -45,9 +45,9 @@ class TestOWPythonScript(WidgetTest):
                 ("Classifier", self.model)):
             lsignal = signal.lower()
             self.widget.text.setPlainText("out_{0} = in_{0}".format(lsignal))
-            self.send_signal(signal, data, (1,))
+            self.send_signal(signal, data, 1)
             self.assertIs(self.get_output(signal), data)
-            self.send_signal(signal, None, (1,))
+            self.send_signal(signal, None, 1)
             self.widget.text.setPlainText("print(in_{})".format(lsignal))
             self.widget.execute_button.click()
             self.assertIsNone(self.get_output(signal))
@@ -73,7 +73,7 @@ class TestOWPythonScript(WidgetTest):
                 ("Learner", self.learner),
                 ("Classifier", self.model)):
             lsignal = signal.lower()
-            self.send_signal(signal, data, (1, ))
+            self.send_signal(signal, data, 1)
             self.widget.text.setPlainText("out_{} = 42".format(lsignal))
             self.widget.execute_button.click()
             self.assertEqual(self.get_output(signal), None)
@@ -98,27 +98,27 @@ class TestOWPythonScript(WidgetTest):
         self.assertIsNone(console_locals["in_data"])
         self.assertEqual(console_locals["in_datas"], [])
 
-        self.send_signal("Data", self.iris, (1, ))
+        self.send_signal("Data", self.iris, 1)
         click()
         self.assertIs(console_locals["in_data"], self.iris)
         datas = console_locals["in_datas"]
         self.assertEqual(len(datas), 1)
         self.assertIs(datas[0], self.iris)
 
-        self.send_signal("Data", titanic, (2, ))
+        self.send_signal("Data", titanic, 2)
         click()
         self.assertIsNone(console_locals["in_data"])
         self.assertEqual({id(obj) for obj in console_locals["in_datas"]},
                          {id(self.iris), id(titanic)})
 
-        self.send_signal("Data", None, (2, ))
+        self.send_signal("Data", None, 2)
         click()
         self.assertIs(console_locals["in_data"], self.iris)
         datas = console_locals["in_datas"]
         self.assertEqual(len(datas), 1)
         self.assertIs(datas[0], self.iris)
 
-        self.send_signal("Data", None, (1, ))
+        self.send_signal("Data", None, 1)
         click()
         self.assertIsNone(console_locals["in_data"])
         self.assertEqual(console_locals["in_datas"], [])
@@ -226,7 +226,7 @@ class TestOWPythonScript(WidgetTest):
         self.signal_manager = DummySignalManager()
         widget3 = self.create_widget(OWPythonScript)
 
-        self.send_signal(widget1.Inputs.data, self.iris, (1,), widget=widget1)
+        self.send_signal(widget1.Inputs.data, self.iris, 1, widget=widget1)
         widget1.text.setPlainText("x = 42\n"
                                   "out_data = in_data\n")
         widget1.execute_button.click()
