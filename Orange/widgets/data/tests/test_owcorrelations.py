@@ -377,8 +377,10 @@ class TestKMeansCorrelationHeuristic(unittest.TestCase):
 
     def test_get_clusters_of_attributes(self):
         clusters = self.heuristic.get_clusters_of_attributes()
-        self.assertListEqual([[1, 2, 3, 4, 5, 6, 7], [8], [0]],
-                             [c.instances for c in clusters])
+        # results depend on scikit-learn k-means implementation
+        result = sorted([c.instances for c in clusters])
+        self.assertListEqual([[0], [1, 2, 3, 4, 5, 6, 7], [8]],
+                             result)
 
     def test_get_states(self):
         n_attrs = len(self.data.domain.attributes)
