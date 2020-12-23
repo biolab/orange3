@@ -590,7 +590,6 @@ class OWPythonScript(OWWidget):
         self.splitterState = bytes(self.splitCanvas.saveState())
 
     def handle_input(self, obj, sig_id, signal):
-        sig_id = sig_id[0]
         dic = getattr(self, signal)
         if obj is None:
             if sig_id in dic.keys():
