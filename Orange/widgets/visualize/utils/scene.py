@@ -10,7 +10,7 @@ class UpdateItemsOnSelectGraphicsScene(QGraphicsScene):
 
     Notes
     -----
-    .. note:: I suspect this is completely unncessary, but have not been able
+    .. note:: I suspect this is completely unnecessary, but have not been able
         to find a reasonable way to keep the selection logic inside the actual
         `QGraphicsItem` objects
 
