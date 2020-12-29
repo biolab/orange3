@@ -514,7 +514,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                     return "∞"
 
                 str_val = attribute.str_val(value)
-                if attribute.is_continuous:
+                if attribute.is_continuous and not attribute.is_time:
                     str_val = format_zeros(str_val)
 
                 return str_val
