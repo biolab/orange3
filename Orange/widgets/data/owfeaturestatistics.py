@@ -149,6 +149,10 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         self.n_attributes = self.n_instances = 0
 
         self.__attributes = self.__class_vars = self.__metas = None
+        # sets of variables for fast membership tests
+        self.__attributes_set = set()
+        self.__class_vars_set = set()
+        self.__metas_set = set()
         self.__distributions_cache = {}
 
         no_data = np.array([])
@@ -176,7 +180,9 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         # while we need a 2d array, which `_Y` provides
         self.__class_vars = self.__filter_attributes(domain.class_vars, self.table._Y)  # pylint: disable=protected-access
         self.__metas = self.__filter_attributes(domain.metas, self.table.metas)
-
+        self.__attributes_set = set(self.__metas[0])
+        self.__class_vars_set = set(self.__class_vars[0])
+        self.__metas_set = set(self.__metas[0])
         self.n_attributes = len(self.variables)
         self.n_instances = len(data)
 
@@ -191,6 +197,9 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         self.__attributes = (np.array([]), np.array([]))
         self.__class_vars = (np.array([]), np.array([]))
         self.__metas = (np.array([]), np.array([]))
+        self.__attributes_set = set()
+        self.__class_vars_set = set()
+        self.__metas_set = set()
         self.__distributions_cache.clear()
         self.endResetModel()
 
@@ -471,11 +480,11 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
     def data(self, index, role):
         # type: (QModelIndex, Qt.ItemDataRole) -> Any
         def background():
-            if attribute in self.domain.attributes:
+            if attribute in self.__attributes_set:
                 return self.COLOR_FOR_ROLE[self.ATTRIBUTE]
-            if attribute in self.domain.metas:
+            if attribute in self.__metas_set:
                 return self.COLOR_FOR_ROLE[self.META]
-            if attribute in self.domain.class_vars:
+            if attribute in self.__class_vars_set:
                 return self.COLOR_FOR_ROLE[self.CLASS_VAR]
             return None
 
@@ -505,7 +514,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                     return "∞"
 
                 str_val = attribute.str_val(value)
-                if attribute.is_continuous:
+                if attribute.is_continuous and not attribute.is_time:
                     str_val = format_zeros(str_val)
 
                 return str_val
