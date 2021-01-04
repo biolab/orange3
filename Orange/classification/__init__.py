@@ -20,6 +20,12 @@ from .rules import *
 from .sgd import *
 from .neural_network import *
 from .calibration import *
-from .catgb import *
+try:
+    from .catgb import *
+except ModuleNotFoundError:
+    pass
 from .gb import *
-from .xgb import *
+try:
+    from .xgb import *
+except ModuleNotFoundError:
+    pass

@@ -22,5 +22,6 @@ class _FeatureScorerMixin(LearnerScorer):
 
 
 class GBLearner(SklFitter, _FeatureScorerMixin):
+    name = "Gradient Boosting"
     __fits__ = {"classification": GBClassifier,
                 "regression": GBRegressor}

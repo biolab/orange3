@@ -22,5 +22,6 @@ class _FeatureScorerMixin(LearnerScorer):
 
 
 class CatGBLearner(SklFitter, _FeatureScorerMixin):
+    name = "Gradient Boosting (catboost)"
     __fits__ = {"classification": CatGBClassifier,
                 "regression": CatGBRegressor}

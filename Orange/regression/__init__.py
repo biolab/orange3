@@ -14,6 +14,12 @@ from .random_forest import *
 from .tree import *
 from .neural_network import *
 from ..classification.simple_tree import *
-from .catgb import *
+try:
+    from .catgb import *
+except ModuleNotFoundError:
+    pass
 from .gb import *
-from .xgb import *
+try:
+    from .xgb import *
+except ModuleNotFoundError:
+    pass

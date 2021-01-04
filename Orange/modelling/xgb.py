@@ -23,10 +23,12 @@ class _FeatureScorerMixin(LearnerScorer):
 
 
 class XGBLearner(SklFitter, _FeatureScorerMixin):
+    name = "Extreme Gradient Boosting (xgboost)"
     __fits__ = {"classification": XGBClassifier,
                 "regression": XGBRegressor}
 
 
 class XGBRFLearner(SklFitter, _FeatureScorerMixin):
+    name = "Extreme Gradient Boosting Random Forest (xgboost)"
     __fits__ = {"classification": XGBRFClassifier,
                 "regression": XGBRFRegressor}
