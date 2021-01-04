@@ -12,3 +12,4 @@ from .randomforest import *
 from .svm import *
 from .tree import *
 from .catgb import *
+from .gb import *
