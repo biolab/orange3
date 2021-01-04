@@ -22,3 +22,4 @@ from .neural_network import *
 from .calibration import *
 from .catgb import *
 from .gb import *
+from .xgb import *

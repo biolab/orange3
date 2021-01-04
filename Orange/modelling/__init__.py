@@ -13,3 +13,4 @@ from .svm import *
 from .tree import *
 from .catgb import *
 from .gb import *
+from .xgb import *

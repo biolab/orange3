@@ -16,3 +16,4 @@ from .neural_network import *
 from ..classification.simple_tree import *
 from .catgb import *
 from .gb import *
+from .xgb import *

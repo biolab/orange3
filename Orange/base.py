@@ -3,7 +3,7 @@ import itertools
 from collections.abc import Iterable
 import re
 import warnings
-from typing import Callable
+from typing import Callable, Dict
 
 import numpy as np
 import scipy
@@ -768,3 +768,20 @@ class CatGBBaseLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+
+class XGBBase(SklLearner):
+    """Base class for xgboost (classification and regression) learners """
+    preprocessors = default_preprocessors = [
+        HasClass(),
+        Continuize(),
+        RemoveNaNColumns(),
+    ]
+
+    def __init__(self, preprocessors=None, **kwargs):
+        super().__init__(preprocessors=preprocessors)
+        self.params = kwargs
+
+    @SklLearner.params.setter
+    def params(self, values: Dict):
+        self._params = values
