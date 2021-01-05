@@ -26,6 +26,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Install system dependencies on MacOS
+        run: brew install libomp
       - name: Install Tox
         run: pip install tox
 
