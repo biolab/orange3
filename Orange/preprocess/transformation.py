@@ -17,6 +17,12 @@ class Transformation(Reprable):
         """
         self.variable = variable
 
+        if self.variable is not None:
+            if self.variable.is_primitive():
+                self.need_domain = Domain([self.variable])
+            else:
+                self.need_domain = Domain([], metas=[self.variable])
+
     def __call__(self, data):
         """
         Return transformed column from the data by extracting the column view
@@ -25,13 +31,10 @@ class Transformation(Reprable):
         inst = isinstance(data, Instance)
         if inst:
             data = Table.from_list(data.domain, [data])
+        data = data.transform(self.need_domain)
         if self.variable.is_primitive():
-            domain = Domain([self.variable])
-            data = Table.from_table(domain, data)
             col = data.X
         else:
-            domain = Domain([], metas=[self.variable])
-            data = Table.from_table(domain, data)
             col = data.metas
         if not sp.issparse(col):
             col = col.squeeze(axis=1)
