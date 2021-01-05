@@ -705,19 +705,6 @@ class OWCSVFileImport(widget.OWWidget):
             "…", icon=self.style().standardIcon(QStyle.SP_DirOpenIcon),
             toolTip="Browse filesystem", autoDefault=False,
         )
-        # A button drop down menu with selection of explicit workflow dir
-        # relative import. This is only enabled when 'basedir' workflow env
-        # is set. XXX: Always use menu, disable Import relative... action?
-        self.browse_menu = menu = QMenu(self.browse_button)
-        ac = menu.addAction("Import any file…")
-        ac.triggered.connect(self.browse)
-
-        ac = menu.addAction("Import relative to workflow file…")
-        ac.setToolTip("Import a file within the workflow file directory")
-        ac.triggered.connect(lambda: self.browse_relative("basedir"))
-
-        if "basedir" in self._replacements():
-            self.browse_button.setMenu(menu)
 
         self.browse_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.browse_button.clicked.connect(self.browse)
@@ -796,7 +783,6 @@ class OWCSVFileImport(widget.OWWidget):
     def workflowEnvChanged(self, key, value, oldvalue):
         super().workflowEnvChanged(key, value, oldvalue)
         if key == "basedir":
-            self.browse_button.setMenu(self.browse_menu)
             self.import_items_model.setReplacementEnv(self._replacements())
 
     @Slot(int)
@@ -916,32 +902,27 @@ class OWCSVFileImport(widget.OWWidget):
         mb.setAttribute(Qt.WA_DeleteOnClose)
         return mb
 
-    @Slot(str)
-    def browse_relative(self, prefixname):
-        path = self._replacements().get(prefixname)
-        self.browse(prefixname=prefixname, directory=path)
-
     @Slot()
     def browse(self, prefixname=None, directory=None):
         """
         Open a file dialog and select a user specified file.
         """
         dlg = self._browse_dialog()
-        if directory is not None:
+
+        if "basedir" in self._replacements():
+            directory = self._replacements().get("basedir")
             dlg.setDirectory(directory)
+        else:
+            directory = ""
 
         status = dlg.exec()
         dlg.deleteLater()
         if status == QFileDialog.Accepted:
             selected_filter = dlg.selectedFileFormat()
             path = dlg.selectedFiles()[0]
-            if prefixname:
-                _prefixpath = self._replacements().get(prefixname, "")
-                if not isprefixed(_prefixpath, path):
-                    mb = self._path_must_be_relative_mb(_prefixpath)
-                    mb.show()
-                    return
-                varpath = VarPath(prefixname, os.path.relpath(path, _prefixpath))
+            assert os.path.isfile(path)
+            if directory and os.path.commonprefix([directory, path]) == directory:
+                varpath = VarPath("basedir", os.path.relpath(path, directory))
             else:
                 varpath = PathItem.AbsPath(path)
 
