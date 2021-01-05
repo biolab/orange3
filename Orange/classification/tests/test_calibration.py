@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 from Orange.base import Model
+from Orange.classification import LogisticRegressionLearner
 from Orange.classification.calibration import \
     ThresholdLearner, ThresholdClassifier, \
     CalibratedLearner, CalibratedClassifier
@@ -64,6 +65,18 @@ class TestThresholdClassifier(unittest.TestCase):
         base_model.domain.class_var = Mock()
         base_model.domain.class_var.is_discrete = False
         self.assertRaises(ValueError, ThresholdClassifier, base_model, 0.5)
+
+    def test_np_data(self):
+        """
+        Test ThresholdModel with numpy data.
+        When passing numpy data to model they should be already
+        transformed to models domain since model do not know how to do it.
+        """
+        data = Table('heart_disease')
+        base_learner = LogisticRegressionLearner()
+        model = ThresholdLearner(base_learner)(data)
+        res = model(model.data_to_model_domain(data).X)
+        self.assertTupleEqual((len(data),), res.shape)
 
 
 class TestThresholdLearner(unittest.TestCase):
@@ -169,6 +182,18 @@ class TestCalibratedClassifier(unittest.TestCase):
         calprobs = self.model.calibrated_probs(self.probs)
         np.testing.assert_almost_equal(calprobs, expprobs)
 
+    def test_np_data(self):
+        """
+        Test CalibratedClassifier with numpy data.
+        When passing numpy data to model they should be already
+        transformed to models domain since model do not know how to do it.
+        """
+        data = Table('heart_disease')
+        base_learner = LogisticRegressionLearner()
+        model = CalibratedLearner(base_learner)(data)
+        res = model(model.data_to_model_domain(data).X)
+        self.assertTupleEqual((len(data),), res.shape)
+
 
 class TestCalibratedLearner(unittest.TestCase):
     @patch("Orange.classification.calibration._SigmoidCalibration.fit")
@@ -207,3 +232,7 @@ class TestCalibratedLearner(unittest.TestCase):
         for call, cls_probs in zip(sigmoid_fit.call_args_list,
                                    res.probabilities[0].T):
             np.testing.assert_equal(call[0][0], cls_probs)
+
+
+if __name__ == "__main__":
+    unittest.main()
