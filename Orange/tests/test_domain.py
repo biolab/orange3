@@ -5,7 +5,6 @@ from time import time
 from numbers import Real
 from itertools import starmap, chain
 import unittest
-import pickle
 
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -444,11 +443,6 @@ class TestDomainInit(unittest.TestCase):
         pre1 = Continuize()(Impute()(table))
         pre2 = table.transform(pre1.domain)
         np.testing.assert_almost_equal(pre1.X, pre2.X)
-
-    def test_unpickling_recreates_known_domains(self):
-        domain = Domain([])
-        unpickled_domain = pickle.loads(pickle.dumps(domain))
-        self.assertTrue(hasattr(unpickled_domain, '_known_domains'))
 
     def test_different_domains_with_same_attributes_are_equal(self):
         domain1 = Domain([])
