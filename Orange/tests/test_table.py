@@ -1962,7 +1962,7 @@ class TableIndexingTests(TableTests):
 
         # single element
         self.assertEqual(_optimize_indices([1], 2), slice(1, 2, 1))
-        np.testing.assert_equal(_optimize_indices([1], 1), [1])
+        self.assertEqual(_optimize_indices([-2], 5), slice(-2, -3, -1))
 
 
 class TableElementAssignmentTest(TableTests):

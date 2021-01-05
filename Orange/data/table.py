@@ -2025,6 +2025,13 @@ def _optimize_indices(indices, maxlen):
     if indices is ...:
         return slice(None, None, 1)
 
+    # a very common case for column selection
+    if len(indices) == 1 and not isinstance(indices[0], bool):
+        if indices[0] >= 0:
+            return slice(indices[0], indices[0] + 1, 1)
+        else:
+            return slice(indices[0], indices[0] - 1, -1)
+
     if len(indices) >= 1:
         indices = np.asarray(indices)
         if indices.dtype != bool:
