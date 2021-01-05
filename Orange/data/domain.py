@@ -175,8 +175,7 @@ class Domain:
         self._known_domains = weakref.WeakKeyDictionary()
         self._last_conversion = None
 
-        # Precompute hash, which is frequently used in domain conversions.
-        self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
+        self._hash = None  # cache for __hash__()
 
     # noinspection PyPep8Naming
     @classmethod
@@ -516,4 +515,6 @@ class Domain:
                 self.metas == other.metas)
 
     def __hash__(self):
+        if self._hash is None:
+            self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
         return self._hash
