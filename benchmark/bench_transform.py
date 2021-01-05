@@ -71,11 +71,11 @@ class BenchTransform(Benchmark):
         domain = self.table.domain
         for t in transforms:
             if t == "single":
-                call_cv = Mock()
+                call_cv = None
                 domain = preprocess_domain_single(domain, call_cv)
                 self.callbacks.append((call_cv,))
             elif t == "shared":
-                call_cv, call_shared = Mock(), Mock()
+                call_cv, call_shared = None, None
                 domain = preprocess_domain_shared(domain, call_cv, call_shared)
                 self.callbacks.append((call_cv, call_shared))
             else:

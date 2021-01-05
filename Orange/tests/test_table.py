@@ -2752,7 +2752,8 @@ class PreprocessComputeValue:
         self.callback = callback
 
     def __call__(self, data_):
-        self.callback(data_)
+        if self.callback:
+            self.callback(data_)
         transformed = data_.transform(self.domain)
         return transformed.X[:, 0] * 2
 
