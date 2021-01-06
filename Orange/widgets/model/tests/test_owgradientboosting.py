@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, Mock
+import sys
 
 from Orange.modelling import GBLearner
 from Orange.preprocess.score import Scorer
@@ -174,19 +175,26 @@ class TestOWGradientBoosting(WidgetTest, WidgetLearnerTestMixin):
     def test_methods(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         method_cb = self.widget.controls.method_index
-        for i, (cls, _, __) in enumerate(LearnerItemModel.LEARNERS):
+        for i, (cls, _, _) in enumerate(LearnerItemModel.LEARNERS):
             if cls is None:
                 continue
             simulate.combobox_activate_index(method_cb, i)
             self.widget.apply_button.button.click()
             self.assertIsInstance(self.widget.learner, cls)
 
-    @patch("Orange.widgets.model.owgradientboosting.CatGBLearnerEditor."
-           "learner_class", None)
     def test_missing_lib(self):
-        widget = self.create_widget(OWGradientBoosting,
-                                    stored_settings={"method_index": 3})
-        self.assertEqual(widget.method_index, 0)
+        modules = {k: v for k, v in sys.modules.items()
+                   if "orange" not in k.lower()}  # retain built-ins
+        modules["xgboost"] = None
+        modules["catboost"] = None
+        # pylint: disable=reimported,redefined-outer-name
+        # pylint: disable=import-outside-toplevel
+        with patch.dict(sys.modules, modules, clear=True):
+            from Orange.widgets.model.owgradientboosting import \
+                OWGradientBoosting
+            widget = self.create_widget(OWGradientBoosting,
+                                        stored_settings={"method_index": 3})
+            self.assertEqual(widget.method_index, 0)
 
 
 if __name__ == "__main__":

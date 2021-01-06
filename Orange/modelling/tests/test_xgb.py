@@ -1,4 +1,6 @@
+import sys
 import unittest
+from unittest.mock import patch
 from typing import Callable, Union
 
 from Orange.data import Table
@@ -49,6 +51,18 @@ class TestXGB(unittest.TestCase):
         booster = learner_class()
         booster.score(self.iris)
         booster.score(self.housing)
+
+    def test_import_missing_library(self):
+        modules = {k: v for k, v in sys.modules.items()
+                   if "orange" not in k.lower()}  # retain built-ins
+        modules["xgboost"] = None
+        # pylint: disable=reimported,redefined-outer-name
+        # pylint: disable=unused-import,import-outside-toplevel
+        with patch.dict(sys.modules, modules, clear=True):
+            def import_():
+                from Orange.modelling import XGBLearner
+
+            self.assertRaises(ImportError, import_)
 
 
 if __name__ == "__main__":
