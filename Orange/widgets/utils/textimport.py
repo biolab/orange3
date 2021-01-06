@@ -1057,6 +1057,8 @@ class CSVImportWidget(QWidget):
         menu.popup(pos)
 
     def __hheader_context_menu(self, pos):
+        col = self.dataview.horizontalHeader().logicalIndexAt(pos)
+        self.dataview.selectColumn(col)
         cols = self.dataview.selectionModel().selectedColumns(0)
         cols = [idx.column() for idx in cols]
         menu = self.__generate_type_columns_menu(cols)
