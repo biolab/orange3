@@ -20,6 +20,8 @@ import gzip
 import lzma
 import bz2
 import zipfile
+
+from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from itertools import chain
 
 from xml.sax.saxutils import escape
@@ -40,8 +42,9 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtWidgets import (
     QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
-    QVBoxLayout, QSizePolicy, QStyle, QFileIconProvider, QFileDialog,
-    QApplication, QMessageBox, QTextBrowser, QMenu
+    QVBoxLayout, QSizePolicy, QFileIconProvider, QFileDialog,
+    QApplication, QMessageBox, QTextBrowser,
+    QStyle, QMenu, QHBoxLayout, QTableView, QHeaderView
 )
 from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
@@ -56,6 +59,7 @@ from Orange.data import Table
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.data.owtable import DataTableView, RichTableModel, is_sortable, TableSliceProxy
 from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get, qname
@@ -666,9 +670,9 @@ class OWCSVFileImport(widget.OWWidget):
 
     MaxHistorySize = 50
 
-    want_main_area = False
+    want_main_area = True
     buttons_area_orientation = None
-    resizing_enabled = False
+    resizing_enabled = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
@@ -682,35 +686,67 @@ class OWCSVFileImport(widget.OWWidget):
 
         self.data = None
 
-        grid = QGridLayout()
         self.controlArea.layout().setSpacing(-1)  # reset spacing
 
         #############
         # File select
         #############
-        grid.addWidget(QLabel("File:", self), 0, 0, 1, 1)
+        box = QHBoxLayout()
+        box.addWidget(QLabel("File:", self))
 
         self.import_items_model = VarPathItemModel(self)
         self.import_items_model.setReplacementEnv(self._replacements())
         self.recent_combo = ItemStyledComboBox(
-            self, objectName="recent-combo", toolTip="Recent files.",
+            self, objectName="recent-combo",
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
-            minimumContentsLength=16, placeholderText="Recent files…"
+            minimumContentsLength=16
         )
         self.recent_combo.setModel(self.import_items_model)
         self.recent_combo.activated.connect(self.activate_recent)
         self.recent_combo.setSizePolicy(
             QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+
         self.browse_button = QPushButton(
             "…", icon=self.style().standardIcon(QStyle.SP_DirOpenIcon),
             toolTip="Browse filesystem", autoDefault=False,
         )
+        # A button drop down menu with selection of explicit workflow dir
+        # relative import. This is only enabled when 'basedir' workflow env
+        # is set. XXX: Always use menu, disable Import relative... action?
+        self.browse_menu = menu = QMenu(self.browse_button)
+        ac = menu.addAction("Import any file…")
+        ac.triggered.connect(self.browse)
+
+        ac = menu.addAction("Import relative to workflow file…")
+        ac.setToolTip("Import a file within the workflow file directory")
+        ac.triggered.connect(lambda: self.browse_relative("basedir"))
+        if "basedir" in self._replacements():
+            self.browse_button.setMenu(menu)
 
         self.browse_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.browse_button.clicked.connect(self.browse)
-        grid.addWidget(self.recent_combo, 0, 1, 1, 1)
-        grid.addWidget(self.browse_button, 0, 2, 1, 1)
-        self.controlArea.layout().addLayout(grid)
+
+        #########
+        # Buttons
+        #########
+
+        self.import_options_button = QPushButton(
+            "Import Options", enabled=False, autoDefault=False,
+            clicked=self._activate_import_dialog
+        )
+
+        self.load_button = QPushButton(
+            "Load", enabled=False, default=True,
+            clicked=self.__committimer.start
+        )
+
+        box.addWidget(self.recent_combo)
+        box.addWidget(self.browse_button)
+        self.controlArea.layout().addLayout(box)
+        box = QHBoxLayout()
+        box.addWidget(self.import_options_button)
+        box.addWidget(self.load_button)
+        self.controlArea.layout().addLayout(box)
 
         ###########
         # Info text
@@ -726,7 +762,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.setMinimumHeight(self.fontMetrics().ascent() * 2 + 4)
         self.summary_text.viewport().setAutoFillBackground(False)
         box.layout().addWidget(self.summary_text)
-        QTimer.singleShot(0, lambda: self._set_summary_text(None))
+        self._set_summary_text(None)
 
         self.info.set_output_summary(self.info.NoOutput)
 
@@ -735,46 +771,46 @@ class OWCSVFileImport(widget.OWWidget):
         ###############
         box = gui.widgetBox(self.controlArea, "Columns (click to edit)")
         self.domain_editor = DomainEditor(self)
+        self.domain_editor.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
+
+        # TODO when File is removed, put these changes into domain editor
+        self.domain_editor.verticalHeader().hide()
+        self.domain_editor.setColumnHidden(3, True)
+
         self.editor_model = self.domain_editor.model()
         box.layout().addWidget(self.domain_editor)
 
         self.editor_model.dataChanged.connect(self.__handle_domain_edit)
 
-        #########
-        # Buttons
-        #########
-        button_box = QDialogButtonBox(
-            orientation=Qt.Horizontal,
-            standardButtons=QDialogButtonBox.Cancel | QDialogButtonBox.Retry
-        )
-        self.load_button = b = button_box.button(QDialogButtonBox.Retry)
-        b.setText("Load")
-        b.clicked.connect(self.__committimer.start)
-        b.setEnabled(False)
-        b.setDefault(True)
+        ############
+        # Table view
+        ############
 
-        self.cancel_button = b = button_box.button(QDialogButtonBox.Cancel)
-        b.clicked.connect(self.cancel)
-        b.setEnabled(False)
-        b.setAutoDefault(False)
+        # TODO consolidate the following 20 lines, they're copied from OWTable
+        self.table_view = view = DataTableView()
+        self.mainArea.layout().addWidget(view)
 
-        self.import_options_button = QPushButton(
-            "Import Options…", enabled=False, autoDefault=False,
-            clicked=self._activate_import_dialog
-        )
+        view.setSortingEnabled(True)
+        view.setItemDelegate(TableDataDelegate(view))
+        view.setSelectionBehavior(QTableView.SelectRows)
 
-        def update_buttons(cbindex):
-            self.import_options_button.setEnabled(cbindex != -1)
-            self.load_button.setEnabled(cbindex != -1)
-        self.recent_combo.currentIndexChanged.connect(update_buttons)
+        header = view.horizontalHeader()
+        header.setSectionsMovable(True)
+        header.setSectionsClickable(True)
+        header.setSortIndicatorShown(True)
+        header.setSortIndicator(-1, Qt.AscendingOrder)
 
-        button_box.addButton(
-            self.import_options_button, QDialogButtonBox.ActionRole
-        )
-        button_box.setStyleSheet(
-            "button-layout: {:d};".format(QDialogButtonBox.MacLayout)
-        )
-        self.controlArea.layout().addWidget(button_box)
+        # QHeaderView does not 'reset' the model sort column,
+        # because there is no guaranty (requirement) that the
+        # models understand the -1 sort column.
+        def sort_reset(index, order):
+            if view.model() is not None and index == -1:
+                view.model().sort(index, order)
+
+        header.sortIndicatorChanged.connect(sort_reset)
+
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
 
         self._restoreState()
@@ -1149,7 +1185,6 @@ class OWCSVFileImport(widget.OWWidget):
         self.progressBarInit()
         self.setBlocking(True)
         self.setStatusMessage("Running")
-        self.cancel_button.setEnabled(True)
         self.load_button.setText("Restart")
         path = self.current_item().path()
         self.Error.clear()
@@ -1162,7 +1197,6 @@ class OWCSVFileImport(widget.OWWidget):
         self.progressBarFinished()
         self.setStatusMessage("")
         self.setBlocking(False)
-        self.cancel_button.setEnabled(False)
         self.load_button.setText("Reload")
         self.domain_editor.setEnabled(True)
 
@@ -1239,7 +1273,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.Outputs.data_frame.send(df)
         self.Outputs.data.send(table)
         
-        self._update_status_messages(table)
+        self._update_table(table)
 
     def __handle_domain_edit(self):
         if self.data is None:
@@ -1262,17 +1296,65 @@ class OWCSVFileImport(widget.OWWidget):
             if renamed:
                 self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
         self.Outputs.data.send(table)
-        self._update_status_messages(table)
+        self._update_table(table)
 
     def _inspect_discrete_variables(self, domain):
         for var in chain(domain.variables, domain.metas):
             if var.is_discrete and len(var.values) > 100:
                 self.Warning.performance_warning()
 
-    def _update_status_messages(self, data):
+    def _update_table(self, data):
+        # TODO consolidate, most of this is copied from OWTable
+        view = self.table_view
         if data is None:
+            view.setModel(None)
             return
 
+        datamodel = RichTableModel(data)
+        rowcount = data.approx_len()
+        view.setItemDelegate(TableDataDelegate(view))
+
+        # Enable/disable view sorting based on data's type
+        view.setSortingEnabled(is_sortable(data))
+        header = view.horizontalHeader()
+        header.setSectionsClickable(is_sortable(data))
+        header.setSortIndicatorShown(is_sortable(data))
+
+        view.setModel(datamodel)
+
+        vheader = view.verticalHeader()
+        option = view.viewOptions()
+        size = view.style().sizeFromContents(
+            QStyle.CT_ItemViewItem, option,
+            QSize(20, 20), view)
+
+        vheader.setDefaultSectionSize(size.height() + 2)
+        vheader.setMinimumSectionSize(5)
+        vheader.setSectionResizeMode(QHeaderView.Fixed)
+
+        # Limit the number of rows displayed in the QTableView
+        # (workaround for QTBUG-18490 / QTBUG-28631)
+        maxrows = (2 ** 31 - 1) // (vheader.defaultSectionSize() + 2)
+        if rowcount > maxrows:
+            sliceproxy = TableSliceProxy(
+                parent=view, rowSlice=slice(0, maxrows))
+            sliceproxy.setSourceModel(datamodel)
+            # First reset the view (without this the header view retains
+            # it's state - at this point invalid/broken)
+            view.setModel(None)
+            view.setModel(sliceproxy)
+
+        assert view.model().rowCount() <= maxrows
+        assert vheader.sectionSize(0) > 1 or datamodel.rowCount() == 0
+
+        model = view.model()
+        if isinstance(model, TableSliceProxy):
+            model = model.sourceModel()
+
+        model.setRichHeaderFlags(RichTableModel.Name)
+        # self.set_corner_text(view, "")
+
+        # update status messages
         def pluralize(seq):
             return "s" if len(seq) != 1 else ""
 
