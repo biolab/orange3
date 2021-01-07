@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+
 from Orange.classification import CatGBClassifier
 from Orange.data import Table
 from Orange.evaluation import CrossValidation, CA
@@ -13,7 +15,7 @@ class TestCatGBClassifier(unittest.TestCase):
 
     def test_GBTrees(self):
         booster = CatGBClassifier()
-        cv = CrossValidation(k=10)
+        cv = CrossValidation(k=3)
         results = cv(self.iris, [booster])
         ca = CA(results)
         self.assertGreater(ca, 0.9)
@@ -64,7 +66,7 @@ class TestCatGBClassifier(unittest.TestCase):
         data = Table("heart_disease")
         booster = CatGBClassifier()
         model = booster(data)
-        params = model.skl_model.get_params()
+        params = model.cat_model.get_params()
         del params["train_dir"]
         self.assertDictEqual(params, {"verbose": False,
                                       "allow_writing_files": False})
@@ -74,7 +76,7 @@ class TestCatGBClassifier(unittest.TestCase):
         self.assertEqual(booster.params["n_estimators"], 42)
         self.assertEqual(booster.params["max_depth"], 4)
         model = booster(self.iris)
-        params = model.skl_model.get_params()
+        params = model.cat_model.get_params()
         self.assertEqual(params["n_estimators"], 42)
         self.assertEqual(params["max_depth"], 4)
 
@@ -82,6 +84,41 @@ class TestCatGBClassifier(unittest.TestCase):
         booster = CatGBClassifier()
         self.assertIsInstance(booster, Scorer)
         booster.score(self.iris)
+
+    def test_discrete_variables(self):
+        data = Table("zoo")
+        booster = CatGBClassifier()
+        cv = CrossValidation(k=3)
+        results = cv(data, [booster])
+        ca = CA(results)
+        self.assertGreater(ca, 0.9)
+        self.assertLess(ca, 0.99)
+
+        data = Table("titanic")
+        booster = CatGBClassifier()
+        cv = CrossValidation(k=3)
+        results = cv(data, [booster])
+        ca = CA(results)
+        self.assertGreater(ca, 0.75)
+        self.assertLess(ca, 0.99)
+
+    def test_missing_values(self):
+        data = Table("heart_disease")
+        booster = CatGBClassifier()
+        cv = CrossValidation(k=3)
+        results = cv(data, [booster])
+        ca = CA(results)
+        self.assertGreater(ca, 0.8)
+        self.assertLess(ca, 0.99)
+
+    def test_retain_x(self):
+        data = Table("heart_disease")
+        X = data.X.copy()
+        booster = CatGBClassifier()
+        model = booster(data)
+        model(data)
+        np.testing.assert_array_equal(data.X, X)
+        self.assertEqual(data.X.dtype, X.dtype)
 
 
 if __name__ == "__main__":

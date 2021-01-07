@@ -654,11 +654,43 @@ class NNBase:
         self.params = vars()
 
 
-class CatGBBaseLearner(SklLearner):
-    """ Base class for catboost (classification and regression) learners """
+class CatGBModel(Model, metaclass=WrapperMeta):
+    def __init__(self, cat_model, cat_features, domain):
+        super().__init__(domain)
+        self.cat_model = cat_model
+        self.cat_features = cat_features
+
+    def predict(self, X):
+        if self.cat_features:
+            X = X.astype(str)
+        value = self.cat_model.predict(X).flatten()
+        if hasattr(self.cat_model, "predict_proba"):
+            probs = self.cat_model.predict_proba(X)
+            return value, probs
+        return value
+
+    def __repr__(self):
+        # Params represented as a comment because not passed into constructor
+        return super().__repr__() + '  # params=' + repr(self.params)
+
+
+class CatGBBaseLearner(Learner, metaclass=WrapperMeta):
+    """
+    ${skldoc}
+    Additional Orange parameters
+
+    preprocessors : list, optional
+        An ordered list of preprocessors applied to data before
+        training or testing.
+        Defaults to
+        `[RemoveNaNClasses(), RemoveNaNColumns()]`
+    """
+    supports_weights = True
+    __wraps__ = None
+    __returns__ = CatGBModel
+    _params = {}
     preprocessors = default_preprocessors = [
         HasClass(),
-        Continuize(),
         RemoveNaNColumns(),
     ]
 
@@ -768,6 +800,47 @@ class CatGBBaseLearner(SklLearner):
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+    @property
+    def params(self):
+        return self._params
+
+    @params.setter
+    def params(self, value):
+        self._params = self._get_wrapper_params(value)
+
+    def _get_wrapper_params(self, values):
+        spec = list(inspect.signature(
+            self.__wraps__.__init__).parameters.keys())
+        return {name: values[name] for name in spec[1:] if name in values}
+
+    def __call__(self, data, progress_callback=None):
+        m = super().__call__(data, progress_callback)
+        m.params = self.params
+        return m
+
+    def fit_storage(self, data: Table):
+        domain, X, Y, W = data.domain, data.X, data.Y.reshape(-1), None
+        if self.supports_weights and data.has_weights():
+            W = data.W.reshape(-1)
+        # pylint: disable=not-callable
+        clf = self.__wraps__(**self.params)
+        cat_features = [i for i, attr in enumerate(domain.attributes)
+                        if attr.is_discrete]
+        if cat_features:
+            X = X.astype(str)
+        cat_model = clf.fit(X, Y, cat_features=cat_features, sample_weight=W)
+        return self.__returns__(cat_model, cat_features, domain)
+
+    def __getattr__(self, item):
+        try:
+            return self.params[item]
+        except (KeyError, AttributeError):
+            raise AttributeError(item) from None
+
+    def __dir__(self):
+        dd = super().__dir__()
+        return list(sorted(set(dd) | set(self.params.keys())))
 
 
 class XGBBase(SklLearner):

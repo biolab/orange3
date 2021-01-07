@@ -18,7 +18,7 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, data: Table) -> Tuple[np.ndarray, Tuple[Variable]]:
         model: CatGBBaseLearner = self.get_learner(data)(data)
-        return model.skl_model.feature_importances_, model.domain.attributes
+        return model.cat_model.feature_importances_, model.domain.attributes
 
 
 class CatGBLearner(SklFitter, _FeatureScorerMixin):

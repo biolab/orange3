@@ -5,7 +5,7 @@ import numpy as np
 import catboost
 
 from Orange.base import CatGBBaseLearner
-from Orange.regression import Learner, SklModel
+from Orange.regression import Learner
 from Orange.data import Variable, ContinuousVariable, Table
 from Orange.preprocess.score import LearnerScorer
 
@@ -18,14 +18,8 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, data: Table) -> Tuple[np.ndarray, Tuple[Variable]]:
         model: CatGBBaseLearner = self(data)
-        return model.skl_model.feature_importances_, model.domain.attributes
-
-
-class CatGBRegModel(SklModel):
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        return super().predict(X).flatten()
+        return model.cat_model.feature_importances_, model.domain.attributes
 
 
 class CatGBRegressor(CatGBBaseLearner, Learner, _FeatureScorerMixin):
     __wraps__ = catboost.CatBoostRegressor
-    __returns__ = CatGBRegModel

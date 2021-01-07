@@ -49,7 +49,7 @@ class TestCatGBRegressor(unittest.TestCase):
     def test_default_params(self):
         booster = CatGBRegressor()
         model = booster(self.housing)
-        params = model.skl_model.get_params()
+        params = model.cat_model.get_params()
         del params["train_dir"]
         self.assertDictEqual(params, {"verbose": False,
                                       "allow_writing_files": False})
@@ -59,7 +59,7 @@ class TestCatGBRegressor(unittest.TestCase):
         self.assertEqual(booster.params["n_estimators"], 42)
         self.assertEqual(booster.params["max_depth"], 4)
         model = booster(self.housing)
-        params = model.skl_model.get_params()
+        params = model.cat_model.get_params()
         self.assertEqual(params["n_estimators"], 42)
         self.assertEqual(params["max_depth"], 4)
 

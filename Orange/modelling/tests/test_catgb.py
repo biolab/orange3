@@ -30,7 +30,7 @@ class TestCatGBLearner(unittest.TestCase):
         self.assertEqual(booster.get_params(self.iris)["max_depth"], 4)
         self.assertEqual(booster.get_params(self.housing)["max_depth"], 4)
         model = booster(self.housing)
-        params = model.skl_model.get_params()
+        params = model.cat_model.get_params()
         self.assertEqual(params["n_estimators"], 42)
         self.assertEqual(params["max_depth"], 4)
 
