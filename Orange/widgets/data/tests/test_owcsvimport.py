@@ -359,6 +359,24 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertEqual(item[0], cur.varPath())
         self.assertEqual(item[1].as_dict(), cur.options().as_dict())
 
+    def test_unsafe_cast_warning(self):
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-regions.tab")
+
+        w = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+            stored_settings={
+                "_session_items": [
+                    (path, self.data_regions_options.as_dict())
+                ]
+            }
+        )
+        w.activate_recent(0)
+        self.process_events(until=lambda: w.data is not None)
+        index = w.domain_editor.model().index(0, 1)
+        w.domain_editor.model().setData(index, 'text')
+        self.assertTrue(w.Warning.numeric_cast.is_shown())
+
 
 class TestImportDialog(GuiTest):
     @staticmethod
