@@ -27,5 +27,5 @@ except ModuleNotFoundError:
 from .gb import *
 try:
     from .xgb import *
-except ModuleNotFoundError:
+except Exception:
     pass
