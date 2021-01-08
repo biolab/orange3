@@ -11,10 +11,11 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGroupBox, QRadioButton, QPushButton, QHBoxLayout, QGridLayout,
     QVBoxLayout, QStackedWidget, QComboBox,
-    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
-)
-from AnyQt.QtCore import Qt, QThread, QModelIndex
+    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox, QLabel)
+from AnyQt.QtCore import Qt, QThread, QModelIndex, QDateTime, QLocale
 from AnyQt.QtCore import pyqtSlot as Slot
+from AnyQt.QtGui import QDoubleValidator
+
 from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
@@ -154,6 +155,8 @@ class OWImpute(OWWidget):
     _variable_imputation_state = settings.ContextSetting({})  # type: VariableState
 
     autocommit = settings.Setting(True)
+    default_numeric = settings.Setting("")
+    default_time = settings.Setting(0)
 
     want_main_area = False
     resizing_enabled = False
@@ -171,10 +174,12 @@ class OWImpute(OWWidget):
         main_layout.setContentsMargins(10, 10, 10, 10)
         self.controlArea.layout().addLayout(main_layout)
 
-        box = QGroupBox(title=self.tr("Default Method"), flat=False)
-        box_layout = QGridLayout(box)
-        box_layout.setContentsMargins(5, 0, 0, 0)
+        box = gui.vBox(None, "Default Method")
         main_layout.addWidget(box)
+
+        box_layout = QGridLayout(box)
+        box_layout.setSpacing(8)
+        box.layout().addLayout(box_layout)
 
         button_group = QButtonGroup()
         button_group.buttonClicked[int].connect(self.set_default_method)
@@ -185,6 +190,41 @@ class OWImpute(OWWidget):
             button.setChecked(method == self.default_method_index)
             button_group.addButton(button, method)
             box_layout.addWidget(button, i % 3, i // 3)
+
+        def set_to_fixed_value():
+            self.set_default_method(Method.Default)
+
+        def set_default_time(datetime):
+            self.default_time = datetime.toSecsSinceEpoch()
+            if self.default_method_index != Method.Default:
+                set_to_fixed_value()
+            else:
+                self._invalidate()
+
+        hlayout = QHBoxLayout()
+        box.layout().addLayout(hlayout)
+        button = QRadioButton("Fixed values; numeric variables:")
+        button_group.addButton(button, Method.Default)
+        button.setChecked(Method.Default == self.default_method_index)
+        hlayout.addWidget(button)
+
+        locale = QLocale()
+        locale.setNumberOptions(locale.NumberOption.RejectGroupSeparator)
+        validator = QDoubleValidator()
+        validator.setLocale(locale)
+        le = gui.lineEdit(
+            None, self, "default_numeric",
+            validator=validator, alignment=Qt.AlignRight,
+            callback=self._invalidate, focusInCallback=set_to_fixed_value)
+        hlayout.addWidget(le)
+
+        hlayout.addWidget(QLabel(", time:"))
+
+        self.time_widget = gui.DateTimeEditWCalendarTime(self)
+        self.time_widget.setContentsMargins(0, 0, 0, 0)
+        self.default_time = QDateTime.currentDateTime().toSecsSinceEpoch()
+        self.time_widget.dateTimeChanged.connect(set_default_time)
+        hlayout.addWidget(self.time_widget)
 
         self.default_button_group = button_group
 
@@ -267,6 +307,17 @@ class OWImpute(OWWidget):
             m = AsDefault()
             m.method = default
             return m
+        elif method == Method.Default and not args:  # global default values
+            if self.default_numeric == "":
+                default_num = np.nan
+            else:
+                default_num, ok = QLocale().toDouble(self.default_numeric)
+                if not ok:
+                    default_num = np.nan
+            return impute.FixedValueByType(
+                default_continuous=default_num,
+                default_time=self.default_time or np.nan
+            )
         else:
             return METHODS[method](*args)
 
@@ -302,6 +353,8 @@ class OWImpute(OWWidget):
         if data is not None:
             self.varmodel[:] = data.domain.variables
             self.openContext(data.domain)
+            self.time_widget.set_datetime(
+                QDateTime.fromSecsSinceEpoch(self.default_time))
             # restore per variable imputation state
             self._restore_state(self._variable_imputation_state)
 
@@ -660,5 +713,19 @@ class OWImpute(OWWidget):
         super().storeSpecificSettings()
 
 
+def __sample_data():  # pragma: no cover
+    domain = Orange.data.Domain(
+        [Orange.data.ContinuousVariable(f"c{i}") for i in range(3)]
+        + [Orange.data.TimeVariable(f"t{i}") for i in range(3)],
+        [])
+    n = np.nan
+    x = np.array([
+        [1, 2, n, 1000, n, n],
+        [2, n, 1, n, 2000, 2000]
+    ])
+    return Orange.data.Table(domain, x, np.empty((2, 0)))
+
+
 if __name__ == "__main__":  # pragma: no cover
+    # WidgetPreview(OWImpute).run(__sample_data())
     WidgetPreview(OWImpute).run(Orange.data.Table("brown-selected"))
