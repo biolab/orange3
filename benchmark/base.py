@@ -141,12 +141,9 @@ class Benchmark(unittest.TestCase):
     def getPlatformSpecificDetails(cls):
         """Get Windows/Linux/OSX-specific details as a string."""
         win = platform.win32_ver()
-        lin = platform.linux_distribution()
         osx = platform.mac_ver()
         if win[0]:
             return "{} {} {}".format(*win[:3])
-        elif lin[0]:
-            return "{} {} {}".format(*lin)
         elif osx[0]:
             return "OSX {} {}".format(osx[0], osx[2])
         else:
