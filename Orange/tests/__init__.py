@@ -94,6 +94,7 @@ def suite(loader=None, pattern='test*.py'):
                                   for fn in os.listdir(orange_dir)
                                   if fn != "widgets")
                       if os.path.exists(dir))
+    print(all_tests)
     return unittest.TestSuite(all_tests)
 
 suite.in_tests = False
