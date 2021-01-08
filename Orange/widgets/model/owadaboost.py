@@ -52,7 +52,7 @@ class OWAdaBoost(OWBaseLearner):
             box, self, "Base estimator: " + self.base_estimator.name.title())
 
         self.n_estimators_spin = gui.spin(
-            box, self, "n_estimators", 1, 100, label="Number of estimators:",
+            box, self, "n_estimators", 1, 10000, label="Number of estimators:",
             alignment=Qt.AlignRight, controlWidth=80,
             callback=self.settings_changed)
         self.learning_rate_spin = gui.doubleSpin(
