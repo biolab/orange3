@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel
 
 from Orange.widgets.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
@@ -86,65 +87,96 @@ class OWSGD(OWBaseLearner):
     tol = Setting(1e-3)
     tol_enabled = Setting(True)
 
-    def add_main_layout(self):
-        self._add_algorithm_to_layout()
-        self._add_regularization_to_layout()
-        self._add_learning_params_to_layout()
+    def __init__(self):
+        super().__init__()
+        self.apply_button.layout().insertStretch(0)
 
-    def _add_algorithm_to_layout(self):
+    def add_main_layout(self):
+        layout = QHBoxLayout()
+        self.controlArea.layout().addLayout(layout)
+        left = QVBoxLayout()
+        right = QVBoxLayout()
+        layout.addLayout(left)
+        layout.addLayout(right)
+        self._add_algorithm_to_layout(left)
+        self._add_regularization_to_layout(left)
+        self._add_learning_params_to_layout(right)
+
+    def _foc_frame_width(self):
+        style = self.style()
+        return style.pixelMetric(style.PM_FocusFrameHMargin) + \
+               style.pixelMetric(style.PM_ComboBoxFrameWidth)
+
+    def _add_algorithm_to_layout(self, layout):
         # this is part of init, pylint: disable=attribute-defined-outside-init
-        box = gui.widgetBox(self.controlArea, 'Algorithm')
+        grid = QGridLayout()
+        box = gui.widgetBox(None, 'Loss functions', orientation=grid)
+        layout.addWidget(box)
         # Classfication loss function
         self.cls_loss_function_combo = gui.comboBox(
-            box, self, 'cls_loss_function_index', orientation=Qt.Horizontal,
-            label='Classificaton loss function: ',
+            None, self, 'cls_loss_function_index', orientation=Qt.Horizontal,
             items=list(zip(*self.cls_losses))[0],
             callback=self._on_cls_loss_change)
-        param_box = gui.hBox(box)
-        gui.rubber(param_box)
+        hbox = gui.hBox(None)
+        hbox.layout().addSpacing(self._foc_frame_width())
         self.cls_epsilon_spin = gui.spin(
-            param_box, self, 'cls_epsilon', 0, 1., 1e-2, spinType=float,
+            hbox, self, 'cls_epsilon', 0, 1., 1e-2, spinType=float,
             label='ε: ', controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
+        hbox.layout().addStretch()
+        grid.addWidget(QLabel("Classification: "), 0, 0)
+        grid.addWidget(self.cls_loss_function_combo, 0, 1)
+        grid.addWidget(hbox, 1, 1)
+
         # Regression loss function
         self.reg_loss_function_combo = gui.comboBox(
-            box, self, 'reg_loss_function_index', orientation=Qt.Horizontal,
-            label='Regression loss function: ',
+            None, self, 'reg_loss_function_index', orientation=Qt.Horizontal,
             items=list(zip(*self.reg_losses))[0],
             callback=self._on_reg_loss_change)
-        param_box = gui.hBox(box)
-        gui.rubber(param_box)
+        hbox = gui.hBox(None)
+        hbox.layout().addSpacing(self._foc_frame_width())
         self.reg_epsilon_spin = gui.spin(
-            param_box, self, 'reg_epsilon', 0, 1., 1e-2, spinType=float,
+            hbox, self, 'reg_epsilon', 0, 1., 1e-2, spinType=float,
             label='ε: ', controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
+        hbox.layout().addStretch()
+        grid.addWidget(QLabel("Regression: "), 2, 0)
+        grid.addWidget(self.reg_loss_function_combo, 2, 1)
+        grid.addWidget(hbox, 3, 1)
 
         # Enable/disable appropriate controls
         self._on_cls_loss_change()
         self._on_reg_loss_change()
 
-    def _add_regularization_to_layout(self):
+    def _add_regularization_to_layout(self, layout):
         # this is part of init, pylint: disable=attribute-defined-outside-init
-        box = gui.widgetBox(self.controlArea, 'Regularization')
+        box = gui.widgetBox(None, 'Regularization')
+        layout.addWidget(box)
+        hlayout = gui.hBox(box)
         self.penalty_combo = gui.comboBox(
-            box, self, 'penalty_index', label='Regularization method: ',
+            hlayout, self, 'penalty_index',
             items=list(zip(*self.penalties))[0], orientation=Qt.Horizontal,
             callback=self._on_regularization_change)
+        self.l1_ratio_box = gui.spin(
+            hlayout, self, 'l1_ratio', 0, 1., 1e-2, spinType=float,
+            label='Mixing: ', controlWidth=80,
+            alignment=Qt.AlignRight, callback=self.settings_changed).box
+
+        hbox = gui.indentedBox(
+            box, sep=self._foc_frame_width(), orientation=Qt.Horizontal)
         self.alpha_spin = gui.spin(
-            box, self, 'alpha', 0, 10., .1e-4, spinType=float, controlWidth=80,
-            label='Regularization strength (α): ', alignment=Qt.AlignRight,
+            hbox, self, 'alpha', 0, 10., .1e-4, spinType=float, controlWidth=80,
+            label='Strength (α): ', alignment=Qt.AlignRight,
             callback=self.settings_changed)
-        self.l1_ratio_spin = gui.spin(
-            box, self, 'l1_ratio', 0, 1., 1e-2, spinType=float,
-            label='Mixing parameter: ', controlWidth=80,
-            alignment=Qt.AlignRight, callback=self.settings_changed)
+        hbox.layout().addStretch()
 
         # Enable/disable appropriate controls
         self._on_regularization_change()
 
-    def _add_learning_params_to_layout(self):
+    def _add_learning_params_to_layout(self, layout):
         # this is part of init, pylint: disable=attribute-defined-outside-init
-        box = gui.widgetBox(self.controlArea, 'Learning parameters')
+        box = gui.widgetBox(None, 'Optimization')
+        layout.addWidget(box)
         self.learning_rate_combo = gui.comboBox(
             box, self, 'learning_rate_index', label='Learning rate: ',
             items=list(zip(*self.learning_rates))[0],
@@ -215,10 +247,8 @@ class OWSGD(OWBaseLearner):
         else:
             self.alpha_spin.setEnabled(False)
         # Elastic Net mixing parameter
-        if self.penalties[self.penalty_index][1] in ('elasticnet',):
-            self.l1_ratio_spin.setEnabled(True)
-        else:
-            self.l1_ratio_spin.setEnabled(False)
+        self.l1_ratio_box.setHidden(
+            self.penalties[self.penalty_index][1] != 'elasticnet')
 
         self.settings_changed()
 
