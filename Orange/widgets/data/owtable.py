@@ -17,12 +17,12 @@ from AnyQt.QtWidgets import (
     QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
     QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QClipboard, QMouseEvent
+from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
     QItemSelectionModel, QItemSelection, QItemSelectionRange,
-    Signal)
+)
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
@@ -33,7 +33,7 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.headerview import HeaderView
+from Orange.widgets.utils.tableview import TableView
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
@@ -364,53 +364,9 @@ def table_selection_to_list(table):
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
-class TableView(gui.HScrollStepMixin, QTableView):
-    #: Signal emitted when selection finished. It is not emitted during
-    #: mouse drag selection updates.
-    selectionFinished = Signal()
-
-    __mouseDown = False
-    __selectionDidChange = False
-
-    def setSelectionModel(self, selectionModel: QItemSelectionModel) -> None:
-        sm = self.selectionModel()
-        if sm is not None:
-            sm.selectionChanged.disconnect(self.__on_selectionChanged)
-        super().setSelectionModel(selectionModel)
-        if selectionModel is not None:
-            selectionModel.selectionChanged.connect(self.__on_selectionChanged)
-
-    def __on_selectionChanged(self):
-        if self.__mouseDown:
-            self.__selectionDidChange = True
-        else:
-            self.selectionFinished.emit()
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        self.__mouseDown = event.button() == Qt.LeftButton
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        super().mouseReleaseEvent(event)
-        if self.__mouseDown and event.button() == Qt.LeftButton:
-            self.__mouseDown = False
-        if self.__selectionDidChange:
-            self.__selectionDidChange = False
-            self.selectionFinished.emit()
-
-
-class DataTableView(TableView):
+class DataTableView(gui.HScrollStepMixin, TableView):
     dataset: Table
     input_slot: TableSlot
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        hheader = HeaderView(Qt.Horizontal, self, highlightSections=True)
-        vheader = HeaderView(Qt.Vertical, self, highlightSections=True)
-        hheader.setSectionsClickable(True)
-        vheader.setSectionsClickable(True)
-        self.setHorizontalHeader(hheader)
-        self.setVerticalHeader(vheader)
 
 
 class OWDataTable(OWWidget):
@@ -510,7 +466,6 @@ class OWDataTable(OWWidget):
             else:
                 view = DataTableView()
                 view.setSortingEnabled(True)
-                view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
 
                 if self.select_rows:
                     view.setSelectionBehavior(QTableView.SelectRows)
