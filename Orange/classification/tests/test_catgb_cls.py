@@ -62,15 +62,6 @@ class TestCatGBClassifier(unittest.TestCase):
         self.assertLessEqual(prob.all().all(), 1)
         self.assertAlmostEqual(prob.sum(), len(sparse_data))
 
-    def test_default_params(self):
-        data = Table("heart_disease")
-        booster = CatGBClassifier()
-        model = booster(data)
-        params = model.cat_model.get_params()
-        del params["train_dir"]
-        self.assertDictEqual(params, {"verbose": False,
-                                      "allow_writing_files": False})
-
     def test_set_params(self):
         booster = CatGBClassifier(n_estimators=42, max_depth=4)
         self.assertEqual(booster.params["n_estimators"], 42)

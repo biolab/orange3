@@ -2,8 +2,13 @@ import unittest
 from unittest.mock import patch, Mock
 import sys
 
+from Orange.classification import XGBClassifier, XGBRFClassifier, \
+    GBClassifier, CatGBClassifier
+from Orange.data import Table
 from Orange.modelling import GBLearner
 from Orange.preprocess.score import Scorer
+from Orange.regression import XGBRegressor, XGBRFRegressor, \
+    GBRegressor, CatGBRegressor
 from Orange.widgets.model.owgradientboosting import OWGradientBoosting, \
     LearnerItemModel, GBLearnerEditor, XGBLearnerEditor, XGBRFLearnerEditor, \
     CatGBLearnerEditor
@@ -50,16 +55,46 @@ class TestGBLearnerEditor(GuiTest):
 
     def test_arguments(self):
         args = {"n_estimators": 100, "learning_rate": 0.1, "max_depth": 3,
-                "random_state": None, "subsample": 1, "min_samples_split": 2}
+                "random_state": 0, "subsample": 1, "min_samples_split": 2}
         self.assertDictEqual(self.editor.get_arguments(), args)
 
     def test_learner_parameters(self):
-        params = (("Method", "Gradient Boosting"), ("Number of trees", 100),
-                  ("Learning rate", 0.1), ("Maximum tree depth", 3),
-                  ("Replicable training", "No"),
+        params = (("Method", "Gradient Boosting (scikit-learn)"),
+                  ("Number of trees", 100),
+                  ("Learning rate", 0.1),
+                  ("Maximum tree depth", 3),
+                  ("Replicable training", "Yes"),
                   ("Fraction of training instance", 1),
                   ("Stop splitting nodes with maximum instances", 2))
         self.assertTupleEqual(self.editor.get_learner_parameters(), params)
+
+    def test_default_parameters_cls(self):
+        data = Table("heart_disease")
+        booster = GBClassifier()
+        model = booster(data)
+        params = model.skl_model.get_params()
+        self.assertEqual(params["n_estimators"], self.editor.n_estimators)
+        self.assertEqual(params["learning_rate"], self.editor.learning_rate)
+        self.assertEqual(params["max_depth"], self.editor.max_depth)
+        self.assertEqual(params["subsample"], self.editor.subsample)
+        self.assertEqual(params["min_samples_split"],
+                         self.editor.min_samples_split)
+        self.assertTrue(self.editor.random_state)  # different than default
+        self.assertIsNone(params["random_state"])
+
+    def test_default_parameters_reg(self):
+        data = Table("housing")
+        booster = GBRegressor()
+        model = booster(data)
+        params = model.skl_model.get_params()
+        self.assertEqual(params["n_estimators"], self.editor.n_estimators)
+        self.assertEqual(params["learning_rate"], self.editor.learning_rate)
+        self.assertEqual(params["max_depth"], self.editor.max_depth)
+        self.assertEqual(params["subsample"], self.editor.subsample)
+        self.assertEqual(params["min_samples_split"],
+                         self.editor.min_samples_split)
+        self.assertTrue(self.editor.random_state)  # different than default
+        self.assertIsNone(params["random_state"])
 
 
 class TestXGBLearnerEditor(GuiTest):
@@ -76,13 +111,51 @@ class TestXGBLearnerEditor(GuiTest):
 
     def test_learner_parameters(self):
         params = (("Method", "Extreme Gradient Boosting (xgboost)"),
-                  ("Number of trees", 100), ("Learning rate", 0.3),
-                  ("Maximum tree depth", 6), ("Regularization strength", 1),
+                  ("Number of trees", 100),
+                  ("Learning rate", 0.3),
+                  ("Maximum tree depth", 6),
+                  ("Regularization strength", 1),
                   ("Fraction of training instance", 1),
                   ("Fraction of features for each tree", 1),
                   ("Fraction of features for each level", 1),
                   ("Fraction of features for each split", 1))
         self.assertTupleEqual(self.editor.get_learner_parameters(), params)
+
+    def test_default_parameters_cls(self):
+        data = Table("heart_disease")
+        booster = XGBClassifier()
+        model = booster(data)
+        params = model.skl_model.get_params()
+        self.assertEqual(params["n_estimators"], self.editor.n_estimators)
+        self.assertEqual(round(params["learning_rate"], 1),
+                         self.editor.learning_rate)
+        self.assertEqual(params["max_depth"], self.editor.max_depth)
+        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
+        self.assertEqual(params["subsample"], self.editor.subsample)
+        self.assertEqual(params["colsample_bytree"],
+                         self.editor.colsample_bytree)
+        self.assertEqual(params["colsample_bylevel"],
+                         self.editor.colsample_bylevel)
+        self.assertEqual(params["colsample_bynode"],
+                         self.editor.colsample_bynode)
+
+    def test_default_parameters_reg(self):
+        data = Table("housing")
+        booster = XGBRegressor()
+        model = booster(data)
+        params = model.skl_model.get_params()
+        self.assertEqual(params["n_estimators"], self.editor.n_estimators)
+        self.assertEqual(round(params["learning_rate"], 1),
+                         self.editor.learning_rate)
+        self.assertEqual(params["max_depth"], self.editor.max_depth)
+        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
+        self.assertEqual(params["subsample"], self.editor.subsample)
+        self.assertEqual(params["colsample_bytree"],
+                         self.editor.colsample_bytree)
+        self.assertEqual(params["colsample_bylevel"],
+                         self.editor.colsample_bylevel)
+        self.assertEqual(params["colsample_bynode"],
+                         self.editor.colsample_bynode)
 
 
 class TestXGBRFLearnerEditor(GuiTest):
@@ -110,6 +183,42 @@ class TestXGBRFLearnerEditor(GuiTest):
                   ("Fraction of features for each split", 1))
         self.assertTupleEqual(self.editor.get_learner_parameters(), params)
 
+    def test_default_parameters_cls(self):
+        data = Table("heart_disease")
+        booster = XGBRFClassifier()
+        model = booster(data)
+        params = model.skl_model.get_params()
+        self.assertEqual(params["n_estimators"], self.editor.n_estimators)
+        self.assertEqual(round(params["learning_rate"], 1),
+                         self.editor.learning_rate)
+        self.assertEqual(params["max_depth"], self.editor.max_depth)
+        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
+        self.assertEqual(params["subsample"], self.editor.subsample)
+        self.assertEqual(params["colsample_bytree"],
+                         self.editor.colsample_bytree)
+        self.assertEqual(params["colsample_bylevel"],
+                         self.editor.colsample_bylevel)
+        self.assertEqual(params["colsample_bynode"],
+                         self.editor.colsample_bynode)
+
+    def test_default_parameters_reg(self):
+        data = Table("housing")
+        booster = XGBRFRegressor()
+        model = booster(data)
+        params = model.skl_model.get_params()
+        self.assertEqual(params["n_estimators"], self.editor.n_estimators)
+        self.assertEqual(round(params["learning_rate"], 1),
+                         self.editor.learning_rate)
+        self.assertEqual(params["max_depth"], self.editor.max_depth)
+        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
+        self.assertEqual(params["subsample"], self.editor.subsample)
+        self.assertEqual(params["colsample_bytree"],
+                         self.editor.colsample_bytree)
+        self.assertEqual(params["colsample_bylevel"],
+                         self.editor.colsample_bylevel)
+        self.assertEqual(params["colsample_bynode"],
+                         self.editor.colsample_bynode)
+
 
 class TestCatGBLearnerEditor(GuiTest):
     def setUp(self):
@@ -118,17 +227,45 @@ class TestCatGBLearnerEditor(GuiTest):
         self.editor = editor_class(self.widget)
 
     def test_arguments(self):
-        args = {"n_estimators": 500, "learning_rate": 0.03, "max_depth": 6,
+        args = {"n_estimators": 100, "learning_rate": 0.3, "max_depth": 6,
                 "reg_lambda": 3, "colsample_bylevel": 1}
         self.assertDictEqual(self.editor.get_arguments(), args)
 
     def test_learner_parameters(self):
         params = (("Method", "Gradient Boosting (catboost)"),
-                  ("Number of trees", 500),
-                  ("Learning rate", 0.03), ("Maximum tree depth", 6),
+                  ("Number of trees", 100),
+                  ("Learning rate", 0.3),
+                  ("Maximum tree depth", 6),
                   ("Regularization strength", 3),
                   ("Fraction of features for each tree", 1))
         self.assertTupleEqual(self.editor.get_learner_parameters(), params)
+
+    def test_default_parameters_cls(self):
+        data = Table("heart_disease")
+        booster = CatGBClassifier()
+        model = booster(data)
+        params = model.cat_model.get_all_params()
+        print(params)
+        self.assertEqual(self.editor.n_estimators, 100)
+        self.assertEqual(params["iterations"], 1000)
+        self.assertEqual(params["depth"], self.editor.max_depth)
+        self.assertEqual(params["l2_leaf_reg"], self.editor.lambda_)
+        self.assertEqual(params["rsm"], self.editor.colsample_bylevel)
+        self.assertEqual(self.editor.learning_rate, 0.3)
+        self.assertEqual(round(params["learning_rate"], 3), 0.006)
+
+    def test_default_parameters_reg(self):
+        data = Table("housing")
+        booster = CatGBRegressor()
+        model = booster(data)
+        params = model.cat_model.get_all_params()
+        self.assertEqual(self.editor.n_estimators, 100)
+        self.assertEqual(params["iterations"], 1000)
+        self.assertEqual(params["depth"], self.editor.max_depth)
+        self.assertEqual(params["l2_leaf_reg"], self.editor.lambda_)
+        self.assertEqual(params["rsm"], self.editor.colsample_bylevel)
+        self.assertEqual(self.editor.learning_rate, 0.3)
+        self.assertEqual(round(params["learning_rate"], 3), 0.035)
 
 
 class TestOWGradientBoosting(WidgetTest, WidgetLearnerTestMixin):

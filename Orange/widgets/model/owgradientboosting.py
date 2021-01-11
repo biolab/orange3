@@ -152,7 +152,7 @@ class GBLearnerEditor(BaseEditor):
     learner_class = GBLearner
     n_estimators = Setting(100)
     learning_rate = Setting(0.1)
-    random_state = Setting(False)
+    random_state = Setting(True)
     subsample = Setting(1)
     max_depth = Setting(3)
     min_samples_split = Setting(2)
@@ -197,8 +197,8 @@ class GBLearnerEditor(BaseEditor):
 
 class CatGBLearnerEditor(RegEditor):
     learner_class = CatGBLearner
-    n_estimators = Setting(500)
-    learning_rate = Setting(0.03)
+    n_estimators = Setting(100)
+    learning_rate = Setting(0.3)
     max_depth = Setting(6)
     lambda_index = Setting(55)  # 3
     colsample_bylevel = Setting(1)

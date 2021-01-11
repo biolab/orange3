@@ -76,16 +76,6 @@ class TestXGBCls(unittest.TestCase):
         self.assertAlmostEqual(prob.sum(), len(sparse_data))
 
     @test_learners
-    def test_default_params(self, learner_class: XGBBase):
-        data = Table("heart_disease")
-        booster = learner_class()
-        model = booster(data)
-        # invalid for multi class classification and therefore
-        # set to None to avoid warnings
-        booster.params["scale_pos_weight"] = 1
-        self.assertDictEqual(booster.params, model.skl_model.get_params())
-
-    @test_learners
     def test_set_params(self, learner_class: XGBBase):
         booster = learner_class(n_estimators=42, max_depth=4)
         self.assertEqual(booster.params["n_estimators"], 42)

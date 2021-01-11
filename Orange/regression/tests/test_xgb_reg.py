@@ -62,12 +62,6 @@ class TestXGBReg(unittest.TestCase):
         self.assertGreater(all(pred), 0)
 
     @test_learners
-    def test_default_params(self, learner_class: XGBBase):
-        booster = learner_class()
-        model = booster(self.housing)
-        self.assertDictEqual(booster.params, model.skl_model.get_params())
-
-    @test_learners
     def test_set_params(self, learner_class: XGBBase):
         booster = learner_class(n_estimators=42, max_depth=4)
         self.assertEqual(booster.params["n_estimators"], 42)
