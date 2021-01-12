@@ -46,7 +46,6 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.endResetModel()
 
     def set_labels(self, labels, variable=None, values=None):
-        self.beginResetModel()
         self.labels = labels
         self.variable = variable
         self.values = values
@@ -55,7 +54,12 @@ class DistanceMatrixModel(QAbstractTableModel):
             self.label_colors = variable.palette.values_to_qcolors(values)
         else:
             self.label_colors = None
-        self.endResetModel()
+        self.headerDataChanged.emit(Qt.Vertical, 0, self.rowCount() - 1)
+        self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount() - 1)
+        self.dataChanged.emit(
+            self.index(0, 0),
+            self.index(self.rowCount() - 1, self.columnCount() - 1)
+        )
 
     def dimension(self, parent=None):
         if parent and parent.isValid() or self.distances is None:
@@ -291,16 +295,14 @@ class OWDistanceMatrix(widget.OWWidget):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
             labels = [var.str_val(value) for value in column]
-        saved_selection = self.tableview.selectionModel().selectedIndices()
-        self.tablemodel.set_labels(labels, var, column)
         if labels:
             self.tableview.horizontalHeader().show()
             self.tableview.verticalHeader().show()
         else:
             self.tableview.horizontalHeader().hide()
             self.tableview.verticalHeader().hide()
+        self.tablemodel.set_labels(labels, var, column)
         self.tableview.resizeColumnsToContents()
-        self.tableview.selectionModel().set_selected_items(saved_selection)
 
     def commit(self):
         sub_table = sub_distances = None
