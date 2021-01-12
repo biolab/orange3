@@ -46,9 +46,6 @@ class BlockSelectionModel(QItemSelectionModel):
 
         model = self.model()
 
-        def to_ranges(spans):
-            return list(range(*r) for r in spans)
-
         if flags & QItemSelectionModel.Current:  # no current selection support
             flags &= ~QItemSelectionModel.Current
         if flags & QItemSelectionModel.Toggle:  # no toggle support either
@@ -62,9 +59,8 @@ class BlockSelectionModel(QItemSelectionModel):
             selection = QItemSelection()
             for row_range, col_range in \
                     product(to_ranges(sel_rows), to_ranges(sel_cols)):
-                selection.select(
-                    model.index(row_range.start, col_range.start),
-                    model.index(row_range.stop - 1, col_range.stop - 1)
+                qitemselection_select_range(
+                    selection, model, row_range, col_range
                 )
         elif flags & (QItemSelectionModel.Select |
                       QItemSelectionModel.Deselect):
@@ -76,15 +72,13 @@ class BlockSelectionModel(QItemSelectionModel):
             ext_selection = QItemSelection()
             for row_range, col_range in \
                     product(to_ranges(rows), to_ranges(sel_cols)):
-                ext_selection.select(
-                    model.index(row_range.start, col_range.start),
-                    model.index(row_range.stop - 1, col_range.stop - 1)
+                qitemselection_select_range(
+                    ext_selection, model, row_range, col_range
                 )
             for row_range, col_range in \
                     product(to_ranges(sel_rows), to_ranges(cols)):
-                ext_selection.select(
-                    model.index(row_range.start, col_range.start),
-                    model.index(row_range.stop - 1, col_range.stop - 1)
+                qitemselection_select_range(
+                    ext_selection, model, row_range, col_range
                 )
             selection.merge(ext_selection, QItemSelectionModel.Select)
         super().select(selection, flags)
@@ -209,6 +203,10 @@ def qitemselection_select_range(
     )
 
 
+def to_ranges(spans: Iterable[Tuple[int, int]]) -> Sequence[range]:
+    return list(starmap(range, spans))
+
+
 class SymmetricSelectionModel(QItemSelectionModel):
     """
     Item selection model ensuring the selection is symmetric
@@ -216,8 +214,6 @@ class SymmetricSelectionModel(QItemSelectionModel):
     """
     def select(self, selection: Union[QItemSelection, QModelIndex],
                flags: QItemSelectionModel.SelectionFlags) -> None:
-        def to_ranges(rngs: Iterable[Tuple[int, int]]) -> Sequence[range]:
-            return list(starmap(range, rngs))
         if isinstance(selection, QModelIndex):
             selection = QItemSelection(selection, selection)
 
