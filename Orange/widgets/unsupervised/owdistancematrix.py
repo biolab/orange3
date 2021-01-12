@@ -168,12 +168,12 @@ class DistanceMatrixContextHandler(ContextHandler):
         context = widget.current_context
         if context is not None:
             context.annotation = widget.annot_combo.currentText()
-            context.selection = widget.tableview.selectionModel().selected_items()
+            context.selection = widget.tableview.selectionModel().selectedItems()
 
     def settings_to_widget(self, widget, *args):
         context = widget.current_context
         widget.annotation_idx = context.annotations.index(context.annotation)
-        widget.tableview.selectionModel().set_selected_items(context.selection)
+        widget.tableview.selectionModel().setSelectedItems(context.selection)
 
 
 class OWDistanceMatrix(widget.OWWidget):
@@ -245,7 +245,7 @@ class OWDistanceMatrix(widget.OWWidget):
         self.distances = distances
         self.tablemodel.set_data(self.distances)
         self.selection = []
-        self.tableview.selectionModel().set_selected_items([])
+        self.tableview.selectionModel().clear()
 
         self.items = items = distances is not None and distances.row_items
         annotations = ["None", "Enumerate"]
@@ -291,7 +291,7 @@ class OWDistanceMatrix(widget.OWWidget):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
             labels = [var.str_val(value) for value in column]
-        saved_selection = self.tableview.selectionModel().selected_items()
+        saved_selection = self.tableview.selectionModel().selectedIndices()
         self.tablemodel.set_labels(labels, var, column)
         if labels:
             self.tableview.horizontalHeader().show()
@@ -305,7 +305,7 @@ class OWDistanceMatrix(widget.OWWidget):
     def commit(self):
         sub_table = sub_distances = None
         if self.distances is not None:
-            inds = self.tableview.selectionModel().selected_items()
+            inds = self.tableview.selectionModel().selectedItems()
             if inds:
                 sub_distances = self.distances.submatrix(inds)
                 if self.distances.axis and isinstance(self.items, Table):

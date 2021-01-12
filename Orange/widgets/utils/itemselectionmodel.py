@@ -1,5 +1,7 @@
-from itertools import chain, product, groupby
-from typing import List, Tuple, Iterable, Optional, Union
+from itertools import chain, starmap, product, groupby, islice
+from functools import reduce
+from operator import itemgetter
+from typing import List, Tuple, Iterable, Sequence, Optional, Union
 
 from AnyQt.QtCore import (
     QModelIndex, QAbstractItemModel, QItemSelectionModel, QItemSelection,
@@ -169,39 +171,95 @@ def ranges(indices):
         yield start, end + 1
 
 
+def merge_ranges(
+        ranges: Iterable[Tuple[int, int]]
+) -> Sequence[Tuple[int, int]]:
+    def merge_range_seq_accum(
+            accum: List[Tuple[int, int]], r: Tuple[int, int]
+    ) -> List[Tuple[int, int]]:
+        last_start, last_stop = accum[-1]
+        r_start, r_stop = r
+        assert last_start <= r_start
+        if r_start <= last_stop:
+            # merge into last
+            accum[-1] = last_start, max(last_stop, r_stop)
+        else:
+            # push a new (disconnected) range interval
+            accum.append(r)
+        return accum
+
+    ranges = sorted(ranges, key=itemgetter(0))
+    if ranges:
+        return reduce(merge_range_seq_accum, islice(ranges, 1, None),
+                      [ranges[0]])
+    else:
+        return []
+
+
+def qitemselection_select_range(
+        selection: QItemSelection,
+        model: QAbstractItemModel,
+        rows: range,
+        columns: range
+) -> None:
+    assert rows.step == 1 and columns.step == 1
+    selection.select(
+        model.index(rows.start, columns.start),
+        model.index(rows.stop - 1, columns.stop - 1)
+    )
+
+
 class SymmetricSelectionModel(QItemSelectionModel):
-    def select(self, selection, flags):
+    """
+    Item selection model ensuring the selection is symmetric
+
+    """
+    def select(self, selection: Union[QItemSelection, QModelIndex],
+               flags: QItemSelectionModel.SelectionFlags) -> None:
+        def to_ranges(rngs: Iterable[Tuple[int, int]]) -> Sequence[range]:
+            return list(starmap(range, rngs))
         if isinstance(selection, QModelIndex):
             selection = QItemSelection(selection, selection)
 
+        if flags & QItemSelectionModel.Current:  # no current selection support
+            flags &= ~QItemSelectionModel.Current
+        if flags & QItemSelectionModel.Toggle:  # no toggle support either
+            flags &= ~QItemSelectionModel.Toggle
+            flags |= QItemSelectionModel.Select
+
         model = self.model()
-        indexes = selection.indexes()
-        sel_inds = {ind.row() for ind in indexes} | \
-                   {ind.column() for ind in indexes}
+        rows, cols = selection_blocks(selection)
+        sym_ranges = to_ranges(merge_ranges(chain(rows, cols)))
         if flags == QItemSelectionModel.ClearAndSelect:
-            selected = set()
-        else:
-            selected = {ind.row() for ind in self.selectedIndexes()}
-        if flags & QItemSelectionModel.Select:
-            selected |= sel_inds
-        elif flags & QItemSelectionModel.Deselect:
-            selected -= sel_inds
-        new_selection = QItemSelection()
-        regions = list(ranges(sorted(selected)))
-        for r_start, r_end in regions:
-            for c_start, c_end in regions:
-                top_left = model.index(r_start, c_start)
-                bottom_right = model.index(r_end - 1, c_end - 1)
-                new_selection.select(top_left, bottom_right)
-        QItemSelectionModel.select(self, new_selection,
-                                   QItemSelectionModel.ClearAndSelect)
+            # extend ranges in `selection` to symmetric selection
+            # row/columns.
+            selection = QItemSelection()
+            for rows, cols in product(sym_ranges, sym_ranges):
+                qitemselection_select_range(selection, model, rows, cols)
+        elif flags & (QItemSelectionModel.Select |
+                      QItemSelectionModel.Deselect):
+            # extend ranges in sym_ranges to span all current rows/columns
+            rows_current, cols_current = selection_blocks(self.selection())
+            ext_selection = QItemSelection()
+            for rrange, crange in product(sym_ranges, sym_ranges):
+                qitemselection_select_range(selection, model, rrange, crange)
+            for rrange, crange in product(sym_ranges, to_ranges(cols_current)):
+                qitemselection_select_range(selection, model, rrange, crange)
+            for rrange, crange in product(to_ranges(rows_current), sym_ranges):
+                qitemselection_select_range(selection, model, rrange, crange)
+            selection.merge(ext_selection, QItemSelectionModel.Select)
+        super().select(selection, flags)
 
-    def selected_items(self):
-        return list({ind.row() for ind in self.selectedIndexes()})
+    def selectedItems(self) -> Sequence[int]:
+        """Return the indices of the the symmetric selection."""
+        ranges_ = starmap(range, selection_rows(self.selection()))
+        return sorted(chain.from_iterable(ranges_))
 
-    def set_selected_items(self, inds):
-        index = self.model().index
+    def setSelectedItems(self, inds: Iterable[int]):
+        """Set and select the `inds` indices"""
+        model = self.model()
         selection = QItemSelection()
-        for i in inds:
-            selection.select(index(i, i), index(i, i))
+        sym_ranges = to_ranges(ranges(inds))
+        for rows, cols in product(sym_ranges, sym_ranges):
+            qitemselection_select_range(selection, model, rows, cols)
         self.select(selection, QItemSelectionModel.ClearAndSelect)
