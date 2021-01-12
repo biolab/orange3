@@ -6,16 +6,15 @@ import numpy as np
 from AnyQt.QtWidgets import QTableView, QItemDelegate, QHeaderView, QStyle, \
     QStyleOptionViewItem
 from AnyQt.QtGui import QColor, QPen, QBrush
-from AnyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, \
-    QItemSelectionModel, QItemSelection, QSize
+from AnyQt.QtCore import Qt, QAbstractTableModel, QSize
 
 from Orange.data import Table, Variable, StringVariable
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
-from Orange.widgets.data.owtable import ranges
 from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.itemselectionmodel import SymmetricSelectionModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
@@ -119,44 +118,6 @@ class TableBorderItem(QItemDelegate):
                     QPen(QBrush(hcolor), 1, Qt.SolidLine, Qt.RoundCap))
                 painter.drawLine(x1, y1, x2, y1)
             painter.restore()
-
-
-class SymmetricSelectionModel(QItemSelectionModel):
-    def select(self, selection, flags):
-        if isinstance(selection, QModelIndex):
-            selection = QItemSelection(selection, selection)
-
-        model = self.model()
-        indexes = selection.indexes()
-        sel_inds = {ind.row() for ind in indexes} | \
-                   {ind.column() for ind in indexes}
-        if flags == QItemSelectionModel.ClearAndSelect:
-            selected = set()
-        else:
-            selected = {ind.row() for ind in self.selectedIndexes()}
-        if flags & QItemSelectionModel.Select:
-            selected |= sel_inds
-        elif flags & QItemSelectionModel.Deselect:
-            selected -= sel_inds
-        new_selection = QItemSelection()
-        regions = list(ranges(sorted(selected)))
-        for r_start, r_end in regions:
-            for c_start, c_end in regions:
-                top_left = model.index(r_start, c_start)
-                bottom_right = model.index(r_end - 1, c_end - 1)
-                new_selection.select(top_left, bottom_right)
-        QItemSelectionModel.select(self, new_selection,
-                                   QItemSelectionModel.ClearAndSelect)
-
-    def selected_items(self):
-        return list({ind.row() for ind in self.selectedIndexes()})
-
-    def set_selected_items(self, inds):
-        index = self.model().index
-        selection = QItemSelection()
-        for i in inds:
-            selection.select(index(i, i), index(i, i))
-        self.select(selection, QItemSelectionModel.ClearAndSelect)
 
 
 class TableView(gui.HScrollStepMixin, QTableView):
