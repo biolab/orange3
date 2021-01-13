@@ -435,8 +435,8 @@ class OWImpute(OWWidget):
         ]
 
         def impute_one(method, var, data):
-            # Readability counts, pylint: disable=no-else-raise
             # type: (impute.BaseImputeMethod, Variable, Table) -> Any
+            # Readability counts, pylint: disable=no-else-raise
             if isinstance(method, impute.Model) and data.is_sparse():
                 raise SparseNotSupported()
             elif isinstance(method, impute.DropInstances):
