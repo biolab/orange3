@@ -353,8 +353,6 @@ class OWImpute(OWWidget):
         if data is not None:
             self.varmodel[:] = data.domain.variables
             self.openContext(data.domain)
-            self.time_widget.set_datetime(
-                QDateTime.fromSecsSinceEpoch(self.default_time))
             # restore per variable imputation state
             self._restore_state(self._variable_imputation_state)
 
