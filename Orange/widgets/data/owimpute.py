@@ -178,7 +178,7 @@ class OWImpute(OWWidget):
         box = gui.vBox(None, "Default Method")
         main_layout.addWidget(box)
 
-        box_layout = QGridLayout(box)
+        box_layout = QGridLayout()
         box_layout.setSpacing(8)
         box.layout().addLayout(box_layout)
 
