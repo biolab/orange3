@@ -222,7 +222,6 @@ class OWImpute(OWWidget):
 
         self.time_widget = gui.DateTimeEditWCalendarTime(self)
         self.time_widget.setContentsMargins(0, 0, 0, 0)
-        self.default_time = QDateTime.currentDateTime().toSecsSinceEpoch()
         self.time_widget.dateTimeChanged.connect(set_default_time)
         hlayout.addWidget(self.time_widget)
 
