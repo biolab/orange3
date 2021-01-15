@@ -191,15 +191,12 @@ class OWImpute(OWWidget):
             button_group.addButton(button, method)
             box_layout.addWidget(button, i % 3, i // 3)
 
-        def set_to_fixed_value():
-            self.set_default_method(Method.Default)
-
         def set_default_time(datetime):
-            self.default_time = datetime.toSecsSinceEpoch()
-            if self.default_method_index != Method.Default:
-                set_to_fixed_value()
-            else:
-                self._invalidate()
+            datetime = datetime.toSecsSinceEpoch()
+            if datetime != self.default_time:
+                self.default_time = datetime
+                if self.default_method_index == Method.Default:
+                    self._invalidate()
 
         hlayout = QHBoxLayout()
         box.layout().addLayout(hlayout)
@@ -212,17 +209,29 @@ class OWImpute(OWWidget):
         locale.setNumberOptions(locale.NumberOption.RejectGroupSeparator)
         validator = QDoubleValidator()
         validator.setLocale(locale)
-        le = gui.lineEdit(
+        self.numeric_value_widget = le = gui.lineEdit(
             None, self, "default_numeric",
             validator=validator, alignment=Qt.AlignRight,
-            callback=self._invalidate, focusInCallback=set_to_fixed_value)
+            callback=self._invalidate,
+            enabled=self.default_method_index == Method.Default
+        )
         hlayout.addWidget(le)
 
         hlayout.addWidget(QLabel(", time:"))
 
         self.time_widget = gui.DateTimeEditWCalendarTime(self)
+        self.time_widget.setEnabled(self.default_method_index == Method.Default)
+        self.time_widget.setKeyboardTracking(False)
         self.time_widget.setContentsMargins(0, 0, 0, 0)
-        self.default_time = QDateTime.currentDateTime().toSecsSinceEpoch()
+        self.time_widget.set_datetime(
+            QDateTime.fromSecsSinceEpoch(self.default_time)
+        )
+        self.connect_control(
+            "default_time",
+            lambda value: self.time_widget.set_datetime(
+                QDateTime.fromSecsSinceEpoch(value)
+            )
+        )
         self.time_widget.dateTimeChanged.connect(set_default_time)
         hlayout.addWidget(self.time_widget)
 
@@ -331,6 +340,8 @@ class OWImpute(OWWidget):
             assert index != Method.AsAboveSoBelow
             self._default_method_index = index
             self.default_button_group.button(index).setChecked(True)
+            self.time_widget.setEnabled(index == Method.Default)
+            self.numeric_value_widget.setEnabled(index == Method.Default)
             # update variable view
             self.update_varview()
             self._invalidate()
@@ -353,8 +364,6 @@ class OWImpute(OWWidget):
         if data is not None:
             self.varmodel[:] = data.domain.variables
             self.openContext(data.domain)
-            self.time_widget.set_datetime(
-                QDateTime.fromSecsSinceEpoch(self.default_time))
             # restore per variable imputation state
             self._restore_state(self._variable_imputation_state)
 
@@ -426,8 +435,8 @@ class OWImpute(OWWidget):
         ]
 
         def impute_one(method, var, data):
-            # Readability counts, pylint: disable=no-else-raise
             # type: (impute.BaseImputeMethod, Variable, Table) -> Any
+            # Readability counts, pylint: disable=no-else-raise
             if isinstance(method, impute.Model) and data.is_sparse():
                 raise SparseNotSupported()
             elif isinstance(method, impute.DropInstances):
