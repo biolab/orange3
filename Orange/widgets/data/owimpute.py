@@ -10,8 +10,9 @@ import numpy as np
 
 from AnyQt.QtWidgets import (
     QGroupBox, QRadioButton, QPushButton, QHBoxLayout, QGridLayout,
-    QVBoxLayout, QStackedWidget, QComboBox,
-    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox, QLabel)
+    QVBoxLayout, QStackedWidget, QComboBox, QWidget,
+    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox, QLabel
+)
 from AnyQt.QtCore import Qt, QThread, QModelIndex, QDateTime, QLocale
 from AnyQt.QtCore import pyqtSlot as Slot
 from AnyQt.QtGui import QDoubleValidator
@@ -177,7 +178,7 @@ class OWImpute(OWWidget):
         box = gui.vBox(None, "Default Method")
         main_layout.addWidget(box)
 
-        box_layout = QGridLayout(box)
+        box_layout = QGridLayout()
         box_layout.setSpacing(8)
         box.layout().addLayout(box_layout)
 
@@ -257,9 +258,11 @@ class OWImpute(OWWidget):
         self.selection = self.varview.selectionModel()
 
         horizontal_layout.addWidget(self.varview)
+        vertical_layout = QVBoxLayout(margin=0)
 
-        method_layout = QVBoxLayout()
-        horizontal_layout.addLayout(method_layout)
+        self.methods_container = QWidget(enabled=False)
+        method_layout = QVBoxLayout(margin=0)
+        self.methods_container.setLayout(method_layout)
 
         button_group = QButtonGroup()
         for method in Method:
@@ -286,13 +289,16 @@ class OWImpute(OWWidget):
             self.set_method_for_current_selection
         )
 
-        method_layout.addStretch(2)
+        self.reset_button = QPushButton(
+            "Restore All to Default", enabled=False, default=False,
+            autoDefault=False, clicked=self.reset_variable_state,
+        )
 
-        reset_button = QPushButton(
-            "Restore All to Default", checked=False, checkable=False,
-            clicked=self.reset_variable_state, default=False,
-            autoDefault=False)
-        method_layout.addWidget(reset_button)
+        vertical_layout.addWidget(self.methods_container)
+        vertical_layout.addStretch(2)
+        vertical_layout.addWidget(self.reset_button)
+
+        horizontal_layout.addLayout(vertical_layout)
 
         self.variable_button_group = button_group
 
@@ -366,7 +372,7 @@ class OWImpute(OWWidget):
             self.openContext(data.domain)
             # restore per variable imputation state
             self._restore_state(self._variable_imputation_state)
-
+        self.reset_button.setEnabled(len(self.varmodel) > 0)
         summary = len(data) if data else self.info.NoInput
         details = format_summary_details(data) if data else ""
         self.info.set_input_summary(summary, details)
@@ -575,6 +581,7 @@ class OWImpute(OWWidget):
         # Method is well documented, splitting it is not needed for readability,
         # thus pylint: disable=too-many-branches
         indexes = self.selection.selectedIndexes()
+        self.methods_container.setEnabled(len(indexes) > 0)
         defmethod = (Method.AsAboveSoBelow, ())
         methods = [index.data(StateRole) for index in indexes]
         methods = [m if m is not None else defmethod for m in methods]
