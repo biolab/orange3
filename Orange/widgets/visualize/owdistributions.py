@@ -386,7 +386,7 @@ class OWDistributions(OWWidget):
             plot.setZValue(zvalue)
             return plot
 
-        self.plotview = DistributionWidget(background=None)
+        self.plotview = DistributionWidget()
         self.plotview.item_clicked.connect(self._on_item_clicked)
         self.plotview.blank_clicked.connect(self._on_blank_clicked)
         self.plotview.mouse_released.connect(self._on_end_selecting)
