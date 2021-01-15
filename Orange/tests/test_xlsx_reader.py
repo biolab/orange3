@@ -181,5 +181,12 @@ class TestExcelHeader3(unittest.TestCase):
             table.metas[:, 2], np.array(list("abcdefghijklmnopqrstuvw")))
 
 
+class TestMissingValues(unittest.TestCase):
+    def test_read_errors(self):
+        table = read_file(get_xlsx_reader, "missing")
+        values = table.get_column_view("C")[0]
+        self.assertTrue(np.isnan(values).all())
+
+
 if __name__ == "__main__":
     unittest.main()
