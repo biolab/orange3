@@ -62,8 +62,8 @@ class TestGBLearnerEditor(GuiTest):
         params = (("Method", "Gradient Boosting (scikit-learn)"),
                   ("Number of trees", 100),
                   ("Learning rate", 0.1),
-                  ("Maximum tree depth", 3),
                   ("Replicable training", "Yes"),
+                  ("Maximum tree depth", 3),
                   ("Fraction of training instance", 1),
                   ("Stop splitting nodes with maximum instances", 2))
         self.assertTupleEqual(self.editor.get_learner_parameters(), params)
@@ -105,14 +105,15 @@ class TestXGBLearnerEditor(GuiTest):
 
     def test_arguments(self):
         args = {"n_estimators": 100, "learning_rate": 0.3, "max_depth": 6,
-                "reg_lambda": 1, "subsample": 1, "colsample_bytree": 1,
-                "colsample_bylevel": 1, "colsample_bynode": 1}
+                "reg_lambda": 1, "colsample_bytree": 1, "colsample_bylevel": 1,
+                "colsample_bynode": 1, "subsample": 1, "random_state": 0}
         self.assertDictEqual(self.editor.get_arguments(), args)
 
     def test_learner_parameters(self):
         params = (("Method", "Extreme Gradient Boosting (xgboost)"),
                   ("Number of trees", 100),
                   ("Learning rate", 0.3),
+                  ("Replicable training", "Yes"),
                   ("Maximum tree depth", 6),
                   ("Regularization strength", 1),
                   ("Fraction of training instance", 1),
@@ -166,8 +167,8 @@ class TestXGBRFLearnerEditor(GuiTest):
 
     def test_arguments(self):
         args = {"n_estimators": 100, "learning_rate": 0.3, "max_depth": 6,
-                "reg_lambda": 1, "subsample": 1, "colsample_bytree": 1,
-                "colsample_bylevel": 1, "colsample_bynode": 1}
+                "reg_lambda": 1, "colsample_bytree": 1, "colsample_bylevel": 1,
+                "colsample_bynode": 1, "subsample": 1, "random_state": 0}
         self.assertDictEqual(self.editor.get_arguments(), args)
 
     def test_learner_parameters(self):
@@ -175,6 +176,7 @@ class TestXGBRFLearnerEditor(GuiTest):
                    "Extreme Gradient Boosting Random Forest (xgboost)"),
                   ("Number of trees", 100),
                   ("Learning rate", 0.3),
+                  ("Replicable training", "Yes"),
                   ("Maximum tree depth", 6),
                   ("Regularization strength", 1),
                   ("Fraction of training instance", 1),
@@ -228,13 +230,14 @@ class TestCatGBLearnerEditor(GuiTest):
 
     def test_arguments(self):
         args = {"n_estimators": 100, "learning_rate": 0.3, "max_depth": 6,
-                "reg_lambda": 3, "colsample_bylevel": 1}
+                "reg_lambda": 3, "colsample_bylevel": 1, "random_state": 0}
         self.assertDictEqual(self.editor.get_arguments(), args)
 
     def test_learner_parameters(self):
         params = (("Method", "Gradient Boosting (catboost)"),
                   ("Number of trees", 100),
                   ("Learning rate", 0.3),
+                  ("Replicable training", "Yes"),
                   ("Maximum tree depth", 6),
                   ("Regularization strength", 3),
                   ("Fraction of features for each tree", 1))
@@ -245,7 +248,6 @@ class TestCatGBLearnerEditor(GuiTest):
         booster = CatGBClassifier()
         model = booster(data)
         params = model.cat_model.get_all_params()
-        print(params)
         self.assertEqual(self.editor.n_estimators, 100)
         self.assertEqual(params["iterations"], 1000)
         self.assertEqual(params["depth"], self.editor.max_depth)

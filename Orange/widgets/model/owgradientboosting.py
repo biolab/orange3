@@ -1,4 +1,5 @@
 from itertools import chain
+from random import randint
 from typing import Tuple, Dict, Callable, Type
 
 from AnyQt.QtCore import Qt
@@ -53,6 +54,7 @@ class BaseEditor(QWidget, gui.OWComponent):
     learner_class: Type[Learner] = NotImplemented
     n_estimators: int = NotImplemented
     learning_rate: float = NotImplemented
+    random_state: bool = NotImplemented
     max_depth: int = NotImplemented
 
     def __init__(self, parent: OWBaseLearner):
@@ -78,6 +80,11 @@ class BaseEditor(QWidget, gui.OWComponent):
             self.basic_box, self, "learning_rate", 0, 1, 0.001,
             label="Learning rate: ", **common_args
         )
+        gui.separator(self.basic_box, height=1)
+        gui.checkBox(
+            self.basic_box, self, "random_state", label="Replicable training",
+            callback=self.settings_changed
+        )
 
         self.growth_box = gui.vBox(self._layout, "Growth Control")
         gui.spin(
@@ -91,6 +98,7 @@ class BaseEditor(QWidget, gui.OWComponent):
         return {
             "n_estimators": self.n_estimators,
             "learning_rate": self.learning_rate,
+            "random_state": 0 if self.random_state else randint(1, 1e6),
             "max_depth": self.max_depth,
         }
 
@@ -99,6 +107,7 @@ class BaseEditor(QWidget, gui.OWComponent):
             ("Method", self.learner_class.name),
             ("Number of trees", self.n_estimators),
             ("Learning rate", self.learning_rate),
+            ("Replicable training", "Yes" if self.random_state else "No"),
             ("Maximum tree depth", self.max_depth),
         )
 
@@ -159,12 +168,6 @@ class GBLearnerEditor(BaseEditor):
 
     def _add_main_layout(self):
         super()._add_main_layout()
-        # Basic properties
-        gui.separator(self.basic_box, height=1)
-        gui.checkBox(
-            self.basic_box, self, "random_state", label="Replicable training",
-            callback=self.settings_changed
-        )
         # Subsampling
         gui.doubleSpin(
             self.sub_box, self, "subsample", 0.05, 1, 0.05,
@@ -181,14 +184,12 @@ class GBLearnerEditor(BaseEditor):
 
     def get_arguments(self) -> Dict:
         params = super().get_arguments()
-        params["random_state"] = 0 if self.random_state else None
         params["subsample"] = self.subsample
         params["min_samples_split"] = self.min_samples_split
         return params
 
     def get_learner_parameters(self) -> Tuple:
         return super().get_learner_parameters() + (
-            ("Replicable training", "Yes" if self.random_state else "No"),
             ("Fraction of training instance", self.subsample),
             ("Stop splitting nodes with maximum instances",
              self.min_samples_split),
@@ -199,6 +200,7 @@ class CatGBLearnerEditor(RegEditor):
     learner_class = CatGBLearner
     n_estimators = Setting(100)
     learning_rate = Setting(0.3)
+    random_state = Setting(True)
     max_depth = Setting(6)
     lambda_index = Setting(55)  # 3
     colsample_bylevel = Setting(1)
@@ -228,6 +230,7 @@ class XGBBaseEditor(RegEditor):
     learner_class = XGBLearner
     n_estimators = Setting(100)
     learning_rate = Setting(0.3)
+    random_state = Setting(True)
     max_depth = Setting(6)
     lambda_index = Setting(53)  # 1
     subsample = Setting(1)
