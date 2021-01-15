@@ -3,7 +3,7 @@ import itertools
 from collections.abc import Iterable
 import re
 import warnings
-from typing import Callable
+from typing import Callable, Dict
 
 import numpy as np
 import scipy
@@ -12,6 +12,7 @@ from Orange.data import Table, Storage, Instance, Value
 from Orange.data.filter import HasClass
 from Orange.data.table import DomainTransformationError
 from Orange.data.util import one_hot
+from Orange.misc.environ import cache_dir
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute, Normalize
 from Orange.statistics.util import all_nan
@@ -168,7 +169,7 @@ class Learner(ReprableWithPreprocessors):
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
 
-    def check_learner_adequacy(self, domain):
+    def check_learner_adequacy(self, _):
         return True
 
     @property
@@ -570,6 +571,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         return m
 
     def _initialize_wrapped(self):
+        # pylint: disable=not-callable
         return self.__wraps__(**self.params)
 
     def fit(self, X, Y, W=None):
@@ -619,6 +621,8 @@ class RandomForestModel(Model):
 class KNNBase:
     """Base class for KNN (classification and regression) learners
     """
+
+    # pylint: disable=unused-argument
     def __init__(self, n_neighbors=5, metric="euclidean", weights="uniform",
                  algorithm='auto', metric_params=None,
                  preprocessors=None):
@@ -637,6 +641,7 @@ class NNBase:
     """
     preprocessors = SklLearner.preprocessors + [Normalize()]
 
+    # pylint: disable=unused-argument,too-many-arguments
     def __init__(self, hidden_layer_sizes=(100,), activation='relu',
                  solver='adam', alpha=0.0001, batch_size='auto',
                  learning_rate='constant', learning_rate_init=0.001,
@@ -647,3 +652,209 @@ class NNBase:
                  epsilon=1e-08, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+
+class CatGBModel(Model, metaclass=WrapperMeta):
+    def __init__(self, cat_model, cat_features, domain):
+        super().__init__(domain)
+        self.cat_model = cat_model
+        self.cat_features = cat_features
+
+    def predict(self, X):
+        if self.cat_features:
+            X = X.astype(str)
+        value = self.cat_model.predict(X).flatten()
+        if hasattr(self.cat_model, "predict_proba"):
+            probs = self.cat_model.predict_proba(X)
+            return value, probs
+        return value
+
+    def __repr__(self):
+        # Params represented as a comment because not passed into constructor
+        return super().__repr__() + '  # params=' + repr(self.params)
+
+
+class CatGBBaseLearner(Learner, metaclass=WrapperMeta):
+    """
+    ${skldoc}
+    Additional Orange parameters
+
+    preprocessors : list, optional
+        An ordered list of preprocessors applied to data before
+        training or testing.
+        Defaults to
+        `[RemoveNaNClasses(), RemoveNaNColumns()]`
+    """
+    supports_weights = True
+    __wraps__ = None
+    __returns__ = CatGBModel
+    _params = {}
+    preprocessors = default_preprocessors = [
+        HasClass(),
+        RemoveNaNColumns(),
+    ]
+
+    # pylint: disable=unused-argument,too-many-arguments,too-many-locals
+    def __init__(self,
+                 iterations=None,
+                 learning_rate=None,
+                 depth=None,
+                 l2_leaf_reg=None,
+                 model_size_reg=None,
+                 rsm=None,
+                 loss_function=None,
+                 border_count=None,
+                 feature_border_type=None,
+                 per_float_feature_quantization=None,
+                 input_borders=None,
+                 output_borders=None,
+                 fold_permutation_block=None,
+                 od_pval=None,
+                 od_wait=None,
+                 od_type=None,
+                 nan_mode=None,
+                 counter_calc_method=None,
+                 leaf_estimation_iterations=None,
+                 leaf_estimation_method=None,
+                 thread_count=None,
+                 random_seed=None,
+                 use_best_model=None,
+                 verbose=False,
+                 logging_level=None,
+                 metric_period=None,
+                 ctr_leaf_count_limit=None,
+                 store_all_simple_ctr=None,
+                 max_ctr_complexity=None,
+                 has_time=None,
+                 allow_const_label=None,
+                 classes_count=None,
+                 class_weights=None,
+                 one_hot_max_size=None,
+                 random_strength=None,
+                 name=None,
+                 ignored_features=None,
+                 train_dir=cache_dir(),
+                 custom_loss=None,
+                 custom_metric=None,
+                 eval_metric=None,
+                 bagging_temperature=None,
+                 save_snapshot=None,
+                 snapshot_file=None,
+                 snapshot_interval=None,
+                 fold_len_multiplier=None,
+                 used_ram_limit=None,
+                 gpu_ram_part=None,
+                 allow_writing_files=False,
+                 final_ctr_computation_mode=None,
+                 approx_on_full_history=None,
+                 boosting_type=None,
+                 simple_ctr=None,
+                 combinations_ctr=None,
+                 per_feature_ctr=None,
+                 task_type=None,
+                 device_config=None,
+                 devices=None,
+                 bootstrap_type=None,
+                 subsample=None,
+                 sampling_unit=None,
+                 dev_score_calc_obj_block_size=None,
+                 max_depth=None,
+                 n_estimators=None,
+                 num_boost_round=None,
+                 num_trees=None,
+                 colsample_bylevel=None,
+                 random_state=None,
+                 reg_lambda=None,
+                 objective=None,
+                 eta=None,
+                 max_bin=None,
+                 scale_pos_weight=None,
+                 gpu_cat_features_storage=None,
+                 data_partition=None,
+                 metadata=None,
+                 early_stopping_rounds=None,
+                 cat_features=None,
+                 grow_policy=None,
+                 min_data_in_leaf=None,
+                 min_child_samples=None,
+                 max_leaves=None,
+                 num_leaves=None,
+                 score_function=None,
+                 leaf_estimation_backtracking=None,
+                 ctr_history_unit=None,
+                 monotone_constraints=None,
+                 feature_weights=None,
+                 penalties_coefficient=None,
+                 first_feature_use_penalties=None,
+                 model_shrink_rate=None,
+                 model_shrink_mode=None,
+                 langevin=None,
+                 diffusion_temperature=None,
+                 posterior_sampling=None,
+                 boost_from_average=None,
+                 text_features=None,
+                 tokenizers=None,
+                 dictionaries=None,
+                 feature_calcers=None,
+                 text_processing=None,
+                 preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()
+
+    @property
+    def params(self):
+        return self._params
+
+    @params.setter
+    def params(self, value):
+        self._params = self._get_wrapper_params(value)
+
+    def _get_wrapper_params(self, values):
+        spec = list(inspect.signature(
+            self.__wraps__.__init__).parameters.keys())
+        return {name: values[name] for name in spec[1:] if name in values}
+
+    def __call__(self, data, progress_callback=None):
+        m = super().__call__(data, progress_callback)
+        m.params = self.params
+        return m
+
+    def fit_storage(self, data: Table):
+        domain, X, Y, W = data.domain, data.X, data.Y.reshape(-1), None
+        if self.supports_weights and data.has_weights():
+            W = data.W.reshape(-1)
+        # pylint: disable=not-callable
+        clf = self.__wraps__(**self.params)
+        cat_features = [i for i, attr in enumerate(domain.attributes)
+                        if attr.is_discrete]
+        if cat_features:
+            X = X.astype(str)
+        cat_model = clf.fit(X, Y, cat_features=cat_features, sample_weight=W)
+        return self.__returns__(cat_model, cat_features, domain)
+
+    def __getattr__(self, item):
+        try:
+            return self.params[item]
+        except (KeyError, AttributeError):
+            raise AttributeError(item) from None
+
+    def __dir__(self):
+        dd = super().__dir__()
+        return list(sorted(set(dd) | set(self.params.keys())))
+
+
+class XGBBase(SklLearner):
+    """Base class for xgboost (classification and regression) learners """
+    preprocessors = default_preprocessors = [
+        HasClass(),
+        Continuize(),
+        RemoveNaNColumns(),
+    ]
+
+    def __init__(self, preprocessors=None, **kwargs):
+        super().__init__(preprocessors=preprocessors)
+        self.params = kwargs
+
+    @SklLearner.params.setter
+    def params(self, values: Dict):
+        self._params = values

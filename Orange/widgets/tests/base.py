@@ -473,6 +473,14 @@ class WidgetLearnerTestMixin:
                  data.domain.has_continuous_class) or
                 (parameter.problem_type == "both"))
 
+    def test_send_report(self, timeout=DEFAULT_TIMEOUT):
+        """Test report"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.report_button.click()
+        self.wait_until_finished(timeout=timeout)
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.report_button.click()
+
 
 class WidgetOutputsTestMixin:
     """Class for widget's outputs testing.
