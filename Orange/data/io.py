@@ -275,6 +275,7 @@ class ExcelReader(_BaseExcelReader):
     """Reader for .xlsx files"""
     EXTENSIONS = ('.xlsx',)
     DESCRIPTION = 'Microsoft Excel spreadsheet'
+    ERRORS = ("#VALUE!", "#DIV/0!", "#REF!", "#NUM!", "#NULL!", "#NAME?")
 
     @property
     def workbook(self) -> openpyxl.Workbook:
@@ -296,7 +297,8 @@ class ExcelReader(_BaseExcelReader):
 
     def get_cells(self) -> Iterable:
         def str_(x):
-            return str(x) if x is not None else ""
+            return str(x) if x is not None and x not in ExcelReader.ERRORS \
+                else ""
 
         sheet = self._get_active_sheet()
         min_col = sheet.min_column
