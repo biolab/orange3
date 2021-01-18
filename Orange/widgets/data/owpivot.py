@@ -612,8 +612,11 @@ class PivotTableView(QTableView):
             self.table_model.setItem(i + 1, 1, item)
 
     def _set_values(self, table):
+        attrs = table.domain.attributes
         for i, j in product(range(len(table)), range(len(table[0]))):
-            item = self._create_value_item(str(table.X[i, j]))
+            # data is read faster when reading directly from table.X
+            value = table.X[i, j] if attrs[j].is_continuous else table[i, j]
+            item = self._create_value_item(str(value))
             self.table_model.setItem(i + self._n_leading_rows,
                                      j + self._n_leading_cols, item)
 

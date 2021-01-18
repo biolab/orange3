@@ -283,6 +283,25 @@ class TestOWPivot(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.too_many_values.is_shown())
 
+    def test_table_values(self):
+        self.send_signal(self.widget.Inputs.data, self.heart_disease)
+        domain = self.heart_disease.domain
+        self.agg_checkboxes[Pivot.Functions.Majority.value].click()
+        simulate.combobox_activate_item(self.widget.controls.col_feature,
+                                        domain["gender"].name)
+        simulate.combobox_activate_item(self.widget.controls.val_feature,
+                                        domain["thal"].name)
+
+        model = self.widget.table_view.model()
+        self.assertEqual(model.data(model.index(2, 3)), "72.0")
+        self.assertEqual(model.data(model.index(3, 3)), "normal")
+        self.assertEqual(model.data(model.index(4, 3)), "25.0")
+        self.assertEqual(model.data(model.index(5, 3)), "reversable defect")
+        self.assertEqual(model.data(model.index(2, 4)), "92.0")
+        self.assertEqual(model.data(model.index(3, 4)), "normal")
+        self.assertEqual(model.data(model.index(4, 4)), "114.0")
+        self.assertEqual(model.data(model.index(5, 4)), "reversable defect")
+
 
 class TestAggregationFunctionsEnum(unittest.TestCase):
     def test_pickle(self):
