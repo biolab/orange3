@@ -211,7 +211,7 @@ class OWPCA(widget.OWWidget):
         if self._pca is not None:
             var = self._cumulative[components - 1]
             if numpy.isfinite(var):
-                self.variance_covered = int(var * 100)
+                self.variance_covered = round(var * 100, 0)
 
         self._invalidate_selection()
 
@@ -229,7 +229,7 @@ class OWPCA(widget.OWWidget):
 
         var = self._cumulative[cut - 1]
         if numpy.isfinite(var):
-            self.variance_covered = int(var * 100)
+            self.variance_covered = round(var * 100, 0)
 
         self.plot.set_cut_point(cut)
         self._invalidate_selection()
@@ -271,7 +271,7 @@ class OWPCA(widget.OWWidget):
         if var_max != numpy.floor(self.variance_covered / 100.0):
             cut = max_comp
             assert numpy.isfinite(var_max)
-            self.variance_covered = int(var_max * 100)
+            self.variance_covered = round(var_max * 100, 0)
         else:
             self.ncomponents = cut = numpy.searchsorted(
                 self._cumulative, self.variance_covered / 100.0) + 1
@@ -347,7 +347,7 @@ class OWPCA(widget.OWWidget):
             vc = settings["variance_covered"]
             if isinstance(vc, numbers.Real):
                 if numpy.isfinite(vc):
-                    vc = int(vc)
+                    vc = round(vc, 0)
                 else:
                     vc = 100
                 settings["variance_covered"] = vc
