@@ -182,8 +182,9 @@ class TestExcelHeader3(unittest.TestCase):
 
 
 class TestMissingValues(unittest.TestCase):
-    def test_read_errors(self):
-        table = read_file(get_xlsx_reader, "missing")
+    @test_xlsx_xls
+    def test_read_errors(self, reader: Callable[[str], io.FileFormat]):
+        table = read_file(reader, "missing")
         values = table.get_column_view("C")[0]
         self.assertTrue(np.isnan(values).all())
 
