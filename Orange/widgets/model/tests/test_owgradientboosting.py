@@ -64,7 +64,7 @@ class TestGBLearnerEditor(GuiTest):
                   ("Learning rate", 0.1),
                   ("Replicable training", "Yes"),
                   ("Maximum tree depth", 3),
-                  ("Fraction of training instance", 1),
+                  ("Fraction of training instances", 1),
                   ("Stop splitting nodes with maximum instances", 2))
         self.assertTupleEqual(self.editor.get_learner_parameters(), params)
 
@@ -116,7 +116,7 @@ class TestXGBLearnerEditor(GuiTest):
                   ("Replicable training", "Yes"),
                   ("Maximum tree depth", 6),
                   ("Regularization strength", 1),
-                  ("Fraction of training instance", 1),
+                  ("Fraction of training instances", 1),
                   ("Fraction of features for each tree", 1),
                   ("Fraction of features for each level", 1),
                   ("Fraction of features for each split", 1))
@@ -179,7 +179,7 @@ class TestXGBRFLearnerEditor(GuiTest):
                   ("Replicable training", "Yes"),
                   ("Maximum tree depth", 6),
                   ("Regularization strength", 1),
-                  ("Fraction of training instance", 1),
+                  ("Fraction of training instances", 1),
                   ("Fraction of features for each tree", 1),
                   ("Fraction of features for each level", 1),
                   ("Fraction of features for each split", 1))

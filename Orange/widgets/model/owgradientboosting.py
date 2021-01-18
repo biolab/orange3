@@ -172,7 +172,7 @@ class GBLearnerEditor(BaseEditor):
         gui.doubleSpin(
             self.sub_box, self, "subsample", 0.05, 1, 0.05,
             controlWidth=80, alignment=Qt.AlignRight,
-            label="Fraction of training instance: ",
+            label="Fraction of training instances: ",
             callback=self.settings_changed
         )
         # Growth control
@@ -190,7 +190,7 @@ class GBLearnerEditor(BaseEditor):
 
     def get_learner_parameters(self) -> Tuple:
         return super().get_learner_parameters() + (
-            ("Fraction of training instance", self.subsample),
+            ("Fraction of training instances", self.subsample),
             ("Stop splitting nodes with maximum instances",
              self.min_samples_split),
         )
@@ -245,7 +245,7 @@ class XGBBaseEditor(RegEditor):
                        "alignment": Qt.AlignRight, "controlWidth": 80}
         gui.doubleSpin(
             self.sub_box, self, "subsample", 0.05, 1, 0.05,
-            label="Fraction of samples: ", **common_args
+            label="Fraction of training instances: ", **common_args
         )
         gui.doubleSpin(
             self.sub_box, self, "colsample_bytree", 0.05, 1, 0.05,
@@ -270,7 +270,7 @@ class XGBBaseEditor(RegEditor):
 
     def get_learner_parameters(self) -> Tuple:
         return super().get_learner_parameters() + (
-            ("Fraction of training instance", self.subsample),
+            ("Fraction of training instances", self.subsample),
             ("Fraction of features for each tree", self.colsample_bytree),
             ("Fraction of features for each level", self.colsample_bylevel),
             ("Fraction of features for each split", self.colsample_bynode),

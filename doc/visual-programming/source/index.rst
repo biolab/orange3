@@ -96,6 +96,7 @@ Model
    widgets/model/knn
    widgets/model/tree
    widgets/model/randomforest
+   widgets/model/gradientboosting
    widgets/model/svm
    widgets/model/linearregression
    widgets/model/logisticregression
