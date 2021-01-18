@@ -79,19 +79,22 @@ class TestThresholdLearner(unittest.TestCase):
         model.domain.class_var.values = ("a", "b")
         data = Table("heart_disease")
         learner = Mock()
-        test_on_training.return_value = res = Mock()
+        test_on_training.return_value = tot = Mock()
+        res = Mock()
         res.models = np.array([[model]])
-        test_on_training.return_value = res
+        tot.return_value = res
 
         thresh_learner = ThresholdLearner(
             base_learner=learner,
             threshold_criterion=ThresholdLearner.OptimizeCA)
         thresh_model = thresh_learner(data)
         self.assertEqual(thresh_model.threshold, 0.15)
-        args, kwargs = test_on_training.call_args
+        args, _ = tot.call_args  # pylint: disable=unpacking-non-sequence
         self.assertEqual(len(args), 2)
         self.assertIs(args[0], data)
         self.assertIs(args[1][0], learner)
+
+        _, kwargs = test_on_training.call_args
         self.assertEqual(len(args[1]), 1)
         self.assertEqual(kwargs, {"store_models": 1})
 
@@ -178,10 +181,11 @@ class TestCalibratedLearner(unittest.TestCase):
         model.domain.class_var.is_discrete = True
         model.domain.class_var.values = ("a", "b")
 
-        test_on_training.return_value = res = Mock()
+        test_on_training.return_value = tot = Mock()
+        res = Mock()
         res.models = np.array([[model]])
         res.probabilities = np.arange(20, dtype=float).reshape(1, 5, 4)
-        test_on_training.return_value = res
+        tot.return_value = res
 
         sigmoid_fit.return_value = Mock()
 
@@ -191,11 +195,13 @@ class TestCalibratedLearner(unittest.TestCase):
 
         self.assertIs(cal_model.base_model, model)
         self.assertEqual(cal_model.calibrators, [sigmoid_fit.return_value] * 4)
-        args, kwargs = test_on_training.call_args
+        args, _ = tot.call_args  # pylint: disable=unpacking-non-sequence
         self.assertEqual(len(args), 2)
         self.assertIs(args[0], data)
         self.assertIs(args[1][0], learner)
         self.assertEqual(len(args[1]), 1)
+
+        _, kwargs = test_on_training.call_args
         self.assertEqual(kwargs, {"store_models": 1})
 
         for call, cls_probs in zip(sigmoid_fit.call_args_list,
