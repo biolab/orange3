@@ -512,6 +512,22 @@
     "keywords": []
    },
    {
+    "text": "Gradient Boosting",
+    "doc": "visual-programming/source/widgets/model/gradientboosting.md",
+    "icon": "../Orange/widgets/model/icons/GradientBoosting.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "catboost",
+     "gradient",
+     "boost",
+     "tree",
+     "forest",
+     "xgb",
+     "gb",
+     "extreme"
+    ]
+   },
+   {
     "text": "SVM",
     "doc": "visual-programming/source/widgets/model/svm.md",
     "icon": "../Orange/widgets/model/icons/SVM.svg",
