@@ -10,7 +10,8 @@ from AnyQt.QtCore import Qt, QPoint
 from AnyQt.QtTest import QTest
 
 from Orange.data import (Table, Domain, ContinuousVariable as Cv,
-                         StringVariable as sv, DiscreteVariable as Dv)
+                         StringVariable as sv, DiscreteVariable as Dv,
+                         TimeVariable as Tv)
 from Orange.widgets.data.owpivot import (OWPivot, Pivot,
                                          AggregationFunctionsEnum)
 from Orange.widgets.tests.base import WidgetTest
@@ -67,6 +68,16 @@ class TestOWPivot(WidgetTest):
         self.assertListEqual(names, [a.name for a in grouped.domain.variables])
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.grouped_data))
+
+    def test_output_grouped_data_time_var(self):
+        domain = Domain([Dv("d1", ("a", "b")), Tv("t1", have_date=1)])
+        X = np.array([[0, 1e9], [0, 1e8], [1, 2e8], [1, np.nan]])
+        data = Table(domain, X)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.agg_checkboxes[Pivot.Functions.Mean.value].click()
+        grouped = self.get_output(self.widget.Outputs.grouped_data)
+        str_grouped = "[[a, 2, 1987-06-06],\n [b, 2, 1976-05-03]]"
+        self.assertEqual(str(grouped), str_grouped)
 
     def test_output_filtered_data(self):
         self.agg_checkboxes[Pivot.Functions.Sum.value].click()
@@ -332,6 +343,18 @@ class TestPivot(unittest.TestCase):
               np.nan, np.nan, np.nan, np.nan],
              [1, 2, 1, 1, 1, 1, 2, 1, 7, 7, 7, 7, 7, 7, 0]])
         self.assert_table_equal(group_tab, Table(Domain(domain[:2] + atts), X))
+
+    def test_group_table_time_var(self):
+        domain = Domain([Dv("d1", ("a", "b")), Tv("t1", have_date=1)])
+        X = np.array([[0, 1e9], [0, 1e8], [1, 2e8], [1, np.nan]])
+        table = Table(domain, X)
+        pivot = Pivot(table, Pivot.Functions, domain[0], val_var=domain[1])
+        str_grouped = \
+            "[[a, 2, 2, a, 2, 1.1e+09, 1987-06-06, 1973-03-03, " \
+            "2001-09-09, 1973-03-03, 1987-06-06, 2.025e+17],\n " \
+            "[b, 2, 2, b, 1, 2e+08, 1976-05-03, 1976-05-03, " \
+            "1976-05-03, 1976-05-03, 1976-05-03, 0]]"
+        self.assertEqual(str(pivot.group_table), str_grouped)
 
     def test_group_table_metas(self):
         domain = Domain([Dv("d1", ("a", "b")), Cv("c1"),

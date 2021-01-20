@@ -14,7 +14,7 @@ from AnyQt.QtWidgets import (QTableView, QSizePolicy, QHeaderView,
                              QGridLayout)
 
 from Orange.data import (Table, DiscreteVariable, Variable, Domain,
-                         ContinuousVariable)
+                         ContinuousVariable, TimeVariable)
 from Orange.data.domain import filter_visible
 from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
@@ -67,6 +67,7 @@ class Pivot:
     AnyVarFunctions = (Count_defined,)
     ContVarFunctions = (Sum, Mean, Min, Max, Mode, Median, Var)
     DiscVarFunctions = (Majority,)
+    TimeVarFunctions = (Mean, Min, Max, Mode, Median)
 
     class Tables:
         table = None  # type: Table
@@ -195,7 +196,12 @@ class Pivot:
             if fun in self.DiscVarFunctions:
                 attrs.append(DiscreteVariable(name, var.values))
             else:
-                attrs.append(ContinuousVariable(name))
+                if isinstance(var, TimeVariable) and \
+                        fun in self.TimeVarFunctions:
+                    attrs.append(TimeVariable(name, have_date=var.have_date,
+                                              have_time=var.have_time))
+                else:
+                    attrs.append(ContinuousVariable(name))
         args = (var_indep_funs, var_dep_funs, attrs)
         for t, var in (("table", None), ("total_h", self._col_var),
                        ("total_v", self._row_var), ("total", self._total_var)):
