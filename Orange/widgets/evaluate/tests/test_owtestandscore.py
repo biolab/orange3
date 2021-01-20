@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
+from AnyQt.QtWidgets import QApplication
 import baycomp
 
 from Orange.classification import MajorityLearner, LogisticRegressionLearner, \
@@ -692,6 +693,22 @@ class TestOWTestAndScore(WidgetTest):
         self.send_signal(self.widget.Inputs.learner, RandomForestLearner(), 0)
         output = self.get_output(self.widget.Outputs.predictions)
         self.assertEqual(output.domain.metas[0].name, 'random forest (1)')
+
+    def test_copy_to_clipboard(self):
+        self.send_signal(self.widget.Inputs.train_data, Table("iris"))
+        self.send_signal(self.widget.Inputs.learner, RandomForestLearner(), 0)
+        self.wait_until_finished()
+        view = self.widget.score_table.view
+        model = self.widget.score_table.model
+        selection_model = view.selectionModel()
+        selection_model.select(model.index(0, 0),
+                               selection_model.Select | selection_model.Rows)
+
+        self.widget.copy_to_clipboard()
+        clipboard_text = QApplication.clipboard().text()
+        view_text = "\t".join([str(model.data(model.index(0, i)))
+                               for i in (0, 3, 4, 5, 6, 7)]) + "\r\n"
+        self.assertEqual(clipboard_text, view_text)
 
 
 class TestHelpers(unittest.TestCase):
