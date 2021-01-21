@@ -614,9 +614,9 @@ class TestOWScatterPlotBase(WidgetTest):
             self.assertEqual(brushes[0].color().alpha(), 0)
             self.assertEqual(brushes[1].color().alpha(), 0)
             self.assertEqual(brushes[4].color().alpha(), 0)
-            self.assertEqual(brushes[5].color().alpha(), 255)
-            self.assertEqual(brushes[6].color().alpha(), 255)
-            self.assertEqual(brushes[7].color().alpha(), 255)
+            self.assertEqual(brushes[5].color().alpha(), 123)
+            self.assertEqual(brushes[6].color().alpha(), 123)
+            self.assertEqual(brushes[7].color().alpha(), 123)
 
         graph = self.graph
 

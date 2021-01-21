@@ -567,6 +567,21 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(w.Inputs.data_subset, data[::30])
         self.assertEqual(len(w.subset_indices), 5)
 
+    def test_opacity_warning(self):
+        data = Table("iris")
+        w = self.widget
+        self.send_signal(w.Inputs.data, data)
+        w.graph.controls.alpha_value.setSliderPosition(10)
+        self.assertFalse(w.Warning.transparent_subset.is_shown())
+        self.send_signal(w.Inputs.data_subset, data[::30])
+        self.assertTrue(w.Warning.transparent_subset.is_shown())
+        w.graph.controls.alpha_value.setSliderPosition(200)
+        self.assertFalse(w.Warning.transparent_subset.is_shown())
+        w.graph.controls.alpha_value.setSliderPosition(10)
+        self.assertTrue(w.Warning.transparent_subset.is_shown())
+        self.send_signal(w.Inputs.data_subset, None)
+        self.assertFalse(w.Warning.transparent_subset.is_shown())
+
     def test_metas_zero_column(self):
         """
         Prevent crash when metas column is zero.
