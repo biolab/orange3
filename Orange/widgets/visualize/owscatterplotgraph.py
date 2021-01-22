@@ -642,12 +642,18 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.tip_textitem.setHtml(text)
 
     def suspend_jittering(self):
+        if self.jittering_suspended:
+            return
         self.jittering_suspended = True
-        self.update_jittering()
+        if self.jitter_size != 0:
+            self.update_jittering()
 
     def unsuspend_jittering(self):
+        if not self.jittering_suspended:
+            return
         self.jittering_suspended = False
-        self.update_jittering()
+        if self.jitter_size != 0:
+            self.update_jittering()
 
     def update_jittering(self):
         x, y = self.get_coordinates()
