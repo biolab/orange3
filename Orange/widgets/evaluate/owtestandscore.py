@@ -1121,6 +1121,9 @@ class OWTestAndScore(OWWidget):
         self.__executor.shutdown(wait=False)
         super().onDeleteWidget()
 
+    def copy_to_clipboard(self):
+        self.score_table.copy_selection_to_clipboard()
+
 
 class UserInterrupt(BaseException):
     """

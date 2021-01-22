@@ -4,8 +4,9 @@ from itertools import chain
 
 import numpy as np
 
-from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu
-from AnyQt.QtGui import QStandardItemModel, QStandardItem
+from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu, \
+    QApplication
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QClipboard
 from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
     QSortFilterProxyModel
 from sklearn.exceptions import UndefinedMetricWarning
@@ -13,6 +14,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 from Orange.data import Variable, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import scoring
 from Orange.widgets import gui
+from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
 
@@ -209,3 +211,9 @@ class ScoreTable(OWComponent, QObject):
             item.setToolTip(score.long_name)
             self.model.setHorizontalHeaderItem(col, item)
         self._update_shown_columns()
+
+    def copy_selection_to_clipboard(self):
+        mime = table_selection_to_mime_data(self.view)
+        QApplication.clipboard().setMimeData(
+            mime, QClipboard.Clipboard
+        )

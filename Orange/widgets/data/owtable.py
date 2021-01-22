@@ -1,7 +1,5 @@
 import sys
 import threading
-import io
-import csv
 import itertools
 import concurrent.futures
 
@@ -18,7 +16,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
-    Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
+    Qt, QSize, QEvent, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
     QItemSelectionModel, QItemSelection, QItemSelectionRange,
 )
@@ -35,7 +33,8 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemselectionmodel import (
     BlockSelectionModel, ranges, selection_blocks
 )
-from Orange.widgets.utils.tableview import TableView
+from Orange.widgets.utils.tableview import TableView, \
+    table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
@@ -161,47 +160,6 @@ class TableSliceProxy(QIdentityProxyModel):
         start, stop, step = self.__rowslice.indices(count)
         assert step == 1
         return stop - start
-
-
-def table_selection_to_mime_data(table):
-    """Copy the current selection in a QTableView to the clipboard.
-    """
-    lines = table_selection_to_list(table)
-
-    as_csv = lines_to_csv_string(lines, dialect="excel").encode("utf-8")
-    as_tsv = lines_to_csv_string(lines, dialect="excel-tab").encode("utf-8")
-
-    mime = QMimeData()
-    mime.setData("text/csv", QByteArray(as_csv))
-    mime.setData("text/tab-separated-values", QByteArray(as_tsv))
-    mime.setData("text/plain", QByteArray(as_tsv))
-    return mime
-
-
-def lines_to_csv_string(lines, dialect="excel"):
-    stream = io.StringIO()
-    writer = csv.writer(stream, dialect=dialect)
-    writer.writerows(lines)
-    return stream.getvalue()
-
-
-def table_selection_to_list(table):
-    model = table.model()
-    indexes = table.selectedIndexes()
-
-    rows = sorted(set(index.row() for index in indexes))
-    columns = sorted(set(index.column() for index in indexes))
-
-    lines = []
-    for row in rows:
-        line = []
-        for col in columns:
-            val = model.index(row, col).data(Qt.DisplayRole)
-            # TODO: use style item delegate displayText?
-            line.append(str(val))
-        lines.append(line)
-
-    return lines
 
 
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
