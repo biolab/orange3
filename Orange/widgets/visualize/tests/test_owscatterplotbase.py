@@ -8,7 +8,7 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtGui import QColor
 from AnyQt.QtTest import QSignalSpy
 
-from pyqtgraph import mkPen
+from pyqtgraph import mkPen, mkBrush
 
 from orangewidget.tests.base import GuiTest
 from Orange.widgets.settings import SettingProvider
@@ -103,7 +103,7 @@ class TestOWScatterPlotBase(WidgetTest):
         scatterplot_item.setSize([5, 6])
         scatterplot_item.setSymbol([7, 8])
         scatterplot_item.setPen([mkPen(9), mkPen(10)])
-        scatterplot_item.setBrush([11, 12])
+        scatterplot_item.setBrush([mkBrush(11), mkBrush(12)])
         data["data"] = np.array([13, 14])
 
         xy[0][0] = 0
@@ -118,7 +118,8 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_almost_equal(data["symbol"], [7, 8])
         self.assertEqual(data["pen"][0], mkPen(9))
         self.assertEqual(data["pen"][1], mkPen(10))
-        np.testing.assert_almost_equal(data["brush"], [11, 12])
+        self.assertEqual(data["brush"][0], mkBrush(11))
+        self.assertEqual(data["brush"][1], mkBrush(12))
         np.testing.assert_almost_equal(data["data"], [13, 14])
 
     def test_update_coordinates_and_labels(self):
