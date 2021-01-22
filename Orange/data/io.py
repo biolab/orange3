@@ -352,13 +352,16 @@ class XlsReader(_BaseExcelReader):
         return self.workbook.sheet_names() if self.workbook else []
 
     def get_cells(self) -> Iterable:
+        def str_(cell):
+            return "" if cell.ctype == xlrd.XL_CELL_ERROR else str(cell.value)
+
         sheet = self._get_active_sheet()
         first_row = next(i for i in range(sheet.nrows)
                          if any(sheet.row_values(i)))
         first_col = next(i for i in range(sheet.ncols)
                          if sheet.cell_value(first_row, i))
         row_len = sheet.row_len(first_row)
-        return filter(any, ([str(sheet.cell_value(row, col))
+        return filter(any, ([str_(sheet.cell(row, col))
                              if col < sheet.row_len(row) else ''
                              for col in range(first_col, row_len)]
                             for row in range(first_row, sheet.nrows)))
