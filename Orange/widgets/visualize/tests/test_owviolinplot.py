@@ -1,0 +1,220 @@
+# pylint: disable=(protected-access
+import unittest
+
+import numpy as np
+from scipy import stats
+from sklearn.neighbors import KernelDensity
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from AnyQt.QtGui import QFont
+
+from Orange.data import Table
+from Orange.data.pandas_compat import table_to_frame
+from Orange.widgets.tests.base import datasets, simulate, \
+    WidgetOutputsTestMixin, WidgetTest
+from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.visualize.owviolinplot import OWViolinPlot
+
+
+class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+
+        cls.signal_name = "Data"
+        cls.signal_data = cls.data
+        cls.titanic = Table("titanic")
+        cls.housing = Table("housing")
+        cls.heart = Table("heart_disease")
+
+    def setUp(self):
+        self.widget = self.create_widget(OWViolinPlot)
+
+    def _select_data(self):
+        self.widget.graph.select_by_indices(list(range(0, len(self.data), 5)))
+        return self.widget.selection
+
+    def test_summary(self):
+        info = self.widget.info
+        no_input, no_output = "No data on input", "No data on output"
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        details = format_summary_details(self.data)
+        self.assertEqual(info._StateInfo__input_summary.brief, "150")
+        self.assertEqual(info._StateInfo__input_summary.details, details)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+        self._select_data()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        details = format_summary_details(output)
+        self.assertEqual(info._StateInfo__output_summary.brief, "30")
+        self.assertEqual(info._StateInfo__output_summary.details, details)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.details, no_input)
+        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+    def test_kernels(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        kernel_combo = self.widget.controls.kernel_index
+        for kernel in self.widget.KERNEL_LABELS[1:]:
+            simulate.combobox_activate_item(kernel_combo, kernel)
+
+    def test_no_cont_features(self):
+        data = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.Error.no_cont_features.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.no_cont_features.is_shown())
+
+    def test_not_enough_instances(self):
+        self.send_signal(self.widget.Inputs.data, self.data[:1])
+        self.assertTrue(self.widget.Error.not_enough_instances.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.not_enough_instances.is_shown())
+
+    def test_controls(self):
+        self.widget.controls.show_strip_plot.setChecked(True)
+        self.widget.controls.show_rug_plot.setChecked(True)
+        self.widget.controls.order_violins.setChecked(True)
+        self.widget.controls.orientation_index.buttons[0].click()
+        self.widget.controls.kernel_index.setCurrentIndex(1)
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.controls.show_box_plot.setChecked(False)
+        self.widget.controls.show_strip_plot.setChecked(False)
+        self.widget.controls.show_rug_plot.setChecked(False)
+        self.widget.controls.order_violins.setChecked(False)
+        self.widget.controls.orientation_index.buttons[1].click()
+        self.widget.controls.kernel_index.setCurrentIndex(0)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.controls.show_box_plot.setChecked(True)
+        self.widget.controls.show_strip_plot.setChecked(True)
+        self.widget.controls.show_rug_plot.setChecked(True)
+        self.widget.controls.order_violins.setChecked(True)
+        self.widget.controls.orientation_index.buttons[0].click()
+        self.widget.controls.kernel_index.setCurrentIndex(1)
+
+    def test_datasets(self):
+        self.widget.controls.show_strip_plot.setChecked(True)
+        self.widget.controls.show_rug_plot.setChecked(True)
+        for ds in datasets.datasets():
+            self.send_signal(self.widget.Inputs.data, ds)
+
+    def test_visual_settings(self):
+        graph = self.widget.graph
+
+        def test_settings():
+            font = QFont("Helvetica", italic=True, pointSize=20)
+            self.assertFontEqual(
+                graph.parameter_setter.title_item.item.font(), font
+            )
+
+            font.setPointSize(16)
+            for item in graph.parameter_setter.axis_items:
+                self.assertFontEqual(item.label.font(), font)
+
+            font.setPointSize(15)
+            for item in graph.parameter_setter.axis_items:
+                self.assertFontEqual(item.style["tickFont"], font)
+
+            self.assertEqual(
+                graph.parameter_setter.title_item.item.toPlainText(), "Foo"
+            )
+            self.assertEqual(graph.parameter_setter.title_item.text, "Foo")
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Title", "Font size"), 20
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Axis title", "Font size"), 16
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Axis ticks", "Font size"), 15
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis ticks", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Annotations", "Title", "Title"), "Foo"
+        self.widget.set_visual_settings(key, value)
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        test_settings()
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        test_settings()
+
+    def assertFontEqual(self, font1, font2):
+        self.assertEqual(font1.family(), font2.family())
+        self.assertEqual(font1.pointSize(), font2.pointSize())
+        self.assertEqual(font1.italic(), font2.italic())
+
+    def test_seaborn(self):
+        # inner{“box”, “quartile”, “point”, “stick”, None}, optional
+
+        data = Table("heart_disease")
+        print(data.domain)
+        df = table_to_frame(data)
+        x = df["diameter narrowing"]
+        y = df["ST by exercise"]
+        y = df["major vessels colored"]
+
+        data = Table("iris")
+        print(data.domain)
+        df = table_to_frame(data)
+        x = df["iris"]
+        y = df["sepal length"]
+        # hue = df["chest pain"]
+        print(y.min(), y.max())
+        sns.violinplot(
+            x=x,
+            y=y,
+            # inner="stick",
+            # orient="v",
+            #   hue=hue,
+            #   scale="count",
+            # data=df,
+            # split=True,
+        )
+        plt.show()
+
+        sns.kdeplot()
+
+    def test_sklearn(self):
+        table = Table("iris")
+
+        data = table.X[:, 0]
+        kde = stats.gaussian_kde(data)
+        bw = kde.factor * data.std(ddof=1)
+        print(bw)
+        # bw = 1
+        kde = stats.gaussian_kde(data, bw_method=bw / data.std(ddof=1))
+        support1 = np.linspace(data.min() - bw * 2, data.max() + bw * 2, 100)
+        density1 = kde.evaluate(support1)
+
+        data = table.X[:, 0]
+        kde = KernelDensity(bandwidth=bw, kernel="gaussian")
+        kde.fit(data.reshape(-1, 1))
+        support2 = np.linspace(data.min() - bw * 2, data.max() + bw * 2, 100)
+        density2 = np.exp(kde.score_samples(support2.reshape(-1, 1)))
+
+        np.testing.assert_array_equal(support1, support2)
+        np.testing.assert_array_almost_equal(density1, density2)
+
+
+if __name__ == "__main__":
+    unittest.main()
