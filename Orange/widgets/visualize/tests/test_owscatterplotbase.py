@@ -1470,7 +1470,11 @@ class TestOWScatterPlotBase(WidgetTest):
     def test_no_needless_buildatlas(self):
         graph = self.graph
         graph.reset_graph()
-        self.assertIsNone(graph.scatterplot_item.fragmentAtlas.atlas)
+        atlas = graph.scatterplot_item.fragmentAtlas
+        if hasattr(atlas, "atlas"):  # pyqtgraph < 0.11.1
+            self.assertIsNone(atlas.atlas)
+        else:
+            self.assertFalse(atlas)
 
 
 class TestScatterPlotItem(GuiTest):
