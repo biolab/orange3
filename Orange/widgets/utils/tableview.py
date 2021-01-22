@@ -118,7 +118,7 @@ def table_selection_to_list(table):
         for col in columns:
             val = model.index(row, col).data(Qt.DisplayRole)
             # TODO: use style item delegate displayText?
-            line.append(str(val))
+            line.append("" if val is None else str(val))
         lines.append(line)
 
     return lines
