@@ -508,10 +508,12 @@ class AxisItem(pg.AxisItem):
         self.prepareGeometryChange()
         self.update()
 
-    def generateDrawSpecs(self, p):
-        if self.style["tickFont"]:
-            p.setFont(self.style["tickFont"])
-        return super().generateDrawSpecs(p)
+    # remove after Orange requires pyqtgraph >= 0.11.1
+    if pg.__version__ <= "0.11.0":
+        def generateDrawSpecs(self, p):
+            if self.style["tickFont"]:
+                p.setFont(self.style["tickFont"])
+            return super().generateDrawSpecs(p)
 
     def drawPicture(self, p, axisSpec, tickSpecs, textSpecs):
         if self.orientation in ["bottom", "top"] and self.style["rotateTicks"]:
@@ -549,12 +551,14 @@ class AxisItem(pg.AxisItem):
         else:
             super().drawPicture(p, axisSpec, tickSpecs, textSpecs)
 
-    def _updateMaxTextSize(self, x):
-        if self.orientation in ["left", "right"]:
-            self.textWidth = x
-            if self.style["autoExpandTextSpace"] is True:
-                self._updateWidth()
-        else:
-            self.textHeight = x
-            if self.style["autoExpandTextSpace"] is True:
-                self._updateHeight()
+    # remove after Orange requires pyqtgraph >= 0.11.1
+    if pg.__version__ <= "0.11.0":
+        def _updateMaxTextSize(self, x):
+            if self.orientation in ["left", "right"]:
+                self.textWidth = x
+                if self.style["autoExpandTextSpace"] is True:
+                    self._updateWidth()
+            else:
+                self.textHeight = x
+                if self.style["autoExpandTextSpace"] is True:
+                    self._updateHeight()

@@ -115,7 +115,7 @@ class Updater:
 
     @staticmethod
     def update_axis_title_text(item: pg.AxisItem, text: str):
-        item.setLabel(text)
+        item.setLabel(text, item.labelUnits, item.labelUnitPrefix)
         item.resizeEvent(None)
 
     @staticmethod
@@ -128,7 +128,8 @@ class Updater:
             style = {"font-size": f"{font.pointSize()}pt",
                      "font-family": f"{font.family()}",
                      "font-style": f"{fstyle}"}
-            item.setLabel(None, None, None, **style)
+            item.setLabel(item.labelText, item.labelUnits,
+                          item.labelUnitPrefix, **style)
 
     @staticmethod
     def update_axes_ticks_font(items: List[pg.AxisItem],
