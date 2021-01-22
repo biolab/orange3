@@ -364,6 +364,29 @@ class TestOWScatterPlotBase(WidgetTest):
         x, y = scatterplot_item.getData()
         np.testing.assert_equal(a10, x)
 
+    def test_suspend_jittering(self):
+        graph = self.graph
+        graph.jitter_size = 10
+        graph.reset_graph()
+        uj = graph.update_jittering = Mock()
+        graph.unsuspend_jittering()
+        uj.assert_not_called()
+        graph.suspend_jittering()
+        uj.assert_called()
+        uj.reset_mock()
+        graph.suspend_jittering()
+        uj.assert_not_called()
+        graph.unsuspend_jittering()
+        uj.assert_called()
+        uj.reset_mock()
+
+        graph.jitter_size = 0
+        graph.reset_graph()
+        graph.suspend_jittering()
+        uj.assert_not_called()
+        graph.unsuspend_jittering()
+        uj.assert_not_called()
+
     def test_size_normalization(self):
         graph = self.graph
 
