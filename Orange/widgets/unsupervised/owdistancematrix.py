@@ -6,16 +6,15 @@ import numpy as np
 from AnyQt.QtWidgets import QTableView, QItemDelegate, QHeaderView, QStyle, \
     QStyleOptionViewItem
 from AnyQt.QtGui import QColor, QPen, QBrush
-from AnyQt.QtCore import Qt, QAbstractTableModel, QModelIndex, \
-    QItemSelectionModel, QItemSelection, QSize
+from AnyQt.QtCore import Qt, QAbstractTableModel, QSize
 
 from Orange.data import Table, Variable, StringVariable
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
-from Orange.widgets.data.owtable import ranges
 from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.itemselectionmodel import SymmetricSelectionModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
@@ -47,7 +46,6 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.endResetModel()
 
     def set_labels(self, labels, variable=None, values=None):
-        self.beginResetModel()
         self.labels = labels
         self.variable = variable
         self.values = values
@@ -56,7 +54,12 @@ class DistanceMatrixModel(QAbstractTableModel):
             self.label_colors = variable.palette.values_to_qcolors(values)
         else:
             self.label_colors = None
-        self.endResetModel()
+        self.headerDataChanged.emit(Qt.Vertical, 0, self.rowCount() - 1)
+        self.headerDataChanged.emit(Qt.Horizontal, 0, self.columnCount() - 1)
+        self.dataChanged.emit(
+            self.index(0, 0),
+            self.index(self.rowCount() - 1, self.columnCount() - 1)
+        )
 
     def dimension(self, parent=None):
         if parent and parent.isValid() or self.distances is None:
@@ -121,44 +124,6 @@ class TableBorderItem(QItemDelegate):
             painter.restore()
 
 
-class SymmetricSelectionModel(QItemSelectionModel):
-    def select(self, selection, flags):
-        if isinstance(selection, QModelIndex):
-            selection = QItemSelection(selection, selection)
-
-        model = self.model()
-        indexes = selection.indexes()
-        sel_inds = {ind.row() for ind in indexes} | \
-                   {ind.column() for ind in indexes}
-        if flags == QItemSelectionModel.ClearAndSelect:
-            selected = set()
-        else:
-            selected = {ind.row() for ind in self.selectedIndexes()}
-        if flags & QItemSelectionModel.Select:
-            selected |= sel_inds
-        elif flags & QItemSelectionModel.Deselect:
-            selected -= sel_inds
-        new_selection = QItemSelection()
-        regions = list(ranges(sorted(selected)))
-        for r_start, r_end in regions:
-            for c_start, c_end in regions:
-                top_left = model.index(r_start, c_start)
-                bottom_right = model.index(r_end - 1, c_end - 1)
-                new_selection.select(top_left, bottom_right)
-        QItemSelectionModel.select(self, new_selection,
-                                   QItemSelectionModel.ClearAndSelect)
-
-    def selected_items(self):
-        return list({ind.row() for ind in self.selectedIndexes()})
-
-    def set_selected_items(self, inds):
-        index = self.model().index
-        selection = QItemSelection()
-        for i in inds:
-            selection.select(index(i, i), index(i, i))
-        self.select(selection, QItemSelectionModel.ClearAndSelect)
-
-
 class TableView(gui.HScrollStepMixin, QTableView):
     def sizeHintForColumn(self, column: int) -> int:
         model = self.model()
@@ -207,12 +172,12 @@ class DistanceMatrixContextHandler(ContextHandler):
         context = widget.current_context
         if context is not None:
             context.annotation = widget.annot_combo.currentText()
-            context.selection = widget.tableview.selectionModel().selected_items()
+            context.selection = widget.tableview.selectionModel().selectedItems()
 
     def settings_to_widget(self, widget, *args):
         context = widget.current_context
         widget.annotation_idx = context.annotations.index(context.annotation)
-        widget.tableview.selectionModel().set_selected_items(context.selection)
+        widget.tableview.selectionModel().setSelectedItems(context.selection)
 
 
 class OWDistanceMatrix(widget.OWWidget):
@@ -284,7 +249,7 @@ class OWDistanceMatrix(widget.OWWidget):
         self.distances = distances
         self.tablemodel.set_data(self.distances)
         self.selection = []
-        self.tableview.selectionModel().set_selected_items([])
+        self.tableview.selectionModel().clear()
 
         self.items = items = distances is not None and distances.row_items
         annotations = ["None", "Enumerate"]
@@ -330,21 +295,19 @@ class OWDistanceMatrix(widget.OWWidget):
             var = self.annot_combo.model()[self.annotation_idx]
             column, _ = self.items.get_column_view(var)
             labels = [var.str_val(value) for value in column]
-        saved_selection = self.tableview.selectionModel().selected_items()
-        self.tablemodel.set_labels(labels, var, column)
         if labels:
             self.tableview.horizontalHeader().show()
             self.tableview.verticalHeader().show()
         else:
             self.tableview.horizontalHeader().hide()
             self.tableview.verticalHeader().hide()
+        self.tablemodel.set_labels(labels, var, column)
         self.tableview.resizeColumnsToContents()
-        self.tableview.selectionModel().set_selected_items(saved_selection)
 
     def commit(self):
         sub_table = sub_distances = None
         if self.distances is not None:
-            inds = self.tableview.selectionModel().selected_items()
+            inds = self.tableview.selectionModel().selectedItems()
             if inds:
                 sub_distances = self.distances.submatrix(inds)
                 if self.distances.axis and isinstance(self.items, Table):
