@@ -10,6 +10,10 @@ from unittest.mock import patch
 
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
 
+import pygments.style
+from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
+
+
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
@@ -30,6 +34,7 @@ from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.util import interleave
 from Orange.widgets import gui
+from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -67,6 +72,59 @@ def read_file_content(filename, limit=None):
             return text
     except (OSError, UnicodeDecodeError):
         return None
+
+
+"""
+Adapted from jupyter notebook, which was adapted from GitHub.
+
+Highlighting styles are applied with pygments.
+
+pygments does not support partial highlighting; on every character
+typed, it performs a full pass of the code. If performance is ever
+an issue, revert to prior commit, which uses Qutepart's syntax
+highlighting implementation.
+"""
+SYNTAX_HIGHLIGHTING_STYLES = {
+    'Light': {
+        Error: '#f00',
+
+        Keyword: 'bold #008000',
+
+        Name: '#212121',
+        Name.Function: '#00f',
+        Name.Variable: '#05a',
+        Name.Decorator: '#aa22ff',
+        Name.Builtin: '#008000',
+        Name.Builtin.Pseudo: '#05a',
+
+        String: '#ba2121',
+
+        Number: '#080',
+
+        Operator: 'bold #aa22ff',
+        Operator.Word: 'bold #008000',
+
+        Comment: 'italic #408080',
+    },
+    'Dark': {
+        # TODO
+    }
+}
+
+
+def make_pygments_style(scheme_name):
+    """
+    Dynamically create a PygmentsStyle class,
+    given the name of one of the above highlighting schemes.
+    """
+    return type(
+        'PygmentsStyle',
+        (pygments.style.Style,),
+        {'styles': SYNTAX_HIGHLIGHTING_STYLES[scheme_name]}
+    )
+
+
+PygmentsStyle = make_pygments_style('Light')
 
 
 class PythonSyntaxHighlighter(QSyntaxHighlighter):
@@ -132,67 +190,6 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
                 start.match(text, startIndex + commentLen + 3).capturedStart(),
                 3
             )
-
-
-class PythonScriptEditor(QPlainTextEdit):
-    INDENT = 4
-
-    def __init__(self, widget):
-        super().__init__()
-        self.widget = widget
-
-    def lastLine(self):
-        text = str(self.toPlainText())
-        pos = self.textCursor().position()
-        index = text.rfind("\n", 0, pos)
-        text = text[index: pos].lstrip("\n")
-        return text
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            if event.modifiers() & (
-                    Qt.ShiftModifier | Qt.ControlModifier | Qt.MetaModifier):
-                self.widget.commit()
-                return
-            text = self.lastLine()
-            indent = len(text) - len(text.lstrip())
-            if text.strip() == "pass" or text.strip().startswith("return "):
-                indent = max(0, indent - self.INDENT)
-            elif text.strip().endswith(":"):
-                indent += self.INDENT
-            super().keyPressEvent(event)
-            self.insertPlainText(" " * indent)
-        elif event.key() == Qt.Key_Tab:
-            self.insertPlainText(" " * self.INDENT)
-        elif event.key() == Qt.Key_Backspace:
-            text = self.lastLine()
-            if text and not text.strip():
-                cursor = self.textCursor()
-                for _ in range(min(self.INDENT, len(text))):
-                    cursor.deletePreviousChar()
-            else:
-                super().keyPressEvent(event)
-
-        else:
-            super().keyPressEvent(event)
-
-    def insertFromMimeData(self, source):
-        """
-        Reimplemented from QPlainTextEdit.insertFromMimeData.
-        """
-        urls = source.urls()
-        if urls:
-            self.pasteFile(urls[0])
-        else:
-            super().insertFromMimeData(source)
-
-    def pasteFile(self, url):
-        new = read_file_content(url.toLocalFile())
-        if new:
-            # inserting text like this allows undo
-            cursor = QTextCursor(self.document())
-            cursor.select(QTextCursor.Document)
-            cursor.insertText(new)
 
 
 class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
@@ -556,10 +553,21 @@ class OWPythonScript(OWWidget):
         self.mainArea.layout().addWidget(self.splitCanvas)
 
         self.defaultFont = defaultFont = \
-            "Monaco" if sys.platform == "darwin" else "Courier"
+            "Menlo" if sys.platform == "darwin" else "Courier"
+        self.defaultFontSize = defaultFontSize = 13
 
         self.textBox = gui.vBox(self.splitCanvas, 'Python Script')
-        self.text = PythonScriptEditor(self)
+        self.splitCanvas.addWidget(self.textBox)
+
+        syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES['Light']
+
+        eFont = QFont(defaultFont)
+        eFont.setPointSize(defaultFontSize)
+
+        editor = PythonEditor(self)
+        editor.setFont(eFont)
+
+        self.text = editor
         self.textBox.layout().addWidget(self.text)
 
         self.textBox.setAlignment(Qt.AlignVCenter)
