@@ -459,16 +459,6 @@ class OWPythonScript(OWWidget):
 
         self._cachedDocuments = {}
 
-        self.infoBox = gui.vBox(self.controlArea, 'Info')
-        gui.label(
-            self.infoBox, self,
-            "<p>Execute python script.</p><p>Input variables:<ul><li> " +
-            "<li>".join(map("in_{0}, in_{0}s".format, self.signal_names)) +
-            "</ul></p><p>Output variables:<ul><li>" +
-            "<li>".join(map("out_{0}".format, self.signal_names)) +
-            "</ul></p>"
-        )
-
         self.libraryList = itemmodels.PyListModel(
             [], self,
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
