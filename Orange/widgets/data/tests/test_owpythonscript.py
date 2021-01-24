@@ -52,20 +52,20 @@ class TestOWPythonScript(WidgetTest):
                 ("Learner", self.learner),
                 ("Classifier", self.model)):
             lsignal = signal.lower()
-            self.widget.text.setPlainText("out_{0} = in_{0}".format(lsignal))
+            self.widget.editor.setPlainText("out_{0} = in_{0}".format(lsignal))
             self.send_signal(signal, data, 1)
             self.assertIs(self.get_output(signal), data)
             self.send_signal(signal, None, 1)
-            self.widget.text.setPlainText("print(in_{})".format(lsignal))
+            self.widget.editor.setPlainText("print(in_{})".format(lsignal))
             self.widget.execute_button.click()
             self.assertIsNone(self.get_output(signal))
 
     def test_local_variable(self):
         """Check if variable remains in locals after removed from script"""
-        self.widget.text.setPlainText("temp = 42\nprint(temp)")
+        self.widget.editor.setPlainText("temp = 42\nprint(temp)")
         self.widget.execute_button.click()
         self.assertIn("42", self.widget.console.toPlainText())
-        self.widget.text.setPlainText("print(temp)")
+        self.widget.editor.setPlainText("print(temp)")
         self.widget.execute_button.click()
         self.assertNotIn("NameError: name 'temp' is not defined",
                          self.widget.console.toPlainText())
@@ -82,13 +82,13 @@ class TestOWPythonScript(WidgetTest):
                 ("Classifier", self.model)):
             lsignal = signal.lower()
             self.send_signal(signal, data, 1)
-            self.widget.text.setPlainText("out_{} = 42".format(lsignal))
+            self.widget.editor.setPlainText("out_{} = 42".format(lsignal))
             self.widget.execute_button.click()
             self.assertEqual(self.get_output(signal), None)
             self.assertTrue(hasattr(self.widget.Error, lsignal))
             self.assertTrue(getattr(self.widget.Error, lsignal).is_shown())
 
-            self.widget.text.setPlainText("out_{0} = in_{0}".format(lsignal))
+            self.widget.editor.setPlainText("out_{0} = in_{0}".format(lsignal))
             self.widget.execute_button.click()
             self.assertIs(self.get_output(signal), data)
             self.assertFalse(getattr(self.widget.Error, lsignal).is_shown())
@@ -132,26 +132,26 @@ class TestOWPythonScript(WidgetTest):
         self.assertEqual(console_locals["in_datas"], [])
 
     def test_store_new_script(self):
-        self.widget.text.setPlainText("42")
+        self.widget.editor.setPlainText("42")
         self.widget.onAddScript()
-        script = self.widget.text.toPlainText()
+        script = self.widget.editor.toPlainText()
         self.assertEqual("42", script)
 
     def test_restore_from_library(self):
-        before = self.widget.text.toPlainText()
-        self.widget.text.setPlainText("42")
+        before = self.widget.editor.toPlainText()
+        self.widget.editor.setPlainText("42")
         self.widget.restoreSaved()
-        script = self.widget.text.toPlainText()
+        script = self.widget.editor.toPlainText()
         self.assertEqual(before, script)
 
     def test_store_current_script(self):
-        self.widget.text.setPlainText("42")
+        self.widget.editor.setPlainText("42")
         settings = self.widget.settingsHandler.pack_data(self.widget)
         self.widget = self.create_widget(OWPythonScript)
-        script = self.widget.text.toPlainText()
+        script = self.widget.editor.toPlainText()
         self.assertNotEqual("42", script)
         self.widget = self.create_widget(OWPythonScript, stored_settings=settings)
-        script = self.widget.text.toPlainText()
+        script = self.widget.editor.toPlainText()
         self.assertEqual("42", script)
 
     def test_read_file_content(self):
@@ -166,18 +166,18 @@ class TestOWPythonScript(WidgetTest):
             self.assertIsNone(content)
 
     def test_script_insert_mime_text(self):
-        current = self.widget.text.toPlainText()
+        current = self.widget.editor.toPlainText()
         insert = "test\n"
-        cursor = self.widget.text.cursor()
+        cursor = self.widget.editor.cursor()
         cursor.setPos(0, 0)
         mime = QMimeData()
         mime.setText(insert)
-        self.widget.text.insertFromMimeData(mime)
-        self.assertEqual(insert + current, self.widget.text.toPlainText())
+        self.widget.editor.insertFromMimeData(mime)
+        self.assertEqual(insert + current, self.widget.editor.toPlainText())
 
     def test_script_insert_mime_file(self):
         with named_file("test", suffix=".42") as fn:
-            previous = self.widget.text.toPlainText()
+            previous = self.widget.editor.toPlainText()
             mime = QMimeData()
             url = QUrl.fromLocalFile(fn)
             mime.setUrls([url])
