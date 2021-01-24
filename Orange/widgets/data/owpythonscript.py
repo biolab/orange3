@@ -4,19 +4,15 @@ import uuid
 
 import sys
 import os
-import code
-import itertools
 import tokenize
 import unicodedata
 
 from jupyter_client import KernelManager
-from unittest.mock import patch
 
 from typing import Optional, List, TYPE_CHECKING
 
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
-from qtconsole.pygments_highlighter import PygmentsHighlighter
 from qtconsole.pygments_highlighter import PygmentsHighlighter
 from qtconsole import styles
 from qtconsole.client import QtKernelClient
@@ -24,13 +20,13 @@ from qtconsole.manager import QtKernelManager
 
 
 from AnyQt.QtWidgets import (
-    QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
+    QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
     QStyleOptionViewItem, QPlainTextDocumentLayout,
     QLabel, QWidget, QHBoxLayout, QApplication)
 from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument, QTextCharFormat,
-    QTextCursor, QKeySequence, QFontMetrics, QPainter
+    QKeySequence, QFontMetrics, QPainter
 )
 from AnyQt.QtCore import (
     Qt, QByteArray, QItemSelectionModel, QSize, QRectF, QTimer
@@ -40,7 +36,6 @@ from orangewidget.widget import Msg
 
 from Orange.data import Table
 from Orange.base import Learner, Model
-from Orange.util import interleave
 from Orange.widgets import gui
 from Orange.widgets.data.utils.python_console import OrangeConsoleWidget
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
@@ -306,166 +301,6 @@ class VimIndicator(QWidget):
         width = round(fm.width(self.indicator_text)) + 10
         height = fm.height() + 6
         return QSize(width, height)
-
-
-class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
-    # `locals` is reasonably used as argument name
-    # pylint: disable=redefined-builtin
-    def __init__(self, locals=None, parent=None):
-        QPlainTextEdit.__init__(self, parent)
-        code.InteractiveConsole.__init__(self, locals)
-        self.newPromptPos = 0
-        self.history, self.historyInd = [""], 0
-        self.loop = self.interact()
-        next(self.loop)
-
-    def setLocals(self, locals):
-        self.locals = locals
-
-    def updateLocals(self, locals):
-        self.locals.update(locals)
-
-    def interact(self, banner=None, _=None):
-        try:
-            sys.ps1
-        except AttributeError:
-            sys.ps1 = ">>> "
-        try:
-            sys.ps2
-        except AttributeError:
-            sys.ps2 = "... "
-        cprt = ('Type "help", "copyright", "credits" or "license" '
-                'for more information.')
-        if banner is None:
-            self.write("Python %s on %s\n%s\n(%s)\n" %
-                       (sys.version, sys.platform, cprt,
-                        self.__class__.__name__))
-        else:
-            self.write("%s\n" % str(banner))
-        more = 0
-        while 1:
-            try:
-                if more:
-                    prompt = sys.ps2
-                else:
-                    prompt = sys.ps1
-                self.new_prompt(prompt)
-                yield
-                try:
-                    line = self.raw_input(prompt)
-                except EOFError:
-                    self.write("\n")
-                    break
-                else:
-                    more = self.push(line)
-            except KeyboardInterrupt:
-                self.write("\nKeyboardInterrupt\n")
-                self.resetbuffer()
-                more = 0
-
-    def raw_input(self, prompt=""):
-        input_str = str(self.document().lastBlock().previous().text())
-        return input_str[len(prompt):]
-
-    def new_prompt(self, prompt):
-        self.write(prompt)
-        self.newPromptPos = self.textCursor().position()
-        self.repaint()
-
-    def write(self, data):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
-        cursor.insertText(data)
-        self.setTextCursor(cursor)
-        self.ensureCursorVisible()
-
-    def writelines(self, lines):
-        for line in lines:
-            self.write(line)
-
-    def flush(self):
-        pass
-
-    def push(self, line):
-        if self.history[0] != line:
-            self.history.insert(0, line)
-        self.historyInd = 0
-
-        # prevent console errors to trigger error reporting & patch stdout, stderr
-        with patch('sys.excepthook', sys.__excepthook__),\
-             patch('sys.stdout', self),\
-             patch('sys.stderr', self):
-            return code.InteractiveConsole.push(self, line)
-
-    def setLine(self, line):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End)
-        cursor.setPosition(self.newPromptPos, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
-        cursor.insertText(line)
-        self.setTextCursor(cursor)
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            self.write("\n")
-            next(self.loop)
-        elif event.key() == Qt.Key_Up:
-            self.historyUp()
-        elif event.key() == Qt.Key_Down:
-            self.historyDown()
-        elif event.key() == Qt.Key_Tab:
-            self.complete()
-        elif event.key() in [Qt.Key_Left, Qt.Key_Backspace]:
-            if self.textCursor().position() > self.newPromptPos:
-                QPlainTextEdit.keyPressEvent(self, event)
-        else:
-            QPlainTextEdit.keyPressEvent(self, event)
-
-    def historyUp(self):
-        self.setLine(self.history[self.historyInd])
-        self.historyInd = min(self.historyInd + 1, len(self.history) - 1)
-
-    def historyDown(self):
-        self.setLine(self.history[self.historyInd])
-        self.historyInd = max(self.historyInd - 1, 0)
-
-    def complete(self):
-        pass
-
-    def _moveCursorToInputLine(self):
-        """
-        Move the cursor to the input line if not already there. If the cursor
-        if already in the input line (at position greater or equal to
-        `newPromptPos`) it is left unchanged, otherwise it is moved at the
-        end.
-
-        """
-        cursor = self.textCursor()
-        pos = cursor.position()
-        if pos < self.newPromptPos:
-            cursor.movePosition(QTextCursor.End)
-            self.setTextCursor(cursor)
-
-    def pasteCode(self, source):
-        """
-        Paste source code into the console.
-        """
-        self._moveCursorToInputLine()
-
-        for line in interleave(source.splitlines(), itertools.repeat("\n")):
-            if line != "\n":
-                self.insertPlainText(line)
-            else:
-                self.write("\n")
-                next(self.loop)
-
-    def insertFromMimeData(self, source):
-        """
-        Reimplemented from QPlainTextEdit.insertFromMimeData.
-        """
-        if source.hasText():
-            self.pasteCode(str(source.text()))
-            return
 
 
 class Script:
