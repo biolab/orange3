@@ -1,9 +1,15 @@
+import shutil
+import tempfile
+import uuid
+
 import sys
 import os
 import code
 import itertools
 import tokenize
 import unicodedata
+
+from jupyter_client import KernelManager
 from unittest.mock import patch
 
 from typing import Optional, List, TYPE_CHECKING
@@ -11,6 +17,11 @@ from typing import Optional, List, TYPE_CHECKING
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
 from qtconsole.pygments_highlighter import PygmentsHighlighter
+from qtconsole.pygments_highlighter import PygmentsHighlighter
+from qtconsole import styles
+from qtconsole.client import QtKernelClient
+from qtconsole.manager import QtKernelManager
+
 
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
@@ -22,13 +33,16 @@ from AnyQt.QtGui import (
     QTextCursor, QKeySequence, QFontMetrics, QPainter
 )
 from AnyQt.QtCore import (
-    Qt, QByteArray, QItemSelectionModel, QSize, QRectF
+    Qt, QByteArray, QItemSelectionModel, QSize, QRectF, QTimer
 )
+
+from orangewidget.widget import Msg
 
 from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.util import interleave
 from Orange.widgets import gui
+from Orange.widgets.data.utils.python_console import OrangeConsoleWidget
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
@@ -553,6 +567,9 @@ class OWPythonScript(OWWidget):
 
     vimModeEnabled = Setting(False)
 
+    class Warning(OWWidget.Warning):
+        illegal_var_type = Msg('{} should be of type {}, not {}.')
+
     class Error(OWWidget.Error):
         pass
 
@@ -619,32 +636,33 @@ class OWPythonScript(OWWidget):
             textEditMargin = max(0, round(char_4_width - width))
             return_stmt.setIndent(textEditMargin + width)
             textEditBox.layout().setContentsMargins(
-                textEditMargin, 0, 0, 0
+                int(textEditMargin), 0, 0, 0
             )
 
-        self.text = editor
+        self.editor = editor
         textEditBox.layout().addWidget(editor)
         self.editorBox.layout().addWidget(func_sig)
         self.editorBox.layout().addWidget(textEditBox)
         self.editorBox.layout().addWidget(return_stmt)
 
         self.editorBox.setAlignment(Qt.AlignVCenter)
-        self.text.setTabStopWidth(4)
+        self.editor.setTabStopWidth(4)
 
-        self.text.modificationChanged[bool].connect(self.onModificationChanged)
+        self.editor.modificationChanged[bool].connect(self.onModificationChanged)
 
         # Console
 
         self.consoleBox = gui.vBox(self, 'Console')
         self.splitCanvas.addWidget(self.consoleBox)
 
-        jupyter_widget = OrangeConsoleWidget(style_sheet=styles.default_light_style_sheet)
+        # Qtconsole
+
+        jupyter_widget = OrangeConsoleWidget(
+            style_sheet=styles.default_light_style_sheet
+        )
         jupyter_widget.results_ready.connect(self.receive_outputs)
 
-        jupyter_widget.kernel_manager = kernel_manager
-        jupyter_widget.kernel_client = kernel_client
-
-        jupyter_widget._highlighter.set_style(PygmentsStyle)
+        jupyter_widget._highlighter.set_style(self.pygments_style_class)
         jupyter_widget.font_family = defaultFont
         jupyter_widget.font_size = defaultFontSize
         jupyter_widget.reset_font()
@@ -652,17 +670,46 @@ class OWPythonScript(OWWidget):
         self.console = jupyter_widget
         self.consoleBox.layout().addWidget(self.console)
         self.consoleBox.setAlignment(Qt.AlignBottom)
-
-        self.console = PythonConsole({}, self)
-        self.consoleBox.layout().addWidget(self.console)
-        self.console.document().setDefaultFont(QFont(defaultFont))
-        self.consoleBox.setAlignment(Qt.AlignBottom)
-        self.console.setTabStopWidth(4)
         self.setAcceptDrops(True)
+
+        self.statuses = []
+
+        # 'Injecting variables...' is set in handleNewVars
+
+        @self.console.variables_finished_injecting.connect
+        def _():
+            self.clear_status('Injecting variables...')
+
+        @self.console.begun_collecting_variables.connect
+        def _():
+            self.set_status('Collecting variables...')
+
+        # 'Collecting variables...' is reset in receive_outputs
+
+        @self.console.execution_started.connect
+        def _():
+            self.set_status('Running script...', force=True)
+            # trigger console repaint
+            # (for some reason repaint is broken if not singleShotting)
+            QTimer.singleShot(0, self.console.update)
+
+        @self.console.execution_finished.connect
+        def _():
+            self.clear_status('Running script...')
+            # trigger console repaint
+            QTimer.singleShot(0, self.console.update)
+
+        # Kernel stuff
+
+        self.kernel_client: QtKernelClient = None
+        self.kernel_manager: KernelManager = None
+        self.init_kernel()
 
         # Controls
 
         self.editor_controls = gui.vBox(self.controlArea, box='Preferences')
+
+        # Vim
 
         self.vim_box = gui.hBox(self.editor_controls, spacing=20)
         self.vim_indicator = VimIndicator(self.vim_box)
@@ -770,14 +817,6 @@ class OWPythonScript(OWWidget):
         action.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         action.triggered.connect(self.saveScript)
 
-        self.consoleBox = gui.vBox(self.splitCanvas, 'Console')
-        self.console = PythonConsole({}, self)
-        self.consoleBox.layout().addWidget(self.console)
-        self.console.document().setDefaultFont(QFont(defaultFont))
-        self.consoleBox.setAlignment(Qt.AlignBottom)
-        self.splitCanvas.setSizes([2, 1])
-        self.controlArea.layout().addStretch(10)
-
         # And finally,
 
         self.splitCanvas.setSizes([2, 1])
@@ -785,7 +824,7 @@ class OWPythonScript(OWWidget):
         self.settingsAboutToBePacked.connect(self._saveState)
 
     def sizeHint(self) -> QSize:
-        return super().sizeHint().expandedTo(QSize(800, 600))
+        return super().sizeHint().expandedTo(QSize(810, 600))
 
     def _restoreState(self):
         self.libraryListSource = [Script.fromdict(s) for s in self.scriptLibrary]
@@ -801,6 +840,43 @@ class OWPythonScript(OWWidget):
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
 
+    def init_kernel(self):
+        if self.kernel_manager is not None:
+            self.shutdown_kernel()
+
+        self._temp_connection_dir = tempfile.mkdtemp()
+
+        ident = str(uuid.uuid4()).split('-')[-1]
+        cf = os.path.join(self._temp_connection_dir, 'kernel-%s.json' % ident)
+
+        self.kernel_manager = QtKernelManager(
+            connection_file=cf
+        )
+
+        self.kernel_manager.start_kernel(
+            extra_arguments=[
+                '--IPKernelApp.kernel_class='
+                'Orange.widgets.data.utils.python_kernel.OrangeIPythonKernel',
+                '--matplotlib='
+                'inline'
+            ]
+        )
+        self.kernel_client = self.kernel_manager.client()
+        self.kernel_client.start_channels()
+
+        if self.editor is not None:
+            self.editor.kernel_manager = self.kernel_manager
+            self.editor.kernel_client = self.kernel_client
+        if self.console is not None:
+            self.console.kernel_manager = self.kernel_manager
+            self.console.kernel_client = self.kernel_client
+            self.console.set_kernel_id(ident)
+
+    def shutdown_kernel(self):
+        self.kernel_client.stop_channels()
+        self.kernel_manager.shutdown_kernel()
+        shutil.rmtree(self._temp_connection_dir)
+
     def _saveState(self):
         self.scriptLibrary = [s.asdict() for s in self.libraryListSource]
         self.scriptText = self.editor.toPlainText()
@@ -813,6 +889,55 @@ class OWPythonScript(OWWidget):
                 del dic[sig_id]
         else:
             dic[sig_id] = obj
+
+    def clear_status(self, msg):
+        if msg not in self.statuses:
+            return
+        self.statuses.remove(msg)
+        self.__update_status()
+
+    def set_status(self, msg, force=False):
+        if msg in self.statuses:
+            if force:
+                self.statuses.remove(msg)
+                self.statuses.insert(0, msg)
+            return
+        if force:
+            self.statuses.insert(0, msg)
+        else:
+            self.statuses.append(msg)
+        self.__update_status()
+
+    def __update_status(self):
+        if self.statuses:
+            msg = self.statuses[0]
+        else:
+            msg = ''
+
+        self.setStatusMessage(msg)
+
+    def receive_outputs(self, out_vars):
+        self.clear_status('Collecting variables...')
+        self.progressBar()
+        for signal in self.signal_names:
+            out_name = "out_" + signal
+            req_type = self.Outputs.__dict__[signal].type
+
+            output = getattr(self.Outputs, signal)
+            if out_name not in out_vars:
+                output.send(None)
+                continue
+            var = out_vars[out_name]
+
+            if not isinstance(var, req_type):
+                output.send(None)
+                actual_type = type(var)
+                self.Warning.illegal_var_type(out_name,
+                                              req_type.__module__ + '.' + req_type.__name__,
+                                              actual_type.__module__ + '.' + actual_type.__name__)
+                continue
+
+            output.send(var)
 
     @Inputs.data
     def set_data(self, data, sig_id):
@@ -836,7 +961,9 @@ class OWPythonScript(OWWidget):
             n: len(getattr(self, n)) for n in self.signal_names
         })
 
-        self.commit()
+        self.set_status('Injecting variables...')
+        vars = self.initial_locals_state()
+        self.console.set_vars(vars)
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()
@@ -953,29 +1080,15 @@ class OWPythonScript(OWWidget):
         for name in self.signal_names:
             value = getattr(self, name)
             all_values = list(value.values())
-            one_value = all_values[0] if len(all_values) == 1 else None
-            d["in_" + name + "s"] = all_values
-            d["in_" + name] = one_value
+            d[name + "s"] = all_values
         return d
 
     def commit(self):
+        self.Warning.clear()
         self.Error.clear()
-        lcls = self.initial_locals_state()
-        lcls["_script"] = str(self.text.toPlainText())
-        self.console.updateLocals(lcls)
-        self.console.write("\nRunning script:\n")
-        self.console.push("exec(_script)")
-        self.console.new_prompt(sys.ps1)
-        for signal in self.signal_names:
-            out_var = self.console.locals.get("out_" + signal)
-            signal_type = getattr(self.Outputs, signal).type
-            if not isinstance(out_var, signal_type) and out_var is not None:
-                self.Error.add_message(signal,
-                                       "'{}' has to be an instance of '{}'.".
-                                       format(signal, signal_type.__name__))
-                getattr(self.Error, signal)()
-                out_var = None
-            getattr(self.Outputs, signal).send(out_var)
+
+        script = str(self.editor.text)
+        self.console.run_script(script)
 
     def keyPressEvent(self, event):
         if event.matches(QKeySequence.InsertLineSeparator):

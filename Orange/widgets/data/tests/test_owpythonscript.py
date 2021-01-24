@@ -19,19 +19,61 @@ from Orange.widgets.data.utils.pythoneditor.tests.test_indent import *
 from Orange.widgets.data.utils.pythoneditor.tests.test_indenter.test_python import *
 from Orange.widgets.data.utils.pythoneditor.tests.test_rectangular_selection import *
 from Orange.widgets.data.utils.pythoneditor.tests.test_vim import *
+from qtconsole.client import QtKernelClient
 
 
 class TestOWPythonScript(WidgetTest):
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWPythonScript)
         self.iris = Table("iris")
         self.learner = LogisticRegressionLearner()
         self.model = self.learner(self.iris)
+        # self.widget.show()
 
     def tearDown(self):
-        # clear sys.last_*, these are set/used by interactive interpreter
-        sys.last_type = sys.last_value = sys.last_traceback = None
         super().tearDown()
+        self.widget.onDeleteWidget()
+
+    def wait_execute_script(self, script=None):
+        """
+        Tests that invoke scripts take longer,
+        because they wait for the IPython kernel.
+        """
+        done = False
+
+        def results_ready_callback():
+            nonlocal done
+            done = True
+
+        def execution_finished_callback(success):
+            if not success:
+                nonlocal done
+                done = True
+
+        self.widget.console.execution_finished.connect(execution_finished_callback)
+        self.widget.console.results_ready.connect(results_ready_callback)
+
+        def is_done():
+            return done
+
+        if script is not None:
+            self.widget.editor.text = script
+        self.widget.execute_button.click()
+
+        def is_ready_and_clear():
+            return self.widget.console._OrangeConsoleWidget__is_ready and \
+                   self.widget.console._OrangeConsoleWidget__queued_execution is None and \
+                   not self.widget.console._OrangeConsoleWidget__executing and \
+                   self.widget.console._OrangeConsoleWidget__queued_broadcast is None and \
+                   not self.widget.console._OrangeConsoleWidget__broadcasting
+
+        if not is_ready_and_clear():
+            self.process_events(until=is_ready_and_clear, timeout=30000)
+        self.process_events(until=is_done)
+
+        self.widget.console.results_ready.disconnect(results_ready_callback)
+        self.widget.console.execution_finished.disconnect(execution_finished_callback)
 
     def test_inputs(self):
         """Check widget's inputs"""
@@ -47,111 +89,168 @@ class TestOWPythonScript(WidgetTest):
 
     def test_outputs(self):
         """Check widget's outputs"""
-        for signal, data in (
-                ("Data", self.iris),
-                ("Learner", self.learner),
-                ("Classifier", self.model)):
+        # The type equation method for learners and classifiers probably isn't ideal,
+        # but it's something. The problem is that the console runs in a separate
+        # python process, so identity is broken when the objects are sent from
+        # process to process. If python3.8 shared memory is implemented for
+        # main process <-> IPython kernel communication,
+        # change this test back to checking identity equality.
+        for signal, data, assert_method in (
+                ("Data", self.iris, self.assert_table_equal),
+                ("Learner", self.learner, lambda a, b: self.assertEqual(type(a), type(b))),
+                ("Classifier", self.model, lambda a, b: self.assertEqual(type(a), type(b)))):
             lsignal = signal.lower()
-            self.widget.editor.setPlainText("out_{0} = in_{0}".format(lsignal))
-            self.send_signal(signal, data, 1)
-            self.assertIs(self.get_output(signal), data)
-            self.send_signal(signal, None, 1)
-            self.widget.editor.setPlainText("print(in_{})".format(lsignal))
-            self.widget.execute_button.click()
+            self.send_signal(signal, data, (1,))
+            self.wait_execute_script("out_{0} = in_{0}".format(lsignal))
+            assert_method(self.get_output(signal), data)
+            self.wait_execute_script("print(5)")
+            assert_method(self.get_output(signal), data)
+            self.send_signal(signal, None, (1,))
+            assert_method(self.get_output(signal), data)
+            self.wait_execute_script("print(5)")
             self.assertIsNone(self.get_output(signal))
 
     def test_local_variable(self):
         """Check if variable remains in locals after removed from script"""
-        self.widget.editor.setPlainText("temp = 42\nprint(temp)")
-        self.widget.execute_button.click()
-        self.assertIn("42", self.widget.console.toPlainText())
-        self.widget.editor.setPlainText("print(temp)")
-        self.widget.execute_button.click()
+        self.wait_execute_script("temp = 42\nprint(temp)")
+        self.assertIn('42', self.widget.console._control.toPlainText())
+
+        # after a successful execution, previous outputs are cleared
+        self.wait_execute_script("print(temp)")
         self.assertNotIn("NameError: name 'temp' is not defined",
-                         self.widget.console.toPlainText())
+                         self.widget.console._control.toPlainText())
 
     def test_wrong_outputs(self):
         """
-        Error is shown when output variables are filled with wrong variable
+        Warning is shown when output variables are filled with wrong variable
         types and also output variable is set to None. (GH-2308)
         """
-        self.assertEqual(len(self.widget.Error.active), 0)
-        for signal, data in (
-                ("Data", self.iris),
-                ("Learner", self.learner),
-                ("Classifier", self.model)):
+        self.widget.orangeDataTablesEnabled = True
+        # see comment in test_outputs()
+        for signal, data, assert_method in (
+                ("Data", self.iris, self.assert_table_equal),
+                ("Learner", self.learner, lambda a, b: self.assertEqual(type(a), type(b))),
+                ("Classifier", self.model, lambda a, b: self.assertEqual(type(a), type(b)))):
             lsignal = signal.lower()
-            self.send_signal(signal, data, 1)
-            self.widget.editor.setPlainText("out_{} = 42".format(lsignal))
-            self.widget.execute_button.click()
-            self.assertEqual(self.get_output(signal), None)
-            self.assertTrue(hasattr(self.widget.Error, lsignal))
-            self.assertTrue(getattr(self.widget.Error, lsignal).is_shown())
+            self.send_signal(signal, data, (1,))
+            self.wait_execute_script("out_{} = 42".format(lsignal))
+            assert_method(self.get_output(signal), None)
+            self.assertTrue(self.widget.Warning.illegal_var_type.is_shown())
 
-            self.widget.editor.setPlainText("out_{0} = in_{0}".format(lsignal))
-            self.widget.execute_button.click()
-            self.assertIs(self.get_output(signal), data)
-            self.assertFalse(getattr(self.widget.Error, lsignal).is_shown())
+            self.wait_execute_script("out_{0} = in_{0}".format(lsignal))
+            assert_method(self.get_output(signal), data)
+            self.assertFalse(self.widget.Warning.illegal_var_type.is_shown())
 
     def test_owns_errors(self):
         self.assertIsNot(self.widget.Error, OWWidget.Error)
 
     def test_multiple_signals(self):
-        click = self.widget.execute_button.click
-        console_locals = self.widget.console.locals
-
         titanic = Table("titanic")
 
-        click()
-        self.assertIsNone(console_locals["in_data"])
-        self.assertEqual(console_locals["in_datas"], [])
+        self.wait_execute_script('clear')
 
-        self.send_signal("Data", self.iris, 1)
-        click()
-        self.assertIs(console_locals["in_data"], self.iris)
-        datas = console_locals["in_datas"]
-        self.assertEqual(len(datas), 1)
-        self.assertIs(datas[0], self.iris)
+        # if no data input signal, in_data is None
+        self.wait_execute_script("print(in_data)")
+        self.assertIn("None",
+                      self.widget.console._control.toPlainText())
 
-        self.send_signal("Data", titanic, 2)
-        click()
-        self.assertIsNone(console_locals["in_data"])
-        self.assertEqual({id(obj) for obj in console_locals["in_datas"]},
-                         {id(self.iris), id(titanic)})
+        self.wait_execute_script('clear')
 
-        self.send_signal("Data", None, 2)
-        click()
-        self.assertIs(console_locals["in_data"], self.iris)
-        datas = console_locals["in_datas"]
-        self.assertEqual(len(datas), 1)
-        self.assertIs(datas[0], self.iris)
+        # if no data input signal, in_datas is empty list
+        self.wait_execute_script("print(in_datas)")
+        self.assertIn("[]",
+                      self.widget.console._control.toPlainText())
 
-        self.send_signal("Data", None, 1)
-        click()
-        self.assertIsNone(console_locals["in_data"])
-        self.assertEqual(console_locals["in_datas"], [])
+        self.wait_execute_script('clear')
+
+        # if one data input signal, in_data is iris
+        self.send_signal("Data", self.iris, (1,))
+        self.wait_execute_script("in_data")
+        self.assertIn(repr(self.iris),
+                      self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # if one data input signal, in_datas is of len 1
+        self.wait_execute_script("'in_datas len: ' + str(len(in_datas))")
+        self.assertIn("in_datas len: 1",
+                      self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # if two data input signals, in_data is defined
+        self.send_signal("Data", titanic, (2,))
+        self.wait_execute_script("print(in_data)")
+        self.assertNotIn("None",
+                         self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # if two data input signals, in_datas is of len 2
+        self.wait_execute_script("'in_datas len: ' + str(len(in_datas))")
+        self.assertIn("in_datas len: 2",
+                      self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # if two data signals, in_data == in_datas[0]
+        self.wait_execute_script('in_data == in_datas[0]')
+        self.assertIn("True",
+                      self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # back to one data signal, in_data is titanic
+        self.send_signal("Data", None, (1,))
+
+        self.wait_execute_script("in_data")
+        self.assertIn(repr(titanic),
+                      self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # back to one data signal after removing first signal, in_data == in_datas[0]
+        self.wait_execute_script('in_data == in_datas[0]')
+        self.assertIn("True",
+                      self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # back to no data signal, in_data is None
+        self.send_signal("Data", None, (2,))
+
+        self.wait_execute_script("print(in_data)")
+        self.assertIn("None",
+                      self.widget.console._control.toPlainText())
+
+        self.wait_execute_script('clear')
+
+        # back to no data signal, in_datas is undefined
+        self.wait_execute_script("print(in_datas)")
+        self.assertIn("[]",
+                      self.widget.console._control.toPlainText())
 
     def test_store_new_script(self):
-        self.widget.editor.setPlainText("42")
+        self.widget.editor.text = "42"
         self.widget.onAddScript()
         script = self.widget.editor.toPlainText()
         self.assertEqual("42", script)
 
     def test_restore_from_library(self):
-        before = self.widget.editor.toPlainText()
-        self.widget.editor.setPlainText("42")
+        before = self.widget.editor.text
+        self.widget.editor.text = "42"
         self.widget.restoreSaved()
-        script = self.widget.editor.toPlainText()
+        script = self.widget.editor.text
         self.assertEqual(before, script)
 
     def test_store_current_script(self):
-        self.widget.editor.setPlainText("42")
+        self.widget.editor.text = "42"
         settings = self.widget.settingsHandler.pack_data(self.widget)
         self.widget = self.create_widget(OWPythonScript)
-        script = self.widget.editor.toPlainText()
+        script = self.widget.editor.text
         self.assertNotEqual("42", script)
         self.widget = self.create_widget(OWPythonScript, stored_settings=settings)
-        script = self.widget.editor.toPlainText()
+        script = self.widget.editor.text
         self.assertEqual("42", script)
 
     def test_read_file_content(self):
@@ -166,29 +265,29 @@ class TestOWPythonScript(WidgetTest):
             self.assertIsNone(content)
 
     def test_script_insert_mime_text(self):
-        current = self.widget.editor.toPlainText()
+        current = self.widget.editor.text
         insert = "test\n"
         cursor = self.widget.editor.cursor()
         cursor.setPos(0, 0)
         mime = QMimeData()
         mime.setText(insert)
         self.widget.editor.insertFromMimeData(mime)
-        self.assertEqual(insert + current, self.widget.editor.toPlainText())
+        self.assertEqual(insert + current, self.widget.editor.text)
 
     def test_script_insert_mime_file(self):
         with named_file("test", suffix=".42") as fn:
-            previous = self.widget.editor.toPlainText()
+            previous = self.widget.editor.text
             mime = QMimeData()
             url = QUrl.fromLocalFile(fn)
             mime.setUrls([url])
-            self.widget.text.insertFromMimeData(mime)
-            text = self.widget.text.toPlainText().split("print('Hello world')")[0]
+            self.widget.editor.insertFromMimeData(mime)
+            text = self.widget.editor.text.split("print('Hello world')")[0]
             self.assertTrue(
                 "'" + fn + "'",
                 text
             )
-            self.widget.text.undo()
-            self.assertEqual(previous, self.widget.text.toPlainText())
+            self.widget.editor.undo()
+            self.assertEqual(previous, self.widget.editor.text)
 
     def test_dragEnterEvent_accepts_text(self):
         with named_file("Content", suffix=".42") as fn:
@@ -237,16 +336,20 @@ class TestOWPythonScript(WidgetTest):
         widget1 = self.create_widget(OWPythonScript)
         widget2 = self.create_widget(OWPythonScript)
 
-        click1 = widget1.execute_button.click
-        click2 = widget2.execute_button.click
+        self.send_signal(widget1.Inputs.data, self.iris, (1,), widget=widget1)
+        self.widget = widget1
+        self.wait_execute_script("x = 42")
 
-        widget1.text.text = "x = 42"
-        click1()
-
-        widget2.text.text = "y = 2 * x"
-        click2()
+        self.widget = widget2
+        self.wait_execute_script("y = 2 * x")
         self.assertIn("NameError: name 'x' is not defined",
-                      widget2.console.toPlainText())
+                      self.widget.console._control.toPlainText())
+
+    def test_unreferencible(self):
+        self.wait_execute_script('out_object = 14')
+        self.assertEqual(self.get_output("Object"), 14)
+        self.wait_execute_script('out_object = ("a",14)')
+        self.assertEqual(self.get_output("Object"), ('a', 14))
 
 
 if __name__ == '__main__':
