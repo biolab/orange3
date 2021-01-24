@@ -39,7 +39,7 @@ class RectangularSelection:
         Reset rectangular selection"""
         if self._start is not None:
             self._start = None
-            self._qpart._updateExtraSelections()
+            self._qpart._updateExtraSelections()  # pylint: disable=protected-access
 
     def isDeleteKeyEvent(self, keyEvent):
         """Check if key event should be handled as Delete command"""
@@ -54,7 +54,8 @@ class RectangularSelection:
                 if cursor.hasSelection():
                     cursor.deleteChar()
 
-    def isExpandKeyEvent(self, keyEvent):
+    @staticmethod
+    def isExpandKeyEvent(keyEvent):
         """Check if key event should expand rectangular selection"""
         return keyEvent.modifiers() & Qt.ShiftModifier and \
                keyEvent.modifiers() & Qt.AltModifier and \
@@ -66,9 +67,10 @@ class RectangularSelection:
         if self._start is None:
             currentBlockText = self._qpart.textCursor().block().text()
             line = self._qpart.cursorPosition[0]
-            visibleColumn = self._realToVisibleColumn(currentBlockText, self._qpart.cursorPosition[1])
+            visibleColumn = self._realToVisibleColumn(currentBlockText,
+                                                      self._qpart.cursorPosition[1])
             self._start = (line, visibleColumn)
-        modifiersWithoutAltShift = keyEvent.modifiers() & ( ~ (Qt.AltModifier | Qt.ShiftModifier))
+        modifiersWithoutAltShift = keyEvent.modifiers() & (~(Qt.AltModifier | Qt.ShiftModifier))
         newEvent = QKeyEvent(keyEvent.type(),
                              keyEvent.key(),
                              modifiersWithoutAltShift,
@@ -87,7 +89,7 @@ class RectangularSelection:
         currentPos = 0
         yield currentPos
 
-        for index, char in enumerate(text):
+        for char in text:
             if char == '\t':
                 currentPos += self._qpart.indentWidth
                 # trim reminder. If width('\t') == 4,   width('abc\t') == 4
@@ -101,7 +103,7 @@ class RectangularSelection:
         This function converts real to visible
         """
         generator = self._visibleCharPositionGenerator(text)
-        for i in range(realColumn):
+        for _ in range(realColumn):
             val = next(generator)
         val = next(generator)
         return val
@@ -153,8 +155,10 @@ class RectangularSelection:
                 if realCurrentCol is None:
                     realCurrentCol = block.length()  # out of range value
 
-                cursor.setPosition(cursor.block().position() + min(realStartCol, block.length() - 1))
-                cursor.setPosition(cursor.block().position() + min(realCurrentCol, block.length() - 1),
+                cursor.setPosition(cursor.block().position() +
+                                   min(realStartCol, block.length() - 1))
+                cursor.setPosition(cursor.block().position() +
+                                   min(realCurrentCol, block.length() - 1),
                                    QTextCursor.KeepAnchor)
                 cursors.append(cursor)
 
@@ -199,8 +203,8 @@ class RectangularSelection:
         self.copy()
         self.delete()
 
-        """Move cursor to top-left corner of the selection,
-        so that if text gets pasted again, original text will be restored"""
+        # Move cursor to top-left corner of the selection,
+        # so that if text gets pasted again, original text will be restored
         self._qpart.cursorPosition = topLeft
 
     def _indentUpTo(self, text, width):
@@ -212,7 +216,7 @@ class RectangularSelection:
         if diff <= 0:
             return ''
         elif self._qpart.indentUseTabs and \
-           all([char == '\t' for char in text]):  # if using tabs and only tabs in text
+                all(char == '\t' for char in text):  # if using tabs and only tabs in text
             return '\t' * (diff // self._qpart.indentWidth) + \
                    ' ' * (diff % self._qpart.indentWidth)
         else:
@@ -231,8 +235,8 @@ class RectangularSelection:
         lines = text.splitlines()
         cursorLine, cursorCol = self._qpart.cursorPosition
         if cursorLine + len(lines) > len(self._qpart.lines):
-           for i in range(cursorLine + len(lines) - len(self._qpart.lines)):
-               self._qpart.lines.append('')
+            for _ in range(cursorLine + len(lines) - len(self._qpart.lines)):
+                self._qpart.lines.append('')
 
         with self._qpart:
             for index, line in enumerate(lines):
