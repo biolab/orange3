@@ -15,11 +15,12 @@ from pygments.token import Comment, Keyword, Number, String, Punctuation, Operat
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
-    QStyleOptionViewItem, QPlainTextDocumentLayout
-)
+    QStyleOptionViewItem, QPlainTextDocumentLayout,
+    QLabel, QWidget, QHBoxLayout)
 from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
+    QFontMetrics
 )
 from AnyQt.QtCore import (
     Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize,
@@ -188,6 +189,65 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
                 start.match(text, startIndex + commentLen + 3).capturedStart(),
                 3
             )
+
+
+class FakeSignatureMixin:
+    def __init__(self, parent, highlighting_scheme, font):
+        super().__init__(parent)
+        self.highlighting_scheme = highlighting_scheme
+        self.setFont(font)
+        self.bold_font = QFont(font)
+        self.bold_font.setBold(True)
+
+        self.indentation_level = 0
+
+        self._char_4_width = QFontMetrics(font).horizontalAdvance('4444')
+
+    def setIndent(self, margins_width):
+        self.setContentsMargins(max(0,
+                                    round(margins_width) +
+                                    (self.indentation_level - 1 * self._char_4_width)),
+                                0, 0, 0)
+
+
+class FunctionSignature(FakeSignatureMixin, QLabel):
+    def __init__(self, parent, highlighting_scheme, font, function_name="python_script"):
+        super().__init__(parent, highlighting_scheme, font)
+        self.signal_prefix = 'in_'
+
+        # `def python_script(`
+        self.prefix = ('<b style="color: ' +
+                       self.highlighting_scheme[Keyword].split(' ')[-1] +
+                       ';">def </b>'
+                       '<span style="color: ' +
+                       self.highlighting_scheme[Name.Function].split(' ')[-1] +
+                       ';">' + function_name + '</span>'
+                       '<span style="color: ' +
+                       self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                       ';">(</span>')
+
+        # `):`
+        self.affix = ('<span style="color: ' +
+                      self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                      ';">):</span>')
+
+        self.update_signal_text({})
+
+    def update_signal_text(self, signal_values_lengths):
+        if not self.signal_prefix:
+            return
+        lbl_text = self.prefix
+        if len(signal_values_lengths) > 0:
+            for name, value in signal_values_lengths.items():
+                if value == 1:
+                    lbl_text += self.signal_prefix + name + ', '
+                elif value > 1:
+                    lbl_text += self.signal_prefix + name + 's, '
+            lbl_text = lbl_text[:-2]  # shave off the trailing ', '
+        lbl_text += self.affix
+        if self.text() != lbl_text:
+            self.setText(lbl_text)
+            self.update()
 
 
 class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
@@ -532,6 +592,8 @@ class OWPythonScript(OWWidget):
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
 
+        # Styling
+
         self.defaultFont = defaultFont = \
             "Menlo" if sys.platform == "darwin" else "Courier"
         self.defaultFontSize = defaultFontSize = 13
@@ -544,11 +606,37 @@ class OWPythonScript(OWWidget):
         eFont = QFont(defaultFont)
         eFont.setPointSize(defaultFontSize)
 
+        # Fake Signature
+
+        self.func_sig = func_sig = FunctionSignature(
+            self.textBox,
+            syntax_highlighting_scheme,
+            eFont
+        )
+        self.textBox.layout().addWidget(func_sig)
+
+        # Editor
+
         editor = PythonEditor(self)
         editor.setFont(eFont)
 
+        # Match indentation
+
+        textEditBox = QWidget(self.textBox)
+        textEditBox.setLayout(QHBoxLayout())
+        char_4_width = QFontMetrics(eFont).width('0000')
+
+        @editor.viewport_margins_updated.connect
+        def _(width):
+            func_sig.setIndent(width)
+            textEditMargin = max(0, char_4_width - width)
+            textEditBox.layout().setContentsMargins(
+                textEditMargin, 0, 0, 0
+            )
+
         self.text = editor
-        self.textBox.layout().addWidget(self.text)
+        textEditBox.layout().addWidget(editor)
+        self.textBox.layout().addWidget(textEditBox)
 
         self.textBox.setAlignment(Qt.AlignVCenter)
 
@@ -619,6 +707,11 @@ class OWPythonScript(OWWidget):
         self.handle_input(data, sig_id, "object")
 
     def handleNewSignals(self):
+        # update fake signature labels
+        self.func_sig.update_signal_text({
+            n: len(getattr(self, n)) for n in self.signal_names
+        })
+
         self.commit()
 
     def selectedScriptIndex(self):
