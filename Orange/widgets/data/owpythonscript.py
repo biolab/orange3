@@ -20,10 +20,10 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
-    QFontMetrics
+    QFontMetrics, QPainter
 )
 from AnyQt.QtCore import (
-    Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize,
+    Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize, QRectF,
     QMimeDatabase
 )
 
@@ -248,6 +248,37 @@ class FunctionSignature(FakeSignatureMixin, QLabel):
         if self.text() != lbl_text:
             self.setText(lbl_text)
             self.update()
+
+
+class VimIndicator(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.indicator_color = QColor('#33cc33')
+        self.indicator_text = 'normal'
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setBrush(self.indicator_color)
+
+        p.save()
+        p.setPen(Qt.NoPen)
+        fm = QFontMetrics(self.font())
+        width = self.rect().width()
+        height = fm.height() + 6
+        rect = QRectF(0, 0, width, height)
+        p.drawRoundedRect(rect, 5, 5)
+        p.restore()
+
+        textstart = (width - fm.width(self.indicator_text)) / 2
+        p.drawText(textstart, height / 2 + 5, self.indicator_text)
+
+    def minimumSizeHint(self):
+        fm = QFontMetrics(self.font())
+        width = round(fm.width(self.indicator_text)) + 10
+        height = fm.height() + 6
+        return QSize(width, height)
 
 
 class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
@@ -507,16 +538,101 @@ class OWPythonScript(OWWidget):
     scriptText: Optional[str] = Setting(None, schema_only=True)
     splitterState: Optional[bytes] = Setting(None)
 
+    vimModeEnabled = Setting(False)
+
     class Error(OWWidget.Error):
         pass
 
     def __init__(self):
         super().__init__()
-        self.libraryListSource = []
 
         for name in self.signal_names:
             setattr(self, name, {})
 
+        self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
+        self.mainArea.layout().addWidget(self.splitCanvas)
+
+        # Styling
+
+        self.defaultFont = defaultFont = \
+            "Menlo" if sys.platform == "darwin" else "Courier"
+        self.defaultFontSize = defaultFontSize = 13
+
+        self.textBox = gui.vBox(self, box=True)
+        self.splitCanvas.addWidget(self.textBox)
+
+        syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES['Light']
+
+        eFont = QFont(defaultFont)
+        eFont.setPointSize(defaultFontSize)
+
+        # Fake Signature
+
+        self.func_sig = func_sig = FunctionSignature(
+            self.textBox,
+            syntax_highlighting_scheme,
+            eFont
+        )
+        self.textBox.layout().addWidget(func_sig)
+
+        # Editor
+
+        editor = PythonEditor(self)
+        editor.setFont(eFont)
+
+        # Match indentation
+
+        textEditBox = QWidget(self.textBox)
+        textEditBox.setLayout(QHBoxLayout())
+        char_4_width = QFontMetrics(eFont).horizontalAdvance('0000')
+
+        @editor.viewport_margins_updated.connect
+        def _(width):
+            func_sig.setIndent(width)
+            textEditMargin = max(0, char_4_width - width)
+            textEditBox.layout().setContentsMargins(
+                textEditMargin, 0, 0, 0
+            )
+
+        self.text = editor
+        textEditBox.layout().addWidget(editor)
+        self.textBox.layout().addWidget(textEditBox)
+
+        self.textBox.setAlignment(Qt.AlignVCenter)
+        self.text.setTabStopWidth(4)
+
+        self.text.modificationChanged[bool].connect(self.onModificationChanged)
+
+        # Controls
+
+        self.editor_controls = gui.vBox(self.controlArea, box=True)
+
+        self.vim_box = gui.hBox(self.editor_controls, spacing=20)
+        self.vim_indicator = VimIndicator(self.vim_box)
+        self.vim_indicator.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Fixed
+        )
+
+        def enable_vim_mode():
+            editor.vimModeEnabled = self.vimModeEnabled
+            self.vim_indicator.setVisible(self.vimModeEnabled)
+        enable_vim_mode()
+
+        gui.checkBox(
+            self.vim_box, self, 'vimModeEnabled', 'Vim mode',
+            tooltip="Only for the coolest.",
+            callback=enable_vim_mode
+        )
+        self.vim_box.layout().addWidget(self.vim_indicator)
+        @editor.vimModeIndicationChanged.connect
+        def _(color, text):
+            self.vim_indicator.indicator_color = color
+            self.vim_indicator.indicator_text = text
+            self.vim_indicator.update()
+
+        # Library
+
+        self.libraryListSource = []
         self._cachedDocuments = {}
 
         self.libraryList = itemmodels.PyListModel(
@@ -588,59 +704,6 @@ class OWPythonScript(OWWidget):
         run = QAction("Run script", self, triggered=self.commit,
                       shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
         self.addAction(run)
-
-        self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
-        self.mainArea.layout().addWidget(self.splitCanvas)
-
-        # Styling
-
-        self.defaultFont = defaultFont = \
-            "Menlo" if sys.platform == "darwin" else "Courier"
-        self.defaultFontSize = defaultFontSize = 13
-
-        self.textBox = gui.vBox(self.splitCanvas, 'Python Script')
-        self.splitCanvas.addWidget(self.textBox)
-
-        syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES['Light']
-
-        eFont = QFont(defaultFont)
-        eFont.setPointSize(defaultFontSize)
-
-        # Fake Signature
-
-        self.func_sig = func_sig = FunctionSignature(
-            self.textBox,
-            syntax_highlighting_scheme,
-            eFont
-        )
-        self.textBox.layout().addWidget(func_sig)
-
-        # Editor
-
-        editor = PythonEditor(self)
-        editor.setFont(eFont)
-
-        # Match indentation
-
-        textEditBox = QWidget(self.textBox)
-        textEditBox.setLayout(QHBoxLayout())
-        char_4_width = QFontMetrics(eFont).width('0000')
-
-        @editor.viewport_margins_updated.connect
-        def _(width):
-            func_sig.setIndent(width)
-            textEditMargin = max(0, char_4_width - width)
-            textEditBox.layout().setContentsMargins(
-                textEditMargin, 0, 0, 0
-            )
-
-        self.text = editor
-        textEditBox.layout().addWidget(editor)
-        self.textBox.layout().addWidget(textEditBox)
-
-        self.textBox.setAlignment(Qt.AlignVCenter)
-
-        self.text.modificationChanged[bool].connect(self.onModificationChanged)
 
         self.saveAction = action = QAction("&Save", self.text)
         action.setToolTip("Save script to file")
