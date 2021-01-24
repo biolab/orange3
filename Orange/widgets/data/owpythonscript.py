@@ -609,7 +609,6 @@ class OWPythonScript(OWWidget):
         self.return_stmt = return_stmt
 
         # Match indentation
-
         textEditBox = QWidget(self.editorBox)
         textEditBox.setLayout(QHBoxLayout())
         char_4_width = QFontMetrics(eFont).horizontalAdvance('0000')
@@ -633,6 +632,33 @@ class OWPythonScript(OWWidget):
         self.text.setTabStopWidth(4)
 
         self.text.modificationChanged[bool].connect(self.onModificationChanged)
+
+        # Console
+
+        self.consoleBox = gui.vBox(self, 'Console')
+        self.splitCanvas.addWidget(self.consoleBox)
+
+        jupyter_widget = OrangeConsoleWidget(style_sheet=styles.default_light_style_sheet)
+        jupyter_widget.results_ready.connect(self.receive_outputs)
+
+        jupyter_widget.kernel_manager = kernel_manager
+        jupyter_widget.kernel_client = kernel_client
+
+        jupyter_widget._highlighter.set_style(PygmentsStyle)
+        jupyter_widget.font_family = defaultFont
+        jupyter_widget.font_size = defaultFontSize
+        jupyter_widget.reset_font()
+
+        self.console = jupyter_widget
+        self.consoleBox.layout().addWidget(self.console)
+        self.consoleBox.setAlignment(Qt.AlignBottom)
+
+        self.console = PythonConsole({}, self)
+        self.consoleBox.layout().addWidget(self.console)
+        self.console.document().setDefaultFont(QFont(defaultFont))
+        self.consoleBox.setAlignment(Qt.AlignBottom)
+        self.console.setTabStopWidth(4)
+        self.setAcceptDrops(True)
 
         # Controls
 
@@ -752,6 +778,9 @@ class OWPythonScript(OWWidget):
         self.splitCanvas.setSizes([2, 1])
         self.controlArea.layout().addStretch(10)
 
+        # And finally,
+
+        self.splitCanvas.setSizes([2, 1])
         self._restoreState()
         self.settingsAboutToBePacked.connect(self._saveState)
 
