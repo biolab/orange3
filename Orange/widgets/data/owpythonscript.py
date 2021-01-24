@@ -4,8 +4,6 @@ import code
 import keyword
 import itertools
 import unicodedata
-import weakref
-from functools import reduce
 from unittest.mock import patch
 
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
@@ -449,14 +447,6 @@ class OWPythonScript(OWWidget):
     scriptText: Optional[str] = Setting(None, schema_only=True)
     splitterState: Optional[bytes] = Setting(None)
 
-    # Widgets in the same schema share namespace through a dictionary whose
-    # key is self.signalManager. ales-erjavec expressed concern (and I fully
-    # agree!) about widget being aware of the outside world. I am leaving this
-    # anyway. If this causes any problems in the future, replace this with
-    # shared_namespaces = {} and thus use a common namespace for all instances
-    # of # PythonScript even if they are in different schemata.
-    shared_namespaces = weakref.WeakKeyDictionary()
-
     class Error(OWWidget.Error):
         pass
 
@@ -751,7 +741,7 @@ class OWPythonScript(OWWidget):
             f.close()
 
     def initial_locals_state(self):
-        d = self.shared_namespaces.setdefault(self.signalManager, {}).copy()
+        d = {}
         for name in self.signal_names:
             value = getattr(self, name)
             all_values = list(value.values())
@@ -759,14 +749,6 @@ class OWPythonScript(OWWidget):
             d["in_" + name + "s"] = all_values
             d["in_" + name] = one_value
         return d
-
-    def update_namespace(self, namespace):
-        not_saved = reduce(set.union,
-                           ({f"in_{name}s", f"in_{name}", f"out_{name}"}
-                            for name in self.signal_names))
-        self.shared_namespaces.setdefault(self.signalManager, {}).update(
-            {name: value for name, value in namespace.items()
-             if name not in not_saved})
 
     def commit(self):
         self.Error.clear()
@@ -776,7 +758,6 @@ class OWPythonScript(OWWidget):
         self.console.write("\nRunning script:\n")
         self.console.push("exec(_script)")
         self.console.new_prompt(sys.ps1)
-        self.update_namespace(self.console.locals)
         for signal in self.signal_names:
             out_var = self.console.locals.get("out_" + signal)
             signal_type = getattr(self.Outputs, signal).type

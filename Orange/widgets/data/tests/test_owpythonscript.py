@@ -222,33 +222,6 @@ class TestOWPythonScript(WidgetTest):
             QPoint(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
 
-    def test_shared_namespaces(self):
-        widget1 = self.create_widget(OWPythonScript)
-        widget2 = self.create_widget(OWPythonScript)
-        self.signal_manager = DummySignalManager()
-        widget3 = self.create_widget(OWPythonScript)
-
-        self.send_signal(widget1.Inputs.data, self.iris, 1, widget=widget1)
-        widget1.text.setPlainText("x = 42\n"
-                                  "out_data = in_data\n")
-        widget1.execute_button.click()
-        self.assertIs(
-            self.get_output(widget1.Outputs.data, widget=widget1),
-            self.iris)
-
-        widget2.text.setPlainText("out_object = 2 * x\n"
-                                  "out_data = in_data")
-        widget2.execute_button.click()
-        self.assertEqual(
-            self.get_output(widget1.Outputs.object, widget=widget2),
-            84)
-        self.assertIsNone(self.get_output(widget1.Outputs.data, widget=widget2))
-
-        sys.last_traceback = None
-        widget3.text.setPlainText("out_object = 2 * x")
-        widget3.execute_button.click()
-        self.assertIsNotNone(sys.last_traceback)
-
     def test_migrate(self):
         w = self.create_widget(OWPythonScript, {
             "libraryListSource": [Script("A", "1")],
@@ -262,6 +235,27 @@ class TestOWPythonScript(WidgetTest):
             "__version__": 2
         })
         self.assertEqual(w.libraryListSource[0].name, "A")
+
+    def test_no_shared_namespaces(self):
+        """
+        Previously, Python Script widgets in the same schema shared a namespace.
+        I (irgolic) think this is just a way to encourage users in writing
+        messy workflows with race conditions, so I encourage them to share
+        between Python Script widgets with Object signals.
+        """
+        widget1 = self.create_widget(OWPythonScript)
+        widget2 = self.create_widget(OWPythonScript)
+
+        click1 = widget1.execute_button.click
+        click2 = widget2.execute_button.click
+
+        widget1.text.text = "x = 42"
+        click1()
+
+        widget2.text.text = "y = 2 * x"
+        click2()
+        self.assertIn("NameError: name 'x' is not defined",
+                      widget2.console.toPlainText())
 
 
 class TestOWPythonScriptDropHandler(unittest.TestCase):
