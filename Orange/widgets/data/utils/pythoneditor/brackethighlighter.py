@@ -7,21 +7,19 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """
-"""Bracket highlighter.
-Calculates list of QTextEdit.ExtraSelection
-"""
-
 import time
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtWidgets import QTextEdit
+from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QTextCursor, QColor
+from AnyQt.QtWidgets import QTextEdit
+
+# Bracket highlighter.
+# Calculates list of QTextEdit.ExtraSelection
 
 
 class _TimeoutException(UserWarning):
     """Operation timeout happened
     """
-    pass
 
 
 class BracketHighlighter:
@@ -31,15 +29,18 @@ class BracketHighlighter:
     Currently, this class might be just a set of functions.
     Probably, it will contain instance specific selection colors later
     """
+    MATCHED_COLOR = QColor('#0b0')
+    UNMATCHED_COLOR = QColor('#a22')
+
     _MAX_SEARCH_TIME_SEC = 0.02
 
     _START_BRACKETS = '({['
     _END_BRACKETS = ')}]'
     _ALL_BRACKETS = _START_BRACKETS + _END_BRACKETS
-    _OPOSITE_BRACKET = dict( (bracket, oposite)
-                    for (bracket, oposite) in zip(_START_BRACKETS + _END_BRACKETS, _END_BRACKETS + _START_BRACKETS))
+    _OPOSITE_BRACKET = dict(zip(_START_BRACKETS + _END_BRACKETS, _END_BRACKETS + _START_BRACKETS))
 
-    currentMatchedBrackets = None  # instance variable. None or ((block, columnIndex), (block, columnIndex))
+    # instance variable. None or ((block, columnIndex), (block, columnIndex))
+    currentMatchedBrackets = None
 
     def _iterateDocumentCharsForward(self, block, startColumnIndex):
         """Traverse document forward. Yield (block, columnIndex, char)
@@ -93,16 +94,15 @@ class BracketHighlighter:
 
         depth = 1
         oposite = self._OPOSITE_BRACKET[bracket]
-        for block, columnIndex, char in charsGenerator:
-            if qpart.isCode(block, columnIndex):
+        for b, c_index, char in charsGenerator:
+            if qpart.isCode(b, c_index):
                 if char == oposite:
                     depth -= 1
                     if depth == 0:
-                        return block, columnIndex
+                        return b, c_index
                 elif char == bracket:
                     depth += 1
-        else:
-            return None, None
+        return None, None
 
     def _makeMatchSelection(self, block, columnIndex, matched):
         """Make matched or unmatched QTextEdit.ExtraSelection
@@ -110,11 +110,12 @@ class BracketHighlighter:
         selection = QTextEdit.ExtraSelection()
 
         if matched:
-            bgColor = Qt.green
+            fgColor = self.MATCHED_COLOR
         else:
-            bgColor = Qt.red
+            fgColor = self.UNMATCHED_COLOR
 
-        selection.format.setBackground(bgColor)
+        selection.format.setForeground(fgColor)
+        selection.format.setBackground(Qt.white)  # repaint hack
         selection.cursor = QTextCursor(block)
         selection.cursor.setPosition(block.position() + columnIndex)
         selection.cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
@@ -126,7 +127,8 @@ class BracketHighlighter:
         Return tuple of QTextEdit.ExtraSelection's
         """
         try:
-            matchedBlock, matchedColumnIndex = self._findMatchingBracket(bracket, qpart, block, columnIndex)
+            matchedBlock, matchedColumnIndex = self._findMatchingBracket(bracket, qpart,
+                                                                         block, columnIndex)
         except _TimeoutException:  # not found, time is over
             return[] # highlight nothing
 

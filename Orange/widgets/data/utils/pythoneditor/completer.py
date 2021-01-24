@@ -1,491 +1,578 @@
-"""
-Adapted from a code editor component created
-for Enki editor as replacement for QScintilla.
-Copyright (C) 2020  Andrei Kopats
+import logging
+import html
+import sys
+from collections import namedtuple
+from os.path import join, dirname
 
-Originally licensed under the terms of GNU Lesser General Public License
-as published by the Free Software Foundation, version 2.1 of the license.
-This is compatible with Orange3's GPL-3.0 license.
-"""
-"""Autocompletion widget and logic
-"""
+from AnyQt.QtCore import QObject, QSize
+from AnyQt.QtCore import QPoint, Qt, Signal
+from AnyQt.QtGui import (QFontMetrics, QIcon, QTextDocument,
+                         QAbstractTextDocumentLayout)
+from AnyQt.QtWidgets import (QApplication, QListWidget, QListWidgetItem,
+                             QToolTip, QStyledItemDelegate,
+                             QStyleOptionViewItem, QStyle)
 
-import re
-import time
+from qtconsole.base_frontend_mixin import BaseFrontendMixin
 
-from PyQt5.QtCore import pyqtSignal, QAbstractItemModel, QEvent, QModelIndex, QObject, QSize, Qt, QTimer
-from PyQt5.QtWidgets import QListView
-from PyQt5.QtGui import QCursor
+log = logging.getLogger(__name__)
 
-from qutepart.htmldelegate import HTMLDelegate
+DEFAULT_COMPLETION_ITEM_WIDTH = 250
 
-
-_wordPattern = "\w+"
-_wordRegExp = re.compile(_wordPattern)
-_wordAtEndRegExp = re.compile(_wordPattern + '$')
-_wordAtStartRegExp = re.compile('^' + _wordPattern)
+JEDI_TYPES = frozenset({'module', 'class', 'instance', 'function', 'param',
+                        'path', 'keyword', 'property', 'statement', None})
 
 
-# Maximum count of words, for which completion will be shown. Ignored, if completion invoked manually.
-MAX_VISIBLE_WORD_COUNT = 256
+class HTMLDelegate(QStyledItemDelegate):
+    """With this delegate, a QListWidgetItem or a QTableItem can render HTML.
 
-
-class _GlobalUpdateWordSetTimer:
-    """Timer updates word set, when editor is idle. (5 sec. after last change)
-    Timer is global, for avoid situation, when all instances
-    update set simultaneously
+    Taken from https://stackoverflow.com/a/5443112/2399799
     """
-    _IDLE_TIMEOUT_MS = 1000
 
-    def __init__(self):
-        self._timer = QTimer()
-        self._timer.setSingleShot(True)
-        self._timer.timeout.connect(self._onTimer)
-        self._scheduledMethods = []
+    def __init__(self, parent, margin=0):
+        super().__init__(parent)
+        self._margin = margin
 
-    def schedule(self, method):
-        if not method in self._scheduledMethods:
-            self._scheduledMethods.append(method)
-        self._timer.start(self._IDLE_TIMEOUT_MS)
+    def _prepare_text_document(self, option, index):
+        # This logic must be shared between paint and sizeHint for consitency
+        options = QStyleOptionViewItem(option)
+        self.initStyleOption(options, index)
 
-    def cancel(self, method):
-        """Cancel scheduled method
-        Safe method, may be called with not-scheduled method"""
-        if method in self._scheduledMethods:
-            self._scheduledMethods.remove(method)
+        doc = QTextDocument()
+        doc.setDocumentMargin(self._margin)
+        doc.setHtml(options.text)
+        icon_height = doc.size().height() - 2
+        options.decorationSize = QSize(icon_height, icon_height)
+        return options, doc
 
-        if not self._scheduledMethods:
-            self._timer.stop()
+    def paint(self, painter, option, index):
+        options, doc = self._prepare_text_document(option, index)
 
-    def _onTimer(self):
-        method = self._scheduledMethods.pop()
-        method()
-        if self._scheduledMethods:
-            self._timer.start(self._IDLE_TIMEOUT_MS)
+        style = (QApplication.style() if options.widget is None
+                 else options.widget.style())
+        options.text = ""
+
+        # Note: We need to pass the options widget as an argument of
+        # drawControl to make sure the delegate is painted with a style
+        # consistent with the widget in which it is used.
+        # See spyder-ide/spyder#10677.
+        style.drawControl(QStyle.CE_ItemViewItem, options, painter,
+                          options.widget)
+
+        ctx = QAbstractTextDocumentLayout.PaintContext()
+
+        textRect = style.subElementRect(QStyle.SE_ItemViewItemText,
+                                        options, None)
+        painter.save()
+
+        painter.translate(textRect.topLeft() + QPoint(0, -3))
+        doc.documentLayout().draw(painter, ctx)
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        _, doc = self._prepare_text_document(option, index)
+        return QSize(round(doc.idealWidth()), round(doc.size().height() - 2))
 
 
-class _CompletionModel(QAbstractItemModel):
-    """QAbstractItemModel implementation for a list of completion variants
-
-    words attribute contains all words
-    canCompleteText attribute contains text, which may be inserted with tab
+class CompletionWidget(QListWidget):
     """
-    def __init__(self, wordSet):
-        QAbstractItemModel.__init__(self)
-
-        self._wordSet = wordSet
-
-    def setData(self, wordBeforeCursor, wholeWord):
-        """Set model information
-        """
-        self._typedText = wordBeforeCursor
-        self.words = self._makeListOfCompletions(wordBeforeCursor, wholeWord)
-        commonStart = self._commonWordStart(self.words)
-        self.canCompleteText = commonStart[len(wordBeforeCursor):]
-
-        self.layoutChanged.emit()
-
-    def hasWords(self):
-        return len(self.words) > 0
-
-    def tooManyWords(self):
-        return len(self.words) > MAX_VISIBLE_WORD_COUNT
-
-    def data(self, index, role):
-        """QAbstractItemModel method implementation
-        """
-        if role == Qt.DisplayRole and \
-           index.row() < len(self.words):
-            text = self.words[index.row()]
-            typed = text[:len(self._typedText)]
-            canComplete = text[len(self._typedText):len(self._typedText) + len(self.canCompleteText)]
-            rest = text[len(self._typedText) + len(self.canCompleteText):]
-            if canComplete:
-                # NOTE foreground colors are hardcoded, but I can't set background color of selected item (Qt bug?)
-                # might look bad on some color themes
-                return '<html>' \
-                            '%s' \
-                            '<font color="#e80000">%s</font>' \
-                            '%s' \
-                        '</html>' % (typed, canComplete, rest)
-            else:
-                return typed + rest
-        else:
-            return None
-
-    def rowCount(self, index = QModelIndex()):
-        """QAbstractItemModel method implementation
-        """
-        return len(self.words)
-
-    def typedText(self):
-        """Get current typed text
-        """
-        return self._typedText
-
-    def _commonWordStart(self, words):
-        """Get common start of all words.
-        i.e. for ['blablaxxx', 'blablayyy', 'blazzz'] common start is 'bla'
-        """
-        if not words:
-            return ''
-
-        length = 0
-        firstWord = words[0]
-        otherWords = words[1:]
-        for index, char in enumerate(firstWord):
-            if not all([word[index] == char for word in otherWords]):
-                break
-            length = index + 1
-
-        return firstWord[:length]
-
-    def _makeListOfCompletions(self, wordBeforeCursor, wholeWord):
-        """Make list of completions, which shall be shown
-        """
-        onlySuitable = [word for word in self._wordSet \
-                                if word.startswith(wordBeforeCursor) and \
-                                   word != wholeWord]
-
-        return sorted(onlySuitable)
-
-    """Trivial QAbstractItemModel methods implementation
+    Modelled after spyder-ide's ComlpetionWidget.
+    Copyright © Spyder Project Contributors
+    Licensed under the terms of the MIT License
+    (see spyder/__init__.py in spyder-ide/spyder for details)
     """
-    def flags(self, index):                                 return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-    def headerData(self, index):                            return None
-    def columnCount(self, index):                           return 1
-    def index(self, row, column, parent = QModelIndex()):   return self.createIndex(row, column)
-    def parent(self, index):                                return QModelIndex()
+    ICON_MAP = {}
 
+    sig_show_completions = Signal(object)
 
-class _CompletionList(QListView):
-    """Completion list widget
-    """
-    closeMe = pyqtSignal()
-    itemSelected = pyqtSignal(int)
-    tabPressed = pyqtSignal()
+    # Signal with the info about the current completion item documentation
+    # str: completion name
+    # str: completion signature/documentation,
+    # QPoint: QPoint where the hint should be shown
+    sig_completion_hint = Signal(str, str, QPoint)
 
-    _MAX_VISIBLE_ROWS = 20  # no any technical reason, just for better UI
+    def __init__(self, parent, ancestor):
+        super().__init__(ancestor)
+        self.textedit = parent
+        self._language = None
+        self.setWindowFlags(Qt.SubWindow | Qt.FramelessWindowHint)
+        self.hide()
+        self.itemActivated.connect(self.item_selected)
+        # self.currentRowChanged.connect(self.row_changed)
+        self.is_internal_console = False
+        self.completion_list = None
+        self.completion_position = None
+        self.automatic = False
+        self.display_index = []
 
-    def __init__(self, qpart, model):
-        QListView.__init__(self, qpart.viewport())
+        # Setup item rendering
+        self.setItemDelegate(HTMLDelegate(self, margin=3))
+        self.setMinimumWidth(DEFAULT_COMPLETION_ITEM_WIDTH)
 
-        # ensure good selected item background on Windows
-        palette = self.palette()
-        palette.setColor(palette.Inactive, palette.Highlight, palette.color(palette.Active, palette.Highlight))
-        self.setPalette(palette)
+        # Initial item height and width
+        fm = QFontMetrics(self.textedit.font())
+        self.item_height = fm.height()
+        self.item_width = self.width()
 
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setStyleSheet('QListWidget::item:selected {'
+                           'background-color: lightgray;'
+                           '}')
 
-        self.setItemDelegate(HTMLDelegate(self))
+    def setup_appearance(self, size, font):
+        """Setup size and font of the completion widget."""
+        self.resize(*size)
+        self.setFont(font)
+        fm = QFontMetrics(font)
+        self.item_height = fm.height()
 
-        self._qpart = qpart
-        self.setFont(qpart.font())
-
-        self.setCursor(QCursor(Qt.PointingHandCursor))
-        self.setFocusPolicy(Qt.NoFocus)
-
-        self.setModel(model)
-
-        self._selectedIndex = -1
-
-        # if cursor moved, we shall close widget, if its position (and model) hasn't been updated
-        self._closeIfNotUpdatedTimer = QTimer(self)
-        self._closeIfNotUpdatedTimer.setInterval(200)
-        self._closeIfNotUpdatedTimer.setSingleShot(True)
-
-        self._closeIfNotUpdatedTimer.timeout.connect(self._afterCursorPositionChanged)
-
-        qpart.installEventFilter(self)
-
-        qpart.cursorPositionChanged.connect(self._onCursorPositionChanged)
-
-        self.clicked.connect(lambda index: self.itemSelected.emit(index.row()))
-
-        self.updateGeometry()
-        self.show()
-
-        qpart.setFocus()
-
-    def __del__(self):
-        """Without this empty destructor Qt prints strange trace
-            QObject::startTimer: QTimer can only be used with threads started with QThread
-        when exiting
-        """
-        pass
-
-    def close(self):
-        """Explicitly called destructor.
-        Removes widget from the qpart
-        """
-        self._closeIfNotUpdatedTimer.stop()
-        self._qpart.removeEventFilter(self)
-        self._qpart.cursorPositionChanged.disconnect(self._onCursorPositionChanged)
-
-        QListView.close(self)
-
-    def sizeHint(self):
-        """QWidget.sizeHint implementation
-        Automatically resizes the widget according to rows count
-
-        FIXME very bad algorithm. Remove all this margins, if you can
-        """
-        width = max([self.fontMetrics().width(word) \
-                        for word in self.model().words])
-        width = width * 1.4  # FIXME bad hack. invent better formula
-        width += 30  # margin
-
-        # drawn with scrollbar without +2. I don't know why
-        rowCount = min(self.model().rowCount(), self._MAX_VISIBLE_ROWS)
-        height = self.sizeHintForRow(0) * (rowCount + 0.5)  # + 0.5 row margin
-
-        return QSize(width, height)
-
-    def minimumHeight(self):
-        """QWidget.minimumSizeHint implementation
-        """
-        return self.sizeHintForRow(0) * 1.5  # + 0.5 row margin
-
-    def _horizontalShift(self):
-        """List should be plased such way, that typed text in the list is under
-        typed text in the editor
-        """
-        strangeAdjustment = 2  # I don't know why. Probably, won't work on other systems and versions
-        return self.fontMetrics().width(self.model().typedText()) + strangeAdjustment
-
-    def updateGeometry(self):
-        """Move widget to point under cursor
-        """
-        WIDGET_BORDER_MARGIN = 5
-        SCROLLBAR_WIDTH = 30  # just a guess
-
-        sizeHint = self.sizeHint()
-        width = sizeHint.width()
-        height = sizeHint.height()
-
-        cursorRect = self._qpart.cursorRect()
-        parentSize = self.parentWidget().size()
-
-        spaceBelow = parentSize.height() - cursorRect.bottom() - WIDGET_BORDER_MARGIN
-        spaceAbove = cursorRect.top() - WIDGET_BORDER_MARGIN
-
-        if height <= spaceBelow or \
-           spaceBelow > spaceAbove:
-            yPos = cursorRect.bottom()
-            if height > spaceBelow and \
-               spaceBelow > self.minimumHeight():
-                height = spaceBelow
-                width = width + SCROLLBAR_WIDTH
-        else:
-            if height > spaceAbove and \
-               spaceAbove > self.minimumHeight():
-                height = spaceAbove
-                width = width + SCROLLBAR_WIDTH
-            yPos = max(3, cursorRect.top() - height)
-
-        xPos = cursorRect.right() - self._horizontalShift()
-
-        if xPos + width + WIDGET_BORDER_MARGIN > parentSize.width():
-            xPos = max(3, parentSize.width() - WIDGET_BORDER_MARGIN - width)
-
-        self.setGeometry(xPos, yPos, width, height)
-        self._closeIfNotUpdatedTimer.stop()
-
-    def _onCursorPositionChanged(self):
-        """Cursor position changed. Schedule closing.
-        Timer will be stopped, if widget position is being updated
-        """
-        self._closeIfNotUpdatedTimer.start()
-
-    def _afterCursorPositionChanged(self):
-        """Widget position hasn't been updated after cursor position change, close widget
-        """
-        self.closeMe.emit()
-
-    def eventFilter(self, object, event):
-        """Catch events from qpart
-        Move selection, select item, or close themselves
-        """
-        if event.type() == QEvent.KeyPress and event.modifiers() == Qt.NoModifier:
-            if event.key() == Qt.Key_Escape:
-                self.closeMe.emit()
-                return True
-            elif event.key() == Qt.Key_Down:
-                if self._selectedIndex + 1 < self.model().rowCount():
-                    self._selectItem(self._selectedIndex + 1)
-                return True
-            elif event.key() == Qt.Key_Up:
-                if self._selectedIndex - 1 >= 0:
-                    self._selectItem(self._selectedIndex - 1)
-                return True
-            elif event.key() in (Qt.Key_Enter, Qt.Key_Return):
-                if self._selectedIndex != -1:
-                    self.itemSelected.emit(self._selectedIndex)
-                    return True
-            elif event.key() == Qt.Key_Tab:
-                self.tabPressed.emit()
-                return True
-        elif event.type() == QEvent.FocusOut:
-            self.closeMe.emit()
-
+    def is_empty(self):
+        """Check if widget is empty."""
+        if self.count() == 0:
+            return True
         return False
 
-    def _selectItem(self, index):
-        """Select item in the list
+    def show_list(self, completion_list, position, automatic):
+        """Show list corresponding to position."""
+        if not completion_list:
+            self.hide()
+            return
+
+        self.automatic = automatic
+
+        if position is None:
+            # Somehow the position was not saved.
+            # Hope that the current position is still valid
+            self.completion_position = self.textedit.textCursor().position()
+
+        elif self.textedit.textCursor().position() < position:
+            # hide the text as we moved away from the position
+            self.hide()
+            return
+
+        else:
+            self.completion_position = position
+
+        self.completion_list = completion_list
+
+        # Check everything is in order
+        self.update_current()
+
+        # If update_current called close, stop loading
+        if not self.completion_list:
+            return
+
+        # If only one, must be chosen if not automatic
+        single_match = self.count() == 1
+        if single_match and not self.automatic:
+            self.item_selected(self.item(0))
+            # signal used for testing
+            self.sig_show_completions.emit(completion_list)
+            return
+
+        self.show()
+        self.setFocus()
+        self.raise_()
+
+        self.textedit.position_widget_at_cursor(self)
+
+        if not self.is_internal_console:
+            tooltip_point = self.rect().topRight()
+            tooltip_point = self.mapToGlobal(tooltip_point)
+
+            if self.completion_list is not None:
+                for completion in self.completion_list:
+                    completion['point'] = tooltip_point
+
+        # Show hint for first completion element
+        self.setCurrentRow(0)
+
+        # signal used for testing
+        self.sig_show_completions.emit(completion_list)
+
+    def set_language(self, language):
+        """Set the completion language."""
+        self._language = language.lower()
+
+    def update_list(self, current_word):
         """
-        self._selectedIndex = index
-        self.setCurrentIndex(self.model().createIndex(index, 0))
+        Update the displayed list by filtering self.completion_list based on
+        the current_word under the cursor (see check_can_complete).
+
+        If we're not updating the list with new completions, we filter out
+        textEdit completions, since it's difficult to apply them correctly
+        after the user makes edits.
+
+        If no items are left on the list the autocompletion should stop
+        """
+        self.clear()
+
+        self.display_index = []
+        height = self.item_height
+        width = self.item_width
+
+        if current_word:
+            for c in self.completion_list:
+                c['end'] = c['start'] + len(current_word)
+
+        for i, completion in enumerate(self.completion_list):
+            text = completion['text']
+            if not self.check_can_complete(text, current_word):
+                continue
+            item = QListWidgetItem()
+            self.set_item_display(
+                item, completion, height=height, width=width)
+            item.setData(Qt.UserRole, completion)
+
+            self.addItem(item)
+            self.display_index.append(i)
+
+        if self.count() == 0:
+            self.hide()
+
+    def _get_cached_icon(self, name):
+        if name not in JEDI_TYPES:
+            log.error('%s is not a valid jedi type', name)
+            return None
+        if name not in self.ICON_MAP:
+            if name is None:
+                self.ICON_MAP[name] = QIcon()
+            else:
+                icon_path = join(dirname(__file__), '..', '..', 'icons',
+                                 'pythonscript', name + '.svg')
+                self.ICON_MAP[name] = QIcon(icon_path)
+        return self.ICON_MAP[name]
+
+    def set_item_display(self, item_widget, item_info, height, width):
+        """Set item text & icons using the info available."""
+        item_label = item_info['text']
+        item_type = item_info['type']
+
+        item_text = self.get_html_item_representation(
+            item_label, item_type,
+            height=height, width=width)
+
+        item_widget.setText(item_text)
+        item_widget.setIcon(self._get_cached_icon(item_type))
+
+    @staticmethod
+    def get_html_item_representation(item_completion, item_type=None,
+                                     height=14,
+                                     width=250):
+        """Get HTML representation of and item."""
+        height = str(height)
+        width = str(width)
+
+        # Unfortunately, both old- and new-style Python string formatting
+        # have poor performance due to being implemented as functions that
+        # parse the format string.
+        # f-strings in new versions of Python are fast due to Python
+        # compiling them into efficient string operations, but to be
+        # compatible with old versions of Python, we manually join strings.
+        parts = [
+            '<table width="', width, '" height="', height, '">', '<tr>',
+
+            '<td valign="middle" style="color: black;" style="margin-left:22px;">',
+            html.escape(item_completion).replace(' ', '&nbsp;'),
+            '</td>',
+        ]
+        if item_type is not None:
+            parts.extend(['<td valign="middle" align="right" float="right" '
+                          'style="color: black;">',
+                          item_type,
+                          '</td>'
+                          ])
+        parts.extend([
+            '</tr>', '</table>',
+        ])
+
+        return ''.join(parts)
+
+    def hide(self):
+        """Override Qt method."""
+        self.completion_position = None
+        self.completion_list = None
+        self.clear()
+        self.textedit.setFocus()
+        tooltip = getattr(self.textedit, 'tooltip_widget', None)
+        if tooltip:
+            tooltip.hide()
+
+        QListWidget.hide(self)
+        QToolTip.hideText()
+
+    def keyPressEvent(self, event):
+        """Override Qt method to process keypress."""
+        # pylint: disable=too-many-branches
+        text, key = event.text(), event.key()
+        alt = event.modifiers() & Qt.AltModifier
+        shift = event.modifiers() & Qt.ShiftModifier
+        ctrl = event.modifiers() & Qt.ControlModifier
+        altgr = event.modifiers() and (key == Qt.Key_AltGr)
+        # Needed to properly handle Neo2 and other keyboard layouts
+        # See spyder-ide/spyder#11293
+        neo2_level4 = (key == 0)  # AltGr (ISO_Level5_Shift) in Neo2 on Linux
+        modifier = shift or ctrl or alt or altgr or neo2_level4
+        if key in (Qt.Key_Return, Qt.Key_Enter, Qt.Key_Tab):
+            # Check that what was selected can be selected,
+            # otherwise timing issues
+            item = self.currentItem()
+            if item is None:
+                item = self.item(0)
+
+            if self.is_up_to_date(item=item):
+                self.item_selected(item=item)
+            else:
+                self.hide()
+                self.textedit.keyPressEvent(event)
+        elif key == Qt.Key_Escape:
+            self.hide()
+        elif key in (Qt.Key_Left, Qt.Key_Right) or text in ('.', ':'):
+            self.hide()
+            self.textedit.keyPressEvent(event)
+        elif key in (Qt.Key_Up, Qt.Key_Down, Qt.Key_PageUp, Qt.Key_PageDown,
+                     Qt.Key_Home, Qt.Key_End) and not modifier:
+            if key == Qt.Key_Up and self.currentRow() == 0:
+                self.setCurrentRow(self.count() - 1)
+            elif key == Qt.Key_Down and self.currentRow() == self.count() - 1:
+                self.setCurrentRow(0)
+            else:
+                QListWidget.keyPressEvent(self, event)
+        elif len(text) > 0 or key == Qt.Key_Backspace:
+            self.textedit.keyPressEvent(event)
+            self.update_current()
+        elif modifier:
+            self.textedit.keyPressEvent(event)
+        else:
+            self.hide()
+            QListWidget.keyPressEvent(self, event)
+
+    def is_up_to_date(self, item=None):
+        """
+        Check if the selection is up to date.
+        """
+        if self.is_empty():
+            return False
+        if not self.is_position_correct():
+            return False
+        if item is None:
+            item = self.currentItem()
+        current_word = self.textedit.get_current_word(completion=True)
+        completion = item.data(Qt.UserRole)
+        filter_text = completion['text']
+        return self.check_can_complete(filter_text, current_word)
+
+    @staticmethod
+    def check_can_complete(filter_text, current_word):
+        """Check if current_word matches filter_text."""
+        if not filter_text:
+            return True
+
+        if not current_word:
+            return True
+
+        return str(filter_text).lower().startswith(
+            str(current_word).lower())
+
+    def is_position_correct(self):
+        """Check if the position is correct."""
+
+        if self.completion_position is None:
+            return False
+
+        cursor_position = self.textedit.textCursor().position()
+
+        # Can only go forward from the data we have
+        if cursor_position < self.completion_position:
+            return False
+
+        completion_text = self.textedit.get_current_word_and_position(
+            completion=True)
+
+        # If no text found, we must be at self.completion_position
+        if completion_text is None:
+            return self.completion_position == cursor_position
+
+        completion_text, text_position = completion_text
+        completion_text = str(completion_text)
+
+        # The position of text must compatible with completion_position
+        if not text_position <= self.completion_position <= (
+                text_position + len(completion_text)):
+            return False
+
+        return True
+
+    def update_current(self):
+        """
+        Update the displayed list.
+        """
+        if not self.is_position_correct():
+            self.hide()
+            return
+
+        current_word = self.textedit.get_current_word(completion=True)
+        self.update_list(current_word)
+        # self.setFocus()
+        # self.raise_()
+        self.setCurrentRow(0)
+
+    def focusOutEvent(self, event):
+        """Override Qt method."""
+        event.ignore()
+        # Don't hide it on Mac when main window loses focus because
+        # keyboard input is lost.
+        # Fixes spyder-ide/spyder#1318.
+        if sys.platform == "darwin":
+            if event.reason() != Qt.ActiveWindowFocusReason:
+                self.hide()
+        else:
+            # Avoid an error when running tests that show
+            # the completion widget
+            try:
+                self.hide()
+            except RuntimeError:
+                pass
+
+    def item_selected(self, item=None):
+        """Perform the item selected action."""
+        if item is None:
+            item = self.currentItem()
+
+        if item is not None and self.completion_position is not None:
+            self.textedit.insert_completion(item.data(Qt.UserRole),
+                                            self.completion_position)
+        self.hide()
+
+    def trigger_completion_hint(self, row=None):
+        if not self.completion_list:
+            return
+        if row is None:
+            row = self.currentRow()
+        if row < 0 or len(self.completion_list) <= row:
+            return
+
+        item = self.completion_list[row]
+        if 'point' not in item:
+            return
+
+        if 'textEdit' in item:
+            insert_text = item['textEdit']['newText']
+        else:
+            insert_text = item['insertText']
+
+            # Split by starting $ or language specific chars
+            chars = ['$']
+            if self._language == 'python':
+                chars.append('(')
+
+            for ch in chars:
+                insert_text = insert_text.split(ch)[0]
+
+        self.sig_completion_hint.emit(
+            insert_text,
+            item['documentation'],
+            item['point'])
+
+    # @Slot(int)
+    # def row_changed(self, row):
+    #     """Set completion hint info and show it."""
+    #     self.trigger_completion_hint(row)
 
 
-class Completer(QObject):
-    """Object listens Qutepart widget events, computes and shows autocompletion lists
+class Completer(BaseFrontendMixin, QObject):
     """
-    _globalUpdateWordSetTimer = _GlobalUpdateWordSetTimer()
-
-    _WORD_SET_UPDATE_MAX_TIME_SEC = 0.4
+    Uses qtconsole's kernel to generate jedi completions, showing a list.
+    """
 
     def __init__(self, qpart):
         QObject.__init__(self, qpart)
-
+        self._request_info = {}
+        self.ready = False
         self._qpart = qpart
-        self._widget = None
-        self._completionOpenedManually = False
+        self._widget = CompletionWidget(self._qpart, self._qpart.parent())
+        self._opened_automatically = True
 
-        self._keywords = set()
-        self._customCompletions = set()
-        self._wordSet = None
-
-        qpart.textChanged.connect(self._onTextChanged)
-        qpart.document().modificationChanged.connect(self._onModificationChanged)
+        self._complete()
 
     def terminate(self):
         """Object deleted. Cancel timer
         """
-        self._globalUpdateWordSetTimer.cancel(self._updateWordSet)
-
-    def setKeywords(self, keywords):
-        self._keywords = keywords
-        self._updateWordSet()
-
-    def setCustomCompletions(self, wordSet):
-        self._customCompletions = wordSet
 
     def isVisible(self):
-        return self._widget is not None
+        return self._widget.isVisible()
 
-    def _onTextChanged(self):
-        """Text in the qpart changed. Update word set"""
-        self._globalUpdateWordSetTimer.schedule(self._updateWordSet)
-
-    def _onModificationChanged(self, modified):
-        if not modified:
-            self._closeCompletion()
-
-    def _updateWordSet(self):
-        """Make a set of words, which shall be completed, from text
-        """
-        self._wordSet = set(self._keywords) | set(self._customCompletions)
-
-        start = time.time()
-
-        for line in self._qpart.lines:
-            for match in _wordRegExp.findall(line):
-                self._wordSet.add(match)
-            if time.time() - start > self._WORD_SET_UPDATE_MAX_TIME_SEC:
-                """It is better to have incomplete word set, than to freeze the GUI"""
-                break
+    def setup_appearance(self, size, font):
+        self._widget.setup_appearance(size, font)
 
     def invokeCompletion(self):
         """Invoke completion manually"""
-        if self.invokeCompletionIfAvailable(requestedByUser=True):
-            self._completionOpenedManually = True
+        self._opened_automatically = False
+        self._complete()
 
+    def invokeCompletionIfAvailable(self):
+        if not self._opened_automatically:
+            return
+        self._complete()
 
-    def _shouldShowModel(self, model, forceShow):
-        if not model.hasWords():
-            return False
+    def _show_completions(self, matches, pos):
+        self._widget.show_list(matches, pos, self._opened_automatically)
 
-        return forceShow or \
-               (not model.tooManyWords())
+    def _close_completions(self):
+        self._widget.hide()
 
-    def _createWidget(self, model):
-        self._widget = _CompletionList(self._qpart, model)
-        self._widget.closeMe.connect(self._closeCompletion)
-        self._widget.itemSelected.connect(self._onCompletionListItemSelected)
-        self._widget.tabPressed.connect(self._onCompletionListTabPressed)
-
-    def invokeCompletionIfAvailable(self, requestedByUser=False):
-        """Invoke completion, if available. Called after text has been typed in qpart
-        Returns True, if invoked
+    def _complete(self):
+        """ Performs completion at the current cursor location.
         """
-        if self._qpart.completionEnabled and self._wordSet is not None:
-            wordBeforeCursor = self._wordBeforeCursor()
-            wholeWord = wordBeforeCursor + self._wordAfterCursor()
+        if not self.ready:
+            return
+        code = self._qpart.text
+        cursor_pos = self._qpart.textCursor().position()
+        self._send_completion_request(code, cursor_pos)
 
-            forceShow = requestedByUser or self._completionOpenedManually
-            if wordBeforeCursor:
-                if len(wordBeforeCursor) >= self._qpart.completionThreshold or forceShow:
-                    if self._widget is None:
-                        model = _CompletionModel(self._wordSet)
-                        model.setData(wordBeforeCursor, wholeWord)
-                        if self._shouldShowModel(model, forceShow):
-                            self._createWidget(model)
-                            return True
-                    else:
-                        self._widget.model().setData(wordBeforeCursor, wholeWord)
-                        if self._shouldShowModel(self._widget.model(), forceShow):
-                            self._widget.updateGeometry()
+    def _send_completion_request(self, code, cursor_pos):
+        # Send the completion request to the kernel
+        msg_id = self.kernel_client.complete(code=code, cursor_pos=cursor_pos)
+        info = self._CompletionRequest(msg_id, code, cursor_pos)
+        self._request_info['complete'] = info
 
-                            return True
+    # ---------------------------------------------------------------------------
+    # 'BaseFrontendMixin' abstract interface
+    # ---------------------------------------------------------------------------
 
-        self._closeCompletion()
-        return False
+    _CompletionRequest = namedtuple('_CompletionRequest',
+                                    ['id', 'code', 'pos'])
 
-    def _closeCompletion(self):
-        """Close completion, if visible.
-        Delete widget
+    def _handle_complete_reply(self, rep):
+        """Support Jupyter's improved completion machinery.
         """
-        if self._widget is not None:
-            self._widget.close()
-            self._widget = None
-            self._completionOpenedManually = False
+        info = self._request_info.get('complete')
+        if (info and info.id == rep['parent_header']['msg_id']):
+            content = rep['content']
 
-    def _wordBeforeCursor(self):
-        """Get word, which is located before cursor
-        """
-        cursor = self._qpart.textCursor()
-        textBeforeCursor = cursor.block().text()[:cursor.positionInBlock()]
-        match = _wordAtEndRegExp.search(textBeforeCursor)
-        if match:
-            return match.group(0)
-        else:
-            return ''
+            if 'metadata' not in content or \
+                    '_jupyter_types_experimental' not in content['metadata']:
+                log.error('Jupyter API has changed, completions are unavailable.')
+                return
+            matches = content['metadata']['_jupyter_types_experimental']
+            start = content['cursor_start']
 
-    def _wordAfterCursor(self):
-        """Get word, which is located before cursor
-        """
-        cursor = self._qpart.textCursor()
-        textAfterCursor = cursor.block().text()[cursor.positionInBlock():]
-        match = _wordAtStartRegExp.search(textAfterCursor)
-        if match:
-            return match.group(0)
-        else:
-            return ''
+            start = max(start, 0)
 
-    def _onCompletionListItemSelected(self, index):
-        """Item selected. Insert completion to editor
-        """
-        model = self._widget.model()
-        selectedWord = model.words[index]
-        textToInsert = selectedWord[len(model.typedText()):]
-        self._qpart.textCursor().insertText(textToInsert)
-        self._closeCompletion()
+            for m in matches:
+                if m['type'] == '<unknown>':
+                    m['type'] = None
 
-    def _onCompletionListTabPressed(self):
-        """Tab pressed on completion list
-        Insert completable text, if available
+            self._show_completions(matches, start)
+        self._opened_automatically = True
+
+    def _handle_kernel_info_reply(self, _):
+        """ Called when the KernelManager channels have started listening or
+            when the frontend is assigned an already listening KernelManager.
         """
-        canCompleteText = self._widget.model().canCompleteText
-        if canCompleteText:
-            self._qpart.textCursor().insertText(canCompleteText)
-            self.invokeCompletionIfAvailable()
+        if not self.ready:
+            self.ready = True
+
+    def _handle_kernel_restarted(self):
+        self.ready = True
+
+    def _handle_kernel_died(self, _):
+        self.ready = False

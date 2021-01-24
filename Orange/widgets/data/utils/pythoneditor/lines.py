@@ -7,17 +7,27 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """
-"""Lines class.
-list-like object for access text document lines
-"""
-
 from PyQt5.QtGui import QTextCursor
+
+# Lines class.
+# list-like object for access text document lines
 
 
 def _iterateBlocksFrom(block):
     while block.isValid():
         yield block
         block = block.next()
+
+
+def _atomicModification(func):
+    """Decorator
+    Make document modification atomic
+    """
+    def wrapper(*args, **kwargs):
+        self = args[0]
+        with self._qpart:  # pylint: disable=protected-access
+            func(*args, **kwargs)
+    return wrapper
 
 
 class Lines:
@@ -27,15 +37,8 @@ class Lines:
         self._qpart = qpart
         self._doc = qpart.document()
 
-    def _atomicModification(func):
-        """Decorator
-        Make document modification atomic
-        """
-        def wrapper(*args, **kwargs):
-            self = args[0]
-            with self._qpart:
-                func(*args, **kwargs)
-        return wrapper
+    def setDocument(self, document):
+        self._doc = document
 
     def _toList(self):
         """Convert to Python list
@@ -89,9 +92,8 @@ class Lines:
             index = self._checkAndConvertIndex(index)
             _setBlockText(index, value)
         elif isinstance(index, slice):
-            """List of indexes is reversed for make sure
-            not processed indexes are not shifted during document modification
-            """
+            # List of indexes is reversed for make sure
+            # not processed indexes are not shifted during document modification
             start, stop, step = index.indices(self._doc.blockCount())
             if step > 0:
                 start, stop, step = stop - 1, start - 1, step * -1
@@ -99,7 +101,8 @@ class Lines:
             blockIndexes = list(range(start, stop, step))
 
             if len(blockIndexes) != len(value):
-                raise ValueError('Attempt to replace %d lines with %d lines' % (len(blockIndexes), len(value)))
+                raise ValueError('Attempt to replace %d lines with %d lines' %
+                                 (len(blockIndexes), len(value)))
 
             for blockIndex, text in zip(blockIndexes, value[::-1]):
                 _setBlockText(blockIndex, text)
@@ -127,9 +130,8 @@ class Lines:
             index = self._checkAndConvertIndex(index)
             _removeBlock(index)
         elif isinstance(index, slice):
-            """List of indexes is reversed for make sure
-            not processed indexes are not shifted during document modification
-            """
+            # List of indexes is reversed for make sure
+            # not processed indexes are not shifted during document modification
             start, stop, step = index.indices(self._doc.blockCount())
             if step > 0:
                 start, stop, step = stop - 1, start - 1, step * -1
