@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import os
+
 import sys
 import unittest
 
@@ -176,7 +178,11 @@ class TestOWPythonScript(WidgetTest):
             url = QUrl.fromLocalFile(fn)
             mime.setUrls([url])
             self.widget.text.insertFromMimeData(mime)
-            self.assertEqual("test", self.widget.text.toPlainText())
+            text = self.widget.text.toPlainText().split("print('Hello world')")[0]
+            self.assertTrue(
+                "'" + fn + "'",
+                text
+            )
             self.widget.text.undo()
             self.assertEqual(previous, self.widget.text.toPlainText())
 
@@ -202,25 +208,6 @@ class TestOWPythonScript(WidgetTest):
         return QDragEnterEvent(
             QPoint(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier)
-
-    def test_dropEvent_replaces_file(self):
-        with named_file("test", suffix=".42") as fn:
-            previous = self.widget.text.toPlainText()
-            event = self._drop_event(QUrl.fromLocalFile(fn))
-            self.widget.dropEvent(event)
-            self.assertEqual("test", self.widget.text.toPlainText())
-            self.widget.text.undo()
-            self.assertEqual(previous, self.widget.text.toPlainText())
-
-    def _drop_event(self, url):
-        # make sure data does not get garbage collected before it used
-        # pylint: disable=attribute-defined-outside-init
-        self.event_data = data = QMimeData()
-        data.setUrls([QUrl(url)])
-
-        return QDropEvent(
-            QPoint(0, 0), Qt.MoveAction, data,
-            Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
 
     def test_migrate(self):
         w = self.create_widget(OWPythonScript, {
