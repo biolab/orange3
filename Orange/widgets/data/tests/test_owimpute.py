@@ -3,7 +3,7 @@
 from unittest.mock import Mock
 import numpy as np
 
-from AnyQt.QtCore import Qt, QItemSelection, QLocale
+from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtTest import QTest
 
 from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
@@ -132,7 +132,7 @@ class TestOWImpute(WidgetTest):
         data = Table(domain, x, np.empty((2, 0)))
 
         widget = self.widget
-        widget.default_numeric = QLocale().toString(3.14)
+        widget.default_numeric_value = 3.14
         widget.default_time = 42
         widget.default_method_index = Method.Default
 
@@ -143,6 +143,10 @@ class TestOWImpute(WidgetTest):
             [[1, 2, 3.14, 1000, 42, 42],
              [2, 3.14, 1, 42, 2000, 2000]]
         )
+
+        widget.numeric_value_widget.setValue(100)
+        QTest.keyClick(widget.numeric_value_widget, Qt.Key_Enter)
+        self.assertEqual(widget.default_numeric_value, 100)
 
     def test_value_edit(self):
         data = Table("heart_disease")[::10]
