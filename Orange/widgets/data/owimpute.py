@@ -11,7 +11,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGroupBox, QRadioButton, QPushButton, QHBoxLayout, QGridLayout,
     QVBoxLayout, QStackedWidget, QComboBox, QWidget,
-    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox, QLabel
+    QButtonGroup, QStyledItemDelegate, QListView, QLabel
 )
 from AnyQt.QtCore import Qt, QThread, QModelIndex, QDateTime
 from AnyQt.QtCore import pyqtSlot as Slot
@@ -27,6 +27,7 @@ from Orange.widgets.utils import concurrent as qconcurrent
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.spinbox import DoubleSpinBox
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
 
@@ -209,8 +210,8 @@ class OWImpute(OWWidget):
         button.setChecked(Method.Default == self.default_method_index)
         hlayout.addWidget(button)
 
-        self.numeric_value_widget = QDoubleSpinBox(
-            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1, decimals=5,
+        self.numeric_value_widget = DoubleSpinBox(
+            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1,
             value=self.default_numeric_value,
             alignment=Qt.AlignRight,
             enabled=self.default_method_index == Method.Default,
@@ -281,9 +282,9 @@ class OWImpute(OWWidget):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
             activated=self._on_value_selected
             )
-        self.value_double = QDoubleSpinBox(
+        self.value_double = DoubleSpinBox(
             editingFinished=self._on_value_selected,
-            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1, decimals=5,
+            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1,
             )
         self.value_stack = value_stack = QStackedWidget()
         value_stack.addWidget(self.value_combo)
