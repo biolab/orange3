@@ -14,6 +14,11 @@ def add_unknown_attribute(table):
     return table.transform(new_domain)
 
 
+def add_unknown_class(table):
+    new_domain = Domain(table.domain.attributes, class_vars=[ContinuousVariable("x")])
+    return table.transform(new_domain)
+
+
 class BenchTransform(Benchmark):
 
     def setup_dense(self, rows, cols):
@@ -53,6 +58,11 @@ class BenchTransform(Benchmark):
     def bench_copy_sparse_wide(self):
         t = add_unknown_attribute(self.table)
         self.assertIsInstance(t.X, scipy.sparse.csr_matrix)
+
+    @benchmark(setup=partial(setup_dense, rows=10000, cols=100), number=5)
+    def bench_subarray_dense_long(self):
+        # adding a class should link X
+        add_unknown_class(self.table)
 
     def setup_dense_transforms(self, rows, cols, transforms):
         self.setup_dense(rows, cols)
