@@ -16,6 +16,16 @@ from Orange.widgets.data.owpythonscript import OWPythonScript, \
 from Orange.widgets.tests.base import WidgetTest, DummySignalManager
 from Orange.widgets.widget import OWWidget
 
+# import tests for python editor
+from Orange.widgets.data.utils.pythoneditor.tests.test_api import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_bracket_highlighter import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_draw_whitespace import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_edit import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_indent import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_indenter.test_python import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_rectangular_selection import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_vim import *
+
 
 class TestOWPythonScript(WidgetTest):
     def setUp(self):
@@ -256,3 +266,7 @@ class TestOWPythonScriptDropHandler(unittest.TestCase):
         r = handler.parametersFromFile(__file__)
         item = r["scriptLibrary"][0]
         self.assertEqual(item["filename"], __file__)
+
+
+if __name__ == '__main__':
+    unittest.main()
