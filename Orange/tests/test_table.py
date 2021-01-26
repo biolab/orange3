@@ -1643,16 +1643,13 @@ class CreateTableWithDomainAndTable(TableTests):
                 new_table, self.table, rows=slice_)
             from_table_rows.assert_called()
 
-    @patch.object(Table, "from_table_rows", wraps=Table.from_table_rows)
-    def test_can_filter_row_with_slice_from_table(self, from_table_rows):
+    def test_can_filter_row_with_slice_from_table(self):
         # calling from_table with a domain copy will use indexing in from_table
         for slice_ in self.interesting_slices:
-            from_table_rows.reset_mock()
             new_table = data.Table.from_table(
                 self.domain.copy(), self.table, row_indices=slice_)
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=slice_)
-            from_table_rows.assert_not_called()
 
     def test_can_use_attributes_as_new_columns(self):
         a, _, _ = column_sizes(self.table)
