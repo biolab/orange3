@@ -68,6 +68,7 @@ class Pivot:
     ContVarFunctions = (Sum, Mean, Min, Max, Mode, Median, Var)
     DiscVarFunctions = (Majority,)
     TimeVarFunctions = (Mean, Min, Max, Mode, Median)
+    FloatFunctions = (Count, Count_defined, Sum, Var)
 
     class Tables:
         table = None  # type: Table
@@ -303,11 +304,23 @@ class Pivot:
                 _X[:, index][_X[:, index] == value] = j
             return values
 
+        create_time_var = \
+            isinstance(val_var, TimeVariable) and \
+            all(fun in self.TimeVarFunctions for fun in agg_funs)
+        create_cont_var = \
+            not val_var or val_var.is_continuous and \
+            (not isinstance(val_var, TimeVariable) or
+             all(fun in self.FloatFunctions for fun in agg_funs))
+
         vals = np.array(self._col_var.values)[self._col_var_groups.astype(int)]
-        if not val_var or val_var.is_continuous:
-            cv = ContinuousVariable
-            attrs = [[cv(f"{v}", 1) for v in vals]] * 2
-            attrs.extend([[cv("Total", 1)]] * 2)
+        if create_time_var:
+            kwargs = {"have_date": val_var.have_date,
+                      "have_time": val_var.have_time}
+            attrs = [[TimeVariable(f"{v}", **kwargs) for v in vals]] * 2
+            attrs.extend([[TimeVariable("Total", **kwargs)]] * 2)
+        elif create_cont_var:
+            attrs = [[ContinuousVariable(f"{v}", 1) for v in vals]] * 2
+            attrs.extend([[ContinuousVariable("Total", 1)]] * 2)
         else:
             attrs = []
             for x in (X, X_h):
@@ -354,15 +367,19 @@ class Pivot:
         gt = self._group_tables
         n_fun = len(agg_funs)
         n_rows, n_cols = len(self._row_var_groups), len(self._col_var_groups)
-        kwargs = {"fill_value": np.nan, "dtype": float} \
-            if not val_var or val_var.is_continuous \
+        is_float_type = not val_var or val_var.is_continuous
+        if isinstance(val_var, TimeVariable):
+            is_float_type = \
+                all(fun in self.TimeVarFunctions for fun in agg_funs) or \
+                all(fun in self.FloatFunctions for fun in agg_funs)
+        kwargs = {"fill_value": np.nan, "dtype": float} if is_float_type \
             else {"fill_value": "", "dtype": object}
         X = np.full((n_rows * n_fun, 2 + n_cols), **kwargs)
         X_h = np.full((n_fun, 2 + n_cols), **kwargs)
         X_v = np.full((n_rows * n_fun, 1), **kwargs)
         X_t = np.full((n_fun, 1), **kwargs)
         for i, fun in enumerate(agg_funs):
-            args = (val_var, fun)
+            args = (val_var, fun, is_float_type)
             X[i::n_fun, 2:] = self.__rows_for_function(n_rows, n_cols, *args)
             X[i::n_fun, :2] = np.array([[row_val, agg_funs.index(fun)] for
                                         row_val in self._row_var_groups])
@@ -372,13 +389,14 @@ class Pivot:
             X_t[i] = self.__total_for_function(gt.total, *args)
         return X, X_h, X_v, X_t
 
-    def __total_for_function(self, group_tab, val_var, fun):
+    def __total_for_function(self, group_tab, val_var, fun, is_float_type):
         ref = self._indepen_agg_done.get(fun, None) \
               or self._depen_agg_done[fun][val_var]
         ref -= int(bool(not self.single_var_grouping))
-        return self.__check_continuous(val_var, group_tab.X[:, ref], fun)
+        return self.__check_continuous(val_var, group_tab.X[:, ref],
+                                       fun, is_float_type)
 
-    def __rows_for_function(self, n_rows, n_cols, val_var, fun):
+    def __rows_for_function(self, n_rows, n_cols, val_var, fun, is_float_type):
         ref = self._indepen_agg_done.get(fun, None) \
               or self._depen_agg_done[fun][val_var]
         column = self._group_tables.table.X[:, ref]
@@ -387,14 +405,23 @@ class Pivot:
             rows[np.diag_indices_from(rows)] = column
         else:
             rows = column.reshape(n_rows, n_cols)
-        return self.__check_continuous(val_var, rows, fun)
+        return self.__check_continuous(val_var, rows, fun, is_float_type)
 
-    def __check_continuous(self, val_var, column, fun):
+    def __check_continuous(self, val_var, column, fun, is_float_type):
         if val_var and not val_var.is_continuous:
             column = column.astype(str)
             if fun in self.DiscVarFunctions:
                 for j, val in enumerate(val_var.values):
                     column[column == str(float(j))] = val
+        elif isinstance(val_var, TimeVariable) and not is_float_type:
+            shape = column.shape
+            column = column.flatten()
+            column_ = column.astype(str)
+            if fun in self.TimeVarFunctions:
+                for i in range(column.shape[0]):
+                    if not np.isnan(column[i]):
+                        column_[i] = val_var.repr_val(column[i])
+            return column_.reshape(shape)
         return column
 
     @staticmethod
@@ -618,10 +645,8 @@ class PivotTableView(QTableView):
             self.table_model.setItem(i + 1, 1, item)
 
     def _set_values(self, table):
-        attrs = table.domain.attributes
         for i, j in product(range(len(table)), range(len(table[0]))):
-            # data is read faster when reading directly from table.X
-            value = table.X[i, j] if attrs[j].is_continuous else table[i, j]
+            value = table[i, j]
             item = self._create_value_item(str(value))
             self.table_model.setItem(i + self._n_leading_rows,
                                      j + self._n_leading_cols, item)
@@ -982,9 +1007,10 @@ class OWPivot(OWWidget):
                 elif isinstance(at, ContinuousVariable):
                     f.append(FilterContinuous(at, FilterContinuous.Equal, val))
             cond.append(Values(f))
-        return Values([f for f in cond], conjunction=False)(self.data)
+        return Values(cond, conjunction=False)(self.data)
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(640, 525)
 
     def send_report(self):
