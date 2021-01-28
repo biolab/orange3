@@ -55,6 +55,21 @@ class _ThreadLocal(threading.local):
 _thread_local = _ThreadLocal()
 
 
+def _idcache_save(cachedict, keys, value):
+    # key is tuple(list) not tuple(genexpr) for speed
+    cachedict[tuple([id(k) for k in keys])] = \
+        value, [weakref.ref(k) for k in keys]
+
+
+def _idcache_restore(cachedict, keys):
+    # key is tuple(list) not tuple(genexpr) for speed
+    shared, weakrefs = cachedict.get(tuple([id(k) for k in keys]), (None, []))
+    for r in weakrefs:
+        if r() is None:
+            return None
+    return shared
+
+
 class DomainTransformationError(Exception):
     pass
 
@@ -318,12 +333,6 @@ class Table(Sequence, Storage):
         :rtype: Orange.data.Table
         """
 
-        def valid_refs(weakrefs):
-            for r in weakrefs:
-                if r() is None:
-                    return False
-            return True
-
         def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
                         is_sparse=False, variables=[]):
             if not len(src_cols):
@@ -376,14 +385,10 @@ class Table(Sequence, Storage):
                     )
                 elif not isinstance(col, Integral):
                     if isinstance(col, SharedComputeValue):
-                        shared, weakrefs = shared_cache.get(
-                            (id(col.compute_shared), id(source)),
-                            (None, None)
-                        )
-                        if shared is None or not valid_refs(weakrefs):
-                            shared, _ = shared_cache[(id(col.compute_shared), id(source))] = \
-                                col.compute_shared(source), \
-                                (weakref.ref(col.compute_shared), weakref.ref(source))
+                        shared = _idcache_restore(shared_cache, (col.compute_shared, source))
+                        if shared is None:
+                            shared = col.compute_shared(source)
+                            _idcache_save(shared_cache, (col.compute_shared, source), shared)
 
                         if row_indices is not ...:
                             col_array = match_density(
@@ -433,9 +438,8 @@ class Table(Sequence, Storage):
             if new_cache:
                 _thread_local.conversion_cache = {}
             else:
-                cached, weakrefs = \
-                    _thread_local.conversion_cache.get((id(domain), id(source)), (None, None))
-                if cached and valid_refs(weakrefs):
+                cached = _idcache_restore(_thread_local.conversion_cache, (domain, source))
+                if cached is not None:
                     return cached
             if domain is source.domain:
                 table = cls.from_table_rows(source, row_indices)
@@ -485,8 +489,7 @@ class Table(Sequence, Storage):
             else:
                 cls._init_ids(self)
             self.attributes = getattr(source, 'attributes', {})
-            _thread_local.conversion_cache[(id(domain), id(source))] = \
-                self, (weakref.ref(domain), weakref.ref(source))
+            _idcache_save(_thread_local.conversion_cache, (domain, source), self)
             return self
         finally:
             if new_cache:
