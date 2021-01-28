@@ -25,12 +25,12 @@ from Orange.widgets.utils.annotated_data import (
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+from Orange.widgets.visualize.owscatterplotgraph import (
+    OWScatterPlotBase, MAX_COLORS
+)
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
-# maximum number of colors (including Other)
-MAX_COLORS = 11
 
 # maximum number of shapes (including Other)
 MAX_SHAPES = len(OWScatterPlotBase.CurveSymbols) - 1

@@ -940,6 +940,46 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_equal(y_data, y_data0)
         np.testing.assert_equal(colors, colors0)
 
+    @patch("Orange.widgets.visualize.owscatterplotgraph.MAX_COLORS", 3)
+    @patch("Orange.widgets.utils.classdensity.class_density_image")
+    def test_density_with_max_colors(self, class_density_image):
+        graph = self.graph
+        graph.reset_graph()
+        graph.plot_widget.addItem = Mock()
+        graph.plot_widget.removeItem = Mock()
+
+        graph.class_density = True
+        d = np.arange(10, dtype=float) % 3
+        self.master.get_color_data = lambda: d
+
+        # All colors known
+        graph.update_colors()
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        np.testing.assert_equal(x_data, np.arange(10)[d < 2])
+        np.testing.assert_equal(y_data, np.arange(10)[d < 2])
+        self.assertEqual(len(set(colors)), 2)
+
+        # Missing colors
+        d[:3] = np.nan
+        graph.update_colors()
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        np.testing.assert_equal(x_data, np.arange(3, 10)[d[3:] < 2])
+        np.testing.assert_equal(y_data, np.arange(3, 10)[d[3:] < 2])
+        self.assertEqual(len(set(colors)), 2)
+
+        # Missing colors + only subsample plotted
+        graph.set_sample_size(8)
+        graph.reset_graph()
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        visible_data = graph._filter_visible(d)
+        d_known = np.bitwise_and(np.isfinite(visible_data),
+                                  visible_data < 2)
+        x_data0 = graph._filter_visible(np.arange(10))[d_known]
+        y_data0 = graph._filter_visible(np.arange(10))[d_known]
+        np.testing.assert_equal(x_data, x_data0)
+        np.testing.assert_equal(y_data, y_data0)
+        self.assertLessEqual(len(set(colors)), 2)
+
     def test_labels(self):
         graph = self.graph
         graph.reset_graph()
