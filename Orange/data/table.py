@@ -50,6 +50,7 @@ class _ThreadLocal(threading.local):
         # here instead of as a class variable of a Table so that caching also works
         # with descendants of Table.
         self.conversion_cache = None
+        self.domain_cache = None
 
 
 _thread_local = _ThreadLocal()
@@ -206,6 +207,8 @@ class _ArrayConversion:
         if any(isinstance(var, StringVariable) for var in self.variables):
             dtype = object
         self.dtype = dtype
+        self.row_selection_needed = any(not isinstance(x, Integral)
+                                        for x in src_cols)
 
     def _can_copy_all(self, src_cols, source_domain):
         n_src_attrs = len(source_domain.attributes)
@@ -243,13 +246,7 @@ class _ArrayConversion:
         assert arr.ndim == 2
         return arr
 
-    def get_columns(self, source, row_indices, n_rows):
-        if not self.is_sparse:
-            # F-order enables faster writing to the array while accessing and
-            # matrix operations work with same speed (e.g. dot)
-            out = np.zeros((n_rows, len(self.src_cols)),
-                           order="F", dtype=self.dtype)
-
+    def get_columns(self, source, row_indices, n_rows, out=None, target_indices=None):
         n_src_attrs = len(source.domain.attributes)
 
         data = []
@@ -265,6 +262,12 @@ class _ArrayConversion:
             X = csc_matrix(source.X) if self.is_sparse else source.X
             Y = csc_matrix(source._Y) if self.is_sparse else source._Y
 
+        if self.row_selection_needed:
+            if row_indices is ...:
+                sourceri = source
+            else:
+                sourceri = source[row_indices]
+
         shared_cache = _thread_local.conversion_cache
         for i, col in enumerate(self.src_cols):
             if col is None:
@@ -275,19 +278,12 @@ class _ArrayConversion:
                 if isinstance(col, SharedComputeValue):
                     shared = _idcache_restore(shared_cache, (col.compute_shared, source))
                     if shared is None:
-                        shared = col.compute_shared(source)
+                        shared = col.compute_shared(sourceri)
                         _idcache_save(shared_cache, (col.compute_shared, source), shared)
-                    if row_indices is not ...:
-                        col_array = match_density(
-                            col(source, shared_data=shared)[row_indices])
-                    else:
-                        col_array = match_density(
-                            col(source, shared_data=shared))
+                    col_array = match_density(
+                        col(sourceri, shared_data=shared))
                 else:
-                    if row_indices is not ...:
-                        col_array = match_density(col(source)[row_indices])
-                    else:
-                        col_array = match_density(col(source))
+                    col_array = match_density(col(sourceri))
             elif col < 0:
                 col_array = match_density(
                     source.metas[row_indices, -1 - col]
@@ -305,7 +301,7 @@ class _ArrayConversion:
                 sp_col.append(np.full(len(col_array.data), i))
                 sp_row.append(col_array.indices)  # row indices should be same
             else:
-                out[:, i] = col_array
+                out[target_indices, i] = col_array
 
         if self.is_sparse:
             # creating csr directly would need plenty of manual work which
@@ -485,10 +481,13 @@ class Table(Sequence, Storage):
         :rtype: Orange.data.Table
         """
 
+        PART = 100
+
         new_cache = _thread_local.conversion_cache is None
         try:
             if new_cache:
                 _thread_local.conversion_cache = {}
+                _thread_local.domain_cache = {}
             else:
                 cached = _idcache_restore(_thread_local.conversion_cache, (domain, source))
                 if cached is not None:
@@ -502,17 +501,23 @@ class Table(Sequence, Storage):
                 table = assure_domain_conversion_sparsity(table, source)
                 return table
 
-            if isinstance(row_indices, slice):
-                n_rows = len(range(*row_indices.indices(source.X.shape[0])))
-            elif row_indices is ...:
+            if row_indices is ...:
                 n_rows = len(source)
+            elif isinstance(row_indices, slice):
+                row_indices_range = range(*row_indices.indices(source.X.shape[0]))
+                n_rows = len(row_indices_range)
             else:
                 n_rows = len(row_indices)
 
             self = cls()
             self.domain = domain
 
-            table_conversion = _FromTableConversion(source.domain, domain)
+            table_conversion = \
+                _idcache_restore(_thread_local.domain_cache, (domain, source.domain))
+            if table_conversion is None:
+                table_conversion = _FromTableConversion(source.domain, domain)
+                _idcache_save(_thread_local.domain_cache, (domain, source.domain),
+                              table_conversion)
 
             # if an array can be a subarray of the input table, this needs to be done
             # on the whole table, because this avoids needless copies of contents
@@ -521,9 +526,55 @@ class Table(Sequence, Storage):
                 out = array_conv.get_subarray(source, row_indices, n_rows)
                 setattr(self, array_conv.target, out)
 
+            parts = {}
+
             for array_conv in table_conversion.columnwise:
-                out = array_conv.get_columns(source, row_indices, n_rows)
-                setattr(self, array_conv.target, out)
+                if array_conv.is_sparse:
+                    parts[array_conv.target] = []
+                else:
+                    # F-order enables faster writing to the array while accessing and
+                    # matrix operations work with same speed (e.g. dot)
+                    parts[array_conv.target] = \
+                        np.zeros((n_rows, len(array_conv.src_cols)),
+                                 order="F", dtype=array_conv.dtype)
+
+            if n_rows <= PART:
+                for array_conv in table_conversion.columnwise:
+                    out = array_conv.get_columns(source, row_indices, n_rows,
+                                                 parts[array_conv.target],
+                                                 ...)
+                    setattr(self, array_conv.target, out)
+            else:
+                i_done = 0
+
+                while i_done < n_rows:
+                    target_indices = slice(i_done, min(n_rows, i_done + PART))
+                    if row_indices is ...:
+                        source_indices = target_indices
+                    elif isinstance(row_indices, slice):
+                        r = row_indices_range[target_indices]
+                        source_indices = slice(r.start, r.stop, r.step)
+                    else:
+                        source_indices = row_indices[target_indices]
+                    part_rows = min(n_rows, i_done+PART) - i_done
+
+                    for array_conv in table_conversion.columnwise:
+                        out = array_conv.get_columns(source, source_indices, part_rows,
+                                                     parts[array_conv.target],
+                                                     target_indices)
+                        if array_conv.is_sparse:  # dense arrays are populated in-place
+                            parts[array_conv.target].append(out)
+
+                    i_done += PART
+
+                    # clear cache after a part is done
+                    if new_cache:
+                        _thread_local.conversion_cache = {}
+
+                for array_conv in table_conversion.columnwise:
+                    cparts = parts[array_conv.target]
+                    out = cparts if not array_conv.is_sparse else sp.vstack(cparts)
+                    setattr(self, array_conv.target, out)
 
             if source.has_weights():
                 self.W = source.W[row_indices]
@@ -540,6 +591,7 @@ class Table(Sequence, Storage):
         finally:
             if new_cache:
                 _thread_local.conversion_cache = None
+                _thread_local.domain_cache = None
 
     def transform(self, domain):
         """
