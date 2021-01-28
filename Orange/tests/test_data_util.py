@@ -53,7 +53,7 @@ class TestSharedComputeValue(unittest.TestCase):
     def test_single_call(self):
         obj = DummyPlus(Mock(return_value=1))
         self.assertEqual(obj.compute_shared.call_count, 0)
-        data = Orange.data.Table("iris")
+        data = Orange.data.Table("iris")[45:55]  # two classes
         domain = Orange.data.Domain([at.copy(compute_value=obj)
                                      for at in data.domain.attributes],
                                     data.domain.class_vars)
