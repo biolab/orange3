@@ -194,6 +194,158 @@ class Columns:
             setattr(self, v.name.replace(" ", "_"), v)
 
 
+class _ArrayConversion:
+
+    def __init__(self, target, src_cols, variables, is_sparse, source_domain):
+        self.target = target
+        self.src_cols = src_cols
+        self.is_sparse = is_sparse
+        self.subarray_from = self._can_copy_all(src_cols, source_domain)
+        self.variables = variables
+        dtype = np.float64
+        if any(isinstance(var, StringVariable) for var in self.variables):
+            dtype = object
+        self.dtype = dtype
+
+    def _can_copy_all(self, src_cols, source_domain):
+        n_src_attrs = len(source_domain.attributes)
+        if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
+               for x in src_cols):
+            return "X"
+        if all(isinstance(x, Integral) and x < 0 for x in src_cols):
+            return "metas"
+        if all(isinstance(x, Integral) and x >= n_src_attrs
+               for x in src_cols):
+            return "Y"
+
+    def get_subarray(self, source, row_indices, n_rows):
+        if not len(self.src_cols):
+            if self.is_sparse:
+                return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
+            else:
+                return np.zeros((n_rows, 0), dtype=source.X.dtype)
+
+        match_density = assure_array_sparse if self.is_sparse else assure_array_dense
+        n_src_attrs = len(source.domain.attributes)
+        if self.subarray_from == "X":
+            arr = match_density(_subarray(source.X, row_indices, self.src_cols))
+        elif self.subarray_from == "metas":
+            arr = match_density(_subarray(source.metas, row_indices,
+                                          [-1 - x for x in self.src_cols]))
+        elif self.subarray_from == "Y":
+            arr = match_density(_subarray(
+                source._Y, row_indices,
+                [x - n_src_attrs for x in self.src_cols]))
+        else:
+            assert False
+        if arr.dtype != self.dtype:
+            arr = arr.astype(self.dtype)
+        assert arr.ndim == 2
+        return arr
+
+    def get_columns(self, source, row_indices, n_rows):
+        if not self.is_sparse:
+            # F-order enables faster writing to the array while accessing and
+            # matrix operations work with same speed (e.g. dot)
+            out = np.zeros((n_rows, len(self.src_cols)),
+                           order="F", dtype=self.dtype)
+
+        n_src_attrs = len(source.domain.attributes)
+
+        data = []
+        sp_col = []
+        sp_row = []
+        match_density = (
+            assure_column_sparse if self.is_sparse else assure_column_dense
+        )
+
+        # converting to csc before instead of each column is faster
+        # do not convert if not required
+        if any(isinstance(x, int) for x in self.src_cols):
+            X = csc_matrix(source.X) if self.is_sparse else source.X
+            Y = csc_matrix(source._Y) if self.is_sparse else source._Y
+
+        shared_cache = _thread_local.conversion_cache
+        for i, col in enumerate(self.src_cols):
+            if col is None:
+                col_array = match_density(
+                    np.full((n_rows, 1), self.variables[i].Unknown)
+                )
+            elif not isinstance(col, Integral):
+                if isinstance(col, SharedComputeValue):
+                    shared = _idcache_restore(shared_cache, (col.compute_shared, source))
+                    if shared is None:
+                        shared = col.compute_shared(source)
+                        _idcache_save(shared_cache, (col.compute_shared, source), shared)
+                    if row_indices is not ...:
+                        col_array = match_density(
+                            col(source, shared_data=shared)[row_indices])
+                    else:
+                        col_array = match_density(
+                            col(source, shared_data=shared))
+                else:
+                    if row_indices is not ...:
+                        col_array = match_density(col(source)[row_indices])
+                    else:
+                        col_array = match_density(col(source))
+            elif col < 0:
+                col_array = match_density(
+                    source.metas[row_indices, -1 - col]
+                )
+            elif col < n_src_attrs:
+                col_array = match_density(X[row_indices, col])
+            else:
+                col_array = match_density(
+                    Y[row_indices, col - n_src_attrs]
+                )
+
+            if self.is_sparse:
+                # col_array should be coo matrix
+                data.append(col_array.data)
+                sp_col.append(np.full(len(col_array.data), i))
+                sp_row.append(col_array.indices)  # row indices should be same
+            else:
+                out[:, i] = col_array
+
+        if self.is_sparse:
+            # creating csr directly would need plenty of manual work which
+            # would probably slow down the process - conversion coo to csr
+            # is fast
+            out = sp.coo_matrix(
+                (np.hstack(data), (np.hstack(sp_row), np.hstack(sp_col))),
+                shape=(n_rows, len(self.src_cols)),
+                dtype=self.dtype
+            )
+            out = out.tocsr()
+
+        return out
+
+
+class _FromTableConversion:
+
+    def __init__(self, source, destination):
+        conversion = DomainConversion(source, destination)
+
+        self.X = _ArrayConversion("X", conversion.attributes,
+                                  destination.attributes, conversion.sparse_X,
+                                  source)
+        self.Y = _ArrayConversion("Y", conversion.class_vars,
+                                  destination.class_vars, conversion.sparse_Y,
+                                  source)
+        self.metas = _ArrayConversion("metas", conversion.metas,
+                                      destination.metas, conversion.sparse_metas,
+                                      source)
+
+        self.subarray = []
+        self.columnwise = []
+
+        for part in [self.X, self.Y, self.metas]:
+            if part.subarray_from is None:
+                self.columnwise.append(part)
+            else:
+                self.subarray.append(part)
+
+
 # noinspection PyPep8Naming
 class Table(Sequence, Storage):
     __file__ = None
@@ -333,106 +485,6 @@ class Table(Sequence, Storage):
         :rtype: Orange.data.Table
         """
 
-        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
-                        is_sparse=False, variables=[]):
-            if not len(src_cols):
-                if is_sparse:
-                    return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
-                else:
-                    return np.zeros((n_rows, 0), dtype=source.X.dtype)
-
-            # match density for subarrays
-            match_density = assure_array_sparse if is_sparse else assure_array_dense
-            n_src_attrs = len(source.domain.attributes)
-            if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
-                   for x in src_cols):
-                return match_density(_subarray(source.X, row_indices, src_cols))
-            if all(isinstance(x, Integral) and x < 0 for x in src_cols):
-                arr = match_density(_subarray(source.metas, row_indices,
-                                              [-1 - x for x in src_cols]))
-                if arr.dtype != dtype:
-                    return arr.astype(dtype)
-                return arr
-            if all(isinstance(x, Integral) and x >= n_src_attrs
-                   for x in src_cols):
-                return match_density(_subarray(
-                    source._Y, row_indices,
-                    [x - n_src_attrs for x in src_cols]))
-
-            # initialize arrays & set `match_density` for columns
-            # F-order enables faster writing to the array while accessing and
-            # matrix operations work with same speed (e.g. dot)
-            a = None if is_sparse else np.zeros(
-                (n_rows, len(src_cols)), order="F", dtype=dtype)
-            data = []
-            sp_col = []
-            sp_row = []
-            match_density = (
-                assure_column_sparse if is_sparse else assure_column_dense
-            )
-
-            # converting to csc before instead of each column is faster
-            # do not convert if not required
-            if any([isinstance(x, int) for x in src_cols]):
-                X = csc_matrix(source.X) if is_sparse else source.X
-                Y = csc_matrix(source._Y) if is_sparse else source._Y
-
-            shared_cache = _thread_local.conversion_cache
-            for i, col in enumerate(src_cols):
-                if col is None:
-                    col_array = match_density(
-                        np.full((n_rows, 1), variables[i].Unknown)
-                    )
-                elif not isinstance(col, Integral):
-                    if isinstance(col, SharedComputeValue):
-                        shared = _idcache_restore(shared_cache, (col.compute_shared, source))
-                        if shared is None:
-                            shared = col.compute_shared(source)
-                            _idcache_save(shared_cache, (col.compute_shared, source), shared)
-
-                        if row_indices is not ...:
-                            col_array = match_density(
-                                col(source, shared_data=shared)[row_indices])
-                        else:
-                            col_array = match_density(
-                                col(source, shared_data=shared))
-                    else:
-                        if row_indices is not ...:
-                            col_array = match_density(col(source)[row_indices])
-                        else:
-                            col_array = match_density(col(source))
-                elif col < 0:
-                    col_array = match_density(
-                        source.metas[row_indices, -1 - col]
-                    )
-                elif col < n_src_attrs:
-                    col_array = match_density(X[row_indices, col])
-                else:
-                    col_array = match_density(
-                        Y[row_indices, col - n_src_attrs]
-                    )
-
-                if is_sparse:
-                    # col_array should be coo matrix
-                    data.append(col_array.data)
-                    sp_col.append(np.full(len(col_array.data), i))
-                    sp_row.append(col_array.indices)  # row indices should be same
-                else:
-                    a[:, i] = col_array
-
-            if is_sparse:
-                # creating csr directly would need plenty of manual work which
-                # would probably slow down the process - conversion coo to csr
-                # is fast
-                a = sp.coo_matrix(
-                    (np.hstack(data), (np.hstack(sp_row), np.hstack(sp_col))),
-                    shape=(n_rows, len(src_cols)),
-                    dtype=dtype
-                )
-                a = a.tocsr()
-
-            return a
-
         new_cache = _thread_local.conversion_cache is None
         try:
             if new_cache:
@@ -459,26 +511,20 @@ class Table(Sequence, Storage):
 
             self = cls()
             self.domain = domain
-            conversion = DomainConversion(source.domain, domain)
-            self.X = get_columns(row_indices, conversion.attributes, n_rows,
-                                 is_sparse=conversion.sparse_X,
-                                 variables=domain.attributes)
-            if self.X.ndim == 1:
-                self.X = self.X.reshape(-1, len(self.domain.attributes))
 
-            self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
-                                 is_sparse=conversion.sparse_Y,
-                                 variables=domain.class_vars)
+            table_conversion = _FromTableConversion(source.domain, domain)
 
-            dtype = np.float64
-            if any(isinstance(var, StringVariable) for var in domain.metas):
-                dtype = object
-            self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, dtype,
-                                     is_sparse=conversion.sparse_metas,
-                                     variables=domain.metas)
-            if self.metas.ndim == 1:
-                self.metas = self.metas.reshape(-1, len(self.domain.metas))
+            # if an array can be a subarray of the input table, this needs to be done
+            # on the whole table, because this avoids needless copies of contents
+
+            for array_conv in table_conversion.subarray:
+                out = array_conv.get_subarray(source, row_indices, n_rows)
+                setattr(self, array_conv.target, out)
+
+            for array_conv in table_conversion.columnwise:
+                out = array_conv.get_columns(source, row_indices, n_rows)
+                setattr(self, array_conv.target, out)
+
             if source.has_weights():
                 self.W = source.W[row_indices]
             else:
