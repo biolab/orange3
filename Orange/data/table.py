@@ -481,7 +481,7 @@ class Table(Sequence, Storage):
         :rtype: Orange.data.Table
         """
 
-        PART = 10
+        PART = 5000
 
         new_cache = _thread_local.conversion_cache is None
         try:
