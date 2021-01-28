@@ -43,6 +43,9 @@ with warnings.catch_warnings():
 SELECTION_WIDTH = 5
 MAX_N_VALID_SIZE_ANIMATE = 1000
 
+# maximum number of colors (including Other)
+MAX_COLORS = 11
+
 
 class LegendItem(PgLegendItem):
     def __init__(self, size=None, offset=None, pen=None, brush=None):
@@ -1189,7 +1192,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             c_data = self.master.get_color_data()
             if c_data is None:
                 return
-            mask = np.isfinite(self._filter_visible(c_data))
+            visible_c_data = self._filter_visible(c_data)
+            mask = np.bitwise_and(np.isfinite(visible_c_data),
+                                  visible_c_data < MAX_COLORS - 1)
             pens = self.scatterplot_item.data['pen']
             rgb_data = [
                 pen.color().getRgb()[:3] if pen is not None else (255, 255, 255)
