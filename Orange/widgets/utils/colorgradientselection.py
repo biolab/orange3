@@ -7,6 +7,8 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtCore import Signal
 from AnyQt.QtGui import QFontMetrics, QDoubleValidator
 
+from orangewidget.gui import Slider
+
 from Orange.widgets.utils import itemmodels, colorpalettes
 
 
@@ -69,7 +71,7 @@ class ColorGradientSelection(QWidget):
         else:
             self.center_box = None
 
-        slider_low = QSlider(
+        slider_low = Slider(
             objectName="threshold-low-slider", minimum=0, maximum=100,
             value=int(low * 100), orientation=Qt.Horizontal,
             tickPosition=QSlider.TicksBelow, pageStep=10,
@@ -77,7 +79,7 @@ class ColorGradientSelection(QWidget):
             whatsThis=self.tr("Applying a low threshold will squeeze the "
                               "gradient from the lower end")
         )
-        slider_high = QSlider(
+        slider_high = Slider(
             objectName="threshold-low-slider", minimum=0, maximum=100,
             value=int(high * 100), orientation=Qt.Horizontal,
             tickPosition=QSlider.TicksAbove, pageStep=10,
