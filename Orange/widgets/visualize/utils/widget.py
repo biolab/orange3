@@ -2,7 +2,7 @@ from xml.sax.saxutils import escape
 
 import numpy as np
 
-from AnyQt.QtCore import QSize, Signal
+from AnyQt.QtCore import QSize, Signal, Qt
 from AnyQt.QtWidgets import QApplication
 
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
@@ -391,6 +391,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     graph = SettingProvider(OWScatterPlotBase)
     graph_name = "graph.plot_widget.plotItem"
     embedding_variables_names = ("proj-x", "proj-y")
+    buttons_area_orientation = Qt.Vertical
 
     input_changed = Signal(object)
     output_changed = Signal(object)
