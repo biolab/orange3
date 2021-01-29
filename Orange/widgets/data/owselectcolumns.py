@@ -198,7 +198,7 @@ class OWSelectAttributes(widget.OWWidget):
         layout = QGridLayout()
         self.controlArea.setLayout(layout)
         layout.setContentsMargins(4, 4, 4, 4)
-        box = gui.vBox(self.controlArea, "Available Variables",
+        box = gui.vBox(self.controlArea, "Ignored",
                        addToLayout=False)
 
         self.available_attrs = VariablesListItemModel()
@@ -240,7 +240,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
-        box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
+        box = gui.vBox(self.controlArea, "Target", addToLayout=False)
         self.class_attrs = VariablesListItemModel()
         self.class_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
@@ -253,7 +253,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
-        box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
+        box = gui.vBox(self.controlArea, "Metas", addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
