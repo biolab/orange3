@@ -12,6 +12,8 @@ from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, \
     QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
     QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel, QMenu, QAction
 
+from orangewidget.gui import Slider
+
 from Orange.data import DiscreteVariable, ContinuousVariable, \
     TimeVariable, Table, StringVariable, Variable, Domain
 from Orange.widgets import gui
@@ -114,7 +116,7 @@ class ContinuousVariableEditor(VariableEditor):
             minimumWidth=70,
             sizePolicy=sp_spin,
         )
-        self._slider = QSlider(
+        self._slider = Slider(
             parent,
             minimum=self.__map_to_slider(self._min_value),
             maximum=self.__map_to_slider(self._max_value),
