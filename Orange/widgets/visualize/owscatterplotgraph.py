@@ -226,6 +226,27 @@ class ScatterPlotItem(pg.ScatterPlotItem):
             self._z_mapping = np.argsort(z)
             self._inv_mapping = np.argsort(self._z_mapping)
 
+    def setCoordinates(self, x, y):
+        """
+        Change the coordinates of points while keeping other properties.
+
+        Asserts that the number of points stays the same.
+
+        Note. Pyqtgraph does not offer a method for this: setting coordinates
+        invalidates other data. We therefore retrieve the data to set it
+        together with the coordinates. Pyqtgraph also does not offer a
+        (documented) method for retrieving the data, yet using
+        data[prop]` looks reasonably safe.
+
+        The alternative, updating the whole scatterplot from the Orange Table,
+        is too slow.
+        """
+        assert len(self.data) == len(x) == len(y)
+        data = dict(x=x, y=y)
+        for prop in ('pen', 'brush', 'size', 'symbol', 'data'):
+            data[prop] = self.data[prop]
+        self.setData(**data)
+
     def updateSpots(self, dataSet=None):  # pylint: disable=unused-argument
         self._update_spots_in_paint = True
         self.update()
@@ -662,8 +683,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         x, y = self.get_coordinates()
         if x is None or len(x) == 0 or self.scatterplot_item is None:
             return
-        self._update_plot_coordinates(self.scatterplot_item, x, y)
-        self._update_plot_coordinates(self.scatterplot_item_sel, x, y)
+        self.scatterplot_item.setCoordinates(x, y)
+        self.scatterplot_item_sel.setCoordinates(x, y)
         self.update_labels()
 
     # TODO: Rename to remove_plot_items
@@ -843,27 +864,6 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         return (x + magnitude * span_x * rs * np.cos(phis),
                 y + magnitude * span_y * rs * np.sin(phis))
 
-    def _update_plot_coordinates(self, plot, x, y):
-        """
-        Change the coordinates of points while keeping other properites.
-
-        Asserts that the number of points stays the same.
-
-        Note. Pyqtgraph does not offer a method for this: setting coordinates
-        invalidates other data. We therefore retrieve the data to set it
-        together with the coordinates. Pyqtgraph also does not offer a
-        (documented) method for retrieving the data, yet using
-        `plot.data[prop]` looks reasonably safe. The alternative, calling
-        update for every property would essentially reset the graph, which
-        can be time consuming.
-        """
-        assert self.n_shown == len(x) == len(y)
-        data = dict(x=x, y=y)
-        for prop in ('pen', 'brush', 'size', 'symbol', 'data',
-                     'sourceRect', 'targetRect'):
-            data[prop] = plot.data[prop]
-        plot.setData(**data)
-
     def update_coordinates(self):
         """
         Trigger the update of coordinates while keeping other features intact.
@@ -891,8 +891,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.plot_widget.addItem(self.scatterplot_item_sel)
             self.plot_widget.addItem(self.scatterplot_item)
         else:
-            self._update_plot_coordinates(self.scatterplot_item, x, y)
-            self._update_plot_coordinates(self.scatterplot_item_sel, x, y)
+            self.scatterplot_item.setCoordinates(x, y)
+            self.scatterplot_item_sel.setCoordinates(x, y)
             self.update_labels()
 
         self.update_density()  # Todo: doesn't work: try MDS with density on
