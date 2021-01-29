@@ -144,6 +144,11 @@ class Updater:
     def update_legend_font(items: Iterable[_LegendItemType],
                            **settings: _SettingType):
         for sample, label in items:
+            if "size" in label.opts:
+                # pyqtgraph added html-like support for size in 0.11.1, which
+                # overrides our QFont property
+                label.opts.pop("size")
+                label.setText(label.text)
             sample.setFixedHeight(sample.height())
             sample.setFixedWidth(sample.width())
             label.item.setFont(Updater.change_font(label.item.font(), settings))
