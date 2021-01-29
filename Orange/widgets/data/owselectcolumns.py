@@ -196,6 +196,8 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.controlArea = QWidget(self.controlArea)
         self.layout().addWidget(self.controlArea)
+
+        # init grid
         layout = QGridLayout()
         self.controlArea.setLayout(layout)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -218,6 +220,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.available_attrs_view)
         layout.addWidget(box, 0, 0, 3, 1)
 
+        # 3rd column
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
         filter_edit, self.used_attrs_view = variables_filter(
@@ -245,12 +248,13 @@ class OWSelectAttributes(widget.OWWidget):
         self.class_attrs = VariablesListItemModel()
         self.class_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
-                          Orange.data.ContinuousVariable))
+                          Orange.data.ContinuousVariable)
+        )
         self.class_attrs_view.setModel(self.class_attrs)
         self.class_attrs_view.selectionModel().selectionChanged.connect(
             partial(update_on_change, self.class_attrs_view))
         self.class_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
-        self.class_attrs_view.setMaximumHeight(72)
+
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
@@ -265,40 +269,30 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
 
+        # 2nd column
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
+        self.move_attr_button = gui.button(
+            bbox, self, ">",
+            callback=partial(self.move_selected,
+                             self.used_attrs_view)
+        )
         layout.addWidget(bbox, 0, 1, 1, 1)
 
-        self.up_attr_button = gui.button(bbox, self, "Up",
-                                         callback=partial(self.move_up, self.used_attrs_view))
-        self.move_attr_button = gui.button(bbox, self, ">",
-                                           callback=partial(self.move_selected,
-                                                            self.used_attrs_view)
-                                          )
-        self.down_attr_button = gui.button(bbox, self, "Down",
-                                           callback=partial(self.move_down, self.used_attrs_view))
-
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
+        self.move_class_button = gui.button(
+            bbox, self, ">",
+            callback=partial(self.move_selected,
+                             self.class_attrs_view)
+        )
         layout.addWidget(bbox, 1, 1, 1, 1)
 
-        self.up_class_button = gui.button(bbox, self, "Up",
-                                          callback=partial(self.move_up, self.class_attrs_view))
-        self.move_class_button = gui.button(bbox, self, ">",
-                                            callback=partial(self.move_selected,
-                                                             self.class_attrs_view)
-                                           )
-        self.down_class_button = gui.button(bbox, self, "Down",
-                                            callback=partial(self.move_down, self.class_attrs_view))
-
         bbox = gui.vBox(self.controlArea, addToLayout=False)
+        self.move_meta_button = gui.button(
+            bbox, self, ">",
+            callback=partial(self.move_selected,
+                             self.meta_attrs_view)
+        )
         layout.addWidget(bbox, 2, 1, 1, 1)
-        self.up_meta_button = gui.button(bbox, self, "Up",
-                                         callback=partial(self.move_up, self.meta_attrs_view))
-        self.move_meta_button = gui.button(bbox, self, ">",
-                                           callback=partial(self.move_selected,
-                                                            self.meta_attrs_view)
-                                          )
-        self.down_meta_button = gui.button(bbox, self, "Down",
-                                           callback=partial(self.move_down, self.meta_attrs_view))
 
         bbox = gui.vBox(self.controlArea, "Additional settings", addToLayout=False)
         gui.checkBox(
@@ -318,9 +312,9 @@ class OWSelectAttributes(widget.OWWidget):
         autobox.layout().insertWidget(0, reset)
         autobox.layout().insertStretch(1, 20)
 
-        layout.setRowStretch(0, 4)
+        layout.setRowStretch(0, 2)
         layout.setRowStretch(1, 0)
-        layout.setRowStretch(2, 2)
+        layout.setRowStretch(2, 1)
         layout.setHorizontalSpacing(0)
         self.controlArea.setLayout(layout)
 
@@ -391,6 +385,8 @@ class OWSelectAttributes(widget.OWWidget):
         self.meta_attrs[:] = attrs_for_role("meta")
         self.available_attrs[:] = attrs_for_role("available")
         self.info.set_input_summary(len(data), format_summary_details(data))
+
+        self.update_interface_state(self.class_attrs_view)
 
     def restore_hints(self, domain: Domain) -> Dict[Variable, Tuple[str, int]]:
         """
@@ -463,9 +459,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.Warning.mismatching_domain()
 
     def enable_used_attrs(self, enable=True):
-        self.up_attr_button.setEnabled(enable)
         self.move_attr_button.setEnabled(enable)
-        self.down_attr_button.setEnabled(enable)
         self.used_attrs_view.setEnabled(enable)
         self.used_attrs_view.repaint()
 
@@ -588,6 +582,14 @@ class OWSelectAttributes(widget.OWWidget):
         self.move_meta_button.setEnabled(bool(move_meta_enabled))
         if move_meta_enabled:
             self.move_meta_button.setText(">" if available_selected else "<")
+
+        # update class_vars height
+        if self.class_attrs.rowCount() == 0:
+            height = 22
+        else:
+            height = ((self.class_attrs.rowCount() or 1) *
+                      self.class_attrs_view.sizeHintForRow(0)) + 2
+        self.class_attrs_view.setFixedHeight(height)
 
         self.__last_active_view = None
         self.__interface_update_timer.stop()
