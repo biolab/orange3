@@ -15,7 +15,6 @@ from AnyQt.QtCore import (
     QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
-from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 from orangewidget.report import plural
 
 import Orange
@@ -32,6 +31,7 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 
 
 # Input slot for the Predictors channel
@@ -1054,7 +1054,10 @@ class SharedSelectionStore:
                 flags that tell whether to Clear, Select, Deselect or Toggle
         """
         if isinstance(selection, QModelIndex):
-            rows = {selection.model().mapToSource(selection).row()}
+            if selection.model() is not None:
+                rows = {selection.model().mapToSource(selection).row()}
+            else:
+                rows = set()
         else:
             indices = selection.indexes()
             if indices:
@@ -1108,11 +1111,12 @@ class SharedSelectionStore:
         try:
             yield
         finally:
-            deselected = map_from_source(old_rows - self._rows)
-            selected = map_from_source(self._rows - old_rows)
-            if selected or deselected:
-                for model in self._selection_models:
-                    model.emit_selection_rows_changed(selected, deselected)
+            if self.proxy.sourceModel() is not None:
+                deselected = map_from_source(old_rows - self._rows)
+                selected = map_from_source(self._rows - old_rows)
+                if selected or deselected:
+                    for model in self._selection_models:
+                        model.emit_selection_rows_changed(selected, deselected)
 
 
 class SharedSelectionModel(QItemSelectionModel):
