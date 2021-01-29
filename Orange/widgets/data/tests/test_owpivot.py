@@ -649,6 +649,55 @@ class TestPivot(unittest.TestCase):
                       [8, 1, np.nan, np.nan]])
         self.assert_table_equal(pivot_tab, Table(Domain(atts), X))
 
+    def test_pivot_time_val_var(self):
+        domain = Domain([Dv("d1", ("a", "b")), Dv("d2", ("c", "d")),
+                         Tv("t1", have_date=1)])
+        X = np.array([[0, 1, 1e9], [0, 0, 1e8], [1, 0, 2e8], [1, 1, np.nan]])
+        table = Table(domain, X)
+
+        # Min
+        pivot = Pivot(table, [Pivot.Min],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Min"]),
+                Tv("c", have_date=1), Tv("d", have_date=1))
+        X = np.array([[0, 0, 1e8, 1e9],
+                      [1, 0, 2e8, np.nan]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
+
+        # Min, Max
+        pivot = Pivot(table, [Pivot.Min, Pivot.Max],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Min", "Max"]),
+                Tv("c", have_date=1), Tv("d", have_date=1))
+        X = np.array([[0, 0, 1e8, 1e9],
+                      [0, 1, 1e8, 1e9],
+                      [1, 0, 2e8, np.nan],
+                      [1, 1, 2e8, np.nan]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
+
+        # Count defined, Sum
+        pivot = Pivot(table, [Pivot.Count_defined, Pivot.Sum],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Count defined", "Sum"]),
+                Cv("c"), Cv("d"))
+        X = np.array([[0, 0, 1, 1],
+                      [0, 1, 1e8, 1e9],
+                      [1, 0, 1, 0],
+                      [1, 1, 2e8, 0]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
+
+        # Count defined, Max
+        pivot = Pivot(table, [Pivot.Count_defined, Pivot.Max],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Count defined", "Max"]),
+                Dv("c", ["1.0", "1973-03-03", "1976-05-03"]),
+                Dv("d", ["0.0", "1.0", "2001-09-09"]))
+        X = np.array([[0, 0, 0, 1],
+                      [0, 1, 1, 2],
+                      [1, 0, 0, 0],
+                      [1, 1, 2, np.nan]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
+
     def test_pivot_attr_combinations(self):
         domain = self.table1.domain
         for var1, var2, var3 in ((domain[1], domain[3], domain[5]),  # d d d
