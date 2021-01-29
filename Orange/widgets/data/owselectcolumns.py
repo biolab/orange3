@@ -194,13 +194,14 @@ class OWSelectAttributes(widget.OWWidget):
             self.__last_active_view = view
             self.__interface_update_timer.start()
 
-        self.controlArea = QWidget(self.controlArea)
-        self.layout().addWidget(self.controlArea)
+        new_control_area = QWidget(self.controlArea)
+        self.controlArea.layout().addWidget(new_control_area)
+        self.controlArea = new_control_area
 
         # init grid
         layout = QGridLayout()
         self.controlArea.setLayout(layout)
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(0, 0, 0, 0)
         box = gui.vBox(self.controlArea, "Ignored",
                        addToLayout=False)
 
@@ -294,7 +295,12 @@ class OWSelectAttributes(widget.OWWidget):
         )
         layout.addWidget(bbox, 2, 1, 1, 1)
 
-        bbox = gui.vBox(self.controlArea, "Additional settings", addToLayout=False)
+        # footer
+        gui.separator(self.buttonsArea)
+        gui.button(self.buttonsArea, self, "Reset", callback=self.reset)
+        gui.separator(self.buttonsArea)
+
+        bbox = gui.vBox(self.buttonsArea, box=True)
         gui.checkBox(
             widget=bbox,
             master=self,
@@ -304,13 +310,9 @@ class OWSelectAttributes(widget.OWWidget):
                     "they are added to the available attributes column if "
                     "<i>Ignore new variables by default</i> is checked."
         )
-        layout.addWidget(bbox, 3, 0, 1, 3)
 
-        autobox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(autobox, 4, 0, 1, 3)
-        reset = gui.button(None, self, "Reset", callback=self.reset, width=120)
-        autobox.layout().insertWidget(0, reset)
-        autobox.layout().insertStretch(1, 20)
+        gui.rubber(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         layout.setRowStretch(0, 2)
         layout.setRowStretch(1, 0)
