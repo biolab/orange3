@@ -11,11 +11,10 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGroupBox, QRadioButton, QPushButton, QHBoxLayout, QGridLayout,
     QVBoxLayout, QStackedWidget, QComboBox, QWidget,
-    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox, QLabel
+    QButtonGroup, QStyledItemDelegate, QListView, QLabel
 )
-from AnyQt.QtCore import Qt, QThread, QModelIndex, QDateTime, QLocale
+from AnyQt.QtCore import Qt, QThread, QModelIndex, QDateTime
 from AnyQt.QtCore import pyqtSlot as Slot
-from AnyQt.QtGui import QDoubleValidator
 
 from orangewidget.utils.listview import ListViewSearch
 
@@ -28,6 +27,7 @@ from Orange.widgets.utils import concurrent as qconcurrent
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.spinbox import DoubleSpinBox
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
 
@@ -127,6 +127,10 @@ def var_key(var):
     return qname, var.name
 
 
+DBL_MIN = np.finfo(float).min
+DBL_MAX = np.finfo(float).max
+
+
 class OWImpute(OWWidget):
     name = "Impute"
     description = "Impute missing values in the data table."
@@ -156,7 +160,7 @@ class OWImpute(OWWidget):
     _variable_imputation_state = settings.ContextSetting({})  # type: VariableState
 
     autocommit = settings.Setting(True)
-    default_numeric = settings.Setting("")
+    default_numeric_value = settings.Setting(0.0)
     default_time = settings.Setting(0)
 
     want_main_area = False
@@ -206,17 +210,19 @@ class OWImpute(OWWidget):
         button.setChecked(Method.Default == self.default_method_index)
         hlayout.addWidget(button)
 
-        locale = QLocale()
-        locale.setNumberOptions(locale.NumberOption.RejectGroupSeparator)
-        validator = QDoubleValidator()
-        validator.setLocale(locale)
-        self.numeric_value_widget = le = gui.lineEdit(
-            None, self, "default_numeric",
-            validator=validator, alignment=Qt.AlignRight,
-            callback=self._invalidate,
-            enabled=self.default_method_index == Method.Default
+        self.numeric_value_widget = DoubleSpinBox(
+            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1,
+            value=self.default_numeric_value,
+            alignment=Qt.AlignRight,
+            enabled=self.default_method_index == Method.Default,
         )
-        hlayout.addWidget(le)
+        self.numeric_value_widget.editingFinished.connect(
+            self.__on_default_numeric_value_edited
+        )
+        self.connect_control(
+            "default_numeric_value", self.numeric_value_widget.setValue
+        )
+        hlayout.addWidget(self.numeric_value_widget)
 
         hlayout.addWidget(QLabel(", time:"))
 
@@ -276,9 +282,9 @@ class OWImpute(OWWidget):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
             activated=self._on_value_selected
             )
-        self.value_double = QDoubleSpinBox(
+        self.value_double = DoubleSpinBox(
             editingFinished=self._on_value_selected,
-            minimum=-1000., maximum=1000., singleStep=.1, decimals=3,
+            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1,
             )
         self.value_stack = value_stack = QStackedWidget()
         value_stack.addWidget(self.value_combo)
@@ -323,15 +329,9 @@ class OWImpute(OWWidget):
             m.method = default
             return m
         elif method == Method.Default and not args:  # global default values
-            if self.default_numeric == "":
-                default_num = np.nan
-            else:
-                default_num, ok = QLocale().toDouble(self.default_numeric)
-                if not ok:
-                    default_num = np.nan
             return impute.FixedValueByType(
-                default_continuous=default_num,
-                default_time=self.default_time or np.nan
+                default_continuous=self.default_numeric_value,
+                default_time=self.default_time
             )
         else:
             return METHODS[method](*args)
@@ -356,6 +356,13 @@ class OWImpute(OWWidget):
         """Set the current selected default imputation method.
         """
         self.default_method_index = index
+
+    def __on_default_numeric_value_edited(self):
+        val = self.numeric_value_widget.value()
+        if val != self.default_numeric_value:
+            self.default_numeric_value = val
+            if self.default_method_index == Method.Default:
+                self._invalidate()
 
     @Inputs.data
     @check_sql_input
