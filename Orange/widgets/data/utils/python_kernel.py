@@ -11,38 +11,13 @@ from Orange.widgets.data.utils.python_serialize import OrangeZMQMixin
 
 class OrangeIPythonKernel(OrangeZMQMixin, IPythonKernel):
 
-    signals = ("data", "learner", "classifier", "object")
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.variables = defaultdict(list)
+        self.variables = {}
         self.init_comms_kernel()
-        self.handle_new_vars({})
 
     def handle_new_vars(self, vars):
-        default_vars = defaultdict(list)
-        default_vars.update(vars)
-
-        input_vars = {}
-
-        for signal in self.signals:
-            # remove old out_ vars
-            out_name = 'out_' + signal
-            if out_name in self.shell.user_ns:
-                del self.shell.user_ns[out_name]
-                self.shell.user_ns_hidden.pop(out_name, None)
-
-            if signal + 's' in vars and vars[signal + 's']:
-                input_vars['in_' + signal + 's'] = vars[signal + 's']
-
-                # prepend script to set single signal values,
-                # e.g. in_data = in_datas[0]
-                input_vars['in_' + signal] = input_vars['in_' + signal + 's'][0]
-            else:
-                input_vars['in_' + signal] = None
-                input_vars['in_' + signal + 's'] = []
-
-        self.shell.push(input_vars)
+        input_vars = update_kernel_vars(self, vars, self.signals)
         self.variables.update(input_vars)
 
     async def execute_request(self, *args, **kwargs):
@@ -50,14 +25,42 @@ class OrangeIPythonKernel(OrangeZMQMixin, IPythonKernel):
         if not self.is_initialized():
             return
 
-        vars = defaultdict(list)
-        for signal in self.signals:
-            key = signal + 's'
-            name = 'out_' + signal
-            if name in self.shell.user_ns:
-                var = self.shell.user_ns[name]
-                vars[key].append(var)
+        variables = collect_kernel_vars(self, self.signals)
+        prepared_variables = {
+            k[4:] + 's': [v]
+            for k, v in variables.items()
+        }
+        self.set_vars(prepared_variables)
 
-        self.set_vars(vars)
 
-        return result
+def update_kernel_vars(kernel, vars, signals):
+    input_vars = {}
+
+    for signal in signals:
+        # remove old out_ vars
+        out_name = 'out_' + signal
+        if out_name in kernel.shell.user_ns:
+            del kernel.shell.user_ns[out_name]
+            kernel.shell.user_ns_hidden.pop(out_name, None)
+
+        if signal + 's' in vars and vars[signal + 's']:
+            input_vars['in_' + signal + 's'] = vars[signal + 's']
+
+            # prepend script to set single signal values,
+            # e.g. in_data = in_datas[0]
+            input_vars['in_' + signal] = input_vars['in_' + signal + 's'][0]
+        else:
+            input_vars['in_' + signal] = None
+            input_vars['in_' + signal + 's'] = []
+    kernel.shell.push(input_vars)
+    return input_vars
+
+
+def collect_kernel_vars(kernel, signals):
+    variables = {}
+    for signal in signals:
+        name = 'out_' + signal
+        if name in kernel.shell.user_ns:
+            var = kernel.shell.user_ns[name]
+            variables[name] = var
+    return variables

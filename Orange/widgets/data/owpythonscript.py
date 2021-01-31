@@ -16,6 +16,7 @@ from pygments.token import Comment, Keyword, Number, String, Punctuation, Operat
 from qtconsole.pygments_highlighter import PygmentsHighlighter
 from qtconsole import styles
 from qtconsole.client import QtKernelClient
+from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.manager import QtKernelManager
 
 
@@ -401,6 +402,7 @@ class OWPythonScript(OWWidget):
     splitterState: Optional[bytes] = Setting(None)
 
     vimModeEnabled = Setting(False)
+    useInProcessKernel = Setting(False)
 
     class Warning(OWWidget.Warning):
         illegal_var_type = Msg('{} should be of type {}, not {}.')
@@ -572,6 +574,14 @@ class OWPythonScript(OWWidget):
             self.vim_indicator.indicator_text = text
             self.vim_indicator.update()
 
+        # Kernel type
+
+        gui.checkBox(
+            self.editor_controls, self, 'useInProcessKernel', 'Use in-process kernel',
+            tooltip="Avoids initializing data, but freezes Orange during computation.",
+            callback=self.init_kernel
+        )
+
         # Library
 
         self.libraryListSource = []
@@ -684,9 +694,14 @@ class OWPythonScript(OWWidget):
         ident = str(uuid.uuid4()).split('-')[-1]
         cf = os.path.join(self._temp_connection_dir, 'kernel-%s.json' % ident)
 
-        self.kernel_manager = QtKernelManager(
-            connection_file=cf
-        )
+        if self.useInProcessKernel:
+            self.kernel_manager = QtInProcessKernelManager(
+                connection_file=cf
+            )
+        else:
+            self.kernel_manager = QtKernelManager(
+                connection_file=cf
+            )
 
         self.kernel_manager.start_kernel(
             extra_arguments=[
@@ -703,9 +718,11 @@ class OWPythonScript(OWWidget):
             self.editor.kernel_manager = self.kernel_manager
             self.editor.kernel_client = self.kernel_client
         if self.console is not None:
+            self.console.set_in_process(self.useInProcessKernel)
             self.console.kernel_manager = self.kernel_manager
             self.console.kernel_client = self.kernel_client
             self.console.set_kernel_id(ident)
+            self.update_variables_in_console()
 
     def shutdown_kernel(self):
         self.kernel_client.stop_channels()
@@ -795,7 +812,9 @@ class OWPythonScript(OWWidget):
         self.func_sig.update_signal_text({
             n: len(getattr(self, n)) for n in self.signal_names
         })
+        self.update_variables_in_console()
 
+    def update_variables_in_console(self):
         self.set_status('Injecting variables...')
         vars = self.initial_locals_state()
         self.console.set_vars(vars)

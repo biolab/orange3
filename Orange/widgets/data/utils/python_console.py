@@ -6,6 +6,7 @@ import pickle
 import threading
 
 from AnyQt.QtCore import Qt, Signal
+from Orange.widgets.data.utils.python_kernel import update_kernel_vars, collect_kernel_vars
 from Orange.widgets.data.utils.python_serialize import OrangeZMQMixin
 from qtconsole.client import QtKernelClient
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -33,6 +34,7 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
 
     def __init__(self, *args, style_sheet='', **kwargs):
         super().__init__(*args, **kwargs)
+        self.__is_in_process = False
         self.__is_ready = False
 
         self.__queued_broadcast = None
@@ -43,19 +45,20 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
         self.__broadcasting = False
         self.__threads = []
 
-        self.inject_vars_comm = None
-        self.collect_vars_comm = None
-
         self.style_sheet = style_sheet + \
                            '.run-prompt { color: #aa22ff; }'
 
+        self.queue_init_client()
+
+    def queue_init_client(self):
         # Let the widget/kernel start up before trying to run a script,
         # by storing a queued execution payload when the widget's commit
         # method is invoked before <In [0]:> appears.
         @self.becomes_ready.connect
         def _():
             self.becomes_ready.disconnect(_)  # reset callback
-            self.init_client()
+            if not self.is_in_process():
+                self.init_client()
             self.becomes_ready.connect(self.__on_ready)
             self.__on_ready()
 
@@ -77,6 +80,24 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
         qe = self.__queued_execution
         self.__queued_execution = None
         self.run_script(*qe)
+
+    def set_in_process(self, enabled):
+        if self.__is_in_process == enabled:
+            return
+        self.__is_in_process = enabled
+        self.__is_ready = False
+        self.__executing = False
+        self.__broadcasting = False
+        self.__prompt_num = 1
+
+        try:
+            self.becomes_ready.disconnect(self.__on_ready)
+        except:
+            pass
+        self.queue_init_client()
+
+    def is_in_process(self):
+        return self.__is_in_process
 
     def run_script(self, script):
         """
@@ -127,7 +148,12 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
         self.in_prompt = "Injecting variables..."
         self._update_prompt(self.__prompt_num)
 
-        super().set_vars(vars)
+        if self.is_in_process():
+            kernel = self.kernel_manager.kernel
+            update_kernel_vars(kernel, vars, self.signals)
+            self.on_variables_injected()
+        else:
+            super().set_vars(vars)
 
     def on_variables_injected(self):
         log.debug('Cleared injecting variables')
@@ -185,6 +211,13 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
 
         self._update_prompt(self.__prompt_num)
         self.execution_finished.emit(True)
+
+        # collect variables manually, handle_new_vars will not be called
+        if self.is_in_process():
+            kernel = self.kernel_manager.kernel
+            self.results_ready.emit(
+                collect_kernel_vars(kernel, self.signals)
+            )
 
     # override
     def _handle_kernel_died(self, since_last_heartbeat):
