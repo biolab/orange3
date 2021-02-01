@@ -911,6 +911,7 @@ class OWPythonScript(OWWidget):
             doc.setPlainText(script.script)
             doc.setDefaultFont(QFont(self.defaultFont))
             doc.highlighter = PythonSyntaxHighlighter(doc)
+            doc.setDefaultFont(QFont(self.defaultFont, pointSize=self.defaultFontSize))
             doc.modificationChanged[bool].connect(self.onModificationChanged)
             doc.setModified(False)
             self._cachedDocuments[script] = doc
