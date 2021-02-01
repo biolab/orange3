@@ -1,12 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, unused-wildcard-import
+# pylint: disable=wildcard-import, protected-access
 import os
-
 import sys
 import unittest
 
 from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
-from AnyQt.QtGui import QDragEnterEvent, QDropEvent
+from AnyQt.QtGui import QDragEnterEvent
 
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
@@ -14,6 +14,7 @@ from Orange.tests import named_file
 from Orange.widgets.data.owpythonscript import OWPythonScript, \
     read_file_content, Script, OWPythonScriptDropHandler
 from Orange.widgets.tests.base import WidgetTest, DummySignalManager
+from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content, Script
 from Orange.widgets.widget import OWWidget
 
 # import tests for python editor
