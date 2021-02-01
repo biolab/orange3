@@ -252,6 +252,70 @@ class FunctionSignature(FakeSignatureMixin, QLabel):
             self.update()
 
 
+class ReturnStatement(FakeSignatureMixin, QWidget):
+    def __init__(self, parent, highlighting_scheme, font):
+        super().__init__(parent, highlighting_scheme, font)
+
+        self.indentation_level = 1
+        self.signal_labels = {}
+        self._prefix = None
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # `return `
+        ret_lbl = QLabel('<b style="color: ' + \
+                         highlighting_scheme[Keyword].split(' ')[-1] + \
+                         ';">return </b>', self)
+        ret_lbl.setFont(self.font())
+        ret_lbl.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(ret_lbl)
+
+        # `out_data[, ]` * 4
+        self.make_signal_labels('out_')
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def make_signal_labels(self, prefix):
+        self._prefix = prefix
+        # `in_data[, ]`
+        for i, signal in enumerate(OWPythonScript.signal_names):
+            # adding an empty b tag like this adjusts the
+            # line height to match the rest of the labels
+            signal_display_name = signal
+            signal_lbl = QLabel('<b></b>' + prefix + signal_display_name, self)
+            signal_lbl.setFont(self.font())
+            signal_lbl.setContentsMargins(0, 0, 0, 0)
+            self.layout().addWidget(signal_lbl)
+
+            self.signal_labels[signal] = signal_lbl
+
+            if i >= len(OWPythonScript.signal_names) - 1:
+                break
+
+            comma_lbl = QLabel(', ')
+            comma_lbl.setFont(self.font())
+            comma_lbl.setContentsMargins(0, 0, 0, 0)
+            comma_lbl.setStyleSheet('.QLabel { color: ' +
+                                    self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                                    '; }')
+            self.layout().addWidget(comma_lbl)
+
+    def update_signal_text(self, signal_name, values_length):
+        if not self._prefix:
+            return
+        lbl = self.signal_labels[signal_name]
+        if values_length == 0:
+            text = '<b></b>' + self._prefix + signal_name
+        else:  # if values_length == 1:
+            text = '<b>' + self._prefix + signal_name + '</b>'
+        if lbl.text() != text:
+            lbl.setText(text)
+            lbl.update()
+
+
 class VimIndicator(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
@@ -560,8 +624,8 @@ class OWPythonScript(OWWidget):
             "Menlo" if sys.platform == "darwin" else "Courier"
         self.defaultFontSize = defaultFontSize = 13
 
-        self.textBox = gui.vBox(self, box=True)
-        self.splitCanvas.addWidget(self.textBox)
+        self.editorBox = gui.vBox(self, box=True, spacing=4)
+        self.splitCanvas.addWidget(self.editorBox)
 
         syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES['Light']
 
@@ -571,36 +635,48 @@ class OWPythonScript(OWWidget):
         # Fake Signature
 
         self.func_sig = func_sig = FunctionSignature(
-            self.textBox,
+            self.editorBox,
             syntax_highlighting_scheme,
             eFont
         )
-        self.textBox.layout().addWidget(func_sig)
 
         # Editor
 
         editor = PythonEditor(self)
         editor.setFont(eFont)
+        editor.setup_completer_appearance((300, 180), eFont)
+
+        # Fake return
+
+        return_stmt = ReturnStatement(
+            self.editorBox,
+            syntax_highlighting_scheme,
+            eFont
+        )
+        self.return_stmt = return_stmt
 
         # Match indentation
 
-        textEditBox = QWidget(self.textBox)
+        textEditBox = QWidget(self.editorBox)
         textEditBox.setLayout(QHBoxLayout())
         char_4_width = QFontMetrics(eFont).horizontalAdvance('0000')
 
         @editor.viewport_margins_updated.connect
         def _(width):
             func_sig.setIndent(width)
-            textEditMargin = max(0, char_4_width - width)
+            textEditMargin = max(0, round(char_4_width - width))
+            return_stmt.setIndent(textEditMargin + width)
             textEditBox.layout().setContentsMargins(
                 textEditMargin, 0, 0, 0
             )
 
         self.text = editor
         textEditBox.layout().addWidget(editor)
-        self.textBox.layout().addWidget(textEditBox)
+        self.editorBox.layout().addWidget(func_sig)
+        self.editorBox.layout().addWidget(textEditBox)
+        self.editorBox.layout().addWidget(return_stmt)
 
-        self.textBox.setAlignment(Qt.AlignVCenter)
+        self.editorBox.setAlignment(Qt.AlignVCenter)
         self.text.setTabStopWidth(4)
 
         self.text.modificationChanged[bool].connect(self.onModificationChanged)
