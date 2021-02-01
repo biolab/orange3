@@ -179,8 +179,8 @@ class InteractiveViewBox(pg.ViewBox):
         p2 = self.mapToView(p2)
         r = QRectF(p1, p2)
         self.rbScaleBox.setPos(r.topLeft())
-        self.rbScaleBox.resetTransform()
-        self.rbScaleBox.scale(r.width(), r.height())
+        tr = QTransform.fromScale(r.width(), r.height())
+        self.rbScaleBox.setTransform(tr)
         self.rbScaleBox.show()
 
     def safe_update_scale_box(self, buttonDownPos, currentPos):
