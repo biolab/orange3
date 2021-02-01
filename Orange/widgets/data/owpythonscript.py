@@ -778,9 +778,9 @@ class OWPythonScript(OWWidget):
 
         self.execute_button = gui.button(self.buttonsArea, self, 'Run', callback=self.commit)
 
-        run = QAction("Run script", self, triggered=self.commit,
-                      shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
-        self.addAction(run)
+        self.run_action = QAction("Run script", self, triggered=self.commit,
+                                  shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
+        self.addAction(self.run_action)
 
         self.saveAction = action = QAction("&Save", self.text)
         action.setToolTip("Save script to file")
@@ -990,6 +990,14 @@ class OWPythonScript(OWWidget):
                 getattr(self.Error, signal)()
                 out_var = None
             getattr(self.Outputs, signal).send(out_var)
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.InsertLineSeparator):
+            # run on Shift+Enter, Ctrl+Enter
+            self.run_action.trigger()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()
