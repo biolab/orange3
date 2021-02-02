@@ -620,8 +620,11 @@ class OWPythonScript(OWWidget):
 
         # Styling
 
-        self.defaultFont = defaultFont = \
-            "Menlo" if sys.platform == "darwin" else "Courier"
+        self.defaultFont = defaultFont = (
+            'Menlo' if sys.platform == 'darwin' else
+            'Courier' if sys.platform in ['win32', 'cygwin'] else
+            'DejaVu Sans Mono'
+        )
         self.defaultFontSize = defaultFontSize = 13
 
         self.editorBox = gui.vBox(self, box=True, spacing=4)
