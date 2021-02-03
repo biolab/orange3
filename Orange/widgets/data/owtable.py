@@ -739,9 +739,9 @@ class OWDataTable(OWWidget):
                 metas = select_vars(TableModel.Meta)
                 domain = Orange.data.Domain(attrs, class_vars, metas)
 
-            # Avoid a copy if none rows are selected.
+            # Send all data by default
             if not rowsel:
-                selected_data = None
+                selected_data = table
             else:
                 selected_data = table.from_table(domain, table, rowsel)
 
