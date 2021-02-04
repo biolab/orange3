@@ -467,7 +467,7 @@ class Table(Sequence, Storage):
 
             dtype = np.float64
             if any(isinstance(var, StringVariable) for var in domain.metas):
-                dtype = np.object
+                dtype = object
             self.metas = get_columns(row_indices, conversion.metas,
                                      n_rows, dtype,
                                      is_sparse=conversion.sparse_metas,
@@ -1262,7 +1262,7 @@ class Table(Sequence, Storage):
                 if self.domain[col_idx].is_primitive():
                     return ~np.isnan(col.astype(float))
                 else:
-                    return col.astype(np.bool)
+                    return col.astype(bool)
             if isinstance(filter, FilterDiscrete):
                 return self._discrete_filter_to_indicator(filter, col)
             if isinstance(filter, FilterContinuous):
@@ -1800,7 +1800,7 @@ def _optimize_indices(indices, maxlen):
 
     if len(indices) >= 1:
         indices = np.asarray(indices)
-        if indices.dtype != np.bool:
+        if indices.dtype != bool:
             begin = indices[0]
             end = indices[-1]
             steps = np.diff(indices) if len(indices) > 1 else np.array([1])
