@@ -302,7 +302,7 @@ class Continuous(Distribution):
 
     def variance(self):
         mean = self.mean()
-        return sum(((x - mean) ** 2) * w for x, w in zip(self[0], self[1])) / sum(self[1])
+        return np.dot((self[0] - mean) ** 2, self[1]) / np.sum(self[1])
 
     def standard_deviation(self):
         return np.sqrt(self.variance())
