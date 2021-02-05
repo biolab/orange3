@@ -42,6 +42,19 @@ def resource_filename(path):
     return pkg_resources.resource_filename("Orange", path)
 
 
+def get_entry_point(dist, group, name):
+    """
+    Load and return the entry point from the distribution.
+
+    Unlike `pkg_resources.load_entry_point`, this function does not check
+    for requirements. Calling this function is preferred because of developers
+    who experiment with different versions and have inconsistent configurations.
+    """
+    dist = pkg_resources.get_distribution(dist)
+    ep = dist.get_entry_info(group, name)
+    return ep.resolve()
+
+
 def deprecated(obj):
     """
     Decorator. Mark called object deprecated.
