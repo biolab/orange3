@@ -19,7 +19,8 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        WidgetOutputsTestMixin.init(cls)
+        WidgetOutputsTestMixin.init(cls,
+                                    output_all_on_no_selection=True)
 
         cls.signal_name = "Data"
         cls.signal_data = cls.data  # pylint: disable=no-member
@@ -130,8 +131,8 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
         self.widget.tabs.currentWidget().selectAll()
         output = self.get_output(self.widget.Outputs.selected_data)
         summary, details = f"{len(output)}", format_summary_details(output)
@@ -143,8 +144,8 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
+        self.assertEqual(info._StateInfo__output_summary.brief, summary)
+        self.assertEqual(info._StateInfo__output_summary.details, details)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
         summary, details = f"{len(output)}", format_summary_details(output)
