@@ -225,7 +225,8 @@
     "background": "#FFD39F",
     "keywords": [
      "file",
-     "program"
+     "program",
+     "function"
     ]
    },
    {
@@ -270,7 +271,10 @@
     "doc": "visual-programming/source/widgets/data/featureconstructor.md",
     "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "function",
+     "lambda"
+    ]
    },
    {
     "text": "Feature Statistics",
