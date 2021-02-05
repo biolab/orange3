@@ -30,10 +30,10 @@ def check_results_adequacy(results, error_group, check_nan=True):
         return None
     if results.data is None:
         error_group.invalid_results(
-            "Results do not include information on test data")
+            "Results do not include information on test data.")
     elif not results.data.domain.has_discrete_class:
         error_group.invalid_results(
-            "Discrete outcome variable is required")
+            "Categorical target variable is required.")
     elif not results.actual.size:
         error_group.invalid_results(
             "Empty result on input. Nothing to display.")
@@ -42,7 +42,7 @@ def check_results_adequacy(results, error_group, check_nan=True):
                         (results.probabilities is not None and
                          anynan(results.probabilities))):
         error_group.invalid_results(
-            "Results contains invalid values")
+            "Results contain invalid values.")
     else:
         return results
 

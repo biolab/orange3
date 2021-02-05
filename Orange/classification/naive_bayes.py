@@ -28,14 +28,15 @@ class NaiveBayesLearner(Learner):
             raise TypeError("Data is not a subclass of Orange.data.Storage.")
         if not all(var.is_discrete
                    for var in table.domain.variables):
-            raise NotImplementedError("Only discrete variables are supported.")
+            raise NotImplementedError("Only categorical variables are "
+                                      "supported.")
 
         cont = contingency.get_contingencies(table)
         class_freq = np.array(np.diag(
             contingency.get_contingency(table, table.domain.class_var)))
         nclss = (class_freq != 0).sum()
         if not nclss:
-            raise ValueError("Data has no defined target values")
+            raise ValueError("Data has no defined target values.")
 
         # Laplacian smoothing considers only classes that appear in the data,
         # in part to avoid cases where the probabilities are affected by empty
