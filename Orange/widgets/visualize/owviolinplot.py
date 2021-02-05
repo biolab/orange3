@@ -1,6 +1,6 @@
 from collections import namedtuple
 from itertools import chain, count
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 
 import numpy as np
 from scipy import stats
@@ -8,7 +8,8 @@ from sklearn.neighbors import KernelDensity
 
 from AnyQt.QtCore import QItemSelection, QPointF, QRectF, QSize, Qt, Signal
 from AnyQt.QtGui import QBrush, QColor, QPainter, QPainterPath, QPolygonF
-from AnyQt.QtWidgets import QCheckBox, QSizePolicy, QWidget
+from AnyQt.QtWidgets import QCheckBox, QSizePolicy, QGraphicsRectItem, \
+    QGraphicsSceneMouseEvent, QApplication, QWidget
 
 import pyqtgraph as pg
 
@@ -23,7 +24,6 @@ from Orange.widgets.settings import ContextSetting, DomainContextHandler, \
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME, \
     create_annotated_table
 from Orange.widgets.utils.itemmodels import VariableListModel
-from Orange.widgets.utils.plot import PANNING, SELECT, ZOOMING
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owboxplot import SortProxyModel
@@ -33,34 +33,33 @@ from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
-class ViolinPlotViewBox(pg.ViewBox):  # TODO
+class ViolinPlotViewBox(pg.ViewBox):
+    sigSelectionChanged = Signal(QPointF, QPointF, bool)
+    sigDeselect = Signal(bool)
+
     def __init__(self, parent):
         super().__init__()
-        self.graph = parent
+        self.graph: ViolinPlot = parent
         self.setMouseMode(self.RectMode)
 
     def mouseDragEvent(self, ev, axis=None):
-        if self.graph.state == SELECT and axis is None:
+        if axis is None:
             ev.accept()
             if ev.button() == Qt.LeftButton:
-                self.updateScaleBox(ev.buttonDownPos(), ev.pos())
-                if ev.isFinish():
-                    self.rbScaleBox.hide()
-                    p1, p2 = ev.buttonDownPos(ev.button()), ev.pos()
-                    p1 = self.mapToView(p1)
-                    p2 = self.mapToView(p2)
-                    self.graph.select_by_rectangle(QRectF(p1, p2))
-                else:
-                    self.updateScaleBox(ev.buttonDownPos(), ev.pos())
-        elif self.graph.state == ZOOMING or self.graph.state == PANNING:
-            super().mouseDragEvent(ev, axis=axis)
+                p1, p2 = ev.buttonDownPos(), ev.pos()
+                self.sigSelectionChanged.emit(self.mapToView(p1),
+                                              self.mapToView(p2),
+                                              ev.isFinish())
         else:
             ev.ignore()
 
+    def mousePressEvent(self, ev: QGraphicsSceneMouseEvent):
+        self.sigDeselect.emit(False)
+        super().mousePressEvent(ev)
+
     def mouseClickEvent(self, ev):
-        if ev.button() == Qt.LeftButton:
-            self.graph.select_by_click(self.mapSceneToView(ev.scenePos()))
-            ev.accept()
+        ev.accept()
+        self.sigDeselect.emit(True)
 
 
 class ParameterSetter(CommonParameterSetter):
@@ -146,8 +145,8 @@ class ViolinItem(pg.GraphicsObject):
 
     @property
     def violin_width(self):
-        return -self.boundingRect().x() if self.__orientation == Qt.Vertical \
-            else -self.boundingRect().y()
+        return self.boundingRect().width() if self.__orientation == Qt.Vertical \
+            else self.boundingRect().height()
 
     def set_show_rug_plot(self, show: bool):
         self.__show_rug_plot = show
@@ -271,8 +270,48 @@ class StripItem(pg.ScatterPlotItem):
         super().__init__(x=x, y=y, size=5, brush=pg.mkBrush(color))
 
 
+class SelectionRect(pg.GraphicsObject):
+    def __init__(self, rect: QRectF, orientation: Qt.Orientations):
+        self.__rect: QRectF = rect
+        self.__orientation: Qt.Orientations = orientation
+        self.__selection_range: Optional[Tuple[float]] = None
+        super().__init__()
+
+    @property
+    def selection_range(self):
+        return self.__selection_range
+
+    @selection_range.setter
+    def selection_range(self, selection_range: Optional[Tuple[float]]):
+        self.__selection_range = selection_range
+        self.update()
+
+    @property
+    def selection_rect(self):
+        rect: QRectF = self.__rect
+        if self.__orientation == Qt.Vertical:
+            rect.setTop(self.__selection_range[0])
+            rect.setBottom(self.__selection_range[1])
+        else:
+            rect.setLeft(self.__selection_range[0])
+            rect.setRight(self.__selection_range[1])
+        return rect
+
+    def boundingRect(self) -> QRectF:
+        return self.__rect
+
+    def paint(self, painter: QPainter, *_):
+        painter.save()
+        painter.setPen(pg.mkPen((255, 255, 100), width=1))
+        painter.setBrush(pg.mkBrush(255, 255, 0, 100))
+        if self.__selection_range is not None:
+            painter.drawRect(self.selection_rect)
+        painter.restore()
+
+
 class ViolinPlot(pg.PlotWidget):
-    selection_changed = Signal(list)
+    VIOLIN_PADDING_FACTOR = 1.25
+    selection_changed = Signal(list, list)
 
     def __init__(self, parent: OWWidget, kernel: str,
                  orientation: Qt.Orientations, show_box_plot: bool,
@@ -299,9 +338,11 @@ class ViolinPlot(pg.PlotWidget):
         self.__strip_items: List[pg.ScatterPlotItem] = []
 
         # selection
-        self.__selection: List[int] = []
+        self.__selection: Set[int] = set()
+        self.__selection_rects: List[SelectionRect] = []
 
-        super().__init__(parent, viewBox=pg.ViewBox(),
+        view_box = ViolinPlotViewBox(self)
+        super().__init__(parent, viewBox=view_box,
                          background="w", enableMenu=False,
                          axisItems={"bottom": AxisItem("bottom"),
                                     "left": AxisItem("left")})
@@ -309,14 +350,32 @@ class ViolinPlot(pg.PlotWidget):
         self.hideButtons()
         self.getPlotItem().setContentsMargins(10, 10, 10, 10)
         self.setMouseEnabled(False, False)
+        view_box.sigSelectionChanged.connect(self._update_selection)
+        view_box.sigDeselect.connect(self._deselect)
 
         self.parameter_setter = ParameterSetter(self)
 
     @property
-    def _item_width(self):
+    def _selection_ranges(self) -> List[Optional[Tuple[float]]]:
+        return [rect.selection_range for rect in self.__selection_rects]
+
+    @_selection_ranges.setter
+    def _selection_ranges(self, ranges: List[Optional[Tuple[float]]]):
+        for min_max, sel_rect in zip(ranges, self.__selection_rects):
+            sel_rect.selection_range = min_max
+
+    @property
+    def _sorted_group_indices(self):
+        medians = [item.value for item in self.__median_items]
+        return np.argsort(medians) if self.__sort_items \
+            else range(len(medians))
+
+    @property
+    def _max_item_width(self):
         if not self.__violin_items:
             return 0
-        return max(item.violin_width for item in self.__violin_items) * 2.5
+        return max(item.violin_width * self.VIOLIN_PADDING_FACTOR
+                   for item in self.__violin_items)
 
     def set_data(self, values: np.ndarray, value_var: ContinuousVariable,
                  group_values: Optional[np.ndarray],
@@ -369,35 +428,52 @@ class ViolinPlot(pg.PlotWidget):
     def order_items(self):
         assert self.__group_var is not None
 
-        medians = [item.value for item in self.__median_items]
-        indices = np.argsort(medians) if self.__sort_items \
-            else range(len(medians))
+        indices = self._sorted_group_indices
 
         for i, index in enumerate(indices):
             violin: ViolinItem = self.__violin_items[index]
             box: BoxItem = self.__box_items[index]
             median: MedianItem = self.__median_items[index]
             strip: StripItem = self.__strip_items[index]
+            sel_rect: QGraphicsRectItem = self.__selection_rects[index]
 
             if self.__orientation == Qt.Vertical:
-                x = i * self._item_width
+                x = i * self._max_item_width
                 violin.setX(x)
                 box.setX(x)
                 median.setX(x)
                 strip.setX(x)
+                sel_rect.setX(x)
             else:
-                y = - i * self._item_width
+                y = - i * self._max_item_width
                 violin.setY(y)
                 box.setY(y)
                 median.setY(y)
                 strip.setY(y)
+                sel_rect.setY(y)
 
         sign = 1 if self.__orientation == Qt.Vertical else -1
         side = "bottom" if self.__orientation == Qt.Vertical else "left"
-        ticks = [[(i * self._item_width * sign,
+        ticks = [[(i * self._max_item_width * sign,
                    self.__group_var.values[index])
                   for i, index in enumerate(indices)]]
         self.getAxis(side).setTicks(ticks)
+
+    def set_selection(self, ranges: List[Optional[Tuple[float]]]):
+        self._selection_ranges = ranges
+
+        self.__selection = set()
+        for index, min_max in enumerate(ranges):
+            if min_max is None:
+                continue
+            mask = np.bitwise_and(self.__values >= min_max[0],
+                                  self.__values <= min_max[1])
+            if self.__group_values is not None:
+                mask = np.bitwise_and(mask, self.__group_values == index)
+            self.__selection |= set(np.flatnonzero(mask))
+
+        self.selection_changed.emit(sorted(self.__selection),
+                                    self._selection_ranges)
 
     def _set_axes(self):
         if self.__value_var is None:
@@ -409,6 +485,9 @@ class ViolinPlot(pg.PlotWidget):
         self.getAxis("bottom" if vertical else "left").setLabel(group_title)
 
     def _plot_data(self):
+        # save selection ranges
+        ranges = self._selection_ranges
+
         self._clear_data_items()
         if self.__values is None:
             return
@@ -423,6 +502,9 @@ class ViolinPlot(pg.PlotWidget):
                 self._set_violin_item(self.__values[mask], color)
 
             self.order_items()
+
+        # apply selection ranges
+        self._selection_ranges = ranges
 
     def _set_violin_item(self, values: np.ndarray, color: QColor):
         values = values[~np.isnan(values)]
@@ -449,6 +531,15 @@ class ViolinPlot(pg.PlotWidget):
         self.addItem(strip)
         self.__strip_items.append(strip)
 
+        width = violin.violin_width * self.VIOLIN_PADDING_FACTOR
+        if self.__orientation == Qt.Vertical:
+            rect = QRectF(-width / 2, median.value, width, 0)
+        else:
+            rect = QRectF(median.value, -width / 2, 0, width)
+        sel_rect = SelectionRect(rect, self.__orientation)
+        self.addItem(sel_rect)
+        self.__selection_rects.append(sel_rect)
+
     def clear_plot(self):
         self.clear()
         self._clear_data()
@@ -468,10 +559,12 @@ class ViolinPlot(pg.PlotWidget):
             self.removeItem(self.__box_items[i])
             self.removeItem(self.__median_items[i])
             self.removeItem(self.__strip_items[i])
+            self.removeItem(self.__selection_rects[i])
         self.__violin_items.clear()
         self.__box_items.clear()
         self.__median_items.clear()
         self.__strip_items.clear()
+        self.__selection_rects.clear()
 
     def _clear_axes(self):
         self.setAxisItems({"bottom": AxisItem(orientation="bottom"),
@@ -486,7 +579,54 @@ class ViolinPlot(pg.PlotWidget):
         )
 
     def _clear_selection(self):
-        self.__selection = []
+        self.__selection = set()
+
+    def _update_selection(self, p1: QPointF, p2: QPointF, finished: bool):
+        # When finished, emit selection_changed.
+        rect = QRectF(p1, p2).normalized()
+        if self.__orientation == Qt.Vertical:
+            min_max = rect.y(), rect.y() + rect.height()
+            index = int((p1.x() + self._max_item_width / 2) /
+                        self._max_item_width)
+        else:
+            min_max = rect.x(), rect.x() + rect.width()
+            index = int((-p1.y() + self._max_item_width / 2) /
+                        self._max_item_width)
+
+        index = min(index, len(self.__selection_rects) - 1)
+        index = self._sorted_group_indices[index]
+
+        self.__selection_rects[index].selection_range = min_max
+
+        if not finished:
+            return
+
+        mask = np.bitwise_and(self.__values >= min_max[0],
+                              self.__values <= min_max[1])
+        if self.__group_values is not None:
+            mask = np.bitwise_and(mask, self.__group_values == index)
+
+        selection = set(np.flatnonzero(mask))
+        keys = QApplication.keyboardModifiers()
+        if keys & Qt.ShiftModifier:
+            remove_mask = self.__group_values == index
+            selection |= self.__selection - set(np.flatnonzero(remove_mask))
+        if self.__selection != selection:
+            self.__selection = selection
+            self.selection_changed.emit(sorted(self.__selection),
+                                        self._selection_ranges)
+
+    def _deselect(self, finished: bool):
+        # When finished, emit selection_changed.
+        keys = QApplication.keyboardModifiers()
+        if keys & Qt.ShiftModifier:
+            return
+
+        for index in range(len(self.__selection_rects)):
+            self.__selection_rects[index].selection_range = None
+        if self.__selection and finished:
+            self.__selection = set()
+            self.selection_changed.emit([], [])
 
     @staticmethod
     def sizeHint() -> QSize:
@@ -526,7 +666,7 @@ class OWViolinPlot(OWWidget):
     order_violins = Setting(False)
     orientation_index = Setting(1)  # Vertical
     kernel_index = Setting(0)  # Normal kernel
-    selection = Setting([], schema_only=True)
+    selection_ranges = Setting([], schema_only=True)
     visual_settings = Setting({}, schema_only=True)
 
     graph_name = "graph.plotItem"
@@ -541,7 +681,8 @@ class OWViolinPlot(OWWidget):
         self._value_var_view: ListViewSearch = None
         self._group_var_view: ListViewSearch = None
         self._order_violins_cb: QCheckBox = None
-        self.__pending_selection = self.selection
+        self.selection = []
+        self.__pending_selection: List = self.selection_ranges
 
         self.setup_gui()
         VisualSettingsDialog(
@@ -560,9 +701,11 @@ class OWViolinPlot(OWWidget):
         self.graph.selection_changed.connect(self.__selection_changed)
         box.layout().addWidget(self.graph)
 
-    def __selection_changed(self, indices: List):
-        self.selection = list(set(self.grouped_indices[indices]))
-        self.commit()
+    def __selection_changed(self, indices: List, ranges: List):
+        self.selection_ranges = ranges
+        if self.selection != indices:
+            self.selection = indices
+            self.commit()
 
     def _add_controls(self):
         self._value_var_model = VariableListModel()
@@ -641,6 +784,7 @@ class OWViolinPlot(OWWidget):
         self.value_var = selection.indexes()[0].data(gui.TableVariable)
         self.apply_group_var_sorting()
         self.setup_plot()
+        self.__selection_changed([], [])
 
     def __group_var_changed(self, selection: QItemSelection):
         if not selection:
@@ -649,6 +793,7 @@ class OWViolinPlot(OWWidget):
         self.apply_value_var_sorting()
         self.enable_order_violins_cb()
         self.setup_plot()
+        self.__selection_changed([], [])
 
     def __show_box_plot_changed(self):
         self.graph.set_show_box_plot(self.show_box_plot)
@@ -692,7 +837,7 @@ class OWViolinPlot(OWWidget):
         self.apply_group_var_sorting()
         self.enable_order_violins_cb()
         self.setup_plot()
-        self.commit()
+        self.apply_selection()
 
     def check_data(self):
         self.clear_messages()
@@ -821,6 +966,15 @@ class OWViolinPlot(OWWidget):
             x = self.data.get_column_view(self.group_var)[0].astype(float)
         self.graph.set_data(y, self.value_var, x, self.group_var)
 
+    def apply_selection(self):
+        if self.__pending_selection:
+            # commit is invoked on selection_changed
+            self.selection_ranges = self.__pending_selection
+            self.__pending_selection = []
+            self.graph.set_selection(self.selection_ranges)
+        else:
+            self.commit()
+
     def commit(self):
         selected = None
         if self.data is not None and bool(self.selection):
@@ -833,7 +987,8 @@ class OWViolinPlot(OWWidget):
     def clear(self):
         self._value_var_model[:] = []
         self._group_var_model[:] = []
-        self.selection = None
+        self.selection = []
+        self.selection_ranges = []
         self.graph.clear_plot()
 
     def _set_input_summary(self, data: Optional[Table]):
@@ -857,10 +1012,6 @@ class OWViolinPlot(OWWidget):
     def set_visual_settings(self, key: KeyType, value: ValueType):
         self.graph.parameter_setter.set_parameter(key, value)
         self.visual_settings[key] = value
-    #
-    # def showEvent(self, event):
-    #     super().showEvent(event)
-    #     self.graph.reset_view()
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 # pylint: disable=(protected-access
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 from scipy import stats
@@ -7,6 +8,7 @@ from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from AnyQt.QtCore import QItemSelectionModel, QPointF, Qt
 from AnyQt.QtGui import QFont
 
 from Orange.data import Table
@@ -33,7 +35,8 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget = self.create_widget(OWViolinPlot)
 
     def _select_data(self):
-        self.widget.graph.select_by_indices(list(range(0, len(self.data), 5)))
+        self.widget.graph._update_selection(QPointF(0, 5), QPointF(0, 6), True)
+        assert len(self.widget.selection) == 30
         return self.widget.selection
 
     def test_summary(self):
@@ -107,6 +110,54 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         for ds in datasets.datasets():
             self.send_signal(self.widget.Inputs.data, ds)
 
+    def test_selection_no_group(self):
+        data = Table("housing")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.graph._update_selection(QPointF(0, 30), QPointF(0, 40), 1)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 53)
+
+    def test_selection_sort_violins(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.__select_value(self.widget._value_var_view, "sepal width")
+        self.widget.controls.show_strip_plot.setChecked(True)
+
+        self.widget.graph._update_selection(QPointF(0, 4), QPointF(0, 5), 1)
+        selected1 = self.get_output(self.widget.Outputs.selected_data)
+
+        self.widget.controls.order_violins.setChecked(True)
+        selected2 = self.get_output(self.widget.Outputs.selected_data)
+
+        self.assert_table_equal(selected1, selected2)
+
+    def test_selection_orientation(self):
+        data = Table("housing")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.graph._update_selection(QPointF(0, 30), QPointF(0, 40), 1)
+        self.widget.controls.orientation_index.buttons[0].click()
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 53)
+
+    def test_saved_selection(self):
+        graph = self.widget.graph
+        self.send_signal(self.widget.Inputs.data, self.data)
+        graph._update_selection(QPointF(0, 6), QPointF(0, 5.5), 1)
+        selected1 = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected1), 5)
+
+        with patch("AnyQt.QtWidgets.QApplication.keyboardModifiers",
+                   lambda: Qt.ShiftModifier):
+            graph._update_selection(QPointF(6, 6), QPointF(6, 5.5), 1)
+        selected2 = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected2), 13)
+
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        widget = self.create_widget(OWViolinPlot, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, self.data, widget=widget)
+        selected3 = self.get_output(widget.Outputs.selected_data,
+                                    widget=widget)
+        self.assert_table_equal(selected2, selected3)
+
     def test_visual_settings(self):
         graph = self.widget.graph
 
@@ -163,9 +214,17 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(font1.pointSize(), font2.pointSize())
         self.assertEqual(font1.italic(), font2.italic())
 
+    def __select_value(self, list, value):
+        m = list.model()
+        for i in range(m.rowCount()):
+            idx = m.index(i, 0)
+            if m.data(idx) == value:
+                list.selectionModel().setCurrentIndex(
+                    idx, QItemSelectionModel.ClearAndSelect)
+
     def test_seaborn(self):
         # inner{“box”, “quartile”, “point”, “stick”, None}, optional
-
+        self.assertEqual(True, False)
         data = Table("heart_disease")
         print(data.domain)
         df = table_to_frame(data)
@@ -181,10 +240,10 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         # hue = df["chest pain"]
         print(y.min(), y.max())
         sns.violinplot(
-            x=x,
-            y=y,
+            x=y,
+            y=x,
             # inner="stick",
-            # orient="v",
+            orient="h",
             #   hue=hue,
             #   scale="count",
             # data=df,
@@ -196,6 +255,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_sklearn(self):
         table = Table("iris")
+        self.assertEqual(True, False)
 
         data = table.X[:, 0]
         kde = stats.gaussian_kde(data)
