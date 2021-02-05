@@ -22,7 +22,7 @@ class MeanLearner(Learner):
         """
         if not data.domain.has_continuous_class:
             raise ValueError("regression.MeanLearner expects a domain with a "
-                             "(single) continuous variable")
+                             "(single) numeric variable.")
         dist = distribution.get_distribution(data, data.domain.class_var)
         return MeanModel(dist)
 

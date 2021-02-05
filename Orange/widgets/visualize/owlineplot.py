@@ -619,7 +619,7 @@ class OWLinePlot(OWWidget):
     graph_name = "graph.plotItem"
 
     class Error(OWWidget.Error):
-        not_enough_attrs = Msg("Need at least one continuous feature.")
+        not_enough_attrs = Msg("Need at least one numeric feature.")
         no_valid_data = Msg("No plot due to no valid data.")
 
     class Warning(OWWidget.Warning):

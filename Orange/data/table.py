@@ -1514,8 +1514,8 @@ class Table(Sequence, Storage):
 
         if any(not (var.is_discrete or var.is_continuous)
                for var in col_desc):
-            raise ValueError("contingency can be computed only for discrete "
-                             "and continuous values")
+            raise ValueError("Contingency can be computed only for categorical "
+                             "and numeric values.")
 
         # when we select a column in sparse matrix it is still two dimensional
         # and sparse - since it is just a column we can afford to transform

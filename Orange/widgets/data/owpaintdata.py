@@ -768,7 +768,7 @@ class OWPaintData(OWWidget):
 
     class Warning(OWWidget.Warning):
         no_input_variables = Msg("Input data has no variables")
-        continuous_target = Msg("Continuous target value can not be used.")
+        continuous_target = Msg("Numeric target value can not be used.")
         sparse_not_supported = Msg("Sparse data is ignored.")
         renamed_vars = Msg("Some variables have been renamed "
                            "to avoid duplicates.\n{}")

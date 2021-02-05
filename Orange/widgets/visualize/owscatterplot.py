@@ -253,8 +253,8 @@ class OWScatterPlot(OWDataProjectionWidget):
     class Warning(OWDataProjectionWidget.Warning):
         missing_coords = Msg(
             "Plot cannot be displayed because '{}' or '{}' "
-            "is missing for all data points")
-        no_continuous_vars = Msg("Data has no continuous variables")
+            "is missing for all data points.")
+        no_continuous_vars = Msg("Data has no numeric variables.")
 
     class Information(OWDataProjectionWidget.Information):
         sampled_sql = Msg("Large SQL table; showing a sample.")

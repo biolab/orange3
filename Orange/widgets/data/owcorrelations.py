@@ -261,7 +261,7 @@ class OWCorrelations(OWWidget):
         removed_cons_feat = Msg("Constant features have been removed.")
 
     class Warning(OWWidget.Warning):
-        not_enough_vars = Msg("At least two continuous features are needed.")
+        not_enough_vars = Msg("At least two numeric features are needed.")
         not_enough_inst = Msg("At least two instances are needed.")
 
     def __init__(self):

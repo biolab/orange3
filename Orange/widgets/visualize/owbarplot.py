@@ -321,7 +321,7 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
 
 class OWBarPlot(OWWidget):
     name = "Bar Plot"
-    description = "Visualizes comparisons among discrete categories."
+    description = "Visualizes comparisons among categorical variables."
     icon = "icons/BarPlot.svg"
     priority = 190
     keywords = ["chart"]

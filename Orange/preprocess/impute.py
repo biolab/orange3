@@ -107,7 +107,7 @@ class Average(BaseImputeMethod):
                 dist = distribution.get_distribution(data, variable)
                 value = dist.modus()
             else:
-                raise TypeError("Variable must be continuous or discrete")
+                raise TypeError("Variable must be numeric or categorical.")
 
         a = variable.copy(compute_value=ReplaceUnknowns(variable, value))
         a.to_sql = ImputeSql(variable, value)
@@ -329,8 +329,8 @@ class ReplaceUnknownsRandom(Transformation):
         elif variable.is_continuous:
             counts = np.array(distribution)[1, :]
         else:
-            raise TypeError("Only discrete and continuous "
-                            "variables are supported")
+            raise TypeError("Only categorical and numeric "
+                            "variables are supported.")
         csum = np.sum(counts)
         if csum > 0:
             self.sample_prob = counts / csum

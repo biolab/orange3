@@ -5,7 +5,7 @@ __all__ = ["LearnerClassification", "ModelClassification",
 
 
 class LearnerClassification(Learner):
-    learner_adequacy_err_msg = "Discrete class variable expected."
+    learner_adequacy_err_msg = "Categorical class variable expected."
 
     def check_learner_adequacy(self, domain):
         return domain.has_discrete_class

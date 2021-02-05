@@ -208,7 +208,7 @@ class OWSOM(OWWidget):
     )
 
     class Warning(OWWidget.Warning):
-        ignoring_disc_variables = Msg("SOM ignores discrete variables.")
+        ignoring_disc_variables = Msg("SOM ignores categorical variables.")
         missing_colors = \
             Msg("Some data instances have undefined value of '{}'.")
         missing_values = \
