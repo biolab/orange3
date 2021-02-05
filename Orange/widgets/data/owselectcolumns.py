@@ -168,7 +168,7 @@ class OWSelectAttributes(widget.OWWidget):
     settingsHandler = SelectAttributesDomainContextHandler(first_match=False)
     domain_role_hints = ContextSetting({})
     use_input_features = Setting(False)
-    select_new_features = Setting(True)
+    ignore_new_features = Setting(False)
     auto_commit = Setting(True)
 
     class Warning(widget.OWWidget.Warning):
@@ -301,7 +301,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         bbox = gui.vBox(self.controlArea, "Additional settings", addToLayout=False)
         gui.checkBox(
-            bbox, self, "select_new_features", "Automatically select additional/new features"
+            bbox, self, "ignore_new_features", "Ignore new variables by default"
         )
         layout.addWidget(bbox, 3, 0, 1, 3)
 
@@ -390,7 +390,7 @@ class OWSelectAttributes(widget.OWWidget):
         Define hints for selected/unselected features.
         Rules:
         - if context available, restore new features based on checked/unchecked
-          select_new_features, context hint should be took into account
+          ignore_new_features, context hint should be took into account
         - in no context, restore features based on the domain (as selected)
 
         Parameters
@@ -404,7 +404,7 @@ class OWSelectAttributes(widget.OWWidget):
         should appear
         """
         domain_hints = {}
-        if self.select_new_features or len(self.domain_role_hints) == 0:
+        if not self.ignore_new_features or len(self.domain_role_hints) == 0:
             # select_new_features selected or no context - restore based on domain
             domain_hints.update(
                 self._hints_from_seq("attribute", domain.attributes)
@@ -414,7 +414,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self._hints_from_seq("class", domain.class_vars)
             )
         else:
-            # if context restored and select_new_features unselected - restore
+            # if context restored and ignore_new_features selected - restore
             # new features as available
             d = domain.attributes + domain.metas + domain.class_vars
             domain_hints.update(self._hints_from_seq("available", d))
