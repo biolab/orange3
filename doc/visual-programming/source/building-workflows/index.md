@@ -1,18 +1,18 @@
 # Building Workflows
 
-The core principle of Orange is visual programming, which means each analytical step in contained within a widget. Widget are placed on the canvas and connected into an analytical workflow, which is executed from left to right. Orange never passes data backwards.
+The core principle of Orange is visual programming, which means each analytical step in contained within a widget. Widgets are placed on the canvas and connected into an analytical workflow, which is executed from left to right. Orange never passes data backwards.
 
 ## Simple workflow
 
-Let us start with a simple workflow. We will load the data with the File widget, say the famous *iris* data set. Right-click on the canvas. A menu will appear. Start typing "File", then press Enter to confirm the selection. [File](../widgets/data/file.md) widget will be placed on the canvas.
+Let us start with a simple workflow. We will load the data with the File widget, say the famous *Iris* data set. Right-click on the canvas. A menu will appear. Start typing "File", then press Enter to confirm the selection. [File](../widgets/data/file.md) widget will be placed on the canvas.
 
 ![](file.gif)
 
-**File** widget has an "ear" on its right side - this is the output of the widget. Click on the "ear" and drag a connection out of it. Upon releasing the connection, a menu will appear. Start typing the name of the widget to connect with the File widget, say Data Table. Select the widget and press enter. The widget is added to the canvas.
+**File** widget has an "ear" on its right side – this is the output of the widget. Click on the "ear" and drag a connection out of it. Upon releasing the connection, a menu will appear. Start typing the name of the widget to connect with the File widget, say Data Table. Select the widget and press enter. The widget is added to the canvas.
 
 ![](file-datatable.gif)
 
-This is a simple workflow. File widget loads the data and sends it to the output. Data Table receives the data and displays it in a table. Please note that Data Table is a viewer and passes onwards only the selection. The data is always available at the source - in the File widget.
+This is a simple workflow. The File widget loads the data and sends it to the output. Data Table receives the data and displays it in a table. Please note that Data Table is a viewer and passes onwards only the selection. The data is always available at the source - in the File widget.
 
 ![](DataTable-wrong.png)
 
@@ -38,6 +38,6 @@ Predictive models are evaluated in [Test and Score](../widgets/evaluate/testands
 
 ![](prediction-workflow.png)
 
-For prediction, the training data is first passed to the model. Once the model is trained, it is passed to **Predictions**. Predictions also needs data to predict on, which are passed as a second input.
+For prediction, the training data is first passed to the model. Once the model is trained, it is passed to **Predictions**. The Predictions widget also needs data to predict on, which are passed as a second input.
 
 ![](prediction-workflow2.png)

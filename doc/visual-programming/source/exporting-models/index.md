@@ -1,6 +1,6 @@
 # Exporting Models
 
-Predictive models can be saved and re-used. Models are saved as Python [pickle](https://docs.python.org/3/library/pickle.html) format.
+Predictive models can be saved and re-used. Models are saved in Python [pickle](https://docs.python.org/3/library/pickle.html) format.
 
 ![](load-save-model.png)
 

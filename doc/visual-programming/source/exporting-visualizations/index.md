@@ -1,8 +1,8 @@
 # Exporting Visualizations
 
-Visualizations are an essential part of data science and analytical reports are incomplete without them. Orange provides a couple of options for saving and modifying visualizations.
+Visualizations are an essential part of data science, and analytical reports are incomplete without them. Orange provides a couple of options for saving and modifying visualizations.
 
-At the bottom of each widget there is a status bar. Visualization widgets have a Save icon (second from the left) and a Palette icon (fourth from the left). Save icon saves the plot to the computer. Palette icon opens a dialogue for modifying visualizations.
+At the bottom of each widget, there is a status bar. Visualization widgets have a Save icon (second from the left) and a Palette icon (fourth from the left). Save icon saves the plot to the computer. Palette icon opens a dialogue for modifying visualizations.
 
 ![](statusbar-viz.png)
 
@@ -12,7 +12,7 @@ Visualizations in Orange can be saved in several formats, namely .png, .svg, .pd
 
 ![](plot-format.png)
 
-[Matplotlib](https://matplotlib.org/) Python code is ideal for detailed editing and a high level of customization. Below is an example of the Python code. It is possible to adjust the colors, size of the symbols, markers, etc.
+[Matplotlib](https://matplotlib.org/) Python code is ideal for detailed editing and a high customization level. Below is an example of the Python code. It is possible to adjust the colors, size of the symbols, markers, etc.
 
 ```python
 import matplotlib.pyplot as plt
