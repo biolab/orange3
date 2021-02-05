@@ -11,7 +11,10 @@ Here we need to copy the getting started guide.
    :maxdepth: 1
 
    loading-your-data/index
-
+   building-workflows/index
+   exporting-models/index
+   exporting-visualizations/index
+   report/index
 
 Widgets
 =======
