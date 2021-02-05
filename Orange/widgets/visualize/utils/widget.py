@@ -519,7 +519,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             return None
         valid_data = self.data[self.valid_data]
         return np.fromiter((ex.id in self.subset_indices for ex in valid_data),
-                           dtype=np.bool, count=len(valid_data))
+                           dtype=bool, count=len(valid_data))
 
     # Plot
     def get_embedding(self):
