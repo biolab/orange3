@@ -245,7 +245,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         summary, details = "101", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -259,7 +259,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         summary, details = "101, 150", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -284,7 +284,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         summary, details = "150, 186", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -294,9 +294,9 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
 
         self.send_signal(self.widget.Inputs.data, None, 2)
         self.send_signal(self.widget.Inputs.data, None, 3)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 class TestVennUtilities(unittest.TestCase):

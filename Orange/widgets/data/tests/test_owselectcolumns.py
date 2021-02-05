@@ -7,6 +7,8 @@ import numpy as np
 from AnyQt.QtCore import QMimeData, QPoint, Qt
 from AnyQt.QtGui import QDragEnterEvent
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils import vartype
@@ -395,9 +397,9 @@ class TestOWSelectAttributes(WidgetTest):
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_domain_new_feature(self):
         """ Test scenario when new attribute is added at position 0 """

@@ -136,8 +136,8 @@ class TestOWOutliers(WidgetTest):
 
     def test_in_out_summary(self):
         info = self.widget.info
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, "No data on input")
         self.assertEqual(info._StateInfo__output_summary.details, "No data on output")
 
@@ -153,8 +153,8 @@ class TestOWOutliers(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, None)
         self.wait_until_finished()
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, "No data on input")
         self.assertEqual(info._StateInfo__output_summary.details, "No data on output")
 

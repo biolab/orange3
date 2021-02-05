@@ -3,6 +3,8 @@
 import unittest
 from unittest.mock import Mock
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.widgets.data.owdatasampler import OWDataSampler
 from Orange.widgets.tests.base import WidgetTest
@@ -136,9 +138,9 @@ class TestOWDataSampler(WidgetTest):
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def set_fixed_sample_size(self, sample_size, with_replacement=False):
         """Set fixed sample size and return the number of gui spin.
