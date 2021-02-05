@@ -415,7 +415,7 @@ class TestOWSelectAttributes(WidgetTest):
 
     def test_select_new_features(self):
         """
-        When select_new_features checked new attributes must appear in one of
+        When ignore_new_features unchecked new attributes must appear in one of
         selected columns. Test with fist make context remember attributes of
         reduced domain and then testing with full domain. Features in missing
         in reduced domain must appears as seleceted.
@@ -445,14 +445,14 @@ class TestOWSelectAttributes(WidgetTest):
 
         # if select_new_features checked all new features goes in the selected
         # features columns - domain equal original
-        self.assertTrue(self.widget.select_new_features)
+        self.assertFalse(self.widget.ignore_new_features)
         self.assertTupleEqual(data.domain.attributes, output.domain.attributes)
         self.assertTupleEqual(data.domain.metas, output.domain.metas)
         self.assertEqual(data.domain.class_var, output.domain.class_var)
 
     def test_unselect_new_features(self):
         """
-        When select_new_features not checked new attributes must appear in one
+        When ignore_new_features checked new attributes must appear in one
         available attributes column. Test with fist make context remember
         attributes of reduced domain and then testing with full domain.
         Features in missing in reduced domain must appears as not seleceted.
@@ -468,9 +468,9 @@ class TestOWSelectAttributes(WidgetTest):
 
         # make context remember features in reduced domain
         self.send_signal(self.widget.Inputs.data, new_data)
-        # unselect select_new_features
-        self.widget.controls.select_new_features.click()
-        self.assertFalse(self.widget.select_new_features)
+        # select ignore_new_features
+        self.widget.controls.ignore_new_features.click()
+        self.assertTrue(self.widget.ignore_new_features)
         output = self.get_output(self.widget.Outputs.data)
 
         self.assertTupleEqual(
@@ -483,9 +483,9 @@ class TestOWSelectAttributes(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(self.widget.Outputs.data)
 
-        # if select_new_features not checked all new features goes in the
+        # if ignore_new_features checked all new features goes in the
         # available attributes column
-        self.assertFalse(self.widget.select_new_features)
+        self.assertTrue(self.widget.ignore_new_features)
         self.assertTupleEqual(new_domain.attributes, output.domain.attributes)
         self.assertTupleEqual(new_domain.metas, output.domain.metas)
         self.assertEqual(new_domain.class_var, output.domain.class_var)
