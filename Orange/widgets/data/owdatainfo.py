@@ -29,6 +29,7 @@ class OWDataInfo(widget.OWWidget):
         data = Input("Data", Table)
 
     want_main_area = False
+    buttons_area_orientation = None
     resizing_enabled = False
 
     def __init__(self):
