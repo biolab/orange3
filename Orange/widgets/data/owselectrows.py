@@ -269,10 +269,7 @@ class OWSelectRows(widget.OWWidget):
             box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        boxes = gui.widgetBox(self.controlArea, orientation=QHBoxLayout())
-        layout = boxes.layout()
-
-        box_setting = gui.vBox(boxes, addToLayout=False, box=True)
+        box_setting = gui.vBox(self.buttonsArea, box=True)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
@@ -280,15 +277,11 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        layout.addWidget(box_setting, 1)
 
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
-        layout.addWidget(self.buttonsArea)
 
-        acbox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(acbox, 1)
-        layout.setAlignment(acbox, Qt.AlignBottom)
+        acbox = gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
