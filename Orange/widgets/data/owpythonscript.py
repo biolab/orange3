@@ -537,8 +537,7 @@ class OWPythonScript(OWWidget):
         self.defaultFont = defaultFont = \
             "Monaco" if sys.platform == "darwin" else "Courier"
 
-        self.textBox = gui.vBox(self, 'Python Script')
-        self.splitCanvas.addWidget(self.textBox)
+        self.textBox = gui.vBox(self.splitCanvas, 'Python Script')
         self.text = PythonScriptEditor(self)
         self.textBox.layout().addWidget(self.text)
 
@@ -553,8 +552,7 @@ class OWPythonScript(OWWidget):
         action.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         action.triggered.connect(self.saveScript)
 
-        self.consoleBox = gui.vBox(self, 'Console')
-        self.splitCanvas.addWidget(self.consoleBox)
+        self.consoleBox = gui.vBox(self.splitCanvas, 'Console')
         self.console = PythonConsole({}, self)
         self.consoleBox.layout().addWidget(self.console)
         self.console.document().setDefaultFont(QFont(defaultFont))
