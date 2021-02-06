@@ -764,6 +764,7 @@ class OWPaintData(OWWidget):
     data = Setting(None, schema_only=True)
     labels = Setting(["C1", "C2"], schema_only=True)
 
+    buttons_area_orientation = Qt.Vertical
     graph_name = "plot"
 
     class Warning(OWWidget.Warning):
@@ -864,7 +865,7 @@ class OWPaintData(OWWidget):
         actionsWidget.layout().setSpacing(1)
         namesBox.layout().addWidget(actionsWidget)
 
-        tBox = gui.vBox(self.controlArea, "Tools", addSpace=True)
+        tBox = gui.vBox(self.buttonsArea, "Tools")
         buttonBox = gui.hBox(tBox)
         toolsBox = gui.widgetBox(buttonBox, orientation=QGridLayout())
 
@@ -938,7 +939,7 @@ class OWPaintData(OWWidget):
             tBox, self, "Reset to Input Data", self.reset_to_input)
         self.btResetToInput.setDisabled(True)
 
-        gui.auto_send(self.controlArea, self, "autocommit")
+        gui.auto_send(self.buttonsArea, self, "autocommit")
 
         # main area GUI
         viewbox = PaintViewBox(enableMouse=False)
