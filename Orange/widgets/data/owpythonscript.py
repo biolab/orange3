@@ -525,7 +525,7 @@ class OWPythonScript(OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
+        self.execute_button = gui.button(self.buttonsArea, self, 'Run', callback=self.commit)
 
         run = QAction("Run script", self, triggered=self.commit,
                       shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
