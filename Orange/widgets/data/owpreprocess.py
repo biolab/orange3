@@ -1105,8 +1105,14 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         self.preprocessors.mimeData = mimeData
 
         box = gui.vBox(self.controlArea, "Preprocessors")
+        gui.rubber(self.controlArea)
 
-        self.preprocessorsView = view = QListView(
+        class ListView(QListView):
+            def sizeHint(self):
+                sh = super().sizeHint()
+                return QSize(sh.width(), 220)
+
+        self.preprocessorsView = view = ListView(
             selectionMode=QListView.SingleSelection,
             dragEnabled=True,
             dragDropMode=QListView.DragOnly
@@ -1142,8 +1148,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         self.mainArea.layout().addWidget(self.scroll_area)
         self.flow_view.installEventFilter(self)
 
-        box = gui.vBox(self.controlArea, "Output")
-        gui.auto_apply(box, self, "autocommit", box=False)
+        gui.auto_apply(self.buttonsArea, self, "autocommit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
