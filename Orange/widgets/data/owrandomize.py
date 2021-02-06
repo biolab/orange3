@@ -71,7 +71,7 @@ class OWRandomize(OWWidget):
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
 
-        self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
     @property
     def parts(self):
