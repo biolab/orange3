@@ -175,12 +175,9 @@ class OWImpute(OWWidget):
         self.executor = qconcurrent.ThreadExecutor(self)
         self.__task = None
 
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        self.controlArea.layout().addLayout(main_layout)
+        main_layout = self.controlArea.layout()
 
-        box = gui.vBox(None, "Default Method")
-        main_layout.addWidget(box)
+        box = gui.vBox(self.controlArea, "Default Method")
 
         box_layout = QGridLayout()
         box_layout.setSpacing(8)
@@ -244,12 +241,8 @@ class OWImpute(OWWidget):
 
         self.default_button_group = button_group
 
-        box = QGroupBox(title=self.tr("Individual Attribute Settings"),
-                        flat=False)
-        main_layout.addWidget(box)
-
-        horizontal_layout = QHBoxLayout(box)
-        main_layout.addWidget(box)
+        box = gui.hBox(self.controlArea, self.tr("Individual Attribute Settings"),
+                       flat=False)
 
         self.varview = ListViewSearch(
             selectionMode=QListView.ExtendedSelection,
@@ -263,7 +256,7 @@ class OWImpute(OWWidget):
         )
         self.selection = self.varview.selectionModel()
 
-        horizontal_layout.addWidget(self.varview)
+        box.layout().addWidget(self.varview)
         vertical_layout = QVBoxLayout(margin=0)
 
         self.methods_container = QWidget(enabled=False)
@@ -304,13 +297,11 @@ class OWImpute(OWWidget):
         vertical_layout.addStretch(2)
         vertical_layout.addWidget(self.reset_button)
 
-        horizontal_layout.addLayout(vertical_layout)
+        box.layout().addLayout(vertical_layout)
 
         self.variable_button_group = button_group
 
-        box = gui.auto_apply(self.controlArea, self, "autocommit")
-        box.button.setFixedWidth(180)
-        box.layout().insertStretch(0)
+        gui.auto_apply(self.buttonsArea, self, "autocommit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
