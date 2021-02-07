@@ -136,7 +136,7 @@ class OWConfusionMatrix(widget.OWWidget):
             callback=self._learner_changed
         )
 
-        self.outputbox = gui.vBox(self.controlArea, "Output")
+        self.outputbox = gui.vBox(self.buttonsArea, "Output")
         box = gui.hBox(self.outputbox)
         gui.checkBox(box, self, "append_predictions",
                      "Predictions", callback=self._invalidate)
@@ -148,9 +148,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         self.info.set_output_summary(self.info.NoOutput)
 
-        self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
-
-        box = gui.vBox(self.mainArea, box=True)
+        box = gui.vBox(self.mainArea, box=True, addSpace=False)
 
         sbox = gui.hBox(box)
         gui.rubber(sbox)
