@@ -6,11 +6,12 @@ from unittest.mock import Mock, patch
 import pickle
 import tempfile
 import warnings
+import time
 
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
+from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl, QThread, QObject
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from AnyQt.QtWidgets import QComboBox
 
@@ -622,3 +623,34 @@ a
         widget.reader.sheet = "no such sheet"
         widget._select_active_sheet()
         self.assertEqual(combo.currentIndex(), 0)
+
+    @patch("os.path.exists", new=lambda _: True)
+    def test_warning_from_another_thread(self):
+        class AnotherWidget(QObject):
+            # This must be a method, not a staticmethod to run in the thread
+            def issue_warning(self):  # pylint: disable=no-self-use
+                time.sleep(0.1)
+                warnings.warn("warning from another thread")
+                warning_thread.quit()
+
+        def read():
+            warning_thread.start()
+            time.sleep(0.2)
+            return Table(TITANIC_PATH)
+
+        warning_thread = QThread()
+        another_widget = AnotherWidget()
+        another_widget.moveToThread(warning_thread)
+        warning_thread.started.connect(another_widget.issue_warning)
+
+        reader = Mock()
+        reader.read = read
+        self.widget._get_reader = lambda: reader
+        self.widget.last_path = lambda: "foo"
+        self.widget._update_sheet_combo = Mock()
+        self.widget._try_load()
+        self.assertFalse(self.widget.Warning.load_warning.is_shown())
+
+
+if __name__ == "__main__":
+    unittest.main()
