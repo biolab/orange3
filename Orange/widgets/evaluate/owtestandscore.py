@@ -148,6 +148,7 @@ class OWTestAndScore(OWWidget):
         evaluations_results = Output("Evaluation Results", Results)
 
     settings_version = 3
+    buttons_area_orientation = None
     UserAdviceMessages = [
         widget.Message(
             "Click on the table header to select shown columns",
@@ -292,7 +293,8 @@ class OWTestAndScore(OWWidget):
             callback=self._on_target_class_changed
         )
 
-        self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")
+        self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison",
+                                         addSpace=0)
         gui.comboBox(
             box, self, "comparison_criterion",
             callback=self.update_comparison_table)
@@ -315,7 +317,8 @@ class OWTestAndScore(OWWidget):
         box = gui.vBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.score_table.view)
 
-        self.compbox = box = gui.vBox(self.mainArea, box="Model comparison")
+        self.compbox = box = gui.vBox(self.mainArea, box="Model comparison",
+                                      addSpace=0)
         table = self.comparison_table = QTableWidget(
             wordWrap=False, editTriggers=QTableWidget.NoEditTriggers,
             selectionMode=QTableWidget.NoSelection)
@@ -341,9 +344,9 @@ class OWTestAndScore(OWWidget):
             "Small numbers show the probability that the difference is "
             "negligible.</small>", wordWrap=True))
 
-    @staticmethod
-    def sizeHint():
-        return QSize(780, 1)
+    def sizeHint(self):
+        sh = super().sizeHint()
+        return QSize(780, sh.height())
 
     def _update_controls(self):
         self.fold_feature = None
