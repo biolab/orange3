@@ -63,6 +63,8 @@ class OWLiftCurve(widget.OWWidget):
         undefined_curves = Msg(
             "No defined curves; check models and data")
 
+    buttons_area_orientation = None
+
     settingsHandler = EvaluationResultsContextHandler()
     target_index = settings.ContextSetting(0)
     selected_classifiers = settings.ContextSetting([])
@@ -103,9 +105,8 @@ class OWLiftCurve(widget.OWWidget):
         self.classifiers_list_box.setMaximumHeight(100)
 
         gui.checkBox(self.controlArea, self, "display_convex_hull",
-                     "Show convex hull", box="Settings", callback=self._replot)
-
-        gui.rubber(self.controlArea)
+                     "Show convex hull", box="Settings", callback=self._replot,
+                     addSpace=False)
 
         self.plotview = pg.GraphicsView(background="w")
         self.plotview.setFrameStyle(QFrame.StyledPanel)
