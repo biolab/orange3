@@ -596,6 +596,7 @@ class OWLinePlot(OWWidget):
     icon = "icons/LinePlot.svg"
     priority = 180
 
+    buttons_area_orientation = None
     enable_selection = Signal(bool)
 
     class Inputs:
@@ -684,7 +685,6 @@ class OWLinePlot(OWWidget):
 
         plot_gui = OWPlotGUI(self)
         plot_gui.box_zoom_select(self.controlArea)
-
         gui.auto_send(self.controlArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)
