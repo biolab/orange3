@@ -50,6 +50,8 @@ class OWPredictions(OWWidget):
     description = "Display predictions of models for an input dataset."
     keywords = []
 
+    buttons_area_orientation = None
+
     class Inputs:
         data = Input("Data", Orange.data.Table)
         predictors = Input("Predictors", Model, multiple=True)
@@ -88,15 +90,18 @@ class OWPredictions(OWWidget):
         self._set_input_summary()
         self._set_output_summary(None)
 
-        gui.listBox(self.controlArea, self, "selected_classes", "class_values",
-                    box="Show probabilities for",
+        controlBox = gui.vBox(self.controlArea, "Show probabilities for",
+                              addSpace=False)
+
+        gui.listBox(controlBox, self, "selected_classes", "class_values",
                     callback=self._update_prediction_delegate,
                     selectionMode=QListWidget.ExtendedSelection,
                     addSpace=False,
-                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred))
-        gui.rubber(self.controlArea)
+                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred),
+                    sizeHint=QSize(1, 350),
+                    minimumHeight=100)
         self.reset_button = gui.button(
-            self.controlArea, self, "Restore Original Order",
+            controlBox, self, "Restore Original Order",
             callback=self._reset_order,
             tooltip="Show rows in the original order")
 
