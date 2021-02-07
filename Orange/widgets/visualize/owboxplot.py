@@ -135,6 +135,8 @@ class OWBoxPlot(widget.OWWidget):
         no_vars = widget.Msg(
             "Data contains no categorical or numeric variables")
 
+    buttons_area_orientation = None
+
     #: Comparison types for continuous variables
     CompareNone, CompareMedians, CompareMeans = 0, 1, 2
 
