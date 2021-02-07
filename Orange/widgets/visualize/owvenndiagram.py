@@ -124,6 +124,7 @@ class OWVennDiagram(widget.OWWidget):
             ["Columns (features)", "Rows (instances), matched by", ],
             box="Elements", callback=self._on_matching_changed
         )
+        gui.rubber(controls)
         gui.comboBox(
             gui.indentedBox(box), self, "selected_feature",
             model=itemmodels.VariableListModel(placeholder="Instance identity"),
@@ -131,11 +132,14 @@ class OWVennDiagram(widget.OWWidget):
             )
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
-        self.outputs_box = box = gui.vBox(controls, "Output")
+        self.outputs_box = box = gui.vBox(controls, "Output", addSpace=0)
+        gui.rubber(box)
         self.output_duplicates_cb = gui.checkBox(
             box, self, "output_duplicates", "Output duplicates",
             callback=lambda: self.commit())  # pylint: disable=unnecessary-lambda
-        gui.auto_send(box, self, "autocommit", box=False)
+        auto = gui.auto_send(box, self, "autocommit", box=False)
+        auto.layout().setContentsMargins(0, 0, 0, 0)
+        gui.rubber(box)
         self.output_duplicates_cb.setEnabled(bool(self.rowwise))
         self._queue = []
 
