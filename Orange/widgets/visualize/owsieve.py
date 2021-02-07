@@ -111,7 +111,8 @@ class OWSieveDiagram(OWWidget):
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
 
-        self.attr_box = gui.hBox(self.mainArea)
+        self.mainArea.layout().setSpacing(0)
+        self.attr_box = gui.hBox(self.mainArea, margin=0)
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
         combo_args = dict(
             widget=self.attr_box, master=self, contentsLength=12,
@@ -119,7 +120,7 @@ class OWSieveDiagram(OWWidget):
             callback=self.attr_changed, model=self.domain_model)
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)
-        gui.widgetLabel(self.attr_box, "\u2715", sizePolicy=fixed_size)
+        gui.widgetLabel(self.attr_box, "\u2717", sizePolicy=fixed_size)
         gui.comboBox(value="attr_y", **combo_args)
         self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
             self.attr_box, self, "Score Combinations", self.set_attr)
