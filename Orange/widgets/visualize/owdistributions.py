@@ -368,7 +368,7 @@ class OWDistributions(OWWidget):
             box, self, "cumulative_distr", "Show cumulative distribution",
             callback=self._on_show_cumulative)
 
-        gui.auto_apply(self.controlArea, self, commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
