@@ -89,7 +89,7 @@ class OWPredictions(OWWidget):
         self._set_output_summary(None)
 
         gui.listBox(self.controlArea, self, "selected_classes", "class_values",
-                    box="Show probabibilities for",
+                    box="Show probabilities for",
                     callback=self._update_prediction_delegate,
                     selectionMode=QListWidget.ExtendedSelection,
                     addSpace=False,
