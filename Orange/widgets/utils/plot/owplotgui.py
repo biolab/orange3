@@ -194,9 +194,10 @@ class VariableSelectionView(QListView):
         self.setUniformItemSizes(True)
 
         self.setItemDelegate(VariablesDelegate())
+        self.setMinimumHeight(50)
 
     def sizeHint(self):
-        return QSize(1, 50)
+        return QSize(1, 150)
 
     def mouseMoveEvent(self, e):
         super().mouseMoveEvent(e)
