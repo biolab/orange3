@@ -334,6 +334,7 @@ class OWBarPlot(OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
+    buttons_area_orientation = Qt.Vertical
     settingsHandler = DomainContextHandler()
     selected_var = ContextSetting(None)
     group_var = ContextSetting(None)
@@ -389,6 +390,7 @@ class OWBarPlot(OWWidget):
 
     def _add_controls(self):
         box = gui.vBox(self.controlArea, True)
+        gui.rubber(self.controlArea)
         self._selected_var_model = DomainModel(valid_types=ContinuousVariable)
         gui.comboBox(
             box, self, "selected_var", label="Values:",
@@ -429,10 +431,9 @@ class OWBarPlot(OWWidget):
         )
 
         plot_gui = OWPlotGUI(self)
-        plot_gui.box_zoom_select(self.controlArea)
+        plot_gui.box_zoom_select(self.buttonsArea)
 
-        gui.rubber(self.controlArea)
-        gui.auto_send(self.controlArea, self, "auto_commit")
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self._set_input_summary(None)
         self._set_output_summary(None)
