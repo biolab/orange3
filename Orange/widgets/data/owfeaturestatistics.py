@@ -737,6 +737,15 @@ class OWFeatureStatistics(widget.OWWidget):
         # shortcut = QShortcut(QKeySequence('Ctrl+f'), self, self.filter_text.setFocus)
         # shortcut.setWhatsThis('Filter variables by name')
 
+        # Main area
+        self.model = FeatureStatisticsTableModel(parent=self)
+        self.table_view = FeatureStatisticsTableView(self.model, parent=self)
+        self.table_view.selectionModel().selectionChanged.connect(self.on_select)
+        self.table_view.horizontalHeader().sectionClicked.connect(self.on_header_click)
+
+        self.mainArea.layout().addWidget(self.table_view)
+        self.mainArea.layout().addSpacing(4)
+
         box = gui.hBox(None, box=False)
         box.setContentsMargins(0, 0, 0, 0)
 
@@ -757,14 +766,6 @@ class OWFeatureStatistics(widget.OWWidget):
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
-
-        # Main area
-        self.model = FeatureStatisticsTableModel(parent=self)
-        self.table_view = FeatureStatisticsTableView(self.model, parent=self)
-        self.table_view.selectionModel().selectionChanged.connect(self.on_select)
-        self.table_view.horizontalHeader().sectionClicked.connect(self.on_header_click)
-
-        self.mainArea.layout().addWidget(self.table_view)
 
     @staticmethod
     def sizeHint():
