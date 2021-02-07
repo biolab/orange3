@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from AnyQt.QtCore import Qt
-from AnyQt.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel
+from AnyQt.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QWidget
 
 from Orange.widgets.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
@@ -85,17 +85,15 @@ class OWSGD(OWBaseLearner):
     tol = Setting(1e-3)
     tol_enabled = Setting(True)
 
-    def __init__(self):
-        super().__init__()
-        self.apply_button.layout().insertStretch(0)
-
     def add_main_layout(self):
+        main_widget = QWidget()
         layout = QHBoxLayout()
-        self.controlArea.layout().addLayout(layout)
-        left = QVBoxLayout()
-        right = QVBoxLayout()
-        layout.addLayout(left)
-        layout.addLayout(right)
+        layout.setContentsMargins(0, 0, 0, 0)
+        main_widget.setLayout(layout)
+        self.controlArea.layout().addWidget(main_widget)
+
+        left = gui.vBox(main_widget).layout()
+        right = gui.vBox(main_widget).layout()
         self._add_algorithm_to_layout(left)
         self._add_regularization_to_layout(left)
         self._add_learning_params_to_layout(right)
