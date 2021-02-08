@@ -141,7 +141,7 @@ class OWLouvainClustering(widget.OWWidget):
             "retrieve less clusters."
         )
         self.apply_button = gui.auto_apply(
-            self.controlArea, self, "auto_commit", box=None,
+            self.buttonsArea, self, "auto_commit",
             commit=lambda: self.commit(), callback=lambda: self._on_auto_commit_changed()
         )  # type: QWidget
 
