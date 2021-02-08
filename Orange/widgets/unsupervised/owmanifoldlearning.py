@@ -256,7 +256,7 @@ class OWManifoldLearning(OWWidget):
             alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
         gui.rubber(self.n_components_spin.box)
-        self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
+        self.apply_button = gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
     def manifold_method_changed(self):
         self.params_widget.hide()
