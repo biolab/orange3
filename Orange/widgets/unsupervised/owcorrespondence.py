@@ -91,7 +91,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             gui.vBox(self.controlArea, "Contribution to Inertia"), "\n"
         )
 
-        gui.auto_send(self.controlArea, self, "auto_commit")
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         gui.rubber(self.controlArea)
 
