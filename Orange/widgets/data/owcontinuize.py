@@ -85,15 +85,15 @@ class OWContinuize(widget.OWWidget):
             None, self, "continuous_treatment", box = "Numeric Features",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
-        box.layout().addStretch(10)
+        gui.rubber(box)
         layout.addWidget(box, 0, 1, 2, 1)
 
         box = gui.radioButtonsInBox(
             None, self, "class_treatment", box="Categorical Outcome(s)",
             btnLabels=[t[0] for t in self.class_treats],
             callback=self.settings_changed)
-        box.layout().addStretch(10)
-        layout.addWidget(box, 0, 2)
+        gui.rubber(box)
+        layout.addWidget(box, 0, 2, 2, 1)
 
         gui.auto_apply(self.buttonsArea, self, "autosend")
 
