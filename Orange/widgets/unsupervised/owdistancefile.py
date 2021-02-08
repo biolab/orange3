@@ -55,11 +55,11 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         self.warnings.setSizePolicy(
             QSizePolicy.Ignored, QSizePolicy.MinimumExpanding)
 
-        box = gui.hBox(self.controlArea)
+        gui.rubber(self.buttonsArea)
         gui.button(
-            box, self, "Browse documentation datasets",
+            self.buttonsArea, self, "Browse documentation datasets",
             callback=lambda: self.browse_file(True), autoDefault=False)
-        box.layout().addSpacing(200)
+        gui.rubber(self.buttonsArea)
 
         self.set_file_list()
         QTimer.singleShot(0, self.open_file)
