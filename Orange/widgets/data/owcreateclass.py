@@ -262,6 +262,8 @@ class OWCreateClass(widget.OWWidget):
             optionsbox, self, "case_sensitive", "Case sensitive",
             callback=self.options_changed)
 
+        gui.rubber(self.controlArea)
+
         gui.button(self.buttonsArea, self, "Apply", callback=self.apply)
 
         self.info.set_input_summary(self.info.NoInput)
