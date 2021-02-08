@@ -232,7 +232,12 @@ class OWKMeans(widget.OWWidget):
         gui.rubber(self.controlArea)
 
         box = gui.vBox(self.mainArea, box="Silhouette Scores")
-        self.mainArea.setVisible(self.optimize_k)
+        if self.optimize_k:
+            self.mainArea.setVisible(True)
+            self.left_side.setContentsMargins(0, 0, 0, 0)
+        else:
+            self.mainArea.setVisible(False)
+            self.left_side.setContentsMargins(0, 0, 4, 0)
         self.table_model = ClusterTableModel(self)
         table = self.table_view = QTableView(self.mainArea)
         table.setModel(self.table_model)
@@ -428,8 +433,12 @@ class OWKMeans(widget.OWWidget):
         # cause flickering when the clusters are computed quickly, so this is
         # the better alternative
         self.table_model.clear_scores()
-        self.mainArea.setVisible(self.optimize_k and self.data is not None and
-                                 self.has_attributes)
+        if self.optimize_k and self.data is not None and self.has_attributes:
+            self.mainArea.setVisible(True)
+            self.left_side.setContentsMargins(0, 0, 0, 0)
+        else:
+            self.mainArea.setVisible(False)
+            self.left_side.setContentsMargins(0, 0, 4, 0)
 
         if self.data is None:
             self.send_data()
