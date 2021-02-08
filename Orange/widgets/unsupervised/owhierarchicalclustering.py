@@ -247,7 +247,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         grid.addWidget(self.top_n_spin, 2, 1)
 
         self.zoom_slider = gui.hSlider(
-            self.controlArea, self, "zoom_factor", box="Zoom",
+            self.buttonsArea, self, "zoom_factor", box="Zoom",
             minValue=-6, maxValue=3, step=1, ticks=True, createLabel=False,
             callback=self.__update_font_scale)
 
