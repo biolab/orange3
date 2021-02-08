@@ -278,7 +278,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
     def add_learner_name_widget(self):
         self.name_line_edit = gui.lineEdit(
             self.controlArea, self, 'learner_name', box='Name',
-            placeholderText=self.name,
+            placeholderText=self.name, addSpace=4,
             tooltip='The name will identify this model in other widgets',
             orientation=Qt.Horizontal, callback=self.learner_name_changed)
 
