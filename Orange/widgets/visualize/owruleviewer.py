@@ -36,8 +36,8 @@ class OWRuleViewer(widget.OWWidget):
     compact_view = settings.Setting(False)
 
     want_basic_layout = True
-    want_main_area = True
-    want_control_area = False
+    want_main_area = False
+    want_control_area = True
 
     def __init__(self):
         super().__init__()
@@ -67,20 +67,22 @@ class OWRuleViewer(widget.OWWidget):
         self.dist_item_delegate = DistributionItemDelegate(self)
         self.view.setItemDelegateForColumn(3, self.dist_item_delegate)
 
-        self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
-        self.mainArea.layout().addWidget(self.view)
-        bottom_box = gui.hBox(widget=self.mainArea, box=None,
-                              margin=0, spacing=0)
+        self.controlArea.layout().addWidget(self.view)
 
-        original_order_button = QPushButton(
-            "Restore original order", autoDefault=False)
+        gui.checkBox(widget=self.buttonsArea, master=self, value="compact_view",
+                     label="Compact view", callback=self.on_update,
+                     box=True)
+
+        gui.rubber(self.buttonsArea)
+
+        original_order_button = gui.button(
+            self.buttonsArea, self,
+            "Restore original order",
+            autoDefault=False,
+            callback=self.restore_original_order
+        )
         original_order_button.setFixedWidth(180)
-        bottom_box.layout().addWidget(original_order_button)
         original_order_button.clicked.connect(self.restore_original_order)
-
-        gui.separator(bottom_box, width=5, height=0)
-        gui.checkBox(widget=bottom_box, master=self, value="compact_view",
-                     label="Compact view", callback=self.on_update)
 
     @Inputs.data
     def set_data(self, data):
