@@ -101,12 +101,13 @@ class OWDBSCAN(widget.OWWidget):
                        callback=self._eps_changed,
                        label="Neighborhood distance")
 
-        box = gui.widgetBox(self.controlArea, self.tr("Distance Metric"))
+        box = gui.widgetBox(self.controlArea, self.tr("Distance Metric"),
+                            addSpace=False)
         gui.comboBox(box, self, "metric_idx",
                      items=list(zip(*self.METRICS))[0],
                      callback=self._metirc_changed)
 
-        gui.auto_apply(self.controlArea, self, "auto_commit")
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
         gui.rubber(self.controlArea)
 
         self.controlArea.layout().addStretch()
