@@ -28,7 +28,7 @@ import yaml
 
 from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
 from AnyQt.QtCore import (
-    Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
+    Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION, QFile
 )
 import pyqtgraph
 
@@ -507,7 +507,12 @@ def main(argv=None):
 
     def onrequest(url):
         log.info("Received an file open request %s", url)
-        open_requests.append(url)
+        path = url.path()
+        exists = QFile(path).exists()
+        if exists and \
+                ('pydevd.py' not in url.path() and  # PyCharm debugger
+                 'run_profiler.py' not in url.path()):  # PyCharm profiler
+            open_requests.append(url)
 
     app.fileOpenRequest.connect(onrequest)
 
