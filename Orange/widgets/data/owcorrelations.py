@@ -247,7 +247,8 @@ class OWCorrelations(OWWidget):
         features = Output("Features", AttributeList)
         correlations = Output("Correlations", Table)
 
-    want_control_area = False
+    want_main_area = False
+    want_control_area = True
 
     correlation_type: int
 
@@ -270,7 +271,7 @@ class OWCorrelations(OWWidget):
         self.cont_data = None  # type: Table
 
         # GUI
-        box = gui.vBox(self.mainArea)
+        box = gui.vBox(self.controlArea)
         self.correlation_combo = gui.comboBox(
             box, self, "correlation_type", items=CorrelationType.items(),
             orientation=Qt.Horizontal, callback=self._correlation_combo_changed
@@ -293,7 +294,7 @@ class OWCorrelations(OWWidget):
         box.layout().addWidget(self.vizrank.filter)
         box.layout().addWidget(self.vizrank.rank_table)
 
-        button_box = gui.hBox(self.mainArea)
+        button_box = gui.hBox(self.buttonsArea)
         button_box.layout().addWidget(self.vizrank.button)
 
         self.info.set_input_summary(self.info.NoInput)
