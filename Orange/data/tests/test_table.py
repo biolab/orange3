@@ -108,6 +108,134 @@ class TestTableInit(unittest.TestCase):
         t = Table.from_numpy(domain, sp.bsr_matrix(x))
         self.assertTrue(sp.isspmatrix_csr(t.X))
 
+    @staticmethod
+    def _new_table(attrs, classes, metas, s):
+        def nz(x):  # pylint: disable=invalid-name
+            return x if x.size else np.empty((5, 0))
+
+        domain = Domain(attrs, classes, metas)
+        X = np.arange(s, s + len(attrs) * 5).reshape(5, -1)
+        Y = np.arange(100 + s, 100 + s + len(classes) * 5)
+        if len(classes) > 1:
+            Y = Y.reshape(5, -1)
+        M = np.arange(200 + s, 200 + s + len(metas) * 5).reshape(5, -1)
+        return Table.from_numpy(domain, nz(X), nz(Y), nz(M))
+
+    def test_concatenate_horizontal(self):
+        a, b, c, d, e, f, g = map(ContinuousVariable, "abcdefg")
+
+        # Common case; one class, no empty's
+        tab1 = self._new_table((a, b), (c, ), (d, ), 0)
+        tab2 = self._new_table((e, ), (), (f, g), 1000)
+        joined = Table.concatenate((tab1, tab2), axis=1)
+        domain = joined.domain
+        self.assertEqual(domain.attributes, (a, b, e))
+        self.assertEqual(domain.class_vars, (c, ))
+        self.assertEqual(domain.metas, (d, f, g))
+        np.testing.assert_equal(joined.X, np.hstack((tab1.X, tab2.X)))
+        np.testing.assert_equal(joined.Y, tab1.Y)
+        np.testing.assert_equal(joined.metas, np.hstack((tab1.metas, tab2.metas)))
+
+        # One part of one table is empty
+        tab1 = self._new_table((a, b), (), (), 0)
+        tab2 = self._new_table((), (), (c, ), 1000)
+        joined = Table.concatenate((tab1, tab2), axis=1)
+        domain = joined.domain
+        self.assertEqual(domain.attributes, (a, b))
+        self.assertEqual(domain.class_vars, ())
+        self.assertEqual(domain.metas, (c, ))
+        np.testing.assert_equal(joined.X, np.hstack((tab1.X, tab2.X)))
+        np.testing.assert_equal(joined.metas, np.hstack((tab1.metas, tab2.metas)))
+
+        # Multiple classes, two empty parts are merged
+        tab1 = self._new_table((a, b), (c, ), (), 0)
+        tab2 = self._new_table((), (d, ), (), 1000)
+        joined = Table.concatenate((tab1, tab2), axis=1)
+        domain = joined.domain
+        self.assertEqual(domain.attributes, (a, b))
+        self.assertEqual(domain.class_vars, (c, d))
+        self.assertEqual(domain.metas, ())
+        np.testing.assert_equal(joined.X, np.hstack((tab1.X, tab2.X)))
+        np.testing.assert_equal(joined.Y, np.vstack((tab1.Y, tab2.Y)).T)
+
+        # Merging of attributes and selection of weights
+        tab1 = self._new_table((a, b), (c, ), (), 0)
+        tab1.attributes = dict(a=5, b=7)
+        tab2 = self._new_table((d, ), (e, ), (), 1000)
+        tab2.W = np.arange(5)
+        tab3 = self._new_table((f, g), (), (), 2000)
+        tab3.attributes = dict(a=1, c=4)
+        tab3.W = np.arange(5, 10)
+        joined = Table.concatenate((tab1, tab2, tab3), axis=1)
+        domain = joined.domain
+        self.assertEqual(domain.attributes, (a, b, d, f, g))
+        self.assertEqual(domain.class_vars, (c, e))
+        self.assertEqual(domain.metas, ())
+        np.testing.assert_equal(joined.X, np.hstack((tab1.X, tab2.X, tab3.X)))
+        np.testing.assert_equal(joined.Y, np.vstack((tab1.Y, tab2.Y)).T)
+        self.assertEqual(joined.attributes, dict(a=5, b=7, c=4))
+        np.testing.assert_equal(joined.ids, tab1.ids)
+        np.testing.assert_equal(joined.W, tab2.W)
+
+        # Raise an exception when no tables are given
+        self.assertRaises(ValueError, Table.concatenate, (), axis=1)
+
+    def test_concatenate_invalid_axis(self):
+        self.assertRaises(ValueError, Table.concatenate, (), axis=2)
+
+    def test_with_column(self):
+        a, b, c, d, e, f, g = map(ContinuousVariable, "abcdefg")
+        col = np.arange(9, 14)
+        colr = col.reshape(5, -1)
+        tab = self._new_table((a, b, c), (d, ), (e, f), 0)
+
+        # Add to attributes
+        tabw = tab.add_column(g, np.arange(9, 14))
+        self.assertEqual(tabw.domain.attributes, (a, b, c, g))
+        np.testing.assert_equal(tabw.X, np.hstack((tab.X, colr)))
+        np.testing.assert_equal(tabw.Y, tab.Y)
+        np.testing.assert_equal(tabw.metas, tab.metas)
+
+        # Add to metas
+        tabw = tab.add_column(g, np.arange(9, 14), to_metas=True)
+        self.assertEqual(tabw.domain.metas, (e, f, g))
+        np.testing.assert_equal(tabw.X, tab.X)
+        np.testing.assert_equal(tabw.Y, tab.Y)
+        np.testing.assert_equal(tabw.metas, np.hstack((tab.metas, colr)))
+
+        # Add to empty attributes
+        tab = self._new_table((), (d, ), (e, f), 0)
+        tabw = tab.add_column(g, np.arange(9, 14))
+        self.assertEqual(tabw.domain.attributes, (g, ))
+        np.testing.assert_equal(tabw.X, colr)
+        np.testing.assert_equal(tabw.Y, tab.Y)
+        np.testing.assert_equal(tabw.metas, tab.metas)
+
+        # Add to empty metas
+        tab = self._new_table((a, b, c), (d, ), (), 0)
+        tabw = tab.add_column(g, np.arange(9, 14), to_metas=True)
+        self.assertEqual(tabw.domain.metas, (g, ))
+        np.testing.assert_equal(tabw.X, tab.X)
+        np.testing.assert_equal(tabw.Y, tab.Y)
+        np.testing.assert_equal(tabw.metas, colr)
+
+        # Pass values as a list
+        tab = self._new_table((a, ), (d, ), (e, f), 0)
+        tabw = tab.add_column(g, [4, 2, -1, 2, 5])
+        self.assertEqual(tabw.domain.attributes, (a, g))
+        np.testing.assert_equal(
+            tabw.X, np.array([[0, 1, 2, 3, 4], [4, 2, -1, 2, 5]]).T)
+
+        # Add non-primitives as metas; join `float` and `object` to `object`
+        tab = self._new_table((a, ), (d, ), (e, f), 0)
+        t = StringVariable("t")
+        tabw = tab.add_column(t, list("abcde"))
+        self.assertEqual(tabw.domain.attributes, (a, ))
+        self.assertEqual(tabw.domain.metas, (e, f, t))
+        np.testing.assert_equal(
+            tabw.metas,
+            np.hstack((tab.metas, np.array(list("abcde")).reshape(5, -1))))
+
 
 class TestTableFilters(unittest.TestCase):
     def setUp(self):
