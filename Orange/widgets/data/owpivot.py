@@ -797,8 +797,7 @@ class OWPivot(OWWidget):
                      model=DomainModel(placeholder="(None)"),
                      callback=self.__val_feature_changed)
         self.__add_aggregation_controls()
-        gui.rubber(self.controlArea)
-        gui.auto_apply(self.controlArea, self, "auto_commit")
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.set_input_summary()
         self.set_output_summary(None, None, None)
