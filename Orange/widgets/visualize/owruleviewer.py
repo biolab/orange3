@@ -81,7 +81,6 @@ class OWRuleViewer(widget.OWWidget):
             autoDefault=False,
             callback=self.restore_original_order
         )
-        original_order_button.setFixedWidth(180)
         original_order_button.clicked.connect(self.restore_original_order)
 
     @Inputs.data
