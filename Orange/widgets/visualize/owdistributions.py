@@ -328,6 +328,10 @@ class OWDistributions(OWWidget):
             callback=self._on_sort_by_freq, stateWhenDisabled=False)
 
         box = self.continuous_box = gui.vBox(self.controlArea, "Distribution")
+        gui.comboBox(
+            box, self, "fitted_distribution", label="Fitted distribution",
+            orientation=Qt.Horizontal, items=(name[0] for name in self.Fitters),
+            callback=self._on_fitted_dist_changed)
         slider = gui.hSlider(
             box, self, "number_of_bins",
             label="Bin width", orientation=Qt.Horizontal,
@@ -337,15 +341,10 @@ class OWDistributions(OWWidget):
         self.bin_width_label.setFixedWidth(35)
         self.bin_width_label.setAlignment(Qt.AlignRight)
         slider.sliderReleased.connect(self._on_bin_slider_released)
-        gui.comboBox(
-            box, self, "fitted_distribution", label="Fitted distribution",
-            orientation=Qt.Horizontal, items=(name[0] for name in self.Fitters),
-            callback=self._on_fitted_dist_changed)
-        self.smoothing_box = gui.indentedBox(box, 40)
-        gui.hSlider(
-            self.smoothing_box, self, "kde_smoothing",
+        self.smoothing_box = gui.hSlider(
+            box, self, "kde_smoothing",
             label="Smoothing", orientation=Qt.Horizontal,
-            minValue=2, maxValue=20, callback=self.replot)
+            minValue=2, maxValue=20, callback=self.replot, disabled=True)
         gui.checkBox(
             box, self, "hide_bars", "Hide bars", stateWhenDisabled=False,
             callback=self._on_hide_bars_changed,
@@ -391,7 +390,8 @@ class OWDistributions(OWWidget):
         self.plotview.blank_clicked.connect(self._on_blank_clicked)
         self.plotview.mouse_released.connect(self._on_end_selecting)
         self.plotview.setRenderHint(QPainter.Antialiasing)
-        self.mainArea.layout().addWidget(self.plotview)
+        box = gui.vBox(self.mainArea, box=True, margin=0)
+        box.layout().addWidget(self.plotview)
         self.ploti = pg.PlotItem(
             enableMenu=False, enableMouse=False,
             axisItems={"bottom": ElidedAxisNoUnits("bottom")})
@@ -500,8 +500,8 @@ class OWDistributions(OWWidget):
         self.plot.update()
 
     def _set_smoothing_visibility(self):
-        self.smoothing_box.setVisible(
-            self.Fitters[self.fitted_distribution][1] is AshCurve)
+        self.smoothing_box.setDisabled(
+            self.Fitters[self.fitted_distribution][1] is not AshCurve)
 
     def _set_bin_width_slider_label(self):
         if self.number_of_bins < len(self.binnings):
