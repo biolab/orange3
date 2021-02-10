@@ -797,6 +797,7 @@ class OWPivot(OWWidget):
                      model=DomainModel(placeholder="(None)"),
                      callback=self.__val_feature_changed)
         self.__add_aggregation_controls()
+        gui.rubber(self.controlArea)
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.set_input_summary()
@@ -819,7 +820,6 @@ class OWPivot(OWWidget):
         self.aggregation_checkboxes = []  # for test purposes
         for agg in self.AGGREGATIONS:
             if agg is None:
-                gui.separator(box, height=1)
                 line = QFrame()
                 line.setFrameShape(QFrame.HLine)
                 line.setLineWidth(1)
