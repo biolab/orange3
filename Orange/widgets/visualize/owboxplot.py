@@ -281,7 +281,6 @@ class OWBoxPlot(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.box_view)
 
-        gui.hBox(self.mainArea, addSpace=False)
         self.stat_test = ""
         self.mainArea.setMinimumWidth(300)
 
