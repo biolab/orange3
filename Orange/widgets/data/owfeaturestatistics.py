@@ -744,7 +744,6 @@ class OWFeatureStatistics(widget.OWWidget):
         self.table_view.horizontalHeader().sectionClicked.connect(self.on_header_click)
 
         self.mainArea.layout().addWidget(self.table_view)
-        self.mainArea.layout().addSpacing(4)
 
         box = gui.hBox(None, box=False)
         box.setContentsMargins(0, 0, 0, 0)
