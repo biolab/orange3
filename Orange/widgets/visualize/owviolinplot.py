@@ -1,6 +1,5 @@
-from collections import namedtuple
 from itertools import chain, count
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple, Set, Sequence
 
 import numpy as np
 from scipy import stats
@@ -95,11 +94,11 @@ class ParameterSetter(CommonParameterSetter):
         }
 
     @property
-    def title_item(self):
+    def title_item(self) -> pg.LabelItem:
         return self.master.getPlotItem().titleLabel
 
     @property
-    def axis_items(self):
+    def axis_items(self) -> List[pg.AxisItem]:
         return [value["item"] for value in
                 self.master.getPlotItem().axes.values()]
 
@@ -125,8 +124,6 @@ def fit_kernel(data: np.ndarray, kernel: str) -> \
 
 
 class ViolinItem(pg.GraphicsObject):
-    RugPlot = namedtuple("RugPlot", "support, density")
-
     def __init__(self, data: np.ndarray, color: QColor, kernel: str,
                  show_rug: bool, orientation: Qt.Orientations):
         self.__show_rug_plot = show_rug
@@ -139,12 +136,16 @@ class ViolinItem(pg.GraphicsObject):
         self.__violin_path: QPainterPath = self._create_violin(data)
         self.__violin_brush: QBrush = QBrush(color)
 
-        self.__rug_plot_data: ViolinItem.RugPlot = self._create_rug_plot(data)
+        self.__rug_plot_data: Tuple = self._create_rug_plot(data)
 
         super().__init__()
 
     @property
-    def violin_width(self):
+    def kde(self) -> KernelDensity:
+        return self.__kde
+
+    @property
+    def violin_width(self) -> float:
         return self.boundingRect().width() if self.__orientation == Qt.Vertical \
             else self.boundingRect().height()
 
@@ -196,21 +197,19 @@ class ViolinItem(pg.GraphicsObject):
     def _create_rug_plot(self, data: np.ndarray) -> Tuple:
         unique_data = np.unique(data)
         if self.__kde is None:
-            return self.RugPlot(unique_data, np.zeros(unique_data.size))
+            return unique_data, np.zeros(unique_data.size)
 
         density = np.exp(self.__kde.score_samples(unique_data.reshape(-1, 1)))
-        return self.RugPlot(unique_data, density)
+        return unique_data, density
 
 
 class BoxItem(pg.GraphicsObject):
-    Stats = namedtuple("Stats", "min q25 q75 max")
-
     def __init__(self, data: np.ndarray, rect: QRectF,
                  orientation: Qt.Orientations):
         self.__bounding_rect = rect
         self.__orientation = orientation
 
-        self.__box_plot_data: BoxItem.Stats = self._create_box_plot(data)
+        self.__box_plot_data: Tuple = self._create_box_plot(data)
 
         super().__init__()
 
@@ -239,13 +238,13 @@ class BoxItem(pg.GraphicsObject):
     @staticmethod
     def _create_box_plot(data: np.ndarray) -> Tuple:
         if data.size == 0:
-            return BoxItem.Stats(*[0] * 4)
+            return (0,) * 4
 
         q25, q75 = np.percentile(data, [25, 75])
         whisker_lim = 1.5 * stats.iqr(data)
         min_ = np.min(data[data >= (q25 - whisker_lim)])
         max_ = np.max(data[data <= (q75 + whisker_lim)])
-        return BoxItem.Stats(min_, q25, q75, max_)
+        return min_, q25, q75, max_
 
 
 class MedianItem(pg.ScatterPlotItem):
@@ -257,14 +256,18 @@ class MedianItem(pg.ScatterPlotItem):
                          brush=pg.mkBrush(QColor(Qt.white)))
 
     @property
-    def value(self):
+    def value(self) -> float:
         return self.__value
 
 
 class StripItem(pg.ScatterPlotItem):
-    def __init__(self, data: np.ndarray, lim: float, color: QColor,
-                 orientation: Qt.Orientations):
-        x = np.random.RandomState(0).uniform(-lim, lim, data.size)
+    def __init__(self, data: np.ndarray, kde: KernelDensity,
+                 color: QColor, orientation: Qt.Orientations):
+        if kde is not None:
+            lim = np.exp(kde.score_samples(data.reshape(-1, 1)))
+        else:
+            lim = np.zeros(data.size)
+        x = np.random.RandomState(0).uniform(-lim, lim)
         x, y = (x, data) if orientation == Qt.Vertical else (data, x)
         color = color.lighter(150)
         super().__init__(x=x, y=y, size=5, brush=pg.mkBrush(color))
@@ -274,27 +277,28 @@ class SelectionRect(pg.GraphicsObject):
     def __init__(self, rect: QRectF, orientation: Qt.Orientations):
         self.__rect: QRectF = rect
         self.__orientation: Qt.Orientations = orientation
-        self.__selection_range: Optional[Tuple[float]] = None
+        self.__selection_range: Optional[Tuple[float, float]] = None
         super().__init__()
 
     @property
-    def selection_range(self):
+    def selection_range(self) -> Optional[Tuple[float, float]]:
         return self.__selection_range
 
     @selection_range.setter
-    def selection_range(self, selection_range: Optional[Tuple[float]]):
+    def selection_range(self, selection_range: Optional[Tuple[float, float]]):
         self.__selection_range = selection_range
         self.update()
 
     @property
-    def selection_rect(self):
+    def selection_rect(self) -> QRectF:
         rect: QRectF = self.__rect
-        if self.__orientation == Qt.Vertical:
-            rect.setTop(self.__selection_range[0])
-            rect.setBottom(self.__selection_range[1])
-        else:
-            rect.setLeft(self.__selection_range[0])
-            rect.setRight(self.__selection_range[1])
+        if self.__selection_range is not None:
+            if self.__orientation == Qt.Vertical:
+                rect.setTop(self.__selection_range[0])
+                rect.setBottom(self.__selection_range[1])
+            else:
+                rect.setLeft(self.__selection_range[0])
+                rect.setRight(self.__selection_range[1])
         return rect
 
     def boundingRect(self) -> QRectF:
@@ -318,8 +322,8 @@ class ViolinPlot(pg.PlotWidget):
                  show_strip_plot: bool, show_rug_plot: bool, sort_items: bool):
 
         # data
-        self.__values: np.ndarray = None
-        self.__value_var: ContinuousVariable = None
+        self.__values: Optional[np.ndarray] = None
+        self.__value_var: Optional[ContinuousVariable] = None
         self.__group_values: Optional[np.ndarray] = None
         self.__group_var: Optional[DiscreteVariable] = None
 
@@ -356,22 +360,22 @@ class ViolinPlot(pg.PlotWidget):
         self.parameter_setter = ParameterSetter(self)
 
     @property
-    def _selection_ranges(self) -> List[Optional[Tuple[float]]]:
+    def _selection_ranges(self) -> List[Optional[Tuple[float, float]]]:
         return [rect.selection_range for rect in self.__selection_rects]
 
     @_selection_ranges.setter
-    def _selection_ranges(self, ranges: List[Optional[Tuple[float]]]):
+    def _selection_ranges(self, ranges: List[Optional[Tuple[float, float]]]):
         for min_max, sel_rect in zip(ranges, self.__selection_rects):
             sel_rect.selection_range = min_max
 
     @property
-    def _sorted_group_indices(self):
+    def _sorted_group_indices(self) -> Sequence[int]:
         medians = [item.value for item in self.__median_items]
         return np.argsort(medians) if self.__sort_items \
             else range(len(medians))
 
     @property
-    def _max_item_width(self):
+    def _max_item_width(self) -> float:
         if not self.__violin_items:
             return 0
         return max(item.violin_width * self.VIOLIN_PADDING_FACTOR
@@ -459,7 +463,10 @@ class ViolinPlot(pg.PlotWidget):
                   for i, index in enumerate(indices)]]
         self.getAxis(side).setTicks(ticks)
 
-    def set_selection(self, ranges: List[Optional[Tuple[float]]]):
+    def set_selection(self, ranges: List[Optional[Tuple[float, float]]]):
+        if self.__values is None:
+            return
+
         self._selection_ranges = ranges
 
         self.__selection = set()
@@ -524,9 +531,7 @@ class ViolinPlot(pg.PlotWidget):
         self.addItem(median)
         self.__median_items.append(median)
 
-        br = violin.boundingRect()
-        lim = br.width() if self.__orientation == Qt.Vertical else br.height()
-        strip = StripItem(values, lim / 2, color, self.__orientation)
+        strip = StripItem(values, violin.kde, color, self.__orientation)
         strip.setVisible(self.__show_strip_plot)
         self.addItem(strip)
         self.__strip_items.append(strip)
@@ -814,12 +819,13 @@ class OWViolinPlot(OWWidget):
         self.graph.set_kernel(self.kernel)
 
     @property
-    def kernel(self):
+    def kernel(self) -> str:
         # pylint: disable=invalid-sequence-index
         return self.KERNELS[self.kernel_index]
 
     @property
-    def orientation(self):
+    def orientation(self) -> Qt.Orientations:
+        # pylint: disable=invalid-sequence-index
         return [Qt.Horizontal, Qt.Vertical][self.orientation_index]
 
     @Inputs.data
@@ -1011,6 +1017,7 @@ class OWViolinPlot(OWWidget):
 
     def set_visual_settings(self, key: KeyType, value: ValueType):
         self.graph.parameter_setter.set_parameter(key, value)
+        # pylint: disable=unsupported-assignment-operation
         self.visual_settings[key] = value
 
 

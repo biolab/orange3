@@ -1,10 +1,7 @@
-# pylint: disable=(protected-access
+# pylint: disable=protected-access
 import unittest
 from unittest.mock import patch
 
-import numpy as np
-from scipy import stats
-from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -27,9 +24,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
 
         cls.signal_name = "Data"
         cls.signal_data = cls.data
-        cls.titanic = Table("titanic")
         cls.housing = Table("housing")
-        cls.heart = Table("heart_disease")
 
     def setUp(self):
         self.widget = self.create_widget(OWViolinPlot)
@@ -111,8 +106,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
             self.send_signal(self.widget.Inputs.data, ds)
 
     def test_selection_no_group(self):
-        data = Table("housing")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.housing)
         self.widget.graph._update_selection(QPointF(0, 30), QPointF(0, 40), 1)
         selected = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(selected), 53)
@@ -131,8 +125,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assert_table_equal(selected1, selected2)
 
     def test_selection_orientation(self):
-        data = Table("housing")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.housing)
         self.widget.graph._update_selection(QPointF(0, 30), QPointF(0, 40), 1)
         self.widget.controls.orientation_index.buttons[0].click()
         selected = self.get_output(self.widget.Outputs.selected_data)
@@ -214,12 +207,13 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(font1.pointSize(), font2.pointSize())
         self.assertEqual(font1.italic(), font2.italic())
 
-    def __select_value(self, list, value):
-        m = list.model()
-        for i in range(m.rowCount()):
-            idx = m.index(i, 0)
-            if m.data(idx) == value:
-                list.selectionModel().setCurrentIndex(
+    @staticmethod
+    def __select_value(list_, value):
+        model = list_.model()
+        for i in range(model.rowCount()):
+            idx = model.index(i, 0)
+            if model.data(idx) == value:
+                list_.selectionModel().setCurrentIndex(
                     idx, QItemSelectionModel.ClearAndSelect)
 
     def test_seaborn(self):
@@ -240,40 +234,18 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         # hue = df["chest pain"]
         print(y.min(), y.max())
         sns.violinplot(
-            x=y,
-            y=x,
+            x=x,
+            y=y,
             # inner="stick",
-            orient="h",
+            # orient="h",
             #   hue=hue,
-            #   scale="count",
+            scale="count",
             # data=df,
             # split=True,
         )
         plt.show()
 
         sns.kdeplot()
-
-    def test_sklearn(self):
-        table = Table("iris")
-        self.assertEqual(True, False)
-
-        data = table.X[:, 0]
-        kde = stats.gaussian_kde(data)
-        bw = kde.factor * data.std(ddof=1)
-        print(bw)
-        # bw = 1
-        kde = stats.gaussian_kde(data, bw_method=bw / data.std(ddof=1))
-        support1 = np.linspace(data.min() - bw * 2, data.max() + bw * 2, 100)
-        density1 = kde.evaluate(support1)
-
-        data = table.X[:, 0]
-        kde = KernelDensity(bandwidth=bw, kernel="gaussian")
-        kde.fit(data.reshape(-1, 1))
-        support2 = np.linspace(data.min() - bw * 2, data.max() + bw * 2, 100)
-        density2 = np.exp(kde.score_samples(support2.reshape(-1, 1)))
-
-        np.testing.assert_array_equal(support1, support2)
-        np.testing.assert_array_almost_equal(density1, density2)
 
 
 if __name__ == "__main__":
