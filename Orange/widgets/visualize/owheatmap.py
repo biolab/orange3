@@ -372,7 +372,7 @@ class OWHeatMap(widget.OWWidget):
 
         gui.checkBox(box, self, 'averages', 'Stripes with averages',
                      callback=self.update_averages_stripe)
-        annotbox = QGroupBox("Row Annotations", flat=True)
+        annotbox = QGroupBox("Row Annotations")
         form = QFormLayout(
             annotbox,
             formAlignment=Qt.AlignLeft,
@@ -405,7 +405,7 @@ class OWHeatMap(widget.OWWidget):
         form.addRow("Text", self.annotation_text_cb)
         form.addRow("Color", self.row_side_color_cb)
         box.layout().addWidget(annotbox)
-        annotbox = QGroupBox("Column annotations", flat=True)
+        annotbox = QGroupBox("Column annotations")
         form = QFormLayout(
             annotbox,
             formAlignment=Qt.AlignLeft,
@@ -434,13 +434,15 @@ class OWHeatMap(widget.OWWidget):
             callback=self.update_column_annotations)
         cb.setModel(create_list_model(ColumnLabelsPosData, parent=self))
         cb.setCurrentIndex(self.column_label_pos)
+        form.addRow("Position", cb)
         form.addRow("Color", self.col_side_color_cb)
-        form.addRow("Label position", cb)
         box.layout().addWidget(annotbox)
 
         gui.checkBox(self.controlArea, self, "keep_aspect",
                      "Keep aspect ratio", box="Resize",
                      callback=self.__aspect_mode_changed)
+
+        gui.rubber(self.controlArea)
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
