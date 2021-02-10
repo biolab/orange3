@@ -63,7 +63,6 @@ class OWRandomize(OWWidget):
             box, "", alignment=Qt.AlignCenter,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
         self._set_scope_label()
-        gui.separator(box, 10, 10)
         self.replicable_check = gui.checkBox(
             box, self, "random_seed", "Replicable shuffling",
             callback=self._shuffle_check_changed)
