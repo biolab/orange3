@@ -11,12 +11,18 @@ from Orange.data import Table
 from Orange.data.util import vstack, hstack, array_equal
 from Orange.statistics.util import stats
 from Orange.tests.test_statistics import dense_sparse
-from Orange.util import wrap_callback
+from Orange.util import wrap_callback, get_entry_point
 
 SOMETHING = 0xf00babe
 
 
 class TestUtil(unittest.TestCase):
+    def test_get_entry_point(self):
+        # pylint: disable=import-outside-toplevel
+        from Orange.canvas.__main__ import main as real_main
+        main = get_entry_point("Orange3", "gui_scripts", "orange-canvas")
+        self.assertIs(main, real_main)
+
     def test_export_globals(self):
         self.assertEqual(sorted(export_globals(globals(), __name__)),
                          ['SOMETHING', 'TestUtil'])
