@@ -837,7 +837,6 @@ class OWPaintData(OWWidget):
         gui.checkBox(hbox, self, "hasAttr2", '', disables=attr2,
                      labelWidth=0,
                      callback=self.set_dimensions)
-        gui.separator(namesBox)
 
         gui.widgetLabel(namesBox, "Labels")
         self.classValuesView = listView = gui.ListViewWithSizeHint(
@@ -866,8 +865,7 @@ class OWPaintData(OWWidget):
         namesBox.layout().addWidget(actionsWidget)
 
         tBox = gui.vBox(self.buttonsArea, "Tools")
-        buttonBox = gui.hBox(tBox)
-        toolsBox = gui.widgetBox(buttonBox, orientation=QGridLayout())
+        toolsBox = gui.widgetBox(tBox, orientation=QGridLayout())
 
         self.toolActions = QActionGroup(self)
         self.toolActions.setExclusive(True)
@@ -907,7 +905,6 @@ class OWPaintData(OWWidget):
         self.addActions([undo, redo])
         self.undo_stack.indexChanged.connect(self.invalidate)
 
-        gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
         form = QFormLayout(
             formAlignment=Qt.AlignLeft,
@@ -917,20 +914,20 @@ class OWPaintData(OWWidget):
         indBox.layout().addLayout(form)
         slider = gui.hSlider(
             indBox, self, "brushRadius", minValue=1, maxValue=100,
-            createLabel=False
+            createLabel=False, addToLayout=False
         )
         form.addRow("Radius:", slider)
 
         slider = gui.hSlider(
             indBox, self, "density", None, minValue=1, maxValue=100,
-            createLabel=False
+            createLabel=False, addToLayout=False
         )
 
         form.addRow("Intensity:", slider)
 
         slider = gui.hSlider(
             indBox, self, "symbol_size", None, minValue=1, maxValue=100,
-            createLabel=False, callback=self.set_symbol_size
+            createLabel=False, callback=self.set_symbol_size, addToLayout=False
         )
 
         form.addRow("Symbol:", slider)
