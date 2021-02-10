@@ -79,7 +79,8 @@ class OWRuleViewer(widget.OWWidget):
             self.buttonsArea, self,
             "Restore original order",
             autoDefault=False,
-            callback=self.restore_original_order
+            callback=self.restore_original_order,
+            attribute=Qt.WA_LayoutUsesWidgetRect,
         )
         original_order_button.clicked.connect(self.restore_original_order)
 

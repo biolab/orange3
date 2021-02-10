@@ -90,7 +90,8 @@ class OWPCA(widget.OWWidget):
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.normalize_box = gui.checkBox(
             self.options_box, self, "normalize",
-            "Normalize variables", callback=self._update_normalize
+            "Normalize variables", callback=self._update_normalize,
+            attribute=Qt.WA_LayoutUsesWidgetRect
         )
 
         self.maxp_spin = gui.spin(

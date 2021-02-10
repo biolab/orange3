@@ -140,7 +140,7 @@ class OWNNLearner(OWBaseLearner):
         form.addRow(
             gui.checkBox(
                 None, self, "replicable", label="Replicable training",
-                callback=self.settings_changed),
+                callback=self.settings_changed, attribute=Qt.WA_LayoutUsesWidgetRect)
         )
 
     def set_alpha(self):

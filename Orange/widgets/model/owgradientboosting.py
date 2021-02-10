@@ -82,7 +82,7 @@ class BaseEditor(QWidget, gui.OWComponent):
         )
         gui.checkBox(
             self.basic_box, self, "random_state", label="Replicable training",
-            callback=self.settings_changed
+            callback=self.settings_changed, attribute=Qt.WA_LayoutUsesWidgetRect
         )
 
         self.growth_box = gui.vBox(self._layout, "Growth Control")

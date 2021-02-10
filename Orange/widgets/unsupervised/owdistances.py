@@ -1,6 +1,8 @@
 from scipy.sparse import issparse
 import bottleneck as bn
 
+from AnyQt.QtCore import Qt
+
 import Orange.data
 import Orange.misc
 from Orange import distance
@@ -115,7 +117,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             callback=self._invalidate,
             tooltip=("All dimensions are (implicitly) scaled to a common"
                      "scale to normalize the influence across the domain."),
-            stateWhenDisabled=False
+            stateWhenDisabled=False, attribute=Qt.WA_LayoutUsesWidgetRect
         )
         _, metric = METRICS[self.metric_idx]
         self.normalization_check.setEnabled(metric.supports_normalization)

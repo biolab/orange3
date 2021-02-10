@@ -238,7 +238,8 @@ class OWDataTable(OWWidget):
         gui.button(self.buttonsArea, self, "Restore Original Order",
                    callback=self.restore_order,
                    tooltip="Show rows in the original order",
-                   autoDefault=False)
+                   autoDefault=False,
+                   attribute=Qt.WA_LayoutUsesWidgetRect)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # GUI with tabs

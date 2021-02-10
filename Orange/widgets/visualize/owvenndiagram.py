@@ -136,7 +136,8 @@ class OWVennDiagram(widget.OWWidget):
         gui.rubber(box)
         self.output_duplicates_cb = gui.checkBox(
             box, self, "output_duplicates", "Output duplicates",
-            callback=lambda: self.commit())  # pylint: disable=unnecessary-lambda
+            callback=lambda: self.commit(),  # pylint: disable=unnecessary-lambda
+            attribute=Qt.WA_LayoutUsesWidgetRect)
         auto = gui.auto_send(box, self, "autocommit", box=False)
         auto.layout().setContentsMargins(0, 0, 0, 0)
         gui.rubber(box)

@@ -107,11 +107,11 @@ class OWLouvainClustering(widget.OWWidget):
         preprocessing_box = gui.vBox(self.controlArea, "Preprocessing")
         self.normalize_cbx = gui.checkBox(
             preprocessing_box, self, "normalize", label="Normalize data",
-            callback=self._invalidate_preprocessed_data,
+            callback=self._invalidate_preprocessed_data, attribute=Qt.WA_LayoutUsesWidgetRect
         )  # type: QCheckBox
         self.apply_pca_cbx = gui.checkBox(
             preprocessing_box, self, "apply_pca", label="Apply PCA preprocessing",
-            callback=self._apply_pca_changed,
+            callback=self._apply_pca_changed, attribute=Qt.WA_LayoutUsesWidgetRect
         )  # type: QCheckBox
         self.pca_components_slider = gui.hSlider(
             preprocessing_box, self, "pca_components", label="PCA Components: ", minValue=2,
