@@ -64,7 +64,7 @@ class BaseEditor(QWidget, gui.OWComponent):
 
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
-        self._layout: QWidget = gui.vBox(self)
+        self._layout: QWidget = gui.vBox(self, spacing=6, margin=0)
 
         self._add_main_layout()
 
@@ -80,7 +80,6 @@ class BaseEditor(QWidget, gui.OWComponent):
             self.basic_box, self, "learning_rate", 0, 1, 0.001,
             label="Learning rate: ", **common_args
         )
-        gui.separator(self.basic_box, height=1)
         gui.checkBox(
             self.basic_box, self, "random_state", label="Replicable training",
             callback=self.settings_changed
