@@ -332,7 +332,6 @@ class OWMergeData(widget.OWWidget):
             self.controlArea, self, "merging", box="Merging",
             btnLabels=self.OptionNames, tooltips=self.OptionDescriptions,
             callback=self.change_merging)
-        grp.layout().setSpacing(8)
 
         self.attr_boxes = ConditionBox(
             self, self.model, self.extra_model, "", "matches")
