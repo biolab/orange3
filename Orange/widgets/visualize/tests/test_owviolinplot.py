@@ -1,19 +1,29 @@
 # pylint: disable=protected-access
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
-import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
 
 from AnyQt.QtCore import QItemSelectionModel, QPointF, Qt
 from AnyQt.QtGui import QFont
 
+from pyqtgraph import ViewBox
+
 from Orange.data import Table
-from Orange.data.pandas_compat import table_to_frame
 from Orange.widgets.tests.base import datasets, simulate, \
     WidgetOutputsTestMixin, WidgetTest
 from Orange.widgets.utils.state_summary import format_summary_details
-from Orange.widgets.visualize.owviolinplot import OWViolinPlot
+from Orange.widgets.visualize.owviolinplot import OWViolinPlot, \
+    ViolinPlotViewBox, scale_density, WIDTH
+
+
+class TestUtils(unittest.TestCase):
+    # pylint: disable=no-self-use
+    def test_scale_density_retain_original_data(self):
+        array = np.arange(10)
+        scaled = scale_density(WIDTH, array, 15, 20)
+        np.testing.assert_array_equal(array, np.arange(10))
+        np.testing.assert_array_equal(scaled, np.arange(10) / 20)
 
 
 class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -42,7 +52,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         details = format_summary_details(self.data)
         self.assertEqual(info._StateInfo__input_summary.brief, "150")
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self._select_data()
@@ -52,9 +62,9 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertEqual(info._StateInfo__input_summary.brief, "-")
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertEqual(info._StateInfo__output_summary.brief, "-")
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_kernels(self):
@@ -82,6 +92,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.controls.order_violins.setChecked(True)
         self.widget.controls.orientation_index.buttons[0].click()
         self.widget.controls.kernel_index.setCurrentIndex(1)
+        self.widget.controls.scale_index.setCurrentIndex(1)
 
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.controls.show_box_plot.setChecked(False)
@@ -90,6 +101,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.controls.order_violins.setChecked(False)
         self.widget.controls.orientation_index.buttons[1].click()
         self.widget.controls.kernel_index.setCurrentIndex(0)
+        self.widget.controls.scale_index.setCurrentIndex(2)
 
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.controls.show_box_plot.setChecked(True)
@@ -98,12 +110,151 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.controls.order_violins.setChecked(True)
         self.widget.controls.orientation_index.buttons[0].click()
         self.widget.controls.kernel_index.setCurrentIndex(1)
+        self.widget.controls.scale_index.setCurrentIndex(1)
+
+    def test_enable_controls(self):
+        self.assertTrue(self.widget.controls.order_violins.isEnabled())
+        self.assertTrue(self.widget.controls.scale_index.isEnabled())
+
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.assertFalse(self.widget.controls.order_violins.isEnabled())
+        self.assertFalse(self.widget.controls.scale_index.isEnabled())
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertTrue(self.widget.controls.order_violins.isEnabled())
+        self.assertTrue(self.widget.controls.scale_index.isEnabled())
+
+        self.__select_value(self.widget._group_var_view, "None")
+        self.assertFalse(self.widget.controls.order_violins.isEnabled())
+        self.assertFalse(self.widget.controls.scale_index.isEnabled())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertTrue(self.widget.controls.order_violins.isEnabled())
+        self.assertTrue(self.widget.controls.scale_index.isEnabled())
 
     def test_datasets(self):
         self.widget.controls.show_strip_plot.setChecked(True)
         self.widget.controls.show_rug_plot.setChecked(True)
         for ds in datasets.datasets():
             self.send_signal(self.widget.Inputs.data, ds)
+            for i in range(3):
+                cb = self.widget.controls.scale_index
+                simulate.combobox_activate_index(cb, i)
+
+    def test_unique_values(self):
+        self.send_signal(self.widget.Inputs.data, self.data[:5])
+        self.__select_value(self.widget._value_var_view, "petal width")
+
+    def test_paint(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.controls.show_strip_plot.setChecked(True)
+        self.widget.controls.show_rug_plot.setChecked(True)
+
+        painter = Mock()
+        painter.save = Mock()
+        painter.drawLine = Mock()
+        painter.drawPath = Mock()
+        painter.drawRect = Mock()
+        painter.restore = Mock()
+
+        item = self.widget.graph._ViolinPlot__violin_items[0]
+        item.paint(painter, Mock())
+        painter.drawPath.assert_called_once()
+
+        painter.drawLine.reset_mock()
+        item = self.widget.graph._ViolinPlot__box_items[0]
+        item.paint(painter, Mock(), None)
+        self.assertEqual(painter.drawLine.call_count, 2)
+
+        self._select_data()
+        item = self.widget.graph._ViolinPlot__selection_rects[0]
+        item.paint(painter, Mock())
+        painter.drawRect.assert_called_once()
+
+        self.widget.controls.orientation_index.buttons[0].click()
+
+        painter.drawPath.reset_mock()
+        item = self.widget.graph._ViolinPlot__violin_items[0]
+        item.paint(painter, Mock())
+        painter.drawPath.assert_called_once()
+
+        painter.drawLine.reset_mock()
+        item = self.widget.graph._ViolinPlot__box_items[0]
+        item.paint(painter, Mock(), None)
+        self.assertEqual(painter.drawLine.call_count, 2)
+
+        painter.drawRect.reset_mock()
+        item = self.widget.graph._ViolinPlot__selection_rects[0]
+        item.paint(painter, Mock())
+        painter.drawRect.assert_called_once()
+
+        self.assertEqual(painter.save.call_count, 6)
+        self.assertEqual(painter.restore.call_count, 6)
+
+    @patch.object(ViolinPlotViewBox, "mapToView")
+    def test_select(self, mocked_mapToView: Mock):
+        mocked_mapToView.side_effect = lambda x: x
+
+        view_box: ViewBox = self.widget.graph.getViewBox()
+
+        event = Mock()
+        event.button.return_value = Qt.LeftButton
+        event.buttonDownPos.return_value = QPointF(0, 5)
+        event.pos.return_value = QPointF(0, 6)
+        event.isFinish.return_value = True
+
+        view_box.mouseDragEvent(event)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertIsNone(selected)
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        view_box.mouseDragEvent(event)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 30)
+
+        view_box.mouseDragEvent(event, 1)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 30)
+
+        view_box.mouseClickEvent(Mock())
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertIsNone(selected)
+
+        view_box.mouseDragEvent(event)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 30)
+
+    def test_set_selection_not_data(self):
+        self.widget.graph.set_selection([1, 2])
+
+    @patch.object(ViolinPlotViewBox, "mapToView")
+    def test_selection_rect(self, mocked_mapToView: Mock):
+        mocked_mapToView.side_effect = lambda x: x
+
+        view_box: ViewBox = self.widget.graph.getViewBox()
+
+        event = Mock()
+        event.button.return_value = Qt.LeftButton
+        event.buttonDownPos.return_value = QPointF(0, 5)
+        event.pos.return_value = QPointF(0, 6)
+        event.isFinish.return_value = True
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        view_box.mouseDragEvent(event)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 30)
+
+        sel_rect = self.widget.graph._ViolinPlot__selection_rects[0]
+        self.assertEqual(sel_rect.selection_rect.height(), 1)
+
+        self.widget.controls.orientation_index.buttons[0].click()
+        sel_rect = self.widget.graph._ViolinPlot__selection_rects[0]
+        self.assertEqual(sel_rect.selection_rect.width(), 1)
+
+    def test_selection_no_data(self):
+        self.widget.graph._update_selection(QPointF(0, 5), QPointF(0, 6), 1)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertIsNone(selected)
 
     def test_selection_no_group(self):
         self.send_signal(self.widget.Inputs.data, self.housing)
@@ -128,6 +279,10 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, self.housing)
         self.widget.graph._update_selection(QPointF(0, 30), QPointF(0, 40), 1)
         self.widget.controls.orientation_index.buttons[0].click()
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(len(selected), 53)
+
+        self.widget.graph._update_selection(QPointF(30, 0), QPointF(40, 0), 1)
         selected = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(selected), 53)
 
@@ -215,37 +370,6 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
             if model.data(idx) == value:
                 list_.selectionModel().setCurrentIndex(
                     idx, QItemSelectionModel.ClearAndSelect)
-
-    def test_seaborn(self):
-        # inner{“box”, “quartile”, “point”, “stick”, None}, optional
-        self.assertEqual(True, False)
-        data = Table("heart_disease")
-        print(data.domain)
-        df = table_to_frame(data)
-        x = df["diameter narrowing"]
-        y = df["ST by exercise"]
-        y = df["major vessels colored"]
-
-        data = Table("iris")
-        print(data.domain)
-        df = table_to_frame(data)
-        x = df["iris"]
-        y = df["sepal length"]
-        # hue = df["chest pain"]
-        print(y.min(), y.max())
-        sns.violinplot(
-            x=x,
-            y=y,
-            # inner="stick",
-            # orient="h",
-            #   hue=hue,
-            scale="count",
-            # data=df,
-            # split=True,
-        )
-        plt.show()
-
-        sns.kdeplot()
 
 
 if __name__ == "__main__":

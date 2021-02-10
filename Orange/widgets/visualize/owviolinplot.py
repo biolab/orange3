@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines
+from collections import namedtuple
 from itertools import chain, count
 from typing import List, Optional, Tuple, Set, Sequence
 
@@ -8,7 +10,7 @@ from sklearn.neighbors import KernelDensity
 from AnyQt.QtCore import QItemSelection, QPointF, QRectF, QSize, Qt, Signal
 from AnyQt.QtGui import QBrush, QColor, QPainter, QPainterPath, QPolygonF
 from AnyQt.QtWidgets import QCheckBox, QSizePolicy, QGraphicsRectItem, \
-    QGraphicsSceneMouseEvent, QApplication, QWidget
+    QGraphicsSceneMouseEvent, QApplication, QWidget, QComboBox
 
 import pyqtgraph as pg
 
@@ -31,14 +33,16 @@ from Orange.widgets.visualize.utils.customizableplot import \
 from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
+# scaling types
+AREA, COUNT, WIDTH = range(3)
+
 
 class ViolinPlotViewBox(pg.ViewBox):
     sigSelectionChanged = Signal(QPointF, QPointF, bool)
     sigDeselect = Signal(bool)
 
-    def __init__(self, parent):
+    def __init__(self, _):
         super().__init__()
-        self.graph: ViolinPlot = parent
         self.setMouseMode(self.RectMode)
 
     def mouseDragEvent(self, ev, axis=None):
@@ -107,7 +111,7 @@ def fit_kernel(data: np.ndarray, kernel: str) -> \
         Tuple[Optional[KernelDensity], float]:
     assert np.all(np.isfinite(data))
 
-    if data.size < 2:
+    if np.unique(data).size < 2:
         return None, 1
 
     # obtain bandwidth
@@ -123,9 +127,24 @@ def fit_kernel(data: np.ndarray, kernel: str) -> \
     return kde, bw
 
 
+def scale_density(scale_type: int, density: np.ndarray, n_data: int,
+                  max_density: float) -> np.ndarray:
+    if scale_type == AREA:
+        return density
+    elif scale_type == COUNT:
+        return density * n_data / max_density
+    elif scale_type == WIDTH:
+        return density / max_density
+    else:
+        raise NotImplementedError
+
+
 class ViolinItem(pg.GraphicsObject):
+    RugPlot = namedtuple("RugPlot", "support, density")
+
     def __init__(self, data: np.ndarray, color: QColor, kernel: str,
-                 show_rug: bool, orientation: Qt.Orientations):
+                 scale: int, show_rug: bool, orientation: Qt.Orientations):
+        self.__scale = scale
         self.__show_rug_plot = show_rug
         self.__orientation = orientation
 
@@ -133,21 +152,26 @@ class ViolinItem(pg.GraphicsObject):
         self.__kde: KernelDensity = kde
         self.__bandwidth: float = bw
 
-        self.__violin_path: QPainterPath = self._create_violin(data)
+        path, max_density = self._create_violin(data)
+        self.__violin_path: QPainterPath = path
         self.__violin_brush: QBrush = QBrush(color)
 
-        self.__rug_plot_data: Tuple = self._create_rug_plot(data)
+        self.__rug_plot_data: ViolinItem.RugPlot = \
+            self._create_rug_plot(data, max_density)
 
         super().__init__()
 
     @property
-    def kde(self) -> KernelDensity:
-        return self.__kde
+    def density(self) -> np.ndarray:
+        # density on unique data
+        return self.__rug_plot_data.density
 
     @property
     def violin_width(self) -> float:
-        return self.boundingRect().width() if self.__orientation == Qt.Vertical \
+        width = self.boundingRect().width() \
+            if self.__orientation == Qt.Vertical \
             else self.boundingRect().height()
+        return width or 1
 
     def set_show_rug_plot(self, show: bool):
         self.__show_rug_plot = show
@@ -173,13 +197,15 @@ class ViolinItem(pg.GraphicsObject):
 
         painter.restore()
 
-    def _create_violin(self, data: np.ndarray) -> QPainterPath:
+    def _create_violin(self, data: np.ndarray) -> Tuple[QPainterPath, float]:
         if self.__kde is None:
-            x, p = np.zeros(1), np.zeros(1)
+            x, p, max_density = np.zeros(1), np.zeros(1), 0
         else:
             x = np.linspace(data.min() - self.__bandwidth * 2,
                             data.max() + self.__bandwidth * 2, 1000)
             p = np.exp(self.__kde.score_samples(x.reshape(-1, 1)))
+            max_density = p.max()
+            p = scale_density(self.__scale, p, len(data), max_density)
 
         if self.__orientation == Qt.Vertical:
             pts = [QPointF(pi, xi) for xi, pi in zip(x, p)]
@@ -192,15 +218,17 @@ class ViolinItem(pg.GraphicsObject):
         polygon = QPolygonF(pts)
         path = QPainterPath()
         path.addPolygon(polygon)
-        return path
+        return path, max_density
 
-    def _create_rug_plot(self, data: np.ndarray) -> Tuple:
-        unique_data = np.unique(data)
+    def _create_rug_plot(self, data: np.ndarray, max_density: float) -> Tuple:
         if self.__kde is None:
-            return unique_data, np.zeros(unique_data.size)
+            return self.RugPlot(data, np.zeros(data.size))
 
-        density = np.exp(self.__kde.score_samples(unique_data.reshape(-1, 1)))
-        return unique_data, density
+        n_data = len(data)
+        data = np.unique(data)  # to optimize scoring
+        density = np.exp(self.__kde.score_samples(data.reshape(-1, 1)))
+        density = scale_density(self.__scale, density, n_data, max_density)
+        return self.RugPlot(data, density)
 
 
 class BoxItem(pg.GraphicsObject):
@@ -216,7 +244,7 @@ class BoxItem(pg.GraphicsObject):
     def boundingRect(self) -> QRectF:
         return self.__bounding_rect
 
-    def paint(self, painter: QPainter, _, widget: QWidget):
+    def paint(self, painter: QPainter, _, widget: Optional[QWidget]):
         painter.save()
 
         q0, q25, q75, q100 = self.__box_plot_data
@@ -227,7 +255,7 @@ class BoxItem(pg.GraphicsObject):
             quartile1 = QPointF(q0, 0), QPointF(q100, 0)
             quartile2 = QPointF(q25, 0), QPointF(q75, 0)
 
-        factor = widget.devicePixelRatio()
+        factor = 1 if widget is None else widget.devicePixelRatio()
         painter.setPen(pg.mkPen(QColor(Qt.black), width=2 * factor))
         painter.drawLine(*quartile1)
         painter.setPen(pg.mkPen(QColor(Qt.black), width=6 * factor))
@@ -251,7 +279,7 @@ class MedianItem(pg.ScatterPlotItem):
     def __init__(self, data: np.ndarray, orientation: Qt.Orientations):
         self.__value = value = 0 if data.size == 0 else np.median(data)
         x, y = (0, value) if orientation == Qt.Vertical else (value, 0)
-        super().__init__(x=[x], y=[y], size=4,
+        super().__init__(x=[x], y=[y], size=5,
                          pen=pg.mkPen(QColor(Qt.white)),
                          brush=pg.mkBrush(QColor(Qt.white)))
 
@@ -259,18 +287,29 @@ class MedianItem(pg.ScatterPlotItem):
     def value(self) -> float:
         return self.__value
 
+    def setX(self, x: float):
+        self.setData(x=[x], y=[self.value])
+
+    def setY(self, y: float):
+        self.setData(x=[self.value], y=[y])
+
 
 class StripItem(pg.ScatterPlotItem):
-    def __init__(self, data: np.ndarray, kde: KernelDensity,
+    def __init__(self, data: np.ndarray, density: np.ndarray,
                  color: QColor, orientation: Qt.Orientations):
-        if kde is not None:
-            lim = np.exp(kde.score_samples(data.reshape(-1, 1)))
-        else:
-            lim = np.zeros(data.size)
-        x = np.random.RandomState(0).uniform(-lim, lim)
+        _, indices = np.unique(data, return_inverse=True)
+        density = density[indices]
+        self.__xdata = x = np.random.RandomState(0).uniform(-density, density)
+        self.__ydata = data
         x, y = (x, data) if orientation == Qt.Vertical else (data, x)
         color = color.lighter(150)
         super().__init__(x=x, y=y, size=5, brush=pg.mkBrush(color))
+
+    def setX(self, x: float):
+        self.setData(x=self.__xdata + x, y=self.__ydata)
+
+    def setY(self, y: float):
+        self.setData(x=self.__ydata, y=self.__xdata + y)
 
 
 class SelectionRect(pg.GraphicsObject):
@@ -315,9 +354,10 @@ class SelectionRect(pg.GraphicsObject):
 
 class ViolinPlot(pg.PlotWidget):
     VIOLIN_PADDING_FACTOR = 1.25
+    SELECTION_PADDING_FACTOR = 1.20
     selection_changed = Signal(list, list)
 
-    def __init__(self, parent: OWWidget, kernel: str,
+    def __init__(self, parent: OWWidget, kernel: str, scale: int,
                  orientation: Qt.Orientations, show_box_plot: bool,
                  show_strip_plot: bool, show_rug_plot: bool, sort_items: bool):
 
@@ -329,6 +369,7 @@ class ViolinPlot(pg.PlotWidget):
 
         # settings
         self.__kernel = kernel
+        self.__scale = scale
         self.__orientation = orientation
         self.__show_box_plot = show_box_plot
         self.__show_strip_plot = show_strip_plot
@@ -394,6 +435,11 @@ class ViolinPlot(pg.PlotWidget):
     def set_kernel(self, kernel: str):
         if self.__kernel != kernel:
             self.__kernel = kernel
+            self._plot_data()
+
+    def set_scale(self, scale: int):
+        if self.__scale != scale:
+            self.__scale = scale
             self._plot_data()
 
     def set_orientation(self, orientation: Qt.Orientations):
@@ -491,6 +537,9 @@ class ViolinPlot(pg.PlotWidget):
         self.getAxis("left" if vertical else "bottom").setLabel(value_title)
         self.getAxis("bottom" if vertical else "left").setLabel(group_title)
 
+        if self.__group_var is None:
+            self.getAxis("bottom" if vertical else "left").setTicks([])
+
     def _plot_data(self):
         # save selection ranges
         ranges = self._selection_ranges
@@ -516,7 +565,7 @@ class ViolinPlot(pg.PlotWidget):
     def _set_violin_item(self, values: np.ndarray, color: QColor):
         values = values[~np.isnan(values)]
 
-        violin = ViolinItem(values, color, self.__kernel,
+        violin = ViolinItem(values, color, self.__kernel, self.__scale,
                             self.__show_rug_plot, self.__orientation)
         self.addItem(violin)
         self.__violin_items.append(violin)
@@ -531,12 +580,13 @@ class ViolinPlot(pg.PlotWidget):
         self.addItem(median)
         self.__median_items.append(median)
 
-        strip = StripItem(values, violin.kde, color, self.__orientation)
+        strip = StripItem(values, violin.density, color, self.__orientation)
         strip.setVisible(self.__show_strip_plot)
         self.addItem(strip)
         self.__strip_items.append(strip)
 
-        width = violin.violin_width * self.VIOLIN_PADDING_FACTOR
+        width = self._max_item_width * self.SELECTION_PADDING_FACTOR / \
+                self.VIOLIN_PADDING_FACTOR
         if self.__orientation == Qt.Vertical:
             rect = QRectF(-width / 2, median.value, width, 0)
         else:
@@ -588,6 +638,10 @@ class ViolinPlot(pg.PlotWidget):
 
     def _update_selection(self, p1: QPointF, p2: QPointF, finished: bool):
         # When finished, emit selection_changed.
+        if len(self.__selection_rects) == 0:
+            return
+        assert self._max_item_width > 0
+
         rect = QRectF(p1, p2).normalized()
         if self.__orientation == Qt.Vertical:
             min_max = rect.y(), rect.y() + rect.height()
@@ -658,7 +712,8 @@ class OWViolinPlot(OWWidget):
         not_enough_instances = Msg("Plotting requires at least two instances.")
 
     KERNELS = ["gaussian", "epanechnikov", "linear"]
-    KERNEL_LABELS = ["Normal kernel", "Epanechnikov kernel", "Linear kernel"]
+    KERNEL_LABELS = ["Normal", "Epanechnikov", "Linear"]
+    SCALE_LABELS = ["Area", "Count", "Width"]
 
     settingsHandler = DomainContextHandler()
     value_var = ContextSetting(None)
@@ -671,10 +726,12 @@ class OWViolinPlot(OWWidget):
     order_violins = Setting(False)
     orientation_index = Setting(1)  # Vertical
     kernel_index = Setting(0)  # Normal kernel
+    scale_index = Setting(AREA)
     selection_ranges = Setting([], schema_only=True)
     visual_settings = Setting({}, schema_only=True)
 
     graph_name = "graph.plotItem"
+    buttons_area_orientation = None
 
     def __init__(self):
         super().__init__()
@@ -686,6 +743,7 @@ class OWViolinPlot(OWWidget):
         self._value_var_view: ListViewSearch = None
         self._group_var_view: ListViewSearch = None
         self._order_violins_cb: QCheckBox = None
+        self._scale_combo: QComboBox = None
         self.selection = []
         self.__pending_selection: List = self.selection_ranges
 
@@ -700,7 +758,8 @@ class OWViolinPlot(OWWidget):
 
     def _add_graph(self):
         box = gui.vBox(self.mainArea)
-        self.graph = ViolinPlot(self, self.kernel, self.orientation,
+        self.graph = ViolinPlot(self, self.kernel,
+                                self.scale_index, self.orientation,
                                 self.show_box_plot, self.show_strip_plot,
                                 self.show_rug_plot, self.order_violins)
         self.graph.selection_changed.connect(self.__selection_changed)
@@ -754,8 +813,7 @@ class OWViolinPlot(OWWidget):
                      callback=self.apply_group_var_sorting)
 
         box = gui.vBox(self.controlArea, "Display",
-                       sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum),
-                       addSpace=False)
+                       sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
         gui.checkBox(box, self, "show_box_plot", "Box plot",
                      callback=self.__show_box_plot_changed)
         gui.checkBox(box, self, "show_strip_plot", "Strip plot",
@@ -772,13 +830,15 @@ class OWViolinPlot(OWWidget):
                          callback=self.__orientation_changed)
 
         box = gui.vBox(self.controlArea, "Density Estimation",
-                       sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum),
-                       addSpace=False)
+                       sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
         gui.comboBox(box, self, "kernel_index", items=self.KERNEL_LABELS,
+                     label="Kernel:", labelWidth=60, orientation=Qt.Horizontal,
                      callback=self.__kernel_changed)
-
-        # stretch over buttonsArea
-        self.left_side.layout().setStretch(0, 9999999)
+        self._scale_combo = gui.comboBox(
+            box, self, "scale_index", items=self.SCALE_LABELS,
+            label="Scale:", labelWidth=60, orientation=Qt.Horizontal,
+            callback=self.__scale_changed
+        )
 
         self._set_input_summary(None)
         self._set_output_summary(None)
@@ -796,7 +856,7 @@ class OWViolinPlot(OWWidget):
             return
         self.group_var = selection.indexes()[0].data(gui.TableVariable)
         self.apply_value_var_sorting()
-        self.enable_order_violins_cb()
+        self.enable_controls()
         self.setup_plot()
         self.__selection_changed([], [])
 
@@ -817,6 +877,9 @@ class OWViolinPlot(OWWidget):
 
     def __kernel_changed(self):
         self.graph.set_kernel(self.kernel)
+
+    def __scale_changed(self):
+        self.graph.set_scale(self.scale_index)
 
     @property
     def kernel(self) -> str:
@@ -841,7 +904,7 @@ class OWViolinPlot(OWWidget):
         self.set_list_view_selection()
         self.apply_value_var_sorting()
         self.apply_group_var_sorting()
-        self.enable_order_violins_cb()
+        self.enable_controls()
         self.setup_plot()
         self.apply_selection()
 
@@ -958,8 +1021,10 @@ class OWViolinPlot(OWWidget):
         if len(selection) == 1:
             view.scrollTo(selection[0])
 
-    def enable_order_violins_cb(self):
-        self._order_violins_cb.setEnabled(self.group_var is not None)
+    def enable_controls(self):
+        enable = self.group_var is not None or not self.data
+        self._order_violins_cb.setEnabled(enable)
+        self._scale_combo.setEnabled(enable)
 
     def setup_plot(self):
         self.graph.clear_plot()
