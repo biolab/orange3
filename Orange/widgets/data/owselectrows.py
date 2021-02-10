@@ -273,7 +273,6 @@ class OWSelectRows(widget.OWWidget):
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
-        gui.separator(box_setting, height=1)
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
