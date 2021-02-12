@@ -126,10 +126,17 @@ class OWVennDiagram(widget.OWWidget):
         )
         gui.rubber(controls)
         gui.comboBox(
-            gui.indentedBox(box), self, "selected_feature",
-            model=itemmodels.VariableListModel(placeholder="Instance identity"),
+            gui.indentedBox(box,
+                            gui.checkButtonOffsetHint(box.buttons[0]),
+                            Qt.Horizontal,
+                            addSpaceBefore=False),
+            self, "selected_feature",
+            model=itemmodels.VariableListModel(
+                placeholder="Instance identity"
+            ),
             callback=self._on_inputAttrActivated
-            )
+        )
+        box.layout().setSpacing(6)
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
         self.outputs_box = box = gui.vBox(controls, "Output",
