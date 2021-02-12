@@ -76,7 +76,7 @@ class OWVennDiagram(widget.OWWidget):
     rowwise = settings.Setting(True)
     selected_feature = settings.ContextSetting(None)
 
-    want_control_area = False
+    want_main_area = False
     graph_name = "scene"
     atr_types = ['attributes', 'metas', 'class_vars']
     atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
@@ -107,7 +107,7 @@ class OWVennDiagram(widget.OWWidget):
         self.view.setBackgroundRole(QPalette.Window)
         self.view.setFrameStyle(QGraphicsView.StyledPanel)
 
-        self.mainArea.layout().addWidget(self.view)
+        self.controlArea.layout().addWidget(self.view)
         self.vennwidget = VennDiagram()
         self._resize()
         self.vennwidget.itemTextEdited.connect(self._on_itemTextEdited)
@@ -118,7 +118,7 @@ class OWVennDiagram(widget.OWWidget):
 
         self.scene.addItem(self.vennwidget)
 
-        controls = gui.hBox(self.mainArea)
+        controls = gui.hBox(self.buttonsArea)
         box = gui.radioButtonsInBox(
             controls, self, 'rowwise',
             ["Columns (features)", "Rows (instances), matched by", ],
@@ -132,14 +132,18 @@ class OWVennDiagram(widget.OWWidget):
             )
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
-        self.outputs_box = box = gui.vBox(controls, "Output", addSpace=0)
+        self.outputs_box = box = gui.vBox(controls, "Output",
+                                          sizePolicy=(QSizePolicy.Preferred,
+                                                      QSizePolicy.Preferred),
+                                          stretch=0)
         gui.rubber(box)
         self.output_duplicates_cb = gui.checkBox(
             box, self, "output_duplicates", "Output duplicates",
             callback=lambda: self.commit(),  # pylint: disable=unnecessary-lambda
             attribute=Qt.WA_LayoutUsesWidgetRect)
-        auto = gui.auto_send(box, self, "autocommit", box=False)
-        auto.layout().setContentsMargins(0, 0, 0, 0)
+        auto = gui.auto_send(box, self, "autocommit",
+                             box=False,
+                             contentsMargins=(0, 0, 0, 0))
         gui.rubber(box)
         self.output_duplicates_cb.setEnabled(bool(self.rowwise))
         self._queue = []
