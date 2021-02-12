@@ -296,21 +296,21 @@ class OWScatterPlot(OWDataProjectionWidget):
     def _add_controls_axis(self):
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
-            contentsLength=14
+            contentsLength=12, searchable=True
         )
-        self.attr_box = gui.vBox(self.controlArea, True)
+        self.attr_box = gui.vBox(self.controlArea, True, spacing=2)
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=ContinuousVariable)
         self.cb_attr_x = gui.comboBox(
             self.attr_box, self, "attr_x", label="Axis x:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options,
-            searchable=True)
+        )
         self.cb_attr_y = gui.comboBox(
             self.attr_box, self, "attr_y", label="Axis y:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options,
-            searchable=True)
+        )
         vizrank_box = gui.hBox(self.attr_box)
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
             vizrank_box, self, "Find Informative Projections", self.set_attr)
