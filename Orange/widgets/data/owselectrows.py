@@ -280,7 +280,7 @@ class OWSelectRows(widget.OWWidget):
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
 
-        acbox = gui.auto_send(self.buttonsArea, self, "auto_commit")
+        acbox = gui.auto_send(self.buttonsArea, self, "auto_commit", box=True)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
