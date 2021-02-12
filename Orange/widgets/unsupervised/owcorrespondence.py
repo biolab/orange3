@@ -3,9 +3,9 @@ from collections import namedtuple, OrderedDict
 
 import numpy as np
 
-from AnyQt.QtWidgets import QListView, QApplication
+from AnyQt.QtWidgets import QListView, QApplication, QSizePolicy
 from AnyQt.QtGui import QBrush, QColor, QPainter
-from AnyQt.QtCore import QEvent
+from AnyQt.QtCore import QEvent, Qt
 from orangewidget.utils.listview import ListViewSearch
 
 import pyqtgraph as pg
@@ -77,23 +77,25 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         box.layout().addWidget(view)
 
         axes_box = gui.vBox(self.controlArea, "Axes")
-        box = gui.vBox(axes_box, "Axis X", margin=0)
-        box.setFlat(True)
         self.axis_x_cb = gui.comboBox(
-            box, self, "component_x", callback=self._component_changed)
+            axes_box, self, "component_x", label="X:",
+            callback=self._component_changed, orientation=Qt.Horizontal,
+            sizePolicy=(QSizePolicy.MinimumExpanding,
+                        QSizePolicy.Preferred)
+        )
 
-        box = gui.vBox(axes_box, "Axis Y", margin=0)
-        box.setFlat(True)
         self.axis_y_cb = gui.comboBox(
-            box, self, "component_y", callback=self._component_changed)
+            axes_box, self, "component_y", label="Y:",
+            callback=self._component_changed, orientation=Qt.Horizontal,
+            sizePolicy=(QSizePolicy.MinimumExpanding,
+                        QSizePolicy.Preferred)
+        )
 
         self.infotext = gui.widgetLabel(
             gui.vBox(self.controlArea, "Contribution to Inertia"), "\n"
         )
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
-
-        gui.rubber(self.controlArea)
 
         self.plot = pg.PlotWidget(background="w")
         self.plot.setMenuEnabled(False)
