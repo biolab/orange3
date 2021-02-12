@@ -1107,10 +1107,20 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         box = gui.vBox(self.controlArea, "Preprocessors")
         gui.rubber(self.controlArea)
 
+        # we define a class that lets us set the vertical sizeHint
+        # based on the height and number of items in the list
+        # see self.__update_list_sizeHint
+
         class ListView(QListView):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.vertical_hint = None
+
             def sizeHint(self):
                 sh = super().sizeHint()
-                return QSize(sh.width(), 220)
+                if self.vertical_hint:
+                    return QSize(sh.width(), self.vertical_hint)
+                return sh
 
         self.preprocessorsView = view = ListView(
             selectionMode=QListView.SingleSelection,
@@ -1169,6 +1179,8 @@ class OWPreprocess(widget.OWWidget, openclass=True):
                           Qt.ItemIsDragEnabled)
             self.preprocessors.appendRow([item])
 
+        self.__update_list_sizeHint()
+
         model = self.load(self.storedsettings)
 
         self.set_model(model)
@@ -1180,6 +1192,14 @@ class OWPreprocess(widget.OWWidget, openclass=True):
             self.__update_size_constraint()
 
         self.apply()
+
+    def __update_list_sizeHint(self):
+        view = self.preprocessorsView
+
+        h = view.sizeHintForRow(0)
+        n = self.preprocessors.rowCount()
+        view.vertical_hint = n * h + 2  # only on Mac?
+        view.updateGeometry()
 
     def load(self, saved):
         """Load a preprocessor list from a dict."""
