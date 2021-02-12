@@ -214,7 +214,6 @@ class OWDataTable(OWWidget):
         self.info_text = gui.widgetLabel(info_box)
         self._set_input_summary(None)
         self._set_output_summary(None)
-        gui.separator(self.controlArea)
 
         box = gui.vBox(self.controlArea, "Variables")
         self.c_show_attribute_labels = gui.checkBox(
