@@ -301,7 +301,13 @@ class OWSelectAttributes(widget.OWWidget):
 
         bbox = gui.vBox(self.controlArea, "Additional settings", addToLayout=False)
         gui.checkBox(
-            bbox, self, "ignore_new_features", "Ignore new variables by default"
+            widget=bbox,
+            master=self,
+            value="ignore_new_features",
+            label="Ignore new variables by default",
+            tooltip="When the widget receives data with additional columns "
+                    "they are added to the available attributes column if "
+                    "<i>Ignore new variables by default</i> is checked."
         )
         layout.addWidget(bbox, 3, 0, 1, 3)
 
