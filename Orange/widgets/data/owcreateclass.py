@@ -252,7 +252,9 @@ class OWCreateClass(widget.OWWidget):
         box = gui.hBox(patternbox)
         gui.rubber(box)
         gui.button(box, self, "+", callback=self.add_row,
-                         autoDefault=False, width=34)
+                   autoDefault=False, width=34,
+                   sizePolicy=(QSizePolicy.Maximum,
+                               QSizePolicy.Maximum))
 
         optionsbox = gui.vBox(self.controlArea, "Options")
         gui.checkBox(
@@ -334,7 +336,10 @@ class OWCreateClass(widget.OWWidget):
                 edit.textChanged.connect(self.sync_edit)
             button = gui.button(
                 None, self, label='×', width=33,
-                autoDefault=False, callback=self.remove_row)
+                autoDefault=False, callback=self.remove_row,
+                sizePolicy=(QSizePolicy.Maximum,
+                            QSizePolicy.Maximum)
+            )
             self.remove_buttons.append(button)
             self.rules_box.addWidget(button, n_lines, 0)
             self.counts.append([])
