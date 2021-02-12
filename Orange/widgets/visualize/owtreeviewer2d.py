@@ -384,7 +384,6 @@ class OWTreeViewer2D(OWWidget, openclass=True):
         self.infolabel = gui.widgetLabel(box, 'No tree.')
 
         layout = QFormLayout()
-        layout.setVerticalSpacing(20)
         layout.setFieldGrowthPolicy(layout.ExpandingFieldsGrow)
         box = self.display_box = \
             gui.widgetBox(self.controlArea, "Display", addSpace=True,
@@ -417,7 +416,6 @@ class OWTreeViewer2D(OWWidget, openclass=True):
                          addToLayout=False,
                          callback=self.toggle_line_width, sizePolicy=policy))
         gui.rubber(self.controlArea)
-        self.resize(800, 500)
 
         self.scene = TreeGraphicsScene(self)
         self.scene_view = TreeGraphicsView(self.scene)
