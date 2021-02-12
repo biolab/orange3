@@ -74,14 +74,10 @@ class OWPurgeDomain(widget.OWWidget):
             frame = QFrame()
             frame.setFrameShape(QFrame.HLine)
             frame.setFrameShadow(QFrame.Sunken)
-            parent.layout().addSpacing(6)
             parent.layout().addWidget(frame)
-            parent.layout().addSpacing(6)
 
         boxAt = gui.vBox(self.controlArea, "Features")
-        for not_first, (value, label) in enumerate(self.feature_options):
-            if not_first:
-                gui.separator(boxAt, 2)
+        for value, label in self.feature_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
         add_line(boxAt)
@@ -90,9 +86,7 @@ class OWPurgeDomain(widget.OWWidget):
                   "reduced: %(reducedAttrs)s, removed: %(removedAttrs)s")
 
         boxAt = gui.vBox(self.controlArea, "Classes", addSpace=True)
-        for not_first, (value, label) in enumerate(self.class_options):
-            if not_first:
-                gui.separator(boxAt, 2)
+        for value, label in self.class_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
         add_line(boxAt)
@@ -101,9 +95,7 @@ class OWPurgeDomain(widget.OWWidget):
                   "reduced: %(reducedClasses)s, removed: %(removedClasses)s")
 
         boxAt = gui.vBox(self.controlArea, "Meta attributes", addSpace=True)
-        for not_first, (value, label) in enumerate(self.meta_options):
-            if not_first:
-                gui.separator(boxAt, 2)
+        for value, label in self.meta_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
         add_line(boxAt)
