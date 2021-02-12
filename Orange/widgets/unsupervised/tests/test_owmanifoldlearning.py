@@ -102,7 +102,7 @@ class TestOWManifoldLearning(WidgetTest):
             self.assertFalse(self.widget.Error.manifold_error.is_shown())
 
         simulate.combobox_run_through_all(
-            self.widget.tsne_editor.metric_combo, callback=__callback,
+            self.widget.tsne_editor.controls.metric_index, callback=__callback,
         )
 
     def test_unique_domain(self):
