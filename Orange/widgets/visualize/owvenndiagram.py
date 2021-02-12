@@ -104,7 +104,6 @@ class OWVennDiagram(widget.OWWidget):
         self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing)
-        self.view.setBackgroundRole(QPalette.Window)
         self.view.setFrameStyle(QGraphicsView.StyledPanel)
 
         self.controlArea.layout().addWidget(self.view)
