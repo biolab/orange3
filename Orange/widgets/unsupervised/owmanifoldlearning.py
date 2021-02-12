@@ -3,7 +3,8 @@ from itertools import chain
 
 import numpy as np
 
-from AnyQt.QtWidgets import QWidget, QVBoxLayout
+from AnyQt.QtWidgets import QWidget, QFormLayout
+from AnyQt.QtGui import QFontMetrics
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable
@@ -25,11 +26,10 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         self.parameters = {}
         self.parent_callback = parent.settings_changed
 
-        # GUI
-        self.setMinimumWidth(221)
-        self.setLayout(QVBoxLayout())
-        self.layout().setContentsMargins(0, 0, 0, 0)
-        self.main_area = gui.vBox(self, spacing=0)
+        layout = QFormLayout()
+        self.setLayout(layout)
+        layout.setVerticalSpacing(4)
+        layout.setContentsMargins(0, 0, 0, 0)
 
     def get_parameters(self):
         return self.parameters
@@ -40,11 +40,15 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
 
     def _create_spin_parameter(self, name, minv, maxv, label):
         self.__spin_parameter_update(name)
-        return gui.spin(
-            self.main_area, self, name, minv, maxv, label=label,
+        width = QFontMetrics(self.font()).width("0" * 10)
+        control = gui.spin(
+            self, self, name, minv, maxv,
             alignment=Qt.AlignRight, callbackOnReturn=True,
+            addToLayout=False, controlWidth=width,
             callback=lambda f=self.__spin_parameter_update,
                             p=name: self.__parameter_changed(f, p))
+        self.layout().addRow(label, control)
+        return control
 
     def __spin_parameter_update(self, name):
         self.parameters[name] = getattr(self, name)
@@ -52,11 +56,13 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
     def _create_combo_parameter(self, name, label):
         self.__combo_parameter_update(name)
         items = (x[1] for x in getattr(self, name + "_values"))
-        return gui.comboBox(
-            self.main_area, self, name + "_index", label=label, items=items,
-            orientation=Qt.Horizontal,
+        control = gui.comboBox(
+            None, self, name + "_index", items=items,
             callback=lambda f=self.__combo_parameter_update,
-                            p=name: self.__parameter_changed(f, p))
+                            p=name: self.__parameter_changed(f, p)
+        )
+        self.layout().addRow(label, control)
+        return control
 
     def __combo_parameter_update(self, name):
         index = getattr(self, name + "_index")
@@ -79,15 +85,17 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
     def _create_radio_parameter(self, name, label):
         self.__radio_parameter_update(name)
         values = (x[1] for x in getattr(self, name + "_values"))
-        gui.separator(self.main_area)
-        box = gui.hBox(self.main_area)
-        lbl = gui.label(box, self, label + ":")
+        space = QWidget()
+        space.setFixedHeight(4)
+        self.layout().addRow(space)
         rbt = gui.radioButtons(
-            box, self, name + "_index", btnLabels=values,
+            None, self, name + "_index", btnLabels=values,
             callback=lambda f=self.__radio_parameter_update,
                             p=name: self.__parameter_changed(f, p))
-        rbt.layout().setAlignment(Qt.AlignTop)
-        lbl.setAlignment(Qt.AlignTop)
+        labox = gui.vBox(None)
+        gui.widgetLabel(labox, label)
+        gui.rubber(labox)
+        self.layout().addRow(labox, rbt)
         return rbt
 
     def __radio_parameter_update(self, name):
@@ -137,7 +145,7 @@ class MDSParametersEditor(ManifoldParametersEditor):
         self.max_iter_spin = self._create_spin_parameter(
             "max_iter", 10, 10 ** 4, "Max iterations:")
         self.random_state_radio = self._create_radio_parameter(
-            "init_type", "Initialization")
+            "init_type", "Initialization:")
 
     def get_parameters(self):
         par = super().get_parameters()
@@ -253,7 +261,7 @@ class OWManifoldLearning(OWWidget):
         self._set_input_summary()
         self._set_output_summary(None)
 
-        self.params_box = gui.vBox(self.controlArea, "Parameters")
+        self.params_box = gui.vBox(method_box)
 
         self.tsne_editor = TSNEParametersEditor(self)
         self.mds_editor = MDSParametersEditor(self)
@@ -273,8 +281,10 @@ class OWManifoldLearning(OWWidget):
         output_box = gui.vBox(self.controlArea, "Output")
         self.n_components_spin = gui.spin(
             output_box, self, "n_components", 1, 10, label="Components:",
+            controlWidth=QFontMetrics(self.font()).width("0" * 10),
             alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
+        gui.rubber(self.n_components_spin.box)
         self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
 
     def manifold_method_changed(self):
