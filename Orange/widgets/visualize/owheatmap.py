@@ -372,6 +372,7 @@ class OWHeatMap(widget.OWWidget):
 
         gui.checkBox(box, self, 'averages', 'Stripes with averages',
                      callback=self.update_averages_stripe)
+        gui.separator(box)
         annotbox = QGroupBox("Row Annotations")
         form = QFormLayout(
             annotbox,
