@@ -294,6 +294,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def _add_controls(self):
         self._add_controls_start_box()
         super()._add_controls()
+        gui.rubber(self.controlArea)
 
     def _add_controls_start_box(self):
         box = gui.vBox(self.controlArea, True)
@@ -301,18 +302,17 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
-            verticalSpacing=10,
         )
 
         self.perplexity_spin = gui.spin(
             box, self, "perplexity", 1, 500, step=1, alignment=Qt.AlignRight,
-            callback=self._invalidate_affinities,
+            callback=self._invalidate_affinities, addToLayout=False
         )
         self.controls.perplexity.setDisabled(self.multiscale)
         form.addRow("Perplexity:", self.perplexity_spin)
         form.addRow(gui.checkBox(
             box, self, "multiscale", label="Preserve global structure",
-            callback=self._multiscale_changed,
+            callback=self._multiscale_changed, addToLayout=False
         ))
 
         sbe = gui.hBox(self.controlArea, False, addToLayout=False)
@@ -331,13 +331,12 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         self.normalize_cbx = gui.checkBox(
             box, self, "normalize", "Normalize data",
-            callback=self._invalidate_pca_projection,
+            callback=self._invalidate_pca_projection, addToLayout=False
         )
         form.addRow(self.normalize_cbx)
 
         box.layout().addLayout(form)
 
-        gui.separator(box, 10)
         self.run_button = gui.button(box, self, "Start", callback=self._toggle_run)
 
     def _multiscale_changed(self):
