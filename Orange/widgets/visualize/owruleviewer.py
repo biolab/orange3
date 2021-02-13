@@ -70,9 +70,7 @@ class OWRuleViewer(widget.OWWidget):
         self.controlArea.layout().addWidget(self.view)
 
         gui.checkBox(widget=self.buttonsArea, master=self, value="compact_view",
-                     label="Compact view", callback=self.on_update,
-                     box=True)
-
+                     label="Compact view", callback=self.on_update)
         gui.rubber(self.buttonsArea)
 
         original_order_button = gui.button(
