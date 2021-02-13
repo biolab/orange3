@@ -97,7 +97,7 @@ class OWPredictions(OWWidget):
                     callback=self._update_prediction_delegate,
                     selectionMode=QListWidget.ExtendedSelection,
                     addSpace=False,
-                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred),
+                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding),
                     sizeHint=QSize(1, 350),
                     minimumHeight=100)
         self.reset_button = gui.button(
