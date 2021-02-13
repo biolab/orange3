@@ -269,7 +269,7 @@ class OWSelectRows(widget.OWWidget):
             box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        box_setting = gui.vBox(self.buttonsArea, box=True)
+        box_setting = gui.vBox(self.buttonsArea)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
@@ -280,7 +280,7 @@ class OWSelectRows(widget.OWWidget):
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
 
-        acbox = gui.auto_send(self.buttonsArea, self, "auto_commit", box=True)
+        acbox = gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
