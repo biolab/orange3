@@ -108,6 +108,8 @@ class OWLiftCurve(widget.OWWidget):
                      "Show convex hull", box="Settings", callback=self._replot,
                      addSpace=False)
 
+        gui.rubber(self.controlArea)
+
         self.plotview = pg.GraphicsView(background="w")
         self.plotview.setFrameStyle(QFrame.StyledPanel)
 
