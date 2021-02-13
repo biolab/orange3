@@ -117,13 +117,13 @@ class OWVennDiagram(widget.OWWidget):
 
         self.scene.addItem(self.vennwidget)
 
-        controls = gui.hBox(self.buttonsArea)
         box = gui.radioButtonsInBox(
-            controls, self, 'rowwise',
+            self.buttonsArea, self, 'rowwise',
             ["Columns (features)", "Rows (instances), matched by", ],
-            box="Elements", callback=self._on_matching_changed
+            callback=self._on_matching_changed
         )
-        gui.rubber(controls)
+        gui.rubber(self.buttonsArea)
+        gui.separator(self.buttonsArea, 10, 0)
         gui.comboBox(
             gui.indentedBox(box,
                             gui.checkButtonOffsetHint(box.buttons[0]),
@@ -138,7 +138,7 @@ class OWVennDiagram(widget.OWWidget):
         box.layout().setSpacing(6)
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
-        self.outputs_box = box = gui.vBox(controls, "Output",
+        self.outputs_box = box = gui.vBox(self.buttonsArea,
                                           sizePolicy=(QSizePolicy.Preferred,
                                                       QSizePolicy.Preferred),
                                           stretch=0)
