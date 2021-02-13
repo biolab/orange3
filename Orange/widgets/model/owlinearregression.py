@@ -62,7 +62,6 @@ class OWLinearRegression(OWBaseLearner):
                          btnLabels=self.REGULARIZATION_TYPES,
                          callback=self._reg_type_changed)
 
-        gui.separator(box, 20, 20)
         self.alpha_box = box2 = gui.vBox(box, margin=10)
         gui.widgetLabel(box2, "Regularization strength:")
         gui.hSlider(
@@ -74,7 +73,6 @@ class OWLinearRegression(OWBaseLearner):
         self.alpha_label = gui.widgetLabel(box3, "")
         self._set_alpha_label()
 
-        gui.separator(box2, 10, 10)
         box4 = gui.vBox(box2, margin=0)
         gui.widgetLabel(box4, "Elastic net mixing:")
         box5 = gui.hBox(box4)
