@@ -523,7 +523,7 @@ class OWCreateInstance(OWWidget):
         # pylint: disable=unnecessary-lambda
         append = gui.checkBox(self.buttonsArea, self, "append_to_data",
                               "Append this instance to input data",
-                              box=True, callback=lambda: self.commit())
+                              callback=lambda: self.commit())
         gui.rubber(self.buttonsArea)
         box = gui.auto_apply(self.buttonsArea, self, "auto_commit")
 

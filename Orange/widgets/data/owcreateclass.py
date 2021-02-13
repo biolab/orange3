@@ -173,6 +173,7 @@ class OWCreateClass(widget.OWWidget):
         data = Output("Data", Table)
 
     want_main_area = False
+    buttons_area_orientation = Qt.Vertical
 
     settingsHandler = DomainContextHandler()
     attribute = ContextSetting(None)
