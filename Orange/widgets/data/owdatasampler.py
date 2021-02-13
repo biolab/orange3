@@ -154,7 +154,7 @@ class OWDataSampler(OWWidget):
         spin.setSuffix(" %")
         self.sql_box.setVisible(False)
 
-        self.options_box = gui.vBox(self.controlArea, "Options")
+        self.options_box = gui.vBox(self.controlArea, "Options", addSpaceBefore=False)
         self.cb_seed = gui.checkBox(
             self.options_box, self, "use_seed",
             "Replicable (deterministic) sampling",
