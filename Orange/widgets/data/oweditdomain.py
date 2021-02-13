@@ -1847,9 +1847,11 @@ class OWEditDomain(widget.OWWidget):
 
         self.le_output_name = gui.lineEdit(
             self.buttonsArea, self, "output_table_name", "Output table name: ",
-            box=True, orientation=Qt.Horizontal)
+            orientation=Qt.Horizontal)
 
-        bbox = gui.hBox(self.buttonsArea, box=True)
+        gui.rubber(self.buttonsArea)
+
+        bbox = gui.hBox(self.buttonsArea)
         breset_all = gui.button(
             bbox, self, "Reset All",
             objectName="button-reset-all",
