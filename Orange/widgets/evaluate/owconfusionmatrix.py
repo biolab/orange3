@@ -132,11 +132,11 @@ class OWConfusionMatrix(widget.OWWidget):
         self.headers = []
 
         self.learners_box = gui.listBox(
-            self.controlArea, self, "selected_learner", "learners", box=True,
+            self.controlArea, self, "selected_learner", "learners", box='Learners',
             callback=self._learner_changed
         )
 
-        self.outputbox = gui.vBox(self.buttonsArea, "Output")
+        self.outputbox = gui.vBox(self.buttonsArea)
         box = gui.hBox(self.outputbox)
         gui.checkBox(box, self, "append_predictions",
                      "Predictions", callback=self._invalidate)
