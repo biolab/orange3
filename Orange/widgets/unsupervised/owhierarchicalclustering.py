@@ -638,9 +638,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         annotated_data = create_annotated_table(data, selected_indices)
         self.Outputs.annotated_data.send(annotated_data)
 
-    def sizeHint(self):
-        return QSize(800, 500)
-
     def eventFilter(self, obj, event):
         if obj is self.view.viewport() and event.type() == QEvent.Resize:
             # NOTE: not using viewport.width(), due to 'transient' scroll bars
