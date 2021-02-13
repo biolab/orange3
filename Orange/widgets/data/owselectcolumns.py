@@ -296,11 +296,9 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(bbox, 2, 1, 1, 1)
 
         # footer
-        gui.separator(self.buttonsArea)
         gui.button(self.buttonsArea, self, "Reset", callback=self.reset)
-        gui.separator(self.buttonsArea)
 
-        bbox = gui.vBox(self.buttonsArea, box=True)
+        bbox = gui.vBox(self.buttonsArea)
         gui.checkBox(
             widget=bbox,
             master=self,
