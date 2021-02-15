@@ -742,7 +742,7 @@ class OWPlotGUI:
             self.LabelOnlySelected], box)
         return box
 
-    def effects_box(self, widget, box=True):
+    def effects_box(self, widget, box=False):
         """
         Create a box with controls for common plot settings
         """
@@ -759,7 +759,7 @@ class OWPlotGUI:
         """
         return self.create_box([
             self.ClassDensity,
-            self.ShowLegend], widget, box, True)
+            self.ShowLegend], widget, box, False)
 
     _functions = {
         ShowFilledSymbols: filled_symbols_check_box,
