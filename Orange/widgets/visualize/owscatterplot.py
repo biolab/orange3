@@ -298,7 +298,8 @@ class OWScatterPlot(OWDataProjectionWidget):
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
             contentsLength=12, searchable=True
         )
-        self.attr_box = gui.vBox(self.controlArea, True, spacing=2)
+        self.attr_box = gui.vBox(self.controlArea, 'Axes',
+                                 spacing=2 if gui.is_macstyle() else 8)
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=ContinuousVariable)
         self.cb_attr_x = gui.comboBox(
