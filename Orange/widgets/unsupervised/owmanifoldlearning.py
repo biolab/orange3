@@ -67,19 +67,6 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         values = getattr(self, name + "_values")
         self.parameters[name] = values[index][0]
 
-    def _create_check_parameter(self, name, label):
-        self.__check_parameter_update(name)
-        box = gui.hBox(self.main_area)
-        return gui.checkBox(
-            box, self, name, label,
-            callback=lambda f=self.__check_parameter_update,
-                            p=name: self.__parameter_changed(f, p))
-
-    def __check_parameter_update(self, name):
-        checked = getattr(self, name)
-        values = getattr(self, name + "_values")
-        self.parameters[name] = values[checked]
-
     def _create_radio_parameter(self, name, label):
         self.__radio_parameter_update(name)
         values = (x[1] for x in getattr(self, name + "_values"))
