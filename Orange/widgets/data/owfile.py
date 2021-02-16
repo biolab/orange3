@@ -1,7 +1,6 @@
 import os
 import logging
 from itertools import chain
-from warnings import catch_warnings
 from urllib.parse import urlparse
 from typing import List
 
@@ -13,6 +12,7 @@ from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
+from Orange.util import log_warnings
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
@@ -366,7 +366,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         except Exception:
             return self.Error.sheet_error
 
-        with catch_warnings(record=True) as warnings:
+        with log_warnings() as warnings:
             try:
                 data = self.reader.read()
             except Exception as ex:

@@ -1,7 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 from os import path, remove, getcwd
 from os.path import dirname
+import unittest
 from unittest.mock import Mock, patch
 import pickle
 import tempfile
@@ -648,8 +649,30 @@ a
         self.widget._get_reader = lambda: reader
         self.widget.last_path = lambda: "foo"
         self.widget._update_sheet_combo = Mock()
+
+        # Warning must be caught by unit tests, but not the widget
+        with self.assertWarns(UserWarning):
+            self.widget._try_load()
+            self.assertFalse(self.widget.Warning.load_warning.is_shown())
+
+
+    @patch("os.path.exists", new=lambda _: True)
+    def test_warning_from_this_thread(self):
+        WARNING_MSG = "warning from this thread"
+
+        def read():
+            warnings.warn(WARNING_MSG)
+            return Table(TITANIC_PATH)
+
+        reader = Mock()
+        reader.read = read
+        self.widget._get_reader = lambda: reader
+        self.widget.last_path = lambda: "foo"
+        self.widget._update_sheet_combo = Mock()
+
         self.widget._try_load()
-        self.assertFalse(self.widget.Warning.load_warning.is_shown())
+        self.assertTrue(self.widget.Warning.load_warning.is_shown())
+        self.assertIn(WARNING_MSG, str(self.widget.Warning.load_warning))
 
 
 if __name__ == "__main__":
