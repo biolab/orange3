@@ -264,7 +264,7 @@ class _BaseExcelReader(FileFormat, DataTableMixin):
             cells = self.get_cells()
             table = self.data_table(cells)
             table.name = path.splitext(path.split(self.filename)[-1])[0]
-            if self.sheet:
+            if self.sheet and len(self.sheets) > 1:
                 table.name = '-'.join((table.name, self.sheet))
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
@@ -276,6 +276,10 @@ class ExcelReader(_BaseExcelReader):
     EXTENSIONS = ('.xlsx',)
     DESCRIPTION = 'Microsoft Excel spreadsheet'
     ERRORS = ("#VALUE!", "#DIV/0!", "#REF!", "#NUM!", "#NULL!", "#NAME?")
+
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.sheet = self.workbook.active.title
 
     @property
     def workbook(self) -> openpyxl.Workbook:
@@ -339,6 +343,10 @@ class XlsReader(_BaseExcelReader):
     """Reader for .xls files"""
     EXTENSIONS = ('.xls',)
     DESCRIPTION = 'Microsoft Excel 97-2004 spreadsheet'
+
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.sheet = self.workbook.sheet_by_index(0).name
 
     @property
     def workbook(self) -> xlrd.Book:

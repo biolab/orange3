@@ -603,3 +603,22 @@ a
             self.assertEqual(w.recent_paths[0].relpath, base_name)
         finally:
             remove(file_name)
+
+    def test_sheets(self):
+        # pylint: disable=protected-access
+        widget = self.widget
+        combo = widget.sheet_combo
+        widget.last_path = \
+            lambda: path.join(path.dirname(__file__), '..', "..", '..',
+                              'tests', 'xlsx_files', 'header_0_sheet.xlsx')
+        widget._try_load()
+        widget.reader.sheet = "my_sheet"
+        widget._select_active_sheet()
+        self.assertEqual(combo.itemText(0), "Sheet1")
+        self.assertEqual(combo.itemText(1), "my_sheet")
+        self.assertEqual(combo.itemText(2), "Sheet3")
+        self.assertEqual(combo.currentIndex(), 1)
+
+        widget.reader.sheet = "no such sheet"
+        widget._select_active_sheet()
+        self.assertEqual(combo.currentIndex(), 0)
