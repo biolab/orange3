@@ -162,7 +162,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         layout = QGridLayout()
         layout.setSpacing(4)
-        gui.widgetBox(self.controlArea, orientation=layout, box=True)
+        gui.widgetBox(self.controlArea, orientation=layout, box='Source')
         vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
                                 callback=self.load_data, addToLayout=False)
 
