@@ -147,6 +147,8 @@ class EqualFreq(Discretization):
         else:
             d = distribution.get_distribution(data, attribute)
             points = _discretize.split_eq_freq(d, self.n)
+            # np.unique handles cases in which differences are below precision
+            points = list(np.unique(points))
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
 
