@@ -15,7 +15,16 @@ ID = "orange.widgets.visualize"
 
 DESCRIPTION = "Widgets for data visualization."
 
-BACKGROUND = "#FFB7B1"
+from AnyQt.QtGui import QPalette
+
+BACKGROUND = {
+    'light': {
+        QPalette.Light: '#f2b6b8',
+        QPalette.Midlight: '#ff8a99',
+        QPalette.Button: '#ff7a8a',
+    },
+    'plain': "#FFB7B1",
+}
 
 ICON = "icons/Category-Visualize.svg"
 

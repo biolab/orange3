@@ -1,3 +1,4 @@
+
 NAME = "Data"
 
 ID = "orange.widgets.data"
@@ -12,6 +13,15 @@ loading, importing, saving, preprocessing, selection, etc.
 
 ICON = "icons/Category-Data.svg"
 
-BACKGROUND = "#FFD39F"
+from AnyQt.QtGui import QPalette
+
+BACKGROUND = {
+    'light': {
+        QPalette.Light: '#febc57',
+        QPalette.Midlight: '#fe9457',
+        QPalette.Button: '#fe9057',
+    },
+    'plain': "#FFD39F",
+}
 
 PRIORITY = 1

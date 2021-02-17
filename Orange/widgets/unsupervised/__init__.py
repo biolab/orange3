@@ -13,7 +13,16 @@ NAME = "Unsupervised"
 
 DESCRIPTION = "Unsupervised learning."
 
-BACKGROUND = "#CAE1EF"
+from AnyQt.QtGui import QPalette
+
+BACKGROUND = {
+    'light': {
+        QPalette.Light: '#aed2d9',
+        QPalette.Midlight: '#5abced',
+        QPalette.Button: '#499fd8',
+    },
+    'plain': "#CAE1EF",
+}
 
 ICON = "icons/Category-Unsupervised.svg"
 

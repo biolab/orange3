@@ -4,7 +4,16 @@ NAME = 'Model'
 
 DESCRIPTION = 'Prediction.'
 
-BACKGROUND = '#FAC1D9'
+from AnyQt.QtGui import QPalette
+
+BACKGROUND = {
+    'light': {
+        QPalette.Light: '#ffbddb',
+        QPalette.Midlight: '#ff8dc6',
+        QPalette.Button: '#f175b6',
+    },
+    'plain': "#FAC1D9",
+}
 
 ICON = 'icons/Category-Model.svg'
 
