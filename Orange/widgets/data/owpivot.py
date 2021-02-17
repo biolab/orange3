@@ -780,22 +780,28 @@ class OWPivot(OWWidget):
         self._add_main_area_controls()
 
     def _add_control_area_controls(self):
-        box = gui.vBox(self.controlArea, box=True)
-        gui.comboBox(box, self, "row_feature", label="Rows", contentsLength=12,
+        gui.comboBox(gui.vBox(self.controlArea, box="Rows"),
+                     self, "row_feature",
+                     contentsLength=14,
                      searchable=True,
                      model=DomainModel(valid_types=DomainModel.PRIMITIVE),
-                     callback=self.__feature_changed)
-        gui.comboBox(box, self, "col_feature", label="Columns",
-                     contentsLength=12,
+                     callback=self.__feature_changed,
+                     orientation=Qt.Horizontal)
+        gui.comboBox(gui.vBox(self.controlArea, box="Columns"),
+                     self, "col_feature",
+                     contentsLength=14,
                      searchable=True,
                      model=DomainModel(placeholder="(Same as rows)",
                                        valid_types=DiscreteVariable),
-                     callback=self.__feature_changed,)
-        gui.comboBox(box, self, "val_feature", label="Values",
-                     contentsLength=12,
+                     callback=self.__feature_changed,
+                     orientation=Qt.Horizontal)
+        gui.comboBox(gui.vBox(self.controlArea, box="Values"),
+                     self, "val_feature",
+                     contentsLength=14,
                      searchable=True,
                      model=DomainModel(placeholder="(None)"),
-                     callback=self.__val_feature_changed)
+                     callback=self.__val_feature_changed,
+                     orientation=Qt.Horizontal)
         self.__add_aggregation_controls()
         gui.rubber(self.controlArea)
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
