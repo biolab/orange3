@@ -8,7 +8,8 @@ from typing import Any, Callable, List, Tuple
 
 import numpy as np
 from AnyQt.QtCore import (
-    QItemSelection, QItemSelectionModel, QItemSelectionRange, Qt
+    QItemSelection, QItemSelectionModel, QItemSelectionRange, Qt,
+    pyqtSignal as Signal
 )
 from AnyQt.QtGui import QFontMetrics
 from AnyQt.QtWidgets import (
@@ -76,6 +77,8 @@ SCORES = CLS_SCORES + REG_SCORES
 
 
 class TableView(QTableView):
+    manualSelection = Signal()
+
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent=parent,
                          selectionBehavior=QTableView.SelectRows,
@@ -104,6 +107,10 @@ class TableView(QTableView):
         header = self.verticalHeader()
         width = QFontMetrics(header.font()).width(max_label)
         header.setFixedWidth(min(width + 40, 400))
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        self.manualSelection.emit()
 
 
 class TableModel(PyTableModel):
@@ -310,7 +317,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         def _set_select_manual():
             self.setSelectionMethod(OWRank.SelectManual)
 
-        view.pressed.connect(_set_select_manual)
+        view.manualSelection.connect(_set_select_manual)
         view.verticalHeader().sectionClicked.connect(_set_select_manual)
         view.horizontalHeader().sectionClicked.connect(self.headerClick)
 
