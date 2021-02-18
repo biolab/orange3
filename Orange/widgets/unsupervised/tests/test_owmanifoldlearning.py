@@ -6,6 +6,8 @@ from unittest.mock import patch, Mock
 import numpy as np
 from scipy import sparse
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate, possible_duplicate_table
@@ -176,7 +178,7 @@ class TestOWManifoldLearning(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

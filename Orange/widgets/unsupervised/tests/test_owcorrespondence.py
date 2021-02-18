@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owcorrespondence \
@@ -107,7 +109,7 @@ class TestOWCorrespondence(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

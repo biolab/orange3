@@ -7,6 +7,8 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QRadioButton
 from sklearn.metrics import silhouette_score
 
+from orangewidget.widget import StateInfo
+
 import Orange.clustering
 from Orange.data import Table, Domain
 from Orange.widgets import gui
@@ -540,9 +542,9 @@ class TestOWKMeans(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 

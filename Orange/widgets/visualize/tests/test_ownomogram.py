@@ -7,6 +7,8 @@ import numpy as np
 
 from AnyQt.QtCore import QPoint, QPropertyAnimation
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import (
     NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
@@ -292,7 +294,7 @@ class TestOWNomogram(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
 
     def test_dots_stop_flashing(self):

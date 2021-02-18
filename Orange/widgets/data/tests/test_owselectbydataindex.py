@@ -1,4 +1,7 @@
 # pylint: disable=protected-access
+
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, Domain
 from Orange.widgets.data.owselectbydataindex import OWSelectByDataIndex
 from Orange.widgets.tests.base import WidgetTest
@@ -77,11 +80,11 @@ class TestOWSelectSubset(WidgetTest):
             data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.data_subset, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

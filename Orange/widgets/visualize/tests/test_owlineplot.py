@@ -16,6 +16,8 @@ from pyqtgraph.Point import Point
 
 from orangewidget.tests.base import DEFAULT_TIMEOUT
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets
@@ -310,7 +312,7 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         sel_indices = list(range(5))
@@ -321,9 +323,9 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):

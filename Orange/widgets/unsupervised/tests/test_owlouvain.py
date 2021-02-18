@@ -4,6 +4,7 @@ from unittest.mock import patch
 import numpy as np
 from sklearn.utils import check_random_state
 
+from orangewidget.widget import StateInfo
 from orangewidget.settings import Context
 
 from Orange.data import Table, Domain, ContinuousVariable
@@ -288,7 +289,7 @@ class TestOWLouvain(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

@@ -5,6 +5,8 @@ import unittest
 
 from os import path
 
+from orangewidget.widget import StateInfo
+
 from Orange.classification.random_forest import RandomForestLearner
 from Orange.data import Table
 from Orange.modelling import TreeLearner
@@ -419,7 +421,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         no_output = "No data on output"
 
         self.send_signal(self.widget.Inputs.tree, self.titanic)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -428,7 +430,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.tree, None)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 if __name__ == "__main__":

@@ -7,6 +7,8 @@ import numpy as np
 from AnyQt.QtCore import QPoint, Qt
 from AnyQt.QtTest import QTest
 
+from orangewidget.widget import StateInfo
+
 import Orange.misc
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.distance import Euclidean
@@ -181,7 +183,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.distances, self.distances)
         self.assertEqual(info._StateInfo__input_summary.brief, matrix_len)
         self.assertEqual(info._StateInfo__input_summary.details, matrix_len)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -190,7 +192,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.distances, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

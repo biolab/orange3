@@ -4,6 +4,8 @@
 import unittest
 from unittest.mock import patch, Mock
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.classification import LocalOutlierFactorLearner
 from Orange.widgets.data.owoutliers import OWOutliers, run
@@ -136,8 +138,8 @@ class TestOWOutliers(WidgetTest):
 
     def test_in_out_summary(self):
         info = self.widget.info
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, "No data on input")
         self.assertEqual(info._StateInfo__output_summary.details, "No data on output")
 
@@ -153,8 +155,8 @@ class TestOWOutliers(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, None)
         self.wait_until_finished()
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, "No data on input")
         self.assertEqual(info._StateInfo__output_summary.details, "No data on output")
 

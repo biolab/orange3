@@ -2,6 +2,8 @@
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QApplication
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.classification import CN2Learner
@@ -168,14 +170,14 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.classifier, self.classifier)
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -184,14 +186,14 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         summary, details = f"{len(output)}", format_summary_details(output)
         self.assertEqual(info._StateInfo__output_summary.brief, summary)
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.classifier, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
