@@ -34,6 +34,7 @@ from orangewidget.gui import (
     CalendarWidgetWithTime, DateTimeEditWCalendarTime,
     ControlGetter, VerticalScrollArea, ProgressBar,
     ControlledCallback, ControlledCallFront, ValueCallback, connectControl,
+    is_macstyle
 )
 
 
@@ -67,7 +68,7 @@ __all__ = [
     "BarRatioRole", "BarBrushRole", "SortOrderRole", "LinkRole",
     "BarItemDelegate", "IndicatorItemDelegate", "LinkStyledItemDelegate",
     "ColoredBarItemDelegate", "HorizontalGridDelegate", "VerticalItemDelegate",
-    "ValueCallback",
+    "ValueCallback", 'is_macstyle',
     # Defined here
     "createAttributePixmap", "attributeIconDict", "attributeItem",
     "listView", "ListViewWithSizeHint", "listBox", "OrangeListBox",
