@@ -19,20 +19,27 @@ from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg, Input, Output
 
 
-def map_by_substring(a, patterns, case_sensitive, match_beginning):
+def map_by_substring(a, patterns, case_sensitive, match_beginning,
+                     map_values=None):
     """
     Map values in a using a list of patterns. The patterns are considered in
     order of appearance.
 
     Args:
         a (np.array): input array of `dtype` `str`
-        patterns (list of str): list of stirngs
+        patterns (list of str): list of strings
         case_sensitive (bool): case sensitive match
         match_beginning (bool): match only at the beginning of the string
+        map_values (list of int): list of len(pattens);
+                                  contains return values for each pattern
 
     Returns:
         np.array of floats representing indices of matched patterns
     """
+    if map_values is None:
+        map_values = np.arange(len(patterns))
+    else:
+        map_values = np.array(map_values, dtype=int)
     res = np.full(len(a), np.nan)
     if not case_sensitive:
         a = np.char.lower(a)
@@ -40,7 +47,7 @@ def map_by_substring(a, patterns, case_sensitive, match_beginning):
     for val_idx, pattern in reversed(list(enumerate(patterns))):
         indices = np.char.find(a, pattern)
         matches = indices == 0 if match_beginning else indices != -1
-        res[matches] = val_idx
+        res[matches] = map_values[val_idx]
     return res
 
 
@@ -62,11 +69,12 @@ class ValueFromStringSubstring(Transformation):
             appear at the beginning of the string
     """
     def __init__(self, variable, patterns,
-                 case_sensitive=False, match_beginning=False):
+                 case_sensitive=False, match_beginning=False, map_values=None):
         super().__init__(variable)
         self.patterns = patterns
         self.case_sensitive = case_sensitive
         self.match_beginning = match_beginning
+        self.map_values = map_values
 
     def transform(self, c):
         """
@@ -82,7 +90,8 @@ class ValueFromStringSubstring(Transformation):
         c = c.astype(str)
         c[nans] = ""
         res = map_by_substring(
-            c, self.patterns, self.case_sensitive, self.match_beginning)
+            c, self.patterns, self.case_sensitive, self.match_beginning,
+            self.map_values)
         res[nans] = np.nan
         return res
 
@@ -90,12 +99,14 @@ class ValueFromStringSubstring(Transformation):
         return super().__eq__(other) \
                and self.patterns == other.patterns \
                and self.case_sensitive == other.case_sensitive \
-               and self.match_beginning == other.match_beginning
+               and self.match_beginning == other.match_beginning \
+               and self.map_values == other.map_values
 
     def __hash__(self):
         return hash((type(self), self.variable,
                      tuple(self.patterns),
-                     self.case_sensitive, self.match_beginning))
+                     self.case_sensitive, self.match_beginning,
+                     self.map_values))
 
 
 class ValueFromDiscreteSubstring(Lookup):
@@ -117,10 +128,12 @@ class ValueFromDiscreteSubstring(Lookup):
             appear at the beginning of the string
     """
     def __init__(self, variable, patterns,
-                 case_sensitive=False, match_beginning=False):
+                 case_sensitive=False, match_beginning=False,
+                 map_values=None):
         super().__init__(variable, [])
         self.case_sensitive = case_sensitive
         self.match_beginning = match_beginning
+        self.map_values = map_values
         self.patterns = patterns  # Finally triggers computation of the lookup
 
     def __setattr__(self, key, value):
@@ -129,10 +142,21 @@ class ValueFromDiscreteSubstring(Lookup):
         super().__setattr__(key, value)
         if hasattr(self, "patterns") and \
                 key in ("case_sensitive", "match_beginning", "patterns",
-                        "variable"):
+                        "variable", "map_values"):
             self.lookup_table = map_by_substring(
                 self.variable.values, self.patterns,
-                self.case_sensitive, self.match_beginning)
+                self.case_sensitive, self.match_beginning, self.map_values)
+
+
+def unique_in_order_mapping(a):
+    """ Return
+    - unique elements of the input list (in the order of appearance)
+    - indices of the input list onto the returned uniques
+    """
+    u, idx, inv = np.unique(a, return_index=True, return_inverse=True)
+    unique_in_order = u[np.argsort(idx)]
+    mapping = np.argsort(idx)[inv]
+    return unique_in_order, mapping
 
 
 class OWCreateClass(widget.OWWidget):
@@ -514,13 +538,19 @@ class OWCreateClass(widget.OWWidget):
             if valid)
         transformer = self.TRANSFORMERS[type(self.attribute)]
 
+        # join patters with the same names
+        names, map_values = unique_in_order_mapping(names)
+        names = tuple(str(a) for a in names)
+        map_values = tuple(map_values)
+
         var_key = (self.attribute, self.class_name, names,
-                   patterns, self.case_sensitive, self.match_beginning)
+                   patterns, self.case_sensitive, self.match_beginning, map_values)
         if var_key in self.cached_variables:
             return self.cached_variables[var_key]
 
         compute_value = transformer(
-            self.attribute, patterns, self.case_sensitive, self.match_beginning)
+            self.attribute, patterns, self.case_sensitive, self.match_beginning,
+            map_values)
         new_var = DiscreteVariable(
             self.class_name, names, compute_value=compute_value)
         self.cached_variables[var_key] = new_var
