@@ -3,6 +3,8 @@ import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
+import scipy.sparse as sp
+
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QRadioButton
 from sklearn.metrics import silhouette_score
@@ -333,6 +335,40 @@ class TestOWKMeans(WidgetTest):
         widget.clusterings = {k: "error" for k in range(2, 7)}
         widget.update_results()
         self.assertEqual(widget.selected_row(), None)
+
+    @patch("Orange.widgets.unsupervised.owkmeans.Normalize")
+    def test_normalize_sparse(self, normalize):
+        normalization = normalize.return_value = Mock(return_value=self.data)
+        widget = self.widget
+        widget.normalize = True
+
+        x = sp.csr_matrix(np.random.randint(0, 2, (5, 10)))
+        data = Table.from_numpy(None, x)
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertTrue(widget.Warning.no_sparse_normalization.is_shown())
+        normalization.assert_not_called()
+
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.Warning.no_sparse_normalization.is_shown())
+        normalization.assert_not_called()
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertTrue(widget.Warning.no_sparse_normalization.is_shown())
+        normalization.assert_not_called()
+
+        self.send_signal(widget.Inputs.data, self.data)
+        self.assertFalse(widget.Warning.no_sparse_normalization.is_shown())
+        normalization.assert_called()
+        normalization.reset_mock()
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertTrue(widget.Warning.no_sparse_normalization.is_shown())
+        normalization.assert_not_called()
+
+        widget.controls.normalize.click()
+        self.assertFalse(widget.Warning.no_sparse_normalization.is_shown())
+        normalization.assert_not_called()
 
     def test_report(self):
         widget = self.widget

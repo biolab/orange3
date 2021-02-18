@@ -2,6 +2,8 @@ from concurrent.futures import Future
 from typing import Optional, List, Dict
 
 import numpy as np
+import scipy.sparse as sp
+
 from AnyQt.QtCore import Qt, QTimer, QAbstractTableModel, QModelIndex, QThread, \
     pyqtSlot as Slot
 from AnyQt.QtGui import QIntValidator
@@ -130,6 +132,7 @@ class OWKMeans(widget.OWWidget):
         not_enough_data = widget.Msg(
             "Too few ({}) unique data instances for {} clusters"
         )
+        no_sparse_normalization = widget.Msg("Sparse data cannot be normalized")
 
     INIT_METHODS = (("Initialize with KMeans++", "k-means++"),
                     ("Random initialization", "random"))
@@ -490,7 +493,10 @@ class OWKMeans(widget.OWWidget):
 
     def preproces(self, data):
         if self.normalize:
-            data = Normalize()(data)
+            if sp.issparse(data.X):
+                self.Warning.no_sparse_normalization()
+            else:
+                data = Normalize()(data)
         for preprocessor in KMeans.preprocessors:  # use same preprocessors than
             data = preprocessor(data)
         return data
