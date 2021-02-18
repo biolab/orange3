@@ -21,12 +21,72 @@
 
 [Orange]: https://orange.biolab.si/
 
+
+## Installing
+
+### Easy installation
+
+For easy installation, [![Download](https://img.shields.io/github/v/release/biolab/orange3?label=download)](https://orange.biolab.si/download) the latest released Orange version from our website.
+
+### Installing with Conda
+
+Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) for your OS. Open the Anaconda prompt and type the following (copy individual lines; skip those starting with `#`).
+
+```Shell
+# Add conda-forge to your channels for access to the latest release
+conda config --add channels conda-forge
+
+# Create and activate an environment for orange
+conda create python=3 --name orange3
+conda activate orange3
+
+# Install orange
+conda install orange3
+```
+
+For installation of any add-ons, use `conda install orange3-<addon name>`. See specific add-on repositories for details.
+
+#### Running
+
+Open Anaconda prompt and activate the environment by `conda activate orange3`. Then run `orange-canvas` or `python3 -m Orange.canvas`. Add `--help` for a list of program options.
+
+Starting up may take a while the first time.
+
+### Installing with pip
+
+To install Orange with pip, run the following.
+
+```Shell
+# Install build requirements via your system's package manager
+sudo apt install virtualenv build-essential python3-dev
+
+# Create an environment for Orange and its dependencies
+virtualenv --python=python3 --system-site-packages orange3venv
+
+# Activate the environment
+source orange3venv/bin/activate
+
+# Install Orange
+pip install orange3
+```
+
+#### Running
+
+Activate the environment by `source orange3venv/bin/activate`. Then run `orange-canvas` or `python3 -m Orange.canvas`. Add `--help` for a list of program options.
+
+Starting up may take a while the first time.
+
+### Installing with winget (Windows only)
+
+To install Orange with [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/), run:
+
+```Shell
+winget install --id  UniversityofLjubljana.Orange 
+```
+
 ## Contributing
 
-[![GitHub Actions](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fbiolab%2Forange3%2Fbadge&label=build)](https://actions-badge.atrox.dev/biolab/orange3/goto)
-[![codecov](https://img.shields.io/codecov/c/github/biolab/orange3)](https://codecov.io/gh/biolab/orange3)
-[![Contributor count](https://img.shields.io/github/contributors-anon/biolab/orange3)](https://github.com/biolab/orange3/graphs/contributors)
-[![Latest GitHub commit](https://img.shields.io/github/last-commit/biolab/orange3)](https://github.com/biolab/orange3/commits/master)
+[![GitHub Actions](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fbiolab%2Forange3%2Fbadge&label=build)](https://actions-badge.atrox.dev/biolab/orange3/goto) [![codecov](https://img.shields.io/codecov/c/github/biolab/orange3)](https://codecov.io/gh/biolab/orange3) [![Contributor count](https://img.shields.io/github/contributors-anon/biolab/orange3)](https://github.com/biolab/orange3/graphs/contributors) [![Latest GitHub commit](https://img.shields.io/github/last-commit/biolab/orange3)](https://github.com/biolab/orange3/commits/master)
 
 Want to get involved? Join us on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV), introduce yourself in #general!
 
@@ -45,100 +105,69 @@ The development of Orange is primarily split into three repositories:
 [biolab/orange-widget-base](https://www.github.com/biolab/orange-widget-base) implements a widget window's interface elements,  
 [biolab/orange3](https://www.github.com/biolab/orange3) brings it all together and implements the base data mining toolbox.	
 
-Additionally, add-ons implement additional widgets for more specific use cases. [Anyone can write an add-on.](https://github.com/biolab/orange3-example-addon) Below is a list of our first-party add-ons:
+Additionally, add-ons implement additional widgets for more specific use cases. [Anyone can write an add-on.](https://github.com/biolab/orange3-example-addon) These are our first-party add-ons:
 
-[biolab/orange3-text](https://www.github.com/biolab/orange3-text)    
-[biolab/orange3-bioinformatics](https://www.github.com/biolab/orange3-bioinformatics)    
-[biolab/orange3-timeseries](https://www.github.com/biolab/orange3-timeseries)    
-[biolab/orange3-single-cell](https://www.github.com/biolab/orange3-single-cell)    
-[biolab/orange3-imageanalytics](https://www.github.com/biolab/orange3-imageanalytics)    
-[biolab/orange3-educational](https://www.github.com/biolab/orange3-educational)    
-[biolab/orange3-geo](https://www.github.com/biolab/orange3-geo)    
-[biolab/orange3-associate](https://www.github.com/biolab/orange3-associate)    
-[biolab/orange3-network](https://www.github.com/biolab/orange3-network)
+- [biolab/orange3-text](https://www.github.com/biolab/orange3-text)
+- [biolab/orange3-bioinformatics](https://www.github.com/biolab/orange3-bioinformatics)
+- [biolab/orange3-timeseries](https://www.github.com/biolab/orange3-timeseries)    
+- [biolab/orange3-single-cell](https://www.github.com/biolab/orange3-single-cell)    
+- [biolab/orange3-imageanalytics](https://www.github.com/biolab/orange3-imageanalytics)    
+- [biolab/orange3-educational](https://www.github.com/biolab/orange3-educational)    
+- [biolab/orange3-geo](https://www.github.com/biolab/orange3-geo)    
+- [biolab/orange3-associate](https://www.github.com/biolab/orange3-associate)    
+- [biolab/orange3-network](https://www.github.com/biolab/orange3-network)
 
-### Setting up
+### Setting up for development of core widgets
 
-1. Set up a __virtual environment__. We recommend [Miniconda](https://docs.conda.io/en/latest/miniconda.html).  
-`conda create python=3 --name orange3`
-2. __Fork__ your chosen repository.  
-Press the fork button in top-right corner of the page
-3. __Clone__ it.   
-`git clone ssh://git@github.com/<your-username>/<repo-name>`
-4. __Install__ it.  
-`pip install -e .` or `python setup.py develop`
-
-Now you're ready to work with git. See GitHub's guides on [pull requests](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/proposing-changes-to-your-work-with-pull-requests), [forks](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/working-with-forks) if you're unfamiliar.  
-If you're having trouble, get in touch on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV).
-
-## Installing
-
-For easy installation, [![Download](https://img.shields.io/github/v/release/biolab/orange3?label=download)](https://orange.biolab.si/download) the latest released Orange version from our website.
-
-### Installing with Miniconda / Anaconda
-
-Orange requires Python 3.6 or newer.
-
-First, install [Miniconda] for your OS. Create virtual environment for Orange:
+Fork the repository by pressing the fork button in top-right corner of this page. Then execute the following lines (copy them one by one!):
 
 ```Shell
 conda create python=3 --name orange3
+conda activate orange3
+
+git clone ssh://git@github.com/<YOUR-USERNAME>/orange3
+
+pip install -e orange3
 ```
-In your Anaconda Prompt add conda-forge to your channels:
+
+
+Now you're ready to work with git. See GitHub's guides on [pull requests](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/proposing-changes-to-your-work-with-pull-requests), [forks](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/working-with-forks) if you're unfamiliar. If you're having trouble, get in touch on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV).
+
+#### Running
+
+Run orange with `python -m Orange.canvas` (after activating the conda environment).
+
+`python -m Orange.canvas -l 2 --no-splash --no-welcome` will skip the splash screen and welcome window, and output more debug info. Use `-l 4` for more.
+
+Add `--clear-widget-settings` to clear the widget settings before start.
+
+To explore the dark side of the orange, try `--style=fusion:breeze-dark`
+
+Argument `--help` lists all available options.
+
+To run tests, use `unittest Orange.tests Orange.widgets.tests`
+
+
+### Setting up for development of all components
+
+If you wish to also contribute to base components (the widget base and the canvas), these two repositories must also be cloned from Github instead of being installed as dependency of Orange 3 (which happens above).
+
+First, fork all repositories to which you want to contribute. Then type:
 
 ```Shell
-conda config --add channels conda-forge
+conda create python=3 --name orange3
+conda activate orange3
+
+git clone ssh://git@github.com/<YOUR-USERNAME>/orange-widget-base
+pip install -e orange-widget-base
+
+git clone ssh://git@github.com/<YOUR-USERNAME>/orange-canvas-core
+pip install -e orange-canvas-core
+
+git clone ssh://git@github.com/<YOUR-USERNAME>/orange3
+pip install -e orange3
+
+# Same for any add-on repositories
 ```
 
-This will enable access to the latest Orange release. Then install Orange3:
-
-```Shell
-conda install orange3
-```
-
-[Miniconda]: https://docs.conda.io/en/latest/miniconda.html
-
-To install the add-ons, follow a similar recipe:
-
-```Shell
-conda install orange3-<addon name>
-```
-
-See specific add-on repositories for details.
-
-### Installing with pip
-
-To install Orange with pip, run the following.
-
-```Shell
-# Install some build requirements via your system's package manager
-sudo apt install virtualenv build-essential python3-dev
-
-# Create a separate Python environment for Orange and its dependencies ...
-virtualenv --python=python3 --system-site-packages orange3venv
-# ... and make it the active one
-source orange3venv/bin/activate
-
-# Install Orange
-pip install orange3
-```
-
-### Installing with winget (Windows only)
-
-To install Orange with [winget](https://docs.microsoft.com/en-us/windows/package-manager/winget/), run:
-
-```Shell
-winget install --id  UniversityofLjubljana.Orange 
-```
-
-### Starting Orange GUI
-
-To start Orange GUI from the command line, run:
-
-```Shell
-orange-canvas
-# or
-python3 -m Orange.canvas
-```
-
-Append `--help` for a list of program options.
+It's important to install `orange-base-widget` and `orange-canvas-core` before `orange3` to ensure that `orange3` will use your local versions.
