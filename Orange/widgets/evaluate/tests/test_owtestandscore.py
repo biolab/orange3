@@ -422,6 +422,52 @@ class TestOWTestAndScore(WidgetTest):
                     OWTestAndScore.KFold, 0),
                 (0.8, 0.5, 0.5, 0.5, 0.5))))
 
+    def test_no_stratification(self):
+        w = self.widget
+        w.cv_stratified = True
+        self._test_scores(
+            Table("zoo"), None, MajorityLearner(),
+            OWTestAndScore.KFold, 2)
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        w.controls.cv_stratified.click()
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+        w.controls.cv_stratified.click()
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        w.controls.n_folds.setCurrentIndex(0)
+        w.controls.n_folds.activated[int].emit(0)
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+        w.controls.n_folds.setCurrentIndex(2)
+        w.controls.n_folds.activated[int].emit(2)
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        self._test_scores(
+            Table("iris"), None, MajorityLearner(), OWTestAndScore.KFold, 2)
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+        self._test_scores(
+            Table("zoo"), None, MajorityLearner(), OWTestAndScore.KFold, 2)
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        self._test_scores(
+            Table("housing"), None, MeanLearner(), OWTestAndScore.KFold, 2)
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+        self.assertTrue(w.Information.cant_stratify_numeric.is_shown())
+
+        w.controls.cv_stratified.click()
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+    def test_too_many_folds(self):
+        w = self.widget
+        w.controls.resampling.buttons[OWTestAndScore.KFold].click()
+        w.n_folds = 3
+        self.send_signal(w.Inputs.train_data, Table("zoo")[:8])
+        self.send_signal(w.Inputs.learner, MajorityLearner(), 0, wait=5000)
+        self.assertTrue(w.Error.too_many_folds.is_shown())
+
     def test_no_pregressbar_warning(self):
         data = Table("iris")[::15]
 
