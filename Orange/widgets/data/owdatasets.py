@@ -377,10 +377,13 @@ class OWDataSets(OWWidget):
             self.__on_selection
         )
 
+        scw = self.view.setColumnWidth
+        width = self.view.fontMetrics().width
         self.view.resizeColumnToContents(0)
-        self.view.setColumnWidth(
-            1, min(self.view.sizeHintForColumn(1),
-                   self.view.fontMetrics().width("X" * 37)))
+        scw(self.Header.title, width("X" * 37))
+        scw(self.Header.size, 20 + max(width("888 bytes "), width("9999.9 MB ")))
+        scw(self.Header.instances, 20 + width("100000000"))
+        scw(self.Header.variables, 20 + width("1000000"))
 
         header = self.view.header()
         header.restoreState(self.header_state)
