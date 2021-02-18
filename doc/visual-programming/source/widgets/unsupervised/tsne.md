@@ -18,11 +18,11 @@ The **t-SNE** widget plots the data with a t-distributed stochastic neighbor emb
 ![](images/tSNE-stamped.png)
 
 1. [Parameters](https://opentsne.readthedocs.io/en/latest/parameters.html) for plot optimization:
-   - measure of [perplexity](http://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html). It can be thought of as the balance between preserving the global and the local structure of the data.
-   - *Preserve global structure*: using tricks for preserving global structure.
-   - *Exaggeration*: parameter which increases the attractive forces between points and allows points to move around more freely, finding their nearest neighbors more easily.
-   - *PCA components*: number of PCA components to consider for initial embedding.
-   - *Normalize data*: the values are replaced with standardized values by subtracting the average value and dividing by the standard deviation.
+   - measure of [perplexity](http://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html). Roughly speaking, it can be interpreted as the number of nearest neighbors to distances will be preserved from each point. Using smaller values can reveal small, local clusters, while using large values tends to reveal the broader, global relationships between data points.
+   - *Preserve global structure*: this option will combine two different perplexity values (50 and 500) to try preserve both the local and global structure.
+   - *Exaggeration*: this parameter increases the attractive forces between points, and can directly be used to control the compactness of clusters. Increasing exaggeration may also better highlight the global structure of the data. t-SNE with exaggeration set to 4 is roughly equal to UMAP.
+   - *PCA components*: in Orange, we always run t-SNE on the principal components of the input data. This parameter controls the number of principal components to use when calculating distances between data points.
+   - *Normalize data*: We can apply standardization before running PCA. Standardization normalizes each column by subtracting the column mean and dividing by the standard deviation.
    - Press Start to (re-)run the optimization.
 2. Set the color of the displayed points. Set shape, size and label to differentiate between points. If *Label only selection and subset* is ticked, only selected and/or highlighted points will be labelled.
 3. Set symbol size and opacity for all data points. Set jittering to randomly disperse data points.
