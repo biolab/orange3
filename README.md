@@ -10,7 +10,7 @@
         <img src="https://readthedocs.org/projects/orange3/badge/?version=latest"></a>
 </p>
 
-# Orange
+# Orange Data Mining
 [Orange] is a data mining and visualization toolbox for novice and expert alike. To explore data with Orange, one requires __no__ programming or in-depth mathematical knowledge. We believe that workflow-based data science tools democratize data science by hiding complex underlying mechanics and exposing intuitive concepts. Anyone who owns data, or is motivated to peek into data, should have the means to do so.
 
 <p align="center">
