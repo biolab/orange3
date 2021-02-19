@@ -128,6 +128,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             "Categorical variables with >100 values may decrease performance.")
         renamed_vars = Msg("Some variables have been renamed "
                            "to avoid duplicates.\n{}")
+        multiple_targets = Msg("Most widgets do not support multiple targets")
 
     class Error(widget.OWWidget.Error):
         file_not_found = Msg("File not found.")
@@ -504,6 +505,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if renamed:
                 self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
 
+        self.Warning.multiple_targets(
+            shown=table is not None and len(table.domain.class_vars) > 1)
         summary = len(table) if table else self.info.NoOutput
         details = format_summary_details(table) if table else ""
         self.info.set_output_summary(summary, details)

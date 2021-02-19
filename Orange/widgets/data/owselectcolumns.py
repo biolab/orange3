@@ -173,6 +173,7 @@ class OWSelectAttributes(widget.OWWidget):
 
     class Warning(widget.OWWidget.Warning):
         mismatching_domain = Msg("Features and data domain do not match")
+        multiple_targets = Msg("Most widgets do not support multiple targets")
 
     def __init__(self):
         super().__init__()
@@ -593,6 +594,7 @@ class OWSelectAttributes(widget.OWWidget):
 
     def commit(self):
         self.update_domain_role_hints()
+        self.Warning.multiple_targets.clear()
         if self.data is not None:
             attributes = list(self.used_attrs)
             class_var = list(self.class_attrs)
@@ -605,6 +607,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.Outputs.features.send(AttributeList(attributes))
             self.info.set_output_summary(len(newdata),
                                          format_summary_details(newdata))
+            self.Warning.multiple_targets(shown=len(class_var) > 1)
         else:
             self.output_data = None
             self.Outputs.data.send(None)
