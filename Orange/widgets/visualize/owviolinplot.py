@@ -779,7 +779,7 @@ class OWViolinPlot(OWWidget):
 
         view = self._value_var_view = ListViewSearch()
         view.setModel(sorted_model)
-        view.setMinimumSize(QSize(30, 30))
+        view.setMinimumSize(QSize(30, 100))
         view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         view.selectionModel().selectionChanged.connect(
             self.__value_var_changed
@@ -792,7 +792,7 @@ class OWViolinPlot(OWWidget):
 
         view = self._group_var_view = ListViewSearch()
         view.setModel(sorted_model)
-        view.setMinimumSize(QSize(30, 30))
+        view.setMinimumSize(QSize(30, 100))
         view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
         view.selectionModel().selectionChanged.connect(
             self.__group_var_changed
