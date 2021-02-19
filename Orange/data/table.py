@@ -897,7 +897,49 @@ class Table(Sequence, Storage):
 
     @classmethod
     def concatenate(cls, tables, axis=0):
-        """Concatenate tables into a new table"""
+        """
+        Concatenate tables into a new table, either vertically or horizontally.
+
+        If axis=0 (vertical concatenate), all tables must have the same domain.
+
+        If axis=1 (horizontal),
+        - all variable names must be unique.
+        - ids are copied from the first table.
+        - weights are copied from the first table in which they are defined.
+        - the dictionary of table's attributes are merged. If the same attribute
+          appears in multiple dictionaries, the earlier are used.
+
+        Args:
+            tables (Table): tables to be joined
+
+        Returns:
+            table (Table)
+        """
+        if axis not in (0, 1):
+            raise ValueError("invalid axis")
+        if not tables:
+            raise ValueError('need at least one table to concatenate')
+
+        if len(tables) == 1:
+            return tables[0].copy()
+
+        if axis == 0:
+            conc = cls._concatenate_vertical(tables)
+        else:
+            conc = cls._concatenate_horizontal(tables)
+
+        # TODO: Add attributes = {} to __init__
+        conc.attributes = getattr(conc, "attributes", {})
+        for table in reversed(tables):
+            conc.attributes.update(table.attributes)
+
+        names = [table.name for table in tables if table.name != "untitled"]
+        if names:
+            conc.name = names[0]
+        return conc
+
+    @classmethod
+    def _concatenate_vertical(cls, tables):
         def vstack(arrs):
             return [np, sp][any(sp.issparse(arr) for arr in arrs)].vstack(arrs)
 
@@ -915,12 +957,6 @@ class Table(Sequence, Storage):
         def collect(attr):
             return [getattr(arr, attr) for arr in tables]
 
-        if axis == 1:
-            raise ValueError("concatenate no longer supports axis 1")
-        if not tables:
-            raise ValueError('need at least one table to concatenate')
-        if len(tables) == 1:
-            return tables[0].copy()
         domain = tables[0].domain
         if any(table.domain != domain for table in tables):
             raise ValueError('concatenated tables must have the same domain')
@@ -933,14 +969,59 @@ class Table(Sequence, Storage):
             merge1d(collect("W"))
         )
         conc.ids = np.hstack([t.ids for t in tables])
-        names = [table.name for table in tables if table.name != "untitled"]
-        if names:
-            conc.name = names[0]
-        # TODO: Add attributes = {} to __init__
-        conc.attributes = getattr(conc, "attributes", {})
-        for table in reversed(tables):
-            conc.attributes.update(table.attributes)
         return conc
+
+    @classmethod
+    def _concatenate_horizontal(cls, tables):
+        """
+        """
+        def all_of(objs, names):
+            return (tuple(getattr(obj, name) for obj in objs)
+                    for name in names)
+
+        def stack(arrs):
+            non_empty = tuple(arr if arr.ndim == 2 else arr[:, np.newaxis]
+                              for arr in arrs
+                              if arr is not None and arr.size > 0)
+            return np.hstack(non_empty) if non_empty else None
+
+        doms, Ws = all_of(tables, ("domain", "W"))
+        Xs, Ys, Ms = map(stack, all_of(tables, ("X", "Y", "metas")))
+        # pylint: disable=undefined-loop-variable
+        for W in Ws:
+            if W.size:
+                break
+
+        parts = all_of(doms, ("attributes", "class_vars", "metas"))
+        domain = Domain(*(tuple(chain(*lst)) for lst in parts))
+        return cls.from_numpy(domain, Xs, Ys, Ms, W, ids=tables[0].ids)
+
+    def add_column(self, variable, data, to_metas=None):
+        """
+        Create a new table with an additional column
+
+        Column's name must be unique
+
+        Args:
+            variable (Variable): variable for the new column
+            data (np.ndarray): data for the new column
+            to_metas (bool, optional): if `True` the column is added as meta
+                column. Otherwise, primitive variables are added to attributes
+                and non-primitive to metas.
+
+        Returns:
+            table (Table): a new table with the additional column
+        """
+        dom = self.domain
+        attrs, classes, metas = dom.attributes, dom.class_vars, dom.metas
+        if to_metas or not variable.is_primitive():
+            metas += (variable, )
+        else:
+            attrs += (variable, )
+        domain = Domain(attrs, classes, metas)
+        new_table = self.transform(domain)
+        new_table.get_column_view(variable)[0][:] = data
+        return new_table
 
     def is_view(self):
         """
