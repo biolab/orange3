@@ -66,8 +66,13 @@ class ViolinPlotViewBox(pg.ViewBox):
 
 
 class ParameterSetter(CommonParameterSetter):
+    BOTTOM_AXIS_LABEL, IS_VERTICAL_LABEL = "Bottom axis", "Vertical tick text"
+
     def __init__(self, master):
         self.master: ViolinPlot = master
+        self.titles_settings = {}
+        self.ticks_settings = {}
+        self.is_vertical_setting = False
         super().__init__()
 
     def update_setters(self):
@@ -79,11 +84,15 @@ class ParameterSetter(CommonParameterSetter):
             self.ticks_settings.update(**settings)
             Updater.update_axes_ticks_font(self.axis_items, **settings)
 
-        self.titles_settings = {}
-        self.ticks_settings = {}
+        def update_bottom_axis(**settings):
+            self.is_vertical_setting = settings[self.IS_VERTICAL_LABEL]
+            self.bottom_axis.setRotateTicks(self.is_vertical_setting)
 
         self._setters[self.LABELS_BOX][self.AXIS_TITLE_LABEL] = update_titles
         self._setters[self.LABELS_BOX][self.AXIS_TICKS_LABEL] = update_ticks
+        self._setters[self.PLOT_BOX] = {
+            self.BOTTOM_AXIS_LABEL: update_bottom_axis,
+        }
 
         self.initial_settings = {
             self.LABELS_BOX: {
@@ -95,6 +104,11 @@ class ParameterSetter(CommonParameterSetter):
             self.ANNOT_BOX: {
                 self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
             },
+            self.PLOT_BOX: {
+                self.BOTTOM_AXIS_LABEL: {
+                    self.IS_VERTICAL_LABEL: (None, self.is_vertical_setting),
+                },
+            },
         }
 
     @property
@@ -102,9 +116,13 @@ class ParameterSetter(CommonParameterSetter):
         return self.master.getPlotItem().titleLabel
 
     @property
-    def axis_items(self) -> List[pg.AxisItem]:
+    def axis_items(self) -> List[AxisItem]:
         return [value["item"] for value in
                 self.master.getPlotItem().axes.values()]
+
+    @property
+    def bottom_axis(self) -> AxisItem:
+        return self.master.getAxis("bottom")
 
 
 def fit_kernel(data: np.ndarray, kernel: str) -> \
@@ -631,6 +649,9 @@ class ViolinPlot(pg.PlotWidget):
         Updater.update_axes_ticks_font(
             self.parameter_setter.axis_items,
             **self.parameter_setter.ticks_settings
+        )
+        self.getAxis("bottom").setRotateTicks(
+            self.parameter_setter.is_vertical_setting
         )
 
     def _clear_selection(self):

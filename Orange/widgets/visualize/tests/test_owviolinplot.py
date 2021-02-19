@@ -328,6 +328,10 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
             )
             self.assertEqual(graph.parameter_setter.title_item.text, "Foo")
 
+            self.assertTrue(
+                graph.parameter_setter.bottom_axis.style["rotateTicks"]
+            )
+
         self.send_signal(self.widget.Inputs.data, self.data)
         key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
         self.widget.set_visual_settings(key, value)
@@ -348,6 +352,9 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.set_visual_settings(key, value)
 
         key, value = ("Annotations", "Title", "Title"), "Foo"
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Figure", "Bottom axis", "Vertical tick text"), True
         self.widget.set_visual_settings(key, value)
 
         self.send_signal(self.widget.Inputs.data, self.data)
