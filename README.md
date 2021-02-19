@@ -126,10 +126,12 @@ Additionally, add-ons implement additional widgets for more specific use cases. 
 Fork the repository by pressing the fork button in top-right corner of this page. Then execute the following lines (copy them one by one!):
 
 ```Shell
+export YOUR_GITHUB_USERNAME=replaceme
+
 conda create python=3 --name orange3
 conda activate orange3
 
-git clone ssh://git@github.com/<YOUR-USERNAME>/orange3
+git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange3
 
 pip install -e orange3
 ```
@@ -159,16 +161,19 @@ If you wish to also contribute to base components (the widget base and the canva
 First, fork all repositories to which you want to contribute. Then type:
 
 ```Shell
+export YOUR_GITHUB_USERNAME=replaceme
+git clone ssh://git@github.com/
+
 conda create python=3 --name orange3
 conda activate orange3
 
-git clone ssh://git@github.com/<YOUR-USERNAME>/orange-widget-base
+git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange-widget-base
 pip install -e orange-widget-base
 
-git clone ssh://git@github.com/<YOUR-USERNAME>/orange-canvas-core
+git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange-canvas-core
 pip install -e orange-canvas-core
 
-git clone ssh://git@github.com/<YOUR-USERNAME>/orange3
+git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange3
 pip install -e orange3
 
 # Same for any add-on repositories
