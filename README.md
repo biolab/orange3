@@ -5,13 +5,17 @@
 </p>
 <p align="center">
     <a href="https://orange.biolab.si/download" alt="Latest release">
-        <img src="https://img.shields.io/github/v/release/biolab/orange3?label=download" /></a>
+        <img src="https://img.shields.io/github/v/release/biolab/orange3?label=download" />
+    </a>
     <a href="https://orange3.readthedocs.io/en/latest/?badge=latest" alt="Documentation">
-        <img src="https://readthedocs.org/projects/orange3/badge/?version=latest"></a>
+        <img src="https://readthedocs.org/projects/orange3/badge/?version=latest">
+    </a>
+    <a href="https://discord.gg/FWrfeXV" alt="Discord">
+        <img src="https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord">                                                                                                                                                                                                                                                  </a>
 </p>
 
 # Orange Data Mining
-[Orange] is a data mining and visualization toolbox for novice and expert alike. To explore data with Orange, one requires __no__ programming or in-depth mathematical knowledge. We believe that workflow-based data science tools democratize data science by hiding complex underlying mechanics and exposing intuitive concepts. Anyone who owns data, or is motivated to peek into data, should have the means to do so.
+[Orange] is a data mining and visualization toolbox for novice and expert alike. To explore data with Orange, one requires __no programming or in-depth mathematical knowledge__. We believe that workflow-based data science tools democratize data science by hiding complex underlying mechanics and exposing intuitive concepts. Anyone who owns data, or is motivated to peek into data, should have the means to do so.
 
 <p align="center">
     <a href="https://orange.biolab.si/download">
@@ -26,7 +30,7 @@
 
 ### Easy installation
 
-For easy installation, [![Download](https://img.shields.io/github/v/release/biolab/orange3?label=download)](https://orange.biolab.si/download) the latest released Orange version from our website.
+For easy installation, [![Download](https://img.shields.io/github/v/release/biolab/orange3?label=download)](https://orange.biolab.si/download) the latest released Orange version from our website. To install an add-on, head to `Options -> Add-ons...` in the menu bar.
 
 ### Installing with Conda
 
@@ -84,28 +88,27 @@ To install Orange with [winget](https://docs.microsoft.com/en-us/windows/package
 winget install --id  UniversityofLjubljana.Orange 
 ```
 
-## Contributing
+## Developing
 
 [![GitHub Actions](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fbiolab%2Forange3%2Fbadge&label=build)](https://actions-badge.atrox.dev/biolab/orange3/goto) [![codecov](https://img.shields.io/codecov/c/github/biolab/orange3)](https://codecov.io/gh/biolab/orange3) [![Contributor count](https://img.shields.io/github/contributors-anon/biolab/orange3)](https://github.com/biolab/orange3/graphs/contributors) [![Latest GitHub commit](https://img.shields.io/github/last-commit/biolab/orange3)](https://github.com/biolab/orange3/commits/master)
 
-Want to get involved? Join us on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV), introduce yourself in #general!
+Want to write your own widget? [Use the Orange3 example addon template.](https://github.com/biolab/orange3-example-addon)
 
-Take a look at our [contributing guide](https://github.com/irgolic/orange3/blob/README-shields/CONTRIBUTING.md), it might answer some questions, and it outlines the standards we adhere to.
+Want to get involved? Join us on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV), introduce yourself in #general! 
+
+Take a look at our [contributing guide](https://github.com/irgolic/orange3/blob/README-shields/CONTRIBUTING.md) and [style guidelines](https://github.com/biolab/orange-widget-base/wiki/Widget-UI).
 
 Check out our widget development [![docs](https://readthedocs.org/projects/orange-widget-base/badge/?version=latest)](https://orange-widget-base.readthedocs.io/en/latest/?badge=latest) for a comprehensive guide on writing Orange widgets.
 
-If you're looking for a good starting point, check out our [![good first issues](https://img.shields.io/github/issues/biolab/orange3/good%20first%20issue?label=good%20first%20issues)](https://github.com/biolab/orange3/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+### The Orange ecosystem
 
+The development of core Orange is primarily split into three repositories:
 
-### The Orange Ecosystem
-
-The development of Orange is primarily split into three repositories:
-
-[biolab/orange-canvas-core](https://www.github.com/biolab/orange-canvas-core) implements canvas elements,  
-[biolab/orange-widget-base](https://www.github.com/biolab/orange-widget-base) implements a widget window's interface elements,  
+[biolab/orange-canvas-core](https://www.github.com/biolab/orange-canvas-core) implements the canvas,  
+[biolab/orange-widget-base](https://www.github.com/biolab/orange-widget-base) is a handy widget GUI library,  
 [biolab/orange3](https://www.github.com/biolab/orange3) brings it all together and implements the base data mining toolbox.	
 
-Additionally, add-ons implement additional widgets for more specific use cases. [Anyone can write an add-on.](https://github.com/biolab/orange3-example-addon) These are our first-party add-ons:
+Additionally, add-ons implement additional widgets for more specific use cases. [Anyone can write an add-on.](https://github.com/biolab/orange3-example-addon) Some of our first-party add-ons:
 
 - [biolab/orange3-text](https://www.github.com/biolab/orange3-text)
 - [biolab/orange3-bioinformatics](https://www.github.com/biolab/orange3-bioinformatics)
@@ -116,8 +119,9 @@ Additionally, add-ons implement additional widgets for more specific use cases. 
 - [biolab/orange3-geo](https://www.github.com/biolab/orange3-geo)    
 - [biolab/orange3-associate](https://www.github.com/biolab/orange3-associate)    
 - [biolab/orange3-network](https://www.github.com/biolab/orange3-network)
+- [biolab/orange3-explain](https://www.github.com/biolab/orange3-explain)
 
-### Setting up for development of core widgets
+### Setting up for Orange core development
 
 Fork the repository by pressing the fork button in top-right corner of this page. Then execute the following lines (copy them one by one!):
 
@@ -150,7 +154,7 @@ To run tests, use `unittest Orange.tests Orange.widgets.tests`
 
 ### Setting up for development of all components
 
-If you wish to also contribute to base components (the widget base and the canvas), these two repositories must also be cloned from Github instead of being installed as dependency of Orange 3 (which happens above).
+If you wish to also contribute to base components (the widget base and the canvas), these two repositories must also be cloned from Github instead of being installed as dependency of Orange3 (which happens above).
 
 First, fork all repositories to which you want to contribute. Then type:
 
