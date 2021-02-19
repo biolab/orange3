@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import sys
 import random
 from unittest import TestCase
 
@@ -43,6 +44,26 @@ class TestEqualFreq(TestCase):
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [1.5, 2.5, 3.5])
 
+    def test_below_precision(self):
+        eps = sys.float_info.epsilon
+
+        # Test with n >= number of distinct values
+        X = np.array([[1], [1 + eps], [1 + 2 * eps], [1 + 3 * eps]])
+        # Test the test: check that these are indeed distinct values
+        assert len(np.unique(X).flatten()) == 4
+        table = data.Table.from_numpy(None, X)
+        var = discretize.EqualFreq(n=4)(table, table.domain[0])
+        points = var.compute_value.points
+        self.assertEqual(len(np.unique(points)), len(points))
+
+        # Test with n < number of distinct values
+        X = np.array([[1 + i * eps] for i in range(10)])
+        # Test the test: check that these are indeed distinct values
+        assert len(np.unique(X).flatten()) == 10
+        table = data.Table.from_numpy(None, X)
+        var = discretize.EqualFreq(n=8)(table, table.domain[0])
+        points = var.compute_value.points
+        self.assertEqual(len(np.unique(points)), len(points))
 
 # noinspection PyPep8Naming
 class TestEqualWidth(TestCase):
