@@ -414,7 +414,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.sheet_combo.setCurrentIndex(idx)
         except ValueError:
             # Requested sheet does not exist in this file
-            self.reader.select_sheet(0)
+            self.reader.select_sheet(None)
             self.sheet_combo.setCurrentIndex(0)
 
     @staticmethod
