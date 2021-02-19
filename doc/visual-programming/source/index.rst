@@ -68,6 +68,7 @@ Visualize
    :maxdepth: 1
 
    widgets/visualize/boxplot
+   widgets/visualize/violinplot
    widgets/visualize/distributions
    widgets/visualize/heatmap
    widgets/visualize/scatterplot
