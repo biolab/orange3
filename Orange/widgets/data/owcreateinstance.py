@@ -510,7 +510,7 @@ class OWCreateInstance(OWWidget):
         vbox.layout().addWidget(self.filter_edit)
         vbox.layout().addWidget(self.view)
 
-        box = gui.hBox(vbox)
+        box = gui.hBox(vbox, objectName="buttonBox")
         gui.rubber(box)
         for name in self.ACTIONS:
             gui.button(

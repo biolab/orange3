@@ -3,8 +3,9 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from AnyQt.QtCore import QDateTime, QDate, QTime, QPoint
-from AnyQt.QtWidgets import QWidget, QLineEdit, QStyleOptionViewItem, QMenu
+from AnyQt.QtCore import QDateTime, QDate, QTime, QPoint, QObject
+from AnyQt.QtWidgets import QWidget, QLineEdit, QStyleOptionViewItem, QMenu, \
+    QPushButton
 
 from orangewidget.widget import StateInfo
 from orangewidget.tests.base import GuiTest
@@ -99,8 +100,7 @@ class TestOWCreateInstance(WidgetTest):
     def _get_init_buttons(self, widget=None):
         if not widget:
             widget = self.widget
-        box = widget.controlArea.layout().itemAt(0).widget().children()[3]
-        return box.children()[1:]
+        return widget.findChild(QObject, "buttonBox").findChildren(QPushButton)
 
     def test_initialize_buttons(self):
         self.widget.controls.append_to_data.setChecked(False)
