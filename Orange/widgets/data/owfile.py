@@ -410,14 +410,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.sheet_box.show()
 
     def _select_active_sheet(self):
-        if self.reader.sheet:
-            try:
-                idx = self.reader.sheets.index(self.reader.sheet)
-                self.sheet_combo.setCurrentIndex(idx)
-            except ValueError:
-                # Requested sheet does not exist in this file
-                self.reader.select_sheet(None)
-        else:
+        try:
+            idx = self.reader.sheets.index(self.reader.sheet)
+            self.sheet_combo.setCurrentIndex(idx)
+        except ValueError:
+            # Requested sheet does not exist in this file
+            self.reader.select_sheet(None)
             self.sheet_combo.setCurrentIndex(0)
 
     @staticmethod
