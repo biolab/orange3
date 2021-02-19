@@ -5,6 +5,8 @@ from unittest.mock import patch
 
 import numpy as np
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, StringVariable, DiscreteVariable
 from Orange.widgets.data.owcreateclass import (
     OWCreateClass,
@@ -477,17 +479,17 @@ class TestOWCreateClass(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.widget.class_name = ""
         self.widget.apply()
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self.widget.class_name = "type"
         self.widget.apply()
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import (
     Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
 )
@@ -416,9 +418,9 @@ class TestOWConcatenate(WidgetTest):
 
         self.send_signal(self.widget.Inputs.additional_data, None, 0)
         self.send_signal(self.widget.Inputs.additional_data, None, 1)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def _create_compute_values(self):

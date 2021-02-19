@@ -7,6 +7,8 @@ import scipy.sparse as sp
 from AnyQt.QtCore import QRectF, QPointF, QEvent, Qt
 from AnyQt.QtGui import QMouseEvent
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.widgets.data import owpaintdata
 from Orange.widgets.data.owpaintdata import OWPaintData
@@ -131,7 +133,7 @@ class TestOWPaintData(WidgetTest):
         event = QMouseEvent(QEvent.MouseButtonPress, QPointF(0.17, 0.17),
                             Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
         tool.mousePressEvent(event)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         output = self.get_output(self.widget.Outputs.data)
         summary, details = f"{len(output)}", format_summary_details(output)
@@ -148,7 +150,7 @@ class TestOWPaintData(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         output = self.get_output(self.widget.Outputs.data)
         summary, details = f"{len(output)}", format_summary_details(output)
@@ -156,5 +158,5 @@ class TestOWPaintData(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.widget.set_current_tool(self.widget.TOOLS[5][2])
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

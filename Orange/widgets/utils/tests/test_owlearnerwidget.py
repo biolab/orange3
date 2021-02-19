@@ -1,5 +1,7 @@
 import scipy.sparse as sp
 
+from orangewidget.widget import StateInfo
+
 # pylint: disable=missing-docstring, protected-access
 from Orange.base import Learner, Model
 from Orange.classification import KNNLearner
@@ -147,5 +149,5 @@ class TestOWBaseLearner(WidgetTest):
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
         self.send_signal(widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)

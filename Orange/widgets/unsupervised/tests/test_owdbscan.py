@@ -2,6 +2,8 @@
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest
@@ -238,7 +240,7 @@ class TestOWDBSCAN(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

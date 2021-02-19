@@ -6,7 +6,9 @@ import numpy as np
 from AnyQt.QtCore import QDateTime, QDate, QTime, QPoint
 from AnyQt.QtWidgets import QWidget, QLineEdit, QStyleOptionViewItem, QMenu
 
+from orangewidget.widget import StateInfo
 from orangewidget.tests.base import GuiTest
+
 from Orange.data import Table, ContinuousVariable, Domain, DiscreteVariable, \
     TimeVariable
 from Orange.widgets.data.owcreateinstance import OWCreateInstance, \
@@ -60,9 +62,9 @@ class TestOWCreateInstance(WidgetTest):
         reference = self.data[:1]
         no_input, no_output = "No data on input", "No data on output"
 
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -87,11 +89,11 @@ class TestOWCreateInstance(WidgetTest):
         summary, details = "0, 1", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.reference, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
 
     def _get_init_buttons(self, widget=None):

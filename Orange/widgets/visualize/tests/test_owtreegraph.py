@@ -2,6 +2,8 @@
 # pylint: disable=missing-docstring, protected-access
 from os import path
 
+from orangewidget.widget import StateInfo
+
 from Orange.classification import TreeLearner
 from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -94,7 +96,7 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         no_output = "No data on output"
 
         self.send_signal(self.widget.Inputs.tree, self.signal_data)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
         self._select_data()
         output = self.get_output(self.widget.Outputs.selected_data)
@@ -103,5 +105,5 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.tree, None)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)

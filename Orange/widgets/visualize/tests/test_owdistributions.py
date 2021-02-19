@@ -7,6 +7,8 @@ from unittest.mock import Mock
 import numpy as np
 from AnyQt.QtCore import QItemSelection, Qt
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
@@ -534,7 +536,7 @@ class TestOWDistributions(WidgetTest):
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self._set_slider(0)
@@ -546,9 +548,9 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_sort_by_freq_no_split(self):

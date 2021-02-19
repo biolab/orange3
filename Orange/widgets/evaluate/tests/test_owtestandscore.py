@@ -10,6 +10,8 @@ from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QApplication
 import baycomp
 
+from orangewidget.widget import StateInfo
+
 from Orange.classification import MajorityLearner, LogisticRegressionLearner, \
     RandomForestLearner
 from Orange.classification.majority import ConstantModel
@@ -724,13 +726,13 @@ class TestOWTestAndScore(WidgetTest):
         summary, details = f"{len(test)}", format_summary_details(test)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.test_data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_unique_output_domain(self):

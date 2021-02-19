@@ -12,6 +12,8 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table, Domain, DiscreteVariable, StringVariable, \
     ContinuousVariable
 from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX, \
@@ -1033,7 +1035,7 @@ class TestOWMergeData(WidgetTest):
         summary, details = f"{len(data)}, 0", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.extra_data, data)
@@ -1052,13 +1054,13 @@ class TestOWMergeData(WidgetTest):
         summary, details = f"0, {len(data)}", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.extra_data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 class MergeDataContextHandlerTest(unittest.TestCase):

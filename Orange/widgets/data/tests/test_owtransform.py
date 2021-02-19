@@ -4,6 +4,8 @@ from unittest.mock import Mock
 
 from numpy import testing as npt
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.preprocess import Discretize
 from Orange.widgets.data.owtransform import OWTransform
@@ -54,7 +56,7 @@ class TestOWTransform(WidgetTest):
         summary, details = "10, 0", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         # send template data
@@ -80,7 +82,7 @@ class TestOWTransform(WidgetTest):
         summary, details = "0, 150", format_multiple_summaries(data_list)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         # remove template data
@@ -89,9 +91,9 @@ class TestOWTransform(WidgetTest):
         self.assertEqual("No template data on input.",
                          self.widget.template_label.text())
         self.assertEqual("", self.widget.output_label.text())
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def assertTableEqual(self, table1, table2):
