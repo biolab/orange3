@@ -576,6 +576,9 @@ class OWKMeans(widget.OWWidget):
         self.selection = None
         self._set_input_summary()
 
+        self.controls.normalize.setDisabled(
+            bool(self.data) and sp.issparse(self.data.X))
+
         # Do not needlessly recluster the data if X hasn't changed
         if old_data and self.data and array_equal(self.data.X, old_data.X):
             if self.auto_commit:

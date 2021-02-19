@@ -341,33 +341,37 @@ class TestOWKMeans(WidgetTest):
         normalization = normalize.return_value = Mock(return_value=self.data)
         widget = self.widget
         widget.normalize = True
+        norm_check = widget.controls.normalize
 
         x = sp.csr_matrix(np.random.randint(0, 2, (5, 10)))
         data = Table.from_numpy(None, x)
 
         self.send_signal(widget.Inputs.data, data)
         self.assertTrue(widget.Warning.no_sparse_normalization.is_shown())
+        self.assertFalse(norm_check.isEnabled())
         normalization.assert_not_called()
 
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.no_sparse_normalization.is_shown())
+        self.assertTrue(norm_check.isEnabled())
         normalization.assert_not_called()
 
         self.send_signal(widget.Inputs.data, data)
         self.assertTrue(widget.Warning.no_sparse_normalization.is_shown())
+        self.assertFalse(norm_check.isEnabled())
         normalization.assert_not_called()
 
         self.send_signal(widget.Inputs.data, self.data)
         self.assertFalse(widget.Warning.no_sparse_normalization.is_shown())
+        self.assertTrue(norm_check.isEnabled())
         normalization.assert_called()
         normalization.reset_mock()
 
-        self.send_signal(widget.Inputs.data, data)
-        self.assertTrue(widget.Warning.no_sparse_normalization.is_shown())
-        normalization.assert_not_called()
-
         widget.controls.normalize.click()
+
+        self.send_signal(widget.Inputs.data, data)
         self.assertFalse(widget.Warning.no_sparse_normalization.is_shown())
+        self.assertFalse(norm_check.isEnabled())
         normalization.assert_not_called()
 
     def test_report(self):
