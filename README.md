@@ -34,27 +34,39 @@ For easy installation, [![Download](https://img.shields.io/github/v/release/biol
 
 ### Installing with Conda
 
-Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) for your OS. Open the Anaconda prompt and type the following (copy individual lines; skip those starting with `#`).
+First, install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) for your OS. 
+
+Then, create a new conda environment, and install orange3:
 
 ```Shell
 # Add conda-forge to your channels for access to the latest release
 conda config --add channels conda-forge
 
-# Create and activate an environment for orange
-conda create python=3 --name orange3
+# Create and activate an environment for Orange
+yes | conda create python=3 --name orange3
 conda activate orange3
 
-# Install orange
+# Install Orange
 conda install orange3
 ```
 
-For installation of any add-ons, use `conda install orange3-<addon name>`. See specific add-on repositories for details.
+For installation of an add-on, use:
+```Shell
+conda install orange3-<addon name>
+```
+[See specific add-on repositories for details.](https://github.com/biolab/)
 
 #### Running
 
-Open Anaconda prompt and activate the environment by `conda activate orange3`. Then run `orange-canvas` or `python3 -m Orange.canvas`. Add `--help` for a list of program options.
+Activate the environment, 
+```Shell
+conda activate orange3
+``` 
+and run either `orange-canvas` or `python3 -m Orange.canvas`. 
 
-Starting up may take a while the first time.
+Add `--help` for a list of program options.
+
+Starting up for the first time may take a while.
 
 ### Installing with pip
 
@@ -78,7 +90,7 @@ pip install orange3
 
 Activate the environment by `source orange3venv/bin/activate`. Then run `orange-canvas` or `python3 -m Orange.canvas`. Add `--help` for a list of program options.
 
-Starting up may take a while the first time.
+Starting up for the first time may take a while.
 
 ### Installing with winget (Windows only)
 
@@ -92,7 +104,7 @@ winget install --id  UniversityofLjubljana.Orange
 
 [![GitHub Actions](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fbiolab%2Forange3%2Fbadge&label=build)](https://actions-badge.atrox.dev/biolab/orange3/goto) [![codecov](https://img.shields.io/codecov/c/github/biolab/orange3)](https://codecov.io/gh/biolab/orange3) [![Contributor count](https://img.shields.io/github/contributors-anon/biolab/orange3)](https://github.com/biolab/orange3/graphs/contributors) [![Latest GitHub commit](https://img.shields.io/github/last-commit/biolab/orange3)](https://github.com/biolab/orange3/commits/master)
 
-Want to write your own widget? [Use the Orange3 example addon template.](https://github.com/biolab/orange3-example-addon)
+Want to write a widget? [Use the Orange3 example add-on template.](https://github.com/biolab/orange3-example-addon)
 
 Want to get involved? Join us on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV), introduce yourself in #general! 
 
@@ -121,33 +133,38 @@ Additionally, add-ons implement additional widgets for more specific use cases. 
 - [biolab/orange3-network](https://www.github.com/biolab/orange3-network)
 - [biolab/orange3-explain](https://www.github.com/biolab/orange3-explain)
 
-### Setting up for Orange core development
+### Setting up for core Orange development
 
-Fork the repository by pressing the fork button in top-right corner of this page. Then execute the following lines (copy them one by one!):
+First, fork the repository by pressing the fork button in the top-right corner of this page.
+
+Set your GitHub username,
 
 ```Shell
-export YOUR_GITHUB_USERNAME=replaceme
+export MY_GITHUB_USERNAME=replaceme
+```
 
-conda create python=3 --name orange3
+create a conda environment, clone your fork, and install it:
+
+```Shell
+yes | conda create python=3 --name orange3
 conda activate orange3
 
-git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange3
+git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange3
 
 pip install -e orange3
 ```
-
 
 Now you're ready to work with git. See GitHub's guides on [pull requests](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/proposing-changes-to-your-work-with-pull-requests), [forks](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/working-with-forks) if you're unfamiliar. If you're having trouble, get in touch on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV).
 
 #### Running
 
-Run orange with `python -m Orange.canvas` (after activating the conda environment).
+Run Orange with `python -m Orange.canvas` (after activating the conda environment).
 
 `python -m Orange.canvas -l 2 --no-splash --no-welcome` will skip the splash screen and welcome window, and output more debug info. Use `-l 4` for more.
 
 Add `--clear-widget-settings` to clear the widget settings before start.
 
-To explore the dark side of the orange, try `--style=fusion:breeze-dark`
+To explore the dark side of the Orange, try `--style=fusion:breeze-dark`
 
 Argument `--help` lists all available options.
 
@@ -156,27 +173,32 @@ To run tests, use `unittest Orange.tests Orange.widgets.tests`
 
 ### Setting up for development of all components
 
-If you wish to also contribute to base components (the widget base and the canvas), these two repositories must also be cloned from Github instead of being installed as dependency of Orange3 (which happens above).
+Should you wish to contribute Orange's base components (the widget base and the canvas), you must also clone these two repositories from Github instead of installing them as dependencies of Orange3.
 
-First, fork all repositories to which you want to contribute. Then type:
+First, fork all the repositories to which you want to contribute. 
+
+Set your GitHub username,
 
 ```Shell
-export YOUR_GITHUB_USERNAME=replaceme
-git clone ssh://git@github.com/
-
-conda create python=3 --name orange3
-conda activate orange3
-
-git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange-widget-base
-pip install -e orange-widget-base
-
-git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange-canvas-core
-pip install -e orange-canvas-core
-
-git clone ssh://git@github.com/$YOUR_GITHUB_USERNAME/orange3
-pip install -e orange3
-
-# Same for any add-on repositories
+export MY_GITHUB_USERNAME=replaceme
 ```
 
-It's important to install `orange-base-widget` and `orange-canvas-core` before `orange3` to ensure that `orange3` will use your local versions.
+create a conda environment, clone your forks, and install them:
+
+```Shell
+yes | conda create python=3 --name orange3
+conda activate orange3
+
+git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange-widget-base
+pip install -e orange-widget-base
+
+git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange-canvas-core
+pip install -e orange-canvas-core
+
+git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange3
+pip install -e orange3
+
+# Repeat for any add-on repositories
+```
+
+It's crucial to install `orange-base-widget` and `orange-canvas-core` before `orange3` to ensure that `orange3` will use your local versions.
