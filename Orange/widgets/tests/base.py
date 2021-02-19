@@ -500,10 +500,11 @@ class WidgetOutputsTestMixin:
     _compare_selected_annotated_domains.
     """
 
-    def init(self, same_table_attributes=True):
+    def init(self, same_table_attributes=True, output_all_on_no_selection=False):
         self.data = Table("iris")
         self.same_input_output_domain = True
         self.same_table_attributes = same_table_attributes
+        self.output_all_on_no_selection = output_all_on_no_selection
 
     def test_outputs(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.signal_name, self.signal_data)
@@ -511,7 +512,11 @@ class WidgetOutputsTestMixin:
         self.wait_until_finished(timeout=timeout)
 
         # check selected data output
-        self.assertIsNone(self.get_output("Selected Data"))
+        output = self.get_output("Selected Data")
+        if self.output_all_on_no_selection:
+            self.assertEqual(output, self.signal_data)
+        else:
+            self.assertIsNone(output)
 
         # check annotated data output
         feature_name = ANNOTATED_DATA_FEATURE_NAME
