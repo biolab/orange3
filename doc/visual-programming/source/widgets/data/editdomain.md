@@ -15,14 +15,14 @@ This widget can be used to edit/change a dataset's domain - rename features, ren
 
 ![](images/EditDomain-stamped.png)
 
-1. All features (including meta attributes) from the input dataset are listed in the *Variables* list. Selecting one feature displays it an editor on the right.
+1. All features (including meta attributes) from the input dataset are listed in the *Variables* list. Selecting one feature displays an editor on the right.
 2. Editing options:
    - Change the name of the feature.
    - Change the type of the feature. For example, convert a string variable to categorical.
    - *Unlink variable from its source variable*. This option removes existing computation for a variable (say for Cluster how clustering was computed), making it 'plain'. This enables merging variables with same names in [Merge Data](../data/mergedata.md).
    - Change the value names for discrete features in the *Values* list box. Double-click to edit the name.
    - Add, remove or edit additional feature annotations in the *Labels* box. Add a new label with the + button and add the *Key* and *Value* for the new entry. Key will be displayed in the top left corner of the [Data Table](../data/datatable.md), while values will appear below the specified column. Remove an existing label with the - button.
-3. Reorder or merge values of categorical features. To reorder the values (for example to display them in [Distributions](../visualize/distributions.md), use the up and down keys at the bottom of the box. To add or remove a value, use + and - buttons. Select two or more variables and click = to merge them into a single value. Use M button to merge variables on condition.
+3. Reorder or merge values of categorical features. To reorder the values (for example, to display them in [Distributions](../visualize/distributions.md), use the up and down keys at the bottom of the box. To add or remove a value, use + and - buttons. Select two or more variables and click = to merge them into a single value. Use the M button to merge variables on condition.
 4. Rename the output table. Useful for displaying table names in [Venn Diagram](../visualize/venndiagram.md).
 5. To revert the changes made to the selected feature, press the *Reset Selected* button while the feature is selected in the *Variables* list. Pressing *Reset All* will remove all the changes to the domain. Press *Apply* to send the new domain to the output.
 
