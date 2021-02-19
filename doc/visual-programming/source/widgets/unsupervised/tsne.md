@@ -37,12 +37,10 @@ The first example is a simple t-SNE plot of *brown-selected* data set. Load *bro
 
 ![](images/tSNE-Example1.png)
 
-For the second example, we will use [Single Cell Datasets](https://orangedatamining.com/widget-catalog/single-cell/single_cell_datasets/) widget from the Single Cell add-on to load *Bone marrow mononuclear cells with AML (sample)* data. Then we will pass it through **k-Means** and select 2 clusters from Silhouette Scores. Ok, it looks like there might be two distinct clusters here.
+For the second example, use [Single Cell Datasets](https://orangedatamining.com/widget-catalog/single-cell/single_cell_datasets/) widget from the Single Cell add-on to load *Bone marrow mononuclear cells with AML (sample)* data. Then pass it through **k-Means** and select 2 clusters from Silhouette Scores. Ok, it looks like there might be two distinct clusters here.
 
-But can we find subpopulations in these cells? Let us load *Bone marrow mononuclear cells with AML (markers)* with **Single Cell Datasets**. Now, pass the marker genes to **Data Table** and select, for example, natural killer cells from the list (NKG7).
+But can we find subpopulations in these cells? Select a few marker genes with the [Marker Genes](https://orangedatamining.com/widget-catalog/bioinformatics/marker_genes/) widget, for example natural killer cells (NK cells). Pass the marker genes and k-Means results to [Score Cells](https://orangedatamining.com/widget-catalog/single-cell/score_cells/) widget. Finally, add **t-SNE** to visualize the results.
 
-Pass the markers and k-Means results to [Score Cells](https://orangedatamining.com/widget-catalog/single-cell/score_cells/) widget and select *geneName* to match markers with genes. Finally, add **t-SNE** to visualize the results.
-
-In **t-SNE**, use *Scores* attribute to color the points and set their size. We see that killer cells are nicely clustered together and that t-SNE indeed found subpopulations.
+In **t-SNE**, use *Cluster* attribute to color the points and *Score* attribute to set their size. We see that killer cells are nicely clustered together and that t-SNE indeed found subpopulations.
 
 ![](images/tSNE-Example2.png)
