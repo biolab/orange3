@@ -196,6 +196,8 @@ class OWDataTable(OWWidget):
     selected_rows = Setting([], schema_only=True)
     selected_cols = Setting([], schema_only=True)
 
+    settings_version = 2
+
     def __init__(self):
         super().__init__()
 
