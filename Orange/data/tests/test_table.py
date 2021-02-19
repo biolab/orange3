@@ -183,6 +183,18 @@ class TestTableInit(unittest.TestCase):
     def test_concatenate_invalid_axis(self):
         self.assertRaises(ValueError, Table.concatenate, (), axis=2)
 
+    def test_concatenate_names(self):
+        a, b, c, d, e, f, g = map(ContinuousVariable, "abcdefg")
+
+        tab1 = self._new_table((a, ), (c, ), (d, ), 0)
+        tab2 = self._new_table((e, ), (), (f, g), 1000)
+        tab3 = self._new_table((b, ), (), (), 1000)
+        tab2.name = "tab2"
+        tab3.name = "tab3"
+
+        joined = Table.concatenate((tab1, tab2, tab3), axis=1)
+        self.assertEqual(joined.name, "tab2")
+
     def test_with_column(self):
         a, b, c, d, e, f, g = map(ContinuousVariable, "abcdefg")
         col = np.arange(9, 14)

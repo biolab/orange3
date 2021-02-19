@@ -898,11 +898,11 @@ class Table(Sequence, Storage):
     @classmethod
     def concatenate(cls, tables, axis=0):
         """
-        Concatenate tables into a new table, either horizontally or vertically.
+        Concatenate tables into a new table, either vertically or horizontally.
 
-        If axis=0 (horizontal concatenate), all tables must have the same domain.
+        If axis=0 (vertical concatenate), all tables must have the same domain.
 
-        If axis=1 (vertical),
+        If axis=1 (horizontal),
         - all variable names must be unique.
         - ids are copied from the first table.
         - weights are copied from the first table in which they are defined.
@@ -915,12 +915,28 @@ class Table(Sequence, Storage):
         Returns:
             table (Table)
         """
-        if axis == 0:
-            return cls._concatenate_vertical(tables)
-        elif axis == 1:
-            return cls._concatenate_horizontal(tables)
-        else:
+        if axis not in (0, 1):
             raise ValueError("invalid axis")
+        if not tables:
+            raise ValueError('need at least one table to concatenate')
+
+        if len(tables) == 1:
+            return tables[0].copy()
+
+        if axis == 0:
+            conc = cls._concatenate_vertical(tables)
+        else:
+            conc = cls._concatenate_horizontal(tables)
+
+        # TODO: Add attributes = {} to __init__
+        conc.attributes = getattr(conc, "attributes", {})
+        for table in reversed(tables):
+            conc.attributes.update(table.attributes)
+
+        names = [table.name for table in tables if table.name != "untitled"]
+        if names:
+            conc.name = names[0]
+        return conc
 
     @classmethod
     def _concatenate_vertical(cls, tables):
@@ -941,10 +957,6 @@ class Table(Sequence, Storage):
         def collect(attr):
             return [getattr(arr, attr) for arr in tables]
 
-        if not tables:
-            raise ValueError('need at least one table to concatenate')
-        if len(tables) == 1:
-            return tables[0].copy()
         domain = tables[0].domain
         if any(table.domain != domain for table in tables):
             raise ValueError('concatenated tables must have the same domain')
@@ -957,22 +969,12 @@ class Table(Sequence, Storage):
             merge1d(collect("W"))
         )
         conc.ids = np.hstack([t.ids for t in tables])
-        names = [table.name for table in tables if table.name != "untitled"]
-        if names:
-            conc.name = names[0]
-        # TODO: Add attributes = {} to __init__
-        conc.attributes = getattr(conc, "attributes", {})
-        for table in reversed(tables):
-            conc.attributes.update(table.attributes)
         return conc
 
     @classmethod
     def _concatenate_horizontal(cls, tables):
         """
         """
-        if not tables:
-            raise ValueError('need at least one table to join')
-
         def all_of(objs, names):
             return (tuple(getattr(obj, name) for obj in objs)
                     for name in names)
@@ -983,7 +985,7 @@ class Table(Sequence, Storage):
                               if arr is not None and arr.size > 0)
             return np.hstack(non_empty) if non_empty else None
 
-        doms, Ws, table_attrss = all_of(tables, ("domain", "W", "attributes"))
+        doms, Ws = all_of(tables, ("domain", "W"))
         Xs, Ys, Ms = map(stack, all_of(tables, ("X", "Y", "metas")))
         # pylint: disable=undefined-loop-variable
         for W in Ws:
@@ -992,11 +994,7 @@ class Table(Sequence, Storage):
 
         parts = all_of(doms, ("attributes", "class_vars", "metas"))
         domain = Domain(*(tuple(chain(*lst)) for lst in parts))
-        table = cls.from_numpy(domain, Xs, Ys, Ms, W, ids=tables[0].ids)
-        for ta in reversed(table_attrss):
-            table.attributes.update(ta)
-
-        return table
+        return cls.from_numpy(domain, Xs, Ys, Ms, W, ids=tables[0].ids)
 
     def add_column(self, variable, data, to_metas=None):
         """
