@@ -43,7 +43,7 @@ Then, create a new conda environment, and install orange3:
 conda config --add channels conda-forge
 
 # Create and activate an environment for Orange
-yes | conda create python=3 --name orange3
+conda create python=3 --yes --name orange3
 conda activate orange3
 
 # Install Orange
@@ -146,7 +146,7 @@ export MY_GITHUB_USERNAME=replaceme
 create a conda environment, clone your fork, and install it:
 
 ```Shell
-yes | conda create python=3 --name orange3
+conda create python=3 --yes --name orange3
 conda activate orange3
 
 git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange3
@@ -186,7 +186,7 @@ export MY_GITHUB_USERNAME=replaceme
 create a conda environment, clone your forks, and install them:
 
 ```Shell
-yes | conda create python=3 --name orange3
+conda create python=3 --yes --name orange3
 conda activate orange3
 
 git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange-widget-base
