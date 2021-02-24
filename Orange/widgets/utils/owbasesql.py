@@ -16,6 +16,15 @@ from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg
 
 
+# the name of the field (placeholder and the tooltip)
+GUI_FIELDS = {
+    "servertext": ("Server", "Server"),
+    "databasetext": ("Database[/Schema]", "Database or optionally Database/Schema"),
+    "usernametext": ("Username", "Username"),
+    "passwordtext": ("Password", "Password")
+}
+
+
 class OWBaseSql(OWWidget, openclass=True):
     """Base widget for connecting to a database.
     Override `get_backend` when subclassing to get corresponding backend.
@@ -50,8 +59,8 @@ class OWBaseSql(OWWidget, openclass=True):
         vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
         self.serverbox = gui.vBox(vbox)
         self.servertext = QLineEdit(self.serverbox)
-        self.servertext.setPlaceholderText("Server")
-        self.servertext.setToolTip("Server")
+        self.servertext.setPlaceholderText(GUI_FIELDS["servertext"][0])
+        self.servertext.setToolTip(GUI_FIELDS["servertext"][1])
         self.servertext.editingFinished.connect(self._load_credentials)
         if self.host:
             self.servertext.setText(self.host if not self.port else
@@ -59,21 +68,21 @@ class OWBaseSql(OWWidget, openclass=True):
         self.serverbox.layout().addWidget(self.servertext)
 
         self.databasetext = QLineEdit(self.serverbox)
-        self.databasetext.setPlaceholderText("Database[/Schema]")
-        self.databasetext.setToolTip("Database or optionally Database/Schema")
+        self.databasetext.setPlaceholderText(GUI_FIELDS["databasetext"][0])
+        self.databasetext.setToolTip(GUI_FIELDS["databasetext"][1])
         if self.database:
             self.databasetext.setText(
                 self.database if not self.schema else
                 "{}/{}".format(self.database, self.schema))
         self.serverbox.layout().addWidget(self.databasetext)
         self.usernametext = QLineEdit(self.serverbox)
-        self.usernametext.setPlaceholderText("Username")
-        self.usernametext.setToolTip("Username")
+        self.usernametext.setPlaceholderText(GUI_FIELDS["usernametext"][0])
+        self.usernametext.setToolTip(GUI_FIELDS["usernametext"][1])
 
         self.serverbox.layout().addWidget(self.usernametext)
         self.passwordtext = QLineEdit(self.serverbox)
-        self.passwordtext.setPlaceholderText("Password")
-        self.passwordtext.setToolTip("Password")
+        self.passwordtext.setPlaceholderText(GUI_FIELDS["passwordtext"][0])
+        self.passwordtext.setToolTip(GUI_FIELDS["passwordtext"][1])
         self.passwordtext.setEchoMode(QLineEdit.Password)
 
         self.serverbox.layout().addWidget(self.passwordtext)

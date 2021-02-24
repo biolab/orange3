@@ -10,4 +10,4 @@ try:
 except ImportError:
     pass
 
-from .alchemy_base import SQLAlchemyBackend, MSSqlAlchemy, MySqlAlchemy
+from .alchemy_base import SQLAlchemyBackend, MySqlAlchemy

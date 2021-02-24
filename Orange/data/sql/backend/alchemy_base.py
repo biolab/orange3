@@ -250,11 +250,6 @@ class SQLAlchemyBackend(Backend):
         return self.engine.dialect.has_table(self.engine, name)
 
 
-class MSSqlAlchemy(SQLAlchemyBackend):
-    display_name = "MS Server Alchemy"
-    dialect_driver = "mssql+pymssql"
-
-
 class MySqlAlchemy(SQLAlchemyBackend):
     display_name = "MySQL Alchemy"
     # we decided to use mysqlclient from pypi
@@ -263,19 +258,16 @@ class MySqlAlchemy(SQLAlchemyBackend):
 
 
 class SqliteAlchemy(SQLAlchemyBackend):
-    display_name = "Sqllite"
+    display_name = "SQLite"
     # requirement sqlite3 - included in the standard module
     dialect_driver = "sqlite+pysqlite"
     connection_string = "{dialect_driver}:///{database}"
 
-
-class OracleAlchemy(SQLAlchemyBackend):
-    display_name = "Oracle Alchemy"
-    # installed via: pip install cx-oracle
-    import cx_Oracle
-    cx_Oracle.init_oracle_client(lib_dir=r'/Users/primoz/instantclient_19_8/')
-    dialect_driver = "oracle+cx_oracle"
-    connection_string = (
-        "{dialect_driver}://{user}:{password}@{host}:"
-        "{port}/{database}?encoding=UTF-8&nencoding=UTF-8"
-    )
+    # sqllite needs just the path to the file with the database other fields
+    # must be disabled in the widget - None means disabled field
+    widget_gui_fields = {
+        "servertext": None,
+        "databasetext": ("Database file path", "The path to the SQLite database"),
+        "usernametext": None,
+        "passwordtext":None
+    }

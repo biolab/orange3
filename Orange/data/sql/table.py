@@ -13,7 +13,7 @@ import numpy as np
 from Orange.data import (
     Table, Domain, Value, Instance, filter, DiscreteVariable)
 from Orange.data.sql import filter as sql_filter
-from Orange.data.sql.backend import Backend, MSSqlAlchemy
+from Orange.data.sql.backend import Backend, MySqlAlchemy
 from Orange.data.sql.backend.base import TableDesc, BackendError
 
 LARGE_TABLE = 100000
@@ -676,7 +676,7 @@ if __name__ == "__main__":
                   user="SA",
                   password="1a2B3@4c5d"),
              "Inventory",
-             backend=MSSqlAlchemy,
+             backend=MySqlAlchemy,
              inspect_values=False)
     print(table.domain)
     print(table[0])

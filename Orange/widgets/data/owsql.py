@@ -1,4 +1,5 @@
-from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication
+from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication, \
+    QLineEdit
 from AnyQt.QtGui import QCursor
 from AnyQt.QtCore import Qt
 
@@ -9,7 +10,7 @@ from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.owbasesql import OWBaseSql
+from Orange.widgets.utils.owbasesql import OWBaseSql, GUI_FIELDS
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 
@@ -99,8 +100,32 @@ class OWSql(OWBaseSql):
         self.backendcombo.currentTextChanged.connect(self.__backend_changed)
         box.layout().insertWidget(0, self.backendcombo)
 
+    def update_interface(self, backend):
+        """
+        Some databases different credentials e.g. SQLite is just a file with
+        one database and without username and password it only need database
+        path specified.
+
+        In those cases default field names are replaced with field names
+        defined in the backend class.
+        """
+        gui_settings = backend.widget_gui_fields if hasattr(backend, "widget_gui_fields") else GUI_FIELDS
+        for field, setting in gui_settings.items():
+            view: QLineEdit = getattr(self, field)
+            if setting:
+                # if the field setting is not None set placeholder and tooltip
+                view.setEnabled(True)
+                view.setPlaceholderText(setting[0])
+                view.setToolTip(setting[1])
+            else:
+                # if none set placeholder and tooltip to default and disable field
+                view.setEnabled(False)
+                view.setPlaceholderText(GUI_FIELDS[field][0])
+                view.setToolTip(GUI_FIELDS[field][1])
+
     def __backend_changed(self):
         backend = self.get_backend()
+        self.update_interface(backend)
         self.selected_backend = backend.display_name if backend else None
 
     def _add_tables_controls(self):
