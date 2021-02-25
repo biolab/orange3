@@ -53,7 +53,8 @@ def is_discrete_values(values):
     # the type is numeric
     try:
         isinstance(next(iter(values)), Number) or \
-        [float(v) for _, v in zip(range(min(3, len(values))), values)]
+        [v not in MISSING_VALUES and float(v)
+         for _, v in zip(range(min(3, len(values))), values)]
     except ValueError:
         is_numeric = False
         max_values = int(round(len(values)**.7))
