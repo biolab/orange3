@@ -11,7 +11,7 @@ from numpy.testing import assert_array_equal
 
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
-    Variable, Domain, Table, DomainConversion)
+    Domain, Table, DomainConversion)
 from Orange.data.domain import filter_visible
 from Orange.preprocess import Continuize, Impute
 from Orange.tests.base import create_pickling_tests
@@ -19,7 +19,7 @@ from Orange.util import OrangeDeprecationWarning
 
 
 def create_domain(*ss):
-    vars = dict(
+    vars_ = dict(
         age=ContinuousVariable(name="AGE"),
         gender=DiscreteVariable(name="Gender", values=("M", "F")),
         incomeA=ContinuousVariable(name="incomeA"),
@@ -31,7 +31,7 @@ def create_domain(*ss):
         arrival=TimeVariable("arrival"))
 
     def map_vars(s):
-        return [vars[x] for x in s]
+        return [vars_[x] for x in s]
     return Domain(*[map_vars(s) for s in ss])
 
 

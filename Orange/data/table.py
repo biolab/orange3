@@ -12,12 +12,13 @@ from threading import Lock
 
 import bottleneck as bn
 import numpy as np
-from Orange.misc.collections import frozendict
-from Orange.util import OrangeDeprecationWarning
+
 from scipy import sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
 import Orange.data  # import for io.py
+from Orange.misc.collections import frozendict
+from Orange.util import OrangeDeprecationWarning
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
@@ -1094,6 +1095,7 @@ class Table(Sequence, Storage):
         """
         Ensure that the table owns its data; copy arrays when necessary.
         """
+
         def is_view(x):
             # Sparse matrices don't have views like numpy arrays. Since indexing on
             # them creates copies in constructor we can skip this check here.
@@ -1163,12 +1165,12 @@ class Table(Sequence, Storage):
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
-        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)   # do not check for sparse X
+        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)  # do not check for sparse X
         return missing_x or bn.anynan(self._Y)
 
     def has_missing_attribute(self):
         """Return `True` if there are any missing attribute values."""
-        return not sp.issparse(self.X) and bn.anynan(self.X)    # do not check for sparse X
+        return not sp.issparse(self.X) and bn.anynan(self.X)  # do not check for sparse X
 
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
@@ -1496,7 +1498,7 @@ class Table(Sequence, Storage):
 
     @staticmethod
     def _range_filter_to_indicator(filter, col, fmin, fmax):
-        with np.errstate(invalid="ignore"):   # nan's are properly discarded
+        with np.errstate(invalid="ignore"):  # nan's are properly discarded
             if filter.oper == filter.Equal:
                 return col == fmin
             if filter.oper == filter.NotEqual:
@@ -1540,9 +1542,9 @@ class Table(Sequence, Storage):
                 if 0 <= c < nattrs:
                     S = fast_stats(self.X[:, [c]], W and W[:, [c]])
                 elif c >= nattrs:
-                    S = fast_stats(self._Y[:, [c-nattrs]], W and W[:, [c-nattrs]])
+                    S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]])
                 else:
-                    S = fast_stats(self.metas[:, [-1-c]], W and W[:, [-1-c]])
+                    S = fast_stats(self.metas[:, [-1 - c]], W and W[:, [-1 - c]])
                 stats.append(S[0])
         return stats
 
@@ -1646,7 +1648,7 @@ class Table(Sequence, Storage):
         # it to dense and make it 1D
         if issparse(row_data):
             row_data = row_data.toarray().ravel()
-        if row_data.dtype.kind != "f": #meta attributes can be stored as type object
+        if row_data.dtype.kind != "f":  # meta attributes can be stored as type object
             row_data = row_data.astype(float)
 
         contingencies = [None] * len(col_desc)
@@ -1844,7 +1846,7 @@ class Table(Sequence, Storage):
         if dense_metas:
             densify(new_domain.metas)
         t = self.transform(new_domain)
-        t.ids = self.ids    # preserve indices
+        t.ids = self.ids  # preserve indices
         return t
 
 
