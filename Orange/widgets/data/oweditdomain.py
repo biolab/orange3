@@ -1816,7 +1816,7 @@ class OWEditDomain(widget.OWWidget):
     _merge_dialog_settings = settings.ContextSetting({})
     output_table_name = settings.ContextSetting("")
 
-    want_control_area = False
+    want_main_area = False
 
     def __init__(self):
         super().__init__()
@@ -1826,13 +1826,8 @@ class OWEditDomain(widget.OWWidget):
         self._invalidated = False
         self.typeindex = 0
 
-        mainlayout = self.mainArea.layout()
-        assert isinstance(mainlayout, QVBoxLayout)
-        layout = QHBoxLayout()
-        mainlayout.addLayout(layout)
-        box = QGroupBox("Variables")
-        box.setLayout(QVBoxLayout())
-        layout.addWidget(box)
+        main = gui.hBox(self.controlArea, spacing=6)
+        box = gui.vBox(main, "Variables")
 
         self.variables_model = VariableListModel(parent=self)
         self.variables_view = self.domain_view = QListView(
@@ -1846,49 +1841,40 @@ class OWEditDomain(widget.OWWidget):
         )
         box.layout().addWidget(self.variables_view)
 
-        box = QGroupBox("Edit", )
-        box.setLayout(QVBoxLayout(margin=4))
-        layout.addWidget(box)
-
+        box = gui.vBox(main, "Edit")
         self._editor = ReinterpretVariableEditor()
-
         box.layout().addWidget(self._editor)
 
         self.le_output_name = gui.lineEdit(
-            self.mainArea, self, "output_table_name", "Output table name: ",
-            box=True, orientation=Qt.Horizontal)
+            self.buttonsArea, self, "output_table_name", "Output table name: ",
+            orientation=Qt.Horizontal)
 
-        bbox = QDialogButtonBox()
-        bbox.setStyleSheet(
-            "button-layout: {:d};".format(QDialogButtonBox.MacLayout))
-        bapply = QPushButton(
-            "Apply",
+        gui.rubber(self.buttonsArea)
+
+        bbox = gui.hBox(self.buttonsArea)
+        breset_all = gui.button(
+            bbox, self, "Reset All",
+            objectName="button-reset-all",
+            toolTip="Reset all variables to their input state.",
+            autoDefault=False,
+            callback=self.reset_all
+        )
+        breset = gui.button(
+            bbox, self, "Reset Selected",
+            objectName="button-reset",
+            toolTip="Rest selected variable to its input state.",
+            autoDefault=False,
+            callback=self.reset_selected
+        )
+        bapply = gui.button(
+            bbox, self, "Apply",
             objectName="button-apply",
             toolTip="Apply changes and commit data on output.",
             default=True,
-            autoDefault=False
+            autoDefault=False,
+            callback=self.commit
         )
-        bapply.clicked.connect(self.commit)
-        breset = QPushButton(
-            "Reset Selected",
-            objectName="button-reset",
-            toolTip="Rest selected variable to its input state.",
-            autoDefault=False
-        )
-        breset.clicked.connect(self.reset_selected)
-        breset_all = QPushButton(
-            "Reset All",
-            objectName="button-reset-all",
-            toolTip="Reset all variables to their input state.",
-            autoDefault=False
-        )
-        breset_all.clicked.connect(self.reset_all)
 
-        bbox.addButton(bapply, QDialogButtonBox.AcceptRole)
-        bbox.addButton(breset, QDialogButtonBox.ResetRole)
-        bbox.addButton(breset_all, QDialogButtonBox.ResetRole)
-
-        mainlayout.addWidget(bbox)
         self.variables_view.setFocus(Qt.NoFocusReason)  # initial focus
 
         self.info.set_input_summary(self.info.NoInput)

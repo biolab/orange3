@@ -596,6 +596,7 @@ class OWLinePlot(OWWidget):
     icon = "icons/LinePlot.svg"
     priority = 180
 
+    buttons_area_orientation = Qt.Vertical
     enable_selection = Signal(bool)
 
     class Inputs:
@@ -683,9 +684,8 @@ class OWLinePlot(OWWidget):
         self.group_view.setEnabled(False)
 
         plot_gui = OWPlotGUI(self)
-        plot_gui.box_zoom_select(self.controlArea)
-
-        gui.auto_send(self.controlArea, self, "auto_commit")
+        plot_gui.box_zoom_select(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)

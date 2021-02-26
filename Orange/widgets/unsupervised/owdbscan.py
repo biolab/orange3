@@ -106,7 +106,7 @@ class OWDBSCAN(widget.OWWidget):
                      items=list(zip(*self.METRICS))[0],
                      callback=self._metirc_changed)
 
-        gui.auto_apply(self.controlArea, self, "auto_commit")
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
         gui.rubber(self.controlArea)
 
         self.controlArea.layout().addStretch()

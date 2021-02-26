@@ -99,7 +99,6 @@ class OWSilhouettePlot(widget.OWWidget):
                  ("Cosine", Orange.distance.Cosine)]
 
     graph_name = "scene"
-    buttons_area_orientation = Qt.Vertical
 
     class Error(widget.OWWidget.Error):
         need_two_clusters = Msg("Need at least two non-empty clusters")
@@ -150,7 +149,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Cluster Label")
         self.cluster_var_cb = gui.comboBox(
-            box, self, "cluster_var_idx", contentsLength=14, addSpace=4,
+            box, self, "cluster_var_idx", contentsLength=14,
             searchable=True, callback=self._invalidate_scores
         )
         gui.checkBox(
@@ -163,7 +162,7 @@ class OWSilhouettePlot(widget.OWWidget):
         gui.widgetLabel(box, "Bar width:")
         gui.hSlider(
             box, self, "bar_size", minValue=1, maxValue=10, step=1,
-            callback=self._update_bar_size, addSpace=6)
+            callback=self._update_bar_size)
         gui.widgetLabel(box, "Annotations:")
         self.annotation_cb = gui.comboBox(
             box, self, "annotation_var_idx", contentsLength=14,
@@ -179,10 +178,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        box = gui.vBox(self.buttonsArea, box=True)
-        gui.auto_send(box, self, "auto_commit", box=False)
-        # Ensure that the controlArea is not narrower than buttonsArea
-        self.controlArea.layout().addWidget(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.scene = QGraphicsScene(self)
         self.view = StickyGraphicsView(self.scene)

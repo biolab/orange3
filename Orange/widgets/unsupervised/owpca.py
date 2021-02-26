@@ -65,21 +65,21 @@ class OWPCA(widget.OWWidget):
         self._init_projector()
 
         # Components Selection
-        box = gui.vBox(self.controlArea, "Components Selection")
         form = QFormLayout()
-        box.layout().addLayout(form)
+        box = gui.widgetBox(self.controlArea, "Components Selection",
+                            orientation=form)
 
         self.components_spin = gui.spin(
             box, self, "ncomponents", 1, MAX_COMPONENTS,
             callback=self._update_selection_component_spin,
-            keyboardTracking=False
+            keyboardTracking=False, addToLayout=False
         )
         self.components_spin.setSpecialValueText("All")
 
         self.variance_spin = gui.spin(
             box, self, "variance_covered", 1, 100,
             callback=self._update_selection_variance_spin,
-            keyboardTracking=False
+            keyboardTracking=False, addToLayout=False
         )
         self.variance_spin.setSuffix("%")
 
@@ -90,7 +90,8 @@ class OWPCA(widget.OWWidget):
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.normalize_box = gui.checkBox(
             self.options_box, self, "normalize",
-            "Normalize variables", callback=self._update_normalize
+            "Normalize variables", callback=self._update_normalize,
+            attribute=Qt.WA_LayoutUsesWidgetRect
         )
 
         self.maxp_spin = gui.spin(
@@ -99,9 +100,9 @@ class OWPCA(widget.OWWidget):
             keyboardTracking=False
         )
 
-        self.controlArea.layout().addStretch()
+        gui.rubber(self.controlArea)
 
-        gui.auto_apply(self.controlArea, self, "auto_commit")
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.plot = SliderGraph(
             "Principal Components", "Proportion of variance",

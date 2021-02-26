@@ -520,14 +520,12 @@ class OWCreateInstance(OWWidget):
             )
         gui.rubber(box)
 
-        box = gui.auto_apply(self.controlArea, self, "auto_commit")
-        box.button.setFixedWidth(180)
-        box.layout().insertStretch(0)
         # pylint: disable=unnecessary-lambda
-        append = gui.checkBox(None, self, "append_to_data",
+        append = gui.checkBox(self.buttonsArea, self, "append_to_data",
                               "Append this instance to input data",
                               callback=lambda: self.commit())
-        box.layout().insertWidget(0, append)
+        gui.rubber(self.buttonsArea)
+        box = gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self._set_input_summary()
         self._set_output_summary()

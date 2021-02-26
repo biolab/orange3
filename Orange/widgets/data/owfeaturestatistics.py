@@ -710,8 +710,7 @@ class OWFeatureStatistics(widget.OWWidget):
         reduced_data = Output('Reduced Data', Table, default=True)
         statistics = Output('Statistics', Table)
 
-    want_control_area = False
-    buttons_area_orientation = Qt.Vertical
+    want_main_area = False
 
     settingsHandler = DomainContextHandler()
     settings_version = 2
@@ -738,34 +737,30 @@ class OWFeatureStatistics(widget.OWWidget):
         # shortcut = QShortcut(QKeySequence('Ctrl+f'), self, self.filter_text.setFocus)
         # shortcut.setWhatsThis('Filter variables by name')
 
-        box = gui.hBox(None, box=False)
-        box.setContentsMargins(0, 0, 0, 0)
-
-        self.color_var_model = DomainModel(
-            valid_types=(ContinuousVariable, DiscreteVariable),
-            placeholder='None',
-        )
-        self.cb_color_var = gui.comboBox(
-            box, master=self, value='color_var', model=self.color_var_model,
-            label='Color:', orientation=Qt.Horizontal, contentsLength=13,
-            searchable=True
-        )
-        self.cb_color_var.activated.connect(self.__color_var_changed)
-
-        gui.rubber(box)
-        gui.auto_send(box, self, "auto_commit", box=None)
-        self.mainArea.layout().addWidget(box)
-
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         # Main area
         self.model = FeatureStatisticsTableModel(parent=self)
         self.table_view = FeatureStatisticsTableView(self.model, parent=self)
         self.table_view.selectionModel().selectionChanged.connect(self.on_select)
         self.table_view.horizontalHeader().sectionClicked.connect(self.on_header_click)
 
-        self.mainArea.layout().addWidget(self.table_view)
+        self.controlArea.layout().addWidget(self.table_view)
+
+        self.color_var_model = DomainModel(
+            valid_types=(ContinuousVariable, DiscreteVariable),
+            placeholder='None',
+        )
+        self.cb_color_var = gui.comboBox(
+            self.buttonsArea, master=self, value='color_var', model=self.color_var_model,
+            label='Color:', orientation=Qt.Horizontal, contentsLength=13,
+            searchable=True
+        )
+        self.cb_color_var.activated.connect(self.__color_var_changed)
+
+        gui.rubber(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
+
+        self.info.set_input_summary(self.info.NoInput)
+        self.info.set_output_summary(self.info.NoOutput)
 
     @staticmethod
     def sizeHint():

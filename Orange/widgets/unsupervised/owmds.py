@@ -224,18 +224,19 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             master=self.graph, value="connected_pairs", minValue=0,
             maxValue=20, createLabel=False, callback=self._on_connected_changed
         )
+        gui.rubber(self.controlArea)
 
     def _add_controls_optimization(self):
         box = gui.vBox(self.controlArea, box=True)
-        self.run_button = gui.button(box, self, "Start", self._toggle_run)
+        hbox = gui.hBox(box, margin=0)
+        gui.button(hbox, self, "PCA", callback=self.do_PCA, autoDefault=False)
+        gui.button(hbox, self, "Randomize", callback=self.do_random, autoDefault=False)
+        gui.button(hbox, self, "Jitter", callback=self.do_jitter, autoDefault=False)
         gui.comboBox(box, self, "refresh_rate", label="Refresh: ",
                      orientation=Qt.Horizontal,
                      items=[t for t, _ in OWMDS.RefreshRate],
                      callback=self.__refresh_rate_combo_changed)
-        hbox = gui.hBox(box, margin=0)
-        gui.button(hbox, self, "PCA", callback=self.do_PCA)
-        gui.button(hbox, self, "Randomize", callback=self.do_random)
-        gui.button(hbox, self, "Jitter", callback=self.do_jitter)
+        self.run_button = gui.button(box, self, "Start", self._toggle_run)
 
     def __refresh_rate_combo_changed(self):
         if self.task is not None:

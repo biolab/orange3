@@ -1,6 +1,7 @@
-from AnyQt.QtCore import Qt
 from scipy.sparse import issparse
 import bottleneck as bn
+
+from AnyQt.QtCore import Qt
 
 import Orange.data
 import Orange.misc
@@ -77,7 +78,6 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
     want_main_area = False
     resizing_enabled = False
-    buttons_area_orientation = Qt.Vertical
 
     class Error(OWWidget.Error):
         no_continuous_features = Msg("No numeric features")
@@ -117,12 +117,12 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             callback=self._invalidate,
             tooltip=("All dimensions are (implicitly) scaled to a common"
                      "scale to normalize the influence across the domain."),
-            stateWhenDisabled=False
+            stateWhenDisabled=False, attribute=Qt.WA_LayoutUsesWidgetRect
         )
         _, metric = METRICS[self.metric_idx]
         self.normalization_check.setEnabled(metric.supports_normalization)
 
-        gui.auto_apply(self.controlArea, self, "autocommit")
+        gui.auto_apply(self.buttonsArea, self, "autocommit")
 
     @Inputs.data
     @check_sql_input

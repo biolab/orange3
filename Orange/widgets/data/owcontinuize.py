@@ -1,7 +1,6 @@
 from functools import reduce
 from types import SimpleNamespace
 
-from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QGridLayout
 
 import Orange.data
@@ -33,7 +32,6 @@ class OWContinuize(widget.OWWidget):
         data = Output("Data", Orange.data.Table)
 
     want_main_area = False
-    buttons_area_orientation = Qt.Vertical
     resizing_enabled = False
 
     Normalize = SimpleNamespace(Leave=0, Standardize=1, Center=2, Scale=3,
@@ -87,18 +85,17 @@ class OWContinuize(widget.OWWidget):
             None, self, "continuous_treatment", box = "Numeric Features",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
-        box.layout().addStretch(10)
+        gui.rubber(box)
         layout.addWidget(box, 0, 1, 2, 1)
 
         box = gui.radioButtonsInBox(
             None, self, "class_treatment", box="Categorical Outcome(s)",
             btnLabels=[t[0] for t in self.class_treats],
             callback=self.settings_changed)
-        box.layout().addStretch(10)
-        layout.addWidget(box, 0, 2)
+        gui.rubber(box)
+        layout.addWidget(box, 0, 2, 2, 1)
 
-        ac = gui.auto_apply(None, self, "autosend", box=False)
-        layout.addWidget(ac, 1, 2)
+        gui.auto_apply(self.buttonsArea, self, "autosend")
 
         self.data = None
         self.info.set_input_summary(self.info.NoInput)

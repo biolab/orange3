@@ -1,4 +1,3 @@
-from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QFrame
 
 from Orange.data import Table
@@ -37,7 +36,6 @@ class OWPurgeDomain(widget.OWWidget):
 
     want_main_area = False
     resizing_enabled = False
-    buttons_area_orientation = Qt.Vertical
 
     feature_options = (('sortValues', 'Sort categorical feature values'),
                        ('removeValues', 'Remove unused feature values'),
@@ -76,14 +74,10 @@ class OWPurgeDomain(widget.OWWidget):
             frame = QFrame()
             frame.setFrameShape(QFrame.HLine)
             frame.setFrameShadow(QFrame.Sunken)
-            parent.layout().addSpacing(6)
             parent.layout().addWidget(frame)
-            parent.layout().addSpacing(6)
 
         boxAt = gui.vBox(self.controlArea, "Features")
-        for not_first, (value, label) in enumerate(self.feature_options):
-            if not_first:
-                gui.separator(boxAt, 2)
+        for value, label in self.feature_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
         add_line(boxAt)
@@ -91,10 +85,8 @@ class OWPurgeDomain(widget.OWWidget):
                   "Sorted: %(resortedAttrs)s, "
                   "reduced: %(reducedAttrs)s, removed: %(removedAttrs)s")
 
-        boxAt = gui.vBox(self.controlArea, "Classes", addSpace=True)
-        for not_first, (value, label) in enumerate(self.class_options):
-            if not_first:
-                gui.separator(boxAt, 2)
+        boxAt = gui.vBox(self.controlArea, "Classes")
+        for value, label in self.class_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
         add_line(boxAt)
@@ -102,10 +94,8 @@ class OWPurgeDomain(widget.OWWidget):
                   "Sorted: %(resortedClasses)s,"
                   "reduced: %(reducedClasses)s, removed: %(removedClasses)s")
 
-        boxAt = gui.vBox(self.controlArea, "Meta attributes", addSpace=True)
-        for not_first, (value, label) in enumerate(self.meta_options):
-            if not_first:
-                gui.separator(boxAt, 2)
+        boxAt = gui.vBox(self.controlArea, "Meta attributes")
+        for value, label in self.meta_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
         add_line(boxAt)
@@ -113,7 +103,6 @@ class OWPurgeDomain(widget.OWWidget):
                   "Reduced: %(reducedMetas)s, removed: %(removedMetas)s")
 
         gui.auto_send(self.buttonsArea, self, "autoSend")
-        gui.rubber(self.controlArea)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)

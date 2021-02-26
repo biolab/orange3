@@ -88,6 +88,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                       doc="Attribute-valued dataset read from the input file.")
 
     want_main_area = False
+    buttons_area_orientation = None
 
     SEARCH_PATHS = [("sample-datasets", get_sample_datasets_dir())]
     SIZE_LIMIT = 1e7
@@ -160,8 +161,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.reader = None
 
         layout = QGridLayout()
-        gui.widgetBox(self.controlArea, margin=0, orientation=layout)
-        vbox = gui.radioButtons(None, self, "source", box=True, addSpace=True,
+        layout.setSpacing(4)
+        gui.widgetBox(self.controlArea, orientation=layout, box='Source')
+        vbox = gui.radioButtons(None, self, "source", box=True,
                                 callback=self.load_data, addToLayout=False)
 
         rb_button = gui.appendRadioButton(vbox, "File:", addToLayout=False)
@@ -217,7 +219,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_edit = url_combo.lineEdit()
         l, t, r, b = url_edit.getTextMargins()
         url_edit.setTextMargins(l + 5, t, r, b)
-        layout.addWidget(url_combo, 3, 1, 3, 3)
+        layout.addWidget(url_combo, 3, 1, 1, 3)
         url_combo.activated.connect(self._url_set)
         # whit completer we set that combo box is case sensitive when
         # matching the history
@@ -234,20 +236,25 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.editor_model = self.domain_editor.model()
         box.layout().addWidget(self.domain_editor)
 
-        box = gui.hBox(self.controlArea)
+        box = gui.hBox(box)
         gui.button(
-            box, self, "Browse documentation datasets",
-            callback=lambda: self.browse_file(True), autoDefault=False)
+            box, self, "Reset", callback=self.reset_domain_edit,
+            autoDefault=False
+        )
         gui.rubber(box)
-
-        gui.button(
-            box, self, "Reset", callback=self.reset_domain_edit)
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
         self.apply_button.setEnabled(False)
         self.apply_button.setFixedWidth(170)
         self.editor_model.dataChanged.connect(
             lambda: self.apply_button.setEnabled(True))
+
+        hBox = gui.hBox(self.controlArea)
+        gui.rubber(hBox)
+        gui.button(
+            hBox, self, "Browse documentation datasets",
+            callback=lambda: self.browse_file(True), autoDefault=False)
+        gui.rubber(hBox)
 
         self.info.set_output_summary(self.info.NoOutput)
 

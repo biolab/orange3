@@ -194,9 +194,10 @@ class VariableSelectionView(QListView):
         self.setUniformItemSizes(True)
 
         self.setItemDelegate(VariablesDelegate())
+        self.setMinimumHeight(50)
 
     def sizeHint(self):
-        return QSize(1, 50)
+        return QSize(1, 150)
 
     def mouseMoveEvent(self, e):
         super().mouseMoveEvent(e)
@@ -727,7 +728,7 @@ class OWPlotGUI:
         else:
             gui.separator(widget)
 
-    def point_properties_box(self, widget, box=True):
+    def point_properties_box(self, widget, box='Attributes'):
         '''
             Creates a box with controls for common point properties.
             Currently, these properties are point size and transparency.
@@ -741,7 +742,7 @@ class OWPlotGUI:
             self.LabelOnlySelected], box)
         return box
 
-    def effects_box(self, widget, box=True):
+    def effects_box(self, widget, box=False):
         """
         Create a box with controls for common plot settings
         """
@@ -758,7 +759,7 @@ class OWPlotGUI:
         """
         return self.create_box([
             self.ClassDensity,
-            self.ShowLegend], widget, box, True)
+            self.ShowLegend], widget, box, False)
 
     _functions = {
         ShowFilledSymbols: filled_symbols_check_box,
@@ -796,7 +797,9 @@ class OWPlotGUI:
             The ``ids`` argument is a list of widget ID's that will be added to this box
         '''
         if box is None:
-            box = gui.vBox(widget, name)
+            kwargs = {}
+            box = gui.vBox(widget, name, margin=True,
+                           contentsMargins=(8, 4, 8, 4))
         self.add_widgets(ids, box)
         return box
 
@@ -804,10 +807,12 @@ class OWPlotGUI:
         grid = QGridLayout()
         grid.setColumnMinimumWidth(0, 50)
         grid.setColumnStretch(1, 1)
-        box = gui.widgetBox(widget, box=box, orientation=grid)
+        b = gui.widgetBox(widget, box=box, orientation=grid)
+        if not box:
+            b.setContentsMargins(8, 4, 8, 4)
         # This must come after calling widgetBox, since widgetBox overrides it
         grid.setVerticalSpacing(8)
-        return box
+        return b
 
     def _expand_id(self, id):
         if type(id) == int:

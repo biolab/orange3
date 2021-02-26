@@ -199,7 +199,8 @@ class OWDistanceMatrix(widget.OWWidget):
     annotation_idx = ContextSetting(1)
     selection = ContextSetting([])
 
-    want_control_area = False
+    want_control_area = True
+    want_main_area = False
 
     def __init__(self):
         super().__init__()
@@ -224,18 +225,16 @@ class OWDistanceMatrix(widget.OWWidget):
         selmodel = SymmetricSelectionModel(view.model(), view)
         view.setSelectionModel(selmodel)
         view.setSelectionBehavior(QTableView.SelectItems)
-        self.mainArea.layout().addWidget(view)
-
-        settings_box = gui.hBox(self.mainArea)
+        self.controlArea.layout().addWidget(view)
 
         self.annot_combo = gui.comboBox(
-            settings_box, self, "annotation_idx", label="Labels: ",
+            self.buttonsArea, self, "annotation_idx", label="Labels: ",
             orientation=Qt.Horizontal,
             callback=self._invalidate_annotations, contentsLength=12)
         self.annot_combo.setModel(VariableListModel())
         self.annot_combo.model()[:] = ["None", "Enumeration"]
-        gui.rubber(settings_box)
-        acb = gui.auto_send(settings_box, self, "auto_commit", box=None)
+        gui.rubber(self.buttonsArea)
+        acb = gui.auto_send(self.buttonsArea, self, "auto_commit", box=False)
         acb.setFixedWidth(200)
         # Signal must be connected after self.commit is redirected
         selmodel.selectionChanged.connect(self.commit)

@@ -147,9 +147,7 @@ class TestOWSelectAttributes(WidgetTest):
         self.assertEqual(control.button.isEnabled(), button)
         self.assertEqual(control.isVisibleTo(widget), box)
         self.assertEqual(widget.used_attrs_view.isEnabled(), _list)
-        self.assertEqual(widget.up_attr_button.isEnabled(), _list)
         self.assertEqual(widget.move_attr_button.isEnabled(), _list)
-        self.assertEqual(widget.down_attr_button.isEnabled(), _list)
         if button:
             control.button.click()
             self.assertEqual(control.button.isEnabled(), False)

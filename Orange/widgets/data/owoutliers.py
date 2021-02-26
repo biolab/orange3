@@ -229,7 +229,7 @@ class OWOutliers(OWWidget, ConcurrentWidgetMixin):
 
         self._init_editors()
 
-        gui.auto_apply(self.controlArea, self, "auto_commit")
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)

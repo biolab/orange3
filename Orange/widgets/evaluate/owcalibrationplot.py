@@ -189,7 +189,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(self.info_box)
 
-        gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, "auto_commit", commit=self.apply)
 
         self.plotview = pg.GraphicsView(background="w")
         axes = {"bottom": AxisItem(orientation="bottom"),

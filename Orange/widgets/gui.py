@@ -34,6 +34,7 @@ from orangewidget.gui import (
     CalendarWidgetWithTime, DateTimeEditWCalendarTime,
     ControlGetter, VerticalScrollArea, ProgressBar,
     ControlledCallback, ControlledCallFront, ValueCallback, connectControl,
+    is_macstyle
 )
 
 
@@ -67,7 +68,7 @@ __all__ = [
     "BarRatioRole", "BarBrushRole", "SortOrderRole", "LinkRole",
     "BarItemDelegate", "IndicatorItemDelegate", "LinkStyledItemDelegate",
     "ColoredBarItemDelegate", "HorizontalGridDelegate", "VerticalItemDelegate",
-    "ValueCallback",
+    "ValueCallback", 'is_macstyle',
     # Defined here
     "createAttributePixmap", "attributeIconDict", "attributeItem",
     "listView", "ListViewWithSizeHint", "listBox", "OrangeListBox",
@@ -192,7 +193,6 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
                        view.selectionModel().selectionChanged,
                        CallFrontListView(view),
                        CallBackListView(model, view, master, value))
-    misc.setdefault('addSpace', True)
     misc.setdefault('uniformItemSizes', True)
     miscellanea(view, bg, widget, **misc)
     return view
@@ -259,7 +259,6 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
         connectControl(master, value, callback, lb.itemSelectionChanged,
                        CallFrontListBox(lb), CallBackListBox(lb, master))
 
-    misc.setdefault('addSpace', True)
     miscellanea(lb, bg, widget, **misc)
     return lb
 

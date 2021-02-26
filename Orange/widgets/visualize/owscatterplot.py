@@ -283,7 +283,7 @@ class OWScatterPlot(OWDataProjectionWidget):
              self.gui.RegressionLine],
             self._plot_box)
         gui.checkBox(
-            gui.indentedBox(self._plot_box), self,
+            self._plot_box, self,
             value="graph.orthonormal_regression",
             label="Treat variables as independent",
             callback=self.graph.update_regression_line,
@@ -291,25 +291,27 @@ class OWScatterPlot(OWDataProjectionWidget):
             "If checked, fit line to group (minimize distance from points);\n"
             "otherwise fit y as a function of x (minimize vertical distances)",
             disabledBy=self.cb_reg_line)
+        gui.rubber(self.controlArea)
 
     def _add_controls_axis(self):
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
-            contentsLength=14
+            contentsLength=12, searchable=True
         )
-        self.attr_box = gui.vBox(self.controlArea, True)
+        self.attr_box = gui.vBox(self.controlArea, 'Axes',
+                                 spacing=2 if gui.is_macstyle() else 8)
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=ContinuousVariable)
         self.cb_attr_x = gui.comboBox(
             self.attr_box, self, "attr_x", label="Axis x:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options,
-            searchable=True)
+        )
         self.cb_attr_y = gui.comboBox(
             self.attr_box, self, "attr_y", label="Axis y:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options,
-            searchable=True)
+        )
         vizrank_box = gui.hBox(self.attr_box)
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
             vizrank_box, self, "Find Informative Projections", self.set_attr)

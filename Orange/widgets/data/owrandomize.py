@@ -63,7 +63,6 @@ class OWRandomize(OWWidget):
             box, "", alignment=Qt.AlignCenter,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
         self._set_scope_label()
-        gui.separator(box, 10, 10)
         self.replicable_check = gui.checkBox(
             box, self, "random_seed", "Replicable shuffling",
             callback=self._shuffle_check_changed)
@@ -71,7 +70,7 @@ class OWRandomize(OWWidget):
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
 
-        self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
     @property
     def parts(self):

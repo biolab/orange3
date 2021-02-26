@@ -500,11 +500,7 @@ class OWFeatureConstructor(OWWidget):
 
         box.layout().addLayout(layout, 1)
 
-        box = gui.hBox(self.controlArea)
-        gui.rubber(box)
-        commit = gui.button(box, self, "Send", callback=self.apply,
-                            default=True)
-        commit.setMinimumWidth(180)
+        gui.button(self.buttonsArea, self, "Send", callback=self.apply, default=True)
 
     def setCurrentIndex(self, index):
         index = min(index, len(self.featuremodel) - 1)

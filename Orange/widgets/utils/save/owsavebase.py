@@ -83,21 +83,17 @@ class OWSaveBase(widget.OWWidget, openclass=True):
             self.filter = next(iter(self.get_filters()))
 
         self.grid = grid = QGridLayout()
-        gui.widgetBox(self.controlArea, orientation=grid)
+        gui.widgetBox(self.controlArea, orientation=grid, box=True)
         grid.addWidget(
             gui.checkBox(
                 None, self, "auto_save", "Autosave when receiving new data",
                 callback=self.update_messages),
             start_row, 0, 1, 2)
-        grid.setRowMinimumHeight(start_row + 1, 8)
         self.bt_save = gui.button(
-            None, self,
+            self.buttonsArea, self,
             label=f"Save as {self.stored_name}" if self.stored_name else "Save",
             callback=self.save_file)
-        grid.addWidget(self.bt_save, start_row + 2, 0)
-        grid.addWidget(
-            gui.button(None, self, "Save as ...", callback=self.save_file_as),
-            start_row + 2, 1)
+        gui.button(self.buttonsArea, self, "Save as ...", callback=self.save_file_as)
 
         self.adjustSize()
         self.update_messages()

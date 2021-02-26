@@ -2,7 +2,7 @@ from xml.sax.saxutils import escape
 
 import numpy as np
 
-from AnyQt.QtCore import QSize, Signal
+from AnyQt.QtCore import QSize, Signal, Qt
 from AnyQt.QtWidgets import QApplication
 
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
@@ -391,7 +391,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     graph = SettingProvider(OWScatterPlotBase)
     graph_name = "graph.plot_widget.plotItem"
     embedding_variables_names = ("proj-x", "proj-y")
-    left_side_scrolling = True
+    buttons_area_orientation = Qt.Vertical
 
     input_changed = Signal(object)
     output_changed = Signal(object)
@@ -428,10 +428,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self._point_box = self.gui.point_properties_box(area)
         self._effects_box = self.gui.effects_box(area)
         self._plot_box = self.gui.plot_properties_box(area)
-        self.control_area_stretch = gui.widgetBox(area)
-        self.control_area_stretch.layout().addStretch(100)
-        self.gui.box_zoom_select(area)
-        gui.auto_send(area, self, "auto_commit")
+
+        self.gui.box_zoom_select(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
     @property
     def effective_variables(self):

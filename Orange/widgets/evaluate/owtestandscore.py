@@ -148,6 +148,7 @@ class OWTestAndScore(OWWidget):
         evaluations_results = Output("Evaluation Results", Results)
 
     settings_version = 3
+    buttons_area_orientation = None
     UserAdviceMessages = [
         widget.Message(
             "Click on the table header to select shown columns",
@@ -341,9 +342,9 @@ class OWTestAndScore(OWWidget):
             "Small numbers show the probability that the difference is "
             "negligible.</small>", wordWrap=True))
 
-    @staticmethod
-    def sizeHint():
-        return QSize(780, 1)
+    def sizeHint(self):
+        sh = super().sizeHint()
+        return QSize(780, sh.height())
 
     def _update_controls(self):
         self.fold_feature = None

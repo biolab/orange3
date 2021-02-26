@@ -119,7 +119,7 @@ class OWConcatenate(widget.OWWidget):
         ###
         box = gui.vBox(
             self.controlArea, self.tr("Source Identification"),
-            addSpace=False)
+        )
 
         cb = gui.checkBox(
             box, self, "append_source_column",
@@ -155,9 +155,7 @@ class OWConcatenate(widget.OWWidget):
         cb.disables.append(ibox)
         cb.makeConsistent()
 
-        box = gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
-        box.button.setFixedWidth(180)
-        box.layout().insertStretch(0)
+        gui.auto_apply(self.buttonsArea, self, "auto_commit", commit=self.apply)
 
     @Inputs.primary_data
     @check_sql_input

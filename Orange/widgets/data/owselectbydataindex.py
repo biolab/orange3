@@ -31,6 +31,7 @@ class OWSelectByDataIndex(widget.OWWidget):
         annotated_data = Output("Annotated Data", Table)
 
     want_main_area = False
+    buttons_area_orientation = None
     resizing_enabled = False
 
     class Warning(widget.OWWidget.Warning):

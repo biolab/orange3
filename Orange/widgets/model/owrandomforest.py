@@ -52,12 +52,14 @@ class OWRandomForest(OWBaseLearner):
             checkCallback=self.settings_changed, alignment=Qt.AlignRight,)
         self.random_state = gui.checkBox(
             box, self, "use_random_state", label="Replicable training",
-            callback=self.settings_changed)
+            callback=self.settings_changed,
+            attribute=Qt.WA_LayoutUsesWidgetRect)
         self.weights = gui.checkBox(
             box, self,
             "class_weight", label="Balance class distribution",
             callback=self.settings_changed,
-            tooltip="Weigh classes inversely proportional to their frequencies."
+            tooltip="Weigh classes inversely proportional to their frequencies.",
+            attribute=Qt.WA_LayoutUsesWidgetRect
         )
 
         box = gui.vBox(self.controlArea, "Growth Control")

@@ -4,7 +4,7 @@ from itertools import count
 
 import numpy as np
 
-from AnyQt.QtWidgets import QGridLayout, QLabel, QLineEdit, QSizePolicy
+from AnyQt.QtWidgets import QGridLayout, QLabel, QLineEdit, QSizePolicy, QWidget
 from AnyQt.QtCore import QSize, Qt
 
 from Orange.data import StringVariable, DiscreteVariable, Domain
@@ -173,6 +173,7 @@ class OWCreateClass(widget.OWWidget):
         data = Output("Data", Table)
 
     want_main_area = False
+    buttons_area_orientation = Qt.Vertical
 
     settingsHandler = DomainContextHandler()
     attribute = ContextSetting(None)
@@ -214,25 +215,27 @@ class OWCreateClass(widget.OWWidget):
         #: list of list of QLabel: pairs of labels with counts
         self.counts = []
 
+        gui.lineEdit(
+            self.controlArea, self, "class_name",
+            orientation=Qt.Horizontal, box="New Class Name")
+
+        variable_select_box = gui.vBox(self.controlArea, "Match by Substring")
+
         combo = gui.comboBox(
-            self.controlArea, self, "attribute", label="From column: ",
-            box=True, orientation=Qt.Horizontal, searchable=True,
+            variable_select_box, self, "attribute", label="From column:",
+            orientation=Qt.Horizontal, searchable=True,
             callback=self.update_rules,
             model=DomainModel(valid_types=(StringVariable, DiscreteVariable)))
         # Don't use setSizePolicy keyword argument here: it applies to box,
         # not the combo
-        combo.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        combo.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
 
-        patternbox = gui.vBox(self.controlArea, box=True)
+        patternbox = gui.vBox(variable_select_box)
         #: QWidget: the box that contains the remove buttons, line edits and
         #    count labels. The lines are added and removed dynamically.
         self.rules_box = rules_box = QGridLayout()
-        patternbox.layout().addLayout(self.rules_box)
-        box = gui.hBox(patternbox)
-        gui.button(
-            box, self, "+", callback=self.add_row, autoDefault=False, flat=True,
-            minimumSize=(QSize(20, 20)))
-        gui.rubber(box)
+        rules_box.setSpacing(4)
+        rules_box.setContentsMargins(4, 4, 4, 4)
         self.rules_box.setColumnMinimumWidth(1, 70)
         self.rules_box.setColumnMinimumWidth(0, 10)
         self.rules_box.setColumnStretch(0, 1)
@@ -240,15 +243,21 @@ class OWCreateClass(widget.OWWidget):
         self.rules_box.setColumnStretch(2, 100)
         rules_box.addWidget(QLabel("Name"), 0, 1)
         rules_box.addWidget(QLabel("Substring"), 0, 2)
-        rules_box.addWidget(QLabel("#Instances"), 0, 3, 1, 2)
+        rules_box.addWidget(QLabel("Count"), 0, 3, 1, 2)
         self.update_rules()
 
-        gui.lineEdit(
-            self.controlArea, self, "class_name",
-            label="Name for the new class:",
-            box=True, orientation=Qt.Horizontal)
+        widget = QWidget(patternbox)
+        widget.setLayout(rules_box)
+        patternbox.layout().addWidget(widget)
 
-        optionsbox = gui.vBox(self.controlArea, box=True)
+        box = gui.hBox(patternbox)
+        gui.rubber(box)
+        gui.button(box, self, "+", callback=self.add_row,
+                   autoDefault=False, width=34,
+                   sizePolicy=(QSizePolicy.Maximum,
+                               QSizePolicy.Maximum))
+
+        optionsbox = gui.vBox(self.controlArea, "Options")
         gui.checkBox(
             optionsbox, self, "match_beginning", "Match only at the beginning",
             callback=self.options_changed)
@@ -256,10 +265,9 @@ class OWCreateClass(widget.OWWidget):
             optionsbox, self, "case_sensitive", "Case sensitive",
             callback=self.options_changed)
 
-        box = gui.hBox(self.controlArea)
-        gui.rubber(box)
-        gui.button(box, self, "Apply", autoDefault=False, width=180,
-                   callback=self.apply)
+        gui.rubber(self.controlArea)
+
+        gui.button(self.buttonsArea, self, "Apply", callback=self.apply)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -328,18 +336,18 @@ class OWCreateClass(widget.OWWidget):
                 self.rules_box.addWidget(edit, n_lines, coli)
                 edit.textChanged.connect(self.sync_edit)
             button = gui.button(
-                None, self, label='×', flat=True, height=20,
-                styleSheet='* {font-size: 16pt; color: silver}'
-                           '*:hover {color: black}',
-                autoDefault=False, callback=self.remove_row)
-            button.setMinimumSize(QSize(12, 20))
+                None, self, label='×', width=33,
+                autoDefault=False, callback=self.remove_row,
+                sizePolicy=(QSizePolicy.Maximum,
+                            QSizePolicy.Maximum)
+            )
             self.remove_buttons.append(button)
             self.rules_box.addWidget(button, n_lines, 0)
             self.counts.append([])
             for coli, kwargs in enumerate(
-                    (dict(alignment=Qt.AlignRight),
-                     dict(alignment=Qt.AlignLeft, styleSheet="color: gray"))):
-                label = QLabel(**kwargs)
+                    (dict(),
+                     dict(styleSheet="color: gray"))):
+                label = QLabel(alignment=Qt.AlignCenter, **kwargs)
                 self.counts[-1].append(label)
                 self.rules_box.addWidget(label, n_lines, 3 + coli)
 

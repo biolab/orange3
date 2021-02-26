@@ -63,6 +63,8 @@ class OWLiftCurve(widget.OWWidget):
         undefined_curves = Msg(
             "No defined curves; check models and data")
 
+    buttons_area_orientation = None
+
     settingsHandler = EvaluationResultsContextHandler()
     target_index = settings.ContextSetting(0)
     selected_classifiers = settings.ContextSetting([])

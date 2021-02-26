@@ -45,7 +45,7 @@ class OWBaseSql(OWWidget, openclass=True):
     def _setup_gui(self):
         self.controlArea.setMinimumWidth(360)
 
-        vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
+        vbox = gui.vBox(self.controlArea, "Server")
         self.serverbox = gui.vBox(vbox)
         self.servertext = QLineEdit(self.serverbox)
         self.servertext.setPlaceholderText("Server")

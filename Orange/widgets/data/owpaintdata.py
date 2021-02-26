@@ -764,6 +764,7 @@ class OWPaintData(OWWidget):
     data = Setting(None, schema_only=True)
     labels = Setting(["C1", "C2"], schema_only=True)
 
+    buttons_area_orientation = Qt.Vertical
     graph_name = "plot"
 
     class Warning(OWWidget.Warning):
@@ -836,7 +837,6 @@ class OWPaintData(OWWidget):
         gui.checkBox(hbox, self, "hasAttr2", '', disables=attr2,
                      labelWidth=0,
                      callback=self.set_dimensions)
-        gui.separator(namesBox)
 
         gui.widgetLabel(namesBox, "Labels")
         self.classValuesView = listView = gui.ListViewWithSizeHint(
@@ -864,9 +864,8 @@ class OWPaintData(OWWidget):
         actionsWidget.layout().setSpacing(1)
         namesBox.layout().addWidget(actionsWidget)
 
-        tBox = gui.vBox(self.controlArea, "Tools", addSpace=True)
-        buttonBox = gui.hBox(tBox)
-        toolsBox = gui.widgetBox(buttonBox, orientation=QGridLayout())
+        tBox = gui.vBox(self.buttonsArea, "Tools")
+        toolsBox = gui.widgetBox(tBox, orientation=QGridLayout())
 
         self.toolActions = QActionGroup(self)
         self.toolActions.setExclusive(True)
@@ -906,7 +905,6 @@ class OWPaintData(OWWidget):
         self.addActions([undo, redo])
         self.undo_stack.indexChanged.connect(self.invalidate)
 
-        gui.separator(tBox)
         indBox = gui.indentedBox(tBox, sep=8)
         form = QFormLayout(
             formAlignment=Qt.AlignLeft,
@@ -916,20 +914,20 @@ class OWPaintData(OWWidget):
         indBox.layout().addLayout(form)
         slider = gui.hSlider(
             indBox, self, "brushRadius", minValue=1, maxValue=100,
-            createLabel=False
+            createLabel=False, addToLayout=False
         )
         form.addRow("Radius:", slider)
 
         slider = gui.hSlider(
             indBox, self, "density", None, minValue=1, maxValue=100,
-            createLabel=False
+            createLabel=False, addToLayout=False
         )
 
         form.addRow("Intensity:", slider)
 
         slider = gui.hSlider(
             indBox, self, "symbol_size", None, minValue=1, maxValue=100,
-            createLabel=False, callback=self.set_symbol_size
+            createLabel=False, callback=self.set_symbol_size, addToLayout=False
         )
 
         form.addRow("Symbol:", slider)
@@ -938,7 +936,7 @@ class OWPaintData(OWWidget):
             tBox, self, "Reset to Input Data", self.reset_to_input)
         self.btResetToInput.setDisabled(True)
 
-        gui.auto_send(self.controlArea, self, "autocommit")
+        gui.auto_send(self.buttonsArea, self, "autocommit")
 
         # main area GUI
         viewbox = PaintViewBox(enableMouse=False)

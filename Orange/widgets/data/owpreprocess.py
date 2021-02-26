@@ -1105,8 +1105,24 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         self.preprocessors.mimeData = mimeData
 
         box = gui.vBox(self.controlArea, "Preprocessors")
+        gui.rubber(self.controlArea)
 
-        self.preprocessorsView = view = QListView(
+        # we define a class that lets us set the vertical sizeHint
+        # based on the height and number of items in the list
+        # see self.__update_list_sizeHint
+
+        class ListView(QListView):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.vertical_hint = None
+
+            def sizeHint(self):
+                sh = super().sizeHint()
+                if self.vertical_hint:
+                    return QSize(sh.width(), self.vertical_hint)
+                return sh
+
+        self.preprocessorsView = view = ListView(
             selectionMode=QListView.SingleSelection,
             dragEnabled=True,
             dragDropMode=QListView.DragOnly
@@ -1142,8 +1158,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         self.mainArea.layout().addWidget(self.scroll_area)
         self.flow_view.installEventFilter(self)
 
-        box = gui.vBox(self.controlArea, "Output")
-        gui.auto_apply(box, self, "autocommit", box=False)
+        gui.auto_apply(self.buttonsArea, self, "autocommit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -1164,6 +1179,8 @@ class OWPreprocess(widget.OWWidget, openclass=True):
                           Qt.ItemIsDragEnabled)
             self.preprocessors.appendRow([item])
 
+        self.__update_list_sizeHint()
+
         model = self.load(self.storedsettings)
 
         self.set_model(model)
@@ -1175,6 +1192,14 @@ class OWPreprocess(widget.OWWidget, openclass=True):
             self.__update_size_constraint()
 
         self.apply()
+
+    def __update_list_sizeHint(self):
+        view = self.preprocessorsView
+
+        h = view.sizeHintForRow(0)
+        n = self.preprocessors.rowCount()
+        view.vertical_hint = n * h + 2  # only on Mac?
+        view.updateGeometry()
 
     def load(self, saved):
         """Load a preprocessor list from a dict."""

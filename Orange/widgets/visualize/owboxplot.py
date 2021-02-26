@@ -135,6 +135,8 @@ class OWBoxPlot(widget.OWWidget):
         no_vars = widget.Msg(
             "Data contains no categorical or numeric variables")
 
+    buttons_area_orientation = None
+
     #: Comparison types for continuous variables
     CompareNone, CompareMedians, CompareMeans = 0, 1, 2
 
@@ -241,8 +243,7 @@ class OWBoxPlot(widget.OWWidget):
         # The vertical size policy is needed to let only the list views expand
         self.display_box = gui.vBox(
             self.controlArea, "Display",
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum),
-            addSpace=False)
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
 
         gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
                      callback=self.update_graph)
@@ -268,7 +269,7 @@ class OWBoxPlot(widget.OWWidget):
             callback=self.update_graph,
             stateWhenDisabled=False)
 
-        gui.vBox(self.mainArea, addSpace=True)
+        gui.vBox(self.mainArea)
         self.box_scene = QGraphicsScene(self)
         self.box_scene.selectionChanged.connect(self.on_selection_changed)
         self.box_view = QGraphicsView(self.box_scene)
@@ -279,7 +280,6 @@ class OWBoxPlot(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.box_view)
 
-        gui.hBox(self.mainArea, addSpace=False)
         self.stat_test = ""
         self.mainArea.setMinimumWidth(300)
 

@@ -1,5 +1,4 @@
 import numpy as np
-from AnyQt.QtCore import Qt
 
 from Orange.util import scale
 from Orange.misc import DistMatrix
@@ -22,7 +21,6 @@ class OWDistanceTransformation(widget.OWWidget):
 
     want_main_area = False
     resizing_enabled = False
-    buttons_area_orientation = Qt.Vertical
 
     normalization_method = settings.Setting(0)
     inversion_method = settings.Setting(0)
@@ -58,7 +56,7 @@ class OWDistanceTransformation(widget.OWWidget):
                          btnLabels=[x[0] for x in self.inversion_options],
                          callback=self._invalidate)
 
-        gui.auto_apply(self.controlArea, self, "autocommit")
+        gui.auto_apply(self.buttonsArea, self, "autocommit")
 
     @Inputs.distances
     def set_data(self, data):

@@ -140,7 +140,7 @@ class OWSVM(OWBaseLearner):
 
         self.kernel_box = buttonbox = gui.radioButtonsInBox(
             box, self, "kernel_type", btnLabels=[k[0] for k in self.kernels],
-            callback=self._on_kernel_changed, addSpace=20)
+            callback=self._on_kernel_changed)
         buttonbox.layout().setSpacing(10)
         gui.rubber(buttonbox)
 

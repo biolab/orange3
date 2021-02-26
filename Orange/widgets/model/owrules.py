@@ -244,7 +244,7 @@ class OWRuleLearner(OWBaseLearner):
 
     def add_main_layout(self):
         # top-level control procedure
-        top_box = gui.hBox(widget=self.controlArea, box=None, addSpace=2)
+        top_box = gui.hBox(widget=self.controlArea, box=None)
 
         rule_ordering_box = gui.hBox(widget=top_box, box="Rule ordering")
         rule_ordering_rbs = gui.radioButtons(
@@ -301,14 +301,14 @@ class OWRuleLearner(OWBaseLearner):
 
         gui.doubleSpin(
             widget=bottom_box, master=self, value="default_alpha", minv=0.0,
-            maxv=1.0, step=0.01, label="Statistical significance\n(default α):",
+            maxv=1.0, step=0.01, label="Statistical significance (default α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_default_alpha")
 
         gui.doubleSpin(
             widget=bottom_box, master=self, value="parent_alpha", minv=0.0,
-            maxv=1.0, step=0.01, label="Relative significance\n(parent α):",
+            maxv=1.0, step=0.01, label="Relative significance (parent α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_parent_alpha")

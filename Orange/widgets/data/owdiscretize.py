@@ -466,9 +466,7 @@ class OWDiscretize(widget.OWWidget):
         bg.button(self.method)
         self.controlbox = controlbox
 
-        box = gui.auto_apply(self.controlArea, self, "autosend")
-        box.button.setFixedWidth(180)
-        box.layout().insertStretch(0)
+        gui.auto_apply(self.buttonsArea, self, "autosend")
 
         self._update_spin_positions()
 
