@@ -38,7 +38,7 @@ class OWLoadModel(widget.OWWidget, RecentPathsWComboMixin):
         RecentPathsWComboMixin.__init__(self)
         self.loaded_file = ""
 
-        vbox = gui.vBox(self.controlArea, "File", addSpace=False)
+        vbox = gui.vBox(self.controlArea, "File")
         box = gui.hBox(vbox)
         self.file_combo.setMinimumWidth(300)
         box.layout().addWidget(self.file_combo)

@@ -119,7 +119,7 @@ class OWConcatenate(widget.OWWidget):
         ###
         box = gui.vBox(
             self.controlArea, self.tr("Source Identification"),
-            addSpace=False)
+        )
 
         cb = gui.checkBox(
             box, self, "append_source_column",

@@ -293,8 +293,7 @@ class OWTestAndScore(OWWidget):
             callback=self._on_target_class_changed
         )
 
-        self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison",
-                                         addSpace=0)
+        self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")
         gui.comboBox(
             box, self, "comparison_criterion",
             callback=self.update_comparison_table)
@@ -317,8 +316,7 @@ class OWTestAndScore(OWWidget):
         box = gui.vBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.score_table.view)
 
-        self.compbox = box = gui.vBox(self.mainArea, box="Model comparison",
-                                      addSpace=0)
+        self.compbox = box = gui.vBox(self.mainArea, box="Model comparison")
         table = self.comparison_table = QTableWidget(
             wordWrap=False, editTriggers=QTableWidget.NoEditTriggers,
             selectionMode=QTableWidget.NoSelection)

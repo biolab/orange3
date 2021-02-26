@@ -105,8 +105,7 @@ class OWLiftCurve(widget.OWWidget):
         self.classifiers_list_box.setMaximumHeight(100)
 
         gui.checkBox(self.controlArea, self, "display_convex_hull",
-                     "Show convex hull", box="Settings", callback=self._replot,
-                     addSpace=False)
+                     "Show convex hull", box="Settings", callback=self._replot)
 
         gui.rubber(self.controlArea)
 

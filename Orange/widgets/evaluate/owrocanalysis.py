@@ -364,7 +364,7 @@ class OWROCAnalysis(widget.OWWidget):
         gui.checkBox(abox, self, "display_convex_hull",
                      "Show ROC convex hull", callback=self._replot)
 
-        box = gui.vBox(self.controlArea, "Analysis", addSpace=False)
+        box = gui.vBox(self.controlArea, "Analysis")
 
         gui.checkBox(box, self, "display_def_threshold",
                      "Default threshold (0.5) point",

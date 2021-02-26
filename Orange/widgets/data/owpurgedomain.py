@@ -85,7 +85,7 @@ class OWPurgeDomain(widget.OWWidget):
                   "Sorted: %(resortedAttrs)s, "
                   "reduced: %(reducedAttrs)s, removed: %(removedAttrs)s")
 
-        boxAt = gui.vBox(self.controlArea, "Classes", addSpace=True)
+        boxAt = gui.vBox(self.controlArea, "Classes")
         for value, label in self.class_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)
@@ -94,7 +94,7 @@ class OWPurgeDomain(widget.OWWidget):
                   "Sorted: %(resortedClasses)s,"
                   "reduced: %(reducedClasses)s, removed: %(removedClasses)s")
 
-        boxAt = gui.vBox(self.controlArea, "Meta attributes", addSpace=True)
+        boxAt = gui.vBox(self.controlArea, "Meta attributes")
         for value, label in self.meta_options:
             gui.checkBox(boxAt, self, value, label,
                          callback=self.optionsChanged)

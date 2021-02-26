@@ -244,7 +244,7 @@ class OWRuleLearner(OWBaseLearner):
 
     def add_main_layout(self):
         # top-level control procedure
-        top_box = gui.hBox(widget=self.controlArea, box=None, addSpace=2)
+        top_box = gui.hBox(widget=self.controlArea, box=None)
 
         rule_ordering_box = gui.hBox(widget=top_box, box="Rule ordering")
         rule_ordering_rbs = gui.radioButtons(

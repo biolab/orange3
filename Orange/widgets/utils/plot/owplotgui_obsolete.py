@@ -62,7 +62,7 @@ class AddVariablesDialog(QDialog):
         self.setWindowTitle("Hidden Axes")
 
         btns_area = gui.widgetBox(
-            self, addSpace=0, spacing=9, orientation=Qt.Horizontal,
+            self, spacing=9, orientation=Qt.Horizontal,
             sizePolicy=QSizePolicy(*SIZE_POLICY_FIXED)
         )
         self.btn_add = QPushButton(

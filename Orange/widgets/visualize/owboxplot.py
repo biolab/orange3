@@ -243,8 +243,7 @@ class OWBoxPlot(widget.OWWidget):
         # The vertical size policy is needed to let only the list views expand
         self.display_box = gui.vBox(
             self.controlArea, "Display",
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum),
-            addSpace=False)
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
 
         gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
                      callback=self.update_graph)
@@ -270,7 +269,7 @@ class OWBoxPlot(widget.OWWidget):
             callback=self.update_graph,
             stateWhenDisabled=False)
 
-        gui.vBox(self.mainArea, addSpace=True)
+        gui.vBox(self.mainArea)
         self.box_scene = QGraphicsScene(self)
         self.box_scene.selectionChanged.connect(self.on_selection_changed)
         self.box_view = QGraphicsView(self.box_scene)

@@ -703,7 +703,7 @@ class OWCSVFileImport(widget.OWWidget):
         ###########
         # Info text
         ###########
-        box = gui.widgetBox(self.controlArea, "Info", addSpace=False)
+        box = gui.widgetBox(self.controlArea, "Info")
         self.summary_text = QTextBrowser(
             verticalScrollBarPolicy=Qt.ScrollBarAsNeeded,
             readOnly=True,

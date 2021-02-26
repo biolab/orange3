@@ -149,7 +149,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Cluster Label")
         self.cluster_var_cb = gui.comboBox(
-            box, self, "cluster_var_idx", contentsLength=14, addSpace=4,
+            box, self, "cluster_var_idx", contentsLength=14,
             searchable=True, callback=self._invalidate_scores
         )
         gui.checkBox(
@@ -162,7 +162,7 @@ class OWSilhouettePlot(widget.OWWidget):
         gui.widgetLabel(box, "Bar width:")
         gui.hSlider(
             box, self, "bar_size", minValue=1, maxValue=10, step=1,
-            callback=self._update_bar_size, addSpace=6)
+            callback=self._update_bar_size)
         gui.widgetLabel(box, "Annotations:")
         self.annotation_cb = gui.comboBox(
             box, self, "annotation_var_idx", contentsLength=14,

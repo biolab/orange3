@@ -90,13 +90,11 @@ class OWPredictions(OWWidget):
         self._set_input_summary()
         self._set_output_summary(None)
 
-        controlBox = gui.vBox(self.controlArea, "Show probabilities for",
-                              addSpace=False)
+        controlBox = gui.vBox(self.controlArea, "Show probabilities for")
 
         gui.listBox(controlBox, self, "selected_classes", "class_values",
                     callback=self._update_prediction_delegate,
                     selectionMode=QListWidget.ExtendedSelection,
-                    addSpace=False,
                     sizePolicy=(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding),
                     sizeHint=QSize(1, 350),
                     minimumHeight=100)

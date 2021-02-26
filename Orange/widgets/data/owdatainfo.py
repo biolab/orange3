@@ -40,8 +40,7 @@ class OWDataInfo(widget.OWWidget):
         for box in ("Data Set Name", "Data Set Size", "Features", "Targets",
                     "Meta Attributes", "Location", "Data Attributes"):
             name = box.lower().replace(" ", "_")
-            bo = gui.vBox(self.controlArea, box,
-                          addSpace=False and box != "Meta Attributes")
+            bo = gui.vBox(self.controlArea, box)
             gui.label(bo, self, "%%(%s)s" % name)
 
         self.info.set_input_summary(self.info.NoInput)

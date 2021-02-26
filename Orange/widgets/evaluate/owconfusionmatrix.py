@@ -148,7 +148,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         self.info.set_output_summary(self.info.NoOutput)
 
-        box = gui.vBox(self.mainArea, box=True, addSpace=False)
+        box = gui.vBox(self.mainArea, box=True)
 
         sbox = gui.hBox(box)
         gui.rubber(sbox)

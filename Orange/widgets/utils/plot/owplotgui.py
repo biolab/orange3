@@ -915,7 +915,7 @@ class OWPlotGUI:
         return c
 
     def box_zoom_select(self, parent):
-        box_zoom_select = gui.vBox(parent, "Zoom/Select", addSpace=0)
+        box_zoom_select = gui.vBox(parent, "Zoom/Select")
         zoom_select_toolbar = self.zoom_select_toolbar(
             box_zoom_select, nomargin=True,
             buttons=[self.StateButtonsBegin,

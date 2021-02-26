@@ -416,7 +416,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.output_changed.emit(None)
 
     def _add_graph(self):
-        box = gui.vBox(self.mainArea, True, margin=0, addSpace=0)
+        box = gui.vBox(self.mainArea, True, margin=0)
         self.graph = self.GRAPH_CLASS(self, box)
         box.layout().addWidget(self.graph.plot_widget)
         self.graph.too_many_labels.connect(
