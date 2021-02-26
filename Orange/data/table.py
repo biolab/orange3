@@ -654,6 +654,49 @@ class Table(Sequence, Storage):
             cls._next_instance_id += 1
             return id
 
+    def to_pandas_dfs(self):
+        return Orange.data.pandas_compat.table_to_frames(self)
+
+    @staticmethod
+    def from_pandas_dfs(xdf, ydf, mdf):
+        return Orange.data.pandas_compat.table_from_frames(xdf, ydf, mdf)
+
+    @property
+    def X_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.Attribute
+        )
+
+    @X_df.setter
+    def X_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.Attribute
+        )
+
+    @property
+    def Y_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.ClassAttribute
+        )
+
+    @Y_df.setter
+    def Y_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.ClassAttribute
+        )
+
+    @property
+    def metas_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.Meta
+        )
+
+    @metas_df.setter
+    def metas_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.Meta
+        )
+
     def save(self, filename):
         """
         Save a data table to a file. The path can be absolute or relative.
@@ -1954,3 +1997,15 @@ def assure_domain_conversion_sparsity(target, source):
     target.Y = match_density[conversion.sparse_Y](target.Y)
     target.metas = match_density[conversion.sparse_metas](target.metas)
     return target
+
+
+class Role:
+    Attribute = 0
+    ClassAttribute = 1
+    Meta = 2
+
+    @staticmethod
+    def get_arr(role, table):
+        return table.X if role == Role.Attribute else \
+               table.Y if role == Role.ClassAttribute else \
+               table.metas
