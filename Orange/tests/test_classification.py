@@ -245,20 +245,29 @@ class ModelTest(unittest.TestCase):
         Test whether results shapes are correct when testing on numpy data
         """
         iris = Table('iris')
+        iris_bin = Table(
+            Domain(
+                iris.domain.attributes,
+                DiscreteVariable("iris", values=["a", "b"])
+            ),
+            iris.X[:100], iris.Y[:100]
+        )
         for learner in all_learners():
             with self.subTest(learner.__name__):
-                try:
-                    model = learner()(iris)
-                except TypeError:
-                    # cannot be tested with default parameters
-                    continue
-                transformed_iris = model.data_to_model_domain(iris)
+                args = []
+                if learner in (ThresholdLearner, CalibratedLearner):
+                    args = [LogisticRegressionLearner()]
+                data = iris_bin if learner is ThresholdLearner else iris
+                model = learner(*args)(data)
+                transformed_iris = model.data_to_model_domain(data)
 
                 res = model(transformed_iris.X[0:5])
                 self.assertTupleEqual((5,), res.shape)
 
                 res = model(transformed_iris.X[0:1], model.Probs)
-                self.assertTupleEqual((1, 3), res.shape)
+                self.assertTupleEqual(
+                    (1, len(data.domain.class_var.values)), res.shape
+                )
 
 
 class ExpandProbabilitiesTest(unittest.TestCase):
