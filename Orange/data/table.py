@@ -846,7 +846,7 @@ class Table(Sequence, Storage):
         # multiple rows, multiple columns
         attributes, col_indices = self.domain._compute_col_indices(col_idx)
         if col_indices is ...:
-            col_indices = range(len(self.domain))
+            col_indices = range(len(self.domain.variables))
         n_attrs = self.X.shape[1]
         if isinstance(value, str):
             if not attributes:

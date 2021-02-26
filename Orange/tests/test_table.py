@@ -32,7 +32,7 @@ class TableTestCase(unittest.TestCase):
     def test_indexing_class(self):
         d = data.Table("datasets/test1")
         self.assertEqual([e.get_class() for e in d], ["t", "t", "f"])
-        cind = len(d.domain) - 1
+        cind = len(d.domain.variables) - 1
         self.assertEqual([e[cind] for e in d], ["t", "t", "f"])
         self.assertEqual([e["d"] for e in d], ["t", "t", "f"])
         cvar = d.domain.class_var

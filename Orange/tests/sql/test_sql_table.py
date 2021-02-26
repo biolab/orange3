@@ -51,7 +51,7 @@ class TestSqlTable(unittest.TestCase, dbt):
                         self.discrete_variable(21),
                         self.string_variable(21)))
         with self.sql_table_from_data(data) as table:
-            self.assertEqual(len(table.domain), 2)
+            self.assertEqual(len(table.domain.variables), 2)
             self.assertEqual(len(table.domain.metas), 1)
 
             float_attr, discrete_attr = table.domain.variables
@@ -213,12 +213,12 @@ class TestSqlTable(unittest.TestCase, dbt):
     @dbt.run_on(["postgres", "mssql"])
     def test_type_hints(self):
         table = SqlTable(self.conn, self.iris, inspect_values=True)
-        self.assertEqual(len(table.domain), 5)
+        self.assertEqual(len(table.domain.variables), 5)
         self.assertEqual(len(table.domain.metas), 0)
         table = SqlTable(self.conn, self.iris, inspect_values=True,
                          type_hints=Domain([], [], metas=[
                              StringVariable("iris")]))
-        self.assertEqual(len(table.domain), 4)
+        self.assertEqual(len(table.domain.variables), 4)
         self.assertEqual(len(table.domain.metas), 1)
 
     @dbt.run_on(["postgres"])
@@ -322,7 +322,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         iris = SqlTable(self.conn, "SELECT * FROM iris",
                         type_hints=Domain([], self.IRIS_VARIABLE))
 
-        self.assertEqual(len(iris.domain), 5)
+        self.assertEqual(len(iris.domain.variables), 5)
 
     @dbt.run_on(["postgres"])
     def test_discrete_bigint(self):
@@ -685,7 +685,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         domain_stats = DomainBasicStats(iris, include_metas=True)
         self.assertEqual(len(domain_stats.stats),
-                         len(iris.domain) + len(iris.domain.metas))
+                         len(iris.domain.variables) + len(iris.domain.metas))
         stats = domain_stats['sepal length']
         self.assertAlmostEqual(stats.min, 4.3)
         self.assertAlmostEqual(stats.max, 7.9)
@@ -710,7 +710,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         domain_stats = DomainBasicStats(iris, include_metas=True)
         self.assertEqual(len(domain_stats.stats),
-                         len(iris.domain) + len(iris.domain.metas))
+                         len(iris.domain.variables) + len(iris.domain.metas))
         stats = domain_stats['sepal length']
         self.assertAlmostEqual(stats.min, 4.3)
         self.assertAlmostEqual(stats.max, 7.9)
@@ -765,7 +765,7 @@ class TestSqlTable(unittest.TestCase, dbt):
                 pass
 
     def assertFirstAttrIsInstance(self, table, variable_type):
-        self.assertGreater(len(table.domain), 0)
+        self.assertGreater(len(table.domain.variables), 0)
         attr = table.domain[0]
         self.assertIsInstance(attr, variable_type)
 

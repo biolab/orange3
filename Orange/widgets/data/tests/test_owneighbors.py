@@ -339,9 +339,9 @@ class TestOWNeighbors(WidgetTest):
 
         domain = Domain([ContinuousVariable("a")])
         domain_ref = Domain([ContinuousVariable("b")])
-        data = Table(domain, np.random.rand(2, len(domain)))
+        data = Table(domain, np.random.rand(2, len(domain.variables)))
         reference = Table(
-            domain_ref, np.random.rand(1, len(domain_ref)))
+            domain_ref, np.random.rand(1, len(domain_ref.variables)))
 
         # no error if one or both of the signals is missing
         self.send_signal(w.Inputs.data, data)
@@ -365,7 +365,7 @@ class TestOWNeighbors(WidgetTest):
 
         # different number of attributes
         domain_ref = Domain([ContinuousVariable("a"), ContinuousVariable("b")])
-        reference = Table(domain_ref, np.random.rand(1, len(domain_ref)))
+        reference = Table(domain_ref, np.random.rand(1, len(domain_ref.variables)))
 
         # error disappears when data is set to None
         self.send_signal(w.Inputs.data, data)

@@ -376,9 +376,9 @@ class TestDomainModel(unittest.TestCase):
         self.assertTrue(model.setItemData(index, {Qt.ToolTipRole: "foo"}))
 
         self.assertFalse(model.insertRows(0, 1))
-        self.assertSequenceEqual(model, domain)
+        self.assertEqual(list(model), list(domain.variables))
         self.assertFalse(model.removeRows(0, 1))
-        self.assertSequenceEqual(model, domain)
+        self.assertEqual(list(model), list(domain.variables))
 
 
 class TestContinuousPalettesModel(GuiTest):

@@ -42,10 +42,10 @@ class DomainBasicStats:
     def __getitem__(self, index):
         """
         Index can be a variable, variable name or an integer. Meta attributes
-        can be specified by negative indices or by indices above len(domain).
+        can be specified by negative indices or by indices above len(domain.variables).
         """
         if not isinstance(index, int):
             index = self.domain.index(index)
         if index < 0:
-            index = len(self.domain) + (-1 - index)
+            index = len(self.domain.variables) + (-1 - index)
         return self.stats[index]

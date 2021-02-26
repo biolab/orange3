@@ -19,7 +19,7 @@ class BenchConversion(Benchmark):
         self.single = Domain([ContinuousVariable("0")])
         self.table = Table.from_numpy(
             self.domain,
-            np.random.RandomState(0).randint(0, 2, (rows, len(self.domain))))
+            np.random.RandomState(0).randint(0, 2, (rows, len(self.domain.variables))))
         self.discretized_domain = Discretize(EqualFreq(n=3))(self.table).domain
         self.normalized_domain = Normalize()(self.table).domain
 

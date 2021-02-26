@@ -111,7 +111,7 @@ class TestPandasCompat(unittest.TestCase):
 
             self.assertEqual(type(df), pd.DataFrame, assert_message)
             self.assertEqual(len(df), len(table), assert_message)
-            self.assertEqual(len(df.columns), len(table.domain), assert_message)
+            self.assertEqual(len(df.columns), len(table.domain.variables), assert_message)
 
 
 if __name__ == "__main__":
