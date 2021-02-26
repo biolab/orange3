@@ -203,15 +203,17 @@ def vars_from_df(df, role=None, force_nominal=False):
                                    discrete.categories.astype(str).tolist())
             attrs.append(var)
             Xcols.append(column)
-            Xexpr.append(lambda s, _: s.astype('category').cat
-                         .codes.replace(-1, np.nan).values)
+            Xexpr.append(lambda s, _: np.asarray(
+                s.astype('category').cat.codes.replace(-1, np.nan)
+            ))
         elif _is_datetime(s):
             var = TimeVariable(str(column))
             s = pd.to_datetime(s, infer_datetime_format=True)
             attrs.append(var)
             Xcols.append(column)
-            Xexpr.append(lambda s, v: s.astype('str')
-                         .replace('NaT', np.nan).map(v.parse).values)
+            Xexpr.append(lambda s, v: np.asarray(
+                s.astype('str').replace('NaT', np.nan).map(v.parse)
+            ))
         elif is_numeric_dtype(s):
             var = ContinuousVariable(str(column))
             attrs.append(var)
@@ -222,7 +224,7 @@ def vars_from_df(df, role=None, force_nominal=False):
             var = StringVariable(str(column))
             metas.append(var)
             Mcols.append(column)
-            Mexpr.append(lambda s, _: s.values.astype(object))
+            Mexpr.append(lambda s, _: np.asarray(s, dtype=object))
 
     # if role isn't explicitly set, try to
     # export dataframes into one contiguous block.
@@ -260,12 +262,12 @@ def vars_from_df(df, role=None, force_nominal=False):
             if all(isinstance(a, SparseDtype) for a in Adf.dtypes):
                 A = csr_matrix(Adf.sparse.to_coo())
             else:
-                A = Adf.values
+                A = np.asarray(Adf)
             XYM.append(A)
             continue
         # we'll have to copy the table to resolve any expressions
         # TODO eliminate expr (preprocessing for pandas -> table)
-        A = np.array([expr(df[col], var) if expr else df[col].values
+        A = np.array([expr(df[col], var) if expr else np.asarray(df[col])
                       for var, col, expr in zip(Avars, Acols, Aexpr)]).T
         XYM.append(A)
 
