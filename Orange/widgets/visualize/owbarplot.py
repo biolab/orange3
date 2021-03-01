@@ -132,18 +132,17 @@ class ParameterSetter(CommonParameterSetter):
         return self.master.legend.items
 
 
-class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
+class BarPlotGraph(pg.PlotWidget):
     selection_changed = Signal(list)
     bar_width = 0.8
 
     def __init__(self, master, parent=None):
-        gui.OWComponent.__init__(self, master)
         self.selection = []
         self.master: OWBarPlot = master
         self.state: int = SELECT
         self.bar_item: pg.BarGraphItem = None
-        pg.PlotWidget.__init__(
-            self, parent=parent,
+        super().__init__(
+            parent=parent,
             viewBox=BarPlotViewBox(self),
             background="w", enableMenu=False,
             axisItems={"bottom": AxisItem(orientation="bottom",
