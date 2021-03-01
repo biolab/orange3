@@ -460,6 +460,10 @@ class TableTestCase(unittest.TestCase):
         self.assertNotEqual(id(t._Y), id(copy._Y))
         self.assertNotEqual(id(t.metas), id(copy.metas))
 
+        # ensure that copied sparse arrays do not share data
+        t.X[0, 0] = 42
+        self.assertEqual(copy.X[0, 0], 5.1)
+
     def test_concatenate(self):
         d1 = data.Domain(
             [data.ContinuousVariable(n) for n in "abc"],
