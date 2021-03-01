@@ -143,7 +143,7 @@ class ParameterSetter(CommonParameterSetter):
 
 class BarPlotGraph(pg.PlotWidget):
     selection_changed = Signal(list)
-    bar_width = 0.8
+    bar_width = 0.7
 
     def __init__(self, master, parent=None):
         self.selection = []
@@ -203,6 +203,7 @@ class BarPlotGraph(pg.PlotWidget):
         self.clear()
         self.update_bars()
         self.update_axes()
+        self.update_group_lines()
         self.update_legend()
         self.reset_view()
 
@@ -279,6 +280,20 @@ class BarPlotGraph(pg.PlotWidget):
 
     def reset_button_clicked(self):
         self.reset_view()
+
+    def update_group_lines(self):
+        if self.bar_item is None:
+            return
+
+        labels = np.array(self.master.get_group_labels())
+        if labels is None or len(labels) == 0:
+            return
+
+        _, indices = np.unique(labels, return_index=True)
+        offset = self.bar_width / 2 + (1 - self.bar_width) / 2
+        for index in sorted(indices)[1:]:
+            line = pg.InfiniteLine(pos=index - offset, angle=90)
+            self.addItem(line)
 
     def select_by_rectangle(self, rect: QRectF):
         if self.bar_item is None:
