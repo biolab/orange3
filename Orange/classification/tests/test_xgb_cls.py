@@ -2,7 +2,11 @@ import unittest
 from typing import Callable
 
 from Orange.base import XGBBase
-from Orange.classification import XGBClassifier, XGBRFClassifier
+
+try:
+    from Orange.classification import XGBClassifier, XGBRFClassifier
+except ImportError:
+    XGBClassifier = XGBRFClassifier = None
 from Orange.data import Table
 from Orange.evaluation import CrossValidation, CA
 from Orange.preprocess.score import Scorer
@@ -16,6 +20,7 @@ def test_learners(func: Callable) -> Callable:
     return wrapper
 
 
+@unittest.skipIf(XGBClassifier is None, "Missing 'xgboost' package")
 class TestXGBCls(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
