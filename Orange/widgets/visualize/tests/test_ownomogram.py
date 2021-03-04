@@ -7,8 +7,6 @@ import numpy as np
 
 from AnyQt.QtCore import QPoint, QPropertyAnimation
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import (
     NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
@@ -16,7 +14,6 @@ from Orange.classification import (
 from Orange.preprocess import Scale, Continuize
 from Orange.tests import test_filename
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.ownomogram import (
     OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem,
     MovableToolTip
@@ -283,20 +280,6 @@ class TestOWNomogram(WidgetTest):
         self.assertEqual(mocked_item.call_args_list[10][0][0], "foo3")
         # most left text at 3. iteration is the same -> stop
         self.assertEqual(mocked_item.call_args_list[15][0][0], "foo3")
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data = self.data
-        info = self.widget.info
-        no_input = "No data on input"
-
-        self.send_signal(self.widget.Inputs.data, data)
-        summary, details = f"{len(data)}", format_summary_details(data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
 
     def test_dots_stop_flashing(self):
         self.widget.set_data(self.data)

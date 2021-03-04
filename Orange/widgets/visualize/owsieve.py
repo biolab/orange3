@@ -20,7 +20,6 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialogAttrPair)
 from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
@@ -108,9 +107,6 @@ class OWSieveDiagram(OWWidget):
         self.areas = []
         self.selection = set()
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         self.mainArea.layout().setSpacing(0)
         self.attr_box = gui.hBox(self.mainArea, margin=0)
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
@@ -178,11 +174,8 @@ class OWSieveDiagram(OWWidget):
             self.attrs[:] = []
             self.domain_model.set_domain(None)
             self.discrete_data = None
-            self.info.set_input_summary(self.info.NoInput)
         else:
             self.domain_model.set_domain(data.domain)
-            self.info.set_input_summary(len(self.data),
-                                        format_summary_details(self.data))
         self.attrs = [x for x in self.domain_model if isinstance(x, Variable)]
         if self.attrs:
             self.attr_x = self.attrs[0]
@@ -307,7 +300,6 @@ class OWSieveDiagram(OWWidget):
         if self.areas is None or not self.selection:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(create_annotated_table(self.data, []))
-            self.info.set_output_summary(self.info.NoOutput)
             return
 
         filts = []
@@ -335,9 +327,6 @@ class OWSieveDiagram(OWWidget):
         if self.discrete_data is not self.data:
             selection = self.data[sel_idx]
 
-        summary = len(selection) if selection is not None else self.info.NoOutput
-        details = format_summary_details(selection) if selection is not None else ""
-        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(selection)
         self.Outputs.annotated_data.send(create_annotated_table(self.data, sel_idx))
 

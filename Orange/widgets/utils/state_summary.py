@@ -57,6 +57,7 @@ def _plural(number):
     return 's' * (number % 100 != 1)
 
 
+# `format` is a good name for the argument, pylint: disable=redefined-builtin
 def format_summary_details(data, format=Qt.PlainText):
     """
     A function that forms the entire descriptive part of the input/output
@@ -86,26 +87,33 @@ def format_summary_details(data, format=Qt.PlainText):
     name = getattr(data, "name", None)
     if name == "untitled":
         name = None
-    basic = f'{len(data)} instance{_plural(len(data))}, ' \
+    basic = f'{len(data):n} instance{_plural(len(data))}, ' \
             f'{n_features} variable{_plural(n_features)}'
 
     if format == Qt.PlainText:
         details = \
-            (f"'{name}': " if name else "") + basic \
+            (f"{name}: " if name else "") + basic \
             + f'\nFeatures: {features} {features_missing}' \
             + f'\nTarget: {targets}'
         if data.domain.metas:
             details += f'\nMetas: {metas}'
     else:
-        details = \
-            _nobr(f"<b>'{escape(name)}'</b>: {basic}" if name else basic) \
-            + '<br/>' \
-            + _nobr(f'<b>Features</b>: {features} {features_missing}') \
-            + '<br/>' \
-            + _nobr(f"<b>Target</b>: {targets}")
+        descs = []
+        if name:
+            descs.append(_nobr(f"<b><u>{escape(name)}</u></b>: {basic}"))
+        else:
+            descs.append(_nobr(f'{basic}'))
+
+        if data.domain.variables:
+            descs.append(_nobr(f'Features: {features} {features_missing}'))
+        if data.domain.class_vars:
+            descs.append(_nobr(f"Target: {targets}"))
         if data.domain.metas:
-            details += "<br/>" + _nobr("<b>Metas</b>: {metas}")
-        return details
+            descs.append(_nobr(f"Metas: {metas}"))
+
+        details = '<br/>'.join(descs)
+
+    return details
 
 
 def missing_values(value):
@@ -161,13 +169,13 @@ def summarize_(data: Table):
 
 
 @summarize.register(DistMatrix)
-def summarize_(matrix: DistMatrix):
+def summarize_(matrix: DistMatrix):  # pylint: disable=function-redefined
     n, m = matrix.shape
     return PartialSummary(f"{n}×{m}", _nobr(f"{n}×{m} distance matrix"))
 
 
 @summarize.register(Results)
-def summarize_(results: Results):
+def summarize_(results: Results):  # pylint: disable=function-redefined
     nmethods, ninstances = results.predicted.shape
     summary = f"{nmethods}×{ninstances}"
     details = f"{nmethods} method{_plural(nmethods)} " \
@@ -176,7 +184,7 @@ def summarize_(results: Results):
 
 
 @summarize.register(AttributeList)
-def summarize_(attributes):
+def summarize_(attributes):  # pylint: disable=function-redefined
     n = len(attributes)
     if n == 0:
         details = "empty list"

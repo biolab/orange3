@@ -17,8 +17,6 @@ from Orange.data import DiscreteVariable, ContinuousVariable, \
 from Orange.widgets import gui
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.state_summary import format_summary_details, \
-    format_multiple_summaries
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
@@ -527,8 +525,6 @@ class OWCreateInstance(OWWidget):
         gui.rubber(self.buttonsArea)
         box = gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
-        self._set_input_summary()
-        self._set_output_summary()
         self.settingsAboutToBePacked.connect(self.pack_settings)
 
     def __filter_edit_changed(self):
@@ -604,7 +600,6 @@ class OWCreateInstance(OWWidget):
     @Inputs.data
     def set_data(self, data: Table):
         self.data = data
-        self._set_input_summary()
         self._set_model_data()
         self.unconditional_commit()
 
@@ -624,27 +619,6 @@ class OWCreateInstance(OWWidget):
     @Inputs.reference
     def set_reference(self, data: Table):
         self.reference = data
-        self._set_input_summary()
-
-    def _set_input_summary(self):
-        n_data = len(self.data) if self.data else 0
-        n_refs = len(self.reference) if self.reference else 0
-        summary, details, kwargs = self.info.NoInput, "", {}
-
-        if self.data or self.reference:
-            summary = f"{self.info.format_number(n_data)}, " \
-                      f"{self.info.format_number(n_refs)}"
-            data_list = [("Data", self.data), ("Reference", self.reference)]
-            details = format_multiple_summaries(data_list)
-            kwargs = {"format": Qt.RichText}
-        self.info.set_input_summary(summary, details, **kwargs)
-
-    def _set_output_summary(self, data: Optional[Table] = None):
-        if data:
-            summary, details = len(data), format_summary_details(data)
-        else:
-            summary, details = self.info.NoOutput, ""
-        self.info.set_output_summary(summary, details)
 
     def commit(self):
         output_data = None
@@ -652,7 +626,6 @@ class OWCreateInstance(OWWidget):
             output_data = self._create_data_from_values()
             if self.append_to_data:
                 output_data = self._append_to_data(output_data)
-        self._set_output_summary(output_data)
         self.Outputs.data.send(output_data)
 
     def _create_data_from_values(self) -> Table:

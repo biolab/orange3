@@ -19,7 +19,6 @@ from Orange.widgets import widget, settings, gui
 from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.report import colored_square as square
 from Orange.widgets.widget import Input, Output
 
@@ -580,9 +579,6 @@ class OWColor(widget.OWWidget):
         gui.rubber(self.buttonsArea)
         gui.auto_apply(self.buttonsArea, self, "auto_apply")
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
     @staticmethod
     def sizeHint():  # pragma: no cover
         return QSize(500, 570)
@@ -594,10 +590,8 @@ class OWColor(widget.OWWidget):
         self.cont_descs = []
         if data is None:
             self.data = self.domain = None
-            self.info.set_input_summary(self.info.NoInput)
         else:
             self.data = data
-            self.info.set_input_summary(len(data), format_summary_details(data))
             for var in chain(data.domain.variables, data.domain.metas):
                 if var.is_discrete:
                     self.disc_descs.append(DiscAttrDesc(var))
@@ -738,7 +732,6 @@ class OWColor(widget.OWWidget):
 
         if self.data is None:
             self.Outputs.data.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
             return
 
         disc_dict = {desc.var.name: desc for desc in self.disc_descs}
@@ -748,8 +741,6 @@ class OWColor(widget.OWWidget):
         new_domain = Orange.data.Domain(
             make(dom.attributes), make(dom.class_vars), make(dom.metas))
         new_data = self.data.transform(new_domain)
-        self.info.set_output_summary(len(new_data),
-                                     format_summary_details(new_data))
         self.Outputs.data.send(new_data)
 
     def send_report(self):

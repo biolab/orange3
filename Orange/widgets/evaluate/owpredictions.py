@@ -87,9 +87,6 @@ class OWPredictions(OWWidget):
         self.selection_store = None
         self.__pending_selection = self.selection
 
-        self._set_input_summary()
-        self._set_output_summary(None)
-
         controlBox = gui.vBox(self.controlArea, "Show probabilities for")
 
         gui.listBox(controlBox, self, "selected_classes", "class_values",
@@ -226,7 +223,6 @@ class OWPredictions(OWWidget):
         self._update_predictions_model()
         self._update_prediction_delegate()
         self._set_errors()
-        self._set_input_summary()
         self.commit()
 
     def _call_predictors(self):
@@ -332,19 +328,9 @@ class OWPredictions(OWWidget):
         else:
             self.Warning.wrong_targets.clear()
 
-    def _set_input_summary(self):
-        if not self.data and not self.predictors:
-            self.info.set_input_summary(self.info.NoInput)
-            return
-
-        summary = len(self.data) if self.data else 0
-        details = self._get_details()
-        self.info.set_input_summary(summary, details, format=Qt.RichText)
-
     def _get_details(self):
         details = "Data:<br>"
-        details += format_summary_details(self.data).replace('\n', '<br>') if \
-            self.data else "No data on input."
+        details += format_summary_details(self.data, format=Qt.RichText)
         details += "<hr>"
         pred_names = [v.name for v in self.predictors.values()]
         n_predictors = len(self.predictors)
@@ -360,11 +346,6 @@ class OWPredictions(OWWidget):
         else:
             details += "Model:<br>No model on input."
         return details
-
-    def _set_output_summary(self, output):
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
 
     def _invalidate_predictions(self):
         for inputid, pred in list(self.predictors.items()):
@@ -588,7 +569,6 @@ class OWPredictions(OWWidget):
 
     def _commit_predictions(self):
         if not self.data:
-            self._set_output_summary(None)
             self.Outputs.predictions.send(None)
             return
 
@@ -634,7 +614,6 @@ class OWPredictions(OWWidget):
             source_rows = [map_to(index(row, 0)).row() for row in rows]
             predictions = predictions[source_rows]
         self.Outputs.predictions.send(predictions)
-        self._set_output_summary(predictions)
 
     @staticmethod
     def _add_classification_out_columns(slot, newmetas, newcolumns):

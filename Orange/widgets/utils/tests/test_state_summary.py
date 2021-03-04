@@ -105,32 +105,30 @@ class TestUtils(unittest.TestCase):
         """Check if details part of the summary is formatted correctly"""
         data = Table('zoo')
         n_features = len(data.domain.variables) + len(data.domain.metas)
-        details = f'{len(data)} instances, ' \
+        details = f'zoo: {len(data)} instance, ' \
                   f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} categorical ' \
-                  f'(No missing values)\n' \
+                  f'(no missing values)\n' \
                   f'Target: categorical\n' \
                   f'Metas: string'
         self.assertEqual(details, format_summary_details(data))
 
         data = Table('housing')
         n_features = len(data.domain.variables) + len(data.domain.metas)
-        details = f'{len(data)} instances, ' \
+        details = f'housing: {len(data)} instances, ' \
                   f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} numeric ' \
-                  f'(No missing values)\n' \
-                  f'Target: numeric\n' \
-                  f'Metas: —'
+                  f'(no missing values)\n' \
+                  f'Target: numeric'
         self.assertEqual(details, format_summary_details(data))
 
         data = Table('heart_disease')
         n_features = len(data.domain.variables) + len(data.domain.metas)
-        details = f'{len(data)} instances, ' \
+        details = f'heart_disease: {len(data)} instances, ' \
                   f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} ' \
                   f'(7 categorical, 6 numeric) (0.2% missing values)\n' \
-                  f'Target: categorical\n' \
-                  f'Metas: —'
+                  f'Target: categorical'
         self.assertEqual(details, format_summary_details(data))
 
         data = make_table(
@@ -167,25 +165,22 @@ class TestUtils(unittest.TestCase):
                   f'{len(data.domain.variables)} variables\n' \
                   f'Features: {len(data.domain.attributes)} time ' \
                   f'(10.0% missing values)\n' \
-                  f'Target: categorical\n' \
-                  f'Metas: —'
+                  f'Target: categorical'
         self.assertEqual(details, format_summary_details(data))
 
         data = make_table([rgb_full, ints_full], target=None, metas=None)
         details = f'{len(data)} instances, ' \
                   f'{len(data.domain.variables)} variables\n' \
                   f'Features: {len(data.domain.variables)} categorical ' \
-                  f'(No missing values)\n' \
-                  f'Target: —\n' \
-                  f'Metas: —'
+                  f'(no missing values)\n' \
+                  f'Target: —'
         self.assertEqual(details, format_summary_details(data))
 
         data = make_table([rgb_full], target=None, metas=None)
         details = f'{len(data)} instances, ' \
                   f'{len(data.domain.variables)} variable\n' \
-                  f'Features: categorical (No missing values)\n' \
-                  f'Target: —\n' \
-                  f'Metas: —'
+                  f'Features: categorical (no missing values)\n' \
+                  f'Target: —'
         self.assertEqual(details, format_summary_details(data))
 
         data = None
@@ -197,41 +192,41 @@ class TestUtils(unittest.TestCase):
         n_features_data = len(data.domain.variables) + len(data.domain.metas)
         n_features_extra_data = len(extra_data.domain.variables) + \
                                 len(extra_data.domain.metas)
-        details = f'Data:<br>{len(data)} instances, ' \
+        details = f'Data:<br>zoo: {len(data)} instance, ' \
                   f'{n_features_data} variables<br>' \
                   f'Features: {len(data.domain.attributes)} categorical ' \
-                  f'(No missing values)<br>' \
+                  f'(no missing values)<br>' \
                   f'Target: categorical<br>' \
                   f'Metas: string<hr>'\
-                  f'Extra Data:<br>{len(extra_data)} instances, ' \
+                  f'Extra Data:<br>zoo: {len(extra_data)} instances, ' \
                   f'{n_features_extra_data} variables<br>' \
                   f'Features: {len(extra_data.domain.attributes)} ' \
-                  f'categorical (No missing values)<br>' \
+                  f'categorical (no missing values)<br>' \
                   f'Target: categorical<br>' \
                   f'Metas: string'
         inputs = [('Data', data), ('Extra Data', extra_data)]
         self.assertEqual(details, format_multiple_summaries(inputs))
 
-        details = f'{len(data)} instances, ' \
+        details = f'zoo: {len(data)} instance, ' \
                   f'{n_features_data} variables<br>' \
                   f'Features: {len(data.domain.attributes)} categorical ' \
-                  f'(No missing values)<br>' \
+                  f'(no missing values)<br>' \
                   f'Target: categorical<br>' \
                   f'Metas: string<hr>'\
-                  f'{len(extra_data)} instances, ' \
+                  f'zoo: {len(extra_data)} instances, ' \
                   f'{n_features_extra_data} variables<br>' \
                   f'Features: {len(extra_data.domain.attributes)} ' \
-                  f'categorical (No missing values)<br>' \
+                  f'categorical (no missing values)<br>' \
                   f'Target: categorical<br>' \
                   f'Metas: string'
         inputs = [('', data), ('', extra_data)]
         self.assertEqual(details, format_multiple_summaries(inputs))
 
         details = f'No data on output.<hr>' \
-                  f'Extra data:<br>{len(extra_data)} instances, ' \
+                  f'Extra data:<br>zoo: {len(extra_data)} instances, ' \
                   f'{n_features_extra_data} variables<br>' \
                   f'Features: {len(extra_data.domain.attributes)} ' \
-                  f'categorical (No missing values)<br>' \
+                  f'categorical (no missing values)<br>' \
                   f'Target: categorical<br>' \
                   f'Metas: string<hr>'\
                   f'No data on output.'

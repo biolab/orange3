@@ -4,7 +4,6 @@ from unittest.mock import patch
 import numpy as np
 from sklearn.utils import check_random_state
 
-from orangewidget.widget import StateInfo
 from orangewidget.settings import Context
 
 from Orange.data import Table, Domain, ContinuousVariable
@@ -12,7 +11,6 @@ from Orange.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import table_dense_sparse
 from Orange.widgets.unsupervised.owlouvainclustering import OWLouvainClustering
-from Orange.widgets.utils.state_summary import format_summary_details
 
 # Deterministic tests
 np.random.seed(42)
@@ -273,23 +271,3 @@ class TestOWLouvain(WidgetTest):
         correct = {'apply_pca': True, 'k_neighbors': 29, 'metric_idx': 1,
                    'normalize': False, 'pca_components': 10, 'resolution': 1.0}
         self.assertEqual(sorted(settings.items()), sorted(correct.items()))
-
-    def test_summary(self):
-        """Check if the status bar updates"""
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        summary, details = f"{len(self.iris)}", format_summary_details(self.iris)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.annotated_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)

@@ -9,12 +9,8 @@ from sklearn.exceptions import ConvergenceWarning
 
 from AnyQt.QtCore import Qt, QModelIndex
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.preprocess import Continuize
 from Orange.widgets.utils import colorpalettes
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owheatmap import OWHeatMap, Clustering
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 
@@ -378,30 +374,6 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         widget.set_column_annotation_color_var(data.domain["diau g"])
         widget.set_column_annotation_color_var(None)
         self.assertFalse(widget.scene.widget.top_side_colors[0].isVisible())
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        data = self.housing
-        self.send_signal(self.widget.Inputs.data, data)
-        summary, details = f"{len(data)}", format_summary_details(data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-        self._select_data()
-        output = self.get_output(self.widget.Outputs.selected_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 
 if __name__ == "__main__":

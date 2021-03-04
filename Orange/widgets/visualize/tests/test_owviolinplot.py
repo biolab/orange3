@@ -9,11 +9,9 @@ from AnyQt.QtGui import QFont
 
 from pyqtgraph import ViewBox
 
-from orangewidget.widget import StateInfo
 from Orange.data import Table
 from Orange.widgets.tests.base import datasets, simulate, \
     WidgetOutputsTestMixin, WidgetTest
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owviolinplot import OWViolinPlot, \
     ViolinPlotViewBox, scale_density, WIDTH
 
@@ -44,29 +42,6 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.graph._update_selection(QPointF(0, 5), QPointF(0, 6), True)
         assert len(self.widget.selection) == 30
         return self.widget.selection
-
-    def test_summary(self):
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.data, self.data)
-        details = format_summary_details(self.data)
-        self.assertEqual(info._StateInfo__input_summary.brief, "150")
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self._select_data()
-        output = self.get_output(self.widget.Outputs.selected_data)
-        details = format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, "30")
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_kernels(self):
         self.send_signal(self.widget.Inputs.data, self.data)

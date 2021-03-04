@@ -23,7 +23,6 @@ from Orange.widgets.utils.annotated_data import \
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureSetWatcher
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 
@@ -169,9 +168,6 @@ class OWKMeans(widget.OWWidget):
 
         self.__executor = ThreadExecutor(parent=self)
         self.__task = None  # type: Optional[Task]
-
-        self._set_input_summary()
-        self._set_output_summary(None)
 
         layout = QGridLayout()
         bg = gui.radioButtonsInBox(
@@ -517,7 +513,6 @@ class OWKMeans(widget.OWWidget):
 
         km = self.clusterings.get(k)
         if self.data is None or km is None or isinstance(km, str):
-            self._set_output_summary(None)
             self.Outputs.annotated_data.send(None)
             self.Outputs.centroids.send(None)
             return
@@ -572,7 +567,6 @@ class OWKMeans(widget.OWWidget):
         else:
             centroids.name = f"{self.data.name} centroids"
 
-        self._set_output_summary(new_table)
         self.Outputs.annotated_data.send(new_table)
         self.Outputs.centroids.send(centroids)
 
@@ -581,8 +575,6 @@ class OWKMeans(widget.OWWidget):
     def set_data(self, data):
         self.data, old_data = data, self.data
         self.selection = None
-        self._set_input_summary()
-
         self.controls.normalize.setDisabled(
             bool(self.data) and sp.issparse(self.data.X))
 
@@ -592,16 +584,6 @@ class OWKMeans(widget.OWWidget):
                 self.send_data()
         else:
             self.invalidate(unconditional=True)
-
-    def _set_input_summary(self):
-        summary = len(self.data) if self.data else self.info.NoInput
-        details = format_summary_details(self.data) if self.data else ""
-        self.info.set_input_summary(summary, details)
-
-    def _set_output_summary(self, output):
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
 
     def send_report(self):
         # False positives (Setting is not recognized as int)

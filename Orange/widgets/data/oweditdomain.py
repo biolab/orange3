@@ -41,7 +41,6 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 ndarray = np.ndarray  # pylint: disable=invalid-name
@@ -1877,9 +1876,6 @@ class OWEditDomain(widget.OWWidget):
 
         self.variables_view.setFocus(Qt.NoFocusReason)  # initial focus
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
     @Inputs.data
     def set_data(self, data):
         """Set input dataset."""
@@ -1888,8 +1884,6 @@ class OWEditDomain(widget.OWWidget):
         self.data = data
 
         if self.data is not None:
-            self.info.set_input_summary(len(data),
-                                        format_summary_details(data))
             self.setup_model(data)
             self.le_output_name.setPlaceholderText(data.name)
             self.openContext(self.data)
@@ -1897,7 +1891,6 @@ class OWEditDomain(widget.OWWidget):
             self._restore()
         else:
             self.le_output_name.setPlaceholderText("")
-            self.info.set_input_summary(self.info.NoInput)
 
         self.commit()
 
@@ -2080,7 +2073,6 @@ class OWEditDomain(widget.OWWidget):
         data = self.data
         if data is None:
             self.Outputs.data.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
             return
         model = self.variables_model
 
@@ -2096,8 +2088,6 @@ class OWEditDomain(widget.OWWidget):
                 and not any(requires_transform(var, trs)
                             for var, (_, trs) in zip(input_vars, state)):
             self.Outputs.data.send(data)
-            self.info.set_output_summary(len(data),
-                                         format_summary_details(data))
             return
 
         assert all(v_.vtype.name == v.name
@@ -2121,7 +2111,6 @@ class OWEditDomain(widget.OWWidget):
         if len(output_vars) != len({v.name for v in output_vars}):
             self.Error.duplicate_var_name()
             self.Outputs.data.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
             return
 
         domain = data.domain
@@ -2148,8 +2137,6 @@ class OWEditDomain(widget.OWWidget):
         if self.output_table_name:
             new_data.name = self.output_table_name
         self.Outputs.data.send(new_data)
-        self.info.set_output_summary(len(new_data),
-                                     format_summary_details(new_data))
 
     def sizeHint(self):
         sh = super().sizeHint()

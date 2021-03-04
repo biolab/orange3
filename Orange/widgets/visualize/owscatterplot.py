@@ -521,7 +521,7 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     def send_features(self):
         features = [attr for attr in [self.attr_x, self.attr_y] if attr]
-        self.Outputs.features.send(features or None)
+        self.Outputs.features.send(AttributeList(features) or None)
 
     def get_widget_name_extension(self):
         if self.data is not None:

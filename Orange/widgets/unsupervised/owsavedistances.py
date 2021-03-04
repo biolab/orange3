@@ -33,13 +33,6 @@ class OWSaveDistances(OWSaveBase):
         self.Warning.part_not_saved("columns" if skip_col else "rows",
                                     shown=skip_row != skip_col,)
 
-    def update_status(self):
-        dist = self.data
-        if dist is None:
-            self.info.set_input_summary(self.info.NoInput)
-        else:
-            self.info.set_input_summary(str(len(dist)), self._description())
-
     def send_report(self):
         self.report_items((
             ("Input:", "none" if self.data is None else self._description()),

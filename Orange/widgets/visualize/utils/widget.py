@@ -24,7 +24,6 @@ from Orange.widgets.utils.annotated_data import (
 )
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owscatterplotgraph import (
     OWScatterPlotBase, MAX_COLORS
 )
@@ -403,8 +402,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.__pending_selection = self.selection
         self._invalidated = True
         self._domain_invalidated = True
-        self.input_changed.connect(self.set_input_summary)
-        self.output_changed.connect(self.set_output_summary)
         self.setup_gui()
         VisualSettingsDialog(self, self.graph.parameter_setter.initial_settings)
 
@@ -505,16 +502,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     def _update_opacity_warning(self):
         self.Warning.transparent_subset(
             shown=self.subset_indices and self.graph.alpha_value < 128)
-
-    def set_input_summary(self, data):
-        summary = len(data) if data else self.info.NoInput
-        detail = format_summary_details(data) if data else ""
-        self.info.set_input_summary(summary, detail)
-
-    def set_output_summary(self, data):
-        summary = len(data) if data else self.info.NoOutput
-        detail = format_summary_details(data) if data else ""
-        self.info.set_output_summary(summary, detail)
 
     def get_subset_mask(self):
         if not self.subset_indices:

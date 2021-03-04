@@ -11,7 +11,6 @@ from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.util import Reprable
 
@@ -85,9 +84,6 @@ class OWDataSampler(OWWidget):
         self.data = None
         self.indices = None
         self.sampled_instances = self.remaining_instances = None
-
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoInput)
 
         self.sampling_box = gui.vBox(self.controlArea, "Sampling Type")
         sampling = gui.radioButtons(self.sampling_box, self, "sampling_type",
@@ -194,14 +190,11 @@ class OWDataSampler(OWWidget):
             self.cb_seed.setVisible(not sql)
             self.cb_stratify.setVisible(not sql)
             self.cb_sql_dl.setVisible(sql)
-            self.info.set_input_summary(dataset.approx_len(),
-                                        format_summary_details(dataset))
 
             if not sql:
                 self._update_sample_max_size()
                 self.updateindices()
         else:
-            self.info.set_input_summary(self.info.NoInput)
             self.indices = None
             self.clear_messages()
         self.commit()
@@ -247,10 +240,6 @@ class OWDataSampler(OWWidget):
             other = self.data[remaining]
             self.sampled_instances = len(sample)
             self.remaining_instances = len(other)
-
-        summary = sample.approx_len() if sample else self.info.NoOutput
-        details = format_summary_details(sample) if sample else ""
-        self.info.set_output_summary(summary, details)
 
         self.Outputs.data_sample.send(sample)
         self.Outputs.remaining_data.send(other)

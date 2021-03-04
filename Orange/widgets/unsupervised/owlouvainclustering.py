@@ -27,7 +27,6 @@ from Orange.widgets.utils.annotated_data import add_columns, \
 from Orange.widgets.utils.concurrent import FutureWatcher
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg
 
 try:
@@ -101,8 +100,6 @@ class OWLouvainClustering(widget.OWWidget):
         # Set up UI
         info_box = gui.vBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(info_box, "No data on input.")  # type: QLabel
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
 
         preprocessing_box = gui.vBox(self.controlArea, "Preprocessing")
         self.normalize_cbx = gui.checkBox(
@@ -391,10 +388,6 @@ class OWLouvainClustering(widget.OWWidget):
         new_table = self.data.transform(new_domain)
         new_table.get_column_view(cluster_var)[0][:] = new_partition
 
-        summary = len(new_table) if new_table else self.info.NoOutput
-        details = format_summary_details(new_table) if new_table else ""
-        self.info.set_output_summary(summary, details)
-
         self.Outputs.annotated_data.send(new_table)
 
         if Network is not None:
@@ -410,7 +403,6 @@ class OWLouvainClustering(widget.OWWidget):
         self.Error.clear()
 
         prev_data, self.data = self.data, data
-        self._set_input_summary()
         # Make sure to properly enable/disable slider based on `apply_pca` setting
         self.controls.pca_components.setEnabled(self.apply_pca)
 
@@ -421,7 +413,6 @@ class OWLouvainClustering(widget.OWWidget):
 
         self.cancel()
         # Clear the outputs
-        self.info.set_output_summary(self.info.NoOutput)
         self.Outputs.annotated_data.send(None)
         if Network is not None:
             self.Outputs.graph.send(None)
@@ -447,11 +438,6 @@ class OWLouvainClustering(widget.OWWidget):
         self.info_label.setText("Clustering not yet run.")
 
         self.commit()
-
-    def _set_input_summary(self):
-        summary = len(self.data) if self.data else self.info.NoInput
-        details = format_summary_details(self.data) if self.data else ""
-        self.info.set_input_summary(summary, details)
 
     def clear(self):
         self.__cancel_task(wait=False)

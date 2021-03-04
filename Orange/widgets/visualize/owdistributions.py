@@ -20,7 +20,6 @@ from Orange.widgets.utils.annotated_data import \
     create_groups_table, create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.utils.plotutils import ElidedLabelsAxis
 from Orange.widgets.widget import Input, Output, OWWidget, Msg
 
@@ -369,9 +368,6 @@ class OWDistributions(OWWidget):
 
         gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         self._set_smoothing_visibility()
         self._setup_plots()
         self._setup_legend()
@@ -437,9 +433,6 @@ class OWDistributions(OWWidget):
         self.closeContext()
         self.var = self.cvar = None
         self.data = data
-        summary = len(data) if data else self.info.NoInput
-        details = format_summary_details(data) if data else ""
-        self.info.set_input_summary(summary, details)
         domain = self.data.domain if self.data else None
         varmodel = self.controls.var.model()
         cvarmodel = self.controls.cvar.model()
@@ -1130,10 +1123,6 @@ class OWDistributions(OWWidget):
                 annotated_data = create_groups_table(
                     annotated_data, hist_indices, var_name="Bin", values=hist_values)
             histogram_data = self._get_histogram_table()
-
-        summary = len(selected_data) if selected_data else self.info.NoOutput
-        details = format_summary_details(selected_data) if selected_data else ""
-        self.info.set_output_summary(summary, details)
 
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(annotated_data)

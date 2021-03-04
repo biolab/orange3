@@ -7,15 +7,12 @@ import numpy as np
 from AnyQt.QtCore import QPoint, Qt
 from AnyQt.QtTest import QTest
 
-from orangewidget.widget import StateInfo
-
 import Orange.misc
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     OWHierarchicalClustering
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
@@ -173,26 +170,3 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.distances, self.distances, widget=w)
         ids_2 = self.get_output(w.Outputs.selected_data, widget=w).ids
         self.assertSequenceEqual(list(ids_1), list(ids_2))
-
-    def test_summary(self):
-        """Check if the status bar updates"""
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-        matrix_len = f"{len(self.distances)}"
-
-        self.send_signal(self.widget.Inputs.distances, self.distances)
-        self.assertEqual(info._StateInfo__input_summary.brief, matrix_len)
-        self.assertEqual(info._StateInfo__input_summary.details, matrix_len)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-        self._select_data()
-        output = self.get_output(self.widget.Outputs.selected_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.distances, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)

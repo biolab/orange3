@@ -17,7 +17,6 @@ from Orange.data import Variable
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, vartype, unique_everseen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.data.oweditdomain import FixedSizeButton
 
@@ -470,9 +469,6 @@ class OWDiscretize(widget.OWWidget):
 
         self._update_spin_positions()
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
     @property
     def default_method(self) -> Methods:
         return Methods[self.default_method_name]
@@ -504,10 +500,7 @@ class OWDiscretize(widget.OWWidget):
             self._restore(self.saved_var_states)
             # Complete the induction of cut points
             self._update_points()
-            self.info.set_input_summary(len(data),
-                                        format_summary_details(data))
         else:
-            self.info.set_input_summary(self.info.NoInput)
             self._clear()
         self.unconditional_commit()
 
@@ -775,10 +768,6 @@ class OWDiscretize(widget.OWWidget):
         if self.data is not None:
             domain = self.discretized_domain()
             output = self.data.transform(domain)
-
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
         self.Outputs.data.send(output)
 
     def storeSpecificSettings(self):

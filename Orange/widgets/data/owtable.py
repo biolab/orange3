@@ -178,7 +178,7 @@ class OWDataTable(OWWidget):
     keywords = []
 
     class Inputs:
-        data = Input("Data", Table, multiple=True)
+        data = Input("Data", Table, multiple=True, auto_summary=False)
 
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
@@ -213,7 +213,6 @@ class OWDataTable(OWWidget):
         info_box = gui.vBox(self.controlArea, "Info")
         self.info_text = gui.widgetLabel(info_box)
         self._set_input_summary(None)
-        self._set_output_summary(None)
 
         box = gui.vBox(self.controlArea, "Variables")
         self.c_show_attribute_labels = gui.checkBox(
@@ -543,11 +542,6 @@ class OWDataTable(OWWidget):
                     + format_part(summary.M))
         return text
 
-    def _set_output_summary(self, output):
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
-
     def _on_select_all(self, _):
         data_info = self.tabs.currentWidget().input_slot.summary
         if len(self.selected_rows) == data_info.len \
@@ -711,7 +705,6 @@ class OWDataTable(OWWidget):
             # Selections of individual instances are not implemented
             # for SqlTables
             if isinstance(table, SqlTable):
-                self._set_output_summary(selected_data)
                 self.Outputs.selected_data.send(selected_data)
                 self.Outputs.annotated_data.send(None)
                 return
@@ -747,7 +740,6 @@ class OWDataTable(OWWidget):
             else:
                 selected_data = table.from_table(domain, table, rowsel)
 
-        self._set_output_summary(selected_data)
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(create_annotated_table(table, rowsel))
 

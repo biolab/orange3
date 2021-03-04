@@ -13,7 +13,6 @@ from Orange.data import (
 )
 from Orange.widgets.data.owaggregatecolumns import OWAggregateColumns
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWAggregateColumn(WidgetTest):
@@ -36,31 +35,21 @@ class TestOWAggregateColumn(WidgetTest):
     def test_no_input(self):
         widget = self.widget
         domain = self.data1.domain
-        input_sum = widget.info.set_input_summary = Mock()
-        output_sum = widget.info.set_output_summary = Mock()
 
         self.send_signal(widget.Inputs.data, self.data1)
         self.assertEqual(widget.variables, [])
         widget.commit()
         output = self.get_output(self.widget.Outputs.data)
         self.assertIs(output, self.data1)
-        input_sum.assert_called_with(len(self.data1),
-                                     format_summary_details(self.data1))
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
 
         widget.variables = [domain[n] for n in "c1 c2 t2".split()]
         widget.commit()
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsNotNone(output)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
 
         self.send_signal(widget.Inputs.data, None)
         widget.commit()
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
-        input_sum.assert_called_with(widget.info.NoInput)
-        output_sum.assert_called_with(widget.info.NoOutput)
 
     def test_compute_data(self):
         domain = self.data1.domain

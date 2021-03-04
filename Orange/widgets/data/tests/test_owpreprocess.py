@@ -1,9 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
-from unittest.mock import Mock
 import numpy as np
-
-from orangewidget.widget import StateInfo
 
 from Orange.data import Table
 from Orange.preprocess import (
@@ -14,7 +11,6 @@ from Orange.preprocess import discretize, impute, fss, score
 from Orange.widgets.data import owpreprocess
 from Orange.widgets.data.owpreprocess import OWPreprocess, \
     UnivariateFeatureSelect, Scale as ScaleEditor
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest, datasets
 
 
@@ -141,26 +137,6 @@ class TestOWPreprocess(WidgetTest):
         model = self.widget.load(saved)
         self.widget.set_model(model)
         self.send_signal(self.widget.Inputs.data, table)
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data = Table("iris")
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.preprocessed_data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 # Test for editors

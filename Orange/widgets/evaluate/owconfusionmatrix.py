@@ -20,7 +20,6 @@ from Orange.widgets.settings import \
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -145,8 +144,6 @@ class OWConfusionMatrix(widget.OWWidget):
                      callback=self._invalidate)
 
         gui.auto_apply(self.outputbox, self, "autocommit", box=False)
-
-        self.info.set_output_summary(self.info.NoOutput)
 
         box = gui.vBox(self.mainArea, box=True)
 
@@ -417,10 +414,6 @@ class OWConfusionMatrix(widget.OWWidget):
         else:
             data = None
             annotated_data = None
-
-        summary = len(data) if data else self.info.NoOutput
-        details = format_summary_details(data) if data else ""
-        self.info.set_output_summary(summary, details)
 
         self.Outputs.selected_data.send(data)
         self.Outputs.annotated_data.send(annotated_data)

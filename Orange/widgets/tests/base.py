@@ -762,39 +762,6 @@ class ProjectionWidgetTestMixin:
         self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data, table)
 
-    def test_in_out_summary(self, timeout=DEFAULT_TIMEOUT):
-        info = self.widget.info
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertIn(info._StateInfo__input_summary.details,
-                      ["", "No data on input"])
-        self.assertIn(info._StateInfo__output_summary.details,
-                      ["", "No data on output"])
-
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertTrue(
-            self.signal_manager.wait_for_finished(self.widget, timeout),
-            f"Did not finish in the specified {timeout}ms timeout"
-        )
-        ind = self._select_data()
-        self.assertEqual(info._StateInfo__input_summary.brief,
-                         str(len(self.data)))
-        self.assertEqual(info._StateInfo__output_summary.brief, str(len(ind)))
-        self.assertGreater(info._StateInfo__input_summary.details, "")
-        self.assertGreater(info._StateInfo__output_summary.details, "")
-        self.assertNotIn(info._StateInfo__input_summary.details,
-                         ["", "No data on input"])
-        self.assertNotIn(info._StateInfo__output_summary.details,
-                         ["", "No data on output"])
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertIn(info._StateInfo__input_summary.details,
-                      ["", "No data on input"])
-        self.assertIn(info._StateInfo__output_summary.details,
-                      ["", "No data on output"])
-
     def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):
         graph = self.widget.graph
         font = QFont()

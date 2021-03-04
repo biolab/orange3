@@ -241,6 +241,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.task is not None:
             self._run()
 
+    @Inputs.data
     def set_data(self, data):
         """Set the input dataset.
 

@@ -6,7 +6,6 @@ from Orange.widgets.settings import Setting, ContextSetting, \
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets import gui
 from Orange.widgets.widget import Input, Output
@@ -102,9 +101,6 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
 
         gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         self.set_controls()
 
     def _apply_editing(self):
@@ -123,10 +119,6 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         if self.feature_model:
             self.closeContext()
         self.data = data
-        if data:
-            self.info.set_input_summary(len(data), format_summary_details(data))
-        else:
-            self.info.set_input_summary(self.info.NoInput)
         self.set_controls()
         if self.feature_model:
             self.openContext(data)
@@ -160,11 +152,6 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
 
     def on_done(self, transposed: Optional[Table]):
         self.Outputs.data.send(transposed)
-        if transposed:
-            self.info.set_output_summary(len(transposed),
-                                         format_summary_details(transposed))
-        else:
-            self.info.set_output_summary(self.info.NoOutput)
 
     def on_exception(self, ex: Exception):
         if isinstance(ex, ValueError):
