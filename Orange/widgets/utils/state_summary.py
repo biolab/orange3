@@ -1,5 +1,21 @@
-from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable, \
-    TimeVariable
+from datetime import date
+from html import escape
+
+from AnyQt.QtCore import Qt
+
+from orangewidget.utils.signals import summarize, PartialSummary
+
+from Orange.data import (
+    StringVariable, DiscreteVariable, ContinuousVariable, TimeVariable,
+    Table
+)
+
+from Orange.evaluation import Results
+from Orange.misc import DistMatrix
+from Orange.preprocess import Preprocess, PreprocessorList
+from Orange.preprocess.score import Scorer
+from Orange.widgets.utils.signals import AttributeList
+from Orange.base import Model, Learner
 
 
 def format_variables_string(variables):
@@ -37,7 +53,11 @@ def format_variables_string(variables):
     return var_string
 
 
-def format_summary_details(data):
+def _plural(number):
+    return 's' * (number % 100 != 1)
+
+
+def format_summary_details(data, format=Qt.PlainText):
     """
     A function that forms the entire descriptive part of the input/output
     summary.
@@ -46,31 +66,53 @@ def format_summary_details(data):
     :type data: Orange.data.Table
     :return: A formatted string
     """
-    def _plural(number):
-        return 's' * (number != 1)
+    if data is None:
+        return ""
 
-    details = ''
-    if data:
-        features = format_variables_string(data.domain.attributes)
-        targets = format_variables_string(data.domain.class_vars)
-        metas = format_variables_string(data.domain.metas)
+    if format == Qt.PlainText:
+        def b(s):
+            return s
+    else:
+        def b(s):
+            return f"<b>{s}</b>"
 
-        features_missing = missing_values(data.has_missing_attribute()
-                                          and data.get_nan_frequency_attribute())
-        n_features = len(data.domain.variables) + len(data.domain.metas)
+    features = format_variables_string(data.domain.attributes)
+    targets = format_variables_string(data.domain.class_vars)
+    metas = format_variables_string(data.domain.metas)
+
+    features_missing = missing_values(data.has_missing_attribute()
+                                      and data.get_nan_frequency_attribute())
+    n_features = len(data.domain.variables) + len(data.domain.metas)
+    name = getattr(data, "name", None)
+    if name == "untitled":
+        name = None
+    basic = f'{len(data)} instance{_plural(len(data))}, ' \
+            f'{n_features} variable{_plural(n_features)}'
+
+    if format == Qt.PlainText:
         details = \
-            f'{len(data)} instance{_plural(len(data))}, ' \
-            f'{n_features} variable{_plural(n_features)}\n' \
-            f'Features: {features} {features_missing}\n' \
-            f'Target: {targets}\nMetas: {metas}'
-    return details
+            (f"'{name}': " if name else "") + basic \
+            + f'\nFeatures: {features} {features_missing}' \
+            + f'\nTarget: {targets}'
+        if data.domain.metas:
+            details += f'\nMetas: {metas}'
+    else:
+        details = \
+            _nobr(f"<b>'{escape(name)}'</b>: {basic}" if name else basic) \
+            + '<br/>' \
+            + _nobr(f'<b>Features</b>: {features} {features_missing}') \
+            + '<br/>' \
+            + _nobr(f"<b>Target</b>: {targets}")
+        if data.domain.metas:
+            details += "<br/>" + _nobr("<b>Metas</b>: {metas}")
+        return details
 
 
 def missing_values(value):
     if value:
         return f'({value*100:.1f}% missing values)'
     else:
-        return '(No missing values)'
+        return '(no missing values)'
 
 
 def format_multiple_summaries(data_list, type_io='input'):
@@ -101,3 +143,69 @@ def format_multiple_summaries(data_list, type_io='input'):
             details = f'No data on {type_io}.'
         full_details.append(details if not name else f'{name}:<br>{details}')
     return '<hr>'.join(full_details)
+
+
+def _name_of(object):
+    return _nobr(getattr(object, 'name', type(object).__name__))
+
+
+def _nobr(s):
+    return f"<nobr>{s}</nobr>"
+
+
+@summarize.register(Table)
+def summarize_(data: Table):
+    return PartialSummary(
+        data.approx_len(),
+        format_summary_details(data, format=Qt.RichText))
+
+
+@summarize.register(DistMatrix)
+def summarize_(matrix: DistMatrix):
+    n, m = matrix.shape
+    return PartialSummary(f"{n}×{m}", _nobr(f"{n}×{m} distance matrix"))
+
+
+@summarize.register(Results)
+def summarize_(results: Results):
+    nmethods, ninstances = results.predicted.shape
+    summary = f"{nmethods}×{ninstances}"
+    details = f"{nmethods} method{_plural(nmethods)} " \
+              f"on {ninstances} test instance{_plural(ninstances)}"
+    return PartialSummary(summary, _nobr(details))
+
+
+@summarize.register(AttributeList)
+def summarize_(attributes):
+    n = len(attributes)
+    if n == 0:
+        details = "empty list"
+    elif n <= 3:
+        details = _nobr(", ".join(var.name for var in attributes))
+    else:
+        details = _nobr(", ".join(var.name for var in attributes[:2]) +
+                       f" and {n - 2} others")
+    return PartialSummary(n, details)
+
+
+@summarize.register(Preprocess)
+def summarize_(preprocessor: Preprocess):
+    if isinstance(preprocessor, PreprocessorList):
+        if preprocessor.preprocessors:
+            details = "<br/>".join(map(_name_of, preprocessor.preprocessors))
+        else:
+            details = _nobr(f"{_name_of(preprocessor)} (empty)")
+    else:
+        details = _name_of(preprocessor)
+    return PartialSummary("🄿", details)
+
+
+def summarize_by_name(type_, symbol):
+    @summarize.register(type_)
+    def summarize_(model: type_):
+        return PartialSummary(symbol, _name_of(model))
+
+
+summarize_by_name(Model, "&#9924;" if date.month == 12 else "🄼")
+summarize_by_name(Learner, "🄻")
+summarize_by_name(Scorer, "🅂")
