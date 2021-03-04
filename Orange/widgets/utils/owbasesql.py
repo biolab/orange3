@@ -3,6 +3,7 @@ from typing import Type
 from collections import OrderedDict
 
 from AnyQt.QtWidgets import QLineEdit, QSizePolicy
+from sqlalchemy.exc import OperationalError
 
 from Orange.data import Table
 from Orange.data.sql.backend import Backend
@@ -122,12 +123,7 @@ class OWBaseSql(OWWidget, openclass=True):
         self._parse_host_port()
         if self.get_backend() == SqliteAlchemy:
             self.database = self.databasetext.text()
-            if os.path.isfile(self.database):
-                # no schema provided together with the name
-                self.schema = ""
-            else:
-                # schema as a last part of the name
-                self.database, _, self.schema = self.database.partition("/")
+            self.schema = ""
         else:
             self.database, _, self.schema = self.databasetext.text().partition("/")
         self.username = self.usernametext.text() or None
@@ -191,6 +187,30 @@ class OWBaseSql(OWWidget, openclass=True):
         table: Table
         """
         raise NotImplementedError
+
+    def _update_interface(self):
+        """
+        Some databases different credentials e.g. SQLite is just a file with
+        one database and without username and password it only need database
+        path specified.
+
+        In those cases default field names are replaced with field names
+        defined in the backend class.
+        """
+        backend = self.get_backend()
+        gui_settings = backend.widget_gui_fields if hasattr(backend, "widget_gui_fields") else GUI_FIELDS
+        for field, setting in gui_settings.items():
+            view: QLineEdit = getattr(self, field)
+            if setting:
+                # if the field setting is not None set placeholder and tooltip
+                view.setEnabled(True)
+                view.setPlaceholderText(setting[0])
+                view.setToolTip(setting[1])
+            else:
+                # if none set placeholder and tooltip to default and disable field
+                view.setEnabled(False)
+                view.setPlaceholderText(GUI_FIELDS[field][0])
+                view.setToolTip(GUI_FIELDS[field][1])
 
     def clear(self):
         self.Error.connection.clear()

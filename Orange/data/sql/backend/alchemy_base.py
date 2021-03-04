@@ -3,7 +3,7 @@ from datetime import date, datetime, time
 from typing import Optional, List, Iterable, Tuple, Any, Union
 
 from sqlalchemy import create_engine, MetaData, select, Table, text, func
-from sqlalchemy.exc import NoSuchTableError, ProgrammingError
+from sqlalchemy.exc import NoSuchTableError, ProgrammingError, OperationalError
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.elements import and_, TextClause
@@ -42,22 +42,27 @@ class SQLAlchemyBackend(Backend):
     dialect_driver = None
 
     def __init__(self, connection_params: dict):
-        print("init")
         super().__init__(connection_params)
-        self.engine = create_engine(
-            self.connection_string.format(
-                dialect_driver=self.dialect_driver, **connection_params
+        try:
+            self.engine = create_engine(
+                self.connection_string.format(
+                    dialect_driver=self.dialect_driver, **connection_params
+                )
             )
-        )
+        except OperationalError as ex:
+            raise BackendError(str(ex)) from ex
 
     def list_tables(self, schema: Optional[str] = None):
         if not schema:
             schema = None
-        tables = []
-        for t in self.engine.table_names(schema=schema):
-            s_t = (schema, t,) if schema else (t,)
-            tables.append(TableDesc(t, schema, ".".join(s_t)))
-        return tables
+        try:
+            tables = []
+            for t in self.engine.table_names(schema=schema):
+                s_t = (schema, t,) if schema else (t,)
+                tables.append(TableDesc(t, schema, ".".join(s_t)))
+            return tables
+        except OperationalError as ex:
+            raise BackendError(str(ex)) from ex
 
     def create_sql_query(
         self,
@@ -86,15 +91,17 @@ class SQLAlchemyBackend(Backend):
             elif "AS" in f:
                 col, label = f.split("AS")
                 columns.append(
-                    table.c[col.strip("() ")].label(label.strip("() "))
+                    table.c[col.strip('() "')].label(label.strip('() "'))
                 )
             elif "(" in f or f == "*":
                 # fields is a function
                 # TODO: think about not allowing this
                 #  make separate functions for e.g. count
                 columns.append(text(f))
-            else:
+            elif f in table.c:
                 columns.append(table.c[f])
+            else:
+                columns.append(text(f))
 
         query = select(columns).select_from(table)
         # MSSQL requires an order_by when using an OFFSET or a non-simple
@@ -115,7 +122,6 @@ class SQLAlchemyBackend(Backend):
             query = query.offset(offset)
         if group_by is not None:
             query = query.group_by(*[text(g) for g in group_by])
-        print(query)
         return query
 
     @contextmanager
@@ -129,7 +135,7 @@ class SQLAlchemyBackend(Backend):
                 )
                 yield result
                 result.close()
-            except ProgrammingError as ex:
+            except (OperationalError, ProgrammingError) as ex:
                 raise BackendError(str(ex)) from ex
 
     def get_fields(self, table_name: str):
@@ -233,8 +239,11 @@ class SQLAlchemyBackend(Backend):
         return name
 
     def create_table(self, name: str, sql: str) -> None:
-        with self.engine.begin() as conn:
-            conn.execute(CreateTableAs(name, sql))
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(CreateTableAs(name, sql))
+        except (OperationalError, ProgrammingError) as ex:
+            raise BackendError(str(ex)) from ex
 
     def drop_table(self, name):
         stn = name.split(".")
@@ -251,7 +260,7 @@ class SQLAlchemyBackend(Backend):
 
 
 class MySqlAlchemy(SQLAlchemyBackend):
-    display_name = "MySQL Alchemy"
+    display_name = "MySQL"
     # we decided to use mysqlclient from pypi
     # installed via: pip install mysqlclient
     dialect_driver = "mysql+mysqldb"

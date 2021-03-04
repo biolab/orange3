@@ -20,6 +20,8 @@ class PymssqlBackend(Backend):
     display_name = "Ms SQL Server"
 
     def __init__(self, connection_params):
+        # to avoid editing the dictionary from upstream
+        connection_params = connection_params.copy()
         connection_params["server"] = connection_params.pop("host", None)
 
         for key in list(connection_params):

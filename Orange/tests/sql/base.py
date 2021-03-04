@@ -6,6 +6,7 @@ import random
 import inspect
 
 import numpy as np
+from sqlalchemy import create_engine
 
 from Orange.data import Table
 
@@ -308,9 +309,102 @@ class MicrosoftTestConnection(DBTestConnection):
         return PymssqlBackend(self.params)
 
 
+class MySqlTestConnection(DBTestConnection):
+    uri_name = "mysql"
+    module = "mysqlclient"
+    connection_string = (
+        "{dialect_driver}://{user}:{password}@{host}:"
+        "{port}/{database}?charset=utf8"
+    )
+    dialect_driver ="mysql+mysqldb"
+
+    def try_connection(self):
+        try:
+            self.is_module = True
+            create_engine(
+                self.connection_string.format(
+                    dialect_driver=self.dialect_driver,
+                    **self.params
+                ),
+                pool_pre_ping=True,  # ping on connection - connection test
+            )
+            self.is_active = True
+        except:
+            pass
+
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
+        data = list(data)
+
+        if table_name is None:
+            table_name = ''.join(random.choices(string.ascii_lowercase, k=16))
+
+        if sql_column_types is None:
+            column_size = self._get_column_types(data)
+            sql_column_types = [
+                'float' if size == 0 else 'varchar({})'.format(size)
+                for size in column_size
+            ]
+
+        if sql_column_names is None:
+            sql_column_names = ["col{}".format(i)
+                                for i in range(len(sql_column_types))]
+        else:
+            sql_column_names = map(lambda x: "`{}`".format(x), sql_column_names)
+
+        drop_table_sql = "DROP TABLE IF EXISTS {}".format(table_name)
+
+        create_table_sql = "CREATE TABLE {} ({})".format(
+            table_name,
+            ", ".join('{} {}'.format(n, t)
+                      for n, t in zip(sql_column_names, sql_column_types)))
+
+        insert_values = ", ".join(
+            "({})".format(
+                ", ".join("NULL" if v is None else "'{}'".format(v)
+                          for v, t in zip(row, sql_column_types))
+            ) for row in data
+        )
+
+        insert_sql = "INSERT INTO {} VALUES {}".format(table_name,
+                                                       insert_values)
+
+        engine = create_engine(
+            self.connection_string.format(
+                dialect_driver=self.dialect_driver,
+                **self.params
+            ),
+            pool_pre_ping=True,  # ping on connection - connection test
+        )
+        with engine.connect() as connection:
+            connection.execute(drop_table_sql)
+            print(create_table_sql)
+            connection.execute(create_table_sql)
+            if insert_values:
+                connection.execute(insert_sql)
+
+        return self.params, table_name
+
+    def drop_sql_table(self, table_name):
+        engine = create_engine(
+            self.connection_string.format(
+                dialect_driver=self.dialect_driver,
+                **self.params
+            ),
+            pool_pre_ping=True,  # ping on connection - connection test
+        )
+        with engine.connect() as connection:
+            connection.execute("DROP TABLE {}".format(table_name))
+
+    def get_backend(self):
+        from Orange.data.sql.backend import MySqlAlchemy
+        return MySqlAlchemy(self.params)
+
+
 test_connections = {
     PostgresTestConnection.uri_name: PostgresTestConnection,
-    MicrosoftTestConnection.uri_name: MicrosoftTestConnection
+    MicrosoftTestConnection.uri_name: MicrosoftTestConnection,
+    MySqlTestConnection.uri_name: MySqlTestConnection
 }
 
 

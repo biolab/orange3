@@ -76,7 +76,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         table2 = SqlTable(self.conn, self.iris)
         self.assertEqual(table1.domain[0], table2.domain[0])
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_len(self):
         with self.sql_table_from_data(zip(self.float_variable(26))) as table:
             self.assertEqual(len(table), 26)
@@ -84,14 +84,15 @@ class TestSqlTable(unittest.TestCase, dbt):
         with self.sql_table_from_data(zip(self.float_variable(0))) as table:
             self.assertEqual(len(table), 0)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_bool(self):
         with self.sql_table_from_data(()) as table:
+            print(table)
             self.assertEqual(bool(table), False)
         with self.sql_table_from_data(zip(self.float_variable(1))) as table:
             self.assertEqual(bool(table), True)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_len_with_filter(self):
         data = zip(self.discrete_variable(26))
         with self.sql_table_from_data(data) as table:
@@ -104,7 +105,7 @@ class TestSqlTable(unittest.TestCase, dbt):
             filtered_table = filter.SameValue(table.domain[0], 'x')(table)
             self.assertEqual(len(filtered_table), 0)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_XY_small(self):
         mat = np.random.randint(0, 2, (20, 3))
         conn, table_name = self.create_sql_table(mat)
@@ -114,7 +115,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     @unittest.mock.patch("Orange.data.sql.table.AUTO_DL_LIMIT", 100)
     def test_XY_large(self):
         from Orange.data.sql.table import AUTO_DL_LIMIT as DLL
@@ -136,7 +137,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_download_data(self):
         mat = np.random.randint(0, 2, (20, 3))
         conn, table_name = self.create_sql_table(mat)
@@ -148,19 +149,19 @@ class TestSqlTable(unittest.TestCase, dbt):
         # has all necessary class members to create a standard Table
         Table.from_table(sql_table.domain, sql_table)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_query_all(self):
         table = SqlTable(self.conn, self.iris, inspect_values=True)
         results = list(table)
 
         self.assertEqual(len(results), 150)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_unavailable_row(self):
         table = SqlTable(self.conn, self.iris)
         self.assertRaises(IndexError, lambda: table[151])
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_query_subset_of_attributes(self):
         table = SqlTable(self.conn, self.iris)
         attributes = [
@@ -202,12 +203,12 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertEqual(len(results), 140)
         self.assertSequenceEqual(results, all_results[10:])
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_getitem_single_value(self):
         table = SqlTable(self.conn, self.iris, inspect_values=True)
         self.assertAlmostEqual(table[0, 0], 5.1)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_type_hints(self):
         table = SqlTable(self.conn, self.iris, inspect_values=True)
         self.assertEqual(len(table.domain), 5)
@@ -284,7 +285,7 @@ class TestSqlTable(unittest.TestCase, dbt):
     IRIS_VARIABLE = DiscreteVariable(
         "iris", values=('Iris-setosa', 'Iris-virginica', 'Iris-versicolor'))
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_class_var_type_hints(self):
         iris = SqlTable(self.conn, self.iris,
                         type_hints=Domain([], self.IRIS_VARIABLE))
@@ -292,7 +293,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertEqual(len(iris.domain.class_vars), 1)
         self.assertEqual(iris.domain.class_vars[0].name, 'iris')
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_metas_type_hints(self):
         iris = SqlTable(self.conn, self.iris,
                         type_hints=Domain([], [], metas=[self.IRIS_VARIABLE]))
@@ -300,7 +301,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertEqual(len(iris.domain.metas), 1)
         self.assertEqual(iris.domain.metas[0].name, 'iris')
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_select_all(self):
         iris = SqlTable(self.conn, "SELECT * FROM iris",
                         type_hints=Domain([], self.IRIS_VARIABLE))
@@ -318,7 +319,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_continous_bigint(self):
         table = np.arange(25).reshape((-1, 1))
         conn, table_name = self.create_sql_table(table, ['bigint'])
@@ -340,7 +341,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_continous_int(self):
         table = np.arange(25).reshape((-1, 1))
         conn, table_name = self.create_sql_table(table, ['int'])
@@ -362,7 +363,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_continous_smallint(self):
         table = np.arange(25).reshape((-1, 1))
         conn, table_name = self.create_sql_table(table, ['smallint'])
@@ -384,7 +385,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_discrete_char(self):
         table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['char(1)'])
@@ -404,7 +405,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertSequenceEqual(sql_table.domain[0].values, ['F', 'M'])
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_meta_char(self):
         table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['char(1)'])
@@ -415,7 +416,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_discrete_varchar(self):
         table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['varchar(1)'])
@@ -426,7 +427,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_meta_varchar(self):
         table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['varchar(1)'])
@@ -503,7 +504,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, TimeVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_double_precision(self):
         table = np.arange(25).reshape((-1, 1))
         conn, table_name = self.create_sql_table(table, ['double precision'])
@@ -514,7 +515,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_numeric(self):
         table = np.arange(25).reshape((-1, 1))
         conn, table_name = self.create_sql_table(table, ['numeric(15, 2)'])
@@ -525,7 +526,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_real(self):
         table = np.arange(25).reshape((-1, 1))
         conn, table_name = self.create_sql_table(table, ['real'])
@@ -597,7 +598,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         filters = filter.Values([filter.FilterString(-1, filter.FilterString.Equal, 'foo')])
         self.assertEqual(len(filters(sql_table)), 0)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_recovers_connection_after_sql_error(self):
         conn, table_name = self.create_sql_table(
             np.arange(25).reshape((-1, 1)))
@@ -661,7 +662,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertEqual(stats.nans, 0)
         self.assertEqual(stats.non_nans, 150)
 
-    @dbt.run_on(["postgres", "mssql"])
+    @dbt.run_on(["postgres", "mssql", "mysql"])
     def test_distributions(self):
         iris = SqlTable(self.conn, self.iris, inspect_values=True)
 
@@ -716,6 +717,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertGreater(len(table.domain.metas), 0)
         attr = table.domain[-1]
         self.assertIsInstance(attr, variable_type)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -177,7 +177,7 @@ class Psycopg2Backend(Backend):
     def count_approx(self, query):
         sql = "EXPLAIN " + query
         with self.execute_sql_query(sql) as cur:
-            s = ''.join(  w[0] for row in cur.fetchall())
+            s = ''.join(row[0] for row in cur.fetchall())
         return int(re.findall(r'rows=(\d*)', s)[0])
 
     def create_table(self, name: str, sql: str) -> None:
