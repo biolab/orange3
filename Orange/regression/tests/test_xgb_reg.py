@@ -5,7 +5,11 @@ from Orange.base import XGBBase
 from Orange.data import Table
 from Orange.evaluation import CrossValidation, RMSE
 from Orange.preprocess.score import Scorer
-from Orange.regression import XGBRegressor, XGBRFRegressor
+
+try:
+    from Orange.regression import XGBRegressor, XGBRFRegressor
+except ImportError:
+    XGBRegressor = XGBRFRegressor = None
 
 
 def test_learners(func: Callable) -> Callable:
@@ -16,6 +20,7 @@ def test_learners(func: Callable) -> Callable:
     return wrapper
 
 
+@unittest.skipIf(XGBRegressor is None, "Missing 'xgboost' package")
 class TestXGBReg(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -71,6 +76,7 @@ class TestXGBReg(unittest.TestCase):
         self.assertEqual(params["n_estimators"], 42)
         self.assertEqual(params["max_depth"], 4)
 
+    @unittest.skipIf(XGBRegressor is None, "Missing 'xgboost' package")
     @test_learners
     def test_scorer(self, learner_class: XGBBase):
         booster = learner_class()
