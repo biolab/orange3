@@ -23,14 +23,17 @@ build:
 
 requirements:
   build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+  host:
     - python
     - setuptools
-    # https://github.com/numpy/numpy/pull/6470
-    - numpy         !=1.9.2   # [win]
-    - numpy         >=1.9.0   # [not win]
-    - pip           >=8
+    - numpy         1.14.*
+    - cython
+    - pip
     - wheel
-
+    - sphinx
+    - recommonmark
   run:
     - python
     - setuptools >=36.3
@@ -89,7 +92,7 @@ test:
     - Orange.statistics
 
   commands:
-    - python -m unittest -v Orange.tests
+    - python -m unittest -v Orange.tests Orange.widgets.tests
     - orange-canvas --help
 
 app:
