@@ -142,6 +142,27 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(controls.color_var.currentText(), "(Same color)")
         self.assertEqual(controls.color_var.model().rowCount(), 1)
 
+    def test_group_axis(self):
+        group_axis = self.widget.graph.group_axis
+        annot_axis = self.widget.graph.getAxis('bottom')
+        controls = self.widget.controls
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertFalse(group_axis.isVisible())
+        self.assertTrue(annot_axis.isVisible())
+
+        simulate.combobox_activate_item(controls.group_var, "iris")
+        self.assertTrue(group_axis.isVisible())
+        self.assertFalse(annot_axis.isVisible())
+
+        simulate.combobox_activate_item(controls.annot_var, "iris")
+        self.assertTrue(group_axis.isVisible())
+        self.assertTrue(annot_axis.isVisible())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(group_axis.isVisible())
+        self.assertFalse(annot_axis.isVisible())
+
     def test_datasets(self):
         controls = self.widget.controls
         for ds in datasets.datasets():
@@ -353,10 +374,15 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.set_visual_settings(key, value)
         self.assertFalse(graph.getAxis("left").grid)
 
-        key, value = ("Figure", "Bottom axis", "Vertical tick text"), False
+        key, value = ("Figure", "Bottom axis", "Vertical ticks"), False
         self.assertTrue(graph.getAxis("bottom").style["rotateTicks"])
         self.widget.set_visual_settings(key, value)
         self.assertFalse(graph.getAxis("bottom").style["rotateTicks"])
+
+        key, value = ("Figure", "Group axis", "Vertical ticks"), True
+        self.assertFalse(graph.group_axis.style["rotateTicks"])
+        self.widget.set_visual_settings(key, value)
+        self.assertTrue(graph.group_axis.style["rotateTicks"])
 
     def assertFontEqual(self, font1, font2):
         self.assertEqual(font1.family(), font2.family())

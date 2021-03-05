@@ -68,7 +68,8 @@ class BarPlotViewBox(pg.ViewBox):
 class ParameterSetter(CommonParameterSetter):
     GRID_LABEL, SHOW_GRID_LABEL = "Gridlines", "Show"
     DEFAULT_ALPHA_GRID, DEFAULT_SHOW_GRID = 80, True
-    BOTTOM_AXIS_LABEL, IS_VERTICAL_LABEL = "Bottom axis", "Vertical tick text"
+    BOTTOM_AXIS_LABEL, GROUP_AXIS_LABEL = "Bottom axis", "Group axis"
+    IS_VERTICAL_LABEL = "Vertical ticks"
 
     def __init__(self, master):
         self.grid_settings: Dict = None
@@ -101,6 +102,9 @@ class ParameterSetter(CommonParameterSetter):
                 self.BOTTOM_AXIS_LABEL: {
                     self.IS_VERTICAL_LABEL: (None, True),
                 },
+                self.GROUP_AXIS_LABEL: {
+                    self.IS_VERTICAL_LABEL: (None, False),
+                },
             },
         }
 
@@ -113,9 +117,14 @@ class ParameterSetter(CommonParameterSetter):
             axis = self.master.getAxis("bottom")
             axis.setRotateTicks(settings[self.IS_VERTICAL_LABEL])
 
+        def update_group_axis(**settings):
+            axis = self.master.group_axis
+            axis.setRotateTicks(settings[self.IS_VERTICAL_LABEL])
+
         self._setters[self.PLOT_BOX] = {
             self.GRID_LABEL: update_grid,
             self.BOTTOM_AXIS_LABEL: update_bottom_axis,
+            self.GROUP_AXIS_LABEL: update_group_axis,
         }
 
     @property
@@ -132,18 +141,17 @@ class ParameterSetter(CommonParameterSetter):
         return self.master.legend.items
 
 
-class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
+class BarPlotGraph(pg.PlotWidget):
     selection_changed = Signal(list)
-    bar_width = 0.8
+    bar_width = 0.7
 
     def __init__(self, master, parent=None):
-        gui.OWComponent.__init__(self, master)
         self.selection = []
         self.master: OWBarPlot = master
         self.state: int = SELECT
         self.bar_item: pg.BarGraphItem = None
-        pg.PlotWidget.__init__(
-            self, parent=parent,
+        super().__init__(
+            parent=parent,
             viewBox=BarPlotViewBox(self),
             background="w", enableMenu=False,
             axisItems={"bottom": AxisItem(orientation="bottom",
@@ -155,6 +163,12 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
         self.getPlotItem().buttonsHidden = True
         self.getPlotItem().setContentsMargins(10, 0, 0, 10)
         self.getViewBox().setMouseMode(pg.ViewBox.PanMode)
+
+        self.group_axis = AxisItem("bottom")
+        self.group_axis.hide()
+        self.group_axis.linkToView(self.getViewBox())
+        self.getPlotItem().layout.addItem(self.group_axis, 4, 1)
+
         self.legend = self._create_legend()
 
         self.tooltip_delegate = HelpEventDelegate(self.help_event)
@@ -189,6 +203,7 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
         self.clear()
         self.update_bars()
         self.update_axes()
+        self.update_group_lines()
         self.update_legend()
         self.reset_view()
 
@@ -216,13 +231,31 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
         if self.bar_item is not None:
             self.showAxis("left")
             self.showAxis("bottom")
-            self.setLabel(axis="left", text=self.master.get_axes()[0])
-            self.setLabel(axis="bottom", text=self.master.get_axes()[1])
+            self.group_axis.show()
+
+            vals_label, group_label, annot_label = self.master.get_axes()
+            self.setLabel(axis="left", text=vals_label)
+            self.setLabel(axis="bottom", text=annot_label)
+            self.group_axis.setLabel(group_label)
+
             ticks = [list(enumerate(self.master.get_labels()))]
             self.getAxis('bottom').setTicks(ticks)
+
+            labels = np.array(self.master.get_group_labels())
+            _, indices, counts = \
+                np.unique(labels, return_index=True, return_counts=True)
+            ticks = [[(i + (c - 1) / 2, labels[i]) for i, c in
+                      zip(indices, counts)]]
+            self.group_axis.setTicks(ticks)
+
+            if not group_label:
+                self.group_axis.hide()
+            elif not annot_label:
+                self.hideAxis("bottom")
         else:
             self.hideAxis("left")
             self.hideAxis("bottom")
+            self.group_axis.hide()
 
     def reset_view(self):
         if self.bar_item is None:
@@ -247,6 +280,20 @@ class BarPlotGraph(gui.OWComponent, pg.PlotWidget):
 
     def reset_button_clicked(self):
         self.reset_view()
+
+    def update_group_lines(self):
+        if self.bar_item is None:
+            return
+
+        labels = np.array(self.master.get_group_labels())
+        if labels is None or len(labels) == 0:
+            return
+
+        _, indices = np.unique(labels, return_index=True)
+        offset = self.bar_width / 2 + (1 - self.bar_width) / 2
+        for index in sorted(indices)[1:]:
+            line = pg.InfiniteLine(pos=index - offset, angle=90)
+            self.addItem(line)
 
     def select_by_rectangle(self, rect: QRectF):
         if self.bar_item is None:
@@ -535,6 +582,15 @@ class OWBarPlot(OWWidget):
             return [self.annot_var.str_val(row[self.annot_var])
                     for row in self.grouped_data]
 
+    def get_group_labels(self) -> Optional[List]:
+        if not self.data:
+            return None
+        elif not self.group_var:
+            return []
+        else:
+            return [self.group_var.str_val(row[self.group_var])
+                    for row in self.grouped_data]
+
     def get_legend_data(self) -> List:
         if not self.data or not self.color_var:
             return []
@@ -579,10 +635,12 @@ class OWBarPlot(OWWidget):
             text = "<b>{}</b><br/><br/>{}".format(text, others)
         return text
 
-    def get_axes(self) -> Optional[Tuple[str, str]]:
+    def get_axes(self) -> Optional[Tuple[str, str, str]]:
         if not self.data:
             return None
-        return self.selected_var.name, self.annot_var if self.annot_var else ""
+        return (self.selected_var.name,
+                self.group_var.name if self.group_var else "",
+                self.annot_var if self.annot_var else "")
 
     def setup_plot(self):
         self.graph.reset_graph()
