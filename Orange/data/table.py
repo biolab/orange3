@@ -12,12 +12,13 @@ from threading import Lock
 
 import bottleneck as bn
 import numpy as np
-from Orange.misc.collections import frozendict
-from Orange.util import OrangeDeprecationWarning
+
 from scipy import sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
 import Orange.data  # import for io.py
+from Orange.misc.collections import frozendict
+from Orange.util import OrangeDeprecationWarning
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
@@ -654,6 +655,49 @@ class Table(Sequence, Storage):
             cls._next_instance_id += 1
             return id
 
+    def to_pandas_dfs(self):
+        return Orange.data.pandas_compat.table_to_frames(self)
+
+    @staticmethod
+    def from_pandas_dfs(xdf, ydf, mdf):
+        return Orange.data.pandas_compat.table_from_frames(xdf, ydf, mdf)
+
+    @property
+    def X_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.Attribute
+        )
+
+    @X_df.setter
+    def X_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.Attribute
+        )
+
+    @property
+    def Y_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.ClassAttribute
+        )
+
+    @Y_df.setter
+    def Y_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.ClassAttribute
+        )
+
+    @property
+    def metas_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.Meta
+        )
+
+    @metas_df.setter
+    def metas_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.Meta
+        )
+
     def save(self, filename):
         """
         Save a data table to a file. The path can be absolute or relative.
@@ -1051,6 +1095,7 @@ class Table(Sequence, Storage):
         """
         Ensure that the table owns its data; copy arrays when necessary.
         """
+
         def is_view(x):
             # Sparse matrices don't have views like numpy arrays. Since indexing on
             # them creates copies in constructor we can skip this check here.
@@ -1120,12 +1165,12 @@ class Table(Sequence, Storage):
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
-        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)   # do not check for sparse X
+        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)  # do not check for sparse X
         return missing_x or bn.anynan(self._Y)
 
     def has_missing_attribute(self):
         """Return `True` if there are any missing attribute values."""
-        return not sp.issparse(self.X) and bn.anynan(self.X)    # do not check for sparse X
+        return not sp.issparse(self.X) and bn.anynan(self.X)  # do not check for sparse X
 
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
@@ -1453,7 +1498,7 @@ class Table(Sequence, Storage):
 
     @staticmethod
     def _range_filter_to_indicator(filter, col, fmin, fmax):
-        with np.errstate(invalid="ignore"):   # nan's are properly discarded
+        with np.errstate(invalid="ignore"):  # nan's are properly discarded
             if filter.oper == filter.Equal:
                 return col == fmin
             if filter.oper == filter.NotEqual:
@@ -1497,9 +1542,9 @@ class Table(Sequence, Storage):
                 if 0 <= c < nattrs:
                     S = fast_stats(self.X[:, [c]], W and W[:, [c]])
                 elif c >= nattrs:
-                    S = fast_stats(self._Y[:, [c-nattrs]], W and W[:, [c-nattrs]])
+                    S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]])
                 else:
-                    S = fast_stats(self.metas[:, [-1-c]], W and W[:, [-1-c]])
+                    S = fast_stats(self.metas[:, [-1 - c]], W and W[:, [-1 - c]])
                 stats.append(S[0])
         return stats
 
@@ -1603,7 +1648,7 @@ class Table(Sequence, Storage):
         # it to dense and make it 1D
         if issparse(row_data):
             row_data = row_data.toarray().ravel()
-        if row_data.dtype.kind != "f": #meta attributes can be stored as type object
+        if row_data.dtype.kind != "f":  # meta attributes can be stored as type object
             row_data = row_data.astype(float)
 
         contingencies = [None] * len(col_desc)
@@ -1801,7 +1846,7 @@ class Table(Sequence, Storage):
         if dense_metas:
             densify(new_domain.metas)
         t = self.transform(new_domain)
-        t.ids = self.ids    # preserve indices
+        t.ids = self.ids  # preserve indices
         return t
 
 
@@ -1954,3 +1999,15 @@ def assure_domain_conversion_sparsity(target, source):
     target.Y = match_density[conversion.sparse_Y](target.Y)
     target.metas = match_density[conversion.sparse_metas](target.metas)
     return target
+
+
+class Role:
+    Attribute = 0
+    ClassAttribute = 1
+    Meta = 2
+
+    @staticmethod
+    def get_arr(role, table):
+        return table.X if role == Role.Attribute else \
+               table.Y if role == Role.ClassAttribute else \
+               table.metas
