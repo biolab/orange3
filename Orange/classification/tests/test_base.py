@@ -1,5 +1,3 @@
-import os
-from tempfile import TemporaryDirectory
 import unittest
 
 import numpy as np
@@ -12,17 +10,21 @@ class TestModelMapping(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = iris = Table("iris")
-        with TemporaryDirectory() as tempdir:
-            tables = []
-            x = np.vstack((iris.X[:50], iris.X[100:]))
-            y = np.hstack((iris.Y[:50], iris.Y[100:]))
-            for i, data in enumerate([iris[50:],
-                                      Table.from_numpy(iris.domain, x, y),
-                                      iris[:100]]):
 
-                name = os.path.join(tempdir, f"no{i}.tab")
-                data.save(name)
-                tables.append(Table(name))
+        tables = []
+        ix = iris.X
+        y = np.hstack((np.zeros(50), np.ones(50)))
+        attrs = cls.iris.domain.attributes
+        classes = cls.iris.domain.class_var.values
+        for i, x in enumerate([ix[50:],
+                               np.vstack((ix[:50], ix[100:])),
+                               ix[:100]]):
+            class_var = DiscreteVariable(
+                "iris",
+                values=tuple(n for j, n in enumerate(classes) if j != i))
+            domain = Domain(attrs, class_var)
+            tables.append(Table.from_numpy(domain, x, y))
+        # pylint: disable=unbalanced-tuple-unpacking
         cls.iris0, cls.iris1, cls.iris2 = tables
 
     def test_larger_model(self):

@@ -1,12 +1,12 @@
-from .base import Benchmark, benchmark, pandas_only, non_pandas_only
 from Orange.data import Table
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
+from .base import Benchmark, benchmark, pandas_only, non_pandas_only
 
 # noinspection PyBroadException
 try:
     from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
-except:
+except:  # pylint: disable=bare-except
     # legacy only
     pass
 

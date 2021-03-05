@@ -113,6 +113,7 @@ class TestSqlTable(unittest.TestCase, dbt):
                                  name='col2', values=('0', '1', '2'))))
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     @unittest.mock.patch("Orange.data.sql.table.AUTO_DL_LIMIT", 100)
@@ -135,6 +136,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         sql_table.download_data()
         assert_almost_equal(sql_table.X, mat[:, :2])
         assert_almost_equal(sql_table.Y.flatten(), mat[:, 2])
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_download_data(self):
@@ -147,6 +149,7 @@ class TestSqlTable(unittest.TestCase, dbt):
             self.assertFalse(getattr(sql_table, member) is None)
         # has all necessary class members to create a standard Table
         Table.from_table(sql_table.domain, sql_table)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_query_all(self):
@@ -293,6 +296,20 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertEqual(iris.domain.class_vars[0].name, 'iris')
 
     @dbt.run_on(["postgres", "mssql"])
+    def test_meta_type_hints(self):
+        iris = SqlTable(
+            self.conn,
+            self.iris,
+            type_hints=Domain([], metas=[self.IRIS_VARIABLE]),
+        )
+
+        self.assertEqual(len(iris.domain.metas), 1)
+        self.assertEqual(iris.domain.metas[0].name, "iris")
+        np.testing.assert_array_equal(
+            iris.metas.flatten(), [0] * 50 + [2] * 50 + [1] * 50
+        )
+
+    @dbt.run_on(["postgres", "mssql"])
     def test_metas_type_hints(self):
         iris = SqlTable(self.conn, self.iris,
                         type_hints=Domain([], [], metas=[self.IRIS_VARIABLE]))
@@ -317,6 +334,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_continous_bigint(self):
@@ -328,6 +346,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_discrete_int(self):
@@ -339,6 +358,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_continous_int(self):
@@ -350,6 +370,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_discrete_smallint(self):
@@ -361,6 +382,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_continous_smallint(self):
@@ -372,6 +394,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_boolean(self):
@@ -383,6 +406,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_discrete_char(self):
@@ -394,6 +418,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_discrete_bigger_char(self):
@@ -403,6 +428,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertSequenceEqual(sql_table.domain[0].values, ['F', 'M'])
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_meta_char(self):
@@ -414,6 +440,22 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.drop_sql_table(table_name)
+
+        # test if NULL is transformed to emtpy string
+        table = np.array(list("ABCDEFGHIJKLMNOPQRSTUVW") + [None]).reshape(
+            -1, 1
+        )
+        conn, table_name = self.create_sql_table(table, ["char(1)"])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=False)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertEqual("", sql_table.metas[-1, 0])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.assertEqual("", sql_table.metas[-1, 0])
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_discrete_varchar(self):
@@ -425,6 +467,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_meta_varchar(self):
@@ -436,6 +479,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_time_date(self):
@@ -460,6 +504,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_time_timetz(self):
@@ -472,6 +517,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_time_timestamp(self):
@@ -487,6 +533,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_time_timestamptz(self):
@@ -502,6 +549,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_double_precision(self):
@@ -513,6 +561,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_numeric(self):
@@ -524,6 +573,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_real(self):
@@ -535,6 +585,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_serial(self):
@@ -546,6 +597,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres>90200"])
     def test_smallserial(self):
@@ -557,6 +609,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres>90200"])
     def test_bigserial(self):
@@ -568,6 +621,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_text(self):
@@ -579,6 +633,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstMetaIsInstance(sql_table, StringVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_other(self):
@@ -596,6 +651,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         filters = filter.Values([filter.FilterString(-1, filter.FilterString.Equal, 'foo')])
         self.assertEqual(len(filters(sql_table)), 0)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_recovers_connection_after_sql_error(self):
@@ -615,6 +671,7 @@ class TestSqlTable(unittest.TestCase, dbt):
             sql_table.domain.attributes[0].to_sql(), sql_table.table_name)
         with sql_table.backend.execute_sql_query(working_query) as cur:
             cur.fetchall()
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_basic_stats(self):
@@ -716,6 +773,7 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertGreater(len(table.domain.metas), 0)
         attr = table.domain[-1]
         self.assertIsInstance(attr, variable_type)
+
 
 if __name__ == "__main__":
     unittest.main()

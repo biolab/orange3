@@ -198,6 +198,32 @@ class TestOWCSVFileImport(WidgetTest):
         self.assertIsInstance(domain["numeric2"], ContinuousVariable)
         self.assertIsInstance(domain["string"], StringVariable)
 
+    def test_discrete_values_sort(self):
+        """ Values in the discrete variable should be naturally sorted """
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-csv-types.tab")
+        options = owcsvimport.Options(
+            encoding="ascii", dialect=csv.excel_tab(),
+            columntypes=[
+                (range(0, 1), ColumnType.Auto),
+                (range(1, 2), ColumnType.Categorical),
+                (range(2, 5), ColumnType.Auto)
+            ]
+        )
+        widget = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+            stored_settings={
+                "_session_items": [
+                    (path, options.as_dict())
+                ],
+                "__version__": 2  # guessing works for versions >= 2
+            }
+        )
+        widget.commit()
+        self.wait_until_finished(widget)
+        output = self.get_output("Data", widget)
+        self.assertTupleEqual(('1', '3', '4', '5', '12'), output.domain.attributes[1].values)
+
     def test_backward_compatibility(self):
         """
         Check that widget have old behaviour on workflows with version < 2

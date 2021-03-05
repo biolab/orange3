@@ -1,5 +1,4 @@
 import warnings
-import weakref
 
 from math import log
 from collections.abc import Iterable
@@ -172,11 +171,8 @@ class Domain:
             for idx, var in enumerate(self.metas)))
 
         self.anonymous = False
-        self._known_domains = weakref.WeakKeyDictionary()
-        self._last_conversion = None
 
-        # Precompute hash, which is frequently used in domain conversions.
-        self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
+        self._hash = None  # cache for __hash__()
 
     # noinspection PyPep8Naming
     @classmethod
@@ -334,16 +330,6 @@ class Domain:
         return s
 
     __repr__ = __str__
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        state.pop("_known_domains", None)
-        state["_last_conversion"] = None
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self._known_domains = weakref.WeakKeyDictionary()
 
     def index(self, var):
         """
@@ -516,4 +502,6 @@ class Domain:
                 self.metas == other.metas)
 
     def __hash__(self):
+        if self._hash is None:
+            self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
         return self._hash

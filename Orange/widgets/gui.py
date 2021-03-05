@@ -4,13 +4,14 @@ Wrappers for controls used in widgets
 import math
 
 import logging
+import sys
 import warnings
 import weakref
 from collections.abc import Sequence
 
 from AnyQt import QtWidgets, QtCore, QtGui
 from AnyQt.QtCore import Qt, QSize, QItemSelection
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QColor, QWheelEvent
 from AnyQt.QtWidgets import QWidget, QItemDelegate, QListView, QComboBox
 
 # re-export relevant objects
@@ -30,8 +31,10 @@ from orangewidget.gui import (
     VerticalLabel, tabWidget, createTabPage, table, tableItem,
     VisibleHeaderSectionContextEventFilter,
     checkButtonOffsetHint, toolButtonSizeHint, FloatSlider,
+    CalendarWidgetWithTime, DateTimeEditWCalendarTime,
     ControlGetter, VerticalScrollArea, ProgressBar,
     ControlledCallback, ControlledCallFront, ValueCallback, connectControl,
+    is_macstyle
 )
 
 
@@ -61,10 +64,11 @@ __all__ = [
     "VerticalLabel", "tabWidget", "createTabPage", "table", "tableItem",
     "VisibleHeaderSectionContextEventFilter", "checkButtonOffsetHint",
     "toolButtonSizeHint", "FloatSlider", "ControlGetter",  "VerticalScrollArea",
+    "CalendarWidgetWithTime", "DateTimeEditWCalendarTime",
     "BarRatioRole", "BarBrushRole", "SortOrderRole", "LinkRole",
     "BarItemDelegate", "IndicatorItemDelegate", "LinkStyledItemDelegate",
     "ColoredBarItemDelegate", "HorizontalGridDelegate", "VerticalItemDelegate",
-    "ValueCallback",
+    "ValueCallback", 'is_macstyle',
     # Defined here
     "createAttributePixmap", "attributeIconDict", "attributeItem",
     "listView", "ListViewWithSizeHint", "listBox", "OrangeListBox",
@@ -189,7 +193,6 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
                        view.selectionModel().selectionChanged,
                        CallFrontListView(view),
                        CallBackListView(model, view, master, value))
-    misc.setdefault('addSpace', True)
     misc.setdefault('uniformItemSizes', True)
     miscellanea(view, bg, widget, **misc)
     return view
@@ -256,7 +259,6 @@ def listBox(widget, master, value=None, labels=None, box=None, callback=None,
         connectControl(master, value, callback, lb.itemSelectionChanged,
                        CallFrontListBox(lb), CallBackListBox(lb, master))
 
-    misc.setdefault('addSpace', True)
     miscellanea(lb, bg, widget, **misc)
     return lb
 
@@ -658,3 +660,28 @@ class TableBarItem(QItemDelegate):
 
 from Orange.widgets.utils.colorpalettes import patch_variable_colors
 patch_variable_colors()
+
+
+class HScrollStepMixin:
+    """
+    Overrides default TableView horizontal behavior (scrolls 1 page at a time)
+    to a friendlier scroll speed akin to that of vertical scrolling.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.horizontalScrollBar().setSingleStep(20)
+
+    def wheelEvent(self, event: QWheelEvent):
+        if event.source() == Qt.MouseEventNotSynthesized and \
+                (event.modifiers() & Qt.ShiftModifier and sys.platform == 'darwin' or
+                 event.modifiers() & Qt.AltModifier and sys.platform != 'darwin'):
+            new_event = QWheelEvent(
+                event.pos(), event.globalPos(), event.pixelDelta(),
+                event.angleDelta(), event.buttons(), Qt.NoModifier,
+                event.phase(), event.inverted(), Qt.MouseEventSynthesizedByApplication
+            )
+            event.accept()
+            super().wheelEvent(new_event)
+        else:
+            super().wheelEvent(event)

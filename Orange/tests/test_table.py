@@ -541,7 +541,6 @@ class TableTestCase(unittest.TestCase):
         iris = data.Table("iris")
 
         self.assertRaises(ValueError, data.Table.concatenate, [])
-        self.assertRaises(ValueError, data.Table.concatenate, [zoo], axis=1)
         self.assertRaises(ValueError, data.Table.concatenate, [zoo, iris])
 
     def test_concatenate_sparse(self):

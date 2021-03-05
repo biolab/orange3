@@ -7,13 +7,14 @@ from unittest.mock import Mock, patch
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtGui import QFont
+from AnyQt.QtGui import QFont, QTextDocumentFragment
 from AnyQt.QtCore import QRectF, QPointF
 from AnyQt.QtTest import QSignalSpy
 from AnyQt.QtWidgets import (
     QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
 
+from orangewidget.widget import StateInfo
 from orangewidget.tests.base import (
     GuiTest, WidgetTest as WidgetTestBase, DummySignalManager, DEFAULT_TIMEOUT
 )
@@ -473,6 +474,14 @@ class WidgetLearnerTestMixin:
                  data.domain.has_continuous_class) or
                 (parameter.problem_type == "both"))
 
+    def test_send_report(self, timeout=DEFAULT_TIMEOUT):
+        """Test report"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.report_button.click()
+        self.wait_until_finished(timeout=timeout)
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.report_button.click()
+
 
 class WidgetOutputsTestMixin:
     """Class for widget's outputs testing.
@@ -491,10 +500,11 @@ class WidgetOutputsTestMixin:
     _compare_selected_annotated_domains.
     """
 
-    def init(self, same_table_attributes=True):
+    def init(self, same_table_attributes=True, output_all_on_no_selection=False):
         self.data = Table("iris")
         self.same_input_output_domain = True
         self.same_table_attributes = same_table_attributes
+        self.output_all_on_no_selection = output_all_on_no_selection
 
     def test_outputs(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.signal_name, self.signal_data)
@@ -502,7 +512,11 @@ class WidgetOutputsTestMixin:
         self.wait_until_finished(timeout=timeout)
 
         # check selected data output
-        self.assertIsNone(self.get_output("Selected Data"))
+        output = self.get_output("Selected Data")
+        if self.output_all_on_no_selection:
+            self.assertEqual(output, self.signal_data)
+        else:
+            self.assertIsNone(output)
 
         # check annotated data output
         feature_name = ANNOTATED_DATA_FEATURE_NAME
@@ -676,11 +690,9 @@ class ProjectionWidgetTestMixin:
 
     def test_dragging_tooltip(self):
         """Dragging tooltip depends on data being jittered"""
-        text = self.widget.graph.tiptexts[0]
+        text = QTextDocumentFragment.fromHtml(self.widget.graph.tiptexts[0]).toPlainText()
         self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
         self.assertEqual(self.widget.graph.tip_textitem.toPlainText(), text)
-        self.widget.graph.controls.jitter_size.setValue(1)
-        self.assertGreater(self.widget.graph.tip_textitem.toPlainText(), text)
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
@@ -752,8 +764,8 @@ class ProjectionWidgetTestMixin:
 
     def test_in_out_summary(self, timeout=DEFAULT_TIMEOUT):
         info = self.widget.info
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertIn(info._StateInfo__input_summary.details,
                       ["", "No data on input"])
         self.assertIn(info._StateInfo__output_summary.details,
@@ -776,8 +788,8 @@ class ProjectionWidgetTestMixin:
                          ["", "No data on output"])
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertIn(info._StateInfo__input_summary.details,
                       ["", "No data on input"])
         self.assertIn(info._StateInfo__output_summary.details,

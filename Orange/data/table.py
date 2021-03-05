@@ -12,12 +12,13 @@ from threading import Lock
 
 import bottleneck as bn
 import numpy as np
-from Orange.misc.collections import frozendict
-from Orange.util import OrangeDeprecationWarning
+
 from scipy import sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
 import Orange.data  # import for io.py
+from Orange.misc.collections import frozendict
+from Orange.util import OrangeDeprecationWarning
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
@@ -467,7 +468,7 @@ class Table(Sequence, Storage):
 
             dtype = np.float64
             if any(isinstance(var, StringVariable) for var in domain.metas):
-                dtype = np.object
+                dtype = object
             self.metas = get_columns(row_indices, conversion.metas,
                                      n_rows, dtype,
                                      is_sparse=conversion.sparse_metas,
@@ -653,6 +654,49 @@ class Table(Sequence, Storage):
             id = cls._next_instance_id
             cls._next_instance_id += 1
             return id
+
+    def to_pandas_dfs(self):
+        return Orange.data.pandas_compat.table_to_frames(self)
+
+    @staticmethod
+    def from_pandas_dfs(xdf, ydf, mdf):
+        return Orange.data.pandas_compat.table_from_frames(xdf, ydf, mdf)
+
+    @property
+    def X_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.Attribute
+        )
+
+    @X_df.setter
+    def X_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.Attribute
+        )
+
+    @property
+    def Y_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.ClassAttribute
+        )
+
+    @Y_df.setter
+    def Y_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.ClassAttribute
+        )
+
+    @property
+    def metas_df(self):
+        return Orange.data.pandas_compat.OrangeDataFrame(
+            self, orange_role=Role.Meta
+        )
+
+    @metas_df.setter
+    def metas_df(self, df):
+        Orange.data.pandas_compat.amend_table_with_frame(
+            self, df, role=Role.Meta
+        )
 
     def save(self, filename):
         """
@@ -897,7 +941,49 @@ class Table(Sequence, Storage):
 
     @classmethod
     def concatenate(cls, tables, axis=0):
-        """Concatenate tables into a new table"""
+        """
+        Concatenate tables into a new table, either vertically or horizontally.
+
+        If axis=0 (vertical concatenate), all tables must have the same domain.
+
+        If axis=1 (horizontal),
+        - all variable names must be unique.
+        - ids are copied from the first table.
+        - weights are copied from the first table in which they are defined.
+        - the dictionary of table's attributes are merged. If the same attribute
+          appears in multiple dictionaries, the earlier are used.
+
+        Args:
+            tables (Table): tables to be joined
+
+        Returns:
+            table (Table)
+        """
+        if axis not in (0, 1):
+            raise ValueError("invalid axis")
+        if not tables:
+            raise ValueError('need at least one table to concatenate')
+
+        if len(tables) == 1:
+            return tables[0].copy()
+
+        if axis == 0:
+            conc = cls._concatenate_vertical(tables)
+        else:
+            conc = cls._concatenate_horizontal(tables)
+
+        # TODO: Add attributes = {} to __init__
+        conc.attributes = getattr(conc, "attributes", {})
+        for table in reversed(tables):
+            conc.attributes.update(table.attributes)
+
+        names = [table.name for table in tables if table.name != "untitled"]
+        if names:
+            conc.name = names[0]
+        return conc
+
+    @classmethod
+    def _concatenate_vertical(cls, tables):
         def vstack(arrs):
             return [np, sp][any(sp.issparse(arr) for arr in arrs)].vstack(arrs)
 
@@ -915,12 +1001,6 @@ class Table(Sequence, Storage):
         def collect(attr):
             return [getattr(arr, attr) for arr in tables]
 
-        if axis == 1:
-            raise ValueError("concatenate no longer supports axis 1")
-        if not tables:
-            raise ValueError('need at least one table to concatenate')
-        if len(tables) == 1:
-            return tables[0].copy()
         domain = tables[0].domain
         if any(table.domain != domain for table in tables):
             raise ValueError('concatenated tables must have the same domain')
@@ -933,14 +1013,59 @@ class Table(Sequence, Storage):
             merge1d(collect("W"))
         )
         conc.ids = np.hstack([t.ids for t in tables])
-        names = [table.name for table in tables if table.name != "untitled"]
-        if names:
-            conc.name = names[0]
-        # TODO: Add attributes = {} to __init__
-        conc.attributes = getattr(conc, "attributes", {})
-        for table in reversed(tables):
-            conc.attributes.update(table.attributes)
         return conc
+
+    @classmethod
+    def _concatenate_horizontal(cls, tables):
+        """
+        """
+        def all_of(objs, names):
+            return (tuple(getattr(obj, name) for obj in objs)
+                    for name in names)
+
+        def stack(arrs):
+            non_empty = tuple(arr if arr.ndim == 2 else arr[:, np.newaxis]
+                              for arr in arrs
+                              if arr is not None and arr.size > 0)
+            return np.hstack(non_empty) if non_empty else None
+
+        doms, Ws = all_of(tables, ("domain", "W"))
+        Xs, Ys, Ms = map(stack, all_of(tables, ("X", "Y", "metas")))
+        # pylint: disable=undefined-loop-variable
+        for W in Ws:
+            if W.size:
+                break
+
+        parts = all_of(doms, ("attributes", "class_vars", "metas"))
+        domain = Domain(*(tuple(chain(*lst)) for lst in parts))
+        return cls.from_numpy(domain, Xs, Ys, Ms, W, ids=tables[0].ids)
+
+    def add_column(self, variable, data, to_metas=None):
+        """
+        Create a new table with an additional column
+
+        Column's name must be unique
+
+        Args:
+            variable (Variable): variable for the new column
+            data (np.ndarray): data for the new column
+            to_metas (bool, optional): if `True` the column is added as meta
+                column. Otherwise, primitive variables are added to attributes
+                and non-primitive to metas.
+
+        Returns:
+            table (Table): a new table with the additional column
+        """
+        dom = self.domain
+        attrs, classes, metas = dom.attributes, dom.class_vars, dom.metas
+        if to_metas or not variable.is_primitive():
+            metas += (variable, )
+        else:
+            attrs += (variable, )
+        domain = Domain(attrs, classes, metas)
+        new_table = self.transform(domain)
+        new_table.get_column_view(variable)[0][:] = data
+        return new_table
 
     def is_view(self):
         """
@@ -970,6 +1095,7 @@ class Table(Sequence, Storage):
         """
         Ensure that the table owns its data; copy arrays when necessary.
         """
+
         def is_view(x):
             # Sparse matrices don't have views like numpy arrays. Since indexing on
             # them creates copies in constructor we can skip this check here.
@@ -1039,12 +1165,12 @@ class Table(Sequence, Storage):
 
     def has_missing(self):
         """Return `True` if there are any missing attribute or class values."""
-        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)   # do not check for sparse X
+        missing_x = not sp.issparse(self.X) and bn.anynan(self.X)  # do not check for sparse X
         return missing_x or bn.anynan(self._Y)
 
     def has_missing_attribute(self):
         """Return `True` if there are any missing attribute values."""
-        return not sp.issparse(self.X) and bn.anynan(self.X)    # do not check for sparse X
+        return not sp.issparse(self.X) and bn.anynan(self.X)  # do not check for sparse X
 
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
@@ -1262,7 +1388,7 @@ class Table(Sequence, Storage):
                 if self.domain[col_idx].is_primitive():
                     return ~np.isnan(col.astype(float))
                 else:
-                    return col.astype(np.bool)
+                    return col.astype(bool)
             if isinstance(filter, FilterDiscrete):
                 return self._discrete_filter_to_indicator(filter, col)
             if isinstance(filter, FilterContinuous):
@@ -1372,7 +1498,7 @@ class Table(Sequence, Storage):
 
     @staticmethod
     def _range_filter_to_indicator(filter, col, fmin, fmax):
-        with np.errstate(invalid="ignore"):   # nan's are properly discarded
+        with np.errstate(invalid="ignore"):  # nan's are properly discarded
             if filter.oper == filter.Equal:
                 return col == fmin
             if filter.oper == filter.NotEqual:
@@ -1416,9 +1542,9 @@ class Table(Sequence, Storage):
                 if 0 <= c < nattrs:
                     S = fast_stats(self.X[:, [c]], W and W[:, [c]])
                 elif c >= nattrs:
-                    S = fast_stats(self._Y[:, [c-nattrs]], W and W[:, [c-nattrs]])
+                    S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]])
                 else:
-                    S = fast_stats(self.metas[:, [-1-c]], W and W[:, [-1-c]])
+                    S = fast_stats(self.metas[:, [-1 - c]], W and W[:, [-1 - c]])
                 stats.append(S[0])
         return stats
 
@@ -1514,15 +1640,15 @@ class Table(Sequence, Storage):
 
         if any(not (var.is_discrete or var.is_continuous)
                for var in col_desc):
-            raise ValueError("contingency can be computed only for discrete "
-                             "and continuous values")
+            raise ValueError("Contingency can be computed only for categorical "
+                             "and numeric values.")
 
         # when we select a column in sparse matrix it is still two dimensional
         # and sparse - since it is just a column we can afford to transform
         # it to dense and make it 1D
         if issparse(row_data):
             row_data = row_data.toarray().ravel()
-        if row_data.dtype.kind != "f": #meta attributes can be stored as type object
+        if row_data.dtype.kind != "f":  # meta attributes can be stored as type object
             row_data = row_data.astype(float)
 
         contingencies = [None] * len(col_desc)
@@ -1720,7 +1846,7 @@ class Table(Sequence, Storage):
         if dense_metas:
             densify(new_domain.metas)
         t = self.transform(new_domain)
-        t.ids = self.ids    # preserve indices
+        t.ids = self.ids  # preserve indices
         return t
 
 
@@ -1800,7 +1926,7 @@ def _optimize_indices(indices, maxlen):
 
     if len(indices) >= 1:
         indices = np.asarray(indices)
-        if indices.dtype != np.bool:
+        if indices.dtype != bool:
             begin = indices[0]
             end = indices[-1]
             steps = np.diff(indices) if len(indices) > 1 else np.array([1])
@@ -1873,3 +1999,15 @@ def assure_domain_conversion_sparsity(target, source):
     target.Y = match_density[conversion.sparse_Y](target.Y)
     target.metas = match_density[conversion.sparse_metas](target.metas)
     return target
+
+
+class Role:
+    Attribute = 0
+    ClassAttribute = 1
+    Meta = 2
+
+    @staticmethod
+    def get_arr(role, table):
+        return table.X if role == Role.Attribute else \
+               table.Y if role == Role.ClassAttribute else \
+               table.metas

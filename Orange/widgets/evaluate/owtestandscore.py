@@ -148,6 +148,7 @@ class OWTestAndScore(OWWidget):
         evaluations_results = Output("Evaluation Results", Results)
 
     settings_version = 3
+    buttons_area_orientation = None
     UserAdviceMessages = [
         widget.Message(
             "Click on the table header to select shown columns",
@@ -207,12 +208,16 @@ class OWTestAndScore(OWWidget):
         scores_not_computed = Msg("Some scores could not be computed.")
         test_data_unused = Msg("Test data is present but unused. "
                                "Select 'Test on test data' to use it.")
+        cant_stratify = \
+            Msg("Can't run stratified {}-fold cross validation; "
+                "the least common class has only {} instances.")
 
     class Information(OWWidget.Information):
         data_sampled = Msg("Train data has been sampled")
         test_data_sampled = Msg("Test data has been sampled")
         test_data_transformed = Msg(
             "Test data has been transformed to match the train data.")
+        cant_stratify_numeric = Msg("Stratification is ignored for regression")
 
     def __init__(self):
         super().__init__()
@@ -337,9 +342,9 @@ class OWTestAndScore(OWWidget):
             "Small numbers show the probability that the difference is "
             "negligible.</small>", wordWrap=True))
 
-    @staticmethod
-    def sizeHint():
-        return QSize(780, 1)
+    def sizeHint(self):
+        sh = super().sizeHint()
+        return QSize(780, sh.height())
 
     def _update_controls(self):
         self.fold_feature = None
@@ -921,6 +926,8 @@ class OWTestAndScore(OWWidget):
         self.Warning.test_data_unused.clear()
         self.Error.test_data_incompatible.clear()
         self.Warning.test_data_missing.clear()
+        self.Warning.cant_stratify.clear()
+        self.Information.cant_stratify_numeric.clear()
         self.Information.test_data_transformed(
             shown=self.resampling == self.TestOnTest
             and self.data is not None
@@ -931,7 +938,7 @@ class OWTestAndScore(OWWidget):
         self.Error.too_many_folds.clear()
         self.error()
 
-        # check preconditions and return early
+        # check preconditions and return early or show warnings
         if self.data is None:
             self.__state = State.Waiting
             self.commit()
@@ -940,12 +947,24 @@ class OWTestAndScore(OWWidget):
             self.__state = State.Waiting
             self.commit()
             return
-        if self.resampling == OWTestAndScore.KFold and \
-                len(self.data) < self.NFolds[self.n_folds]:
-            self.Error.too_many_folds()
-            self.__state = State.Waiting
-            self.commit()
-            return
+        if self.resampling == OWTestAndScore.KFold:
+            k = self.NFolds[self.n_folds]
+            if len(self.data) < k:
+                self.Error.too_many_folds()
+                self.__state = State.Waiting
+                self.commit()
+                return
+            do_stratify = self.cv_stratified
+            if do_stratify:
+                if self.data.domain.class_var.is_discrete:
+                    least = min(filter(None,
+                                       np.bincount(self.data.Y.astype(int))))
+                    if least < k:
+                        self.Warning.cant_stratify(k, least)
+                        do_stratify = False
+                else:
+                    self.Information.cant_stratify_numeric()
+                    do_stratify = False
 
         elif self.resampling == OWTestAndScore.TestOnTest:
             if self.test_data is None:
@@ -985,7 +1004,8 @@ class OWTestAndScore(OWWidget):
             if self.resampling == OWTestAndScore.KFold:
                 sampler = Orange.evaluation.CrossValidation(
                     k=self.NFolds[self.n_folds],
-                    random_state=rstate)
+                    random_state=rstate,
+                    stratified=do_stratify)
             elif self.resampling == OWTestAndScore.FeatureFold:
                 sampler = Orange.evaluation.CrossValidationFeature(
                     feature=self.fold_feature)
@@ -1120,6 +1140,9 @@ class OWTestAndScore(OWWidget):
         self.cancel()
         self.__executor.shutdown(wait=False)
         super().onDeleteWidget()
+
+    def copy_to_clipboard(self):
+        self.score_table.copy_selection_to_clipboard()
 
 
 class UserInterrupt(BaseException):

@@ -1,7 +1,12 @@
 import unittest
 
-from Orange.data import DiscreteVariable, ContinuousVariable
-from Orange.preprocess.impute import ReplaceUnknownsRandom, ReplaceUnknowns
+import numpy as np
+
+from Orange.data import \
+    Domain, Table, \
+    DiscreteVariable, ContinuousVariable, TimeVariable, StringVariable
+from Orange.preprocess.impute import ReplaceUnknownsRandom, ReplaceUnknowns, \
+    FixedValueByType
 from Orange.statistics.distribution import Discrete
 
 
@@ -50,6 +55,60 @@ class TestReplaceUnknownsRandom(unittest.TestCase):
         d1[1] += 1
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
+
+
+class TestFixedValuesByType(unittest.TestCase):
+    def setUp(self):
+        domain = Domain(
+            [DiscreteVariable("d", values=tuple("abc")),
+             ContinuousVariable("c"),
+             TimeVariable("t")],
+            [],
+            [StringVariable("s")]
+        )
+        n = np.nan
+        self.data = Table(
+            domain,
+            np.array([[1, n, 15], [n, 42, n]]),
+            np.empty((2, 0)),
+            np.array([["foo"], [""]]))
+
+    def test_none_defined(self):
+        d, c, t = self.data.domain.attributes
+        s,  = self.data.domain.metas
+
+        imputer = FixedValueByType()
+        for var in (d, c, t):
+            imp = imputer(self.data, var)
+            self.assertIsInstance(imp.compute_value, ReplaceUnknowns)
+            self.assertTrue(np.isnan(imp.compute_value.value))
+        imp = imputer(self.data, s)
+        self.assertIsInstance(imp.compute_value, ReplaceUnknowns)
+        self.assertIsNone(imp.compute_value.value)
+
+    def test_all_defined(self):
+        d, c, t = self.data.domain.attributes
+        s, = self.data.domain.metas
+
+        imputer = FixedValueByType(
+            default_discrete=1, default_continuous=42,
+            default_string="foo", default_time=3.14)
+
+        self.assertEqual(imputer(self.data, d).compute_value.value, 1)
+        self.assertEqual(imputer(self.data, c).compute_value.value, 42)
+        self.assertEqual(imputer(self.data, t).compute_value.value, 3.14)
+        self.assertEqual(imputer(self.data, s).compute_value.value, "foo")
+
+    def test_with_default(self):
+        s, = self.data.domain.metas
+
+        imputer = FixedValueByType(
+            default_discrete=1, default_continuous=42,
+            default_string="foo", default_time=3.14)
+
+        self.assertEqual(
+            imputer(self.data, s, default="bar").compute_value.value,
+            "bar")
 
 
 if __name__ == "__main__":

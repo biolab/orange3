@@ -152,3 +152,16 @@ class PymssqlBackend(Backend):
                     warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
                     return None
                 raise BackendError(parse_ex(ex)) from ex
+
+    def distinct_values_query(self, field_name: str, table_name: str) -> str:
+        field = self.quote_identifier(field_name)
+        return self.create_sql_query(
+            table_name,
+            [field],
+            # workaround for collations that are not case sensitive and
+            # UTF characters sensitive - in the domain we still want to
+            # have all values (collation independent)
+            group_by=[f"{field}, Cast({field} as binary)"],
+            order_by=[field],
+            limit=21,
+        )

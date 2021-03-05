@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Optional
+from typing import Optional, Dict, Tuple
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
 from AnyQt.QtWidgets import QListView
@@ -8,6 +8,7 @@ from AnyQt.QtCore import (
     QMimeData, QAbstractItemModel
 )
 
+from Orange.data import Domain, Variable
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import (
     ContextSetting, Setting, DomainContextHandler
@@ -116,6 +117,9 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
         return decoded
 
     def match(self, context, domain, attrs, metas):
+        if context.attributes == attrs and context.metas == metas:
+            return self.PERFECT_MATCH
+
         if not "domain_role_hints" in context.values:
             return self.NO_MATCH
 
@@ -164,10 +168,12 @@ class OWSelectAttributes(widget.OWWidget):
     settingsHandler = SelectAttributesDomainContextHandler(first_match=False)
     domain_role_hints = ContextSetting({})
     use_input_features = Setting(False)
+    ignore_new_features = Setting(False)
     auto_commit = Setting(True)
 
     class Warning(widget.OWWidget.Warning):
         mismatching_domain = Msg("Features and data domain do not match")
+        multiple_targets = Msg("Most widgets do not support multiple targets")
 
     def __init__(self):
         super().__init__()
@@ -188,12 +194,15 @@ class OWSelectAttributes(widget.OWWidget):
             self.__last_active_view = view
             self.__interface_update_timer.start()
 
-        self.controlArea = QWidget(self.controlArea)
-        self.layout().addWidget(self.controlArea)
+        new_control_area = QWidget(self.controlArea)
+        self.controlArea.layout().addWidget(new_control_area)
+        self.controlArea = new_control_area
+
+        # init grid
         layout = QGridLayout()
         self.controlArea.setLayout(layout)
-        layout.setContentsMargins(4, 4, 4, 4)
-        box = gui.vBox(self.controlArea, "Available Variables",
+        layout.setContentsMargins(0, 0, 0, 0)
+        box = gui.vBox(self.controlArea, "Ignored",
                        addToLayout=False)
 
         self.available_attrs = VariablesListItemModel()
@@ -212,6 +221,7 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.available_attrs_view)
         layout.addWidget(box, 0, 0, 3, 1)
 
+        # 3rd column
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
         filter_edit, self.used_attrs_view = variables_filter(
@@ -235,20 +245,21 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
-        box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
+        box = gui.vBox(self.controlArea, "Target", addToLayout=False)
         self.class_attrs = VariablesListItemModel()
         self.class_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
-                          Orange.data.ContinuousVariable))
+                          Orange.data.ContinuousVariable)
+        )
         self.class_attrs_view.setModel(self.class_attrs)
         self.class_attrs_view.selectionModel().selectionChanged.connect(
             partial(update_on_change, self.class_attrs_view))
         self.class_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
-        self.class_attrs_view.setMaximumHeight(72)
+
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
-        box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
+        box = gui.vBox(self.controlArea, "Metas", addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
@@ -259,50 +270,51 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
 
+        # 2nd column
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
+        self.move_attr_button = gui.button(
+            bbox, self, ">",
+            callback=partial(self.move_selected,
+                             self.used_attrs_view)
+        )
         layout.addWidget(bbox, 0, 1, 1, 1)
 
-        self.up_attr_button = gui.button(bbox, self, "Up",
-                                         callback=partial(self.move_up, self.used_attrs_view))
-        self.move_attr_button = gui.button(bbox, self, ">",
-                                           callback=partial(self.move_selected,
-                                                            self.used_attrs_view)
-                                          )
-        self.down_attr_button = gui.button(bbox, self, "Down",
-                                           callback=partial(self.move_down, self.used_attrs_view))
-
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
+        self.move_class_button = gui.button(
+            bbox, self, ">",
+            callback=partial(self.move_selected,
+                             self.class_attrs_view)
+        )
         layout.addWidget(bbox, 1, 1, 1, 1)
 
-        self.up_class_button = gui.button(bbox, self, "Up",
-                                          callback=partial(self.move_up, self.class_attrs_view))
-        self.move_class_button = gui.button(bbox, self, ">",
-                                            callback=partial(self.move_selected,
-                                                             self.class_attrs_view)
-                                           )
-        self.down_class_button = gui.button(bbox, self, "Down",
-                                            callback=partial(self.move_down, self.class_attrs_view))
-
-        bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
+        bbox = gui.vBox(self.controlArea, addToLayout=False)
+        self.move_meta_button = gui.button(
+            bbox, self, ">",
+            callback=partial(self.move_selected,
+                             self.meta_attrs_view)
+        )
         layout.addWidget(bbox, 2, 1, 1, 1)
-        self.up_meta_button = gui.button(bbox, self, "Up",
-                                         callback=partial(self.move_up, self.meta_attrs_view))
-        self.move_meta_button = gui.button(bbox, self, ">",
-                                           callback=partial(self.move_selected,
-                                                            self.meta_attrs_view)
-                                          )
-        self.down_meta_button = gui.button(bbox, self, "Down",
-                                           callback=partial(self.move_down, self.meta_attrs_view))
 
-        autobox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(autobox, 3, 0, 1, 3)
-        reset = gui.button(None, self, "Reset", callback=self.reset, width=120)
-        autobox.layout().insertWidget(0, reset)
-        autobox.layout().insertStretch(1, 20)
+        # footer
+        gui.button(self.buttonsArea, self, "Reset", callback=self.reset)
 
-        layout.setRowStretch(0, 4)
+        bbox = gui.vBox(self.buttonsArea)
+        gui.checkBox(
+            widget=bbox,
+            master=self,
+            value="ignore_new_features",
+            label="Ignore new variables by default",
+            tooltip="When the widget receives data with additional columns "
+                    "they are added to the available attributes column if "
+                    "<i>Ignore new variables by default</i> is checked."
+        )
+
+        gui.rubber(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
+
+        layout.setRowStretch(0, 2)
         layout.setRowStretch(1, 0)
-        layout.setRowStretch(2, 2)
+        layout.setRowStretch(2, 1)
         layout.setHorizontalSpacing(0)
         self.controlArea.setLayout(layout)
 
@@ -367,18 +379,51 @@ class OWSelectAttributes(widget.OWWidget):
             ]
             return sorted(selected_attrs, key=lambda attr: domain_hints[attr][1])
 
-        domain = data.domain
-        domain_hints = {}
-        domain_hints.update(self._hints_from_seq("attribute", domain.attributes))
-        domain_hints.update(self._hints_from_seq("meta", domain.metas))
-        domain_hints.update(self._hints_from_seq("class", domain.class_vars))
-        domain_hints.update(self.domain_role_hints)
-
+        domain_hints = self.restore_hints(data.domain)
         self.used_attrs[:] = attrs_for_role("attribute")
         self.class_attrs[:] = attrs_for_role("class")
         self.meta_attrs[:] = attrs_for_role("meta")
         self.available_attrs[:] = attrs_for_role("available")
         self.info.set_input_summary(len(data), format_summary_details(data))
+
+        self.update_interface_state(self.class_attrs_view)
+
+    def restore_hints(self, domain: Domain) -> Dict[Variable, Tuple[str, int]]:
+        """
+        Define hints for selected/unselected features.
+        Rules:
+        - if context available, restore new features based on checked/unchecked
+          ignore_new_features, context hint should be took into account
+        - in no context, restore features based on the domain (as selected)
+
+        Parameters
+        ----------
+        domain
+            Data domain
+
+        Returns
+        -------
+        Dictionary with hints about order and model in which each feature
+        should appear
+        """
+        domain_hints = {}
+        if not self.ignore_new_features or len(self.domain_role_hints) == 0:
+            # select_new_features selected or no context - restore based on domain
+            domain_hints.update(
+                self._hints_from_seq("attribute", domain.attributes)
+            )
+            domain_hints.update(self._hints_from_seq("meta", domain.metas))
+            domain_hints.update(
+                self._hints_from_seq("class", domain.class_vars)
+            )
+        else:
+            # if context restored and ignore_new_features selected - restore
+            # new features as available
+            d = domain.attributes + domain.metas + domain.class_vars
+            domain_hints.update(self._hints_from_seq("available", d))
+
+        domain_hints.update(self.domain_role_hints)
+        return domain_hints
 
     def update_domain_role_hints(self):
         """ Update the domain hints to be stored in the widgets settings.
@@ -414,9 +459,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.Warning.mismatching_domain()
 
     def enable_used_attrs(self, enable=True):
-        self.up_attr_button.setEnabled(enable)
         self.move_attr_button.setEnabled(enable)
-        self.down_attr_button.setEnabled(enable)
         self.used_attrs_view.setEnabled(enable)
         self.used_attrs_view.repaint()
 
@@ -540,11 +583,20 @@ class OWSelectAttributes(widget.OWWidget):
         if move_meta_enabled:
             self.move_meta_button.setText(">" if available_selected else "<")
 
+        # update class_vars height
+        if self.class_attrs.rowCount() == 0:
+            height = 22
+        else:
+            height = ((self.class_attrs.rowCount() or 1) *
+                      self.class_attrs_view.sizeHintForRow(0)) + 2
+        self.class_attrs_view.setFixedHeight(height)
+
         self.__last_active_view = None
         self.__interface_update_timer.stop()
 
     def commit(self):
         self.update_domain_role_hints()
+        self.Warning.multiple_targets.clear()
         if self.data is not None:
             attributes = list(self.used_attrs)
             class_var = list(self.class_attrs)
@@ -557,6 +609,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.Outputs.features.send(AttributeList(attributes))
             self.info.set_output_summary(len(newdata),
                                          format_summary_details(newdata))
+            self.Warning.multiple_targets(shown=len(class_var) > 1)
         else:
             self.output_data = None
             self.Outputs.data.send(None)

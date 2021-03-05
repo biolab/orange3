@@ -5,14 +5,13 @@ from time import time
 from numbers import Real
 from itertools import starmap, chain
 import unittest
-import pickle
 
 import numpy as np
 from numpy.testing import assert_array_equal
 
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
-    Variable, Domain, Table, DomainConversion)
+    Domain, Table, DomainConversion)
 from Orange.data.domain import filter_visible
 from Orange.preprocess import Continuize, Impute
 from Orange.tests.base import create_pickling_tests
@@ -20,7 +19,7 @@ from Orange.util import OrangeDeprecationWarning
 
 
 def create_domain(*ss):
-    vars = dict(
+    vars_ = dict(
         age=ContinuousVariable(name="AGE"),
         gender=DiscreteVariable(name="Gender", values=("M", "F")),
         incomeA=ContinuousVariable(name="incomeA"),
@@ -32,7 +31,7 @@ def create_domain(*ss):
         arrival=TimeVariable("arrival"))
 
     def map_vars(s):
-        return [vars[x] for x in s]
+        return [vars_[x] for x in s]
     return Domain(*[map_vars(s) for s in ss])
 
 
@@ -444,11 +443,6 @@ class TestDomainInit(unittest.TestCase):
         pre1 = Continuize()(Impute()(table))
         pre2 = table.transform(pre1.domain)
         np.testing.assert_almost_equal(pre1.X, pre2.X)
-
-    def test_unpickling_recreates_known_domains(self):
-        domain = Domain([])
-        unpickled_domain = pickle.loads(pickle.dumps(domain))
-        self.assertTrue(hasattr(unpickled_domain, '_known_domains'))
 
     def test_different_domains_with_same_attributes_are_equal(self):
         domain1 = Domain([])

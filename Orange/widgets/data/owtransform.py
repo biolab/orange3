@@ -31,6 +31,7 @@ class OWTransform(OWWidget):
 
     resizing_enabled = False
     want_main_area = False
+    buttons_area_orientation = None
 
     def __init__(self):
         super().__init__()

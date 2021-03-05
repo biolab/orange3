@@ -32,6 +32,12 @@ Install the backend.
 
 Alternatively, you can follow [these instructions](https://blog.biolab.si/2018/02/16/how-to-enable-sql-widget-in-orange/) for installing the backend.
 
+If the installation of `psycopg2` fails, follow to instructions in the error message you get (it explains how to solve the error) or install an already compiled version of `psycopg2-binary` package:
+
+    pip install psycopg2-binary
+
+Note: `psycopg2-binary` comes with own versions of a few C libraries, among which libpq and libssl, which will be used regardless of other libraries available on the client: upgrading the system libraries will not upgrade the libraries used by psycopg2. Please build psycopg2 from source if you want to maintain binary upgradeability.
+
 [Install the extensions](https://github.com/biolab/orange3/wiki/Installation-of-SQL-extensions). [optional]
 
 ###MSSQL

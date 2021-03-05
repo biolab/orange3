@@ -1,5 +1,5 @@
 import re
-from typing import List
+from typing import List, Iterable
 
 
 class frozendict(dict):
@@ -25,7 +25,7 @@ class frozendict(dict):
         raise AttributeError("FrozenDict does not allow deleting elements")
 
 
-def natural_sorted(values: List) -> List:
+def natural_sorted(values: Iterable) -> List:
     """
     Sort values with natural sort or human order - [sth1, sth2, sth10] or
     [1, 2, 10]

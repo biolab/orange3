@@ -189,8 +189,6 @@ class OWHeatMap(widget.OWWidget):
 
     graph_name = "scene"
 
-    left_side_scrolling = True
-
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")
         discrete_ignored = Msg("{} categorical feature{} ignored")
@@ -374,7 +372,8 @@ class OWHeatMap(widget.OWWidget):
 
         gui.checkBox(box, self, 'averages', 'Stripes with averages',
                      callback=self.update_averages_stripe)
-        annotbox = QGroupBox("Row Annotations", flat=True)
+        gui.separator(box)
+        annotbox = QGroupBox("Row Annotations")
         form = QFormLayout(
             annotbox,
             formAlignment=Qt.AlignLeft,
@@ -407,7 +406,7 @@ class OWHeatMap(widget.OWWidget):
         form.addRow("Text", self.annotation_text_cb)
         form.addRow("Color", self.row_side_color_cb)
         box.layout().addWidget(annotbox)
-        annotbox = QGroupBox("Column annotations", flat=True)
+        annotbox = QGroupBox("Column annotations")
         form = QFormLayout(
             annotbox,
             formAlignment=Qt.AlignLeft,
@@ -436,8 +435,8 @@ class OWHeatMap(widget.OWWidget):
             callback=self.update_column_annotations)
         cb.setModel(create_list_model(ColumnLabelsPosData, parent=self))
         cb.setCurrentIndex(self.column_label_pos)
+        form.addRow("Position", cb)
         form.addRow("Color", self.col_side_color_cb)
-        form.addRow("Label position", cb)
         box.layout().addWidget(annotbox)
 
         gui.checkBox(self.controlArea, self, "keep_aspect",
@@ -445,7 +444,8 @@ class OWHeatMap(widget.OWWidget):
                      callback=self.__aspect_mode_changed)
 
         gui.rubber(self.controlArea)
-        gui.auto_send(self.controlArea, self, "auto_commit")
+
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # Scene with heatmap
         class HeatmapScene(QGraphicsScene):

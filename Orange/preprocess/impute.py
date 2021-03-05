@@ -7,7 +7,7 @@ from Orange.util import Reprable
 from .transformation import Transformation, Lookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
-           "Model", "AsValue", "Random", "Default"]
+           "Model", "AsValue", "Random", "Default", "FixedValueByType"]
 
 
 class ReplaceUnknowns(Transformation):
@@ -107,11 +107,15 @@ class Average(BaseImputeMethod):
                 dist = distribution.get_distribution(data, variable)
                 value = dist.modus()
             else:
-                raise TypeError("Variable must be continuous or discrete")
+                raise TypeError("Variable must be numeric or categorical.")
 
         a = variable.copy(compute_value=ReplaceUnknowns(variable, value))
         a.to_sql = ImputeSql(variable, value)
         return a
+
+    @staticmethod
+    def supports_variable(variable):
+        return variable.is_primitive()
 
 
 class ImputeSql(Reprable):
@@ -124,7 +128,7 @@ class ImputeSql(Reprable):
 
 
 class Default(BaseImputeMethod):
-    name = "Value"
+    name = "Fixed value"
     short_name = "value"
     description = ""
     columns_only = True
@@ -140,6 +144,32 @@ class Default(BaseImputeMethod):
 
     def copy(self):
         return Default(self.default)
+
+
+class FixedValueByType(BaseImputeMethod):
+    name = "Fixed value"
+    short_name = "Fixed Value"
+    format = "{var.name}"
+
+    def __init__(self,
+                 default_discrete=np.nan, default_continuous=np.nan,
+                 default_string=None, default_time=np.nan):
+        # If you change the order of args or in dict, also fix method copy
+        self.defaults = {
+            Orange.data.DiscreteVariable: default_discrete,
+            Orange.data.ContinuousVariable: default_continuous,
+            Orange.data.StringVariable: default_string,
+            Orange.data.TimeVariable: default_time
+        }
+
+    def __call__(self, data, variable, *, default=None):
+        variable = data.domain[variable]
+        if default is None:
+            default = self.defaults[type(variable)]
+        return variable.copy(compute_value=ReplaceUnknowns(variable, default))
+
+    def copy(self):
+        return FixedValueByType(*self.defaults.values())
 
 
 class ReplaceUnknownsModel(Reprable):
@@ -160,19 +190,20 @@ class ReplaceUnknownsModel(Reprable):
 
     def __call__(self, data):
         if isinstance(data, Orange.data.Instance):
-            column = np.array([float(data[self.variable])])
-        else:
-            column = np.array(data.get_column_view(self.variable)[0],
-                              copy=True)
+            data = Orange.data.Table.from_list(data.domain, [data])
+        domain = data.domain
+        column = np.array(data.get_column_view(self.variable)[0], copy=True)
 
         mask = np.isnan(column)
         if not np.any(mask):
             return column
 
-        if isinstance(data, Orange.data.Instance):
-            predicted = self.model(data)
-        else:
-            predicted = self.model(data[mask])
+        if domain.class_vars:
+            # cannot have class var in domain (due to backmappers in model)
+            data = data.transform(
+                Orange.data.Domain(domain.attributes, None, domain.metas)
+            )
+        predicted = self.model(data[mask])
         column[mask] = predicted
         return column
 
@@ -271,6 +302,9 @@ class AsValue(BaseImputeMethod):
         else:
             raise TypeError(type(variable))
 
+    @staticmethod
+    def supports_variable(variable):
+        return variable.is_primitive()
 
 class ReplaceUnknownsRandom(Transformation):
     """
@@ -295,8 +329,8 @@ class ReplaceUnknownsRandom(Transformation):
         elif variable.is_continuous:
             counts = np.array(distribution)[1, :]
         else:
-            raise TypeError("Only discrete and continuous "
-                            "variables are supported")
+            raise TypeError("Only categorical and numeric "
+                            "variables are supported.")
         csum = np.sum(counts)
         if csum > 0:
             self.sample_prob = counts / csum
@@ -353,3 +387,7 @@ class Random(BaseImputeMethod):
             dist[1, :] += 1 / dist.shape[1]
         return variable.copy(
             compute_value=ReplaceUnknownsRandom(variable, dist))
+
+    @staticmethod
+    def supports_variable(variable):
+        return variable.is_primitive()

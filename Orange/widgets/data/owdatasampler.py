@@ -104,8 +104,7 @@ class OWDataSampler(OWWidget):
             gui.indentedBox(sampling), self,
             "sampleSizePercentage",
             minValue=0, maxValue=100, ticks=10, labelFormat="%d %%",
-            callback=set_sampling_type(self.FixedProportion),
-            addSpace=12)
+            callback=set_sampling_type(self.FixedProportion))
 
         gui.appendRadioButton(sampling, "Fixed sample size")
         ibox = gui.indentedBox(sampling)
@@ -116,15 +115,14 @@ class OWDataSampler(OWWidget):
             controlWidth=90)
         gui.checkBox(
             ibox, self, "replacement", "Sample with replacement",
-            callback=set_sampling_type(self.FixedSize),
-            addSpace=12)
+            callback=set_sampling_type(self.FixedSize))
 
         gui.appendRadioButton(sampling, "Cross validation")
         form = QFormLayout(
             formAlignment=Qt.AlignLeft | Qt.AlignTop,
             labelAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow)
-        ibox = gui.indentedBox(sampling, addSpace=True, orientation=form)
+        ibox = gui.indentedBox(sampling, orientation=form)
         form.addRow("Number of subsets:",
                     gui.spin(
                         ibox, self, "number_of_folds", 2, 100,
@@ -154,7 +152,7 @@ class OWDataSampler(OWWidget):
         spin.setSuffix(" %")
         self.sql_box.setVisible(False)
 
-        self.options_box = gui.vBox(self.controlArea, "Options")
+        self.options_box = gui.vBox(self.controlArea, "Options", addSpaceBefore=False)
         self.cb_seed = gui.checkBox(
             self.options_box, self, "use_seed",
             "Replicable (deterministic) sampling",

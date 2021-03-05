@@ -4,8 +4,8 @@ import code
 import keyword
 import itertools
 import unicodedata
+import weakref
 from functools import reduce
-from collections import defaultdict
 from unittest.mock import patch
 
 from typing import Optional, List, TYPE_CHECKING
@@ -401,7 +401,7 @@ class OWPythonScript(OWWidget):
     description = "Write a Python script and run it on input data or models."
     icon = "icons/PythonScript.svg"
     priority = 3150
-    keywords = ["file", "program"]
+    keywords = ["file", "program", "function"]
 
     class Inputs:
         data = Input("Data", Table, replaces=["in_data"],
@@ -437,7 +437,7 @@ class OWPythonScript(OWWidget):
     # anyway. If this causes any problems in the future, replace this with
     # shared_namespaces = {} and thus use a common namespace for all instances
     # of # PythonScript even if they are in different schemata.
-    shared_namespaces = defaultdict(dict)
+    shared_namespaces = weakref.WeakKeyDictionary()
 
     class Error(OWWidget.Error):
         pass
@@ -525,7 +525,7 @@ class OWPythonScript(OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
+        self.execute_button = gui.button(self.buttonsArea, self, 'Run', callback=self.commit)
 
         run = QAction("Run script", self, triggered=self.commit,
                       shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
@@ -537,8 +537,7 @@ class OWPythonScript(OWWidget):
         self.defaultFont = defaultFont = \
             "Monaco" if sys.platform == "darwin" else "Courier"
 
-        self.textBox = gui.vBox(self, 'Python Script')
-        self.splitCanvas.addWidget(self.textBox)
+        self.textBox = gui.vBox(self.splitCanvas, 'Python Script')
         self.text = PythonScriptEditor(self)
         self.textBox.layout().addWidget(self.text)
 
@@ -553,8 +552,7 @@ class OWPythonScript(OWWidget):
         action.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         action.triggered.connect(self.saveScript)
 
-        self.consoleBox = gui.vBox(self, 'Console')
-        self.splitCanvas.addWidget(self.consoleBox)
+        self.consoleBox = gui.vBox(self.splitCanvas, 'Console')
         self.console = PythonConsole({}, self)
         self.consoleBox.layout().addWidget(self.console)
         self.console.document().setDefaultFont(QFont(defaultFont))
@@ -590,7 +588,6 @@ class OWPythonScript(OWWidget):
         self.splitterState = bytes(self.splitCanvas.saveState())
 
     def handle_input(self, obj, sig_id, signal):
-        sig_id = sig_id[0]
         dic = getattr(self, signal)
         if obj is None:
             if sig_id in dic.keys():
@@ -727,7 +724,7 @@ class OWPythonScript(OWWidget):
             f.close()
 
     def initial_locals_state(self):
-        d = self.shared_namespaces[self.signalManager].copy()
+        d = self.shared_namespaces.setdefault(self.signalManager, {}).copy()
         for name in self.signal_names:
             value = getattr(self, name)
             all_values = list(value.values())
@@ -740,7 +737,7 @@ class OWPythonScript(OWWidget):
         not_saved = reduce(set.union,
                            ({f"in_{name}s", f"in_{name}", f"out_{name}"}
                             for name in self.signal_names))
-        self.shared_namespaces[self.signalManager].update(
+        self.shared_namespaces.setdefault(self.signalManager, {}).update(
             {name: value for name, value in namespace.items()
              if name not in not_saved})
 

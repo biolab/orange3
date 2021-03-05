@@ -11,7 +11,10 @@ Here we need to copy the getting started guide.
    :maxdepth: 1
 
    loading-your-data/index
-
+   building-workflows/index
+   exporting-models/index
+   exporting-visualizations/index
+   report/index
 
 Widgets
 =======
@@ -35,6 +38,7 @@ Data
    widgets/data/transpose
    widgets/data/discretize
    widgets/data/continuize
+   widgets/data/createinstance
    widgets/data/createclass
    widgets/data/randomize
    widgets/data/concatenate
@@ -64,10 +68,12 @@ Visualize
    :maxdepth: 1
 
    widgets/visualize/boxplot
+   widgets/visualize/violinplot
    widgets/visualize/distributions
    widgets/visualize/heatmap
    widgets/visualize/scatterplot
    widgets/visualize/lineplot
+   widgets/visualize/barplot
    widgets/visualize/venndiagram
    widgets/visualize/linearprojection
    widgets/visualize/sievediagram
@@ -94,6 +100,7 @@ Model
    widgets/model/knn
    widgets/model/tree
    widgets/model/randomforest
+   widgets/model/gradientboosting
    widgets/model/svm
    widgets/model/linearregression
    widgets/model/logisticregression

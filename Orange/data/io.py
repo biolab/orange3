@@ -264,11 +264,58 @@ class _BaseExcelReader(FileFormat, DataTableMixin):
             cells = self.get_cells()
             table = self.data_table(cells)
             table.name = path.splitext(path.split(self.filename)[-1])[0]
-            if self.sheet:
+            if self.sheet and len(self.sheets) > 1:
                 table.name = '-'.join((table.name, self.sheet))
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table
+
+
+class ExcelReader(_BaseExcelReader):
+    """Reader for .xlsx files"""
+    EXTENSIONS = ('.xlsx',)
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
+    ERRORS = ("#VALUE!", "#DIV/0!", "#REF!", "#NUM!", "#NULL!", "#NAME?")
+
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.sheet = self.workbook.active.title
+
+    @property
+    def workbook(self) -> openpyxl.Workbook:
+        if not self._workbook:
+            with warnings.catch_warnings():
+                # We don't care about extensions, but we hate warnings
+                warnings.filterwarnings(
+                    "ignore",
+                    ".*extension is not supported and will be removed.*",
+                    UserWarning)
+                self._workbook = openpyxl.load_workbook(self.filename,
+                                                    data_only=True)
+        return self._workbook
+
+    @property
+    @lru_cache(1)
+    def sheets(self) -> List:
+        return self.workbook.sheetnames if self.workbook else []
+
+    def get_cells(self) -> Iterable:
+        def str_(x):
+            return str(x) if x is not None and x not in ExcelReader.ERRORS \
+                else ""
+
+        sheet = self._get_active_sheet()
+        min_col = sheet.min_column
+        max_col = sheet.max_column
+        cells = ([str_(cell.value) for cell in row[min_col - 1: max_col]]
+                 for row in sheet.iter_rows(sheet.min_row, sheet.max_row + 1))
+        return filter(any, cells)
+
+    def _get_active_sheet(self) -> openpyxl.worksheet.worksheet.Worksheet:
+        if self.sheet:
+            return self.workbook[self.sheet]
+        else:
+            return self.workbook.active
 
     @classmethod
     def write_file(cls, filename, data):
@@ -292,51 +339,14 @@ class _BaseExcelReader(FileFormat, DataTableMixin):
         workbook.close()
 
 
-class ExcelReader(_BaseExcelReader):
-    """Reader for .xlsx files"""
-    EXTENSIONS = ('.xlsx',)
-    DESCRIPTION = 'Microsoft Excel spreadsheet'
-
-    @property
-    def workbook(self) -> openpyxl.Workbook:
-        if not self._workbook:
-            with warnings.catch_warnings():
-                # We don't care about extensions, but we hate warnings
-                warnings.filterwarnings(
-                    "ignore",
-                    ".*extension is not supported and will be removed.*",
-                    UserWarning)
-                self._workbook = openpyxl.load_workbook(self.filename,
-                                                    data_only=True)
-        return self._workbook
-
-    @property
-    @lru_cache(1)
-    def sheets(self) -> List:
-        return self.workbook.sheetnames if self.workbook else []
-
-    def get_cells(self) -> Iterable:
-        def str_(x):
-            return str(x) if x is not None else ""
-
-        sheet = self._get_active_sheet()
-        min_col = sheet.min_column
-        max_col = sheet.max_column
-        cells = ([str_(cell.value) for cell in row[min_col - 1: max_col]]
-                 for row in sheet.iter_rows(sheet.min_row, sheet.max_row + 1))
-        return filter(any, cells)
-
-    def _get_active_sheet(self) -> openpyxl.worksheet.worksheet.Worksheet:
-        if self.sheet:
-            return self.workbook[self.sheet]
-        else:
-            return self.workbook.active
-
-
 class XlsReader(_BaseExcelReader):
     """Reader for .xls files"""
     EXTENSIONS = ('.xls',)
     DESCRIPTION = 'Microsoft Excel 97-2004 spreadsheet'
+
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.sheet = self.workbook.sheet_by_index(0).name
 
     @property
     def workbook(self) -> xlrd.Book:
@@ -350,13 +360,16 @@ class XlsReader(_BaseExcelReader):
         return self.workbook.sheet_names() if self.workbook else []
 
     def get_cells(self) -> Iterable:
+        def str_(cell):
+            return "" if cell.ctype == xlrd.XL_CELL_ERROR else str(cell.value)
+
         sheet = self._get_active_sheet()
         first_row = next(i for i in range(sheet.nrows)
                          if any(sheet.row_values(i)))
         first_col = next(i for i in range(sheet.ncols)
                          if sheet.cell_value(first_row, i))
         row_len = sheet.row_len(first_row)
-        return filter(any, ([str(sheet.cell_value(row, col))
+        return filter(any, ([str_(sheet.cell(row, col))
                              if col < sheet.row_len(row) else ''
                              for col in range(first_col, row_len)]
                             for row in range(first_row, sheet.nrows)))

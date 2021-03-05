@@ -112,3 +112,13 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal("Data", table)
         coef2 = self.get_output("Coefficients")
         self.assertTrue(np.array_equal(coef1, coef2))
+
+    def test_class_weights(self):
+        table = Table("iris")
+        self.send_signal("Data", table)
+        self.assertFalse(self.widget.class_weight)
+        self.widget.controls.class_weight.setChecked(True)
+        self.assertTrue(self.widget.class_weight)
+        self.widget.apply_button.button.click()
+        self.assertEqual(self.widget.model.skl_model.class_weight, "balanced")
+        self.assertTrue(self.widget.Warning.class_weights_used.is_shown())

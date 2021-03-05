@@ -51,6 +51,7 @@ import pandas as pd
 from pandas.api import types as pdtypes
 
 import Orange.data
+from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.concurrent import PyOwned
@@ -702,7 +703,7 @@ class OWCSVFileImport(widget.OWWidget):
         ###########
         # Info text
         ###########
-        box = gui.widgetBox(self.controlArea, "Info", addSpace=False)
+        box = gui.widgetBox(self.controlArea, "Info")
         self.summary_text = QTextBrowser(
             verticalScrollBarPolicy=Qt.ScrollBarAsNeeded,
             readOnly=True,
@@ -1790,7 +1791,7 @@ def pandas_to_table(df):
     for header, series in df.items():  # type: (Any, pd.Series)
         if pdtypes.is_categorical_dtype(series):
             coldata = series.values  # type: pd.Categorical
-            categories = [str(c) for c in coldata.categories]
+            categories = natural_sorted(str(c) for c in coldata.categories)
             var = Orange.data.DiscreteVariable.make(
                 str(header), values=categories
             )

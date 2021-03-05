@@ -44,6 +44,15 @@ def ensure_local(index_url, file_path, local_cache_path,
     return localfiles.localpath_download(*file_path, callback=progress_advance)
 
 
+def list_remote(server: str) -> Dict[Tuple[str, ...], dict]:
+    client = ServerFiles(server)
+    return client.allinfo()
+
+
+def list_local(path: str) -> Dict[Tuple[str, ...], dict]:
+    return LocalFiles(path).allinfo()
+
+
 def format_exception(error):
     # type: (BaseException) -> str
     return "\n".join(traceback.format_exception_only(type(error), error))
@@ -256,7 +265,7 @@ class OWDataSets(OWWidget):
         self.setStatusMessage("Initializing")
 
         self._executor = ThreadPoolExecutor(max_workers=1)
-        f = self._executor.submit(self.list_remote)
+        f = self._executor.submit(list_remote, self.INDEX_URL)
         w = FutureWatcher(f, parent=self)
         w.done.connect(self.__set_index)
 
@@ -349,7 +358,7 @@ class OWDataSets(OWWidget):
         assert f.done()
         self.setBlocking(False)
         self.setStatusMessage("")
-        self.allinfo_local = self.list_local()
+        self.allinfo_local = list_local(self.local_cache_path)
 
         try:
             self.allinfo_remote = f.result()
@@ -368,10 +377,13 @@ class OWDataSets(OWWidget):
             self.__on_selection
         )
 
+        scw = self.view.setColumnWidth
+        width = self.view.fontMetrics().width
         self.view.resizeColumnToContents(0)
-        self.view.setColumnWidth(
-            1, min(self.view.sizeHintForColumn(1),
-                   self.view.fontMetrics().width("X" * 37)))
+        scw(self.Header.title, width("X" * 37))
+        scw(self.Header.size, 20 + max(width("888 bytes "), width("9999.9 MB ")))
+        scw(self.Header.instances, 20 + width("100000000"))
+        scw(self.Header.variables, 20 + width("1000000"))
 
         header = self.view.header()
         header.restoreState(self.header_state)
@@ -385,7 +397,7 @@ class OWDataSets(OWWidget):
 
     def __update_cached_state(self):
         model = self.view.model().sourceModel()
-        localinfo = self.list_local()
+        localinfo = list_local(self.local_cache_path)
         assert isinstance(model, QStandardItemModel)
         allinfo = []
         for i in range(model.rowCount()):
@@ -551,15 +563,6 @@ class OWDataSets(OWWidget):
     @staticmethod
     def load_data(path):
         return Orange.data.Table(path)
-
-    def list_remote(self):
-        # type: () -> Dict[Tuple[str, ...], dict]
-        client = ServerFiles(server=self.INDEX_URL)
-        return client.allinfo()
-
-    def list_local(self):
-        # type: () -> Dict[Tuple[str, ...], dict]
-        return LocalFiles(self.local_cache_path).allinfo()
 
 
 class FutureWatcher(QObject):

@@ -30,16 +30,8 @@ To fix the bug, we need to be able to reproduce it. Please answer the following 
 
 
 
-- [ ] **Which version of Orange are you using? How did you install Orange?**
-<!-- See "Help → About → Version" or `Orange.version.full_version` in code -->
-
-
-
-
-
-- [ ] **What is your operating system?**
-
-
-
-
-
+- [ ] **What's your environment?**
+<!-- To find your Orange version, see "Help → About → Version" or `Orange.version.full_version` in code -->
+- Operating system:
+- Orange version:
+- How you installed Orange:

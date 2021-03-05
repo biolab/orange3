@@ -6,7 +6,9 @@ import numpy as np
 from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtTest import QTest
 
-from Orange.data import Table, Domain
+from orangewidget.widget import StateInfo
+
+from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.preprocess import impute
 from Orange.widgets.data.owimpute import OWImpute, AsDefault, Learner, Method
 from Orange.widgets.tests.base import WidgetTest
@@ -119,6 +121,35 @@ class TestOWImpute(WidgetTest):
         self.assertIsInstance(widget.get_method_for_column(0), AsDefault)
         self.assertIsInstance(widget.get_method_for_column(2), AsDefault)
 
+    def test_overall_default(self):
+        domain = Domain(
+            [ContinuousVariable(f"c{i}") for i in range(3)]
+            + [TimeVariable(f"t{i}") for i in range(3)],
+            [])
+        n = np.nan
+        x = np.array([
+            [1, 2, n, 1000, n, n],
+            [2, n, 1, n, 2000, 2000]
+        ])
+        data = Table(domain, x, np.empty((2, 0)))
+
+        widget = self.widget
+        widget.default_numeric_value = 3.14
+        widget.default_time = 42
+        widget.default_method_index = Method.Default
+
+        self.send_signal(self.widget.Inputs.data, data)
+        imp_data = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_almost_equal(
+            imp_data.X,
+            [[1, 2, 3.14, 1000, 42, 42],
+             [2, 3.14, 1, 42, 2000, 2000]]
+        )
+
+        widget.numeric_value_widget.setValue(100)
+        QTest.keyClick(widget.numeric_value_widget, Qt.Key_Enter)
+        self.assertEqual(widget.default_numeric_value, 100)
+
     def test_value_edit(self):
         data = Table("heart_disease")[::10]
         self.send_signal(self.widget.Inputs.data, data)
@@ -206,6 +237,6 @@ class TestOWImpute(WidgetTest):
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)

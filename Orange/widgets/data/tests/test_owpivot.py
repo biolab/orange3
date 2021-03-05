@@ -8,15 +8,18 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QPoint
 from AnyQt.QtTest import QTest
-from AnyQt.QtWidgets import QCheckBox
+
+from orangewidget.widget import StateInfo
 
 from Orange.data import (Table, Domain, ContinuousVariable as Cv,
-                         StringVariable as sv, DiscreteVariable as Dv)
+                         StringVariable as sv, DiscreteVariable as Dv,
+                         TimeVariable as Tv)
 from Orange.widgets.data.owpivot import (OWPivot, Pivot,
                                          AggregationFunctionsEnum)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.state_summary import format_summary_details, \
+    format_multiple_summaries
 
 
 class TestOWPivot(WidgetTest):
@@ -67,6 +70,16 @@ class TestOWPivot(WidgetTest):
         self.assertListEqual(names, [a.name for a in grouped.domain.variables])
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.grouped_data))
+
+    def test_output_grouped_data_time_var(self):
+        domain = Domain([Dv("d1", ("a", "b")), Tv("t1", have_date=1)])
+        X = np.array([[0, 1e9], [0, 1e8], [1, 2e8], [1, np.nan]])
+        data = Table(domain, X)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.agg_checkboxes[Pivot.Functions.Mean.value].click()
+        grouped = self.get_output(self.widget.Outputs.grouped_data)
+        str_grouped = "[[a, 2, 1987-06-06],\n [b, 2, 1976-05-03]]"
+        self.assertEqual(str(grouped), str_grouped)
 
     def test_output_filtered_data(self):
         self.agg_checkboxes[Pivot.Functions.Sum.value].click()
@@ -155,9 +168,10 @@ class TestOWPivot(WidgetTest):
         simulate.combobox_activate_item(self.widget.controls.val_feature,
                                         "(None)")
         self.assertTrue(self.widget.Warning.cannot_aggregate.is_shown())
+        # agg: Count, Majority, feature: None, row: Continuous
         simulate.combobox_activate_item(self.widget.controls.row_feature,
                                         self.iris.domain.attributes[1].name)
-        self.assertTrue(self.widget.Warning.cannot_aggregate.is_shown())
+        self.assertFalse(self.widget.Warning.cannot_aggregate.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.cannot_aggregate.is_shown())
 
@@ -247,16 +261,22 @@ class TestOWPivot(WidgetTest):
                                         self.iris.domain.class_var.name)
         self.widget.table_view.set_selection(set([(11, 0), (11, 1), (12, 0)]))
         self.widget.table_view.selection_changed.emit()
-        output = self.get_output(self.widget.Outputs.filtered_data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
+        filtered = self.get_output(self.widget.Outputs.filtered_data)
+        pivot = self.get_output(self.widget.Outputs.pivot_table)
+        grouped = self.get_output(self.widget.Outputs.grouped_data)
+        output_sum.assert_called_with(
+            f"{len(pivot)}, {len(filtered)}, {len(grouped)}",
+            format_multiple_summaries([("Pivot table", pivot),
+                                       ("Filtered data", filtered),
+                                       ("Grouped data", grouped)]),
+            format=1)
         input_sum.reset_mock()
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_renaming_warning(self):
         data = Table('iris')
@@ -267,6 +287,34 @@ class TestOWPivot(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertFalse(self.widget.Warning.renamed_vars.is_shown())
+
+    @patch("Orange.widgets.data.owpivot.OWPivot.MAX_VALUES", 2)
+    def test_max_values(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Warning.too_many_values.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.too_many_values.is_shown())
+
+    def test_table_values(self):
+        self.send_signal(self.widget.Inputs.data, self.heart_disease)
+        domain = self.heart_disease.domain
+        self.agg_checkboxes[Pivot.Functions.Majority.value].click()
+        simulate.combobox_activate_item(self.widget.controls.col_feature,
+                                        domain["gender"].name)
+        simulate.combobox_activate_item(self.widget.controls.val_feature,
+                                        domain["thal"].name)
+
+        model = self.widget.table_view.model()
+        self.assertEqual(model.data(model.index(2, 3)), "72.0")
+        self.assertEqual(model.data(model.index(3, 3)), "normal")
+        self.assertEqual(model.data(model.index(4, 3)), "25.0")
+        self.assertEqual(model.data(model.index(5, 3)), "reversable defect")
+        self.assertEqual(model.data(model.index(2, 4)), "92.0")
+        self.assertEqual(model.data(model.index(3, 4)), "normal")
+        self.assertEqual(model.data(model.index(4, 4)), "114.0")
+        self.assertEqual(model.data(model.index(5, 4)), "reversable defect")
+
 
 class TestAggregationFunctionsEnum(unittest.TestCase):
     def test_pickle(self):
@@ -316,6 +364,18 @@ class TestPivot(unittest.TestCase):
               np.nan, np.nan, np.nan, np.nan],
              [1, 2, 1, 1, 1, 1, 2, 1, 7, 7, 7, 7, 7, 7, 0]])
         self.assert_table_equal(group_tab, Table(Domain(domain[:2] + atts), X))
+
+    def test_group_table_time_var(self):
+        domain = Domain([Dv("d1", ("a", "b")), Tv("t1", have_date=1)])
+        X = np.array([[0, 1e9], [0, 1e8], [1, 2e8], [1, np.nan]])
+        table = Table(domain, X)
+        pivot = Pivot(table, Pivot.Functions, domain[0], val_var=domain[1])
+        str_grouped = \
+            "[[a, 2, 2, a, 2, 1.1e+09, 1987-06-06, 1973-03-03, " \
+            "2001-09-09, 1973-03-03, 1987-06-06, 2.025e+17],\n " \
+            "[b, 2, 2, b, 1, 2e+08, 1976-05-03, 1976-05-03, " \
+            "1976-05-03, 1976-05-03, 1976-05-03, 0]]"
+        self.assertEqual(str(pivot.group_table), str_grouped)
 
     def test_group_table_metas(self):
         domain = Domain([Dv("d1", ("a", "b")), Cv("c1"),
@@ -590,6 +650,55 @@ class TestPivot(unittest.TestCase):
                       [8, 0, 0, 0],
                       [8, 1, np.nan, np.nan]])
         self.assert_table_equal(pivot_tab, Table(Domain(atts), X))
+
+    def test_pivot_time_val_var(self):
+        domain = Domain([Dv("d1", ("a", "b")), Dv("d2", ("c", "d")),
+                         Tv("t1", have_date=1)])
+        X = np.array([[0, 1, 1e9], [0, 0, 1e8], [1, 0, 2e8], [1, 1, np.nan]])
+        table = Table(domain, X)
+
+        # Min
+        pivot = Pivot(table, [Pivot.Min],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Min"]),
+                Tv("c", have_date=1), Tv("d", have_date=1))
+        X = np.array([[0, 0, 1e8, 1e9],
+                      [1, 0, 2e8, np.nan]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
+
+        # Min, Max
+        pivot = Pivot(table, [Pivot.Min, Pivot.Max],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Min", "Max"]),
+                Tv("c", have_date=1), Tv("d", have_date=1))
+        X = np.array([[0, 0, 1e8, 1e9],
+                      [0, 1, 1e8, 1e9],
+                      [1, 0, 2e8, np.nan],
+                      [1, 1, 2e8, np.nan]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
+
+        # Count defined, Sum
+        pivot = Pivot(table, [Pivot.Count_defined, Pivot.Sum],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Count defined", "Sum"]),
+                Cv("c"), Cv("d"))
+        X = np.array([[0, 0, 1, 1],
+                      [0, 1, 1e8, 1e9],
+                      [1, 0, 1, 0],
+                      [1, 1, 2e8, 0]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
+
+        # Count defined, Max
+        pivot = Pivot(table, [Pivot.Count_defined, Pivot.Max],
+                      domain[0], domain[1], domain[2])
+        atts = (domain[0], Dv("Aggregate", ["Count defined", "Max"]),
+                Dv("c", ["1.0", "1973-03-03", "1976-05-03"]),
+                Dv("d", ["0.0", "1.0", "2001-09-09"]))
+        X = np.array([[0, 0, 0, 1],
+                      [0, 1, 1, 2],
+                      [1, 0, 0, 0],
+                      [1, 1, 2, np.nan]])
+        self.assert_table_equal(pivot.pivot_table, Table(Domain(atts), X))
 
     def test_pivot_attr_combinations(self):
         domain = self.table1.domain

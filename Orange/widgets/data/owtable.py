@@ -1,12 +1,9 @@
 import sys
 import threading
-import io
-import csv
 import itertools
 import concurrent.futures
 
 from collections import OrderedDict, namedtuple
-from typing import List, Tuple, Iterable
 
 from math import isnan
 
@@ -17,12 +14,12 @@ from AnyQt.QtWidgets import (
     QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
     QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QClipboard, QMouseEvent
+from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
-    Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
+    Qt, QSize, QEvent, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
     QItemSelectionModel, QItemSelection, QItemSelectionRange,
-    Signal)
+)
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
@@ -33,6 +30,11 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.itemselectionmodel import (
+    BlockSelectionModel, ranges, selection_blocks
+)
+from Orange.widgets.utils.tableview import TableView, \
+    table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
@@ -160,245 +162,10 @@ class TableSliceProxy(QIdentityProxyModel):
         return stop - start
 
 
-class BlockSelectionModel(QItemSelectionModel):
-    """
-    Item selection model ensuring the selection maintains a simple block
-    like structure.
-
-    e.g.
-
-        [a b] c [d e]
-        [f g] h [i j]
-
-    is allowed but this is not
-
-        [a] b  c  d e
-        [f  g] h [i j]
-
-    I.e. select the Cartesian product of row and column indices.
-
-    """
-    def __init__(self, model, parent=None, selectBlocks=True, **kwargs):
-        super().__init__(model, parent, **kwargs)
-        self.__selectBlocks = selectBlocks
-
-    def select(self, selection, flags):
-        """Reimplemented."""
-        if isinstance(selection, QModelIndex):
-            selection = QItemSelection(selection, selection)
-
-        if not self.__selectBlocks:
-            super().select(selection, flags)
-            return
-
-        model = self.model()
-
-        def to_ranges(spans):
-            return list(range(*r) for r in spans)
-
-        if flags & QItemSelectionModel.Current:  # no current selection support
-            flags &= ~QItemSelectionModel.Current
-        if flags & QItemSelectionModel.Toggle:  # no toggle support either
-            flags &= ~QItemSelectionModel.Toggle
-            flags |= QItemSelectionModel.Select
-
-        if flags == QItemSelectionModel.ClearAndSelect:
-            # extend selection ranges in `selection` to span all row/columns
-            sel_rows = selection_rows(selection)
-            sel_cols = selection_columns(selection)
-            selection = QItemSelection()
-            for row_range, col_range in \
-                    itertools.product(to_ranges(sel_rows), to_ranges(sel_cols)):
-                selection.select(
-                    model.index(row_range.start, col_range.start),
-                    model.index(row_range.stop - 1, col_range.stop - 1)
-                )
-        elif flags & (QItemSelectionModel.Select |
-                      QItemSelectionModel.Deselect):
-            # extend all selection ranges in `selection` with the full current
-            # row/col spans
-            rows, cols = selection_blocks(self.selection())
-            sel_rows = selection_rows(selection)
-            sel_cols = selection_columns(selection)
-            ext_selection = QItemSelection()
-            for row_range, col_range in \
-                    itertools.product(to_ranges(rows), to_ranges(sel_cols)):
-                ext_selection.select(
-                    model.index(row_range.start, col_range.start),
-                    model.index(row_range.stop - 1, col_range.stop - 1)
-                )
-            for row_range, col_range in \
-                    itertools.product(to_ranges(sel_rows), to_ranges(cols)):
-                ext_selection.select(
-                    model.index(row_range.start, col_range.start),
-                    model.index(row_range.stop - 1, col_range.stop - 1)
-                )
-            selection.merge(ext_selection, QItemSelectionModel.Select)
-        super().select(selection, flags)
-
-    def selectBlocks(self):
-        """Is the block selection in effect."""
-        return self.__selectBlocks
-
-    def setSelectBlocks(self, state):
-        """Set the block selection state.
-
-        If set to False, the selection model behaves as the base
-        QItemSelectionModel
-
-        """
-        self.__selectBlocks = state
-
-
-def selection_rows(selection):
-    # type: (QItemSelection) -> List[Tuple[int, int]]
-    """
-    Return a list of ranges for all referenced rows contained in selection
-
-    Parameters
-    ----------
-    selection : QItemSelection
-
-    Returns
-    -------
-    rows : List[Tuple[int, int]]
-    """
-    spans = set(range(s.top(), s.bottom() + 1) for s in selection)
-    indices = sorted(set(itertools.chain(*spans)))
-    return list(ranges(indices))
-
-
-def selection_columns(selection):
-    # type: (QItemSelection) -> List[Tuple[int, int]]
-    """
-    Return a list of ranges for all referenced columns contained in selection
-
-    Parameters
-    ----------
-    selection : QItemSelection
-
-    Returns
-    -------
-    rows : List[Tuple[int, int]]
-    """
-    spans = {range(s.left(), s.right() + 1) for s in selection}
-    indices = sorted(set(itertools.chain(*spans)))
-    return list(ranges(indices))
-
-
-def selection_blocks(selection):
-    # type: (QItemSelection) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]
-    if selection.count() > 0:
-        rowranges = {range(span.top(), span.bottom() + 1)
-                     for span in selection}
-        colranges = {range(span.left(), span.right() + 1)
-                     for span in selection}
-    else:
-        return [], []
-
-    rows = sorted(set(itertools.chain(*rowranges)))
-    cols = sorted(set(itertools.chain(*colranges)))
-    return list(ranges(rows)), list(ranges(cols))
-
-
-def ranges(indices):
-    # type: (Iterable[int]) -> Iterable[Tuple[int, int]]
-    """
-    Group consecutive indices into `(start, stop)` tuple 'ranges'.
-
-    >>> list(ranges([1, 2, 3, 5, 3, 4]))
-    >>> [(1, 4), (5, 6), (3, 5)]
-
-    """
-    g = itertools.groupby(enumerate(indices),
-                          key=lambda t: t[1] - t[0])
-    for _, range_ind in g:
-        range_ind = list(range_ind)
-        _, start = range_ind[0]
-        _, end = range_ind[-1]
-        yield start, end + 1
-
-
-def table_selection_to_mime_data(table):
-    """Copy the current selection in a QTableView to the clipboard.
-    """
-    lines = table_selection_to_list(table)
-
-    as_csv = lines_to_csv_string(lines, dialect="excel").encode("utf-8")
-    as_tsv = lines_to_csv_string(lines, dialect="excel-tab").encode("utf-8")
-
-    mime = QMimeData()
-    mime.setData("text/csv", QByteArray(as_csv))
-    mime.setData("text/tab-separated-values", QByteArray(as_tsv))
-    mime.setData("text/plain", QByteArray(as_tsv))
-    return mime
-
-
-def lines_to_csv_string(lines, dialect="excel"):
-    stream = io.StringIO()
-    writer = csv.writer(stream, dialect=dialect)
-    writer.writerows(lines)
-    return stream.getvalue()
-
-
-def table_selection_to_list(table):
-    model = table.model()
-    indexes = table.selectedIndexes()
-
-    rows = sorted(set(index.row() for index in indexes))
-    columns = sorted(set(index.column() for index in indexes))
-
-    lines = []
-    for row in rows:
-        line = []
-        for col in columns:
-            val = model.index(row, col).data(Qt.DisplayRole)
-            # TODO: use style item delegate displayText?
-            line.append(str(val))
-        lines.append(line)
-
-    return lines
-
-
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
-class TableView(QTableView):
-    #: Signal emitted when selection finished. It is not emitted during
-    #: mouse drag selection updates.
-    selectionFinished = Signal()
-
-    __mouseDown = False
-    __selectionDidChange = False
-
-    def setSelectionModel(self, selectionModel: QItemSelectionModel) -> None:
-        sm = self.selectionModel()
-        if sm is not None:
-            sm.selectionChanged.disconnect(self.__on_selectionChanged)
-        super().setSelectionModel(selectionModel)
-        if selectionModel is not None:
-            selectionModel.selectionChanged.connect(self.__on_selectionChanged)
-
-    def __on_selectionChanged(self):
-        if self.__mouseDown:
-            self.__selectionDidChange = True
-        else:
-            self.selectionFinished.emit()
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:
-        self.__mouseDown = event.button() == Qt.LeftButton
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
-        super().mouseReleaseEvent(event)
-        if self.__mouseDown and event.button() == Qt.LeftButton:
-            self.__mouseDown = False
-        if self.__selectionDidChange:
-            self.__selectionDidChange = False
-            self.selectionFinished.emit()
-
-
-class DataTableView(TableView):
+class DataTableView(gui.HScrollStepMixin, TableView):
     dataset: Table
     input_slot: TableSlot
 
@@ -410,14 +177,14 @@ class OWDataTable(OWWidget):
     priority = 50
     keywords = []
 
-    buttons_area_orientation = Qt.Vertical
-
     class Inputs:
         data = Input("Data", Table, multiple=True)
 
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
+
+    buttons_area_orientation = Qt.Vertical
 
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
@@ -428,6 +195,8 @@ class OWDataTable(OWWidget):
     color_by_class = Setting(True)
     selected_rows = Setting([], schema_only=True)
     selected_cols = Setting([], schema_only=True)
+
+    settings_version = 2
 
     def __init__(self):
         super().__init__()
@@ -445,7 +214,6 @@ class OWDataTable(OWWidget):
         self.info_text = gui.widgetLabel(info_box)
         self._set_input_summary(None)
         self._set_output_summary(None)
-        gui.separator(self.controlArea)
 
         box = gui.vBox(self.controlArea, "Variables")
         self.c_show_attribute_labels = gui.checkBox(
@@ -466,10 +234,11 @@ class OWDataTable(OWWidget):
 
         gui.rubber(self.controlArea)
 
-        reset = gui.button(
-            None, self, "Restore Original Order", callback=self.restore_order,
-            tooltip="Show rows in the original order", autoDefault=False)
-        self.buttonsArea.layout().insertWidget(0, reset)
+        gui.button(self.buttonsArea, self, "Restore Original Order",
+                   callback=self.restore_order,
+                   tooltip="Show rows in the original order",
+                   autoDefault=False,
+                   attribute=Qt.WA_LayoutUsesWidgetRect)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # GUI with tabs
@@ -500,7 +269,6 @@ class OWDataTable(OWWidget):
             else:
                 view = DataTableView()
                 view.setSortingEnabled(True)
-                view.setHorizontalScrollMode(QTableView.ScrollPerPixel)
 
                 if self.select_rows:
                     view.setSelectionBehavior(QTableView.SelectRows)
@@ -973,9 +741,9 @@ class OWDataTable(OWWidget):
                 metas = select_vars(TableModel.Meta)
                 domain = Orange.data.Domain(attrs, class_vars, metas)
 
-            # Avoid a copy if none rows are selected.
+            # Send all data by default
             if not rowsel:
-                selected_data = None
+                selected_data = table
             else:
                 selected_data = table.from_table(domain, table, rowsel)
 

@@ -136,7 +136,14 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.set_input_summary()
 
         if data is not None and data.domain.class_var is None:
-            self.Error.data_error("Data has no target variable.")
+            if data.domain.class_vars:
+                self.Error.data_error(
+                    "Data contains multiple target variables.\n"
+                    "Select a single one with the Select Columns widget.")
+            else:
+                self.Error.data_error(
+                    "Data has no target variable.\n"
+                    "Select one with the Select Columns widget.")
             self.data = None
 
         self.update_model()
@@ -276,7 +283,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             orientation=Qt.Horizontal, callback=self.learner_name_changed)
 
     def add_bottom_buttons(self):
-        self.apply_button = gui.auto_apply(self.controlArea, self, commit=self.apply)
+        self.apply_button = gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
     def send(self, signalName, value, id=None):
         # A subclass might still use the old syntax to send outputs

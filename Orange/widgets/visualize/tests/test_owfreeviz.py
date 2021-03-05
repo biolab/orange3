@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.projection import FreeViz
 from Orange.projection.freeviz import FreeVizModel
 from Orange.widgets.tests.base import (
@@ -47,6 +47,41 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_class_var.is_shown())
         self.assertFalse(self.widget.Error.not_enough_class_vars.is_shown())
+
+    def test_number_of_targets(self):
+        data = self.heart_disease
+        domain = data.domain
+
+        no_target = data.transform(
+            Domain(domain.attributes,
+                   []))
+        two_targets = data.transform(
+            Domain([domain["age"]],
+                   [domain["gender"], domain["chest pain"]]))
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(self.widget.Error.no_class_var.is_shown())
+        self.assertFalse(self.widget.Error.multiple_class_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, no_target)
+        self.assertTrue(self.widget.Error.no_class_var.is_shown())
+        self.assertFalse(self.widget.Error.multiple_class_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, two_targets)
+        self.assertFalse(self.widget.Error.no_class_var.is_shown())
+        self.assertTrue(self.widget.Error.multiple_class_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(self.widget.Error.no_class_var.is_shown())
+        self.assertFalse(self.widget.Error.multiple_class_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, two_targets)
+        self.assertFalse(self.widget.Error.no_class_var.is_shown())
+        self.assertTrue(self.widget.Error.multiple_class_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.no_class_var.is_shown())
+        self.assertFalse(self.widget.Error.multiple_class_vars.is_shown())
 
     def test_optimization(self):
         self.send_signal(self.widget.Inputs.data, self.heart_disease)

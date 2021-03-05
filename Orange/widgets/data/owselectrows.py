@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel, QHBoxLayout, QDateTimeEdit, QCalendarWidget)
+    QLabel, QHBoxLayout, QDateTimeEdit)
 from AnyQt.QtGui import (QDoubleValidator, QStandardItemModel, QStandardItem,
                          QFontMetrics, QPalette)
 from AnyQt.QtCore import Qt, QPoint, QPersistentModelIndex, QLocale, \
@@ -152,31 +152,6 @@ def _plural(s):
     return s
 
 
-class CalendarWidgetWithTime(QCalendarWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.timeedit = QDateTimeEdit(displayFormat="hh:mm:ss")
-        self.timeedit.setTime(self.parent().min_datetime.time())
-
-        self._time_layout = sublay = QHBoxLayout()
-        sublay.setContentsMargins(6, 6, 6, 6)
-        sublay.addStretch(1)
-        sublay.addWidget(QLabel("Time: "))
-        sublay.addWidget(self.timeedit)
-        sublay.addStretch(1)
-        self.layout().addLayout(sublay)
-
-    def minimumSize(self):
-        return self.sizeHint()
-
-    def sizeHint(self):
-        size = super().sizeHint()
-        size.setHeight(
-            size.height()
-            + self._time_layout.sizeHint().height()
-            + self.layout().spacing())
-        return size
-
 class OWSelectRows(widget.OWWidget):
     name = "Select Rows"
     id = "Orange.widgets.data.file"
@@ -294,26 +269,18 @@ class OWSelectRows(widget.OWWidget):
             box2, self, "Remove All", callback=self.remove_all)
         gui.rubber(box2)
 
-        boxes = gui.widgetBox(self.controlArea, orientation=QHBoxLayout())
-        layout = boxes.layout()
-
-        box_setting = gui.vBox(boxes, addToLayout=False, box=True)
+        box_setting = gui.vBox(self.buttonsArea)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes", "Remove unused features",
             callback=self.conditions_changed)
-        gui.separator(box_setting, height=1)
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",
             callback=self.conditions_changed)
-        layout.addWidget(box_setting, 1)
 
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
-        layout.addWidget(self.buttonsArea)
 
-        acbox = gui.auto_send(None, self, "auto_commit")
-        layout.addWidget(acbox, 1)
-        layout.setAlignment(acbox, Qt.AlignBottom)
+        acbox = gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -908,7 +875,8 @@ class DateTimeWidget(QDateTimeEdit):
             self.min_datetime = QDateTime.fromString(min_datetime, str_format)
             self.max_datetime = QDateTime.fromString(max_datetime, str_format)
             self.setCalendarPopup(True)
-            self.calendarWidget = CalendarWidgetWithTime(self)
+            self.calendarWidget = gui.CalendarWidgetWithTime(
+                self, time=self.min_datetime.time())
             self.calendarWidget.timeedit.timeChanged.connect(
                 self.set_datetime)
             self.setCalendarWidget(self.calendarWidget)

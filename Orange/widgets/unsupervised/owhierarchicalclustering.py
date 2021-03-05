@@ -247,7 +247,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         grid.addWidget(self.top_n_spin, 2, 1)
 
         self.zoom_slider = gui.hSlider(
-            self.controlArea, self, "zoom_factor", box="Zoom",
+            self.buttonsArea, self, "zoom_factor", box="Zoom",
             minValue=-6, maxValue=3, step=1, ticks=True, createLabel=False,
             callback=self.__update_font_scale)
 
@@ -637,9 +637,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.Outputs.selected_data.send(selected_data)
         annotated_data = create_annotated_table(data, selected_indices)
         self.Outputs.annotated_data.send(annotated_data)
-
-    def sizeHint(self):
-        return QSize(800, 500)
 
     def eventFilter(self, obj, event):
         if obj is self.view.viewport() and event.type() == QEvent.Resize:

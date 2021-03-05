@@ -328,6 +328,10 @@ class OWDistributions(OWWidget):
             callback=self._on_sort_by_freq, stateWhenDisabled=False)
 
         box = self.continuous_box = gui.vBox(self.controlArea, "Distribution")
+        gui.comboBox(
+            box, self, "fitted_distribution", label="Fitted distribution",
+            orientation=Qt.Horizontal, items=(name[0] for name in self.Fitters),
+            callback=self._on_fitted_dist_changed)
         slider = gui.hSlider(
             box, self, "number_of_bins",
             label="Bin width", orientation=Qt.Horizontal,
@@ -337,15 +341,10 @@ class OWDistributions(OWWidget):
         self.bin_width_label.setFixedWidth(35)
         self.bin_width_label.setAlignment(Qt.AlignRight)
         slider.sliderReleased.connect(self._on_bin_slider_released)
-        gui.comboBox(
-            box, self, "fitted_distribution", label="Fitted distribution",
-            orientation=Qt.Horizontal, items=(name[0] for name in self.Fitters),
-            callback=self._on_fitted_dist_changed)
-        self.smoothing_box = gui.indentedBox(box, 40)
-        gui.hSlider(
-            self.smoothing_box, self, "kde_smoothing",
+        self.smoothing_box = gui.hSlider(
+            box, self, "kde_smoothing",
             label="Smoothing", orientation=Qt.Horizontal,
-            minValue=2, maxValue=20, callback=self.replot)
+            minValue=2, maxValue=20, callback=self.replot, disabled=True)
         gui.checkBox(
             box, self, "hide_bars", "Hide bars", stateWhenDisabled=False,
             callback=self._on_hide_bars_changed,
@@ -368,7 +367,7 @@ class OWDistributions(OWWidget):
             box, self, "cumulative_distr", "Show cumulative distribution",
             callback=self._on_show_cumulative)
 
-        gui.auto_apply(self.controlArea, self, commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -386,12 +385,13 @@ class OWDistributions(OWWidget):
             plot.setZValue(zvalue)
             return plot
 
-        self.plotview = DistributionWidget(background=None)
+        self.plotview = DistributionWidget()
         self.plotview.item_clicked.connect(self._on_item_clicked)
         self.plotview.blank_clicked.connect(self._on_blank_clicked)
         self.plotview.mouse_released.connect(self._on_end_selecting)
         self.plotview.setRenderHint(QPainter.Antialiasing)
-        self.mainArea.layout().addWidget(self.plotview)
+        box = gui.vBox(self.mainArea, box=True, margin=0)
+        box.layout().addWidget(self.plotview)
         self.ploti = pg.PlotItem(
             enableMenu=False, enableMouse=False,
             axisItems={"bottom": ElidedAxisNoUnits("bottom")})
@@ -500,8 +500,8 @@ class OWDistributions(OWWidget):
         self.plot.update()
 
     def _set_smoothing_visibility(self):
-        self.smoothing_box.setVisible(
-            self.Fitters[self.fitted_distribution][1] is AshCurve)
+        self.smoothing_box.setDisabled(
+            self.Fitters[self.fitted_distribution][1] is not AshCurve)
 
     def _set_bin_width_slider_label(self):
         if self.number_of_bins < len(self.binnings):
@@ -668,8 +668,8 @@ class OWDistributions(OWWidget):
     def _cont_plot(self):
         self._set_cont_ticks()
         data = self.valid_data
-        y, x = np.histogram(
-            data, bins=self.binnings[self.number_of_bins].thresholds)
+        binning = self.binnings[self.number_of_bins]
+        y, x = np.histogram(data, bins=binning.thresholds)
         total = len(data)
         colors = [QColor(0, 128, 255)]
         if self.fitted_distribution:
@@ -677,15 +677,20 @@ class OWDistributions(OWWidget):
 
         tot_freq = 0
         lasti = len(y) - 1
+        width = np.min(x[1:] - x[:-1])
+        unique = self.number_of_bins == 0 and binning.width is None
+        xoff = -width / 2 if unique else 0
         for i, (x0, x1), freq in zip(count(), zip(x, x[1:]), y):
             tot_freq += freq
-            desc = self.str_int(x0, x1, not i, i == lasti)
+            desc = self.str_int(x0, x1, not i, i == lasti, unique)
             tooltip = \
                 "<p style='white-space:pre;'>" \
                 f"<b>{escape(desc)}</b>: " \
                 f"{freq} ({100 * freq / total:.2f} %)</p>"
+            bar_width = width if unique else x1 - x0
             self._add_bar(
-                x0, x1 - x0, 0, [tot_freq if self.cumulative_distr else freq],
+                x0 + xoff, bar_width, 0,
+                [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip,
                 desc=desc, hidden=self.hide_bars)
 
@@ -697,8 +702,8 @@ class OWDistributions(OWWidget):
     def _cont_split_plot(self):
         self._set_cont_ticks()
         data = self.valid_data
-        _, bins = np.histogram(
-            data, bins=self.binnings[self.number_of_bins].thresholds)
+        binning = self.binnings[self.number_of_bins]
+        _, bins = np.histogram(data, bins=binning.thresholds)
         gvalues = self.cvar.values
         varcolors = [QColor(*col) for col in self.cvar.colors]
         if self.fitted_distribution:
@@ -720,12 +725,17 @@ class OWDistributions(OWWidget):
         tot_freqs = np.zeros(len(ys))
 
         lasti = len(ys[0]) - 1
+        width = np.min(bins[1:] - bins[:-1])
+        unique = self.number_of_bins == 0 and binning.width is None
+        xoff = -width / 2 if unique else 0
         for i, x0, x1, freqs in zip(count(), bins, bins[1:], zip(*ys)):
             tot_freqs += freqs
             plotfreqs = tot_freqs.copy() if self.cumulative_distr else freqs
-            desc = self.str_int(x0, x1, not i, i == lasti)
+            desc = self.str_int(x0, x1, not i, i == lasti, unique)
+            bar_width = width if unique else x1 - x0
             self._add_bar(
-                x0, x1 - x0, 0 if self.stacked_columns else 0.1, plotfreqs,
+                x0 + xoff, bar_width, 0 if self.stacked_columns else 0.1,
+                plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 hidden=self.hide_bars,
                 tooltip=self._split_tooltip(
@@ -899,12 +909,12 @@ class OWDistributions(OWWidget):
             return 0
         return 10 ** -var.number_of_decimals
 
-    def str_int(self, x0, x1, first, last):
+    def str_int(self, x0, x1, first, last, unique=False):
         var = self.var
         sx0, sx1 = var.repr_val(x0), var.repr_val(x1)
         if self.cumulative_distr:
             return f"{var.name} < {sx1}"
-        elif first and last:
+        elif first and last or unique:
             return f"{var.name} = {sx0}"
         elif first:
             return f"{var.name} < {sx1}"

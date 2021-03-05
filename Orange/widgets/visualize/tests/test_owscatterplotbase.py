@@ -8,7 +8,7 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtGui import QColor
 from AnyQt.QtTest import QSignalSpy
 
-from pyqtgraph import mkPen
+from pyqtgraph import mkPen, mkBrush
 
 from orangewidget.tests.base import GuiTest
 from Orange.widgets.settings import SettingProvider
@@ -46,14 +46,30 @@ class MockWidget(OWWidget):
         else:
             return colorpalettes.DefaultDiscretePalette
 
+    @staticmethod
+    def reset_mocks():
+        for m in MockWidget.__dict__.values():
+            if isinstance(m, Mock):
+                m.reset_mock()
+
 
 class TestOWScatterPlotBase(WidgetTest):
     def setUp(self):
+        super().setUp()
         self.master = MockWidget()
         self.graph = OWScatterPlotBase(self.master)
 
         self.xy = (np.arange(10, dtype=float), np.arange(10, dtype=float))
         self.master.get_coordinates_data = lambda: self.xy
+
+    def tearDown(self):
+        self.master.onDeleteWidget()
+        self.master.deleteLater()
+        # Clear mocks as they keep ref to widget instance when called
+        MockWidget.reset_mocks()
+        del self.master
+        del self.graph
+        super().tearDown()
 
     # pylint: disable=keyword-arg-before-vararg
     def setRange(self, rect=None, *_, **__):
@@ -87,7 +103,7 @@ class TestOWScatterPlotBase(WidgetTest):
         scatterplot_item.setSize([5, 6])
         scatterplot_item.setSymbol([7, 8])
         scatterplot_item.setPen([mkPen(9), mkPen(10)])
-        scatterplot_item.setBrush([11, 12])
+        scatterplot_item.setBrush([mkBrush(11), mkBrush(12)])
         data["data"] = np.array([13, 14])
 
         xy[0][0] = 0
@@ -102,7 +118,8 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_almost_equal(data["symbol"], [7, 8])
         self.assertEqual(data["pen"][0], mkPen(9))
         self.assertEqual(data["pen"][1], mkPen(10))
-        np.testing.assert_almost_equal(data["brush"], [11, 12])
+        self.assertEqual(data["brush"][0], mkBrush(11))
+        self.assertEqual(data["brush"][1], mkBrush(12))
         np.testing.assert_almost_equal(data["data"], [13, 14])
 
     def test_update_coordinates_and_labels(self):
@@ -347,6 +364,29 @@ class TestOWScatterPlotBase(WidgetTest):
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         np.testing.assert_equal(a10, x)
+
+    def test_suspend_jittering(self):
+        graph = self.graph
+        graph.jitter_size = 10
+        graph.reset_graph()
+        uj = graph.update_jittering = Mock()
+        graph.unsuspend_jittering()
+        uj.assert_not_called()
+        graph.suspend_jittering()
+        uj.assert_called()
+        uj.reset_mock()
+        graph.suspend_jittering()
+        uj.assert_not_called()
+        graph.unsuspend_jittering()
+        uj.assert_called()
+        uj.reset_mock()
+
+        graph.jitter_size = 0
+        graph.reset_graph()
+        graph.suspend_jittering()
+        uj.assert_not_called()
+        graph.unsuspend_jittering()
+        uj.assert_not_called()
 
     def test_size_normalization(self):
         graph = self.graph
@@ -598,9 +638,9 @@ class TestOWScatterPlotBase(WidgetTest):
             self.assertEqual(brushes[0].color().alpha(), 0)
             self.assertEqual(brushes[1].color().alpha(), 0)
             self.assertEqual(brushes[4].color().alpha(), 0)
-            self.assertEqual(brushes[5].color().alpha(), 255)
-            self.assertEqual(brushes[6].color().alpha(), 255)
-            self.assertEqual(brushes[7].color().alpha(), 255)
+            self.assertEqual(brushes[5].color().alpha(), 123)
+            self.assertEqual(brushes[6].color().alpha(), 123)
+            self.assertEqual(brushes[7].color().alpha(), 123)
 
         graph = self.graph
 
@@ -900,6 +940,46 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_equal(x_data, x_data0)
         np.testing.assert_equal(y_data, y_data0)
         np.testing.assert_equal(colors, colors0)
+
+    @patch("Orange.widgets.visualize.owscatterplotgraph.MAX_COLORS", 3)
+    @patch("Orange.widgets.utils.classdensity.class_density_image")
+    def test_density_with_max_colors(self, class_density_image):
+        graph = self.graph
+        graph.reset_graph()
+        graph.plot_widget.addItem = Mock()
+        graph.plot_widget.removeItem = Mock()
+
+        graph.class_density = True
+        d = np.arange(10, dtype=float) % 3
+        self.master.get_color_data = lambda: d
+
+        # All colors known
+        graph.update_colors()
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        np.testing.assert_equal(x_data, np.arange(10)[d < 2])
+        np.testing.assert_equal(y_data, np.arange(10)[d < 2])
+        self.assertEqual(len(set(colors)), 2)
+
+        # Missing colors
+        d[:3] = np.nan
+        graph.update_colors()
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        np.testing.assert_equal(x_data, np.arange(3, 10)[d[3:] < 2])
+        np.testing.assert_equal(y_data, np.arange(3, 10)[d[3:] < 2])
+        self.assertEqual(len(set(colors)), 2)
+
+        # Missing colors + only subsample plotted
+        graph.set_sample_size(8)
+        graph.reset_graph()
+        x_data, y_data, colors = class_density_image.call_args[0][5:]
+        visible_data = graph._filter_visible(d)
+        d_known = np.bitwise_and(np.isfinite(visible_data),
+                                  visible_data < 2)
+        x_data0 = graph._filter_visible(np.arange(10))[d_known]
+        y_data0 = graph._filter_visible(np.arange(10))[d_known]
+        np.testing.assert_equal(x_data, x_data0)
+        np.testing.assert_equal(y_data, y_data0)
+        self.assertLessEqual(len(set(colors)), 2)
 
     def test_labels(self):
         graph = self.graph
@@ -1453,7 +1533,11 @@ class TestOWScatterPlotBase(WidgetTest):
     def test_no_needless_buildatlas(self):
         graph = self.graph
         graph.reset_graph()
-        self.assertIsNone(graph.scatterplot_item.fragmentAtlas.atlas)
+        atlas = graph.scatterplot_item.fragmentAtlas
+        if hasattr(atlas, "atlas"):  # pyqtgraph < 0.11.1
+            self.assertIsNone(atlas.atlas)
+        else:
+            self.assertFalse(atlas)
 
 
 class TestScatterPlotItem(GuiTest):

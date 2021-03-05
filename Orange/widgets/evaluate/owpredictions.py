@@ -15,7 +15,6 @@ from AnyQt.QtCore import (
     QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
-from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 from orangewidget.report import plural
 
 import Orange
@@ -32,6 +31,7 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 
 
 # Input slot for the Predictors channel
@@ -49,6 +49,8 @@ class OWPredictions(OWWidget):
     priority = 200
     description = "Display predictions of models for an input dataset."
     keywords = []
+
+    buttons_area_orientation = None
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -88,15 +90,16 @@ class OWPredictions(OWWidget):
         self._set_input_summary()
         self._set_output_summary(None)
 
-        gui.listBox(self.controlArea, self, "selected_classes", "class_values",
-                    box="Show probabibilities for",
+        controlBox = gui.vBox(self.controlArea, "Show probabilities for")
+
+        gui.listBox(controlBox, self, "selected_classes", "class_values",
                     callback=self._update_prediction_delegate,
                     selectionMode=QListWidget.ExtendedSelection,
-                    addSpace=False,
-                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred))
-        gui.rubber(self.controlArea)
+                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding),
+                    sizeHint=QSize(1, 350),
+                    minimumHeight=100)
         self.reset_button = gui.button(
-            self.controlArea, self, "Restore Original Order",
+            controlBox, self, "Restore Original Order",
             callback=self._reset_order,
             tooltip="Show rows in the original order")
 
@@ -1054,7 +1057,10 @@ class SharedSelectionStore:
                 flags that tell whether to Clear, Select, Deselect or Toggle
         """
         if isinstance(selection, QModelIndex):
-            rows = {selection.model().mapToSource(selection).row()}
+            if selection.model() is not None:
+                rows = {selection.model().mapToSource(selection).row()}
+            else:
+                rows = set()
         else:
             indices = selection.indexes()
             if indices:
@@ -1108,11 +1114,12 @@ class SharedSelectionStore:
         try:
             yield
         finally:
-            deselected = map_from_source(old_rows - self._rows)
-            selected = map_from_source(self._rows - old_rows)
-            if selected or deselected:
-                for model in self._selection_models:
-                    model.emit_selection_rows_changed(selected, deselected)
+            if self.proxy.sourceModel() is not None:
+                deselected = map_from_source(old_rows - self._rows)
+                selected = map_from_source(self._rows - old_rows)
+                if selected or deselected:
+                    for model in self._selection_models:
+                        model.emit_selection_rows_changed(selected, deselected)
 
 
 class SharedSelectionModel(QItemSelectionModel):
@@ -1209,7 +1216,7 @@ class SharedSelectionModel(QItemSelectionModel):
         self.clearCurrentIndex()
 
 
-class TableView(QTableView):
+class TableView(gui.HScrollStepMixin, QTableView):
     MaxSizeHintSamples = 1000
 
     def sizeHintForColumn(self, column):

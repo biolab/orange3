@@ -9,6 +9,8 @@ import scipy.sparse as sp
 from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QFont
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest, simulate, \
     WidgetOutputsTestMixin, datasets
@@ -43,7 +45,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         details = format_summary_details(self.data)
         self.assertEqual(info._StateInfo__input_summary.brief, "150")
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self._select_data()
@@ -53,9 +55,9 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_input_no_cont_features(self):
@@ -139,6 +141,27 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(controls.annot_var.model().rowCount(), 2)
         self.assertEqual(controls.color_var.currentText(), "(Same color)")
         self.assertEqual(controls.color_var.model().rowCount(), 1)
+
+    def test_group_axis(self):
+        group_axis = self.widget.graph.group_axis
+        annot_axis = self.widget.graph.getAxis('bottom')
+        controls = self.widget.controls
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertFalse(group_axis.isVisible())
+        self.assertTrue(annot_axis.isVisible())
+
+        simulate.combobox_activate_item(controls.group_var, "iris")
+        self.assertTrue(group_axis.isVisible())
+        self.assertFalse(annot_axis.isVisible())
+
+        simulate.combobox_activate_item(controls.annot_var, "iris")
+        self.assertTrue(group_axis.isVisible())
+        self.assertTrue(annot_axis.isVisible())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(group_axis.isVisible())
+        self.assertFalse(annot_axis.isVisible())
 
     def test_datasets(self):
         controls = self.widget.controls
@@ -351,10 +374,15 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.set_visual_settings(key, value)
         self.assertFalse(graph.getAxis("left").grid)
 
-        key, value = ("Figure", "Bottom axis", "Vertical tick text"), False
+        key, value = ("Figure", "Bottom axis", "Vertical ticks"), False
         self.assertTrue(graph.getAxis("bottom").style["rotateTicks"])
         self.widget.set_visual_settings(key, value)
         self.assertFalse(graph.getAxis("bottom").style["rotateTicks"])
+
+        key, value = ("Figure", "Group axis", "Vertical ticks"), True
+        self.assertFalse(graph.group_axis.style["rotateTicks"])
+        self.widget.set_visual_settings(key, value)
+        self.assertTrue(graph.group_axis.style["rotateTicks"])
 
     def assertFontEqual(self, font1, font2):
         self.assertEqual(font1.family(), font2.family())

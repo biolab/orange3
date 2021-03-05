@@ -7,31 +7,28 @@ Measures the performance of a chosen classifier against a random classifier.
 
 - Evaluation Results: results of testing classification algorithms
 
-The **Lift curve** shows the relation between the number of instances which were predicted positive and those that are indeed positive and thus measures the performance of a chosen classifier against a random classifier. The graph is constructed with the cumulative number of cases (in descending order of probability) on the x-axis and the cumulative number of true positives on the y-axis. Lift curve is often used in segmenting the population, e.g., plotting the number of responding customers against the number of all customers contacted. You can also determine the optimal classifier and its threshold from the graph.
+The **Lift curve** shows the curves for analysing the proportion of true positive data instances in relation to the classifier's threshold or the number of instances that we classify as positive.
+
+Cumulative gains chart shows the proportion of true positive instances (for example, the number of clients who accept the offer) as a function of the number of positive instances (the number of clients contacted), assuming the the instances are ordered according to the model's probability of being positive (e.g. ranking of clients).
+
+![](images/LiftCurve-cumulative-gain.png)
+
+Lift curve shows the ratio between the proportion of true positive instances in the selection and the proportion of customers contacted. See [a tutorial for more details](https://medium.com/analytics-vidhya/understanding-lift-curve-b674d21e426).
 
 ![](images/LiftCurve-stamped.png)
 
-1. Choose the desired *Target class*. The default class is chosen alphabetically.
-2. If test results contain more than one classifier, the user can choose which curves she or he wants to see plotted. Click on a classifier to select or deselect the curve.
-3. *Show lift convex hull* plots a convex hull over lift curves for all classifiers (yellow curve). The curve shows the optimal classifier (or combination thereof) for each desired TP/P rate.
-4. Press *Save Image* if you want to save the created image to your computer in a .svg or .png format.
-5. Produce a report.
-6. 2-D pane with **P rate** (population) as x-axis and **TP rate** (true positives) as a y-axis. The diagonal line represents the behavior of a random classifier. Click and drag to move the pane and scroll in or out to zoom. Click on the "*A*" sign at the bottom left corner to realign the pane.
+1. Choose the desired *Target class*. The default is chosen alphabetically.
+2. Choose whether to observe lift curve or cumulative gains.
+3. If test results contain more than one classifier, the user can choose which curves she or he wants to see plotted. Click on a classifier to select or deselect the curve.
+4. *Show lift convex hull* plots a convex hull over lift curves for all classifiers (yellow curve). The curve shows the optimal classifier (or combination thereof) for each desired lift or cumulative gain.
+5. Press *Save Image* to save the created image in a .svg or .png format.
+6. Produce a report.
+7. A plot with **lift** or **cumulative gain** vs. **positive rate**. The dashed line represents the behavior of a random classifier.
 
-**Note!** The perfect classifier would have a steep slope towards 1 until all
-classes are guessed correctly and then run straight along 1 on y-axis to
-(1,1).
 
 Example
 -------
 
-At the moment, the only widget which gives the right type of the signal needed by the **Lift Curve** is [Test & Score](../evaluate/testandscore.md).
+The widgets that provide the right type of the signal needed by the **Lift Curve** (evaluation data) are [Test & Score](../evaluate/testandscore.md) and [Predictions](../evaluate/predictions.md).
 
-In the example below, we try to see the prediction quality for the class 'survived' on the *Titanic* dataset. We compared three different classifiers in the Test Learners widget and sent them to Lift Curve to see their performance against a random model. We see the [Tree](../model/tree.md) classifier is the best out of the three, since it best aligns with *lift convex hull*. We also see that its performance is the best for the first 30% of the population (in order of descending probability), which we can set as the threshold for optimal classification.
-
-![](images/LiftCurve-example.png)
-
-References
-----------
-
-Handouts of the University of Notre Dame on Data Mining - Lift Curve. Available [here](https://www3.nd.edu/~busiforc/handouts/DataMining/Lift%20Charts.html).
+In the example below, we observe the lift curve and cumulative gain for the bank marketing data, where the classification goal is to predict whether the client will accept a term deposit offer based on his age, job, education, marital status and similar data. The data set is available in the Datasets widget. We run the learning algorithms in the Test and Score widget and send the results to Lift Curve to see their performance against a random model. Of the two algorithms tested, logistic regression outperforms the naive Bayesian classifier. The curve tells us that by picking the first 20 % of clients as ranked by the model, we are going to hit four times more positive instances than by selecting a random sample with 20 % of clients.

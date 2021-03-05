@@ -69,8 +69,7 @@ class OWTranspose(OWWidget):
             "feature_names_column", contentsLength=12, searchable=True,
             callback=self._feature_combo_changed, model=self.feature_model)
 
-        self.apply_button = gui.auto_apply(self.controlArea, self, box=False, commit=self.apply)
-        self.apply_button.button.setAutoDefault(False)
+        gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)

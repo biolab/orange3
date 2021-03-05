@@ -158,6 +158,13 @@ class InteractiveViewBox(pg.ViewBox):
     def _dragtip_pos():
         return 10, 10
 
+    def setDragTooltip(self, tooltip):
+        scene = self.scene()
+        scene.addItem(tooltip)
+        tooltip.setPos(*self._dragtip_pos())
+        tooltip.hide()
+        scene.drag_tooltip = tooltip
+
     def updateScaleBox(self, p1, p2):
         """
         Overload to use ViewBox.mapToView instead of mapRectFromParent
@@ -172,8 +179,8 @@ class InteractiveViewBox(pg.ViewBox):
         p2 = self.mapToView(p2)
         r = QRectF(p1, p2)
         self.rbScaleBox.setPos(r.topLeft())
-        self.rbScaleBox.resetTransform()
-        self.rbScaleBox.scale(r.width(), r.height())
+        tr = QTransform.fromScale(r.width(), r.height())
+        self.rbScaleBox.setTransform(tr)
         self.rbScaleBox.show()
 
     def safe_update_scale_box(self, buttonDownPos, currentPos):
@@ -183,6 +190,12 @@ class InteractiveViewBox(pg.ViewBox):
         if buttonDownPos[1] == y:
             y += 1
         self.updateScaleBox(buttonDownPos, pg.Point(x, y))
+
+    def _updateDragtipShown(self, enabled):
+        scene = self.scene()
+        dragtip = scene.drag_tooltip
+        if enabled != dragtip.isVisible():
+            dragtip.setVisible(enabled)
 
     # noinspection PyPep8Naming,PyMethodOverriding
     def mouseDragEvent(self, ev, axis=None):
@@ -196,16 +209,15 @@ class InteractiveViewBox(pg.ViewBox):
             ev.accept()
             if ev.button() == Qt.LeftButton:
                 self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
-                scene = self.scene()
-                dragtip = scene.drag_tooltip
                 if ev.isFinish():
-                    dragtip.hide()
+                    self._updateDragtipShown(False)
+                    self.graph.unsuspend_jittering()
                     self.rbScaleBox.hide()
                     value_rect = get_mapped_rect()
                     self.graph.select_by_rectangle(value_rect)
                 else:
-                    dragtip.setPos(*self._dragtip_pos())
-                    dragtip.show()  # although possibly already shown
+                    self._updateDragtipShown(True)
+                    self.graph.suspend_jittering()
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
 
         def zoom():
@@ -270,7 +282,7 @@ class InteractiveViewBox(pg.ViewBox):
     def mouseClickEvent(self, ev):
         if ev.button() == Qt.RightButton:  # undo zoom
             self.scaleHistory(-1)
-        else:
+        elif ev.modifiers() == Qt.NoModifier:
             ev.accept()
             self.graph.unselect_all()
 
@@ -496,10 +508,12 @@ class AxisItem(pg.AxisItem):
         self.prepareGeometryChange()
         self.update()
 
-    def generateDrawSpecs(self, p):
-        if self.style["tickFont"]:
-            p.setFont(self.style["tickFont"])
-        return super().generateDrawSpecs(p)
+    # remove after Orange requires pyqtgraph >= 0.11.1
+    if pg.__version__ <= "0.11.0":
+        def generateDrawSpecs(self, p):
+            if self.style["tickFont"]:
+                p.setFont(self.style["tickFont"])
+            return super().generateDrawSpecs(p)
 
     def drawPicture(self, p, axisSpec, tickSpecs, textSpecs):
         if self.orientation in ["bottom", "top"] and self.style["rotateTicks"]:
@@ -537,12 +551,14 @@ class AxisItem(pg.AxisItem):
         else:
             super().drawPicture(p, axisSpec, tickSpecs, textSpecs)
 
-    def _updateMaxTextSize(self, x):
-        if self.orientation in ["left", "right"]:
-            self.textWidth = x
-            if self.style["autoExpandTextSpace"] is True:
-                self._updateWidth()
-        else:
-            self.textHeight = x
-            if self.style["autoExpandTextSpace"] is True:
-                self._updateHeight()
+    # remove after Orange requires pyqtgraph >= 0.11.1
+    if pg.__version__ <= "0.11.0":
+        def _updateMaxTextSize(self, x):
+            if self.orientation in ["left", "right"]:
+                self.textWidth = x
+                if self.style["autoExpandTextSpace"] is True:
+                    self._updateWidth()
+            else:
+                self.textHeight = x
+                if self.style["autoExpandTextSpace"] is True:
+                    self._updateHeight()

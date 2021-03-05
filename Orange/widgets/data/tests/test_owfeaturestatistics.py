@@ -11,6 +11,9 @@ import numpy as np
 from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
     QItemSelectionModel, Qt
 
+from orangewidget.widget import StateInfo
+from orangewidget.settings import Context
+
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -18,7 +21,6 @@ from Orange.widgets.tests.utils import simulate, table_dense_sparse
 from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
 from Orange.widgets.utils.state_summary import format_summary_details
-from orangewidget.settings import Context
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
 
@@ -105,7 +107,7 @@ def _to_timestamps(years):
 # Time variable variations, windows timestamps need to be valid timestamps so
 # we'll just fill it in with arbitrary years
 time_full = VarDataPair(
-    TimeVariable('time_full'),
+    TimeVariable('time_full', have_date=True, have_time=True),
     np.array(_to_timestamps([2000, 2001, 2002, 2003, 2004]), dtype=float),
 )
 time_missing = VarDataPair(
@@ -117,7 +119,7 @@ time_all_missing = VarDataPair(
     np.array(_to_timestamps([np.nan] * 5), dtype=float),
 )
 time_same = VarDataPair(
-    TimeVariable('time_same'),
+    TimeVariable('time_same', have_date=True, have_time=True),
     np.array(_to_timestamps([2004] * 5), dtype=float),
 )
 time = [
@@ -530,9 +532,9 @@ class TestSummary(WidgetTest):
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 if __name__ == "__main__":

@@ -19,13 +19,18 @@ Predict using an ensemble of decision trees.
 
 **Random Forest** works for both classification and regression tasks.
 
-![](images/RandomForest-stamped.png)
+![](images/RandomForest.png)
 
 1. Specify the name of the model. The default name is "Random Forest".
-2. Specify how many decision trees will be included in the forest (*Number of trees in the forest*), and how many attributes will be arbitrarily drawn for consideration at each node. If the latter is not specified (option *Number of attributes...* left unchecked), this number is equal to the square root of the number of attributes in the data. You can also choose to fix the seed for tree generation (*Fixed seed for random generator*), which enables replicability of the results.
-3. Original Breiman's proposal is to grow the trees without any pre-pruning, but since pre-pruning often works quite well and is faster, the user can set the depth to which the trees will be grown (*Limit depth of individual trees*). Another pre-pruning option is to select the smallest subset that can be split (*Do not split subsets smaller than*).
-4. Produce a report.
-5. Click *Apply* to communicate the changes to other widgets. Alternatively, tick the box on the left side of the *Apply* button and changes will be communicated automatically.
+2. Basic properties:
+   - *Number of trees*: Specify how many decision trees will be included in the forest.
+   - *Number of trees considered at each split*: Specify how many attributes will be arbitrarily drawn for consideration at each node. If the latter is not specified (option *Number of attributes...* left unchecked), this number is equal to the square root of the number of attributes in the data.
+   - *Replicable training*: Fix the seed for tree generation, which enables replicability of the results.
+   - *Balance class distribution*: [Weigh classes](https://scikit-learn.org/stable/modules/generated/sklearn.utils.class_weight.compute_class_weight.html?highlight=sklearn%20utils%20class_weight) inversely proportional to their frequencies.
+3. Growth control:
+   - *Limit depth of individual trees*: Original Breiman's proposal is to grow the trees without any pre-pruning, but since pre-pruning often works quite well and is faster, the user can set the depth to which the trees will be grown.
+   - *Do not split subsets smaller than*: Select the smallest subset that can be split.
+4. Click *Apply* to communicate the changes to other widgets. Alternatively, tick the box on the left side of the *Apply* button and changes will be communicated automatically.
 
 Examples
 --------

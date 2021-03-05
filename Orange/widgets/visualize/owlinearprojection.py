@@ -293,8 +293,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             value="hide_radius", minValue=0, maxValue=100, step=10,
             createLabel=False, callback=self.__radius_slider_changed
         )
-        self.controlArea.layout().removeWidget(self.control_area_stretch)
-        self.control_area_stretch.setParent(None)
 
     def _add_controls_variables(self):
         self.model_selected = VariableSelectionModel(self.selected_vars)

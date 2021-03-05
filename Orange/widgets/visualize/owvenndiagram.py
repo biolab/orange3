@@ -76,7 +76,7 @@ class OWVennDiagram(widget.OWWidget):
     rowwise = settings.Setting(True)
     selected_feature = settings.ContextSetting(None)
 
-    want_control_area = False
+    want_main_area = False
     graph_name = "scene"
     atr_types = ['attributes', 'metas', 'class_vars']
     atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
@@ -104,10 +104,9 @@ class OWVennDiagram(widget.OWWidget):
         self.scene = QGraphicsScene(self)
         self.view = QGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing)
-        self.view.setBackgroundRole(QPalette.Window)
         self.view.setFrameStyle(QGraphicsView.StyledPanel)
 
-        self.mainArea.layout().addWidget(self.view)
+        self.controlArea.layout().addWidget(self.view)
         self.vennwidget = VennDiagram()
         self._resize()
         self.vennwidget.itemTextEdited.connect(self._on_itemTextEdited)
@@ -118,24 +117,40 @@ class OWVennDiagram(widget.OWWidget):
 
         self.scene.addItem(self.vennwidget)
 
-        controls = gui.hBox(self.mainArea)
         box = gui.radioButtonsInBox(
-            controls, self, 'rowwise',
+            self.buttonsArea, self, 'rowwise',
             ["Columns (features)", "Rows (instances), matched by", ],
-            box="Elements", callback=self._on_matching_changed
+            callback=self._on_matching_changed
         )
+        gui.rubber(self.buttonsArea)
+        gui.separator(self.buttonsArea, 10, 0)
         gui.comboBox(
-            gui.indentedBox(box), self, "selected_feature",
-            model=itemmodels.VariableListModel(placeholder="Instance identity"),
+            gui.indentedBox(box,
+                            gui.checkButtonOffsetHint(box.buttons[0]),
+                            Qt.Horizontal,
+                            addSpaceBefore=False),
+            self, "selected_feature",
+            model=itemmodels.VariableListModel(
+                placeholder="Instance identity"
+            ),
             callback=self._on_inputAttrActivated
-            )
+        )
+        box.layout().setSpacing(6)
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
-        self.outputs_box = box = gui.vBox(controls, "Output")
+        self.outputs_box = box = gui.vBox(self.buttonsArea,
+                                          sizePolicy=(QSizePolicy.Preferred,
+                                                      QSizePolicy.Preferred),
+                                          stretch=0)
+        gui.rubber(box)
         self.output_duplicates_cb = gui.checkBox(
             box, self, "output_duplicates", "Output duplicates",
-            callback=lambda: self.commit())  # pylint: disable=unnecessary-lambda
-        gui.auto_send(box, self, "autocommit", box=False)
+            callback=lambda: self.commit(),  # pylint: disable=unnecessary-lambda
+            attribute=Qt.WA_LayoutUsesWidgetRect)
+        auto = gui.auto_send(box, self, "autocommit",
+                             box=False,
+                             contentsMargins=(0, 0, 0, 0))
+        gui.rubber(box)
         self.output_duplicates_cb.setEnabled(bool(self.rowwise))
         self._queue = []
 

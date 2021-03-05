@@ -115,7 +115,7 @@ class Updater:
 
     @staticmethod
     def update_axis_title_text(item: pg.AxisItem, text: str):
-        item.setLabel(text)
+        item.setLabel(text, item.labelUnits, item.labelUnitPrefix)
         item.resizeEvent(None)
 
     @staticmethod
@@ -128,7 +128,8 @@ class Updater:
             style = {"font-size": f"{font.pointSize()}pt",
                      "font-family": f"{font.family()}",
                      "font-style": f"{fstyle}"}
-            item.setLabel(None, None, None, **style)
+            item.setLabel(item.labelText, item.labelUnits,
+                          item.labelUnitPrefix, **style)
 
     @staticmethod
     def update_axes_ticks_font(items: List[pg.AxisItem],
@@ -143,6 +144,11 @@ class Updater:
     def update_legend_font(items: Iterable[_LegendItemType],
                            **settings: _SettingType):
         for sample, label in items:
+            if "size" in label.opts:
+                # pyqtgraph added html-like support for size in 0.11.1, which
+                # overrides our QFont property
+                label.opts.pop("size")
+                label.setText(label.text)
             sample.setFixedHeight(sample.height())
             sample.setFixedWidth(sample.width())
             label.item.setFont(Updater.change_font(label.item.font(), settings))

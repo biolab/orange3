@@ -7,7 +7,10 @@ import warnings
 import numpy as np
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
+from AnyQt.QtWidgets import QApplication
 import baycomp
+
+from orangewidget.widget import StateInfo
 
 from Orange.classification import MajorityLearner, LogisticRegressionLearner, \
     RandomForestLearner
@@ -421,6 +424,52 @@ class TestOWTestAndScore(WidgetTest):
                     OWTestAndScore.KFold, 0),
                 (0.8, 0.5, 0.5, 0.5, 0.5))))
 
+    def test_no_stratification(self):
+        w = self.widget
+        w.cv_stratified = True
+        self._test_scores(
+            Table("zoo"), None, MajorityLearner(),
+            OWTestAndScore.KFold, 2)
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        w.controls.cv_stratified.click()
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+        w.controls.cv_stratified.click()
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        w.controls.n_folds.setCurrentIndex(0)
+        w.controls.n_folds.activated[int].emit(0)
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+        w.controls.n_folds.setCurrentIndex(2)
+        w.controls.n_folds.activated[int].emit(2)
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        self._test_scores(
+            Table("iris"), None, MajorityLearner(), OWTestAndScore.KFold, 2)
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+        self._test_scores(
+            Table("zoo"), None, MajorityLearner(), OWTestAndScore.KFold, 2)
+        self.assertTrue(w.Warning.cant_stratify.is_shown())
+
+        self._test_scores(
+            Table("housing"), None, MeanLearner(), OWTestAndScore.KFold, 2)
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+        self.assertTrue(w.Information.cant_stratify_numeric.is_shown())
+
+        w.controls.cv_stratified.click()
+        self.assertFalse(w.Warning.cant_stratify.is_shown())
+
+    def test_too_many_folds(self):
+        w = self.widget
+        w.controls.resampling.buttons[OWTestAndScore.KFold].click()
+        w.n_folds = 3
+        self.send_signal(w.Inputs.train_data, Table("zoo")[:8])
+        self.send_signal(w.Inputs.learner, MajorityLearner(), 0, wait=5000)
+        self.assertTrue(w.Error.too_many_folds.is_shown())
+
     def test_no_pregressbar_warning(self):
         data = Table("iris")[::15]
 
@@ -677,13 +726,13 @@ class TestOWTestAndScore(WidgetTest):
         summary, details = f"{len(test)}", format_summary_details(test)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self.send_signal(self.widget.Inputs.test_data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_unique_output_domain(self):
@@ -692,6 +741,22 @@ class TestOWTestAndScore(WidgetTest):
         self.send_signal(self.widget.Inputs.learner, RandomForestLearner(), 0)
         output = self.get_output(self.widget.Outputs.predictions)
         self.assertEqual(output.domain.metas[0].name, 'random forest (1)')
+
+    def test_copy_to_clipboard(self):
+        self.send_signal(self.widget.Inputs.train_data, Table("iris"))
+        self.send_signal(self.widget.Inputs.learner, RandomForestLearner(), 0)
+        self.wait_until_finished()
+        view = self.widget.score_table.view
+        model = self.widget.score_table.model
+        selection_model = view.selectionModel()
+        selection_model.select(model.index(0, 0),
+                               selection_model.Select | selection_model.Rows)
+
+        self.widget.copy_to_clipboard()
+        clipboard_text = QApplication.clipboard().text()
+        view_text = "\t".join([str(model.data(model.index(0, i)))
+                               for i in (0, 3, 4, 5, 6, 7)]) + "\r\n"
+        self.assertEqual(clipboard_text, view_text)
 
 
 class TestHelpers(unittest.TestCase):

@@ -180,6 +180,12 @@ class Psycopg2Backend(Backend):
             s = ''.join(row[0] for row in cur.fetchall())
         return int(re.findall(r'rows=(\d*)', s)[0])
 
+    def distinct_values_query(self, field_name: str, table_name: str) -> str:
+        fields = [self.quote_identifier(field_name)]
+        return self.create_sql_query(
+            table_name, fields, group_by=fields, order_by=fields, limit=21
+        )
+
     def __getstate__(self):
         # Drop connection_pool from state as it cannot be pickled
         state = dict(self.__dict__)

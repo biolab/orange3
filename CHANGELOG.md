@@ -6,6 +6,50 @@ Change Log
 * ...
 
 
+[3.28.0] - 2021-03-05
+--------------------
+##### Enhancements
+* Bar Plot: Improve "Group by" visualization ([#5301](../../pull/5301))
+* Violin Plot: New widget ([#5252](../../pull/5252))
+* Test and Score: Copy selected rows to clipboard ([#5203](../../pull/5203))
+* Projections: Allow transparent subset ([#5141](../../pull/5141))
+* Gradient Boosting: New widget ([#5160](../../pull/5160))
+* Impute: Allow setting a default value for all numeric and time variables ([#5102](../../pull/5102))
+* Distribution: Show equal bar widths on unique-valued bins ([#5139](../../pull/5139))
+* Implement proper Lift curve; keep Cumulative gains as an option ([#5075](../../pull/5075))
+* Create Instance: New widget ([#5033](../../pull/5033))
+
+##### Bugfixes
+* Calibration model: Work with numpy data ([#5159](../../pull/5159))
+* Rank: Switch to manual selection on deselect ([#5271](../../pull/5271))
+* Create Class: multiple patterns for a class value ([#5283](../../pull/5283))
+* Test and Score: Fix stratification warnings ([#5281](../../pull/5281))
+* Predictions: Fix crash when clicking on empty left area ([#5222](../../pull/5222))
+* Distribution: vectorize variance, speeds up normalization ([#5230](../../pull/5230))
+* owimpute: Make `default_numeric` locale independant ([#5209](../../pull/5209))
+* Pivot: Display time variable in time format ([#5212](../../pull/5212))
+* OWScatterPlotBase: Ignore 'Other' when showing color regions ([#5214](../../pull/5214))
+* Fix performance regression in scatterplot ([#5206](../../pull/5206))
+* Pivot: Fix table for categorical variables ([#5193](../../pull/5193))
+* Distance Matrix: Fix freeze with large selections ([#5176](../../pull/5176))
+* Xls reader: Error as missing value ([#5192](../../pull/5192))
+* owdataset: Do not capture self in closure ([#5198](../../pull/5198))
+* ROC shows all points, including the last ([#5138](../../pull/5138))
+* Pivot: Output date for group by table ([#5202](../../pull/5202))
+* Enable classification tests ([#5168](../../pull/5168))
+* Data Table: Fix freeze with large selections ([#5164](../../pull/5164))
+* OWImpute: Preserve default method setting ([#5181](../../pull/5181))
+* AdaBoost: Set maximum number of estimators to 10000 ([#5165](../../pull/5165))
+* Feature Statistics: Error in time variable display ([#5152](../../pull/5152))
+* owpythonscript: Use signal id as is ([#5147](../../pull/5147))
+* SqlTable use empty string instead of None for StringVariable ([#5120](../../pull/5120))
+* Pivot: Handle big dataset ([#5104](../../pull/5104))
+* SQL: Fix the issue with database collation setting when retrieving column values ([#5089](../../pull/5089))
+* impute: Remove class vars from input data for ReplaceUnknownsModel ([#5083](../../pull/5083))
+* Edit Domain: Preserve renames on categories merge ([#5072](../../pull/5072))
+* CSV File Import: sort discrete values naturally ([#5041](../../pull/5041))
+
+
 [3.27.1] - 2020-10-23
 --------------------
 ##### Bugfixes
@@ -1485,7 +1529,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.27.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.28.0...HEAD
+[3.28.0]: https://github.com/biolab/orange3/compare/3.27.1...3.28.0
 [3.27.1]: https://github.com/biolab/orange3/compare/3.27.0...3.27.1
 [3.27.0]: https://github.com/biolab/orange3/compare/3.26.0...3.27.0
 [3.26.0]: https://github.com/biolab/orange3/compare/3.25.1...3.26.0

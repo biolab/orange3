@@ -15,6 +15,8 @@ from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
     QStyleOptionViewItem, QDialog, QMenu
 from AnyQt.QtTest import QTest, QSignalSpy
 
+from orangewidget.widget import StateInfo
+
 from Orange.widgets.utils import colorpalettes
 from orangewidget.tests.utils import simulate
 from orangewidget.utils.itemmodels import PyListModel
@@ -345,15 +347,15 @@ class TestOWEditDomain(WidgetTest):
         enter_text(editor.name_edit, "sepal width")
         self.widget.commit()
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
         input_sum.reset_mock()
         output_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
         output_sum.assert_called_once()
-        self.assertEqual(output_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 class TestEditors(GuiTest):
@@ -502,7 +504,13 @@ class TestEditors(GuiTest):
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
                         (("A", "1"), ("B", "b")), False)
-        w.set_data_categorical(v, [0, 0, 0, 1, 1, 2])
+
+        w.set_data_categorical(
+            v, [0, 0, 0, 1, 1, 2],
+            [CategoriesMapping([
+                ("a", "AA"), ("b", "BB"), ("c", "CC"),
+            ])]
+        )
 
         view = w.values_edit
         model = view.model()
@@ -511,12 +519,16 @@ class TestEditors(GuiTest):
             QItemSelection(model.index(0, 0), model.index(1, 0)),
             QItemSelectionModel.ClearAndSelect
         )
-
-        # trigger the action, then find the active popup, and simulate entry
+        spy = QSignalSpy(w.variable_changed)
         w.merge_items.trigger()
 
         self.assertEqual(model.index(0, 0).data(Qt.EditRole), "other")
         self.assertEqual(model.index(1, 0).data(Qt.EditRole), "other")
+        self.assertEqual(model.index(2, 0).data(Qt.EditRole), "CC")
+
+        self.assertSequenceEqual(
+            list(spy), [[]], 'variable_changed should emit exactly once'
+        )
 
     def test_discrete_editor_rename_selected_items_action(self):
         w = DiscreteVariableEditor()

@@ -5,7 +5,7 @@ __all__ = ["LearnerRegression", "ModelRegression",
 
 
 class LearnerRegression(Learner):
-    learner_adequacy_err_msg = "Continuous class variable expected."
+    learner_adequacy_err_msg = "Numeric class variable expected."
 
     def check_learner_adequacy(self, domain):
         return domain.has_continuous_class

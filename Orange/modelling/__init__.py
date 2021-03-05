@@ -11,3 +11,12 @@ from .neural_network import *
 from .randomforest import *
 from .svm import *
 from .tree import *
+try:
+    from .catgb import *
+except ImportError:
+    pass
+from .gb import *
+try:
+    from .xgb import *
+except ImportError:
+    pass

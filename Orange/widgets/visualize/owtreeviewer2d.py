@@ -379,28 +379,26 @@ class OWTreeViewer2D(OWWidget, openclass=True):
         self.model = None
 
         box = gui.vBox(
-            self.controlArea, 'Tree', addSpace=20,
+            self.controlArea, 'Tree',
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
         self.infolabel = gui.widgetLabel(box, 'No tree.')
 
         layout = QFormLayout()
-        layout.setVerticalSpacing(20)
         layout.setFieldGrowthPolicy(layout.ExpandingFieldsGrow)
-        box = self.display_box = \
-            gui.widgetBox(self.controlArea, "Display", addSpace=True,
-                          orientation=layout)
+        box = self.display_box = gui.widgetBox(self.controlArea, "Display",
+                                               orientation=layout)
         layout.addRow(
             "Zoom: ",
             gui.hSlider(box, self, 'zoom',
                         minValue=1, maxValue=10, step=1, ticks=False,
                         callback=self.toggle_zoom_slider,
-                        createLabel=False, addToLayout=False, addSpace=False))
+                        createLabel=False, addToLayout=False))
         layout.addRow(
             "Width: ",
             gui.hSlider(box, self, 'max_node_width',
                         minValue=50, maxValue=200, step=1, ticks=False,
                         callback=self.toggle_node_size,
-                        createLabel=False, addToLayout=False, addSpace=False))
+                        createLabel=False, addToLayout=False))
         policy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         layout.addRow(
             "Depth: ",
@@ -417,7 +415,6 @@ class OWTreeViewer2D(OWWidget, openclass=True):
                          addToLayout=False,
                          callback=self.toggle_line_width, sizePolicy=policy))
         gui.rubber(self.controlArea)
-        self.resize(800, 500)
 
         self.scene = TreeGraphicsScene(self)
         self.scene_view = TreeGraphicsView(self.scene)

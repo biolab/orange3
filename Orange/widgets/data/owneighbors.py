@@ -63,7 +63,6 @@ class OWNeighbors(OWWidget):
 
     want_main_area = False
     resizing_enabled = False
-    buttons_area_orientation = Qt.Vertical
 
     def __init__(self):
         super().__init__()
@@ -84,7 +83,7 @@ class OWNeighbors(OWWidget):
             checkCallback=lambda: self.apply(),
             callback=lambda: self.apply())
 
-        self.apply_button = gui.auto_apply(self.controlArea, self, commit=self.apply)
+        self.apply_button = gui.auto_apply(self.buttonsArea, self, commit=self.apply)
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
 

@@ -3,8 +3,8 @@
 
 import unittest
 
-from Orange.data.sql.table import SqlTable, SqlRowInstance
-from Orange.data import filter, domain
+from Orange.data.sql.table import SqlTable
+from Orange.data import filter, domain, Instance
 from Orange.tests.sql.base import DataBaseTest as dbt
 
 
@@ -368,7 +368,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.IsDefined)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] is not None]
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -379,7 +379,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Equal, 'in')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] == 'in']
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -391,7 +391,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Equal, 'In',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] == 'in']
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -403,7 +403,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Equal, 'donec',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] == 'Donec']
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -414,7 +414,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.NotEqual, 'in')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] != 'in']
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -426,7 +426,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.NotEqual, 'In',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] != 'in']
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -438,7 +438,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.NotEqual, 'donec',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] != 'Donec']
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -449,7 +449,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Less, 'A')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0] < 'A']
 
@@ -462,7 +462,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Less, 'In',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() < 'in']
 
@@ -475,7 +475,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Less, 'donec',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() < 'donec']
 
@@ -487,7 +487,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.LessEqual, 'A')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0] <= 'A']
 
@@ -500,7 +500,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.LessEqual, 'In',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() <= 'in']
 
@@ -513,7 +513,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.LessEqual, 'donec',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() <= 'donec']
 
@@ -525,7 +525,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Greater, 'volutpat')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0] > 'volutpat']
 
@@ -538,7 +538,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Greater, 'In',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() > 'in']
 
@@ -551,7 +551,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Greater, 'donec',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() > 'donec']
 
@@ -563,7 +563,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.GreaterEqual, 'volutpat')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0] >= 'volutpat']
 
@@ -576,7 +576,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.GreaterEqual, 'In',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() >= 'in']
 
@@ -589,7 +589,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.GreaterEqual, 'donec',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].lower() >= 'donec']
 
@@ -601,7 +601,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Between, 'a', 'c')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and 'a' <= row[0] <= 'c']
 
@@ -614,7 +614,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Between, 'I', 'O',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and 'i' < row[0].lower() <= 'o']
 
@@ -627,7 +627,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Between, 'i', 'O',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and 'i' <= row[0].lower() <= 'o']
 
@@ -639,7 +639,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Contains, 'et')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and 'et' in row[0]]
 
@@ -652,7 +652,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Contains, 'eT',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and 'et' in row[0].lower()]
 
@@ -665,7 +665,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Contains, 'do',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and 'do' in row[0].lower()]
 
@@ -677,7 +677,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Outside, 'am', 'di')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and not 'am' < row[0] < 'di']
 
@@ -690,7 +690,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.Outside, 'd', 'k',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and not 'd' < row[0].lower() < 'k']
 
@@ -702,7 +702,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.StartsWith, 'D')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].startswith('D')]
 
@@ -715,7 +715,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.StartsWith, 'D',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None
                         and row[0].lower().startswith('d')]
@@ -728,7 +728,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.EndsWith, 's')
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None and row[0].endswith('s')]
 
@@ -741,7 +741,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
             filter.FilterString(-1, filter.FilterString.EndsWith, 'S',
                                 case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data
                         if row[0] is not None
                         and row[0].lower().endswith('s')]
@@ -754,7 +754,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterStringList(-1, ['et', 'in'])
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] in ['et', 'in']]
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -765,7 +765,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterStringList(-1, ['Et', 'In'], case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] in ['et', 'in']]
 
         self.assertEqual(len(filtered_data), len(correct_data))
@@ -776,7 +776,7 @@ class TestFilterStringSql(unittest.TestCase, dbt):
         filtered_data = filter.Values(conditions=[
             filter.FilterStringList(-1, ['donec'], case_sensitive=False)
         ])(self.table)
-        correct_data = [SqlRowInstance(filtered_data.domain, row)
+        correct_data = [Instance(filtered_data.domain, row)
                         for row in self.data if row[0] in ['Donec']]
 
         self.assertEqual(len(filtered_data), len(correct_data))

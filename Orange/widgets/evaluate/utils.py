@@ -4,8 +4,9 @@ from itertools import chain
 
 import numpy as np
 
-from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu
-from AnyQt.QtGui import QStandardItemModel, QStandardItem
+from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu, \
+    QApplication
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QClipboard
 from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
     QSortFilterProxyModel
 from sklearn.exceptions import UndefinedMetricWarning
@@ -13,6 +14,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 from Orange.data import Variable, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import scoring
 from Orange.widgets import gui
+from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
 
@@ -28,10 +30,10 @@ def check_results_adequacy(results, error_group, check_nan=True):
         return None
     if results.data is None:
         error_group.invalid_results(
-            "Results do not include information on test data")
+            "Results do not include information on test data.")
     elif not results.data.domain.has_discrete_class:
         error_group.invalid_results(
-            "Discrete outcome variable is required")
+            "Categorical target variable is required.")
     elif not results.actual.size:
         error_group.invalid_results(
             "Empty result on input. Nothing to display.")
@@ -40,7 +42,7 @@ def check_results_adequacy(results, error_group, check_nan=True):
                         (results.probabilities is not None and
                          anynan(results.probabilities))):
         error_group.invalid_results(
-            "Results contains invalid values")
+            "Results contain invalid values.")
     else:
         return results
 
@@ -209,3 +211,9 @@ class ScoreTable(OWComponent, QObject):
             item.setToolTip(score.long_name)
             self.model.setHorizontalHeaderItem(col, item)
         self._update_shown_columns()
+
+    def copy_selection_to_clipboard(self):
+        mime = table_selection_to_mime_data(self.view)
+        QApplication.clipboard().setMimeData(
+            mime, QClipboard.Clipboard
+        )

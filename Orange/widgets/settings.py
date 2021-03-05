@@ -203,6 +203,9 @@ class DomainContextHandler(ContextHandler):
                 metas.get(attr_name, -1) == attr_type)
 
     def match(self, context, domain, attrs, metas):
+        if context.attributes == attrs and context.metas == metas:
+            return self.PERFECT_MATCH
+
         matches = []
         try:
             for setting, data, _ in \

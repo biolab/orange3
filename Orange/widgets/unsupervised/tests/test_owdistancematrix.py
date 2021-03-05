@@ -36,3 +36,13 @@ class TestOWDistanceMatrix(WidgetTest):
             commit.reset_mock()
             self.send_signal(self.widget.Inputs.distances, self.distances)
             commit.assert_called()
+
+    def test_labels(self):
+        grades = Table.from_url("https://datasets.biolab.si/core/grades-two.tab")
+        distances = Euclidean(grades)
+        self.widget.set_distances(distances)
+        ac = self.widget.annot_combo
+        idx = ac.model().indexOf(grades.domain.metas[0])
+        ac.setCurrentIndex(idx)
+        ac.activated.emit(idx)
+        self.assertIsNone(self.widget.tablemodel.label_colors)

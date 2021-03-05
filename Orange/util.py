@@ -2,6 +2,8 @@
 import logging
 import os
 import inspect
+from contextlib import contextmanager
+
 import pkg_resources
 from enum import Enum as _Enum
 from functools import wraps, partial
@@ -35,11 +37,87 @@ if os.environ.get('ORANGE_DEPRECATIONS_ERROR'):
     warnings.simplefilter('error', OrangeDeprecationWarning)
 
 
+def _log_warning(msg):
+    """
+    Replacement for `warnings._showwarnmsg_impl` that logs the warning
+    Logs the warning in the appropriate list, or passes it to the original
+    function if the warning wasn't issued within the log_warnings context.
+    """
+    for frame in inspect.stack():
+        if frame.frame in warning_loggers:
+            warning_loggers[frame.frame].append(msg)
+            break
+    else:
+        __orig_showwarnmsg_impl(msg)
+
+
+@contextmanager
+def log_warnings():
+    """
+    logs all warnings that occur within context, including warnings from calls.
+
+    ```python
+    with log_warnings() as warnings:
+       ...
+    ```
+
+    Unlike `warnings.catch_warnings(record=True)`, this manager is thread-safe
+    and will only log warning from this thread. It does so by storing the
+    stack frame within which the context is created, and then checking the
+    stack when the warning is issued.
+
+    Nesting of `log_warnings` within the same function will raise an error.
+    If `log_wanings` are nested within function calls, the warning is logged
+    in the inner-most context.
+
+    If `catch_warnings` is used within the `log_warnings` context, logging is
+    disabled until the `catch_warnings` exits. This looks inevitable (without
+    patching `catch_warnings`, which I'd prefer not to do).
+
+    If `catch_warnings` is used outside this context, everything, including
+    warning filtering, should work as expected.
+
+    Note: the method imitates `catch_warnings` by patching the `warnings`
+    module's internal function `_showwarnmsg_impl`. Python (as of version 3.9)
+    doesn't seem to offer any other way of catching the warnings. This function
+    was introduced in Python 3.6, so we cover all supported versions. If it is
+    ever removed, unittests will crash, so we'll know. :)
+    """
+    # currentframe().f_back is `contextmanager`'s __enter__
+    frame = inspect.currentframe().f_back.f_back
+    if frame in warning_loggers:
+        raise ValueError("nested log_warnings")
+    try:
+        warning_loggers[frame] = []
+        yield warning_loggers[frame]
+    finally:
+        del warning_loggers[frame]
+
+
+# pylint: disable=protected-access
+warning_loggers = {}
+__orig_showwarnmsg_impl = warnings._showwarnmsg_impl
+warnings._showwarnmsg_impl = _log_warning
+
+
 def resource_filename(path):
     """
     Return the resource filename path relative to the Orange package.
     """
     return pkg_resources.resource_filename("Orange", path)
+
+
+def get_entry_point(dist, group, name):
+    """
+    Load and return the entry point from the distribution.
+
+    Unlike `pkg_resources.load_entry_point`, this function does not check
+    for requirements. Calling this function is preferred because of developers
+    who experiment with different versions and have inconsistent configurations.
+    """
+    dist = pkg_resources.get_distribution(dist)
+    ep = dist.get_entry_info(group, name)
+    return ep.resolve()
 
 
 def deprecated(obj):

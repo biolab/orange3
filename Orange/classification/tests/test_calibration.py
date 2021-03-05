@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 from Orange.base import Model
+from Orange.classification import LogisticRegressionLearner
 from Orange.classification.calibration import \
     ThresholdLearner, ThresholdClassifier, \
     CalibratedLearner, CalibratedClassifier
@@ -65,6 +66,18 @@ class TestThresholdClassifier(unittest.TestCase):
         base_model.domain.class_var.is_discrete = False
         self.assertRaises(ValueError, ThresholdClassifier, base_model, 0.5)
 
+    def test_np_data(self):
+        """
+        Test ThresholdModel with numpy data.
+        When passing numpy data to model they should be already
+        transformed to models domain since model do not know how to do it.
+        """
+        data = Table('heart_disease')
+        base_learner = LogisticRegressionLearner()
+        model = ThresholdLearner(base_learner)(data)
+        res = model(model.data_to_model_domain(data).X)
+        self.assertTupleEqual((len(data),), res.shape)
+
 
 class TestThresholdLearner(unittest.TestCase):
     @patch("Orange.evaluation.performance_curves.Curves.from_results")
@@ -79,19 +92,22 @@ class TestThresholdLearner(unittest.TestCase):
         model.domain.class_var.values = ("a", "b")
         data = Table("heart_disease")
         learner = Mock()
-        test_on_training.return_value = res = Mock()
+        test_on_training.return_value = tot = Mock()
+        res = Mock()
         res.models = np.array([[model]])
-        test_on_training.return_value = res
+        tot.return_value = res
 
         thresh_learner = ThresholdLearner(
             base_learner=learner,
             threshold_criterion=ThresholdLearner.OptimizeCA)
         thresh_model = thresh_learner(data)
         self.assertEqual(thresh_model.threshold, 0.15)
-        args, kwargs = test_on_training.call_args
+        args, _ = tot.call_args  # pylint: disable=unpacking-non-sequence
         self.assertEqual(len(args), 2)
         self.assertIs(args[0], data)
         self.assertIs(args[1][0], learner)
+
+        _, kwargs = test_on_training.call_args
         self.assertEqual(len(args[1]), 1)
         self.assertEqual(kwargs, {"store_models": 1})
 
@@ -166,6 +182,18 @@ class TestCalibratedClassifier(unittest.TestCase):
         calprobs = self.model.calibrated_probs(self.probs)
         np.testing.assert_almost_equal(calprobs, expprobs)
 
+    def test_np_data(self):
+        """
+        Test CalibratedClassifier with numpy data.
+        When passing numpy data to model they should be already
+        transformed to models domain since model do not know how to do it.
+        """
+        data = Table('heart_disease')
+        base_learner = LogisticRegressionLearner()
+        model = CalibratedLearner(base_learner)(data)
+        res = model(model.data_to_model_domain(data).X)
+        self.assertTupleEqual((len(data),), res.shape)
+
 
 class TestCalibratedLearner(unittest.TestCase):
     @patch("Orange.classification.calibration._SigmoidCalibration.fit")
@@ -178,10 +206,11 @@ class TestCalibratedLearner(unittest.TestCase):
         model.domain.class_var.is_discrete = True
         model.domain.class_var.values = ("a", "b")
 
-        test_on_training.return_value = res = Mock()
+        test_on_training.return_value = tot = Mock()
+        res = Mock()
         res.models = np.array([[model]])
         res.probabilities = np.arange(20, dtype=float).reshape(1, 5, 4)
-        test_on_training.return_value = res
+        tot.return_value = res
 
         sigmoid_fit.return_value = Mock()
 
@@ -191,13 +220,19 @@ class TestCalibratedLearner(unittest.TestCase):
 
         self.assertIs(cal_model.base_model, model)
         self.assertEqual(cal_model.calibrators, [sigmoid_fit.return_value] * 4)
-        args, kwargs = test_on_training.call_args
+        args, _ = tot.call_args  # pylint: disable=unpacking-non-sequence
         self.assertEqual(len(args), 2)
         self.assertIs(args[0], data)
         self.assertIs(args[1][0], learner)
         self.assertEqual(len(args[1]), 1)
+
+        _, kwargs = test_on_training.call_args
         self.assertEqual(kwargs, {"store_models": 1})
 
         for call, cls_probs in zip(sigmoid_fit.call_args_list,
                                    res.probabilities[0].T):
             np.testing.assert_equal(call[0][0], cls_probs)
+
+
+if __name__ == "__main__":
+    unittest.main()

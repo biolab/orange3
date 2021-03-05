@@ -28,6 +28,10 @@ class TestListModel(GuiTest):
         self.view = gui.listView(
             self.widget.controlArea, self.widget, "foo", model=self.attrs)
 
+    def tearDown(self) -> None:
+        self.widget.deleteLater()
+        del self.widget
+
     def test_select_callback(self):
         widget = self.widget
         view = self.view

@@ -2,7 +2,7 @@ from xml.sax.saxutils import escape
 
 import numpy as np
 
-from AnyQt.QtCore import QSize, Signal
+from AnyQt.QtCore import QSize, Signal, Qt
 from AnyQt.QtWidgets import QApplication
 
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
@@ -25,12 +25,12 @@ from Orange.widgets.utils.annotated_data import (
 from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+from Orange.widgets.visualize.owscatterplotgraph import (
+    OWScatterPlotBase, MAX_COLORS
+)
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
-# maximum number of colors (including Other)
-MAX_COLORS = 11
 
 # maximum number of shapes (including Other)
 MAX_SHAPES = len(OWScatterPlotBase.CurveSymbols) - 1
@@ -250,6 +250,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
 
     def colors_changed(self):
         self.graph.update_colors()
+        self._update_opacity_warning()
         self.cb_class_density.setEnabled(self.can_draw_density())
 
     # Labels
@@ -378,6 +379,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             "input data")
         subset_independent = Msg(
             "No subset data instances appear in input data")
+        transparent_subset = Msg(
+            "Increase opacity if subset is difficult to see")
 
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
@@ -388,7 +391,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     graph = SettingProvider(OWScatterPlotBase)
     graph_name = "graph.plot_widget.plotItem"
     embedding_variables_names = ("proj-x", "proj-y")
-    left_side_scrolling = True
+    buttons_area_orientation = Qt.Vertical
 
     input_changed = Signal(object)
     output_changed = Signal(object)
@@ -425,10 +428,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self._point_box = self.gui.point_properties_box(area)
         self._effects_box = self.gui.effects_box(area)
         self._plot_box = self.gui.plot_properties_box(area)
-        self.control_area_stretch = gui.widgetBox(area)
-        self.control_area_stretch.layout().addStretch(100)
-        self.gui.box_zoom_select(area)
-        gui.auto_send(area, self, "auto_commit")
+
+        self.gui.box_zoom_select(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
     @property
     def effective_variables(self):
@@ -473,7 +475,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     @check_sql_input
     def set_subset_data(self, subset):
         self.subset_data = subset
-        self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
         self._handle_subset_data()
@@ -482,6 +483,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             self.setup_plot()
         else:
             self.graph.update_point_props()
+        self._update_opacity_warning()
         self.unconditional_commit()
 
     def _handle_subset_data(self):
@@ -496,6 +498,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
                 self.Warning.subset_independent()
             elif self.subset_indices - ids:
                 self.Warning.subset_not_subset()
+
+    def _update_opacity_warning(self):
+        self.Warning.transparent_subset(
+            shown=self.subset_indices and self.graph.alpha_value < 128)
 
     def set_input_summary(self, data):
         summary = len(data) if data else self.info.NoInput
@@ -512,7 +518,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             return None
         valid_data = self.data[self.valid_data]
         return np.fromiter((ex.id in self.subset_indices for ex in valid_data),
-                           dtype=np.bool, count=len(valid_data))
+                           dtype=bool, count=len(valid_data))
 
     # Plot
     def get_embedding(self):
@@ -554,6 +560,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             self.__pending_selection = None
             self.graph.selection = selection
             self.graph.update_selection_colors()
+            if self.graph.label_only_selected:
+                self.graph.update_labels()
 
     def selection_changed(self):
         sel = None if self.data and isinstance(self.data, SqlTable) \

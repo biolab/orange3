@@ -1,3 +1,5 @@
+#cython: language_level=3
+
 import scipy.sparse as sp
 
 from libc.stdio cimport fopen, fclose, fgetc, ungetc, EOF, FILE

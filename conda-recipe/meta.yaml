@@ -23,14 +23,17 @@ build:
 
 requirements:
   build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+  host:
     - python
     - setuptools
-    # https://github.com/numpy/numpy/pull/6470
-    - numpy         !=1.9.2   # [win]
-    - numpy         >=1.9.0   # [not win]
-    - pip           >=8
+    - numpy         1.14.*
+    - cython
+    - pip
     - wheel
-
+    - sphinx
+    - recommonmark
   run:
     - python
     - setuptools >=36.3
@@ -39,7 +42,6 @@ requirements:
     - scikit-learn >=0.22.0,!=0.23.0
     - bottleneck >=1.0.0
     - chardet >=3.0.2
-    - docutils
     - xlrd >=0.9.2
     - xlsxwriter
     - anyqt >=0.0.11
@@ -55,7 +57,7 @@ requirements:
     - requests
     - matplotlib-base >=2.0.0
     - openTSNE >=0.4.3
-    - pandas
+    - pandas >=1.0.0
     - pyyaml
     - orange-canvas-core >=0.1.18,<0.2a
     - orange-widget-base >=4.8.1
@@ -90,7 +92,7 @@ test:
     - Orange.statistics
 
   commands:
-    - python -m unittest -v Orange.tests
+    - python -m unittest -v Orange.tests Orange.widgets.tests
     - orange-canvas --help
 
 app:

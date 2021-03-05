@@ -84,6 +84,21 @@ class Backend(metaclass=Registry):
         with self.execute_sql_query(query) as cur:
             return cur.description
 
+    def distinct_values_query(self, field_name: str, table_name: str) -> str:
+        """
+        Generate query for getting distinct values of field
+
+        Parameters
+        ----------
+        field_name : name of the field
+        table_name : name of the table or query to search
+
+        Returns
+        -------
+        The query for getting distinct values of field
+        """
+        raise NotImplementedError
+
     def get_distinct_values(self, field_name, table_name):
         """Return a list of distinct values of field
 
@@ -96,11 +111,7 @@ class Backend(metaclass=Registry):
         -------
         List[str] of values
         """
-        fields = [self.quote_identifier(field_name)]
-
-        query = self.create_sql_query(table_name, fields,
-                                      group_by=fields, order_by=fields,
-                                      limit=21)
+        query = self.distinct_values_query(field_name, table_name)
         with self.execute_sql_query(query) as cur:
             values = cur.fetchall()
         if len(values) > 20:

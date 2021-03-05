@@ -10,11 +10,12 @@ import numpy as np
 
 from AnyQt.QtWidgets import (
     QGroupBox, QRadioButton, QPushButton, QHBoxLayout, QGridLayout,
-    QVBoxLayout, QStackedWidget, QComboBox,
-    QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
+    QVBoxLayout, QStackedWidget, QComboBox, QWidget,
+    QButtonGroup, QStyledItemDelegate, QListView, QLabel
 )
-from AnyQt.QtCore import Qt, QThread, QModelIndex
+from AnyQt.QtCore import Qt, QThread, QModelIndex, QDateTime
 from AnyQt.QtCore import pyqtSlot as Slot
+
 from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
@@ -26,6 +27,7 @@ from Orange.widgets.utils import concurrent as qconcurrent
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils.spinbox import DoubleSpinBox
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
 
@@ -125,6 +127,10 @@ def var_key(var):
     return qname, var.name
 
 
+DBL_MIN = np.finfo(float).min
+DBL_MAX = np.finfo(float).max
+
+
 class OWImpute(OWWidget):
     name = "Impute"
     description = "Impute missing values in the data table."
@@ -154,6 +160,8 @@ class OWImpute(OWWidget):
     _variable_imputation_state = settings.ContextSetting({})  # type: VariableState
 
     autocommit = settings.Setting(True)
+    default_numeric_value = settings.Setting(0.0)
+    default_time = settings.Setting(0)
 
     want_main_area = False
     resizing_enabled = False
@@ -167,14 +175,13 @@ class OWImpute(OWWidget):
         self.executor = qconcurrent.ThreadExecutor(self)
         self.__task = None
 
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        self.controlArea.layout().addLayout(main_layout)
+        main_layout = self.controlArea.layout()
 
-        box = QGroupBox(title=self.tr("Default Method"), flat=False)
-        box_layout = QGridLayout(box)
-        box_layout.setContentsMargins(5, 0, 0, 0)
-        main_layout.addWidget(box)
+        box = gui.vBox(self.controlArea, "Default Method")
+
+        box_layout = QGridLayout()
+        box_layout.setSpacing(8)
+        box.layout().addLayout(box_layout)
 
         button_group = QButtonGroup()
         button_group.buttonClicked[int].connect(self.set_default_method)
@@ -186,14 +193,56 @@ class OWImpute(OWWidget):
             button_group.addButton(button, method)
             box_layout.addWidget(button, i % 3, i // 3)
 
+        def set_default_time(datetime):
+            datetime = datetime.toSecsSinceEpoch()
+            if datetime != self.default_time:
+                self.default_time = datetime
+                if self.default_method_index == Method.Default:
+                    self._invalidate()
+
+        hlayout = QHBoxLayout()
+        box.layout().addLayout(hlayout)
+        button = QRadioButton("Fixed values; numeric variables:")
+        button_group.addButton(button, Method.Default)
+        button.setChecked(Method.Default == self.default_method_index)
+        hlayout.addWidget(button)
+
+        self.numeric_value_widget = DoubleSpinBox(
+            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1,
+            value=self.default_numeric_value,
+            alignment=Qt.AlignRight,
+            enabled=self.default_method_index == Method.Default,
+        )
+        self.numeric_value_widget.editingFinished.connect(
+            self.__on_default_numeric_value_edited
+        )
+        self.connect_control(
+            "default_numeric_value", self.numeric_value_widget.setValue
+        )
+        hlayout.addWidget(self.numeric_value_widget)
+
+        hlayout.addWidget(QLabel(", time:"))
+
+        self.time_widget = gui.DateTimeEditWCalendarTime(self)
+        self.time_widget.setEnabled(self.default_method_index == Method.Default)
+        self.time_widget.setKeyboardTracking(False)
+        self.time_widget.setContentsMargins(0, 0, 0, 0)
+        self.time_widget.set_datetime(
+            QDateTime.fromSecsSinceEpoch(self.default_time)
+        )
+        self.connect_control(
+            "default_time",
+            lambda value: self.time_widget.set_datetime(
+                QDateTime.fromSecsSinceEpoch(value)
+            )
+        )
+        self.time_widget.dateTimeChanged.connect(set_default_time)
+        hlayout.addWidget(self.time_widget)
+
         self.default_button_group = button_group
 
-        box = QGroupBox(title=self.tr("Individual Attribute Settings"),
-                        flat=False)
-        main_layout.addWidget(box)
-
-        horizontal_layout = QHBoxLayout(box)
-        main_layout.addWidget(box)
+        box = gui.hBox(self.controlArea, self.tr("Individual Attribute Settings"),
+                       flat=False)
 
         self.varview = ListViewSearch(
             selectionMode=QListView.ExtendedSelection,
@@ -207,10 +256,12 @@ class OWImpute(OWWidget):
         )
         self.selection = self.varview.selectionModel()
 
-        horizontal_layout.addWidget(self.varview)
+        box.layout().addWidget(self.varview)
+        vertical_layout = QVBoxLayout(margin=0)
 
-        method_layout = QVBoxLayout()
-        horizontal_layout.addLayout(method_layout)
+        self.methods_container = QWidget(enabled=False)
+        method_layout = QVBoxLayout(margin=0)
+        self.methods_container.setLayout(method_layout)
 
         button_group = QButtonGroup()
         for method in Method:
@@ -224,9 +275,9 @@ class OWImpute(OWWidget):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
             activated=self._on_value_selected
             )
-        self.value_double = QDoubleSpinBox(
+        self.value_double = DoubleSpinBox(
             editingFinished=self._on_value_selected,
-            minimum=-1000., maximum=1000., singleStep=.1, decimals=3,
+            minimum=DBL_MIN, maximum=DBL_MAX, singleStep=.1,
             )
         self.value_stack = value_stack = QStackedWidget()
         value_stack.addWidget(self.value_combo)
@@ -237,19 +288,20 @@ class OWImpute(OWWidget):
             self.set_method_for_current_selection
         )
 
-        method_layout.addStretch(2)
+        self.reset_button = QPushButton(
+            "Restore All to Default", enabled=False, default=False,
+            autoDefault=False, clicked=self.reset_variable_state,
+        )
 
-        reset_button = QPushButton(
-            "Restore All to Default", checked=False, checkable=False,
-            clicked=self.reset_variable_state, default=False,
-            autoDefault=False)
-        method_layout.addWidget(reset_button)
+        vertical_layout.addWidget(self.methods_container)
+        vertical_layout.addStretch(2)
+        vertical_layout.addWidget(self.reset_button)
+
+        box.layout().addLayout(vertical_layout)
 
         self.variable_button_group = button_group
 
-        box = gui.auto_apply(self.controlArea, self, "autocommit")
-        box.button.setFixedWidth(180)
-        box.layout().insertStretch(0)
+        gui.auto_apply(self.buttonsArea, self, "autocommit")
 
         self.info.set_input_summary(self.info.NoInput)
         self.info.set_output_summary(self.info.NoOutput)
@@ -267,6 +319,11 @@ class OWImpute(OWWidget):
             m = AsDefault()
             m.method = default
             return m
+        elif method == Method.Default and not args:  # global default values
+            return impute.FixedValueByType(
+                default_continuous=self.default_numeric_value,
+                default_time=self.default_time
+            )
         else:
             return METHODS[method](*args)
 
@@ -280,6 +337,8 @@ class OWImpute(OWWidget):
             assert index != Method.AsAboveSoBelow
             self._default_method_index = index
             self.default_button_group.button(index).setChecked(True)
+            self.time_widget.setEnabled(index == Method.Default)
+            self.numeric_value_widget.setEnabled(index == Method.Default)
             # update variable view
             self.update_varview()
             self._invalidate()
@@ -288,6 +347,13 @@ class OWImpute(OWWidget):
         """Set the current selected default imputation method.
         """
         self.default_method_index = index
+
+    def __on_default_numeric_value_edited(self):
+        val = self.numeric_value_widget.value()
+        if val != self.default_numeric_value:
+            self.default_numeric_value = val
+            if self.default_method_index == Method.Default:
+                self._invalidate()
 
     @Inputs.data
     @check_sql_input
@@ -304,7 +370,7 @@ class OWImpute(OWWidget):
             self.openContext(data.domain)
             # restore per variable imputation state
             self._restore_state(self._variable_imputation_state)
-
+        self.reset_button.setEnabled(len(self.varmodel) > 0)
         summary = len(data) if data else self.info.NoInput
         details = format_summary_details(data) if data else ""
         self.info.set_input_summary(summary, details)
@@ -373,8 +439,8 @@ class OWImpute(OWWidget):
         ]
 
         def impute_one(method, var, data):
-            # Readability counts, pylint: disable=no-else-raise
             # type: (impute.BaseImputeMethod, Variable, Table) -> Any
+            # Readability counts, pylint: disable=no-else-raise
             if isinstance(method, impute.Model) and data.is_sparse():
                 raise SparseNotSupported()
             elif isinstance(method, impute.DropInstances):
@@ -513,6 +579,7 @@ class OWImpute(OWWidget):
         # Method is well documented, splitting it is not needed for readability,
         # thus pylint: disable=too-many-branches
         indexes = self.selection.selectedIndexes()
+        self.methods_container.setEnabled(len(indexes) > 0)
         defmethod = (Method.AsAboveSoBelow, ())
         methods = [index.data(StateRole) for index in indexes]
         methods = [m if m is not None else defmethod for m in methods]
@@ -660,5 +727,19 @@ class OWImpute(OWWidget):
         super().storeSpecificSettings()
 
 
+def __sample_data():  # pragma: no cover
+    domain = Orange.data.Domain(
+        [Orange.data.ContinuousVariable(f"c{i}") for i in range(3)]
+        + [Orange.data.TimeVariable(f"t{i}") for i in range(3)],
+        [])
+    n = np.nan
+    x = np.array([
+        [1, 2, n, 1000, n, n],
+        [2, n, 1, n, 2000, 2000]
+    ])
+    return Orange.data.Table(domain, x, np.empty((2, 0)))
+
+
 if __name__ == "__main__":  # pragma: no cover
+    # WidgetPreview(OWImpute).run(__sample_data())
     WidgetPreview(OWImpute).run(Orange.data.Table("brown-selected"))

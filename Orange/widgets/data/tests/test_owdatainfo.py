@@ -2,6 +2,8 @@
 # pylint: disable=missing-docstring,unsubscriptable-object
 from unittest.mock import Mock
 
+from orangewidget.widget import StateInfo
+
 from Orange.data import Table
 from Orange.widgets.data.owdatainfo import OWDataInfo
 from Orange.widgets.tests.base import WidgetTest
@@ -38,4 +40,4 @@ class TestOWDataInfo(WidgetTest):
         input_sum.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
-        self.assertEqual(input_sum.call_args[0][0].brief, "")
+        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)

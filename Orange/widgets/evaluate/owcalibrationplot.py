@@ -105,21 +105,22 @@ class OWCalibrationPlot(widget.OWWidget):
         calibrated_model = Output("Calibrated Model", Model)
 
     class Error(widget.OWWidget.Error):
-        non_discrete_target = Msg("Calibration plot requires a discrete target")
+        non_discrete_target = Msg("Calibration plot requires a categorical "
+                                  "target variable.")
         empty_input = widget.Msg("Empty result on input. Nothing to display.")
         nan_classes = \
-            widget.Msg("Remove test data instances with unknown classes")
+            widget.Msg("Remove test data instances with unknown classes.")
         all_target_class = widget.Msg(
-            "All data instances belong to target class")
+            "All data instances belong to target class.")
         no_target_class = widget.Msg(
-            "No data instances belong to target class")
+            "No data instances belong to target class.")
 
     class Warning(widget.OWWidget.Warning):
         omitted_folds = widget.Msg(
-            "Test folds where all data belongs to (non)-target are not shown")
+            "Test folds where all data belongs to (non)-target are not shown.")
         omitted_nan_prob_points = widget.Msg(
             "Instance for which the model couldn't compute probabilities are"
-            "skipped")
+            "skipped.")
         no_valid_data = widget.Msg("No valid data for model(s) {}")
 
     class Information(widget.OWWidget.Information):
@@ -188,7 +189,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(self.info_box)
 
-        gui.auto_apply(self.controlArea, self, "auto_commit", commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, "auto_commit", commit=self.apply)
 
         self.plotview = pg.GraphicsView(background="w")
         axes = {"bottom": AxisItem(orientation="bottom"),
