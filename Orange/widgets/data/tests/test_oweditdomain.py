@@ -217,6 +217,30 @@ class TestOWEditDomain(WidgetTest):
         t2 = self.get_output(self.widget.Outputs.data)
         self.assertEqual(t2.domain["a"].attributes["list"], [1, 2, 4])
 
+    def test_annotation_bool(self):
+        """Check if bool labels remain bool"""
+        a = ContinuousVariable("a")
+        a.attributes["hidden"] = True
+        d = Domain([a])
+        t = Table.from_domain(d)
+
+        self.send_signal(self.widget.Inputs.data, t)
+
+        assert isinstance(self.widget, OWEditDomain)
+        # select first variable
+        idx = self.widget.domain_view.model().index(0)
+        self.widget.domain_view.setCurrentIndex(idx)
+
+        # change first attribute value
+        editor = self.widget.findChild(ContinuousVariableEditor)
+        assert isinstance(editor, ContinuousVariableEditor)
+        idx = editor.labels_model.index(0, 1)
+        editor.labels_model.setData(idx, "False", Qt.EditRole)
+
+        self.widget.commit()
+        t2 = self.get_output(self.widget.Outputs.data)
+        self.assertFalse(t2.domain["a"].attributes["hidden"])
+
     def test_duplicate_names(self):
         """
         Tests if widget shows error when duplicate name is entered.
@@ -276,8 +300,6 @@ class TestOWEditDomain(WidgetTest):
         self.assertIsNotNone(out0.compute_value)
         self.assertIsNone(out1.compute_value)
         self.assertIsNone(out2.compute_value)
-
-
 
     def test_time_variable_preservation(self):
         """Test if time variables preserve format specific attributes"""
