@@ -2618,6 +2618,12 @@ class TestTableTranspose(unittest.TestCase):
         self._compare_tables(zoo, t2)
         self._compare_tables(t1, t3)
 
+    def test_transpose_callback(self):
+        zoo = Table("zoo")
+        cb = Mock()
+        Table.transpose(zoo, progress_callback=cb)
+        cb.assert_called()
+
     def _compare_tables(self, table1, table2):
         self.assertEqual(table1.n_rows, table2.n_rows)
         np.testing.assert_array_equal(table1.X, table2.X)

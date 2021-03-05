@@ -17,8 +17,6 @@ from scipy import sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
 import Orange.data  # import for io.py
-from Orange.misc.collections import frozendict
-from Orange.util import OrangeDeprecationWarning
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
@@ -27,9 +25,11 @@ from Orange.data import (
 from Orange.data.util import SharedComputeValue, \
     assure_array_dense, assure_array_sparse, \
     assure_column_dense, assure_column_sparse, get_unique_names_duplicates
+from Orange.misc.collections import frozendict
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
     sparse_implicit_zero_weights
+from Orange.util import OrangeDeprecationWarning, dummy_callback
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
 
@@ -1704,7 +1704,8 @@ class Table(Sequence, Storage):
 
     @classmethod
     def transpose(cls, table, feature_names_column="",
-                  meta_attr_name="Feature name", feature_name="Feature"):
+                  meta_attr_name="Feature name", feature_name="Feature",
+                  progress_callback=None):
         """
         Transpose the table.
 
@@ -1714,8 +1715,12 @@ class Table(Sequence, Storage):
         :param meta_attr_name: str - name of new meta attribute into which
             feature names are mapped
         :param feature_name: str - default feature name prefix
+        :param progress_callback: callable - to report the progress
         :return: Table - transposed table
         """
+        if progress_callback is None:
+            progress_callback = dummy_callback
+        progress_callback(0, "Transposing...")
 
         self = cls()
         n_cols, self.n_rows = table.X.shape
@@ -1727,12 +1732,16 @@ class Table(Sequence, Storage):
         self.X = table.X.T
         if feature_names_column:
             names = [str(row[feature_names_column]) for row in table]
+            progress_callback(0.1)
             names = get_unique_names_duplicates(names)
+            progress_callback(0.3)
             attributes = [ContinuousVariable(name) for name in names]
         else:
             places = int(np.ceil(np.log10(n_cols))) if n_cols else 1
             attributes = [ContinuousVariable(f"{feature_name} {i:0{places}}")
                           for i in range(1, n_cols + 1)]
+        progress_callback(0.4)
+
         if old_domain is not None and feature_names_column:
             for i, _ in enumerate(attributes):
                 if attributes[i].name in old_domain:
@@ -1755,6 +1764,7 @@ class Table(Sequence, Storage):
                         attributes[j].attributes[variable.name] = value
 
         set_attributes_of_attributes(table.domain.class_vars, table.Y)
+        progress_callback(0.5)
         set_attributes_of_attributes(table.domain.metas, table.metas)
 
         # weights
@@ -1790,6 +1800,7 @@ class Table(Sequence, Storage):
         names = chain.from_iterable(list(attr.attributes)
                                     for attr in table.domain.attributes)
         names = sorted(set(names) - {var.name for var in class_vars})
+        progress_callback(0.6)
 
         def guessed_var(i, var_name):
             orig_vals = M[:, i]
@@ -1803,6 +1814,7 @@ class Table(Sequence, Storage):
         if old_domain is not None:
             _metas = [m for m in old_domain.metas if m.name != meta_attr_name]
         M = get_table_from_attributes_of_attributes(_metas, _dtype=object)
+        progress_callback(0.7)
         if old_domain is None:
             _metas = [guessed_var(i, m.name) for i, m in enumerate(_metas)]
         if _metas:
@@ -1810,9 +1822,11 @@ class Table(Sequence, Storage):
             metas.extend(_metas)
 
         self.domain = Domain(attributes, class_vars, metas)
+        progress_callback(0.9)
         cls._init_ids(self)
         self.attributes = table.attributes.copy()
         self.attributes["old_domain"] = table.domain
+        progress_callback(1)
         return self
 
     def to_sparse(self, sparse_attributes=True, sparse_class=False,
