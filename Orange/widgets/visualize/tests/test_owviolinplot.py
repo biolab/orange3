@@ -9,6 +9,7 @@ from AnyQt.QtGui import QFont
 
 from pyqtgraph import ViewBox
 
+from orangewidget.widget import StateInfo
 from Orange.data import Table
 from Orange.widgets.tests.base import datasets, simulate, \
     WidgetOutputsTestMixin, WidgetTest
@@ -52,7 +53,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         details = format_summary_details(self.data)
         self.assertEqual(info._StateInfo__input_summary.brief, "150")
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
         self._select_data()
@@ -62,9 +63,9 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(info._StateInfo__input_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertEqual(info._StateInfo__output_summary.brief, "-")
+        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_kernels(self):
