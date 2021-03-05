@@ -20,7 +20,7 @@ python-louvain>=0.13
 requests
 openTSNE>=0.4.3
 baycomp>=1.0.2
-pandas
+pandas>=1.0.0
 pyyaml
 openpyxl
 httpx>=0.14.0,<0.17
