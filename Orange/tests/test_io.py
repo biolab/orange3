@@ -15,7 +15,7 @@ from Orange import data
 from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader
 from Orange.data.io_base import PICKLE_PROTOCOL
 from Orange.data.table import get_sample_datasets_dir
-from Orange.data import Table, Variable
+from Orange.data import Table
 from Orange.tests import test_dirname
 from Orange.util import OrangeDeprecationWarning
 
@@ -173,16 +173,12 @@ class TestReader(unittest.TestCase):
             # load pickles created with Orange 3.20
             # in next version there is a change in variables.py - line 738
             # which broke back compatibility - tests introduced after the fix
-            with self.assertWarns(OrangeDeprecationWarning):
-                data1 = Table("datasets/sailing-orange-3-20.pkl")
-            with self.assertWarns(OrangeDeprecationWarning):
-                data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
+            data1 = Table("datasets/sailing-orange-3-20.pkl")
+            data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
 
             # load pickles created with Orange 3.21
-            with self.assertWarns(OrangeDeprecationWarning):
-                data3 = Table("datasets/sailing-orange-3-21.pkl")
-            with self.assertWarns(OrangeDeprecationWarning):
-                data4 = Table("datasets/sailing-orange-3-21.pkl.gz")
+            data3 = Table("datasets/sailing-orange-3-21.pkl")
+            data4 = Table("datasets/sailing-orange-3-21.pkl.gz")
 
             examples_count = 20
             self.assertEqual(examples_count, len(data1))
