@@ -11,6 +11,7 @@ from orangewidget.widget import StateInfo
 from Orange.data import Table
 from Orange.widgets.data.owtranspose import OWTranspose, run
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.tests import test_filename
 
@@ -22,21 +23,21 @@ class TestRunner(WidgetTest):
         self.state.is_interruption_requested = Mock(return_value=False)
 
     def test_run(self):
-        result = run(self.zoo, "", "Feature", self.state)
+        result = run(self.zoo, "", "Feature", False, self.state)
         self.assert_table_equal(Table.transpose(self.zoo), result)
 
     def test_run_var(self):
-        result = run(self.zoo, "name", "Feature", self.state)
+        result = run(self.zoo, "name", "Feature", False, self.state)
         self.assert_table_equal(Table.transpose(self.zoo, "name"), result)
 
     def test_run_name(self):
-        result1 = run(self.zoo, "", "Foo", self.state)
+        result1 = run(self.zoo, "", "Foo", False, self.state)
         result2 = Table.transpose(self.zoo, feature_name="Foo")
         self.assert_table_equal(result1, result2)
 
     def test_run_callback(self):
         self.state.set_progress_value = Mock()
-        run(self.zoo, "", "Feature", self.state)
+        run(self.zoo, "", "Feature", False, self.state)
         self.state.set_progress_value.assert_called()
 
 
@@ -105,6 +106,23 @@ class TestOWTranspose(WidgetTest):
         self.assertTrue(
             all(x.name.startswith(widget.DEFAULT_PREFIX)
                 for x in output.domain.attributes))
+
+    def test_remove_redundant_instance(self):
+        cb = self.widget.feature_combo
+        data = Table("iris")
+
+        self.send_signal(self.widget.Inputs.data, data)
+        simulate.combobox_activate_item(cb, "petal length")
+        self.widget.controls.remove_redundant_inst.setChecked(True)
+        self.wait_until_finished()
+
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 3)
+        self.assertNotIn("petal length", output.metas)
+
+        self.widget.controls.remove_redundant_inst.setChecked(False)
+        self.wait_until_finished()
+        self.assertEqual(len(self.get_output(self.widget.Outputs.data)), 4)
 
     def test_send_report(self):
         widget = self.widget

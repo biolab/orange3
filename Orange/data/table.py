@@ -1705,7 +1705,7 @@ class Table(Sequence, Storage):
     @classmethod
     def transpose(cls, table, feature_names_column="",
                   meta_attr_name="Feature name", feature_name="Feature",
-                  progress_callback=None):
+                  remove_redundant_inst=False, progress_callback=None):
         """
         Transpose the table.
 
@@ -1715,6 +1715,8 @@ class Table(Sequence, Storage):
         :param meta_attr_name: str - name of new meta attribute into which
             feature names are mapped
         :param feature_name: str - default feature name prefix
+        :param remove_redundant_inst: bool - remove instance that
+            represents feature_names_column
         :param progress_callback: callable - to report the progress
         :return: Table - transposed table
         """
@@ -1722,14 +1724,28 @@ class Table(Sequence, Storage):
             progress_callback = dummy_callback
         progress_callback(0, "Transposing...")
 
+        if isinstance(feature_names_column, Variable):
+            feature_names_column = feature_names_column.name
+
         self = cls()
         n_cols, self.n_rows = table.X.shape
         old_domain = table.attributes.get("old_domain")
+        table_domain_attributes = list(table.domain.attributes)
+        attr_index = None
+        if remove_redundant_inst:
+            attr_names = [a.name for a in table_domain_attributes]
+            if feature_names_column and feature_names_column in attr_names:
+                attr_index = attr_names.index(feature_names_column)
+                self.n_rows = self.n_rows - 1
+                table_domain_attributes.remove(
+                    table_domain_attributes[attr_index])
 
         # attributes
         # - classes and metas to attributes of attributes
         # - arbitrary meta column to feature names
         self.X = table.X.T
+        if attr_index is not None:
+            self.X = np.delete(self.X, attr_index, 0)
         if feature_names_column:
             names = [str(row[feature_names_column]) for row in table]
             progress_callback(0.1)
@@ -1772,7 +1788,7 @@ class Table(Sequence, Storage):
 
         def get_table_from_attributes_of_attributes(_vars, _dtype=float):
             T = np.empty((self.n_rows, len(_vars)), dtype=_dtype)
-            for i, _attr in enumerate(table.domain.attributes):
+            for i, _attr in enumerate(table_domain_attributes):
                 for j, _var in enumerate(_vars):
                     val = str(_attr.attributes.get(_var.name, ""))
                     if not _var.is_string:
@@ -1792,13 +1808,13 @@ class Table(Sequence, Storage):
         # - feature names and attributes of attributes to metas
         self.metas, metas = np.empty((self.n_rows, 0), dtype=object), []
         if meta_attr_name not in [m.name for m in table.domain.metas] and \
-                table.domain.attributes:
-            self.metas = np.array([[a.name] for a in table.domain.attributes],
+                table_domain_attributes:
+            self.metas = np.array([[a.name] for a in table_domain_attributes],
                                   dtype=object)
             metas.append(StringVariable(meta_attr_name))
 
         names = chain.from_iterable(list(attr.attributes)
-                                    for attr in table.domain.attributes)
+                                    for attr in table_domain_attributes)
         names = sorted(set(names) - {var.name for var in class_vars})
         progress_callback(0.6)
 

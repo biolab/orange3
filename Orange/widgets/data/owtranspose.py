@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import Optional, Union
 
-from Orange.data import Table, ContinuousVariable, StringVariable
+from Orange.data import Table, ContinuousVariable, StringVariable, Variable
 from Orange.widgets.settings import Setting, ContextSetting, \
     DomainContextHandler
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
@@ -12,12 +12,12 @@ from Orange.widgets import gui
 from Orange.widgets.widget import Input, Output
 
 
-def run(
-        data: Table,
-        variable: str,
+def run(data: Table,
+        variable: Optional[Union[Variable, bool]],
         feature_name: str,
+        remove_redundant_inst: bool,
         state: TaskState
-) -> Table:
+        ) -> Table:
     if not data:
         return None
 
@@ -29,6 +29,7 @@ def run(
             raise Exception
 
     return Table.transpose(data, variable, feature_name=feature_name,
+                           remove_redundant_inst=remove_redundant_inst,
                            progress_callback=callback)
 
 
@@ -56,6 +57,7 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
     feature_type = ContextSetting(GENERIC)
     feature_name = ContextSetting("")
     feature_names_column = ContextSetting(None)
+    remove_redundant_inst = ContextSetting(False)
     auto_apply = Setting(True)
 
     class Warning(OWWidget.Warning):
@@ -92,6 +94,11 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
             gui.indentedBox(box, gui.checkButtonOffsetHint(button)), self,
             "feature_names_column", contentsLength=12, searchable=True,
             callback=self._feature_combo_changed, model=self.feature_model)
+
+        self.remove_check = gui.checkBox(
+            gui.indentedBox(box, gui.checkButtonOffsetHint(button)), self,
+            "remove_redundant_inst", "Remove redundant instance",
+            callback=lambda: self.apply())
 
         gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
@@ -145,7 +152,8 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         if self.data and self.data.domain.has_discrete_attributes():
             self.Warning.discrete_attrs()
         feature_name = self.feature_name or self.DEFAULT_PREFIX
-        self.start(run, self.data, variable, feature_name)
+        self.start(run, self.data, variable,
+                   feature_name, self.remove_redundant_inst)
 
     def on_partial_result(self, _):
         pass
