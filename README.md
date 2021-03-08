@@ -70,6 +70,8 @@ Starting up for the first time may take a while.
 
 ### Installing with pip
 
+Warning: on Windows, Orange cannot be installed with pip properly. Use our [standalone installer](https://orange.biolab.si/download) or conda instead.
+
 To install Orange with pip, run the following.
 
 ```Shell
