@@ -166,7 +166,6 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
             value="hide_radius", minValue=0, maxValue=100, step=10,
             createLabel=False, callback=self.__radius_slider_changed
         )
-        gui.rubber(self.controlArea)
 
     def __add_controls_start_box(self):
         box = gui.vBox(self.controlArea, box=True)

@@ -412,6 +412,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     def setup_gui(self):
         self._add_graph()
         self._add_controls()
+        self._add_buttons()
         self.input_changed.emit(None)
         self.output_changed.emit(None)
 
@@ -429,6 +430,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self._effects_box = self.gui.effects_box(area)
         self._plot_box = self.gui.plot_properties_box(area)
 
+    def _add_buttons(self):
+        gui.rubber(self.controlArea)
         self.gui.box_zoom_select(self.buttonsArea)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
