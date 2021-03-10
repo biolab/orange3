@@ -352,13 +352,13 @@ class OWMergeData(widget.OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.data = data
-        self.model.set_domain(data and data.domain)
+        self.model.set_domain(data.domain if data else None)
 
     @Inputs.extra_data
     @check_sql_input
     def set_extra_data(self, data):
         self.extra_data = data
-        self.extra_model.set_domain(data and data.domain)
+        self.extra_model.set_domain(data.domain if data else None)
 
     def store_combo_state(self):
         self.attr_pairs = self.attr_boxes.current_state()
