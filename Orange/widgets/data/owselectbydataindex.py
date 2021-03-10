@@ -91,7 +91,7 @@ class OWSelectByDataIndex(widget.OWWidget):
             return "No data."
         else:
             return "{}\n{} instances\n{} variables".format(
-                data.name, len(data), len(data.domain) + len(data.domain.metas))
+                data.name, len(data), len(data.domain.variables) + len(data.domain.metas))
 
     def commit(self):
         self.Warning.instances_not_matching.clear()

@@ -320,7 +320,7 @@ class OWBoxPlot(widget.OWWidget):
         self.closeContext()
         self._reset_all_data()
         if dataset and not (
-                len(dataset.domain)
+                len(dataset.domain.variables)
                 or any(var.is_primitive() for var in dataset.domain.metas)):
             self.Warning.no_vars()
             dataset = None

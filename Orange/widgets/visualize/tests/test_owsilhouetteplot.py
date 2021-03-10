@@ -110,7 +110,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.ignoring_categorical.is_shown())
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
-        self.assertEqual(len(output.domain), len(data.domain))
+        self.assertEqual(len(output.domain.variables), len(data.domain.variables))
         self.widget.distance_idx = 0
         self.widget._update()
         self.assertFalse(self.widget.Warning.ignoring_categorical.is_shown())

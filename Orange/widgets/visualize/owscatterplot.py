@@ -400,7 +400,7 @@ class OWScatterPlot(OWDataProjectionWidget):
                 self.data = None
 
         if self.data is not None and (len(self.data) == 0 or
-                                      len(self.data.domain) == 0):
+                                      len(self.data.domain.variables) == 0):
             self.data = None
 
     def get_embedding(self):

@@ -429,7 +429,7 @@ a
         self.open_dataset("iris")
         data = self.get_output(self.widget.Outputs.data)
         self.assertTrue(len(data), 150)
-        self.assertTrue(len(data.domain), 5)
+        self.assertTrue(len(data.domain.variables), 5)
         for i in range(5):
             idx = self.widget.domain_editor.model().createIndex(i, 2)
             self.widget.domain_editor.model().setData(idx, "skip", Qt.EditRole)

@@ -127,7 +127,7 @@ class TestTabReader(unittest.TestCase):
         table = read_tab_file(file)
 
         self.assertEqual(len(table), 2)
-        self.assertEqual(len(table.domain), 3)
+        self.assertEqual(len(table.domain.variables), 3)
         self.assertEqual(table.domain[0].name, 'data1')
 
     def test_read_data_no_header(self):
@@ -139,7 +139,7 @@ class TestTabReader(unittest.TestCase):
         table = read_tab_file(file)
 
         self.assertEqual(len(table), 2)
-        self.assertEqual(len(table.domain), 3)
+        self.assertEqual(len(table.domain.variables), 3)
         self.assertTrue(table.domain[0].is_continuous)
         self.assertEqual(table.domain[0].name, 'Feature 1')
 
@@ -178,7 +178,7 @@ class TestTabReader(unittest.TestCase):
     def test_dataset_with_weird_names_and_column_attributes(self):
         data = Table(path.join(path.dirname(__file__), 'datasets/weird.tab'))
         self.assertEqual(len(data), 6)
-        self.assertEqual(len(data.domain), 1)
+        self.assertEqual(len(data.domain.variables), 1)
         self.assertEqual(len(data.domain.metas), 1)
         NAME = ['5534fab7fad58d5df50061f1', '5534fab8fad58d5de20061f8']
         self.assertEqual(data.domain[0].name, str(NAME))

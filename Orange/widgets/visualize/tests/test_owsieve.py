@@ -143,14 +143,14 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         Sparse support.
         """
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertEqual(len(self.widget.discrete_data.domain),
-                         len(self.iris.domain))
+        self.assertEqual(len(self.widget.discrete_data.domain.variables),
+                         len(self.iris.domain.variables))
         output = self.get_output("Data")
         self.assertFalse(output.is_sparse())
 
         table = self.iris.to_sparse()
         self.send_signal(self.widget.Inputs.data, table)
-        self.assertEqual(len(self.widget.discrete_data.domain), 2)
+        self.assertEqual(len(self.widget.discrete_data.domain.variables), 2)
         output = self.get_output("Data")
         self.assertTrue(output.is_sparse())
 

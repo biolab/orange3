@@ -551,7 +551,7 @@ class OWDataTable(OWWidget):
     def _on_select_all(self, _):
         data_info = self.tabs.currentWidget().input_slot.summary
         if len(self.selected_rows) == data_info.len \
-                and len(self.selected_cols) == len(data_info.domain):
+                and len(self.selected_cols) == len(data_info.domain.variables):
             self.tabs.currentWidget().clearSelection()
         else:
             self.tabs.currentWidget().selectAll()
@@ -721,7 +721,7 @@ class OWDataTable(OWWidget):
 
             domain = table.domain
 
-            if len(colsel) < len(domain) + len(domain.metas):
+            if len(colsel) < len(domain.variables) + len(domain.metas):
                 # only a subset of the columns is selected
                 allvars = domain.class_vars + domain.metas + domain.attributes
                 columns = [(c, model.headerData(c, Qt.Horizontal,

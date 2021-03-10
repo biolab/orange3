@@ -58,8 +58,8 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         self.assertListEqual([], self.widget.selected_rows)
 
     def _select_data(self):
-        self.widget.selected_cols = list(range(len(self.data.domain)))
-        self.widget.selected_rows = list(range(0, len(self.data.domain), 10))
+        self.widget.selected_cols = list(range(len(self.data.domain.variables)))
+        self.widget.selected_rows = list(range(0, len(self.data.domain.variables), 10))
         self.widget.set_selection()
         return self.widget.selected_rows
 
@@ -87,7 +87,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
     def test_pending_selection(self):
         widget = self.create_widget(OWDataTable, stored_settings=dict(
             selected_rows=[5, 6, 7, 8, 9],
-            selected_cols=list(range(len(self.data.domain)))))
+            selected_cols=list(range(len(self.data.domain.variables)))))
         self.send_signal(widget.Inputs.data, None, 1)
         self.send_signal(widget.Inputs.data, self.data, 1)
         output = self.get_output(widget.Outputs.selected_data)
@@ -96,7 +96,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
     def test_sorting(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.selected_rows = [0, 1, 2, 3, 4]
-        self.widget.selected_cols = list(range(len(self.data.domain)))
+        self.widget.selected_cols = list(range(len(self.data.domain.variables)))
         self.widget.set_selection()
 
         output = self.get_output(self.widget.Outputs.selected_data)

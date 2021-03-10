@@ -117,12 +117,12 @@ class OWDataInfo(widget.OWWidget):
             sparseness = ""
         self.data_set_size = pack_table((
             ("Rows", '~{}'.format(data.approx_len())),
-            ("Columns", len(domain)+len(domain.metas)))) + sparseness
+            ("Columns", len(domain.variables)+len(domain.metas)))) + sparseness
 
         def update_size():
             self.data_set_size = pack_table((
                 ("Rows", len(data)),
-                ("Columns", len(domain)+len(domain.metas)))) + sparseness
+                ("Columns", len(domain.variables)+len(domain.metas)))) + sparseness
 
         threading.Thread(target=update_size).start()
 
