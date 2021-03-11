@@ -375,14 +375,17 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         to group those variable types together.
         """
         # Prepare indices for variable types so we can group them together
-        order = [DiscreteVariable, ContinuousVariable, TimeVariable, StringVariable]
+        order = [ContinuousVariable, TimeVariable,
+                 DiscreteVariable, StringVariable]
         mapping = {var: idx for idx, var in enumerate(order)}
         vmapping = np.vectorize(mapping.__getitem__)
         var_types_indices = vmapping(self._variable_types)
 
         # Store the variable name sorted indices so we can pass a default
         # order when sorting by multiple keys
-        var_name_indices = np.argsort(self._variable_names)
+        # Double argsort is "inverse" argsort:
+        # data will be *sorted* by these indices
+        var_name_indices = np.argsort(np.argsort(self._variable_names))
 
         # Prepare vartype indices so ready when needed
         disc_idx, _, time_idx, str_idx = self._attr_indices(self.variables)
@@ -443,12 +446,21 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
     def _argsortData(self, data, order):
         if data.ndim == 1:
-            indices = np.argsort(data, kind='mergesort')
-            if order == Qt.DescendingOrder:
-                indices = indices[::-1]
-            # Always sort NaNs last
             if np.issubdtype(data.dtype, np.number):
-                indices = np.roll(indices, -np.isnan(data).sum())
+                if order == Qt.DescendingOrder:
+                    data = -data
+                indices = np.argsort(data, kind='stable')
+                # Always sort NaNs last
+                if np.issubdtype(data.dtype, np.number):
+                    indices = np.roll(indices, -np.isnan(data).sum())
+            else:
+                # When not sorting by numbers, we can't do data = -data, but
+                # use indices = indices[::-1] instead. This is not stable, but
+                # doesn't matter because we use this only for variable names
+                # which are guaranteed to be unique
+                indices = np.argsort(data)
+                if order == Qt.DescendingOrder:
+                    indices = indices[::-1]
         else:
             assert np.issubdtype(data.dtype, np.number), \
                 'We do not deal with non numeric values in sorting by ' \
@@ -719,7 +731,7 @@ class OWFeatureStatistics(widget.OWWidget):
     color_var = ContextSetting(None)  # type: Optional[Variable]
     # filter_string = ContextSetting('')
 
-    sorting = Setting((0, Qt.DescendingOrder))
+    sorting = Setting((0, Qt.AscendingOrder))
     selected_vars = ContextSetting([], schema_only=True)
 
     def __init__(self):
