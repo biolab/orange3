@@ -24,7 +24,7 @@ Visualization of data profiles (e.g., time series).
    - Mean adds the line for mean value. If group by is selected, means will be displayed per each group value.
    - Error bars show the standard deviation of each attribute.
 3. Select a categorical attribute to use for grouping of data instances. Use None to show ungrouped data.
-4. *Select, zoom, pan and zoom to fit* are the options for exploring the graph. The manual selection of data instances works as a line selection, meaning the data under the selected line plots will be sent on the output. Scroll in or out for zoom.
+4. *Select, zoom, pan and zoom to fit* are the options for exploring the graph. The manual selection of data instances works as a line selection, meaning the data under the selected line plots will be sent on the output. Scroll in or out for zoom. When hovering over an individual axis, scrolling will zoom only by the hovered-on axis (vertical or horizontal zoom).
 5. If *Send Automatically* is ticked, changes are communicated automatically. Alternatively, click *Send*.
 
 Example
