@@ -20,11 +20,9 @@ from pyqtgraph.graphicsItems.LegendItem import LegendItem as PgLegendItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 
 from Orange.preprocess.discretize import _time_binnings
-from Orange.widgets.utils import colorpalettes
-from Orange.util import OrangeDeprecationWarning
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import classdensity
+from Orange.widgets.utils import classdensity, colorpalettes
 from Orange.widgets.utils.plot import OWPalette
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
@@ -32,13 +30,6 @@ from Orange.widgets.visualize.utils.plotutils import (
     HelpEventDelegate as EventDelegate, InteractiveViewBox as ViewBox,
     PaletteItemSample, SymbolItemSample, AxisItem
 )
-
-with warnings.catch_warnings():
-    # This just loads an obsolete module; proper warning is issued below
-    warnings.simplefilter("ignore", DeprecationWarning)
-    from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
-        OWScatterPlotGraph as OWScatterPlotGraphObs
-    )
 
 SELECTION_WIDTH = 5
 MAX_N_VALID_SIZE_ANIMATE = 1000
@@ -171,22 +162,6 @@ class DiscretizedScale:
 
     def get_bins(self):
         return self.offset + self.width * np.arange(self.bins + 1)
-
-
-class InteractiveViewBox(ViewBox):
-    def __init__(self, graph, enable_menu=False):
-        super().__init__(graph, enable_menu)
-        warnings.warn("InteractiveViewBox class has been deprecated since "
-                      "3.17. Use Orange.widgets.visualize.utils.plotutils."
-                      "InteractiveViewBox instead.", OrangeDeprecationWarning)
-
-
-class OWScatterPlotGraph(OWScatterPlotGraphObs):
-    def __init__(self, scatter_widget, parent=None, _="None", view_box=InteractiveViewBox):
-        super().__init__(scatter_widget, parent=parent, _=_, view_box=view_box)
-        warnings.warn("OWScatterPlotGraph class has been deprecated since "
-                      "3.17. Use OWScatterPlotBase instead.",
-                      OrangeDeprecationWarning)
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -1635,11 +1610,3 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             return True
         else:
             return False
-
-
-class HelpEventDelegate(EventDelegate):
-    def __init__(self, delegate, parent=None):
-        super().__init__(delegate, parent)
-        warnings.warn("HelpEventDelegate class has been deprecated since 3.17."
-                      " Use Orange.widgets.visualize.utils.plotutils."
-                      "HelpEventDelegate instead.", OrangeDeprecationWarning)
