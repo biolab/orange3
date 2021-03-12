@@ -204,7 +204,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.max_depth_spin = gui.spin(
             box, self, "max_depth", minv=1, maxv=100,
             callback=self._invalidate_pruning,
-            keyboardTracking=False
+            keyboardTracking=False, addToLayout=False
         )
 
         grid.addWidget(
@@ -231,7 +231,8 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.cut_ratio_spin = gui.spin(
             self.selection_box, self, "cut_ratio", 0, 100, step=1e-1,
-            spinType=float, callback=self._selection_method_changed
+            spinType=float, callback=self._selection_method_changed,
+            addToLayout=False
         )
         self.cut_ratio_spin.setSuffix("%")
 
@@ -243,11 +244,12 @@ class OWHierarchicalClustering(widget.OWWidget):
             2, 0
         )
         self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
-                                   callback=self._selection_method_changed)
+                                   callback=self._selection_method_changed,
+                                   addToLayout=False)
         grid.addWidget(self.top_n_spin, 2, 1)
 
         self.zoom_slider = gui.hSlider(
-            self.buttonsArea, self, "zoom_factor", box="Zoom",
+            self.controlArea, self, "zoom_factor", box="Zoom",
             minValue=-6, maxValue=3, step=1, ticks=True, createLabel=False,
             callback=self.__update_font_scale)
 
@@ -268,7 +270,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.controlArea.layout().addStretch()
 
-        gui.auto_send(box, self, "autocommit", box=False)
+        gui.auto_send(self.buttonsArea, self, "autocommit")
 
         self.scene = QGraphicsScene(self)
         self.view = StickyGraphicsView(
