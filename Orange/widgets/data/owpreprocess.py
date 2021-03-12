@@ -1406,10 +1406,6 @@ class OWPreprocess(widget.OWWidget, openclass=True):
             min(max(sh.width() + scroll_width + 2, self.controlArea.width()),
                 520))
 
-    def sizeHint(self):
-        sh = super().sizeHint()
-        return sh.expandedTo(QSize(sh.width() + 300, 500))
-
     def send_report(self):
         pp = [(self.controler.model().index(i, 0).data(Qt.DisplayRole), w)
               for i, w in enumerate(self.controler.view.widgets())]
