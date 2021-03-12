@@ -70,23 +70,7 @@ Starting up for the first time may take a while.
 
 ### Installing with pip
 
-Warning: on Windows, Orange cannot be installed with pip properly. Use our [standalone installer](https://orange.biolab.si/download) or conda instead.
-
-To install Orange with pip, run the following.
-
-```Shell
-# Install build requirements via your system's package manager
-sudo apt install virtualenv build-essential python3-dev
-
-# Create an environment for Orange and its dependencies
-virtualenv --python=python3 --system-site-packages orange3venv
-
-# Activate the environment
-source orange3venv/bin/activate
-
-# Install Orange
-pip install orange3
-```
+We recommend using our [standalone installer](https://orange.biolab.si/download) or conda, but Orange is also installable with pip. On Windows, you will also need Microsoft Visual Studio Build Tools.
 
 #### Running
 
