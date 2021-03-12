@@ -139,6 +139,9 @@ class RadvizVizRank(VizRankDialog, OWComponent):
                                          len(master.model_selected)))
         return True
 
+    def on_selection_changed(self, selected, _):
+        self.on_row_clicked(selected.indexes()[0])
+
     def on_row_clicked(self, index):
         self.selectionChanged.emit(index.data(self._AttrRole))
 
