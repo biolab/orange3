@@ -314,6 +314,10 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             callback=self.__placement_radio_changed
         )
 
+    def _add_buttons(self):
+        self.gui.box_zoom_select(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
+
     @property
     def continuous_variables(self):
         if self.data is None or self.data.domain is None:

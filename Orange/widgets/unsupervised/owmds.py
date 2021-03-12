@@ -224,7 +224,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             master=self.graph, value="connected_pairs", minValue=0,
             maxValue=20, createLabel=False, callback=self._on_connected_changed
         )
-        gui.rubber(self.controlArea)
 
     def _add_controls_optimization(self):
         box = gui.vBox(self.controlArea, box=True)
