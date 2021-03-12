@@ -14,6 +14,7 @@ import random
 import logging
 import ast
 import types
+import unicodedata
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
@@ -917,7 +918,8 @@ def bind_variable(descriptor, env, data):
 
     exp_ast = ast.parse(descriptor.expression, mode="eval")
     freev = unique(freevars(exp_ast, []))
-    variables = {sanitized_name(v.name): v for v in env}
+    variables = {unicodedata.normalize("NFKC", sanitized_name(v.name)): v
+                 for v in env}
     source_vars = [(name, variables[name]) for name in freev
                    if name in variables]
 

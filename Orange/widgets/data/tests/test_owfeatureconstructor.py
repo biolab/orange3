@@ -133,6 +133,22 @@ class FeatureConstructorTest(unittest.TestCase):
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
 
+    @staticmethod
+    def test_unicode_normalization():
+        micro = "\u00b5"
+        domain = Domain([ContinuousVariable(micro)])
+        name = 'Micro Variable'
+        expression = micro
+        desc = PyListModel(
+            [ContinuousDescriptor(name=name, expression=expression,
+                                  number_of_decimals=2)]
+        )
+        data = Table.from_numpy(domain, np.arange(5).reshape(5, 1))
+        data = data.transform(Domain(data.domain.attributes,
+                                     [],
+                                     construct_variables(desc, data)))
+        np.testing.assert_equal(data.X, data.metas)
+
 
 class TestTools(unittest.TestCase):
     def test_free_vars(self):
