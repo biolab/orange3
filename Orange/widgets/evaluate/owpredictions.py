@@ -73,8 +73,8 @@ class OWPredictions(OWWidget):
     score_table = settings.SettingProvider(ScoreTable)
 
     #: List of selected class value indices in the `class_values` list
-    selected_classes = settings.ContextSetting([])
-    selection = settings.Setting([], schema_only=True)
+    selected_classes: List[int] = settings.ContextSetting([])
+    selection: List[int] = settings.Setting([], schema_only=True)
 
     def __init__(self):
         super().__init__()

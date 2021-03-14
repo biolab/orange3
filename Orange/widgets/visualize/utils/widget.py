@@ -1,3 +1,4 @@
+from typing import List, Tuple, Dict
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -5,6 +6,7 @@ import numpy as np
 from AnyQt.QtCore import QSize, Signal, Qt
 from AnyQt.QtWidgets import QApplication
 
+from orangewidget.utils import visual_settings_dlg as vissettings
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from Orange.data import (
@@ -53,10 +55,10 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
     and a bool `np.ndarray` with indicators of valid (that is, shown)
     data points.
     """
-    attr_color = ContextSetting(None, required=ContextSetting.OPTIONAL)
-    attr_label = ContextSetting(None, required=ContextSetting.OPTIONAL)
-    attr_shape = ContextSetting(None, required=ContextSetting.OPTIONAL)
-    attr_size = ContextSetting(None, required=ContextSetting.OPTIONAL)
+    attr_color: Variable = ContextSetting(None, required=ContextSetting.OPTIONAL)
+    attr_label: Variable = ContextSetting(None, required=ContextSetting.OPTIONAL)
+    attr_shape: Variable = ContextSetting(None, required=ContextSetting.OPTIONAL)
+    attr_size: Variable = ContextSetting(None, required=ContextSetting.OPTIONAL)
 
     class Information(OWWidget.Information):
         missing_size = Msg(
@@ -383,8 +385,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             "Increase opacity if subset is difficult to see")
 
     settingsHandler = DomainContextHandler()
-    selection = Setting(None, schema_only=True)
-    visual_settings = Setting({}, schema_only=True)
+    selection: List[Tuple[int, int]] = Setting(None, schema_only=True)
+    visual_settings: Dict[vissettings.KeyType, vissettings.ValueType] \
+        = Setting({}, schema_only=True)
     auto_commit = Setting(True)
 
     GRAPH_CLASS = OWScatterPlotBase

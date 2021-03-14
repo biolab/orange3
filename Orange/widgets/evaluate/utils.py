@@ -1,6 +1,7 @@
 import warnings
 from functools import partial
 from itertools import chain
+from typing import Set
 
 import numpy as np
 
@@ -131,7 +132,7 @@ class ScoreModel(QSortFilterProxyModel):
 
 
 class ScoreTable(OWComponent, QObject):
-    shown_scores = \
+    shown_scores: Set[str] = \
         Setting(set(chain(*BUILTIN_SCORERS_ORDER.values())))
 
     shownScoresChanged = Signal()

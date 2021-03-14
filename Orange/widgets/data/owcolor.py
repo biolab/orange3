@@ -1,6 +1,7 @@
 import os
 from itertools import chain
 import json
+from typing import List
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from AnyQt.QtGui import QColor, QFont, QBrush
 from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView, QComboBox, \
     QFileDialog, QMessageBox
 
-from orangewidget.settings import IncompatibleContext
+from orangewidget.settings import IncompatibleContext, TypeSupport
 
 import Orange
 from Orange.preprocess.transformation import Identity
@@ -230,6 +231,48 @@ class ContAttrDesc(AttrDesc):
                 raise InvalidFileFormat
             obj.palette_name = colors
         return obj, warnings
+
+
+class AttrDescTypeSupport(TypeSupport):
+    @classmethod
+    def pack_value(cls, value, _=None):
+        packed = {k: list(tuple(x) for x in v) if k == "new_colors" else v
+                  for k, v in value.__dict__.items()
+                  if k.startswith("new_") and v is not None}
+        packed["var"] = value.var.name
+        return packed
+
+    @classmethod
+    def unpack_value(cls, value, _, domain, *_a):
+        var = domain[value["var"]]
+        desc = cls.supported_types[0](var)
+        if "new_name" in value:
+            desc.name = value["new_name"]
+        return desc
+
+
+class DiscAttrDescTypeSupport(AttrDescTypeSupport):
+    supported_types = (DiscAttrDesc, )
+
+    @classmethod
+    def unpack_value(cls, value, tp, domain, *_):
+        desc = super().unpack_value(value, tp, domain)
+        for i, color in enumerate(value.get("new_colors", ())):
+            desc.set_color(i, color)
+        for i, color in enumerate(value.get("new_values", ())):
+            desc.set_value(i, color)
+        return desc
+
+
+class ContAttrDescTypeSupport(AttrDescTypeSupport):
+    supported_types = (ContAttrDesc, )
+
+    @classmethod
+    def unpack_value(cls, value, tp, domain, *_):
+        desc = super().unpack_value(value, tp, domain)
+        if "new_palette_name" in value:
+            desc.palette_name = value["new_palette_name"]
+        return desc
 
 
 class ColorTableModel(QAbstractTableModel):
@@ -547,12 +590,12 @@ class OWColor(widget.OWWidget):
 
     settingsHandler = settings.PerfectDomainContextHandler(
         match_values=settings.PerfectDomainContextHandler.MATCH_VALUES_ALL)
-    disc_descs = settings.ContextSetting([])
-    cont_descs = settings.ContextSetting([])
+    disc_descs: List[DiscAttrDesc] = settings.ContextSetting([])
+    cont_descs: List[ContAttrDesc] = settings.ContextSetting([])
     selected_schema_index = settings.Setting(0)
     auto_apply = settings.Setting(True)
 
-    settings_version = 2
+    settings_version = 3
 
     want_main_area = False
 
@@ -801,9 +844,17 @@ class OWColor(widget.OWWidget):
             self.report_raw(f"<table>{table}</table>")
 
     @classmethod
-    def migrate_context(cls, _, version):
+    def migrate_context(cls, context, version):
         if not version or version < 2:
             raise IncompatibleContext
+        if version < 3:
+            values = context.values
+            values["disc_descs"] = [
+                DiscAttrDescTypeSupport.pack_value(desc)
+                for desc in values["disc_descs"]]
+            values["cont_descs"] = [
+                ContAttrDescTypeSupport.pack_value(desc)
+                for desc in values["cont_descs"]]
 
 
 if __name__ == "__main__":  # pragma: no cover

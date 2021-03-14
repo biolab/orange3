@@ -716,11 +716,11 @@ class OWFeatureStatistics(widget.OWWidget):
     settings_version = 2
 
     auto_commit = Setting(True)
-    color_var = ContextSetting(None)  # type: Optional[Variable]
+    color_var: Optional[Variable] = ContextSetting(None)
     # filter_string = ContextSetting('')
 
-    sorting = Setting((0, Qt.DescendingOrder))
-    selected_vars = ContextSetting([], schema_only=True)
+    sorting: Tuple[int, int] = Setting((0, Qt.DescendingOrder))
+    selected_vars: List[Variable] = ContextSetting([], schema_only=True)
 
     def __init__(self):
         super().__init__()
@@ -859,8 +859,9 @@ class OWFeatureStatistics(widget.OWWidget):
 
         # Send a table with only selected columns to output
         variables = self.selected_vars
-        self.info.set_output_summary(len(self.data[:, variables]),
-                                     format_summary_details(self.data[:, variables]))
+        reduced_data = self.data[:, variables]
+        self.info.set_output_summary(len(reduced_data),
+                                     format_summary_details(reduced_data))
         self.Outputs.reduced_data.send(self.data[:, variables])
 
         # Send the statistics of the selected variables to ouput
@@ -895,7 +896,7 @@ class OWFeatureStatistics(widget.OWWidget):
                     # is no suitable conversion function, and StringVariable (3)
                     # was the only hidden var when settings_version < 2, so:
                     if tpe != 3]
-                selected_vars = [all_vars[i] for i in selected_rows]
+                selected_vars = [all_vars[i] for i in selected_rows[0]]
             context.values["selected_vars"] = selected_vars, -3
 
 

@@ -476,7 +476,7 @@ class TestFeatureStatisticsUI(WidgetTest):
 
     def test_settings_migration_to_ver21(self):
         settings = {
-            'controlAreaVisible': True, 'savedWidgetGeometry': '',
+            'controlAreaVisible': True, 'savedWidgetGeometry': None,
             '__version__': 1,
             'context_settings': [
                 Context(

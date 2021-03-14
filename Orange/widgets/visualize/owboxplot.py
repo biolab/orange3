@@ -2,6 +2,8 @@ import math
 from collections import namedtuple
 from itertools import chain, count
 import numpy as np
+import scipy.special
+from scipy.stats import f_oneway, chi2_contingency
 
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
@@ -10,10 +12,9 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSize, QSortFilterProxyModel
-from orangewidget.utils.listview import ListViewSearch
 
-import scipy.special
-from scipy.stats import f_oneway, chi2_contingency
+from Orange.data import Variable, DiscreteVariable
+from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values, \
@@ -145,10 +146,10 @@ class OWBoxPlot(widget.OWWidget):
     # variable names!
     selection = ContextSetting((), schema_only=True)
 
-    attribute = ContextSetting(None)
+    attribute: Variable = ContextSetting(None)
     order_by_importance = Setting(False)
     order_grouping_by_importance = Setting(False)
-    group_var = ContextSetting(None)
+    group_var: DiscreteVariable = ContextSetting(None)
     show_annotations = Setting(True)
     compare = Setting(CompareMeans)
     stattest = Setting(0)

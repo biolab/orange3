@@ -2,9 +2,10 @@
 Linear Projection widget
 ------------------------
 """
-
+from enum import IntEnum
 from itertools import islice, permutations, chain
 from math import factorial
+from typing import List
 
 import numpy as np
 
@@ -17,11 +18,10 @@ from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import PCA, LDA, LinearProjector
-from Orange.util import Enum
 from Orange.widgets import gui, report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
@@ -257,8 +257,8 @@ class OWLinProjGraph(OWGraphWithAnchors):
             self.circle_item.setPen(pen)
 
 
-Placement = Enum("Placement", dict(Circular=0, LDA=1, PCA=2), type=int,
-                 qualname="Placement")
+Placement = IntEnum("Placement", dict(Circular=0, LDA=1, PCA=2),
+                    qualname="Placement")
 
 
 class OWLinearProjection(OWAnchorProjectionWidget):
@@ -276,7 +276,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     settings_version = 6
 
     placement = Setting(Placement.Circular)
-    selected_vars = ContextSetting([])
+    selected_vars: List[ContinuousVariable] = ContextSetting([])
     vizrank = SettingProvider(LinearProjectionVizRank)
     GRAPH_CLASS = OWLinProjGraph
     graph = SettingProvider(OWLinProjGraph)

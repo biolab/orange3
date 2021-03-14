@@ -3,6 +3,7 @@ from functools import reduce
 from itertools import product, chain, repeat
 from math import sqrt, log
 from operator import mul, attrgetter
+from typing import Set
 
 import numpy as np
 from scipy.stats import distributions
@@ -312,7 +313,7 @@ class OWMosaicDisplay(OWWidget):
     variable3: Variable = ContextSetting(None)
     variable4: Variable = ContextSetting(None)
     variable_color: DiscreteVariable = ContextSetting(None)
-    selection = Setting(set(), schema_only=True)
+    selection: Set[str] = Setting(set(), schema_only=True)
 
     BAR_WIDTH = 5
     SPACING = 4

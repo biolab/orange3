@@ -240,8 +240,8 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     settings_version = 4
     auto_sample = Setting(True)
-    attr_x = ContextSetting(None)
-    attr_y = ContextSetting(None)
+    attr_x: ContinuousVariable = ContextSetting(None)
+    attr_y: ContinuousVariable = ContextSetting(None)
     tooltip_shows_all = Setting(True)
 
     GRAPH_CLASS = OWScatterPlotGraph

@@ -6,6 +6,7 @@ import concurrent.futures
 from collections import OrderedDict, namedtuple
 
 from math import isnan
+from typing import List
 
 import numpy
 from scipy.sparse import issparse
@@ -177,6 +178,9 @@ class OWDataTable(OWWidget):
     priority = 50
     keywords = []
 
+    buttons_area_orientation = Qt.Vertical
+    dist_color_RGB = (220, 220, 220, 255)
+
     class Inputs:
         data = Input("Data", Table, multiple=True)
 
@@ -184,17 +188,14 @@ class OWDataTable(OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
-    buttons_area_orientation = Qt.Vertical
-
     show_distributions = Setting(False)
-    dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
     select_rows = Setting(True)
     auto_commit = Setting(True)
 
     color_by_class = Setting(True)
-    selected_rows = Setting([], schema_only=True)
-    selected_cols = Setting([], schema_only=True)
+    selected_rows: List[int] = Setting([], schema_only=True)
+    selected_cols: List[int] = Setting([], schema_only=True)
 
     settings_version = 2
 

@@ -4,6 +4,7 @@ import unicodedata
 import itertools
 from functools import partial, singledispatch
 from collections import namedtuple
+from typing import List
 
 import numpy as np
 
@@ -761,8 +762,8 @@ class OWPaintData(OWWidget):
     symbol_size = Setting(10)
 
     #: current data array (shape=(N, 3)) as presented on the output
-    data = Setting(None, schema_only=True)
-    labels = Setting(["C1", "C2"], schema_only=True)
+    data: List[List[float]] = Setting(None, schema_only=True)
+    labels: List[str] = Setting(["C1", "C2"], schema_only=True)
 
     buttons_area_orientation = Qt.Vertical
     graph_name = "plot"

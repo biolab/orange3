@@ -1,4 +1,4 @@
-from Orange.data import Table, ContinuousVariable, StringVariable
+from Orange.data import Table, ContinuousVariable, StringVariable, Variable
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -32,7 +32,7 @@ class OWTranspose(OWWidget):
     settingsHandler = DomainContextHandler()
     feature_type = ContextSetting(GENERIC)
     feature_name = ContextSetting("")
-    feature_names_column = ContextSetting(None)
+    feature_names_column: Variable = ContextSetting(None)
     auto_apply = Setting(True)
 
     class Warning(OWWidget.Warning):

@@ -5,6 +5,7 @@ from enum import IntEnum
 from operator import attrgetter
 from types import SimpleNamespace
 from itertools import combinations, groupby, chain
+from typing import List
 
 import numpy as np
 from scipy.stats import spearmanr, pearsonr
@@ -254,8 +255,8 @@ class OWCorrelations(OWWidget):
 
     settings_version = 3
     settingsHandler = DomainContextHandler()
-    selection = ContextSetting([])
-    feature = ContextSetting(None)
+    selection: List[ContinuousVariable] = ContextSetting([])
+    feature: ContinuousVariable = ContextSetting(None)
     correlation_type = Setting(0)
 
     class Information(OWWidget.Information):

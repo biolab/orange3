@@ -9,11 +9,20 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import QObject
 
-from Orange.data.variable import TimeVariable
+from Orange.data.variable import \
+    Variable, DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
 from Orange.util import deepgetattr
 
 
+_vartype2int = {DiscreteVariable: 1,
+                ContinuousVariable: 2,
+                StringVariable: 3,
+                TimeVariable: 4}
+
 def vartype(var):
+    if isinstance(var, type) and issubclass(var, Variable):
+        return _vartype2int[var]
+
     if var.is_discrete:
         return 1
     elif var.is_continuous:

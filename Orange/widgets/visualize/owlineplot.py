@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -13,6 +13,7 @@ from pyqtgraph.functions import mkPen
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
 
 from orangewidget.utils.listview import ListViewSearch
+from orangewidget.utils import visual_settings_dlg as vissettings
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from Orange.data import Table, DiscreteVariable
@@ -608,15 +609,15 @@ class OWLinePlot(OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     settingsHandler = DomainContextHandler()
-    group_var = ContextSetting(None)
+    group_var: DiscreteVariable = ContextSetting(None)
     show_profiles = Setting(False)
     show_range = Setting(True)
     show_mean = Setting(True)
     show_error = Setting(False)
     auto_commit = Setting(True)
-    selection = Setting(None, schema_only=True)
-    visual_settings = Setting({}, schema_only=True)
-
+    selection: List[int] = Setting(None, schema_only=True)
+    visual_settings: Dict[vissettings.KeyType, vissettings.ValueType] \
+        = Setting({}, schema_only=True)
     graph_name = "graph.plotItem"
 
     class Error(OWWidget.Error):
