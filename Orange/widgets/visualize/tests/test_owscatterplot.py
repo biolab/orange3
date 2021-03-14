@@ -298,7 +298,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         """
         self.send_signal(self.widget.Inputs.data, self.data)
         settings = self.widget.settingsHandler.pack_data(self.widget)
-        plot_settings = settings["context_settings"][0].values
+        plot_settings = settings["context_settings"][0]["values"]
         plot_settings["attr_label"] = ("sepal length", -2)
         plot_settings["attr_color"] = ("sepal width", -2)
         plot_settings["attr_shape"] = ("iris", -2)

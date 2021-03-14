@@ -85,14 +85,20 @@ class VariableTypeSupport(TypeSupport):
             if domain is None:
                 warnings.warn("unpacking variables requires having a domain")
                 return None
-            saved_type = value[1] % 100
-            if saved_type == 0:
-                return value[0]
-            var = domain[value[0]]
-            if vartype(var) != saved_type:
-                warnings.warn(
-                    f"'{var.name}' is of wrong type ({type(var).__name__})")
-            return var
+            # Compatibility with ancient settings that stored Variable as
+            # string, without any type-checking
+            if isinstance(value, str):
+                if value in domain:
+                    return domain[value]
+            else:
+                saved_type = value[1] % 100
+                if saved_type == 0:
+                    return value[0]
+                var = domain[value[0]]
+                if vartype(var) != saved_type:
+                    warnings.warn(
+                        f"'{var.name}' is of wrong type ({type(var).__name__})")
+                return var
         return super().unpack_value(value, tp, domain, *args)
 
 
