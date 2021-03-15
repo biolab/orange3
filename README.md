@@ -56,41 +56,11 @@ conda install orange3-<addon name>
 ```
 [See specific add-on repositories for details.](https://github.com/biolab/)
 
-#### Running
-
-Activate the environment, 
-```Shell
-conda activate orange3
-``` 
-and run either `orange-canvas` or `python3 -m Orange.canvas`. 
-
-Add `--help` for a list of program options.
-
-Starting up for the first time may take a while.
 
 ### Installing with pip
 
-To install Orange with pip, run the following.
+We recommend using our [standalone installer](https://orange.biolab.si/download) or conda, but Orange is also installable with pip. You will need a C/C++ compiler (on Windows we suggest using Microsoft Visual Studio Build Tools).
 
-```Shell
-# Install build requirements via your system's package manager
-sudo apt install virtualenv build-essential python3-dev
-
-# Create an environment for Orange and its dependencies
-virtualenv --python=python3 --system-site-packages orange3venv
-
-# Activate the environment
-source orange3venv/bin/activate
-
-# Install Orange
-pip install orange3
-```
-
-#### Running
-
-Activate the environment by `source orange3venv/bin/activate`. Then run `orange-canvas` or `python3 -m Orange.canvas`. Add `--help` for a list of program options.
-
-Starting up for the first time may take a while.
 
 ### Installing with winget (Windows only)
 
@@ -99,6 +69,19 @@ To install Orange with [winget](https://docs.microsoft.com/en-us/windows/package
 ```Shell
 winget install --id  UniversityofLjubljana.Orange 
 ```
+
+## Running
+
+Ensure you've activated the correct virtual environment. If following the above conda instructions:
+
+```Shell
+conda activate orange3
+``` 
+
+Run `orange-canvas` or `python3 -m Orange.canvas`. Add `--help` for a list of program options.
+
+Starting up for the first time may take a while.
+
 
 ## Developing
 
