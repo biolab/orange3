@@ -1,5 +1,5 @@
 # This is a temporary solution until Github actions provide an official support for this.
-# Workflow ids are located here: https://api.github.com/repos/biolab/orange3/actions/workflows
+# Workflow ids are located here: https://api.github.com/repos/biolab/orange3/actions/workflows 
 
 name: Cleanup workflow
 
