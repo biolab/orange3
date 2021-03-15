@@ -59,7 +59,7 @@ conda install orange3-<addon name>
 
 ### Installing with pip
 
-We recommend using our [standalone installer](https://orange.biolab.si/download) or conda, but Orange is also installable with pip. On Windows, you will also need Microsoft Visual Studio Build Tools.
+We recommend using our [standalone installer](https://orange.biolab.si/download) or conda, but Orange is also installable with pip. You will need a C/C++ compiler (on Windows we suggest using Microsoft Visual Studio Build Tools).
 
 
 ### Installing with winget (Windows only)
