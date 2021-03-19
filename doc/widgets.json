@@ -74,6 +74,22 @@
     ]
    },
    {
+    "text": "Aggregate Columns",
+    "doc": "visual-programming/source/widgets/data/aggregatecolumns.md",
+    "icon": "../Orange/widgets/data/icons/AggregateColumns.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "aggregate",
+     "sum",
+     "product",
+     "max",
+     "min",
+     "mean",
+     "median",
+     "variance"
+    ]
+   },
+   {
     "text": "Data Sampler",
     "doc": "visual-programming/source/widgets/data/datasampler.md",
     "icon": "../Orange/widgets/data/icons/DataSampler.svg",

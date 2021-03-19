@@ -31,6 +31,7 @@ Data
    widgets/data/sqltable
    widgets/data/save
    widgets/data/datainfo
+   widegts/data/aggregatecolumns
    widgets/data/datatable
    widgets/data/selectcolumns
    widgets/data/selectrows
