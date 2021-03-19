@@ -110,14 +110,16 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
     HIDDEN_VAR_TYPES = (StringVariable,)
 
     class Columns(IntEnum):
-        ICON, NAME, DISTRIBUTION, CENTER, DISPERSION, MIN, MAX, MISSING = range(8)
+        ICON, NAME, DISTRIBUTION, CENTER, MEDIAN, DISPERSION, MIN, MAX, \
+        MISSING = range(9)
 
         @property
         def name(self):
             return {self.ICON: '',
                     self.NAME: 'Name',
                     self.DISTRIBUTION: 'Distribution',
-                    self.CENTER: 'Center',
+                    self.CENTER: 'Mean',
+                    self.MEDIAN: 'Median',
                     self.DISPERSION: 'Dispersion',
                     self.MIN: 'Min.',
                     self.MAX: 'Max.',
@@ -157,7 +159,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
         no_data = np.array([])
         self._variable_types = self._variable_names = no_data
-        self._min = self._max = self._center = no_data
+        self._min = self._max = self._center = self._median = no_data
         self._dispersion = no_data
         self._missing = no_data
         # Clear model initially to set default values
@@ -275,9 +277,16 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
         self._center = self.__compute_stat(
             matrices,
-            discrete_f=lambda x: __mode(x, axis=0),
+            discrete_f=None,
             continuous_f=lambda x: ut.nanmean(x, axis=0),
             time_f=lambda x: ut.nanmean(x, axis=0),
+        )
+
+        self._median = self.__compute_stat(
+            matrices,
+            discrete_f=lambda x: __mode(x, axis=0),
+            continuous_f=lambda x: ut.nanmedian(x, axis=0),
+            time_f=lambda x: ut.nanmedian(x, axis=0),
         )
 
     def get_statistics_matrix(self, variables=None, return_labels=False):
@@ -311,14 +320,16 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             indices = ...
 
         matrix = np.vstack((
-            self._center[indices], self._dispersion[indices],
+            self._center[indices], self._median[indices],
+            self._dispersion[indices],
             self._min[indices], self._max[indices], self._missing[indices],
         )).T
 
         # Return string labels for the returned matrix columns e.g. 'Mean',
         # 'Dispersion' if requested
         if return_labels:
-            labels = [self.Columns.CENTER.name, self.Columns.DISPERSION.name,
+            labels = [self.Columns.CENTER.name, self.Columns.MEDIAN.name,
+                      self.Columns.DISPERSION.name,
                       self.Columns.MIN.name, self.Columns.MAX.name,
                       self.Columns.MISSING.name]
             return labels, matrix
@@ -406,6 +417,13 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         elif column == self.Columns.CENTER:
             # Sorting discrete or string values by mean makes no sense
             vals = np.array(self._center)
+            vals[disc_idx] = var_name_indices[disc_idx]
+            vals[str_idx] = var_name_indices[str_idx]
+            return np.vstack((var_types_indices, np.zeros_like(vals), vals)).T
+        # Sort by: (type, median)
+        elif column == self.Columns.MEDIAN:
+            # Sorting discrete or string values by median makes no sense
+            vals = np.array(self._median)
             vals[disc_idx] = var_name_indices[disc_idx]
             vals[str_idx] = var_name_indices[str_idx]
             return np.vstack((var_types_indices, np.zeros_like(vals), vals)).T
@@ -550,6 +568,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                     return self.__distributions_cache[row]
             elif column == self.Columns.CENTER:
                 return render_value(self._center[row])
+            elif column == self.Columns.MEDIAN:
+                return render_value(self._median[row])
             elif column == self.Columns.DISPERSION:
                 if isinstance(attribute, TimeVariable):
                     return format_time_diff(self._min[row], self._max[row])
