@@ -54,6 +54,19 @@ The **Stochastic Gradient Descent** widget uses [stochastic gradient descent](ht
 5. Produce a report.
 6. Press *Apply* to commit changes. Alternatively, tick the box on the left side of the *Apply* button and changes will be communicated automatically.
 
+Preprocessing
+-------------
+
+SGD uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+- normalizes the data by centering to mean and scaling to standard deviation of 1
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 

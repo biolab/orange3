@@ -38,6 +38,20 @@ The widget works for both classification and regression tasks.
 5. Produce a report.
 6. Click *Apply* to commit changes. If you tick the box on the left side of the *Apply* button, changes will be communicated automatically.
 
+Preprocessing
+-------------
+
+SVM uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+
+For classification, SVM also normalizes dense and scales sparse data.
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 

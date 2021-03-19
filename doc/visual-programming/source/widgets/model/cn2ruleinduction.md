@@ -39,6 +39,17 @@ The CN2 algorithm is a classification technique designed for the efficient induc
    - **Parent alpha**: significance testing to prune out most specialised (less frequently applicable) rules in regard to the parent class distribution.
 6. Tick 'Apply Automatically' to auto-communicate changes to other widgets and to immediately train the classifier if learning data is connected. Alternatively, press ‘Apply‘ after configuration.
 
+Preprocessing
+-------------
+
+CN2 Rule Induction uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes empty columns
+- removes instances with unknown target values
+- imputes missing values with mean values
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 

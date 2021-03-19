@@ -30,6 +30,19 @@ The **kNN** widget uses the [kNN algorithm](https://en.wikipedia.org/wiki/K-near
 3. Produce a report.
 4. When you change one or more settings, you need to click *Apply*, which will put a new learner on the output and, if the training examples are given, construct a new model and output it as well. Changes can also be applied automatically by clicking the box on the left side of the *Apply* button.
 
+Preprocessing
+-------------
+
+kNN uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+- normalizes the data by centering to mean and scaling to standard deviation of 1
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 

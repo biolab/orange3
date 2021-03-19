@@ -36,6 +36,19 @@ The **Neural Network** widget uses sklearn's [Multi-layer Perceptron algorithm](
 3. Produce a report.
 4. When the box is ticked (*Apply Automatically*), the widget will communicate changes automatically. Alternatively, click *Apply*.
 
+Preprocessing
+-------------
+
+Neural Network uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+- normalizes the data by centering to mean and scaling to standard deviation of 1
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 

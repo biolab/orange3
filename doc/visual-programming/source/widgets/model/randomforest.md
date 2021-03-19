@@ -32,6 +32,18 @@ Predict using an ensemble of decision trees.
    - *Do not split subsets smaller than*: Select the smallest subset that can be split.
 4. Click *Apply* to communicate the changes to other widgets. Alternatively, tick the box on the left side of the *Apply* button and changes will be communicated automatically.
 
+Preprocessing
+-------------
+
+Random Forest uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 

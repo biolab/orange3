@@ -19,6 +19,16 @@ A fast and simple probabilistic classifier based on Bayes' theorem with the assu
 
 This widget has two options: the name under which it will appear in other widgets and producing a report. The default name is *Naive Bayes*. When you change it, you need to press *Apply*.
 
+Preprocessing
+-------------
+
+Naive Bayes uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes empty columns
+- discretizes numeric values to 4 bins with equal frequency
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 

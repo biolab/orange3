@@ -29,6 +29,18 @@ Linear regression works only on regression tasks.
 3. Produce a report.
 4. Press *Apply* to commit changes. If *Apply Automatically* is ticked, changes are committed automatically.
 
+Preprocessing
+-------------
+
+Linear Regression uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Example
 -------
 

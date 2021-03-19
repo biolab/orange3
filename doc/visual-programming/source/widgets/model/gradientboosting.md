@@ -15,7 +15,6 @@ Predict using gradient boosting on decision trees.
 
 [Gradient Boosting](https://en.wikipedia.org/wiki/Gradient_boosting) is a machine learning technique for regression and classification problems, which produces a prediction model in the form of an ensemble of weak prediction models, typically decision trees.
 
-
 ![](images/GradientBoosting-stamped.png)
 
 1. Specify the name of the model. The default name is "Gradient Boosting".
@@ -38,6 +37,18 @@ Predict using gradient boosting on decision trees.
    - *Fraction of features for each level*: Specify the percentage of features to use for each level. Available only for *xgboost* methods.
    - *Fraction of features for each split*: Specify the percentage of features to use for each split. Available only for *xgboost* methods.
 6. Click *Apply* to communicate the changes to other widgets. Alternatively, tick the box on the left side of the *Apply* button and changes will be communicated automatically.
+
+Preprocessing
+-------------
+
+Gradient Boosting uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
 
 Example
 -------
