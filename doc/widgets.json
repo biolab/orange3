@@ -266,7 +266,15 @@
     "doc": "visual-programming/source/widgets/data/continuize.md",
     "icon": "../Orange/widgets/data/icons/Continuize.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "encode",
+     "dummy",
+     "numeric",
+     "one-hot",
+     "binary",
+     "treatment",
+     "contrast"
+    ]
    },
    {
     "text": "Create Class",
@@ -280,7 +288,12 @@
     "doc": "visual-programming/source/widgets/data/discretize.md",
     "icon": "../Orange/widgets/data/icons/Discretize.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "bin",
+     "categorical",
+     "nominal",
+     "ordinal"
+    ]
    },
    {
     "text": "Feature Constructor",
