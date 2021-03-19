@@ -11,7 +11,6 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtWidgets import QSizePolicy
 from AnyQt.QtGui import QStandardItem, QColor
 from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
 
@@ -285,8 +284,9 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         no_cont_features = Msg("Plotting requires numeric features")
 
     def _add_controls(self):
-        self._add_controls_variables()
-        self._add_controls_placement()
+        box = gui.vBox(self.controlArea, box="Features")
+        self._add_controls_variables(box)
+        self._add_controls_placement(box)
         super()._add_controls()
         self.gui.add_control(
             self._effects_box, gui.hSlider, "Hide radius:", master=self.graph,
@@ -294,20 +294,16 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             createLabel=False, callback=self.__radius_slider_changed
         )
 
-    def _add_controls_variables(self):
+    def _add_controls_variables(self, box):
         self.model_selected = VariableSelectionModel(self.selected_vars)
-        variables_selection(self.controlArea, self, self.model_selected)
+        variables_selection(box, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
         self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
             None, self, "Suggest Features", self.__vizrank_set_attrs)
-        self.controlArea.layout().addWidget(self.btn_vizrank)
+        box.layout().addWidget(self.btn_vizrank)
 
-    def _add_controls_placement(self):
-        box = gui.widgetBox(
-            self.controlArea, True,
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum)
-        )
+    def _add_controls_placement(self, box):
         self.radio_placement = gui.radioButtonsInBox(
             box, self, "placement",
             btnLabels=[self.Projection_name[x] for x in Placement],

@@ -333,14 +333,15 @@ class OWRadviz(OWAnchorProjectionWidget):
         max_vars_selected = widget.Msg("Maximum number of selected variables reached.")
 
     def _add_controls(self):
+        box = gui.vBox(self.controlArea, box="Features")
         self.model_selected = VariableSelectionModel(self.selected_vars,
                                                      max_vars=20)
-        variables_selection(self.controlArea, self, self.model_selected)
+        variables_selection(box, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
             None, self, "Suggest features", self.vizrank_set_attrs)
-        self.controlArea.layout().addWidget(self.btn_vizrank)
+        box.layout().addWidget(self.btn_vizrank)
         super()._add_controls()
 
     def _add_buttons(self):

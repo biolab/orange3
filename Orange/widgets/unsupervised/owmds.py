@@ -226,7 +226,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         )
 
     def _add_controls_optimization(self):
-        box = gui.vBox(self.controlArea, box=True)
+        box = gui.vBox(self.controlArea, box="Optimize", spacing=0)
         hbox = gui.hBox(box, margin=0)
         gui.button(hbox, self, "PCA", callback=self.do_PCA, autoDefault=False)
         gui.button(hbox, self, "Randomize", callback=self.do_random, autoDefault=False)
