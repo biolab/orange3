@@ -57,14 +57,12 @@ _thread_local = _ThreadLocal()
 
 
 def _idcache_save(cachedict, keys, value):
-    # key is tuple(list) not tuple(genexpr) for speed
-    cachedict[tuple([id(k) for k in keys])] = \
+    cachedict[tuple(map(id, keys))] = \
         value, [weakref.ref(k) for k in keys]
 
 
 def _idcache_restore(cachedict, keys):
-    # key is tuple(list) not tuple(genexpr) for speed
-    shared, weakrefs = cachedict.get(tuple([id(k) for k in keys]), (None, []))
+    shared, weakrefs = cachedict.get(tuple(map(id, keys)), (None, []))
     for r in weakrefs:
         if r() is None:
             return None
