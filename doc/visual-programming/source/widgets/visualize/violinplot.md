@@ -37,8 +37,8 @@ Examples
 
 The **Violin Plot** widget is most commonly used immediately after the [File](../data/file.md) widget to observe the statistical properties of a dataset. In the first example, we have used *heart-disease* data to inspect our variables.
 
-![](images/ViolinPlot-Example1.png)
+![](images/ViolinPlot-example1.png)
 
 The **Violin Plot** could also be used for *outlier detection*. In the next example we eliminate the outliers by selecting only instances that fall inside the [Q1 − 1.5  and Q3 + 1.5 IQR](https://en.wikipedia.org/wiki/Interquartile_range).
 
-![](images/ViolinPlot-Example2.png)
+![](images/ViolinPlot-example2.png)
