@@ -20,6 +20,7 @@ The **Violin Plot** widget plays a similar role as a [Box Plot](boxplot.md). It 
 1. Select the variable you want to plot. Tick *Order by relevance to subgroups* to order variables by Chi2 or ANOVA over the selected subgroup.
 2. Choose *Subgroups* to see [violin plots](https://en.wikipedia.org/wiki/Violin_plot) displayed by a discrete subgroup. Tick *Order by relevance to variable* to order subgroups by Chi2 or ANOVA over the selected variable.
 3.  *Box plot*: Tick to show the underlying box plot.
+    ![](images/ViolinPlot-boxplot.png)
 
     *Strip plot*: Tick to show the underlying data represented by points.
     
