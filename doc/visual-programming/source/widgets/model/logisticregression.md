@@ -22,6 +22,18 @@ The logistic regression classification algorithm with LASSO (L1) or ridge (L2) r
 2. [Regularization](https://en.wikipedia.org/wiki/Regularization_(mathematics)) type (either [L1](https://en.wikipedia.org/wiki/Least_squares#Lasso_method) or [L2](https://en.wikipedia.org/wiki/Tikhonov_regularization)). Set the cost strength (default is C=1).
 3. Press *Apply* to commit changes. If *Apply Automatically* is ticked, changes will be communicated automatically.
 
+Preprocessing
+-------------
+
+Logistic Regression uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Example
 -------
 

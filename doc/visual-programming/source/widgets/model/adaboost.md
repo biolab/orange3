@@ -31,6 +31,18 @@ The [AdaBoost](https://en.wikipedia.org/wiki/AdaBoost) (short for "Adaptive boos
 4. Produce a report.
 5. Click *Apply* after changing the settings. That will put the new learner in the output and, if the training examples are given, construct a new model and output it as well. To communicate changes automatically tick *Apply Automatically*.
 
+Preprocessing
+-------------
+
+AdaBoost uses default preprocessing when no other preprocessors are given. It executes them in the following order:
+
+- removes instances with unknown target values
+- continuizes categorical variables (with one-hot-encoding)
+- removes empty columns
+- imputes missing values with mean values
+
+To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+
 Examples
 --------
 
