@@ -76,16 +76,15 @@ class OWAggregateColumns(widget.OWWidget):
     @Inputs.data
     def set_data(self, data: Table = None):
         self.closeContext()
+        self.variables.clear()
         self.data = data
         if self.data:
             self.variable_model.set_domain(data.domain)
             self.info.set_input_summary(len(self.data),
                                         format_summary_details(self.data))
-            self.variables.clear()
             self.openContext(data)
         else:
             self.variable_model.set_domain(None)
-            self.variables.clear()
             self.info.set_input_summary(self.info.NoInput)
         self.unconditional_commit()
 

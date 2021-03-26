@@ -155,6 +155,19 @@ class TestOWAggregateColumn(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data1)
         self.assertEqual(self.widget.variables, saved)
 
+    def test_selection_in_context(self):
+        widget = self.widget
+
+        self.send_signal(widget.Inputs.data, self.data1)
+        self.widget.variables[:] = self.data1.domain.variables[1:3]
+
+        self.send_signal(widget.Inputs.data, self.data2)
+        self.assertEqual(widget.variables, [])
+
+        self.send_signal(widget.Inputs.data, self.data1)
+        self.assertSequenceEqual(self.widget.variables[:],
+                                 self.data1.domain.variables[1:3])
+
     def test_report(self):
         self.widget.send_report()
 
