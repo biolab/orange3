@@ -160,14 +160,6 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         pos_down, pos_up = QPointF(2.38, 4.84), QPointF(3.58, 4.76)
         mapToParent = self.widget.graph.view_box.childGroup.mapToParent
 
-        # On pyqtgraph < 0.11.1 mapping does not work unless the widget is shown
-        # Delete when Orange stops supporting pyqtgraph < 0.11.1,
-        to_and_back = self.widget.graph.view_box.childGroup.mapFromParent(
-            mapToParent(pos_down))
-        successful_mapping = (to_and_back - pos_down).manhattanLength() < 0.001
-        if not successful_mapping:  # on pyqtgraph < 0.11.1
-            mapToParent = lambda x: x
-
         event.buttonDownPos.return_value = mapToParent(pos_down)
         event.pos.return_value = mapToParent(pos_up)
 
@@ -179,12 +171,6 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(self.widget.selection), 55)
         self.widget.graph.view_box.mouseClickEvent(event)
         self.assertListEqual(self.widget.selection, [])
-
-    def test_remove_old_pyqtgraph_support(self):
-        # When 0.11.2 is released there is probably time to drop support
-        # for pyqtgraph <= 0.11.0:
-        # - remove test_selection_line workaround for 0.11.0
-        self.assertLess(pyqtgraph.__version__, "0.11.2")
 
     @patch("Orange.widgets.visualize.owlineplot.SEL_MAX_INSTANCES", 100)
     def test_select_lines_enabled(self):
