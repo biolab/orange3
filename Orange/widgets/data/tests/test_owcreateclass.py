@@ -283,6 +283,12 @@ class TestOWCreateClass(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.heart)
         self.assertFalse(widget.Warning.no_nonnumeric_vars.is_shown())
 
+        self.send_signal(self.widget.Inputs.data, self.heart[:0])
+        self.assertFalse(widget.Warning.no_nonnumeric_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self.no_attributes[:0])
+        self.assertTrue(widget.Warning.no_nonnumeric_vars.is_shown())
+
     def test_string_data(self):
         widget = self.widget
         self.send_signal(self.widget.Inputs.data, self.zoo)
