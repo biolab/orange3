@@ -1063,6 +1063,12 @@ class TestOWMergeData(WidgetTest):
         self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
+    def test_empty_tables(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.dataA[:0])
+        self.send_signal(widget.Inputs.extra_data, self.dataB[:0])
+
+
 class MergeDataContextHandlerTest(unittest.TestCase):
     # These units are too small to test individually, so they are tested
     # within their function in the widget.
