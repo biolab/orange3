@@ -10,7 +10,7 @@ from AnyQt.QtWidgets import (
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
-from Orange.data import StringVariable, ContinuousVariable, Variable
+from Orange.data import StringVariable, ContinuousVariable, Variable, Domain
 from Orange.data.util import hstack, get_unique_names_duplicates
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextHandler, ContextSetting
@@ -207,6 +207,8 @@ class MergeDataContextHandler(ContextHandler):
     def _encode_domain(self, domain):
         if domain is None:
             return {}
+        if not isinstance(domain, Domain):
+            domain = domain.domain
         all_vars = chain(domain.variables, domain.metas)
         return dict(self.encode_variables(all_vars))
 
@@ -352,13 +354,13 @@ class OWMergeData(widget.OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.data = data
-        self.model.set_domain(data and data.domain)
+        self.model.set_domain(data.domain if data else None)
 
     @Inputs.extra_data
     @check_sql_input
     def set_extra_data(self, data):
         self.extra_data = data
-        self.extra_model.set_domain(data and data.domain)
+        self.extra_model.set_domain(data.domain if data else None)
 
     def store_combo_state(self):
         self.attr_pairs = self.attr_boxes.current_state()

@@ -301,7 +301,7 @@ class OWCreateClass(widget.OWWidget):
         details = format_summary_details(data) if data else ""
         self.info.set_input_summary(summary, details)
         model = self.controls.attribute.model()
-        model.set_domain(data and data.domain)
+        model.set_domain(data.domain if data is not None else None)
         self.Warning.no_nonnumeric_vars(shown=data is not None and not model)
         if not model:
             self.attribute = None

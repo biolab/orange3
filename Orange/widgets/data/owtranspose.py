@@ -102,7 +102,7 @@ class OWTranspose(OWWidget):
         self.unconditional_apply()
 
     def set_controls(self):
-        self.feature_model.set_domain(self.data and self.data.domain)
+        self.feature_model.set_domain(self.data.domain if self.data else None)
         self.meta_button.setEnabled(bool(self.feature_model))
         if self.feature_model:
             self.feature_names_column = self.feature_model[0]
