@@ -33,14 +33,7 @@ If you change the widget's name, you need to click *Apply*. Alternatively, tick 
 Preprocessing
 -------------
 
-Constant uses default preprocessing when no other preprocessors are given. It executes them in the following order:
-
-- removes instances with unknown target values
-- continuizes categorical variables (with one-hot-encoding)
-- removes empty columns
-- imputes missing values with mean values
-
-To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
+Constant does not use any preprocessing.
 
 Examples
 --------
