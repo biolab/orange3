@@ -9,10 +9,36 @@ import numpy as np
 from orangewidget.widget import StateInfo
 
 from Orange.data import Table
-from Orange.widgets.data.owtranspose import OWTranspose
+from Orange.widgets.data.owtranspose import OWTranspose, run
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.tests import test_filename
+
+
+class TestRunner(WidgetTest):
+    def setUp(self):
+        self.zoo = Table("zoo")
+        self.state = Mock()
+        self.state.is_interruption_requested = Mock(return_value=False)
+
+    def test_run(self):
+        result = run(self.zoo, "", "Feature", False, self.state)
+        self.assert_table_equal(Table.transpose(self.zoo), result)
+
+    def test_run_var(self):
+        result = run(self.zoo, "name", "Feature", False, self.state)
+        self.assert_table_equal(Table.transpose(self.zoo, "name"), result)
+
+    def test_run_name(self):
+        result1 = run(self.zoo, "", "Foo", False, self.state)
+        result2 = Table.transpose(self.zoo, feature_name="Foo")
+        self.assert_table_equal(result1, result2)
+
+    def test_run_callback(self):
+        self.state.set_progress_value = Mock()
+        run(self.zoo, "", "Feature", False, self.state)
+        self.state.set_progress_value.assert_called()
 
 
 class TestOWTranspose(WidgetTest):
@@ -80,6 +106,23 @@ class TestOWTranspose(WidgetTest):
         self.assertTrue(
             all(x.name.startswith(widget.DEFAULT_PREFIX)
                 for x in output.domain.attributes))
+
+    def test_remove_redundant_instance(self):
+        cb = self.widget.feature_combo
+        data = Table("iris")
+
+        self.send_signal(self.widget.Inputs.data, data)
+        simulate.combobox_activate_item(cb, "petal length")
+        self.widget.controls.remove_redundant_inst.setChecked(True)
+        self.wait_until_finished()
+
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 3)
+        self.assertNotIn("petal length", output.metas)
+
+        self.widget.controls.remove_redundant_inst.setChecked(False)
+        self.wait_until_finished()
+        self.assertEqual(len(self.get_output(self.widget.Outputs.data)), 4)
 
     def test_send_report(self):
         widget = self.widget
@@ -150,8 +193,10 @@ class TestOWTranspose(WidgetTest):
         with unittest.mock.patch("Orange.data.Table.transpose",
                                  side_effect=ValueError("foo")):
             self.send_signal(widget.Inputs.data, self.zoo)
+            self.wait_until_finished()
             self.assertTrue(widget.Error.value_error.is_shown())
         self.send_signal(widget.Inputs.data, self.zoo)
+        self.wait_until_finished()
         self.assertFalse(widget.Error.value_error.is_shown())
 
     def test_feature_names_from_cont_vars(self):
@@ -182,6 +227,7 @@ class TestOWTranspose(WidgetTest):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
         input_sum.assert_called_with(len(data), format_summary_details(data))
+        self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.data)
         output_sum.assert_called_with(len(output),
                                       format_summary_details(output))
@@ -191,8 +237,10 @@ class TestOWTranspose(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         input_sum.assert_called_once()
         self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
+        self.wait_until_finished()
         output_sum.assert_called_once()
         self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
+
 
 if __name__ == "__main__":
     unittest.main()
