@@ -168,7 +168,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         )
 
     def __add_controls_start_box(self):
-        box = gui.vBox(self.controlArea, box=True)
+        box = gui.vBox(self.controlArea, box="Optimize", spacing=0)
         gui.comboBox(
             box, self, "initialization", label="Initialization:",
             items=InitType.items(), orientation=Qt.Horizontal,
