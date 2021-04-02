@@ -17,7 +17,7 @@ cdef extern from "numpy/npy_math.h":
 cpdef enum:
     NULL_BRANCH = -1
 
-def contingency(double[:] x, int nx, double[:] y, int ny):
+def contingency(const double[:] x, int nx, const double[:] y, int ny):
     cdef:
         np.ndarray[np.uint32_t, ndim=2] cont = np.zeros((ny, nx), dtype=np.uint32)
         int n = len(x), yi, xi
@@ -28,7 +28,8 @@ def contingency(double[:] x, int nx, double[:] y, int ny):
             cont[yi, xi] += 1
     return cont
 
-def find_threshold_entropy(double[:] x, double[:] y, np.intp_t[:] idx,
+def find_threshold_entropy(const double[:] x, const double[:] y,
+                           const np.intp_t[:] idx,
                            int n_classes, int min_leaf):
     """
     Find the threshold for continuous attribute values that maximizes
@@ -89,8 +90,9 @@ def find_threshold_entropy(double[:] x, double[:] y, np.intp_t[:] idx,
     return (class_entro - best_entro) / N / log(2), x[idx[best_idx]]
 
 
-def find_binarization_entropy(double[:, :] cont, double[:] class_distr,
-                              double[:] val_distr, int min_leaf):
+def find_binarization_entropy(const double[:, :] cont,
+                              const double[:] class_distr,
+                              const double[:] val_distr, int min_leaf):
     """
     Find the split of discrete values into two groups that optimizes information
     gain.
@@ -187,7 +189,9 @@ def find_binarization_entropy(double[:, :] cont, double[:] class_distr,
     return (class_entro - best_entro) / N / log(2), best_mapping
 
 
-def find_threshold_MSE(double[:] x, double[:] y, np.intp_t[:] idx, int min_leaf):
+def find_threshold_MSE(const double[:] x,
+                       const double[:] y,
+                       const np.intp_t[:] idx, int min_leaf):
     """
     Find the threshold for continuous attribute values that minimizes MSE.
 
@@ -232,7 +236,8 @@ def find_threshold_MSE(double[:] x, double[:] y, np.intp_t[:] idx, int min_leaf)
     return (best_inter - (sum * sum) / N) / N, x[idx[best_idx]]
 
 
-def find_binarization_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
+def find_binarization_MSE(const double[:] x,
+                          const double[:] y, int n_values, int min_leaf):
     """
     Find the split of discrete values into two groups that minimizes the MSE.
 
@@ -315,7 +320,9 @@ def find_binarization_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
     return (best_inter - start_inter) / x.shape[0], best_mapping
 
 
-def compute_grouped_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
+def compute_grouped_MSE(const double[:] x,
+                        const double[:] y,
+                        int n_values, int min_leaf):
     """
     Compute the MSE decrease of the given split into groups.
 
@@ -371,8 +378,10 @@ def compute_grouped_MSE(double[:] x, double[:] y, int n_values, int min_leaf):
     return (inter - sum * sum / n) / x.shape[0]
 
 
-def compute_predictions(double[:, :] X, int[:] code,
-                        double[:, :] values, double[:] thresholds):
+def compute_predictions(const double[:, :] X,
+                        const int[:] code,
+                        const double[:, :] values,
+                        const double[:] thresholds):
     """
     Return the values (distributions, means and variances) stored in the nodes
     to which the tree classify the rows in X.
@@ -419,8 +428,10 @@ def compute_predictions(double[:, :] X, int[:] code,
     return np.asarray(predictions)
 
 
-def compute_predictions_csr(X, int[:] code,
-                               double[:, :] values, double[:] thresholds):
+def compute_predictions_csr(X,
+                            const int[:] code,
+                            const double[:, :] values,
+                            const double[:] thresholds):
     """
     Same as compute_predictions except for sparse data
     """
@@ -431,9 +442,9 @@ def compute_predictions_csr(X, int[:] code,
         double[: ,:] predictions = np.empty(
             (X.shape[0], values.shape[1]), dtype=np.float64)
 
-        double[:] data = X.data
-        np.int32_t[:] indptr = X.indptr
-        np.int32_t[:] indices = X.indices
+        const double[:] data = X.data
+        const np.int32_t[:] indptr = X.indptr
+        const np.int32_t[:] indices = X.indices
         int ind, attr, n_rows
 
     n_rows = X.shape[0]
@@ -463,8 +474,10 @@ def compute_predictions_csr(X, int[:] code,
                 predictions[i, j] = values[node_idx, j]
     return np.asarray(predictions)
 
-def compute_predictions_csc(X, int[:] code,
-                               double[:, :] values, double[:] thresholds):
+def compute_predictions_csc(X,
+                            const int[:] code,
+                            const double[:, :] values,
+                            const double[:] thresholds):
     """
     Same as compute_predictions except for sparse data
     """
@@ -475,9 +488,9 @@ def compute_predictions_csc(X, int[:] code,
         double[: ,:] predictions = np.empty(
             (X.shape[0], values.shape[1]), dtype=np.float64)
 
-        double[:] data = X.data
-        np.int32_t[:] indptr = X.indptr
-        np.int32_t[:] indices = X.indices
+        const double[:] data = X.data
+        const np.int32_t[:] indptr = X.indptr
+        const np.int32_t[:] indices = X.indices
         int ind, attr, n_rows
 
     n_rows = X.shape[0]

@@ -120,7 +120,8 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_saved_selection(self):
         data = self.data.copy()
-        data[0, 0] = np.nan
+        with data.unlocked():
+            data[0, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         mask = np.zeros(len(data) - 1, dtype=bool)
         mask[::10] = True
@@ -185,7 +186,8 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_data_with_missing_values(self):
         data = self.data.copy()
-        data[0, 0] = np.nan
+        with data.unlocked():
+            data[0, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Information.hidden_instances.is_shown())
         self.send_signal(self.widget.Inputs.data, None)

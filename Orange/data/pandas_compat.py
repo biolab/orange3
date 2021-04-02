@@ -332,6 +332,10 @@ def vars_from_df(df, role=None, force_nominal=False):
                       for var, col, expr in zip(Avars, Acols, Aexpr)]).T
         XYM.append(A)
 
+    # Let the tables share memory with pandas frame
+    if XYM[1] is not None and XYM[1].ndim == 2 and XYM[1].shape[1] == 1:
+        XYM[1] = XYM[1][:, 0]
+
     return XYM, Domain(attrs, class_vars, metas)
 
 

@@ -599,7 +599,8 @@ class OWPredictions(OWWidget):
         if newcolumns:
             newcolumns = numpy.hstack(
                 [numpy.atleast_2d(cols) for cols in newcolumns])
-            predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
+            with predictions.unlocked(predictions.metas):
+                predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
 
         index = self.dataview.model().index
         map_to = self.dataview.model().mapToSource

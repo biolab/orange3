@@ -516,9 +516,9 @@ class JaccardModel(FittedDistanceModel):
         symmetric = x2 is None
         if symmetric:
             x2 = x1
-        x1 = sp.csr_matrix(x1)
+        x1 = sp.csr_matrix(x1).copy()
         x1.eliminate_zeros()
-        x2 = sp.csr_matrix(x2)
+        x2 = sp.csr_matrix(x2).copy()
         x2.eliminate_zeros()
         n, m = x1.shape[0], x2.shape[0]
         matrix = np.zeros((n, m))

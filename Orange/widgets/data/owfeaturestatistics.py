@@ -177,11 +177,12 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         self.domain = domain = data.domain
         self.target_var = None
 
-        self.__attributes = self.__filter_attributes(domain.attributes, self.table.X)
-        # We disable pylint warning because the `Y` property squeezes vectors,
-        # while we need a 2d array, which `_Y` provides
-        self.__class_vars = self.__filter_attributes(domain.class_vars, self.table._Y)  # pylint: disable=protected-access
-        self.__metas = self.__filter_attributes(domain.metas, self.table.metas)
+        self.__attributes = self.__filter_attributes(
+            domain.attributes, self.table.X)
+        self.__class_vars = self.__filter_attributes(
+            domain.class_vars, self.table.Y.reshape((len(self.table.Y), -1)))
+        self.__metas = self.__filter_attributes(
+            domain.metas, self.table.metas)
         self.__attributes_set = set(self.__metas[0])
         self.__class_vars_set = set(self.__class_vars[0])
         self.__metas_set = set(self.__metas[0])

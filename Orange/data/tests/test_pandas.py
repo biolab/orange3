@@ -635,7 +635,7 @@ class TestDenseTablePandas(TestTablePandas):
             [0, 1, 0, 1, 1, 2, 1] +
             [0, 0, 0, 0, 4, 1, 1] +
             "a  b  c  d  e     f    g".split() +
-            list("ABCDEF") + [""], dtype=object).reshape(-1, 7).T
+            list("ABCDEF") + [""], dtype=object).reshape(-1, 7).T.copy()
         self.table = Table.from_numpy(
             self.domain,
             np.array(
@@ -691,10 +691,12 @@ class TestDenseTablePandas(TestTablePandas):
             ), 1)
 
     def test_amend(self):
-        df = self.table.X_df
-        df.iloc[0][0] = 0
+        with self.table.unlocked():
+            df = self.table.X_df
+            df.iloc[0][0] = 0
         X = self.table.X
-        self.table.X_df = df
+        with self.table.unlocked():
+            self.table.X_df = df
         self.assertTrue(np.shares_memory(df.values, X))
 
     def test_amend_dimension_mismatch(self):

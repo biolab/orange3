@@ -595,7 +595,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 self.data.domain.metas + self._get_projection_variables()
             )
         )
-        data.metas[:, -2:] = self.get_embedding()
+        with data.unlocked(data.metas):
+            data.metas[:, -2:] = self.get_embedding()
         if self.tsne_embedding is not None:
             data.domain = Domain(
                 self.data.domain.attributes,

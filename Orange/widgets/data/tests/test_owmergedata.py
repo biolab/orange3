@@ -782,7 +782,8 @@ class TestOWMergeData(WidgetTest):
         self.assertTrue(sp.issparse(output_sparse.X))
         self.assertTrue(output_sparse.is_sparse())
 
-        output_sparse.X = output_sparse.X.toarray()
+        with output_sparse.unlocked():
+            output_sparse.X = output_sparse.X.toarray()
         self.assertTablesEqual(output_dense, output_sparse)
 
     def test_commit_on_new_data(self):

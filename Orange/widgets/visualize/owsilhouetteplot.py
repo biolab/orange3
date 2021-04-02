@@ -503,15 +503,18 @@ class OWSilhouettePlot(widget.OWWidget):
                 domain.attributes,
                 domain.class_vars,
                 domain.metas + (silhouette_var, ))
-            data = self.data.transform(domain)
 
             if np.count_nonzero(selectedmask):
                 selected = self.data.from_table(
                     domain, self.data, np.flatnonzero(selectedmask))
 
             if selected is not None:
-                selected[:, silhouette_var] = np.c_[scores[selectedmask]]
-            data[:, silhouette_var] = np.c_[scores]
+                with selected.unlocked(selected.metas):
+                    selected[:, silhouette_var] = np.c_[scores[selectedmask]]
+
+            data = self.data.transform(domain)
+            with data.unlocked(data.metas):
+                data[:, silhouette_var] = np.c_[scores]
 
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(create_annotated_table(data, indices))

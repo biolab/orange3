@@ -213,9 +213,10 @@ class TestOWDistributions(WidgetTest):
         y = self.iris.domain.class_var
         extra = DiscreteVariable("foo", values=("a", "b"))
         domain = Domain(self.iris.domain.attributes + (extra, ), y)
-        data = self.iris.transform(domain)
-        data.X[:75, -1] = 0
-        data.X[75:120, -1] = 1
+        data = self.iris.transform(domain, copy=True)
+        with data.unlocked():
+            data.X[:75, -1] = 0
+            data.X[75:120, -1] = 1
         self.send_signal(widget.Inputs.data, data)
         self._set_var(2)
         self._set_cvar(y)
@@ -288,11 +289,12 @@ class TestOWDistributions(WidgetTest):
         self.assertIsNotNone(widget.valid_group_data)
         self.assertTrue(widget.is_valid)
 
-        X, Y = self.iris.X, self.iris.Y
-        X[:, 0] = np.nan
-        X[:50, 1] = np.nan
-        X[:100, 2] = np.nan
-        Y[75:] = np.nan
+        with self.iris.unlocked():
+            X, Y = self.iris.X, self.iris.Y
+            X[:, 0] = np.nan
+            X[:50, 1] = np.nan
+            X[:100, 2] = np.nan
+            Y[75:] = np.nan
         self.send_signal(widget.Inputs.data, self.iris)
 
         self._set_var(domain[0])

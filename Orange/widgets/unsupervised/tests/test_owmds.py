@@ -92,9 +92,10 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, None)
         combobox_run_through_all()
 
-        data.X[:, 0] = np.nan
-        data.Y[:] = np.nan
-        data.metas[:, 1] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
+            data.Y[:] = np.nan
+            data.metas[:, 1] = np.nan
 
         self.send_signal(self.widget.Inputs.data, data, wait=1000)
         combobox_run_through_all()

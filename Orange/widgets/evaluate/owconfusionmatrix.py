@@ -393,8 +393,9 @@ class OWConfusionMatrix(widget.OWWidget):
                                     metas)
         data = self.data.transform(domain)
         if extra:
-            data.metas[:, len(self.data.domain.metas):] = \
-                np.hstack(tuple(extra))
+            with data.unlocked(data.metas):
+                data.metas[:, len(self.data.domain.metas):] = \
+                    np.hstack(tuple(extra))
         data.name = learner_name
 
         if selected:

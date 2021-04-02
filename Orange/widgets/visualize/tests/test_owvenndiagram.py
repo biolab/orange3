@@ -37,7 +37,8 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
     def test_rows_id(self):
         data = Table('zoo')
         data1 = deepcopy(data)
-        data1[:, 1] = 1
+        with data1.unlocked():
+            data1[:, 1] = 1
         self.widget.rowwise = True
         self.send_signal(self.signal_name, data1[:10], 1)
         self.widget.selected_feature = IDENTITY_STR
@@ -177,7 +178,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         selected_atr_name = 'Selected'
         input2 = self.data.transform(Domain([self.data.domain.attributes[0]],
                                             self.data.domain.class_vars,
-                                            self.data.domain.metas))
+                                            self.data.domain.metas), copy=True)
         self.send_signal(self.signal_name, self.data, (1, 'Data', None))
         self.send_signal(self.signal_name, input2, (2, 'Data', None))
 
@@ -200,7 +201,8 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
                                       input2.metas)
 
         #domain matches but the values do not
-        input2.X = input2.X - 1
+        with input2.unlocked(input2.X):
+            input2.X = input2.X - 1
         self.send_signal(self.signal_name, input2, (2, 'Data', None))
         self.widget.vennwidget.vennareas()[3].setSelected(True)
         annotated = self.get_output(self.widget.Outputs.annotated_data)

@@ -38,8 +38,9 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         simulate.combobox_run_through_all(self.widget.controls.attr_color)
         simulate.combobox_run_through_all(self.widget.controls.attr_size)
 
-        data.X[:, 0] = np.nan
-        data.Y[:] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
+            data.Y[:] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.data_subset, data[2:3])
         simulate.combobox_run_through_all(self.widget.controls.attr_color)
@@ -108,7 +109,8 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
             self.assertEqual(is_shown, self.widget.Error.no_valid_data.is_shown())
 
         data = Table("iris")[::30]
-        data[:, 0] = np.nan
+        with data.unlocked():
+            data[:, 0] = np.nan
         for data, is_shown in zip([None, data, Table("iris")[:30]], [False, True, False]):
             assertErrorShown(data, is_shown)
 

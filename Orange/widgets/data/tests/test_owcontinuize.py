@@ -51,8 +51,9 @@ class TestOWContinuize(WidgetTest):
         GH-2144
         """
         table = Table("iris")
-        table = table[:, 1]
-        table[:] = 42.0
+        table = table[:, 1].copy()
+        with table.unlocked():
+            table[:] = 42.0
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
@@ -66,13 +67,16 @@ class TestOWContinuize(WidgetTest):
         GH-2144
         """
         table = Table("iris")
-        table[:, 2] = np.NaN
+        with table.unlocked():
+            table[:, 2] = np.NaN
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
         self.widget.unconditional_commit()
+
         table = Table("iris")
-        table[1, 2] = np.NaN
+        with table.unlocked():
+            table[1, 2] = np.NaN
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.unconditional_commit()
 
@@ -83,13 +87,16 @@ class TestOWContinuize(WidgetTest):
         GH-2144
         """
         table = Table("iris")
-        table[:, 2] = np.NaN
+        with table.unlocked():
+            table[:, 2] = np.NaN
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySpan
         self.widget.continuous_treatment = 1
         self.widget.unconditional_commit()
+
         table = Table("iris")
-        table[1, 2] = np.NaN
+        with table.unlocked():
+            table[1, 2] = np.NaN
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.unconditional_commit()
 

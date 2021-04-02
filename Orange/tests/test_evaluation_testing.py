@@ -46,7 +46,9 @@ class TestSampling(unittest.TestCase):
         cls.iris = Table('iris')
         cls.nrows = 200
         cls.ncols = 5
-        cls.random_table = random_data(cls.nrows, cls.ncols)
+
+    def setUp(self):
+        self.random_table = random_data(self.nrows, self.ncols)
 
     def run_test_failed(self, method, succ_calls):
         # Can't use mocking helpers here (wrong result type for Majority,
@@ -258,7 +260,8 @@ class TestCrossValidation(TestSampling):
         res = cv(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[-4:] = np.zeros((4, 3))
+        with data.unlocked(data.X):
+            x[-4:] = np.zeros((4, 3))
         res = cv(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
@@ -335,7 +338,8 @@ class TestCrossValidationFeature(TestSampling):
         ndata = data.transform(domain)
         vals = np.tile(range(f), len(data)//f + 1)[:len(data)]
         vals = vals.reshape((-1, 1))
-        ndata[:, fat] = vals
+        with ndata.unlocked(ndata.metas):
+            ndata[:, fat] = vals
         return ndata
 
     def test_init(self):
@@ -358,7 +362,8 @@ class TestCrossValidationFeature(TestSampling):
         t = self.random_table
         t = self.add_meta_fold(t, 3)
         fat = t.domain.metas[0]
-        t[0][fat] = float("nan")
+        with t.unlocked(t.metas):
+            t[0][fat] = float("nan")
         res = CrossValidationFeature(feature=fat)(t, [NaiveBayesLearner()])
         self.assertNotIn(0, res.row_indices)
 
@@ -440,11 +445,13 @@ class TestLeaveOneOut(TestSampling):
         res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[49] = 0
+        with data.unlocked(data.X):
+            x[49] = 0
         res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[25:] = 1
+        with data.unlocked(data.X):
+            x[25:] = 1
         data = Table.from_numpy(None, x, y)
         res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0],
@@ -516,11 +523,13 @@ class TestTestOnTrainingData(TestSampling):
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[49] = 0
+        with data.unlocked(data.X):
+            x[49] = 0
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[25:] = 1
+        with data.unlocked(data.X):
+            x[25:] = 1
         data = Table.from_numpy(None, x, y)
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
@@ -604,11 +613,13 @@ class TestTestOnTestData(TestSampling):
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[49] = 0
+        with data.unlocked(data.X):
+            x[49] = 0
         res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
-        x[25:] = 1
+        with data.unlocked(data.X):
+            x[25:] = 1
         y = x[:, -1]
         data = Table.from_numpy(None, x, y)
         res = TestOnTrainingData()(data, [MajorityLearner()])

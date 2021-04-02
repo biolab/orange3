@@ -34,11 +34,12 @@ class Instance:
             self._weight = 1
         elif isinstance(data, Instance) and data.domain == domain:
             self._x = np.array(data._x)
-            self._y = np.array(data._y)
+            self._y = np.atleast_1d(np.array(data._y))
             self._metas = np.array(data._metas)
             self._weight = data._weight
         else:
             self._x, self._y, self._metas = domain.convert(data)
+            self._y = np.atleast_1d(self._y)
             self._weight = 1
 
         if id is not None:
@@ -116,7 +117,10 @@ class Instance:
         if 0 <= idx < len(self._domain.attributes):
             value = self._x[idx]
         elif idx >= len(self._domain.attributes):
-            value = self._y[idx - len(self.domain.attributes)]
+            if self._y.ndim == 0:
+                value = self._y
+            else:
+                value = self._y[idx - len(self.domain.attributes)]
         else:
             value = self._metas[-1 - idx]
         var = self._domain[idx]

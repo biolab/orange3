@@ -112,7 +112,7 @@ class TreeLearner(Learner):
             cont_entr = np.sum(cont * np.log(cont))
             score = (class_entr - attr_entr + cont_entr) / n / np.log(2)
             score *= n / len(data)  # punishment for missing values
-            branches = col_x
+            branches = col_x.copy()
             branches[np.isnan(branches)] = -1
             if score == 0:
                 return REJECT_ATTRIBUTE

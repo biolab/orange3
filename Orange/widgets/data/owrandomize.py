@@ -97,8 +97,9 @@ class OWRandomize(OWWidget):
             type_ = sum(t for t, p in zip(Randomize.Type, self.parts) if p)
             randomized = Randomize(type_, rand_seed)(self.data[indices])
             data = self.data.copy()
-            for i, instance in zip(indices, randomized):
-                data[i] = instance
+            with data.unlocked():
+                for i, instance in zip(indices, randomized):
+                    data[i] = instance
         self.Outputs.data.send(data)
 
     def send_report(self):

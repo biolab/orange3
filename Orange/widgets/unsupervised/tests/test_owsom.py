@@ -80,8 +80,9 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, Table("heart_disease"))
         self.assertTrue(widget.Warning.ignoring_disc_variables.is_shown())
 
-        for i in range(150):
-            self.iris.X[i, i % 4] = np.nan
+        with self.iris.unlocked():
+            for i in range(150):
+                self.iris.X[i, i % 4] = np.nan
 
         self.send_signal(widget.Inputs.data, self.iris)
         self.assertTrue(widget.Error.no_defined_rows.is_shown())
@@ -94,7 +95,8 @@ class TestOWSOM(WidgetTest):
 
     def test_missing_some_data(self):
         widget = self.widget
-        self.iris.X[:50, 0] = np.nan
+        with self.iris.unlocked():
+            self.iris.X[:50, 0] = np.nan
 
         self.send_signal(widget.Inputs.data, self.iris)
         self.assertFalse(widget.Error.no_defined_rows.is_shown())
@@ -108,7 +110,8 @@ class TestOWSOM(WidgetTest):
 
     def test_missing_one_row_data(self):
         widget = self.widget
-        self.iris.X[5, 0] = np.nan
+        with self.iris.unlocked():
+            self.iris.X[5, 0] = np.nan
 
         self.send_signal(widget.Inputs.data, self.iris)
         self.assertFalse(widget.Error.no_defined_rows.is_shown())
@@ -120,7 +123,8 @@ class TestOWSOM(WidgetTest):
     @_patch_recompute_som
     def test_sparse_data(self):
         widget = self.widget
-        self.iris.X = sp.csc_matrix(self.iris.X)
+        with self.iris.unlocked():
+            self.iris.X = sp.csc_matrix(self.iris.X)
 
         # Table.from_table can decide to return dense data
         with patch.object(Table, "from_table", lambda _, x: x):
@@ -386,7 +390,8 @@ class TestOWSOM(WidgetTest):
             self.assertEqual(e.y(), y)
             self.assertEqual(e.r, r / 2)
 
-        self.iris.Y[:15] = np.nan
+        with self.iris.unlocked():
+            self.iris.Y[:15] = np.nan
         self.send_signal(widget.Inputs.data, self.iris)
         a = widget.elements.childItems()[0]
         np.testing.assert_equal(a.dist, [0.5, 0, 0, 0.5])
@@ -398,8 +403,9 @@ class TestOWSOM(WidgetTest):
         domain = table.domain
         new_domain = Domain(
             domain.attributes[3:], domain.class_var, domain.attributes[:3])
-        new_table = table.transform(new_domain)
-        new_table.metas = new_table.metas.astype(object)
+        new_table = table.transform(new_domain, copy=True)
+        with new_table.unlocked(new_table.metas):
+            new_table.metas = new_table.metas.astype(object)
         self.send_signal(widget.Inputs.data, new_table)
 
         # discrete attribute
@@ -441,15 +447,17 @@ class TestOWSOM(WidgetTest):
 
         # discrete meta with missing values
         widget.attr_color = domain["gender"]
-        col = widget.data.get_column_view("gender")[0]
-        col[:5] = np.nan
+        with widget.data.unlocked():
+            col = widget.data.get_column_view("gender")[0]
+            col[:5] = np.nan
         col = col.copy()
         col[:5] = 2
         np.testing.assert_equal(widget._get_color_column(), col)
 
     @_patch_recompute_som
     def test_colored_circles_with_missing_values(self):
-        self.iris.get_column_view("iris")[0][:5] = np.nan
+        with self.iris.unlocked():
+            self.iris.get_column_view("iris")[0][:5] = np.nan
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertTrue(self.widget.Warning.missing_colors.is_shown())
 

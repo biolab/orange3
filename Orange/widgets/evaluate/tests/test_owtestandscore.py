@@ -112,9 +112,11 @@ class TestOWTestAndScore(WidgetTest):
         self.widget.resampling = OWTestAndScore.TestOnTest
         # test data with the same class (otherwise the widget shows a different error)
         # and a non-nan X
-        iris_test = iris.transform(Domain([ContinuousVariable("x")],
-                                          class_vars=iris.domain.class_vars))
-        iris_test.X[:, 0] = 1
+        iris_test = iris.transform(
+            Domain([ContinuousVariable("x")], class_vars=iris.domain.class_vars),
+            copy=True)
+        with iris_test.unlocked():
+            iris_test.X[:, 0] = 1
         self.send_signal(self.widget.Inputs.test_data, iris_test)
         self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
         self.assertTrue(self.widget.Error.test_data_incompatible.is_shown())
@@ -196,8 +198,9 @@ class TestOWTestAndScore(WidgetTest):
             self.assertEqual(is_shown, self.widget.Error.train_data_error.is_shown())
             self.assertEqual(message, str(self.widget.Error.train_data_error))
 
-        data = Table("iris")[::30]
-        data.Y[:] = np.nan
+        data = Table("iris")[::30].copy()
+        with data.unlocked():
+            data.Y[:] = np.nan
 
         iris_empty_x = Table.from_table(
             Domain([], data.domain.class_var), Table("iris")

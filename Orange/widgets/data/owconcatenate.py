@@ -227,7 +227,9 @@ class OWConcatenate(widget.OWWidget):
             if source_var:
                 source_ids = np.array(list(flatten(
                     [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
-                data[:, source_var] = source_ids
+                parts = [data.Y, data.X, data.metas]
+                with data.unlocked(parts[self.source_column_role]):
+                    data[:, source_var] = source_ids
         else:
             data = None
 

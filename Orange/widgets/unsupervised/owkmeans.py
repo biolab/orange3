@@ -543,8 +543,9 @@ class OWKMeans(widget.OWWidget):
 
         new_domain = add_columns(domain, metas=[cluster_var, silhouette_var])
         new_table = self.data.transform(new_domain)
-        new_table.get_column_view(cluster_var)[0][:] = clust_ids
-        new_table.get_column_view(silhouette_var)[0][:] = scores
+        with new_table.unlocked(new_table.metas):
+            new_table.get_column_view(cluster_var)[0][:] = clust_ids
+            new_table.get_column_view(silhouette_var)[0][:] = scores
 
         domain_attributes = set(domain.attributes)
         centroid_attributes = [
@@ -556,8 +557,12 @@ class OWKMeans(widget.OWWidget):
         centroid_domain = add_columns(
             Domain(centroid_attributes, [], domain.metas),
             metas=[cluster_var, silhouette_var])
+        # Table is constructed from a copy of centroids: if data is stored in
+        # the widget, it can be modified, so the widget should preferrably
+        # output a copy. The number of centroids is small, hence copying it is
+        # cheap.
         centroids = Table(
-            centroid_domain, km.centroids, None,
+            centroid_domain, km.centroids.copy(), None,
             np.hstack((np.full((km.k, len(domain.metas)), np.nan),
                        np.arange(km.k).reshape(km.k, 1),
                        clust_scores))

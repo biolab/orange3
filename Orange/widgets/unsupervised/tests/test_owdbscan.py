@@ -132,7 +132,8 @@ class TestOWDBSCAN(WidgetTest):
         simulate.combobox_activate_index(cbox, 0)  # Euclidean
 
     def test_sparse_csr_data(self):
-        self.iris.X = csr_matrix(self.iris.X)
+        with self.iris.unlocked():
+            self.iris.X = csr_matrix(self.iris.X)
 
         w = self.widget
 
@@ -149,7 +150,8 @@ class TestOWDBSCAN(WidgetTest):
         self.assertEqual("DBSCAN Core", str(output.domain.metas[1]))
 
     def test_sparse_csc_data(self):
-        self.iris.X = csc_matrix(self.iris.X)
+        with self.iris.unlocked():
+            self.iris.X = csc_matrix(self.iris.X)
 
         w = self.widget
 
@@ -226,7 +228,8 @@ class TestOWDBSCAN(WidgetTest):
 
     def test_missing_data(self):
         w = self.widget
-        self.iris[1:5, 1] = np.nan
+        with self.iris.unlocked():
+            self.iris[1:5, 1] = np.nan
         self.send_signal(w.Inputs.data, self.iris)
         output = self.get_output(w.Outputs.annotated_data)
         self.assertTupleEqual((150, 1), output[:, "Cluster"].metas.shape)
@@ -244,7 +247,7 @@ class TestOWDBSCAN(WidgetTest):
         clusters = DBSCAN(**kwargs)(data)
 
         output = self.get_output(self.widget.Outputs.annotated_data)
-        output_clusters = output.metas[:, 0]
+        output_clusters = output.metas[:, 0].copy()
         output_clusters[np.isnan(output_clusters)] = -1
         np.testing.assert_array_equal(output_clusters, clusters)
 
@@ -259,7 +262,7 @@ class TestOWDBSCAN(WidgetTest):
         clusters = DBSCAN(**kwargs)(data)
 
         output = self.get_output(self.widget.Outputs.annotated_data)
-        output_clusters = output.metas[:, 0]
+        output_clusters = output.metas[:, 0].copy()
         output_clusters[np.isnan(output_clusters)] = -1
         np.testing.assert_array_equal(output_clusters, clusters)
 

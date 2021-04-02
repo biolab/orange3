@@ -5,6 +5,7 @@ import copy
 import os
 import random
 import unittest
+import warnings
 from unittest.mock import Mock, MagicMock, patch
 from itertools import chain
 from math import isnan
@@ -47,8 +48,6 @@ class TableTestCase(unittest.TestCase):
         self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
 
     def test_indexing(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
@@ -111,8 +110,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(d[np.int_(0)][np.int_(metae)], "i")
 
     def test_indexing_example(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
@@ -149,8 +146,6 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(e[np.int_(metae)], "i")
 
     def test_indexing_assign_value(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
@@ -160,48 +155,65 @@ class TableTestCase(unittest.TestCase):
             metaa = d.domain.index("a")
 
             self.assertEqual(d[0, "a"], "A")
-            d[0, "a"] = "B"
+
+            with d.unlocked():
+                d[0, "a"] = "B"
             self.assertEqual(d[0, "a"], "B")
-            d[0]["a"] = "A"
+            with d.unlocked():
+                d[0]["a"] = "A"
             self.assertEqual(d[0, "a"], "A")
 
-            d[0, vara] = "B"
+            with d.unlocked():
+                d[0, vara] = "B"
             self.assertEqual(d[0, "a"], "B")
-            d[0][vara] = "A"
+            with d.unlocked():
+                d[0][vara] = "A"
             self.assertEqual(d[0, "a"], "A")
 
-            d[0, metaa] = "B"
+            with d.unlocked():
+                d[0, metaa] = "B"
             self.assertEqual(d[0, "a"], "B")
-            d[0][metaa] = "A"
+            with d.unlocked():
+                d[0][metaa] = "A"
             self.assertEqual(d[0, "a"], "A")
 
-            d[0, np.int_(metaa)] = "B"
+            with d.unlocked():
+                d[0, np.int_(metaa)] = "B"
             self.assertEqual(d[0, "a"], "B")
-            d[0][np.int_(metaa)] = "A"
+            with d.unlocked():
+                d[0][np.int_(metaa)] = "A"
             self.assertEqual(d[0, "a"], "A")
 
             # regular
             varb = d.domain["b"]
 
             self.assertEqual(d[0, "b"], 0)
-            d[0, "b"] = 42
+            with d.unlocked():
+                d[0, "b"] = 42
             self.assertEqual(d[0, "b"], 42)
-            d[0]["b"] = 0
+            with d.unlocked():
+                d[0]["b"] = 0
             self.assertEqual(d[0, "b"], 0)
 
-            d[0, varb] = 42
+            with d.unlocked():
+                d[0, varb] = 42
             self.assertEqual(d[0, "b"], 42)
-            d[0][varb] = 0
+            with d.unlocked():
+                d[0][varb] = 0
             self.assertEqual(d[0, "b"], 0)
 
-            d[0, 0] = 42
+            with d.unlocked():
+                d[0, 0] = 42
             self.assertEqual(d[0, "b"], 42)
-            d[0][0] = 0
+            with d.unlocked():
+                d[0][0] = 0
             self.assertEqual(d[0, "b"], 0)
 
-            d[0, np.int_(0)] = 42
+            with d.unlocked():
+                d[0, np.int_(0)] = 42
             self.assertEqual(d[0, "b"], 42)
-            d[0][np.int_(0)] = 0
+            with d.unlocked():
+                d[0][np.int_(0)] = 0
             self.assertEqual(d[0, "b"], 0)
 
     def test_indexing_assign_example(self):
@@ -209,44 +221,48 @@ class TableTestCase(unittest.TestCase):
             for e, f in zip(s, t):
                 self.assertAlmostEqual(e, f)
 
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
 
             self.assertFalse(isnan(d[0, "a"]))
-            d[0] = ["3.14", "1", "f"]
+            with d.unlocked():
+                d[0] = ["3.14", "1", "f"]
             almost_equal_list(d[0].values(), [3.14, "1", "f"])
             self.assertTrue(isnan(d[0, "a"]))
-            d[0] = [3.15, 1, "t"]
+
+            with d.unlocked():
+                d[0] = [3.15, 1, "t"]
             almost_equal_list(d[0].values(), [3.15, "0", "t"])
-            d[np.int_(0)] = [3.15, 2, "f"]
+
+            with d.unlocked():
+                d[np.int_(0)] = [3.15, 2, "f"]
             almost_equal_list(d[0].values(), [3.15, 2, "f"])
 
-            with self.assertRaises(ValueError):
+            with d.unlocked(), self.assertRaises(ValueError):
                 d[0] = ["3.14", "1"]
 
-            with self.assertRaises(ValueError):
+            with d.unlocked(), self.assertRaises(ValueError):
                 d[np.int_(0)] = ["3.14", "1"]
 
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
-            d[0] = ex
+            with d.unlocked():
+                d[0] = ex
             almost_equal_list(d[0].values(), [3.16, "1", "f"])
 
             ex = data.Instance(d.domain, ["3.16", 2, "t"])
-            d[np.int_(0)] = ex
+            with d.unlocked():
+                d[np.int_(0)] = ex
             almost_equal_list(d[0].values(), [3.16, 2, "t"])
 
             ex = data.Instance(d.domain, ["3.16", "1", "f"])
             ex["e"] = "mmmapp"
-            d[0] = ex
+            with d.unlocked():
+                d[0] = ex
             almost_equal_list(d[0].values(), [3.16, "1", "f"])
             self.assertEqual(d[0, "e"], "mmmapp")
 
     def test_slice(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
@@ -267,27 +283,27 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual([e[0] for e in x], [2.26, 3.333, Unknown])
 
     def test_assign_slice_value(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
-            d[2:5, 0] = 42
+            with d.unlocked():
+                d[2:5, 0] = 42
             self.assertEqual([e[0] for e in d],
                              [0, 1.1, 42, 42, 42, 2.25, 2.26, 3.333, Unknown])
-            d[:3, "b"] = 43
+            with d.unlocked():
+                d[:3, "b"] = 43
             self.assertEqual([e[0] for e in d],
                              [43, 43, 43, 42, 42, 2.25, 2.26, 3.333, None])
-            d[-2:, d.domain[0]] = 44
+            with d.unlocked():
+                d[-2:, d.domain[0]] = 44
             self.assertEqual([e[0] for e in d],
                              [43, 43, 43, 42, 42, 2.25, 2.26, 44, 44])
 
-            d[2:5, "a"] = "A"
+            with d.unlocked():
+                d[2:5, "a"] = "A"
             self.assertEqual([e["a"] for e in d], list("ABAAACCDE"))
 
     def test_multiple_indices(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
@@ -302,29 +318,28 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual([e[0] for e in x], [2.22, 2.25, 1.1])
 
     def test_assign_multiple_indices_value(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
 
-            d[1:4, "b"] = 42
+            with d.unlocked():
+                d[1:4, "b"] = 42
             self.assertEqual([e[0] for e in d],
                              [0, 42, 42, 42, 2.24, 2.25, 2.26, 3.333, None])
 
-            d[range(5, 2, -1), "b"] = None
+            with d.unlocked():
+                d[range(5, 2, -1), "b"] = None
             self.assertEqual([e[d.domain[0]] for e in d],
                              [0, 42, 42, None, "?", "", 2.26, 3.333, None])
 
     def test_set_multiple_indices_example(self):
-        import warnings
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             d = data.Table("datasets/test2")
 
             vals = [e[0] for e in d]
-            d[[1, 2, 5]] = [42, None, None]
+            with d.unlocked():
+                d[[1, 2, 5]] = [42, None, None]
             vals[1] = vals[2] = vals[5] = 42
             self.assertEqual([e[0] for e in d], vals)
 
@@ -340,16 +355,23 @@ class TableTestCase(unittest.TestCase):
 
     def test_checksum(self):
         d = data.Table("zoo")
-        d[42, 3] = 0
+        with d.unlocked():
+            d[42, 3] = 0
         crc1 = d.checksum(False)
-        d[42, 3] = 1
+
+        with d.unlocked():
+            d[42, 3] = 1
         crc2 = d.checksum(False)
         self.assertNotEqual(crc1, crc2)
-        d[42, 3] = 0
+
+        with d.unlocked():
+            d[42, 3] = 0
         crc3 = d.checksum(False)
         self.assertEqual(crc1, crc3)
+
         _ = d[42, "name"]
-        d[42, "name"] = "non-animal"
+        with d.unlocked():
+            d[42, "name"] = "non-animal"
         crc4 = d.checksum(False)
         self.assertEqual(crc1, crc4)
         crc4 = d.checksum(True)
@@ -363,10 +385,11 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("zoo")
         self.assertEqual(d.total_weight(), len(d))
 
-        d.set_weights(0)
-        d[0].weight = 0.1
-        d[10].weight = 0.2
-        d[-1].weight = 0.3
+        with d.unlocked():
+            d.set_weights(0)
+            d[0].weight = 0.1
+            d[10].weight = 0.2
+            d[-1].weight = 0.3
         self.assertAlmostEqual(d.total_weight(), 0.6)
 
     def test_has_missing(self):
@@ -374,15 +397,18 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(d.has_missing())
         self.assertFalse(d.has_missing_class())
 
-        d[10, 3] = "?"
+        with d.unlocked():
+            d[10, 3] = "?"
         self.assertTrue(d.has_missing())
         self.assertFalse(d.has_missing_class())
 
-        d[10].set_class("?")
+        with d.unlocked():
+            d[10].set_class("?")
         self.assertTrue(d.has_missing())
         self.assertTrue(d.has_missing_class())
 
-        d = data.Table("datasets/test3")
+        with d.unlocked():
+            d = data.Table("datasets/test3")
         self.assertFalse(d.has_missing())
         self.assertFalse(d.has_missing_class())
 
@@ -391,19 +417,22 @@ class TableTestCase(unittest.TestCase):
         crc = d.checksum()
         names = set(str(x["name"]) for x in d)
 
-        d.shuffle()
+        with d.unlocked():
+            d.shuffle()
         self.assertNotEqual(crc, d.checksum())
         self.assertSetEqual(names, set(str(x["name"]) for x in d))
         crc2 = d.checksum()
 
         x = d[2:10]
         crcx = x.checksum()
-        d.shuffle()
+        with d.unlocked():
+            d.shuffle()
         self.assertNotEqual(crc2, d.checksum())
         self.assertEqual(crcx, x.checksum())
 
         crc2 = d.checksum()
-        x.shuffle()
+        with x.unlocked():
+            x.shuffle()
         self.assertNotEqual(crcx, x.checksum())
         self.assertEqual(crc2, d.checksum())
 
@@ -443,7 +472,8 @@ class TableTestCase(unittest.TestCase):
         self.assertTrue(np.all(t.X == copy.X))
         self.assertTrue(np.all(t.Y == copy.Y))
         self.assertTrue(np.all(t.metas == copy.metas))
-        copy[0] = [1, 1, 1, 1, 1, 1, 1, 1]
+        with copy.unlocked():
+            copy[0] = [1, 1, 1, 1]
         self.assertFalse(np.all(t.X == copy.X))
         self.assertFalse(np.all(t.Y == copy.Y))
         self.assertFalse(np.all(t.metas == copy.metas))
@@ -461,7 +491,8 @@ class TableTestCase(unittest.TestCase):
         self.assertNotEqual(id(t.metas), id(copy.metas))
 
         # ensure that copied sparse arrays do not share data
-        t.X[0, 0] = 42
+        with t.unlocked():
+            t.X[0, 0] = 42
         self.assertEqual(copy.X[0, 0], 5.1)
 
     def test_concatenate(self):
@@ -528,7 +559,8 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(t123.name, "t2")
         self.assertEqual(t123.attributes, {"a": 42, "c": 43, "b": 45})
 
-        t2.Y = np.atleast_2d(t2.Y).T
+        with t2.unlocked(t2.Y):
+            t2.Y = np.atleast_2d(t2.Y).T
         t12 = data.Table.concatenate((t1, t2))
         self.assertEqual(t12.domain, t1.domain)
         np.testing.assert_almost_equal(t12.X, np.vstack((x1, x2)))
@@ -549,7 +581,8 @@ class TableTestCase(unittest.TestCase):
 
     def test_concatenate_sparse(self):
         iris = Table("iris")
-        iris.X = sp.csc_matrix(iris.X)
+        with iris.unlocked():
+            iris.X = sp.csc_matrix(iris.X)
         new = Table.concatenate([iris, iris])
         self.assertEqual(len(new), 300)
         self.assertTrue(sp.issparse(new.X), "Concatenated X is not sparse.")
@@ -639,7 +672,8 @@ class TableTestCase(unittest.TestCase):
             os.remove("test-zoo.tab.metadata")
 
         d = data.Table("zoo")
-        d.set_weights(range(len(d)))
+        with d.unlocked():
+            d.set_weights(range(len(d)))
         d.save("test-zoo-weights.tab")
         dd = data.Table("test-zoo-weights")
         try:
@@ -669,26 +703,27 @@ class TableTestCase(unittest.TestCase):
             os.remove("iris.pickle")
 
     def test_from_numpy(self):
-        a = np.arange(20, dtype="d").reshape((4, 5))
+        a = np.arange(20, dtype="d").reshape((4, 5)).copy()
         a[:, -1] = [0, 0, 0, 1]
         dom = data.Domain([data.ContinuousVariable(x) for x in "abcd"],
                           data.DiscreteVariable("e", values=("no", "yes")))
         table = data.Table(dom, a)
-        for i in range(4):
-            self.assertEqual(table[i].get_class(), "no" if i < 3 else "yes")
-            for j in range(5):
-                self.assertEqual(a[i, j], table[i, j])
-                table[i, j] = random.random()
-                self.assertEqual(a[i, j], table[i, j])
+        with table.unlocked():
+            for i in range(4):
+                self.assertEqual(table[i].get_class(), "no" if i < 3 else "yes")
+                for j in range(5):
+                    self.assertEqual(a[i, j], table[i, j])
 
-        with self.assertRaises(IndexError):
+        with table.unlocked(), self.assertRaises(IndexError):
             table[0, -5] = 5
 
     def test_filter_is_defined(self):
         d = data.Table("iris")
-        d[1, 4] = Unknown
+        with d.unlocked():
+            d[1, 4] = Unknown
         self.assertTrue(isnan(d[1, 4]))
-        d[140, 0] = Unknown
+        with d.unlocked():
+            d[140, 0] = Unknown
         e = filter.IsDefined()(d)
         self.assertEqual(len(e), len(d) - 2)
         self.assertEqual(e[0], d[0])
@@ -699,9 +734,11 @@ class TableTestCase(unittest.TestCase):
 
     def test_filter_has_class(self):
         d = data.Table("iris")
-        d[1, 4] = Unknown
+        with d.unlocked():
+            d[1, 4] = Unknown
         self.assertTrue(isnan(d[1, 4]))
-        d[140, 0] = Unknown
+        with d.unlocked():
+            d[140, 0] = Unknown
         e = filter.HasClass()(d)
         self.assertEqual(len(e), len(d) - 1)
         self.assertEqual(e[0], d[0])
@@ -817,7 +854,8 @@ class TableTestCase(unittest.TestCase):
         x = filter.Values([f])(d)
         self.assertEqual(len(x), len(d))
 
-        d[:30, v.petal_length] = Unknown
+        with d.unlocked():
+            d[:30, v.petal_length] = Unknown
         x = filter.Values([f])(d)
         self.assertEqual(len(x), len(d) - 30)
 
@@ -893,7 +931,8 @@ class TableTestCase(unittest.TestCase):
         f = filter.FilterDiscrete(v.hair, values=None)
         self.assertEqual(len(filter.Values([f])(d)), len(d))
 
-        d[:5, v.hair] = Unknown
+        with d.unlocked():
+            d[:5, v.hair] = Unknown
         self.assertEqual(len(filter.Values([f])(d)), len(d) - 5)
 
     def test_valueFilter_string_is_defined(self):
@@ -979,7 +1018,8 @@ class TableTestCase(unittest.TestCase):
 
     def test_valueFilter_string_case_insens(self):
         d = data.Table("zoo")
-        d[d[:, "name"].metas[:, 0] == "girl", "name"] = "GIrl"
+        with d.unlocked():
+            d[d[:, "name"].metas[:, 0] == "girl", "name"] = "GIrl"
 
         col = d[:, "name"].metas[:, 0]
 
@@ -1111,12 +1151,14 @@ class TableTestCase(unittest.TestCase):
         table = data.Table("iris")
         self.assertFalse(table.is_sparse())
 
-        table.X = sp.csr_matrix(table.X)
-        self.assertTrue(table.is_sparse())
+        with table.unlocked():
+            table.X = sp.csr_matrix(table.X)
+            self.assertTrue(table.is_sparse())
 
     def test_repr_sparse_with_one_row(self):
         table = data.Table("iris")[:1]
-        table.X = sp.csr_matrix(table.X)
+        with table.unlocked():
+            table.X = sp.csr_matrix(table.X)
         repr(table)     # make sure repr does not crash
 
     def test_inf(self):
@@ -1152,11 +1194,13 @@ class TableTests(unittest.TestCase):
 
     def mock_domain(self, with_classes=False, with_metas=False):
         attributes = self.attributes
+        class_var = self.class_vars[0] if with_classes else None
         class_vars = self.class_vars if with_classes else []
         metas = self.metas if with_metas else []
         variables = attributes + class_vars
         return MagicMock(data.Domain,
                          attributes=attributes,
+                         class_var=class_var,
                          class_vars=class_vars,
                          metas=metas,
                          variables=variables)
@@ -1971,20 +2015,24 @@ class TableElementAssignmentTest(TableTests):
             data.Table(self.domain, self.data, self.class_data, self.meta_data)
 
     def test_can_assign_values(self):
-        self.table[0, 0] = 42.
+        with self.table.unlocked():
+            self.table[0, 0] = 42.
         self.assertAlmostEqual(self.table.X[0, 0], 42.)
 
     def test_can_assign_values_to_classes(self):
         a, _, _ = column_sizes(self.table)
-        self.table[0, a] = 42.
+        with self.table.unlocked():
+            self.table[0, a] = 42.
         self.assertAlmostEqual(self.table.Y[0], 42.)
 
     def test_can_assign_values_to_metas(self):
-        self.table[0, -1] = 42.
+        with self.table.unlocked():
+            self.table[0, -1] = 42.
         self.assertAlmostEqual(self.table.metas[0, 0], 42.)
 
     def test_can_assign_rows_to_rows(self):
-        self.table[0] = self.table[1]
+        with self.table.unlocked():
+            self.table[0] = self.table[1]
         np.testing.assert_almost_equal(
             self.table.X[0], self.table.X[1])
         np.testing.assert_almost_equal(
@@ -1996,7 +2044,8 @@ class TableElementAssignmentTest(TableTests):
         a, _, _ = column_sizes(self.table)
         new_example = [float(i)
                        for i in range(len(self.attributes + self.class_vars))]
-        self.table[0] = new_example
+        with self.table.unlocked():
+            self.table[0] = new_example
         np.testing.assert_almost_equal(
             self.table.X[0], np.array(new_example[:a]))
         np.testing.assert_almost_equal(
@@ -2007,7 +2056,8 @@ class TableElementAssignmentTest(TableTests):
         new_example = \
             np.array([float(i)
                       for i in range(len(self.attributes + self.class_vars))])
-        self.table[0] = new_example
+        with self.table.unlocked():
+            self.table[0] = new_example
         np.testing.assert_almost_equal(self.table.X[0], new_example[:a])
         np.testing.assert_almost_equal(self.table.Y[0], new_example[a:])
 
@@ -2081,17 +2131,19 @@ class InterfaceTest(unittest.TestCase):
 
     def test_row_assignment(self):
         new_value = 2.
-        for i in range(self.nrows):
-            new_row = [new_value] * len(self.data[i])
-            self.table[i] = np.array(new_row)
-            self.assertEqual(list(self.table[i]), new_row)
+        with self.table.unlocked():
+            for i in range(self.nrows):
+                new_row = [new_value] * len(self.data[i])
+                self.table[i] = np.array(new_row)
+                self.assertEqual(list(self.table[i]), new_row)
 
     def test_value_assignment(self):
         new_value = 0.
-        for i in range(self.nrows):
-            for j in range(len(self.table[i])):
-                self.table[i, j] = new_value
-                self.assertEqual(self.table[i, j], new_value)
+        with self.table.unlocked():
+            for i in range(self.nrows):
+                for j in range(len(self.table[i])):
+                    self.table[i, j] = new_value
+                    self.assertEqual(self.table[i, j], new_value)
 
     def test_subclasses(self):
         from pathlib import Path
@@ -2114,15 +2166,18 @@ class TestTableStats(TableTests):
         self.assertEqual(table.get_nan_frequency_attribute(), 0)
         self.assertEqual(table.get_nan_frequency_class(), 0)
 
-        table.X[1, 2] = table.X[4, 5] = np.nan
+        with table.unlocked():
+            table.X[1, 2] = table.X[4, 5] = np.nan
         self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
         self.assertEqual(table.get_nan_frequency_class(), 0)
 
-        table.Y[3:6] = np.nan
+        with table.unlocked():
+            table.Y[3:6] = np.nan
         self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
         self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
 
-        table.X[1, 2] = table.X[4, 5] = 0
+        with table.unlocked():
+            table.X[1, 2] = table.X[4, 5] = 0
         self.assertEqual(table.get_nan_frequency_attribute(), 0)
         self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
 
@@ -2139,45 +2194,56 @@ class TestRowInstance(unittest.TestCase):
         inst = table[2]
         self.assertIsInstance(inst, data.RowInstance)
 
-        inst[1] = 0
+        with table.unlocked():
+            inst[1] = 0
         self.assertEqual(table[2, 1], 0)
-        inst[1] = 1
+        with table.unlocked():
+            inst[1] = 1
         self.assertEqual(table[2, 1], 1)
 
-        inst.set_class("mammal")
+        with table.unlocked():
+            inst.set_class("mammal")
         self.assertEqual(table[2, len(table.domain.attributes)], "mammal")
-        inst.set_class("fish")
+        with table.unlocked():
+            inst.set_class("fish")
         self.assertEqual(table[2, len(table.domain.attributes)], "fish")
 
-        inst[-1] = "Foo"
+        with table.unlocked():
+            inst[-1] = "Foo"
         self.assertEqual(table[2, -1], "Foo")
 
     def test_iteration_with_assignment(self):
         table = data.Table("iris")
-        for i, row in enumerate(table):
-            row[0] = i
+        with table.unlocked():
+            for i, row in enumerate(table):
+                row[0] = i
         np.testing.assert_array_equal(table.X[:, 0], np.arange(len(table)))
 
     def test_sparse_assignment(self):
         X = np.eye(4)
-        Y = X[2]
+        Y = X[2].copy()
         table = data.Table.from_numpy(None, X, Y)
         row = table[1]
         self.assertFalse(sp.issparse(row.sparse_x))
         self.assertEqual(row[0], 0)
         self.assertEqual(row[1], 1)
 
-        table.X = sp.csr_matrix(table.X)
-        table._Y = sp.csr_matrix(table._Y)
+        with table.unlocked():
+            table.X = sp.csr_matrix(table.X)
+            table.Y = sp.csr_matrix(table.Y)
         sparse_row = table[1]
         self.assertTrue(sp.issparse(sparse_row.sparse_x))
         self.assertEqual(sparse_row[0], 0)
         self.assertEqual(sparse_row[1], 1)
-        sparse_row[1] = 0
+
+        with table.unlocked():
+            sparse_row[1] = 0
         self.assertEqual(sparse_row[1], 0)
         self.assertEqual(table.X[1, 1], 0)
         self.assertEqual(table[2][4], 1)
-        table[2][4] = 0
+
+        with table.unlocked():
+            table[2][4] = 0
         self.assertEqual(table[2][4], 0)
 
 

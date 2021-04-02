@@ -155,8 +155,9 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
                         if v.is_continuous and v is not attr_color],
             class_vars=attr_color
         )
-        data = self.master.data.transform(domain)
-        data.X = normalized(data.X)
+        data = self.master.data.transform(domain, copy=True)
+        with data.unlocked():
+            data.X = normalized(data.X)
         relief = ReliefF if attr_color.is_discrete else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
         results = sorted(zip(weights, domain.attributes), key=lambda x: (-x[0], x[1].name))

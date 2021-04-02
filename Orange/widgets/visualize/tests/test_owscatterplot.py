@@ -96,7 +96,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         """Check if error message appears and then disappears when
         data is removed from input"""
         data = self.data.copy()
-        data.X[:, 0] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.missing_coords.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
@@ -288,7 +289,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                 "selection_group": [(i, 1) for i in range(50)]}
         )
         data = self.data.copy()[:11]
-        data[0, 0] = np.nan
+        with data.unlocked():
+            data[0, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
@@ -394,12 +396,14 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         data1 = Table("iris")[::30]
         data2 = Table("iris")[::30]
-        data2.Y[:] = np.nan
+        with data2.unlocked():
+            data2.Y[:] = np.nan
         domain = Domain(
             attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=()))
         data2 = Table(domain, data2.X, Y=data2.Y)
         data3 = Table("iris")[::30]
-        data3.Y[:] = np.nan
+        with data3.unlocked():
+            data3.Y[:] = np.nan
 
         for data, is_enabled in zip([data1, data2, data1, data3, data1],
                                     [True, False, True, False, True]):
@@ -549,9 +553,10 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             class_vars=data.domain.class_vars,
             metas=data.domain.attributes[2:]
         )
-        data = data.transform(domain)
+        data = data.transform(domain, copy=True)
         # Sometimes floats in metas are saved as objects
-        data.metas = data.metas.astype(object)
+        with data.unlocked():
+            data.metas = data.metas.astype(object)
         self.send_signal(w.Inputs.data, data)
         simulate.combobox_activate_item(w.cb_attr_x, data.domain.metas[1].name)
         simulate.combobox_activate_item(w.controls.attr_color, data.domain.metas[0].name)
@@ -596,8 +601,9 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = Table("iris")
         domain = data.domain
         domain = Domain(domain.attributes[:3], domain.class_vars, domain.attributes[3:])
-        data = data.transform(domain)
-        data.metas[:, 0] = 0
+        data = data.transform(domain, copy=True)
+        with data.unlocked():
+            data.metas[:, 0] = 0
         w = self.widget
         self.send_signal(w.Inputs.data, data)
         simulate.combobox_activate_item(w.controls.attr_x, domain.metas[0].name)
@@ -667,8 +673,12 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             data = Table("iris")
             values = list(range(15))
             class_var = DiscreteVariable("iris5", values=[str(v) for v in values])
-            data = data.transform(Domain(attributes=data.domain.attributes, class_vars=[class_var]))
-            data.Y = np.array(values * 10, dtype=float)
+            data = data.transform(
+                Domain(attributes=data.domain.attributes,
+                       class_vars=[class_var]),
+                copy=True)
+            with data.unlocked():
+                data.Y = np.array(values * 10, dtype=float)
             return data
 
         def assert_equal(data, max):
@@ -679,7 +689,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         assert_equal(prepare_data(), MAX_COLORS)
         # data with nan value
         data = prepare_data()
-        data.Y[42] = np.nan
+        with data.unlocked():
+            data.Y[42] = np.nan
         assert_equal(data, MAX_COLORS + 1)
 
     def test_invalidated_same_features(self):
@@ -824,7 +835,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         simulate.combobox_activate_index(self.widget.controls.attr_color, 0)
         self.assertEqual(len(self.widget.graph.reg_line_items), 1)
         data = self.data.copy()
-        data[:, 0] = np.nan
+        with data.unlocked():
+            data[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertEqual(len(self.widget.graph.reg_line_items), 0)
 

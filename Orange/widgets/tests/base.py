@@ -831,7 +831,8 @@ class ProjectionWidgetTestMixin:
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
     def test_embedding_missing_values(self):
         table = Table("heart_disease")
-        table.X[0] = np.nan
+        with table.unlocked():
+            table.X[0] = np.nan
         self.send_signal(self.widget.Inputs.data, table)
         self.assertFalse(np.all(self.widget.valid_data))
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
@@ -842,7 +843,8 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
+        with table.unlocked():
+            table.X = sp.csr_matrix(table.X)
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
         self.assertTrue(self.widget.Error.sparse_data.is_shown())
@@ -853,7 +855,8 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
 
     def test_manual_move(self):
         data = self.data.copy()
-        data[1, 0] = np.nan
+        with data.unlocked():
+            data[1, 0] = np.nan
         nvalid, nsample = len(self.data) - 1, self.widget.SAMPLE_SIZE
         self.send_signal(self.widget.Inputs.data, data)
         self.widget.graph.select_by_indices(list(range(0, len(data), 10)))
@@ -962,7 +965,8 @@ class datasets:
                 ["", "", "", ""],
                 "ynyn"
             )))
-        table[:, 1] = value
+        with table.unlocked():
+            table[:, 1] = value
         return table
 
     @classmethod

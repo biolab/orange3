@@ -584,7 +584,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         data = self.data.transform(Domain(self.data.domain.attributes,
                                           self.data.domain.class_vars,
                                           self.data.domain.metas + variables))
-        data.metas[:, -2:] = self.get_embedding()
+        with data.unlocked(data.metas):
+            data.metas[:, -2:] = self.get_embedding()
         return data
 
     def _get_projection_variables(self):
@@ -755,7 +756,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
             comp_name = get_unique_names(proposed, 'component')
             meta_attrs = [StringVariable(name=comp_name)]
             domain = Domain(self.effective_variables, metas=meta_attrs)
-            components = Table(domain, self._send_components_x(),
+            components = Table(domain, self._send_components_x().copy(),
                                metas=self._send_components_metas())
             components.name = "components"
         self.Outputs.components.send(components)

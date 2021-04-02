@@ -311,7 +311,8 @@ class Results:
         attrs = data.domain.attributes if include_attrs else []
         domain = Domain(attrs, data.domain.class_vars, metas=new_meta_attr)
         predictions = data.transform(domain)
-        predictions.metas = new_meta_vals
+        with predictions.unlocked(predictions.metas):
+            predictions.metas = new_meta_vals
         predictions.name = data.name
         return predictions
 
