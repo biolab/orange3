@@ -7,7 +7,6 @@ from AnyQt.QtCore import Qt
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import DomainModel
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
@@ -66,7 +65,6 @@ class OWUnique(widget.OWWidget):
             self.var_model.set_domain(data.domain)
             self.selected_vars = self.var_model[:]
             self.openContext(data.domain)
-            self.info.set_input_summary(len(data), format_summary_details(data))
         else:
             self.var_model.set_domain(None)
 

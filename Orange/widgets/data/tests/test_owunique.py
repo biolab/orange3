@@ -5,10 +5,8 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from orangewidget.widget import StateInfo
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.state_summary import format_summary_details
 
 from Orange.widgets.data import owunique
 
@@ -31,33 +29,6 @@ class TestOWUnique(WidgetTest):
              [1, 2, 0, 0]],
             np.arange(6),
             np.zeros((6, 2)))
-
-    def test_model(self):
-        # false positive for call_args, pylint: disable=unsubscriptable-object
-        w = self.widget
-        data = self.table
-        w._compute_unique_data = lambda *_: data
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsNone(self.get_output(w.Outputs.data))
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsNone(self.get_output(w.Outputs.data))
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_settings(self):
         w = self.widget
