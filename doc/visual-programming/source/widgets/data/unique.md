@@ -1,7 +1,7 @@
 Unique
 ======
 
-Remove duplicated data instances
+Remove duplicated data instances.
 
 **Inputs**
 
@@ -13,8 +13,7 @@ Remove duplicated data instances
 
 The widget removes duplicated data instances. The user can choose a subset of observed variables, so two instances are considered as duplicates although they may differ in values of other, ignored variables.
 
-
-![](images/Unique-Default-stamped.png)
+![](images/Unique-stamped.png)
 
 1. Select the variables that are considered in comparing data instances.
 2. Data instance that is kept. The options are to use the first, last, middle or random instance, or to keep none, that is, to remove duplicated instances altogether.
@@ -22,6 +21,6 @@ The widget removes duplicated data instances. The user can choose a subset of ob
 Example
 -------
 
-Data set Zoo contains two frogs. This workflow keeps only one by removing the instances with same names.
+Data set *Zoo* contains two frogs. This workflow keeps only one by removing instances with the same names.
 
-![](images/Unique-Workflow.png)
+![](images/Unique-Example.png)
