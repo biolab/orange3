@@ -12,7 +12,7 @@ from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency, util as ut
 from Orange.statistics.basic_stats import BasicStats
-from Orange.util import Reprable
+from Orange.util import Reprable, utc_from_timestamp
 from .transformation import Transformation
 from . import _discretize
 
@@ -359,7 +359,8 @@ def time_binnings(data, *, min_bins=2, max_bins=50, min_unique=5, add_unique=0):
             (number_of_seconds_since_epoch, label).
     """
     mn, mx, unique = _min_max_unique(data)
-    mn, mx = time.gmtime(mn), time.gmtime(mx)
+    mn = utc_from_timestamp(mn).timetuple()
+    mx = utc_from_timestamp(mx).timetuple()
     bins = []
     if len(unique) <= max(min_unique, add_unique):
         bins.append(_unique_time_bins(unique))
@@ -464,7 +465,7 @@ def _simplified_labels(labels):
 
 
 def _unique_time_bins(unique):
-    times = [time.gmtime(x) for x in unique]
+    times = [utc_from_timestamp(x).timetuple() for x in unique]
     fmt = f'%y %b %d'
     fmt += " %H:%M" * (len({t[2:] for t in times}) > 1)
     fmt += ":%S" * bool(np.all(unique % 60 == 0))
