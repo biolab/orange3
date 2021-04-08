@@ -4,7 +4,6 @@ import warnings
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 from datetime import datetime, timezone
-from time import gmtime
 
 import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
@@ -20,6 +19,7 @@ from pyqtgraph.graphicsItems.LegendItem import LegendItem as PgLegendItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 
 from Orange.preprocess.discretize import _time_binnings
+from Orange.util import utc_from_timestamp
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import classdensity, colorpalettes
@@ -311,8 +311,8 @@ class AxisItem(AxisItem):
                      datetime.min.replace(tzinfo=timezone.utc).timestamp() + 1)
         maxVal = min(maxVal,
                      datetime.max.replace(tzinfo=timezone.utc).timestamp() - 1)
-        mn, mx = gmtime(minVal), gmtime(maxVal)
-
+        mn = utc_from_timestamp(minVal).timetuple()
+        mx = utc_from_timestamp(maxVal).timetuple()
         try:
             bins = _time_binnings(mn, mx, 6, 30)[-1]
         except (IndexError, ValueError):
@@ -350,10 +350,7 @@ class AxisItem(AxisItem):
         else:
             fmt = '%S.%f'
 
-        # if timezone is not set, then local timezone is used
-        # which cause exceptions for edge cases
-        return [datetime.fromtimestamp(x, tz=timezone.utc).strftime(fmt)
-                for x in values]
+        return [utc_from_timestamp(x).strftime(fmt) for x in values]
 
 
 class ScatterBaseParameterSetter(CommonParameterSetter):
