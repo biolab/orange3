@@ -122,8 +122,12 @@ time_same = VarDataPair(
     TimeVariable('time_same', have_date=True, have_time=True),
     np.array(_to_timestamps([2004] * 5), dtype=float),
 )
+time_negative = VarDataPair(
+    TimeVariable('time_negative', have_date=True, have_time=True),
+    np.array([0, -1, 24 * 60 * 60], dtype=float),
+)
 time = [
-    time_full, time_missing, time_all_missing, time_same
+    time_full, time_missing, time_all_missing, time_same, time_negative
 ]
 
 # String variable variations
@@ -246,6 +250,12 @@ class TestVariousDataSets(WidgetTest):
     @table_dense_sparse
     def test_on_data_with_continuous_values_all_the_same(self, prepare_table):
         data = make_table([ints_full, ints_same], [continuous_same, continuous_full])
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
+        self.run_through_variables()
+
+    @table_dense_sparse
+    def test_on_data_with_negative_timestamps(self, prepare_table):
+        data = make_table([time_negative])
         self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 

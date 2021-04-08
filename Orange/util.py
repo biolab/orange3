@@ -2,6 +2,7 @@
 import logging
 import os
 import inspect
+import datetime
 from contextlib import contextmanager
 
 import pkg_resources
@@ -520,6 +521,14 @@ def wrap_callback(progress_callback, start=0, end=1):
 def dummy_callback(*_, **__):
     """ A dummy callable. """
     return 1
+
+
+def utc_from_timestamp(timestamp) -> datetime.datetime:
+    """
+    Return the UTC datetime corresponding to the POSIX timestamp.
+    """
+    return datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + \
+           datetime.timedelta(seconds=float(timestamp))
 
 
 # For best result, keep this at the bottom
