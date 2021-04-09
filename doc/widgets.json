@@ -338,6 +338,13 @@
     "keywords": [
      "export"
     ]
+   },
+   {
+    "text": "Unique",
+    "doc": "visual-programming/source/widgets/data/unique.md",
+    "icon": "../Orange/widgets/data/icons/Unique.svg",
+    "background": "#FFD39F",
+    "keywords": []
    }
   ]
  ],

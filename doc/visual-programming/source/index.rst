@@ -60,6 +60,7 @@ Data
    widgets/data/color
    widgets/data/featurestatistics
    widgets/data/neighbors
+   widgets/data/unique
 
 
 Visualize
