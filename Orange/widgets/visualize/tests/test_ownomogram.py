@@ -13,6 +13,7 @@ from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import (
     NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
 )
+from Orange.preprocess import Scale, Continuize
 from Orange.tests import test_filename
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.state_summary import format_summary_details
@@ -305,6 +306,28 @@ class TestOWNomogram(WidgetTest):
         dot._mousePressFunc()
         anim = animator._GraphicsColorAnimator__animation
         self.assertNotEqual(anim.state(), QPropertyAnimation.Running)
+
+    def test_reconstruct_domain(self):
+        data = Table("heart_disease")
+        cls = LogisticRegressionLearner()(data)
+        domain = OWNomogram.reconstruct_domain(cls.original_domain, cls.domain)
+        transformed_data = cls.original_data.transform(domain)
+        self.assertEqual(transformed_data.X.shape, data.X.shape)
+        self.assertFalse(np.isnan(transformed_data.X[0]).any())
+
+        scaled_data = Scale()(data)
+        cls = LogisticRegressionLearner()(scaled_data)
+        domain = OWNomogram.reconstruct_domain(cls.original_domain, cls.domain)
+        transformed_data = cls.original_data.transform(domain)
+        self.assertEqual(transformed_data.X.shape, scaled_data.X.shape)
+        self.assertFalse(np.isnan(transformed_data.X[0]).any())
+
+        disc_data = Continuize()(data)
+        cls = LogisticRegressionLearner()(disc_data)
+        domain = OWNomogram.reconstruct_domain(cls.original_domain, cls.domain)
+        transformed_data = cls.original_data.transform(domain)
+        self.assertEqual(transformed_data.X.shape, disc_data.X.shape)
+        self.assertFalse(np.isnan(transformed_data.X[0]).any())
 
 
 if __name__ == "__main__":

@@ -1285,6 +1285,7 @@ class OWNomogram(OWWidget):
         for attr in preprocessed.attributes:
             cv = attr._compute_value.variable._compute_value
             var = cv.variable if cv else original[attr.name]
+            var = original[var.name] if var.name in original else attr
             if var in attrs:    # the reason for OrderedDict
                 continue
             attrs[var] = None   # we only need keys
