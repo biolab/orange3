@@ -23,6 +23,7 @@ from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
 import Orange.statistics.util as ut
 from Orange.data import Table, StringVariable, DiscreteVariable, \
     ContinuousVariable, TimeVariable, Domain, Variable
+from Orange.util import utc_from_timestamp
 from Orange.widgets import widget, gui
 from Orange.widgets.data.utils.histogram import Histogram
 from Orange.widgets.settings import Setting, ContextSetting, \
@@ -69,8 +70,8 @@ def format_time_diff(start, end, round_up_after=2):
     str
 
     """
-    start = datetime.datetime.fromtimestamp(start)
-    end = datetime.datetime.fromtimestamp(end)
+    start = utc_from_timestamp(start)
+    end = utc_from_timestamp(end)
     diff = abs(end - start)  # type: datetime.timedelta
 
     # Get the different resolutions
