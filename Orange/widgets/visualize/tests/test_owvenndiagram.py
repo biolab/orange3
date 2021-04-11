@@ -15,9 +15,9 @@ from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME)
 from Orange.widgets.utils.state_summary import (format_multiple_summaries,
                                                 format_summary_details)
-from Orange.widgets.visualize.owvenndiagram import (OWVennDiagram, get_perm,
-                                                    arrays_equal, pad_columns)
-
+from Orange.widgets.visualize.owvenndiagram import (
+    OWVennDiagram, get_perm, arrays_equal, pad_columns,
+    IDENTITY_STR, EQUALITY_STR)
 
 
 class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
@@ -42,7 +42,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         data1[:, 1] = 1
         self.widget.rowwise = True
         self.send_signal(self.signal_name, data1[:10], 1)
-        self.widget.selected_feature = None
+        self.widget.selected_feature = IDENTITY_STR
         self.send_signal(self.signal_name, data[5:10], 2)
 
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
@@ -109,6 +109,22 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, None, 2)
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
+
+    def test_equality(self):
+        self.widget.rowwise = True
+        data1 = Table.from_numpy(None, np.arange(20).reshape(20, 1))
+        data2 = Table.from_numpy(None, np.arange(10, 25).reshape(15, 1))
+        self.send_signal(self.signal_name, data1, 1)
+        self.send_signal(self.signal_name, data2, 2)
+
+        self.widget.vennwidget.vennareas()[3].setSelected(True)
+        self.assertFalse(bool(self.get_output(self.widget.Outputs.selected_data)))
+
+        self.widget.selected_feature = EQUALITY_STR
+        self.widget._on_inputAttrActivated()
+        self.assertEqual(
+            set(self.get_output(self.widget.Outputs.selected_data).X.flatten()),
+            set(range(10, 20)))
 
     def test_multiple_input_over_cols(self):
         self.widget.rowwise = False

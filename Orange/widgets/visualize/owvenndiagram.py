@@ -26,7 +26,9 @@ from AnyQt.QtCore import pyqtSignal as Signal
 
 from Orange.data import Table, Domain, StringVariable, RowInstance
 from Orange.data.util import get_unique_names_duplicates
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import (
+    DomainContextHandler, ContextSetting, Setting)
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -38,6 +40,9 @@ from Orange.widgets.widget import Input, Output, Msg
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
 _ItemSet = namedtuple("_ItemSet", ["key", "name", "title", "items"])
+
+IDENTITY_STR = "Instance identity"
+EQUALITY_STR = "Instance equality"
 
 
 class OWVennDiagram(widget.OWWidget):
@@ -66,15 +71,15 @@ class OWVennDiagram(widget.OWWidget):
 
     selection: list
 
-    settingsHandler = settings.DomainContextHandler()
+    settingsHandler = DomainContextHandler()
     # Indices of selected disjoint areas
-    selection = settings.Setting([], schema_only=True)
+    selection = Setting([], schema_only=True)
     #: Output unique items (one output row for every unique instance `key`)
     #: or preserve all duplicates in the output.
-    output_duplicates = settings.Setting(False)
-    autocommit = settings.Setting(True)
-    rowwise = settings.Setting(True)
-    selected_feature = settings.ContextSetting(None)
+    output_duplicates = Setting(False)
+    autocommit = Setting(True)
+    rowwise = Setting(True)
+    selected_feature = ContextSetting(IDENTITY_STR)
 
     want_main_area = False
     graph_name = "scene"
@@ -130,11 +135,12 @@ class OWVennDiagram(widget.OWWidget):
                             Qt.Horizontal,
                             addSpaceBefore=False),
             self, "selected_feature",
-            model=itemmodels.VariableListModel(
-                placeholder="Instance identity"
-            ),
-            callback=self._on_inputAttrActivated
-        )
+            model=itemmodels.VariableListModel([IDENTITY_STR, EQUALITY_STR]),
+            callback=self._on_inputAttrActivated,
+            tooltip="""
+Two instances are identical if they come from the same row of the same table
+somewhere back in the workflow. Instances coming from different sources or rows
+can only be equal.""")
         box.layout().setSpacing(6)
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
@@ -252,25 +258,38 @@ class OWVennDiagram(widget.OWWidget):
             return reduce(set.intersection, sets)
         return set()
 
+    def _uses_feature(self):
+        return isinstance(self.selected_feature, StringVariable)
+
     def _setInterAttributes(self):
         model = self.controls.selected_feature.model()
-        model[:] = [None] + list(self.intersectionStringAttrs())
-        if self.selected_feature:
-            names = (var.name for var in model if var)
+        model[2:] = list(self.intersectionStringAttrs())
+        if self._uses_feature():
+            names = (var.name for var in model if isinstance(var, StringVariable))
             if self.selected_feature.name not in names:
                 self.selected_feature = model[0]
+
+    @staticmethod
+    def _hashes(table):
+        # In the interest of space, we compare hashes. If this is not OK,
+        # concatenate bytes instead of xoring hashes. Renaming a method
+        # brings bonus points.
+        return [hash(inst.x.data.tobytes())
+                ^ hash(inst.y.data.tobytes())
+                ^ hash(inst.metas.data.tobytes()) for inst in table]
 
     def _itemsForInput(self, key):
         """
         Calculates input for venn diagram, according to user's settings.
         """
         table = self.data[key].table
-        attr = self.selected_feature
-        if attr:
-            return [str(inst[attr]) for inst in table
-                    if not np.isnan(inst[attr])]
-        else:
+        if self.selected_feature == IDENTITY_STR:
             return list(table.ids)
+        if self.selected_feature == EQUALITY_STR:
+            return self._hashes(table)
+        attr = self.selected_feature
+        return [str(inst[attr]) for inst in table
+                if not np.isnan(inst[attr])]
 
     def _createItemsets(self):
         """
@@ -329,19 +348,13 @@ class OWVennDiagram(widget.OWWidget):
                 area.setText("{0}".format(len(area_items)))
 
             label = disjoint_set_label(i, n, simplify=False)
-            head = "<h4>|{}| = {}</h4>".format(label, len(area_items))
-            if len(area_items) > 32:
-                items_str = ", ".join(map(escape, area_items[:32]))
-                hidden = len(area_items) - 32
-                tooltip = ("{}<span>{}, ...</br>({} items not shown)<span>"
-                           .format(head, items_str, hidden))
-            elif area_items:
-                tooltip = "{}<span>{}</span>".format(
-                    head,
-                    ", ".join(map(escape, area_items))
-                )
-            else:
-                tooltip = head
+            tooltip = "<h4>|{}| = {}</h4>".format(label, len(area_items))
+            if self._uses_feature() or not self.rowwise:
+                # Nothing readable to show when matching by identity or equality
+                tooltip += "<span>" + ", ".join(map(escape, area_items[:32]))
+                if len(area_items) > 32:
+                    tooltip += f"</br>({len(area_items) - 32} items not shown)"
+                tooltip += "</span>"
 
             area.setToolTip(tooltip)
 
@@ -356,7 +369,7 @@ class OWVennDiagram(widget.OWWidget):
         # Clear all warnings
         self.warning()
 
-        if self.selected_feature is None:
+        if not self._uses_feature():
             no_idx = ["#{}".format(i + 1)
                       for i, key in enumerate(self.data)
                       if not source_attributes(self.data[key].table.domain)]
@@ -589,7 +602,7 @@ class OWVennDiagram(widget.OWWidget):
 
         if renamed:
             self.Warning.renamed_vars(', '.join(renamed))
-        ids = None if self.selected_feature else np.array(all_ids)
+        ids = None if self._uses_feature() else np.array(all_ids)
         table = self.merge_data(domain, values, ids)
         if selection:
             mask = [idx in self.selected_items for idx in all_ids]
@@ -598,18 +611,20 @@ class OWVennDiagram(widget.OWWidget):
 
     def get_indices(self, table, selection):
         """Returns mappings of ids (be it row id or string) to indices in tables"""
-        if self.selected_feature:
-            if self.output_duplicates and selection:
-                items, inverse = np.unique(getattr(table[:, self.selected_feature], 'metas'),
-                                           return_inverse=True)
-                ids = [np.nonzero(inverse == idx)[0] for idx in range(len(items))]
-            else:
-                items, ids = np.unique(getattr(table[:, self.selected_feature], 'metas'),
-                                       return_index=True)
-
-        else:
+        if self.selected_feature == IDENTITY_STR:
             items = table.ids
             ids = range(len(table))
+        else:
+            if self.selected_feature == EQUALITY_STR:
+                items = self._hashes(table)
+            else:
+                items = getattr(table[:, self.selected_feature], 'metas')
+
+            if self.output_duplicates and selection:
+                items, inverse = np.unique(items, return_inverse=True)
+                ids = [np.nonzero(inverse == idx)[0] for idx in range(len(items))]
+            else:
+                items, ids = np.unique(items, return_index=True)
 
         if selection:
             return {item: idx for item, idx in zip(items, ids)
@@ -743,6 +758,13 @@ class OWVennDiagram(widget.OWWidget):
             included_tables[i] = [k for k, inc in zip(self.data, key) if inc]
 
         return disjoint_sets, included_tables
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 3:
+            if settings.pop("selected_feature", None) is None:
+                settings["selected_feature"] = IDENTITY_STR
+
 
 def string_attributes(domain):
     """
