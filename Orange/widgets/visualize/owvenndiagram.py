@@ -236,7 +236,6 @@ can only be equal.""")
         if not self.autocommit:
             self.unconditional_commit()
 
-        self._updateInfo()
         super().handleNewSignals()
 
     def set_input_summary(self):
@@ -365,21 +364,6 @@ can only be equal.""")
         self._updating = False
         self._on_selectionChanged()
 
-    def _updateInfo(self):
-        # Clear all warnings
-        self.warning()
-
-        if not self._uses_feature():
-            no_idx = ["#{}".format(i + 1)
-                      for i, key in enumerate(self.data)
-                      if not source_attributes(self.data[key].table.domain)]
-            if len(no_idx) == 1:
-                self.warning("Dataset {} has no suitable identifiers."
-                             .format(no_idx[0]))
-            elif len(no_idx) > 1:
-                self.warning("Datasets {} and {} have no suitable identifiers."
-                             .format(", ".join(no_idx[:-1]), no_idx[-1]))
-
     def _on_selectionChanged(self):
         if self._updating:
             return
@@ -395,7 +379,6 @@ can only be equal.""")
             return
         self._createItemsets()
         self._createDiagram()
-        self._updateInfo()
 
     def _on_inputAttrActivated(self):
         self.rowwise = 1
@@ -771,12 +754,6 @@ def string_attributes(domain):
     Return all string attributes from the domain.
     """
     return [attr for attr in domain.variables + domain.metas if attr.is_string]
-
-def source_attributes(domain):
-    """
-    Return all suitable attributes for the venn diagram.
-    """
-    return string_attributes(domain)  # + discrete_attributes(domain)
 
 
 def disjoint_set_label(i, n, simplify=False):

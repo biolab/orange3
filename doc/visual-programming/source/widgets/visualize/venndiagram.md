@@ -24,7 +24,7 @@ The **Venn Diagram** widget displays logical relations between datasets by showi
 Rows can be matched
 - by their identity, e.g. rows from different data sets match if they came from the same row in a file,
 - by equality,
-- or by the value of a string variable; a warning is shown if data sets have no common string variable.
+- or by values of a string variable.
 
 Examples
 --------
