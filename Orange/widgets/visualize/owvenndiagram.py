@@ -45,6 +45,21 @@ IDENTITY_STR = "Instance identity"
 EQUALITY_STR = "Instance equality"
 
 
+class VennVariableListModel(itemmodels.VariableListModel):
+    def __init__(self):
+        super().__init__([IDENTITY_STR, EQUALITY_STR])
+        self.same_domains = True
+
+    def set_variables(self, variables, same_domains):
+        self[2:] = variables
+        self.same_domains = same_domains
+
+    def flags(self, index):
+        if index.row() == 1 and not self.same_domains:
+            return Qt.NoItemFlags
+        return Qt.ItemIsSelectable | Qt.ItemIsEnabled
+
+
 class OWVennDiagram(widget.OWWidget):
     name = "Venn Diagram"
     description = "A graphical visualization of the overlap of data instances " \
@@ -135,12 +150,12 @@ class OWVennDiagram(widget.OWWidget):
                             Qt.Horizontal,
                             addSpaceBefore=False),
             self, "selected_feature",
-            model=itemmodels.VariableListModel([IDENTITY_STR, EQUALITY_STR]),
+            model=VennVariableListModel(),
             callback=self._on_inputAttrActivated,
-            tooltip="""
-Two instances are identical if they come from the same row of the same table
-somewhere back in the workflow. Instances coming from different sources or rows
-can only be equal.""")
+            tooltip="Instances are identical if originally coming from the "
+                    "same row of the same table.\n"
+                    "Instances can be check for equality only if described by "
+                    "the same variables.")
         box.layout().setSpacing(6)
         box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
@@ -152,12 +167,13 @@ can only be equal.""")
         self.output_duplicates_cb = gui.checkBox(
             box, self, "output_duplicates", "Output duplicates",
             callback=lambda: self.commit(),  # pylint: disable=unnecessary-lambda
+            stateWhenDisabled=False,
             attribute=Qt.WA_LayoutUsesWidgetRect)
         auto = gui.auto_send(box, self, "autocommit",
                              box=False,
                              contentsMargins=(0, 0, 0, 0))
         gui.rubber(box)
-        self.output_duplicates_cb.setEnabled(bool(self.rowwise))
+        self._update_duplicates_cb()
         self._queue = []
 
     def resizeEvent(self, event):
@@ -251,22 +267,30 @@ can only be equal.""")
             kwargs = {"format": Qt.RichText}
         self.info.set_input_summary(summary, details, **kwargs)
 
-    def intersectionStringAttrs(self):
-        sets = [set(string_attributes(data_.table.domain)) for data_ in self.data.values()]
+    def _intersection_string_attrs(self):
+        sets = [set(string_attributes(data_.table.domain))
+                for data_ in self.data.values()]
         if sets:
-            return reduce(set.intersection, sets)
-        return set()
+            return list(reduce(set.intersection, sets))
+        return []
+
+    def _all_domains_same(self):
+        domains = [data_.table.domain for data_ in self.data.values()]
+        # Domain.__hash__ is hacky, let's not use a set here, just for the case
+        return not domains or all(domain == domains[0] for domain in domains)
 
     def _uses_feature(self):
         return isinstance(self.selected_feature, StringVariable)
 
     def _setInterAttributes(self):
         model = self.controls.selected_feature.model()
-        model[2:] = list(self.intersectionStringAttrs())
-        if self._uses_feature():
-            names = (var.name for var in model if isinstance(var, StringVariable))
-            if self.selected_feature.name not in names:
-                self.selected_feature = model[0]
+        same_domains = self._all_domains_same()
+        variables = self._intersection_string_attrs()
+        model.set_variables(variables, same_domains)
+        if self.selected_feature == EQUALITY_STR and not same_domains \
+                or self._uses_feature() and \
+                self.selected_feature.name not in (var.name for var in variables):
+            self.selected_feature = IDENTITY_STR
 
     @staticmethod
     def _hashes(table):
@@ -372,8 +396,12 @@ can only be equal.""")
         self.selection = [i for i, area in enumerate(areas) if area.isSelected()]
         self.invalidateOutput()
 
+    def _update_duplicates_cb(self):
+        self.output_duplicates_cb.setEnabled(
+            self.rowwise and self._uses_feature())
+
     def _on_matching_changed(self):
-        self.output_duplicates_cb.setEnabled(bool(self.rowwise))
+        self._update_duplicates_cb()
         if not self.settings_compatible():
             self.invalidateOutput()
             return
@@ -381,7 +409,7 @@ can only be equal.""")
         self._createDiagram()
 
     def _on_inputAttrActivated(self):
-        self.rowwise = 1
+        self.rowwise = True
         self._on_matching_changed()
 
     def _on_itemTextEdited(self, index, text):
@@ -597,12 +625,10 @@ can only be equal.""")
         if self.selected_feature == IDENTITY_STR:
             items = table.ids
             ids = range(len(table))
+        elif self.selected_feature == EQUALITY_STR:
+            items, ids = np.unique(self._hashes(table), return_index=True)
         else:
-            if self.selected_feature == EQUALITY_STR:
-                items = self._hashes(table)
-            else:
-                items = getattr(table[:, self.selected_feature], 'metas')
-
+            items = getattr(table[:, self.selected_feature], 'metas')
             if self.output_duplicates and selection:
                 items, inverse = np.unique(items, return_inverse=True)
                 ids = [np.nonzero(inverse == idx)[0] for idx in range(len(items))]

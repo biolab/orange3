@@ -7,6 +7,8 @@ from copy import deepcopy
 
 import numpy as np
 
+from AnyQt.QtCore import Qt
+
 from orangewidget.widget import StateInfo
 
 from Orange.data import (Table, Domain, StringVariable,
@@ -125,6 +127,54 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(
             set(self.get_output(self.widget.Outputs.selected_data).X.flatten()),
             set(range(10, 20)))
+
+    def test_disable_duplicates(self):
+        cb = self.widget.output_duplicates_cb
+        data1 = Table.from_numpy(None, np.arange(20).reshape(20, 1))
+        data2 = Table.from_numpy(None, np.arange(10, 25).reshape(15, 1))
+        self.send_signal(self.signal_name, data1, 1)
+        self.send_signal(self.signal_name, data2, 2)
+        self.assertFalse(cb.isEnabled())
+
+        data = Table("zoo")
+        self.send_signal(self.signal_name, data, 1)
+        self.send_signal(self.signal_name, data, 2)
+        for self.widget.selected_feature in (IDENTITY_STR, EQUALITY_STR):
+            self.widget._on_inputAttrActivated()
+            self.assertFalse(cb.isEnabled())
+
+        self.widget.selected_feature = \
+            self.widget.controls.selected_feature.model()[2]
+        self.widget._on_inputAttrActivated()
+        self.assertTrue(cb.isEnabled())
+
+        self.widget.rowwise = False
+        self.widget._on_matching_changed()
+        self.assertFalse(cb.isEnabled())
+
+    def test_disable_match_equality(self):
+        model = self.widget.controls.selected_feature.model()
+        row0 = model.index(0, 0)
+        row1 = model.index(1, 0)
+        data = Table("zoo")
+
+        self.assertTrue(model.flags(row0) & Qt.ItemIsEnabled)
+        self.assertTrue(model.flags(row1) & Qt.ItemIsEnabled)
+
+        self.send_signal(self.signal_name, data, 1)
+        self.assertTrue(model.flags(row0) & Qt.ItemIsEnabled)
+        self.assertTrue(model.flags(row1) & Qt.ItemIsEnabled)
+
+        self.send_signal(self.signal_name, data, 2)
+        self.assertTrue(model.flags(row0) & Qt.ItemIsEnabled)
+        self.assertTrue(model.flags(row1) & Qt.ItemIsEnabled)
+
+        data1 = Table.from_numpy(None, np.arange(20).reshape(20, 1))
+        self.widget.selected_feature = EQUALITY_STR
+        self.send_signal(self.signal_name, data1, 3)
+        self.assertEqual(self.widget.selected_feature, IDENTITY_STR)
+        self.assertTrue(model.flags(row0) & Qt.ItemIsEnabled)
+        self.assertFalse(model.flags(row1) & Qt.ItemIsEnabled)
 
     def test_multiple_input_over_cols(self):
         self.widget.rowwise = False
@@ -316,6 +366,16 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
         self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__output_summary.details, no_output)
+
+    def test_migration_to_3(self):
+        settings = {"selected_feature": None}
+        OWVennDiagram.migrate_settings(settings, 1)
+        self.assertEqual(settings["selected_feature"], IDENTITY_STR)
+
+        settings = {}
+        OWVennDiagram.migrate_settings(settings, 1)
+        self.assertEqual(settings["selected_feature"], IDENTITY_STR)
+
 
 class TestVennUtilities(unittest.TestCase):
 
