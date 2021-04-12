@@ -172,7 +172,7 @@ if not release:
         a.close()
 
 
-PACKAGES = find_packages()
+PACKAGES = find_packages(include=("Orange*",))
 
 # Extra non .py, .{so,pyd} files that are installed within the package dir
 # hierarchy
