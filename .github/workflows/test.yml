@@ -1,0 +1,136 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  lint:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: '2'
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install Tox
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade tox tox-pip-version
+
+      - name: Run Pylint
+        run:  tox -e pylint-ci
+
+  test_on_linux:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    name: ${{ matrix.name }} (${{ matrix.os }}, py${{ matrix.python-version }})
+    strategy:
+      fail-fast: False
+      matrix:
+        os: [ubuntu-18.04]
+        python-version: [3.7, 3.8, 3.9]
+        tox_env: [orange-released]
+        name: [Released]
+        include:
+          - os: ubuntu-18.04
+            python-version: 3.8
+            tox_env: orange-latest
+            name: Latest
+
+    services:
+      postgres:
+        image: orangedm/postgres:11
+        env:
+          POSTGRES_USER: postgres_user
+          POSTGRES_PASSWORD: postgres_password
+          POSTGRES_DB: postgres_db
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+      SQLServer:
+        image: mcr.microsoft.com/mssql/server:2017-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: sqlServerPassw0rd
+        ports:
+          - 1433:1433
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install linux system dependencies
+        run: sudo apt-get install -y libxkbcommon-x11-0 
+
+      - name: Install Tox
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade tox tox-pip-version
+
+      - name: Run Tox
+        run: xvfb-run -a -s "-screen 0 1280x1024x24" tox -e ${{ matrix.tox_env }}
+        env:
+          # QT_QPA_PLATFORM: offscreen
+          ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
+
+      - name: Upload code coverage
+        if: |
+          matrix.python-version == '3.8' &&  
+          matrix.tox_env == 'orange-released'
+        run: |
+          pip install codecov
+          codecov
+
+  test_on_macos_and_windows:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    name: ${{ matrix.name }} (${{ matrix.os }}, py${{ matrix.python-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-10.15, windows-2016]
+        python-version: [3.7, 3.8, 3.9]
+        tox_env: [orange-released]
+        name: [Released]
+        include:
+          - os: windows-2016
+            python-version: 3.8
+            tox_env: orange-latest
+            name: Latest
+          - os: macos-10.15
+            python-version: 3.8
+            tox_env: orange-latest
+            name: Latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system dependencies on MacOS
+        run: brew install libomp
+        if: matrix.os == 'macos-10.15' || matrix.os == 'macos-11.0'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade tox tox-pip-version
+
+      - name: Test with Tox
+        run: |
+          tox -e ${{ matrix.tox_env }}
