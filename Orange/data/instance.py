@@ -177,6 +177,10 @@ class Instance:
                        type(m1) == type(m2) == float and isnan(m1) and isnan(m2)
                        for m1, m2 in zip(self._metas, other._metas))
 
+    @classmethod
+    def __hash__(cls):
+        raise TypeError(f"unhashable type: '{type(cls.__name__)}'")
+
     def __iter__(self):
         return chain(iter(self._x), iter(self._y))
 
