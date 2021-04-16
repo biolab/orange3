@@ -342,7 +342,16 @@ class AxisItem(AxisItem):
         elif spacing >= 3600 * 24:
             fmt = "%Y %b %d"
         elif spacing >= 3600:
-            fmt = "%d %Hh"
+            min_day = max_day = 1
+            if len(values) > 0:
+                min_day = datetime.fromtimestamp(
+                    min(values), tz=timezone.utc).day
+                max_day = datetime.fromtimestamp(
+                    max(values), tz=timezone.utc).day
+            if min_day == max_day:
+                fmt = "%Hh"
+            else:
+                fmt = "%d %Hh"
         elif spacing >= 60:
             fmt = "%H:%M"
         elif spacing >= 1:
