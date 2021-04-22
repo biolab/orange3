@@ -802,7 +802,7 @@ class OWLinePlot(OWWidget):
 
     def plot_groups(self):
         self._remove_groups()
-        data = self.data[self.valid_data, self.graph_variables]
+        data = self.data[self.valid_data][:, self.graph_variables]
         if self.group_var is None:
             self._plot_group(data, np.where(self.valid_data)[0])
         else:

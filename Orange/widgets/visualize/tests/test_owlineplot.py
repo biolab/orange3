@@ -232,6 +232,14 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(p, 2)
         self.assertFalse(self.widget.graph.legend.isVisible())
 
+    def test_group_var_none_single_instance(self):
+        self.send_signal(self.widget.Inputs.data, self.housing[:1])
+        m, n, p = self.widget.graph.view_box._profile_items.shape
+        self.assertEqual(m, len(self.housing.domain.attributes))
+        self.assertEqual(n, 1)
+        self.assertEqual(p, 2)
+        self.assertFalse(self.widget.graph.legend.isVisible())
+
     def test_datasets(self):
         for ds in datasets.datasets():
             self.send_signal(self.widget.Inputs.data, ds)
