@@ -923,6 +923,13 @@ class OWPivot(OWWidget):
 
     def commit(self):
         def send_outputs(pivot_table, filtered_data, grouped_data):
+            if self.data:
+                if grouped_data:
+                    grouped_data.name = self.data.name
+                if pivot_table:
+                    pivot_table.name = self.data.name
+                if filtered_data:
+                    filtered_data.name = self.data.name
             self.Outputs.grouped_data.send(grouped_data)
             self.Outputs.pivot_table.send(pivot_table)
             self.Outputs.filtered_data.send(filtered_data)
