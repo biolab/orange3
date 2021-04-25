@@ -313,6 +313,17 @@
     "keywords": []
    },
    {
+    "text": "Melt",
+    "doc": "visual-programming/source/widgets/data/melt.md",
+    "icon": "../Orange/widgets/data/icons/Melt.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "shopping list",
+     "wide",
+     "narrow"
+    ]
+   },
+   {
     "text": "Neighbors",
     "doc": "visual-programming/source/widgets/data/neighbors.md",
     "icon": "../Orange/widgets/data/icons/Neighbors.svg",

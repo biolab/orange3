@@ -59,6 +59,7 @@ Data
    widgets/data/correlations
    widgets/data/color
    widgets/data/featurestatistics
+   widgets/data/melt
    widgets/data/neighbors
    widgets/data/unique
 
