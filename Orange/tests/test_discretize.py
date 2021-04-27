@@ -8,7 +8,7 @@ from unittest import TestCase
 import numpy as np
 import scipy.sparse as sp
 
-from Orange.preprocess import discretize, Discretize
+from Orange.preprocess import discretize, Discretize, decimal_binnings
 from Orange import data
 from Orange.data import Table, Instance, Domain, ContinuousVariable, DiscreteVariable
 
@@ -93,6 +93,34 @@ class TestEqualWidth(TestCase):
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 1)
         self.assertEqual(dvar.compute_value.points, [])
+
+
+class TestBinning(TestCase):
+    def test_decimal_binnings(self):
+        values = np.array([
+            -0.2, -0.2, -0.6, 1.0, 0.2, -0.6, 0.6, 1.0, 0.4, -0.5, -0.4, -0.4,
+            -0.6, 0.6, 0.75, 0.4, -0.2, 0.2, 0.0, 0.0, -1.0, -0.6, -0.2, -0.6,
+        ])
+        binning = decimal_binnings(values, factors=[0.2, 0.25, 0.5])
+        self.assertEqual(len(binning), 3)
+
+        np.testing.assert_array_equal(
+            binning[0].thresholds,
+            [-1, -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8, 1]
+        )
+        self.assertEqual(binning[0].width, 0.2)
+
+        np.testing.assert_array_equal(
+            binning[1].thresholds,
+            [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1]
+        )
+        self.assertEqual(binning[1].width, 0.25)
+
+        np.testing.assert_array_equal(
+            binning[2].thresholds,
+            [-1, -0.5, 0, 0.5, 1]
+        )
+        self.assertEqual(binning[2].width, 0.5)
 
 
 # noinspection PyPep8Naming
