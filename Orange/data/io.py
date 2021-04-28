@@ -13,7 +13,8 @@ from itertools import chain
 
 from os import path, remove
 from tempfile import NamedTemporaryFile
-from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
+from urllib.parse import urlparse, urlsplit, urlunsplit, \
+    unquote as urlunquote, quote
 from urllib.request import urlopen, Request
 from pathlib import Path
 
@@ -405,6 +406,7 @@ class UrlReader(FileFormat):
         filename = filename.strip()
         if not urlparse(filename).scheme:
             filename = 'http://' + filename
+        filename = quote(filename, safe="/:")
         super().__init__(filename)
 
     @staticmethod
