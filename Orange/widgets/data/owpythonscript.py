@@ -37,10 +37,14 @@ __all__ = ["OWPythonScript"]
 
 
 DEFAULT_SCRIPT = """import numpy as np
-from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 
-arr = np.random.rand(3,3)
-domain = Domain([ContinuousVariable(i) for i in ['one', 'two', 'three']])
+domain = Domain([ContinuousVariable("age"),
+                 ContinuousVariable("height"),
+                 DiscreteVariable("gender", values=("M", "F"))])
+arr = np.array([
+  [25, 186, 0],
+  [30, 164, 1]])
 out_data = Table.from_numpy(domain, arr)
 """
 
@@ -431,7 +435,7 @@ class OWPythonScript(OWWidget):
 
     settings_version = 2
     scriptLibrary: 'List[_ScriptData]' = Setting([{
-        "name": "from_numpy",
+        "name": "Table from numpy",
         "script": DEFAULT_SCRIPT,
         "filename": None
     }])
