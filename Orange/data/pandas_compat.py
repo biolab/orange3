@@ -368,8 +368,7 @@ def table_to_frame(tab, include_metas=False):
         elif col.is_continuous:
             dt = float
             # np.nan are not compatible with int column
-            nan_values_in_column = [t for t in vals if np.isnan(t)]
-            if col.number_of_decimals == 0 and len(nan_values_in_column) == 0:
+            if col.number_of_decimals == 0 and not np.any(np.isnan(vals)):
                 dt = int
             result = (col.name, pd.Series(vals).astype(dt))
         elif col.is_string:

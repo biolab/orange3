@@ -81,6 +81,25 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(list(df['sepal length'])[0:4], [5.1, 4.9, 4.7, 4.6])
         self.assertEqual(list(df['iris'])[0:2], ['Iris-setosa', 'Iris-setosa'])
 
+    def test_table_to_frame_nans(self):
+        from Orange.data.pandas_compat import table_to_frame
+        domain = Domain(
+            [ContinuousVariable("a", number_of_decimals=0), ContinuousVariable("b")]
+        )
+        table = Table(
+            domain, np.column_stack((np.ones(10), np.hstack((np.ones(9), [np.nan]))))
+        )
+
+        df = table_to_frame(table)
+        table_column_names = [var.name for var in table.domain.variables]
+        frame_column_names = df.columns
+
+        self.assertEqual(sorted(table_column_names), sorted(frame_column_names))
+        self.assertEqual(df["a"].dtype, int)
+        self.assertEqual(df["b"].dtype, float)
+        self.assertEqual([1, 1, 1], list(df["a"].iloc[-3:]))
+        self.assertTrue(np.isnan(df["b"].iloc[-1]))
+
     def test_table_to_frame_metas(self):
         from Orange.data.pandas_compat import table_to_frame
 
