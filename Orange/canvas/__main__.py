@@ -235,7 +235,7 @@ def pull_notifications():
                 contents = urlopen(request, timeout=10).read().decode()
             # Nothing that this fails with should make Orange crash
             except Exception:  # pylint: disable=broad-except
-                log.exception('Failed to pull notification feed')
+                log.warning('Failed to pull notification feed')
             else:
                 self.resultReady.emit(contents)
 
