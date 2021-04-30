@@ -1,11 +1,11 @@
-from collections import OrderedDict
+from typing import List
 
 from Orange.base import Learner
 from Orange.data import Table
 from Orange.ensembles.stack import StackedFitter
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
-from Orange.widgets.widget import Input
+from Orange.widgets.widget import Input, MultiInput
 
 
 class OWStackedLearner(OWBaseLearner):
@@ -19,11 +19,11 @@ class OWStackedLearner(OWBaseLearner):
     learner_name = Setting("Stack")
 
     class Inputs(OWBaseLearner.Inputs):
-        learners = Input("Learners", Learner, multiple=True)
+        learners = MultiInput("Learners", Learner, filter_none=True)
         aggregate = Input("Aggregate", Learner)
 
     def __init__(self):
-        self.learners = OrderedDict()
+        self.learners: List[Learner] = []
         self.aggregate = None
         super().__init__()
 
@@ -31,27 +31,34 @@ class OWStackedLearner(OWBaseLearner):
         pass
 
     @Inputs.learners
-    def set_learners(self, learner, id):  # pylint: disable=redefined-builtin
-        if id in self.learners and learner is None:
-            del self.learners[id]
-        elif learner is not None:
-            self.learners[id] = learner
-        self.apply()
+    def set_learner(self, index: int, learner: Learner):
+        self.learners[index] = learner
+
+    @Inputs.learners.insert
+    def insert_learner(self, index, learner):
+        self.learners.insert(index, learner)
+
+    @Inputs.learners.remove
+    def remove_learner(self, index):
+        self.learners.pop(index)
 
     @Inputs.aggregate
     def set_aggregate(self, aggregate):
         self.aggregate = aggregate
+
+    def handleNewSignals(self):
+        super().handleNewSignals()
         self.apply()
 
     def create_learner(self):
         if not self.learners:
             return None
         return self.LEARNER(
-            tuple(self.learners.values()), aggregate=self.aggregate,
+            tuple(self.learners), aggregate=self.aggregate,
             preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
-        return (("Base learners", [l.name for l in self.learners.values()]),
+        return (("Base learners", [l.name for l in self.learners]),
                 ("Aggregator",
                  self.aggregate.name if self.aggregate else 'default'))
 
