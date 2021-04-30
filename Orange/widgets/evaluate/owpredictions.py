@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from functools import partial
 from operator import itemgetter
 from itertools import chain
-from typing import Set, Sequence, Union, Dict, Optional, List, NamedTuple
+from typing import Set, Sequence, Union, Optional, List, NamedTuple
 
 import numpy
 from AnyQt.QtWidgets import (
@@ -27,7 +27,7 @@ from Orange.widgets import gui, settings
 from Orange.widgets.evaluate.utils import (
     ScoreTable, usable_scorers, learner_name, scorer_caller)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Msg, Input, Output
+from Orange.widgets.widget import OWWidget, Msg, Input, Output, MultiInput
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
@@ -54,7 +54,7 @@ class OWPredictions(OWWidget):
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
-        predictors = Input("Predictors", Model, multiple=True)
+        predictors = MultiInput("Predictors", Model, filter_none=True)
 
     class Outputs:
         predictions = Output("Predictions", Orange.data.Table)
@@ -80,7 +80,7 @@ class OWPredictions(OWWidget):
         super().__init__()
 
         self.data = None  # type: Optional[Orange.data.Table]
-        self.predictors = {}  # type: Dict[object, PredictorSlot]
+        self.predictors = []  # type: List[PredictorSlot]
         self.class_values = []  # type: List[str]
         self._delegates = []
         self.left_width = 10
@@ -185,21 +185,25 @@ class OWPredictions(OWWidget):
     def class_var(self):
         return self.data and self.data.domain.class_var
 
-    # pylint: disable=redefined-builtin
     @Inputs.predictors
-    def set_predictor(self, predictor=None, id=None):
-        if id in self.predictors:
-            if predictor is not None:
-                self.predictors[id] = self.predictors[id]._replace(
-                    predictor=predictor, name=predictor.name, results=None)
-            else:
-                del self.predictors[id]
-        elif predictor is not None:
-            self.predictors[id] = PredictorSlot(predictor, predictor.name, None)
+    def set_predictor(self, index, predictor: Model):
+        item = self.predictors[index]
+        self.predictors[index] = item._replace(
+            predictor=predictor, name=predictor.name, results=None
+        )
+
+    @Inputs.predictors.insert
+    def insert_predictor(self, index, predictor: Model):
+        item = PredictorSlot(predictor, predictor.name, None)
+        self.predictors.insert(index, item)
+
+    @Inputs.predictors.remove
+    def remove_predictor(self, index):
+        self.predictors.pop(index)
 
     def _set_class_values(self):
         class_values = []
-        for slot in self.predictors.values():
+        for slot in self.predictors:
             class_var = slot.predictor.domain.class_var
             if class_var and class_var.is_discrete:
                 for value in class_var.values:
@@ -235,7 +239,7 @@ class OWPredictions(OWWidget):
         else:
             classless_data = self.data
 
-        for inputid, slot in self.predictors.items():
+        for index, slot in enumerate(self.predictors):
             if isinstance(slot.results, Results):
                 continue
 
@@ -247,7 +251,7 @@ class OWPredictions(OWWidget):
                     pred = predictor(classless_data, Model.Value)
                     prob = numpy.zeros((len(pred), 0))
             except (ValueError, DomainTransformationError) as err:
-                self.predictors[inputid] = \
+                self.predictors[index] = \
                     slot._replace(results=f"{predictor.name}: {err}")
                 continue
 
@@ -260,7 +264,7 @@ class OWPredictions(OWWidget):
             results.unmapped_probabilities = prob
             results.unmapped_predicted = pred
             results.probabilities = results.predicted = None
-            self.predictors[inputid] = slot._replace(results=results)
+            self.predictors[index] = slot._replace(results=results)
 
             target = predictor.domain.class_var
             if target != self.class_var:
@@ -279,8 +283,8 @@ class OWPredictions(OWWidget):
         scorers = usable_scorers(self.class_var) if self.class_var else []
         self.score_table.update_header(scorers)
         errors = []
-        for inputid, pred in self.predictors.items():
-            results = self.predictors[inputid].results
+        for pred in self.predictors:
+            results = pred.results
             if not isinstance(results, Results) or results.predicted is None:
                 continue
             row = [QStandardItem(learner_name(pred.predictor)),
@@ -314,14 +318,14 @@ class OWPredictions(OWWidget):
         # in _call_predictors
         errors = "\n".join(
             f"- {p.predictor.name}: {p.results}"
-            for p in self.predictors.values()
+            for p in self.predictors
             if isinstance(p.results, str) and p.results)
         self.Error.predictor_failed(errors, shown=bool(errors))
 
         if self.class_var:
             inv_targets = "\n".join(
                 f"- {pred.name} predicts '{pred.domain.class_var.name}'"
-                for pred in (p.predictor for p in self.predictors.values()
+                for pred in (p.predictor for p in self.predictors
                              if isinstance(p.results, Results)
                              and p.results.probabilities is None))
             self.Warning.wrong_targets(inv_targets, shown=bool(inv_targets))
@@ -332,7 +336,7 @@ class OWPredictions(OWWidget):
         details = "Data:<br>"
         details += format_summary_details(self.data, format=Qt.RichText)
         details += "<hr>"
-        pred_names = [v.name for v in self.predictors.values()]
+        pred_names = [v.name for v in self.predictors]
         n_predictors = len(self.predictors)
         if n_predictors:
             n_valid = len(self._non_errored_predictors())
@@ -348,11 +352,11 @@ class OWPredictions(OWWidget):
         return details
 
     def _invalidate_predictions(self):
-        for inputid, pred in list(self.predictors.items()):
-            self.predictors[inputid] = pred._replace(results=None)
+        for i, pred in enumerate(self.predictors):
+            self.predictors[i] = pred._replace(results=None)
 
     def _non_errored_predictors(self):
-        return [p for p in self.predictors.values()
+        return [p for p in self.predictors
                 if isinstance(p.results, Results)]
 
     def _reordered_probabilities(self, prediction):
@@ -501,7 +505,7 @@ class OWPredictions(OWWidget):
     def _update_prediction_delegate(self):
         self._delegates.clear()
         colors = self._get_colors()
-        for col, slot in enumerate(self.predictors.values()):
+        for col, slot in enumerate(self.predictors):
             target = slot.predictor.domain.class_var
             shown_probs = (
                 () if target.is_continuous else
@@ -1272,4 +1276,4 @@ if __name__ == "__main__":  # pragma: no cover
 
     WidgetPreview(OWPredictions).run(
         set_data=iris2,
-        set_predictor=[(pred, i) for i, pred in enumerate(predictors_)])
+        insert_predictor=list(enumerate(predictors_)))

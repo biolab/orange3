@@ -492,6 +492,39 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
         self.widget.selection_store.unregister.called_with(prev_model)
 
+    def test_multi_inputs(self):
+        w = self.widget
+        data = self.iris[::5].copy()
+
+        p1 = ConstantLearner()(data)
+        p1.name = "P1"
+        p2 = ConstantLearner()(data)
+        p2.name = "P2"
+        p3 = ConstantLearner()(data)
+        p3.name = "P3"
+        for i, p in enumerate([p1, p2, p3], 1):
+            self.send_signal(w.Inputs.predictors, p, i)
+        self.send_signal(w.Inputs.data, data)
+
+        def check_evres(expected):
+            out = self.get_output(w.Outputs.evaluation_results)
+            self.assertSequenceEqual(out.learner_names, expected)
+
+        check_evres(["P1", "P2", "P3"])
+
+        self.send_signal(w.Inputs.predictors, None, 2)
+        check_evres(["P1", "P3"])
+
+        self.send_signal(w.Inputs.predictors, p2, 2)
+        check_evres(["P1", "P2", "P3"])
+
+        self.send_signal(w.Inputs.predictors,
+                         w.Inputs.predictors.closing_sentinel, 2)
+        check_evres(["P1", "P3"])
+
+        self.send_signal(w.Inputs.predictors, p2, 2)
+        check_evres(["P1", "P3", "P2"])
+
 
 class SelectionModelTest(unittest.TestCase):
     def setUp(self):
