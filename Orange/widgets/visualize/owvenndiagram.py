@@ -11,6 +11,7 @@ from itertools import compress, count
 from functools import reduce
 from operator import attrgetter
 from xml.sax.saxutils import escape
+from typing import Dict, Any, List, Mapping, Optional
 
 import numpy as np
 
@@ -32,9 +33,9 @@ from Orange.widgets.settings import (
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.sql import check_sql_input_sequence
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input, Output, Msg
+from Orange.widgets.widget import MultiInput, Output, Msg
 
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
@@ -69,7 +70,7 @@ class OWVennDiagram(widget.OWWidget):
     settings_version = 2
 
     class Inputs:
-        data = Input("Data", Table, multiple=True)
+        data = MultiInput("Data", Table)
 
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
@@ -106,8 +107,11 @@ class OWVennDiagram(widget.OWWidget):
 
         # Diagram update is in progress
         self._updating = False
-        # Input datasets in the order they were 'connected'.
-        self.data = {}
+        self.__id_gen = count()  # 'key' generator for _InputData
+        #: Connected input dataset signals.
+        self._data_inputs: List[_InputData] = []
+        # Input non-none datasets in the order they were 'connected'.
+        self.__data: Optional[Dict[Any, _InputData]] = None
         # Extracted input item sets in the order they were 'connected'
         self.itemsets = {}
         # A list with 2 ** len(self.data) elements that store item sets
@@ -185,28 +189,48 @@ class OWVennDiagram(widget.OWWidget):
         self.vennwidget.resize(size, size)
         self.scene.setSceneRect(self.scene.itemsBoundingRect())
 
-    @Inputs.data
-    @check_sql_input
-    def setData(self, data, key=None):
-        self.Error.too_many_inputs.clear()
-        if key in self.data:
-            if data is None:
-                # Remove the input
-                # Clear possible warnings.
-                self.Warning.clear()
-                del self.data[key]
-            else:
-                # Update existing item
-                self.data[key] = self.data[key]._replace(name=data.name, table=data)
+    @property
+    def data(self) -> Mapping[Any, _InputData]:
+        if self.__data is None:
+            self.__data = {
+                item.key: item for item in self._data_inputs[:5]
+                if item.table is not None
+            }
+        return self.__data
 
-        elif data is not None:
-            # TODO: Allow setting more them 5 inputs and let the user
-            # select the 5 to display.
-            if len(self.data) == 5:
-                self.Error.too_many_inputs()
-                return
-            # Add a new input
-            self.data[key] = _InputData(key, data.name, data)
+    @Inputs.data
+    @check_sql_input_sequence
+    def setData(self, index: int, data: Optional[Table]):
+        item = self._data_inputs[index]
+        item = item._replace(
+            name=data.name if data is not None else "",
+            table=data
+        )
+        self._data_inputs[index] = item
+        self.__data = None  # invalidate self.data
+        self._setInterAttributes()
+
+    @Inputs.data.insert
+    @check_sql_input_sequence
+    def insertData(self, index: int, data: Optional[Table]):
+        key = next(self.__id_gen)
+        item = _InputData(
+            key, name=data.name if data is not None else "", table=data
+        )
+        self._data_inputs.insert(index, item)
+        self.__data = None  # invalidate self.data
+        if len(self._data_inputs) > 5:
+            self.Error.too_many_inputs()
+        self._setInterAttributes()
+
+    @Inputs.data.remove
+    def removeData(self, index: int):
+        self.__data = None  # invalidate self.data
+        self._data_inputs.pop(index)
+        if len(self._data_inputs) <= 5:
+            self.Error.too_many_inputs.clear()
+        # Clear possible warnings.
+        self.Warning.clear()
         self._setInterAttributes()
 
     def data_equality(self):
