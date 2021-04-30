@@ -35,7 +35,7 @@ from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Input, Output
+from Orange.widgets.widget import OWWidget, MultiInput, Output
 
 if TYPE_CHECKING:
     from typing_extensions import TypedDict
@@ -526,14 +526,18 @@ class OWPythonScript(OWWidget):
     keywords = ["program", "function"]
 
     class Inputs:
-        data = Input("Data", Table, replaces=["in_data"],
-                     default=True, multiple=True)
-        learner = Input("Learner", Learner, replaces=["in_learner"],
-                        default=True, multiple=True)
-        classifier = Input("Classifier", Model, replaces=["in_classifier"],
-                           default=True, multiple=True)
-        object = Input("Object", object, replaces=["in_object"],
-                       default=False, multiple=True)
+        data = MultiInput(
+            "Data", Table, replaces=["in_data"], default=True
+        )
+        learner = MultiInput(
+            "Learner", Learner, replaces=["in_learner"], default=True
+        )
+        classifier = MultiInput(
+            "Classifier", Model, replaces=["in_classifier"], default=True
+        )
+        object = MultiInput(
+            "Object", object, replaces=["in_object"], default=False
+        )
 
     class Outputs:
         data = Output("Data", Table, replaces=["out_data"])
@@ -562,7 +566,7 @@ class OWPythonScript(OWWidget):
         super().__init__()
 
         for name in self.signal_names:
-            setattr(self, name, {})
+            setattr(self, name, [])
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -779,29 +783,65 @@ class OWPythonScript(OWWidget):
         self.scriptText = self.text.toPlainText()
         self.splitterState = bytes(self.splitCanvas.saveState())
 
-    def handle_input(self, obj, sig_id, signal):
+    def set_input(self, index, obj, signal):
         dic = getattr(self, signal)
-        if obj is None:
-            if sig_id in dic.keys():
-                del dic[sig_id]
-        else:
-            dic[sig_id] = obj
+        dic[index] = obj
+
+    def insert_input(self, index, obj, signal):
+        dic = getattr(self, signal)
+        dic.insert(index, obj)
+
+    def remove_input(self, index, signal):
+        dic = getattr(self, signal)
+        dic.pop(index)
 
     @Inputs.data
-    def set_data(self, data, sig_id):
-        self.handle_input(data, sig_id, "data")
+    def set_data(self, index, data):
+        self.set_input(index, data, "data")
+
+    @Inputs.data.insert
+    def insert_data(self, index, data):
+        self.insert_input(index, data, "data")
+
+    @Inputs.data.remove
+    def remove_data(self, index):
+        self.remove_input(index, "data")
 
     @Inputs.learner
-    def set_learner(self, data, sig_id):
-        self.handle_input(data, sig_id, "learner")
+    def set_learner(self, index, learner):
+        self.set_input(index, learner, "learner")
+
+    @Inputs.learner.insert
+    def insert_learner(self, index, learner):
+        self.insert_input(index, learner, "learner")
+
+    @Inputs.learner.remove
+    def remove_learner(self, index):
+        self.remove_input(index, "learner")
 
     @Inputs.classifier
-    def set_classifier(self, data, sig_id):
-        self.handle_input(data, sig_id, "classifier")
+    def set_classifier(self, index, classifier):
+        self.set_input(index, classifier, "classifier")
+
+    @Inputs.classifier.insert
+    def insert_classifier(self, index, classifier):
+        self.insert_input(index, classifier, "classifier")
+
+    @Inputs.classifier.remove
+    def remove_classifier(self, index):
+        self.remove_input(index, "classifier")
 
     @Inputs.object
-    def set_object(self, data, sig_id):
-        self.handle_input(data, sig_id, "object")
+    def set_object(self, index, object):
+        self.set_input(index, object, "object")
+
+    @Inputs.object.insert
+    def insert_object(self, index, object):
+        self.insert_input(index, object, "object")
+
+    @Inputs.object.remove
+    def remove_object(self, index):
+        self.remove_input(index, "object")
 
     def handleNewSignals(self):
         # update fake signature labels
@@ -925,7 +965,7 @@ class OWPythonScript(OWWidget):
         d = {}
         for name in self.signal_names:
             value = getattr(self, name)
-            all_values = list(value.values())
+            all_values = list(value)
             one_value = all_values[0] if len(all_values) == 1 else None
             d["in_" + name + "s"] = all_values
             d["in_" + name] = one_value
