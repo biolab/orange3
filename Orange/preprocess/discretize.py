@@ -320,8 +320,11 @@ def decimal_binnings(
         nbins = np.round((mx_ - mn_) / width)
         if min_bins <= nbins <= max_bins \
                 and (not bins or bins[-1].nbins != nbins):
-            bin_def = BinDefinition(mn_ + width * np.arange(nbins + 1),
-                                    label_fmt, None, width)
+            bins_ = mn_ + width * np.arange(nbins + 1)
+            # to prevent values on the edge of the bin fall in the wrong bin
+            # due to precision error on decimals that are not precise
+            bins_ = np.around(bins_, decimals=np.finfo(bins_.dtype).precision)
+            bin_def = BinDefinition(bins_, label_fmt, None, width)
             bins.append(bin_def)
     return bins
 
