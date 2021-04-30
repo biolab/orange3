@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
+from numpy.testing import assert_array_equal
 
 from Orange.data import (
     Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
@@ -492,6 +493,27 @@ class TestOWConcatenate(WidgetTest):
 
         self.assertEqual(len(output.domain.metas), 1)
         self.assertIs(output.domain.metas[0].compute_value.variable, ma4)  # renamed
+
+    def test_explicit_closing(self):
+        w = self.widget
+        self.send_signal(w.Inputs.additional_data, self.iris[:1], 0)
+        self.send_signal(w.Inputs.additional_data, self.iris[1:2], 1)
+        self.send_signal(w.Inputs.additional_data, self.iris[2:3], 2)
+
+        def assert_output_equal(expected: np.ndarray):
+            out = self.get_output(w.Outputs.data)
+            assert_array_equal(out.X, expected)
+
+        assert_output_equal(self.iris[:3].X)
+        self.send_signal(w.Inputs.additional_data, None, 1)
+        assert_output_equal(self.iris[:3:2].X)
+        self.send_signal(w.Inputs.additional_data, self.iris[1:2], 1)
+        assert_output_equal(self.iris[:3].X)
+        self.send_signal(w.Inputs.additional_data,
+                         w.Inputs.additional_data.closing_sentinel, 1)
+        assert_output_equal(self.iris[:3:2].X)
+        self.send_signal(w.Inputs.additional_data, self.iris[1:2], 1)
+        assert_output_equal(np.vstack((self.iris[:3:2].X, self.iris[1:2].X)))
 
 
 if __name__ == "__main__":
