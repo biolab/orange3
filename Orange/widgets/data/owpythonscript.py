@@ -36,6 +36,18 @@ if TYPE_CHECKING:
 __all__ = ["OWPythonScript"]
 
 
+DEFAULT_SCRIPT = """import numpy as np
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+
+domain = Domain([ContinuousVariable("age"),
+                 ContinuousVariable("height"),
+                 DiscreteVariable("gender", values=("M", "F"))])
+arr = np.array([
+  [25, 186, 0],
+  [30, 164, 1]])
+out_data = Table.from_numpy(domain, arr)
+"""
+
 def text_format(foreground=Qt.black, weight=QFont.Normal):
     fmt = QTextCharFormat()
     fmt.setForeground(QBrush(foreground))
@@ -423,8 +435,8 @@ class OWPythonScript(OWWidget):
 
     settings_version = 2
     scriptLibrary: 'List[_ScriptData]' = Setting([{
-        "name": "Hello world",
-        "script": "print('Hello world')\n",
+        "name": "Table from numpy",
+        "script": DEFAULT_SCRIPT,
         "filename": None
     }])
     currentScriptIndex = Setting(0)
