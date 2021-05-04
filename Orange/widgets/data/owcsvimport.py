@@ -31,18 +31,18 @@ from typing import (
     Union, AnyStr, BinaryIO, Set, Type, Mapping, Sequence, NamedTuple
 )
 
-from PyQt5.QtCore import (
+from AnyQt.QtCore import (
     Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType
 )
-from PyQt5.QtGui import (
+from AnyQt.QtGui import (
     QStandardItem, QStandardItemModel, QPalette, QColor, QIcon
 )
-from PyQt5.QtWidgets import (
+from AnyQt.QtWidgets import (
     QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
     QVBoxLayout, QSizePolicy, QStyle, QFileIconProvider, QFileDialog,
     QApplication, QMessageBox, QTextBrowser, QMenu
 )
-from PyQt5.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
 import numpy as np
 import pandas.errors

@@ -36,17 +36,17 @@ from typing import (
     List, Tuple, Dict, Iterator, Optional, Any, Union, Callable, Mapping
 )
 
-from PyQt5.QtCore import (
+from AnyQt.QtCore import (
     Qt, QSize, QPoint, QRect, QRectF, QRegExp, QAbstractTableModel,
     QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent
 )
-from PyQt5.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-from PyQt5.QtGui import (
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtGui import (
     QRegExpValidator, QColor, QBrush, QPalette, QHelpEvent,
     QStandardItemModel, QStandardItem, QIcon, QIconEngine, QPainter, QPixmap,
     QFont
 )
-from PyQt5.QtWidgets import (
+from AnyQt.QtWidgets import (
     QWidget, QComboBox, QFormLayout, QHBoxLayout, QVBoxLayout, QLineEdit,
     QHeaderView, QFrame, QTableView, QMenu, QLabel, QAction, QActionGroup,
     QStyleOptionFrame, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
