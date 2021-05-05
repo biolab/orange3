@@ -220,9 +220,7 @@ class LineEdit(QLineEdit):
         opt = QStyleOptionFrame()
         self.initStyleOption(opt)
         size = self.style().sizeFromContents(
-            QStyle.CT_LineEdit, opt,
-            QSize(w, h).expandedTo(QApplication.globalStrut()),
-            self
+            QStyle.CT_LineEdit, opt, QSize(w, h), self
         )
         return size
 
