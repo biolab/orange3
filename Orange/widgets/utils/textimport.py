@@ -37,12 +37,12 @@ from typing import (
 )
 
 from AnyQt.QtCore import (
-    Qt, QSize, QPoint, QRect, QRectF, QRegExp, QAbstractTableModel,
+    Qt, QSize, QPoint, QRect, QRectF, QRegularExpression, QAbstractTableModel,
     QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 from AnyQt.QtGui import (
-    QRegExpValidator, QColor, QBrush, QPalette, QHelpEvent,
+    QRegularExpressionValidator, QColor, QBrush, QPalette, QHelpEvent,
     QStandardItemModel, QStandardItem, QIcon, QIconEngine, QPainter, QPixmap,
     QFont
 )
@@ -304,7 +304,7 @@ class CSVOptionsWidget(QWidget):
         self.delimiter_cb.setCurrentIndex(self._delimiter_idx)
         self.delimiter_cb.activated.connect(self.__on_delimiter_idx_activated)
 
-        validator = QRegExpValidator(QRegExp("."))
+        validator = QRegularExpressionValidator(QRegularExpression("."))
         self.delimiteredit = LineEdit(
             self._delimiter_custom,
             enabled=self._delimiter_idx == CSVOptionsWidget.DelimiterOther,
@@ -666,7 +666,7 @@ class CSVImportWidget(QWidget):
         # Maybe just use unicodedata.normalize('NFKC', ...) as a converter?
         # For now only allow a limited set
         self.grouping_sep_edit_cb.setValidator(
-            QRegExpValidator(QRegExp(r"(\.|,| |')?"), self)
+            QRegularExpressionValidator(QRegularExpression(r"(\.|,| |')?"), self)
         )
         self.grouping_sep_edit_cb.activated[str].connect(
             self.__group_sep_activated)
@@ -678,7 +678,7 @@ class CSVImportWidget(QWidget):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
         )
         self.decimal_sep_edit_cb.setValidator(
-            QRegExpValidator(QRegExp(r"(\.|,)"), self))
+            QRegularExpressionValidator(QRegularExpression(r"(\.|,)"), self))
         self.decimal_sep_edit_cb.addItems([".", ","])
         self.decimal_sep_edit_cb.activated[str].connect(
             self.__decimal_sep_activated)
