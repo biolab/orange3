@@ -1740,7 +1740,7 @@ def main(argv=None):  # pragma: no cover
         f = io.BytesIO(TEST_DATA)
     try:
         w.setSampleContents(f)
-        app.exec_()
+        app.exec()
     finally:
         f.close()
 

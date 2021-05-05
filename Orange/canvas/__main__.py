@@ -685,7 +685,7 @@ def main(argv=None):
              patch('sys.excepthook', excepthook),\
              patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):
-            status = app.exec_()
+            status = app.exec()
     except BaseException:
         log.error("Error in main event loop.", exc_info=True)
         status = 42

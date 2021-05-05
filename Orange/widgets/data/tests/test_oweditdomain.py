@@ -471,9 +471,9 @@ class TestEditors(GuiTest):
         self.assertGreaterEqual(len(changedspy), 1, "Did not change data")
         w.grab()
 
-    # mocking exec_ make dialog never show - dialog blocks running until closed
+    # mocking exec make dialog never show - dialog blocks running until closed
     @patch(
-        "Orange.widgets.data.oweditdomain.GroupItemsDialog.exec_",
+        "Orange.widgets.data.oweditdomain.GroupItemsDialog.exec",
         Mock(side_effect=lambda: QDialog.Accepted)
     )
     def test_discrete_editor_merge_action(self):

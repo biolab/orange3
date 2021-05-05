@@ -793,5 +793,5 @@ if __name__ == "__main__":
     ow.set_subset_data(table[::10])
     ow.handleNewSignals()
     ow.show()
-    app.exec_()
+    app.exec()
     ow.saveSettings()

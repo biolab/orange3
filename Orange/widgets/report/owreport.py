@@ -42,4 +42,4 @@ if __name__ == "__main__":
     main.saveSettings()
     assert main.table_model.rowCount() == 4
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

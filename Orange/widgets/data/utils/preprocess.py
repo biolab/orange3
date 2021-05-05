@@ -756,7 +756,7 @@ class SequenceFlow(QWidget):
         mime = QMimeData()
         mime.setData("application/x-internal-move", b"")
         drag.setMimeData(mime)
-        return drag.exec_(Qt.MoveAction)
+        return drag.exec(Qt.MoveAction)
 
     def __widgetFrame(self, widget):
         layout = self.__flowlayout

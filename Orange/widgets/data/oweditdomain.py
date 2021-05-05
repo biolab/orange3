@@ -1474,7 +1474,7 @@ class DiscreteVariableEditor(VariableEditor):
             sizeGripEnabled=True,
         )
         dlg.setWindowModality(Qt.WindowModal)
-        status = dlg.exec_()
+        status = dlg.exec()
         dlg.deleteLater()
         self.merge_dialog_settings[self.var] = dlg.get_dialog_settings()
 

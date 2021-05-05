@@ -113,7 +113,7 @@ class MainWindow(OWCanvasMainWindow):
         """Reimplemented."""
         dlg = OUserSettingsDialog(self, windowTitle=self.tr("Preferences"))
         dlg.show()
-        status = dlg.exec_()
+        status = dlg.exec()
         if status == 0:
             self.user_preferences_changed_notify_all()
 

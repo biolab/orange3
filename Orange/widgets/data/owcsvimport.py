@@ -889,7 +889,7 @@ class OWCSVFileImport(widget.OWWidget):
         if directory is not None:
             dlg.setDirectory(directory)
 
-        status = dlg.exec_()
+        status = dlg.exec()
         dlg.deleteLater()
         if status == QFileDialog.Accepted:
             selected_filter = dlg.selectedFileFormat()
@@ -937,7 +937,7 @@ class OWCSVFileImport(widget.OWWidget):
             dlg.setWindowModality(Qt.WindowModal)
             dlg.setPath(path)
             dlg.setOptions(options)
-            status = dlg.exec_()
+            status = dlg.exec()
             dlg.deleteLater()
             if status == QDialog.Accepted:
                 self.set_selected_file(path, dlg.options())
@@ -1852,7 +1852,7 @@ def main(argv=None):  # pragma: no cover
     w = OWCSVFileImport()
     w.show()
     w.raise_()
-    app.exec_()
+    app.exec()
     w.saveSettings()
     w.onDeleteWidget()
     return 0

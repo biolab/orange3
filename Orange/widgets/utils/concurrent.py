@@ -129,7 +129,7 @@ class _TaskRunnable(QRunnable):
         # Quit the loop and exit when task finishes or is cancelled.
         self.task.finished.connect(self.eventLoop.quit)
         self.task.cancelled.connect(self.eventLoop.quit)
-        self.eventLoop.exec_()
+        self.eventLoop.exec()
 
 
 class FutureRunnable(QRunnable):
