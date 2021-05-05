@@ -213,7 +213,7 @@ class LineEdit(QLineEdit):
         if nchar <= 0:
             nchar = 17
 
-        w = (fm.width("X") * nchar + 2 * self._horizontalMargin +
+        w = (fm.horizontalAdvance("X") * nchar + 2 * self._horizontalMargin +
              textmargins.left() + textmargins.right() +
              contentsmargins.left() + contentsmargins.right())
 
