@@ -604,17 +604,17 @@ class OWCSVFileImport(widget.OWWidget):
     category = "Data"
     keywords = ["file", "load", "read", "open", "csv"]
 
-    outputs = [
-        widget.OutputSignal(
+    class Outputs:
+        data = widget.Output(
             name="Data",
             type=Orange.data.Table,
-            doc="Loaded data set."),
-        widget.OutputSignal(
+            doc="Loaded data set.")
+        data_frame = widget.Output(
             name="Data Frame",
             type=pd.DataFrame,
-            doc=""
+            doc="",
+            auto_summary=False
         )
-    ]
 
     class Error(widget.OWWidget.Error):
         error = widget.Msg(
@@ -1213,8 +1213,8 @@ class OWCSVFileImport(widget.OWWidget):
             table.name = os.path.splitext(os.path.split(filename)[-1])[0]
         else:
             table = None
-        self.send("Data Frame", df)
-        self.send('Data', table)
+        self.Outputs.data_frame.send(df)
+        self.Outputs.data.send(table)
         self._update_status_messages(table)
 
     def _update_status_messages(self, data):
