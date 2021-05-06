@@ -218,6 +218,11 @@ class TestOWDBSCAN(WidgetTest):
         data = Table("titanic")
         self.send_signal(w.Inputs.data, data)
 
+    def test_data_retain_ids(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(self.iris.ids, output.ids)
+
     def test_missing_data(self):
         w = self.widget
         self.iris[1:5, 1] = np.nan
