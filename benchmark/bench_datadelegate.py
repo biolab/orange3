@@ -4,10 +4,10 @@ from orangewidget.tests.base import GuiTest
 
 import Orange
 from Orange.data import Table
-from Orange.widgets.data.owtable import RichTableModel, TableBarItemDelegate
+from Orange.widgets.data.owtable import RichTableModel, TableBarItemDelegate, \
+    TableDataDelegate
 from Orange.widgets.unsupervised.owdistancematrix import DistanceMatrixModel, \
     TableBorderItem
-from Orange.widgets.utils.itemdelegates import DataDelegate
 from Orange.widgets.utils.tableview import TableView
 
 from .base import benchmark, Benchmark
@@ -37,7 +37,7 @@ class BenchTableView(BaseBenchTableView):
     def setUp(self) -> None:
         super().setUp()
         data = Table("brown-selected")
-        self.delegate = DataDelegate(
+        self.delegate = TableDataDelegate(
             self.view, roles=(
                 Qt.DisplayRole, Qt.BackgroundRole, Qt.TextAlignmentRole
             )
