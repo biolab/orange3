@@ -12,7 +12,7 @@ from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import (
     QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
-    QStyle, QStylePainter, QStyledItemDelegate
+    QStyle, QStylePainter
 )
 from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
@@ -30,6 +30,7 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from Orange.widgets.utils.itemselectionmodel import (
     BlockSelectionModel, ranges, selection_blocks
 )
@@ -170,6 +171,10 @@ class DataTableView(gui.HScrollStepMixin, TableView):
     input_slot: TableSlot
 
 
+class TableBarItemDelegate(gui.TableBarItem, TableDataDelegate):
+    pass
+
+
 class OWDataTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
@@ -269,6 +274,7 @@ class OWDataTable(OWWidget):
             else:
                 view = DataTableView()
                 view.setSortingEnabled(True)
+                view.setItemDelegate(TableDataDelegate(view))
 
                 if self.select_rows:
                     view.setSelectionBehavior(QTableView.SelectRows)
@@ -356,11 +362,11 @@ class OWDataTable(OWWidget):
             color_schema = None
         if self.show_distributions:
             view.setItemDelegate(
-                gui.TableBarItem(
-                    self, color=self.dist_color, color_schema=color_schema)
+                TableBarItemDelegate(
+                    view, color=self.dist_color, color_schema=color_schema)
             )
         else:
-            view.setItemDelegate(QStyledItemDelegate(self))
+            view.setItemDelegate(TableDataDelegate(view))
 
         # Enable/disable view sorting based on data's type
         view.setSortingEnabled(is_sortable(data))
@@ -604,10 +610,10 @@ class OWDataTable(OWWidget):
             else:
                 color_schema = None
             if self.show_distributions:
-                delegate = gui.TableBarItem(self, color=self.dist_color,
-                                            color_schema=color_schema)
+                delegate = TableBarItemDelegate(widget, color=self.dist_color,
+                                                color_schema=color_schema)
             else:
-                delegate = QStyledItemDelegate(self)
+                delegate = TableDataDelegate(widget)
             widget.setItemDelegate(delegate)
         tab = self.tabs.currentWidget()
         if tab:

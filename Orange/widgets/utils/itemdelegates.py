@@ -93,3 +93,12 @@ class FixedFormatNumericColumnDelegate(DataDelegate):
         else:
             sh = self.__sh_cache[key]
         return QSize(sh)
+
+
+class TableDataDelegate(DataDelegate):
+    """
+    A DataDelegate initialized to be used with
+    :class:`Orange.widgets.utils.itemmodels.TableModel`
+    """
+    #: Roles supplied by TableModel we want DataDelegate to use.
+    DefaultRoles = (Qt.DisplayRole, Qt.TextAlignmentRole, Qt.BackgroundRole)
