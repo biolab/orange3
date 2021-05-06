@@ -2,7 +2,6 @@
 # pylint: disable=protected-access
 import unittest
 from unittest.mock import Mock, patch
-import warnings
 
 import numpy as np
 from AnyQt.QtCore import Qt
@@ -469,14 +468,6 @@ class TestOWTestAndScore(WidgetTest):
         self.send_signal(w.Inputs.train_data, Table("zoo")[:8])
         self.send_signal(w.Inputs.learner, MajorityLearner(), 0, wait=5000)
         self.assertTrue(w.Error.too_many_folds.is_shown())
-
-    def test_no_pregressbar_warning(self):
-        data = Table("iris")[::15]
-
-        with warnings.catch_warnings(record=True) as w:
-            self.send_signal(self.widget.Inputs.train_data, data)
-            self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0)
-            assert not w
 
     def _set_comparison_score(self, score):
         w = self.widget
