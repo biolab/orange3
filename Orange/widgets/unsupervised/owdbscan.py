@@ -10,7 +10,7 @@ from Orange.preprocess import Normalize, Continuize, SklImpute
 from Orange.widgets import widget, gui
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.settings import Setting
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, DiscreteVariable
 from Orange.data.util import get_unique_names
 from Orange.clustering import DBSCAN
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
@@ -197,11 +197,10 @@ class OWDBSCAN(widget.OWWidget):
 
         clusters = [c if c >= 0 else np.nan for c in model.labels]
         k = len(set(clusters) - {np.nan})
-        clusters = np.array(clusters).reshape(len(self.data), 1)
+        clusters = np.array(clusters)
         core_samples = set(model.projector.core_sample_indices_)
         in_core = np.array([1 if (i in core_samples) else 0
                             for i in range(len(self.data))])
-        in_core = in_core.reshape(len(self.data), 1)
 
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
@@ -215,15 +214,8 @@ class OWDBSCAN(widget.OWWidget):
         u_in_core = get_unique_names(names + [u_clust_var], "DBSCAN Core")
         in_core_var = DiscreteVariable(u_in_core, values=("0", "1"))
 
-        x, y, metas = self.data.X, self.data.Y, self.data.metas
-
-        meta_attrs += (clust_var, )
-        metas = np.hstack((metas, clusters))
-        meta_attrs += (in_core_var, )
-        metas = np.hstack((metas, in_core))
-
-        domain = Domain(attributes, classes, meta_attrs)
-        new_table = Table(domain, x, y, metas, self.data.W)
+        new_table = self.data.add_column(clust_var, clusters, to_metas=True)
+        new_table = new_table.add_column(in_core_var, in_core, to_metas=True)
 
         self._set_output_summary(new_table)
         self.Outputs.annotated_data.send(new_table)
