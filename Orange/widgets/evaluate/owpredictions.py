@@ -7,8 +7,9 @@ from typing import Set, List, Sequence, Union
 
 import numpy
 from AnyQt.QtWidgets import (
-    QTableView, QListWidget, QSplitter, QStyledItemDelegate,
-    QToolTip, QStyle, QApplication, QSizePolicy)
+    QTableView, QListWidget, QSplitter, QToolTip, QStyle, QApplication,
+    QSizePolicy
+)
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
@@ -32,6 +33,7 @@ from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
+from Orange.widgets.utils.itemdelegates import DataDelegate
 
 
 # Input slot for the Predictors channel
@@ -706,7 +708,14 @@ class OWPredictions(OWWidget):
         QTimer.singleShot(0, self._update_splitter)
 
 
-class DataItemDelegate(QStyledItemDelegate):
+class DataItemDelegate(DataDelegate):
+    def __init__(
+            self, *args,
+            roles=(Qt.DisplayRole, Qt.TextAlignmentRole, Qt.BackgroundRole),
+            **kwargs
+    ):
+        super().__init__(*args, roles=roles, **kwargs)
+
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
         if self.parent().selectionModel().isSelected(index):
@@ -715,7 +724,7 @@ class DataItemDelegate(QStyledItemDelegate):
                             | QStyle.State_Active
 
 
-class PredictionsItemDelegate(QStyledItemDelegate):
+class PredictionsItemDelegate(DataDelegate):
     """
     A Item Delegate for custom formatting of predictions/probabilities
     """
@@ -790,9 +799,8 @@ class PredictionsItemDelegate(QStyledItemDelegate):
         height = sh.height() + metrics.leading() + 2 * margin
         return QSize(sh.width(), height)
 
-    @staticmethod
-    def distribution(index):
-        value = index.data(Qt.DisplayRole)
+    def distribution(self, index):
+        value = self.cachedData(index, Qt.DisplayRole)
         if isinstance(value, tuple) and len(value) == 2:
             _, dist = value
             return dist
@@ -819,20 +827,15 @@ class PredictionsItemDelegate(QStyledItemDelegate):
             QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
         bottommargin = min(margin, 1)
         rect = option.rect.adjusted(margin, margin, -margin, -bottommargin)
-
+        option.text = ""
         textrect = style.subElementRect(
             QStyle.SE_ItemViewItemText, option, option.widget)
         # Are the margins included in the subElementRect?? -> No!
         textrect = textrect.adjusted(margin, margin, -margin, -bottommargin)
-
-        text = option.fontMetrics.elidedText(
-            text, option.textElideMode, textrect.width())
-
         spacing = max(metrics.leading(), 1)
 
         distheight = rect.height() - metrics.height() - spacing
-        distheight = numpy.clip(distheight, 2, metrics.height())
-
+        distheight = min(max(distheight, 2), metrics.height())
         painter.save()
         painter.setClipRect(option.rect)
         painter.setFont(option.font)
@@ -843,12 +846,6 @@ class PredictionsItemDelegate(QStyledItemDelegate):
         style.drawPrimitive(
             QStyle.PE_PanelItemViewItem, option, painter, option.widget)
 
-        if option.state & QStyle.State_Selected:
-            color = option.palette.highlightedText().color()
-        else:
-            color = option.palette.text().color()
-        painter.setPen(QPen(color))
-
         textrect = textrect.adjusted(0, 0, 0, -distheight - spacing)
         distrect = QRect(
             textrect.bottomLeft() + QPoint(0, spacing),
@@ -857,9 +854,8 @@ class PredictionsItemDelegate(QStyledItemDelegate):
         self.drawDistBar(painter, distrect, dist)
         painter.restore()
         if text:
-            style.drawItemText(
-                painter, textrect, option.displayAlignment, option.palette,
-                option.state & QStyle.State_Enabled, text)
+            option.text = text
+            self.drawViewItemText(style, painter, option, textrect)
 
     def drawDistBar(self, painter, rect, distribution):
         painter.save()
