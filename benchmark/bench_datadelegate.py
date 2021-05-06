@@ -1,9 +1,11 @@
+from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QStyledItemDelegate
 
 from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table
 from Orange.widgets.data.owtable import RichTableModel
+from Orange.widgets.utils.itemdelegates import DataDelegate
 from Orange.widgets.utils.tableview import TableView
 
 from .base import benchmark, Benchmark
@@ -14,7 +16,11 @@ class BenchDataDelegate(GuiTest, Benchmark):
         super().setUp()
         data = Table("brown-selected")
         self.view = TableView()
-        self.delegate = QStyledItemDelegate()
+        self.delegate = DataDelegate(
+            self.view, roles=(
+                Qt.DisplayRole, Qt.BackgroundRole, Qt.TextAlignmentRole
+            )
+        )
         self.view.setItemDelegate(self.delegate)
         self.model = RichTableModel(data)
         self.view.setModel(self.model)

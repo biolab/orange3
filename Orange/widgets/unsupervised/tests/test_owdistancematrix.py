@@ -1,9 +1,19 @@
+# pylint: disable=all
+from itertools import product
 from unittest.mock import patch
+
+import numpy as np
+from AnyQt.QtCore import QSize
+from AnyQt.QtGui import QImage, QPainter
+from AnyQt.QtWidgets import QStyleOptionViewItem
+
+from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.unsupervised.owdistancematrix import OWDistanceMatrix
+from Orange.widgets.unsupervised.owdistancematrix import OWDistanceMatrix, \
+    DistanceMatrixModel, TableBorderItem
 
 
 class TestOWDistanceMatrix(WidgetTest):
@@ -46,3 +56,23 @@ class TestOWDistanceMatrix(WidgetTest):
         ac.setCurrentIndex(idx)
         ac.activated.emit(idx)
         self.assertIsNone(self.widget.tablemodel.label_colors)
+
+
+class TestDelegates(GuiTest):
+    def test_delegate(self):
+        model = DistanceMatrixModel()
+        matrix = np.array([[0.0, 0.1, 0.2], [0.1, 0.0, 0.1], [0.2, 0.1, 0.0]])
+        model.set_data(matrix)
+        delegate = TableBorderItem()
+        for row, col in product(range(model.rowCount()),
+                                range(model.columnCount())):
+            index = model.index(row, col)
+            option = QStyleOptionViewItem()
+            size = delegate.sizeHint(option, index).expandedTo(QSize(30, 18))
+            delegate.initStyleOption(option, index)
+            img = QImage(size, QImage.Format_ARGB32_Premultiplied)
+            painter = QPainter(img)
+            try:
+                delegate.paint(painter, option, index)
+            finally:
+                painter.end()
