@@ -33,8 +33,7 @@ from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
-from Orange.widgets.utils.itemdelegates import DataDelegate
-
+from Orange.widgets.utils.itemdelegates import DataDelegate, TableDataDelegate
 
 # Input slot for the Predictors channel
 PredictorSlot = namedtuple(
@@ -708,14 +707,7 @@ class OWPredictions(OWWidget):
         QTimer.singleShot(0, self._update_splitter)
 
 
-class DataItemDelegate(DataDelegate):
-    def __init__(
-            self, *args,
-            roles=(Qt.DisplayRole, Qt.TextAlignmentRole, Qt.BackgroundRole),
-            **kwargs
-    ):
-        super().__init__(*args, roles=roles, **kwargs)
-
+class DataItemDelegate(TableDataDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
         if self.parent().selectionModel().isSelected(index):
@@ -728,6 +720,9 @@ class PredictionsItemDelegate(DataDelegate):
     """
     A Item Delegate for custom formatting of predictions/probabilities
     """
+    #: Roles supplied by the `PredictionsModel`
+    DefaultRoles = (Qt.DisplayRole, )
+
     def __init__(
             self, class_values, colors, shown_probabilities=(),
             target_format=None, parent=None,
