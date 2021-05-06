@@ -2,8 +2,11 @@ from AnyQt.QtCore import Qt
 
 from orangewidget.tests.base import GuiTest
 
+import Orange
 from Orange.data import Table
 from Orange.widgets.data.owtable import RichTableModel, TableBarItemDelegate
+from Orange.widgets.unsupervised.owdistancematrix import DistanceMatrixModel, \
+    TableBorderItem
 from Orange.widgets.utils.itemdelegates import DataDelegate
 from Orange.widgets.utils.tableview import TableView
 
@@ -67,3 +70,24 @@ class BenchTableBarItemDelegate(BenchTableView):
         self.delegate = TableBarItemDelegate(self.view)
         # self.delegate = gui.TableBarItem()
         self.view.setItemDelegate(self.delegate)
+
+
+class BenchDistanceDelegate(BaseBenchTableView):
+    def setUp(self) -> None:
+        super().setUp()
+        data = Table("iris")
+        dist = Orange.distance.Euclidean(data)
+        self.model = DistanceMatrixModel()
+        self.model.set_data(dist)
+        self.delegate = TableBorderItem()
+        self.view.setItemDelegate(self.delegate)
+        self.view.setModel(self.model)
+
+    def tearDown(self) -> None:
+        super().tearDown()
+        del self.model
+        del self.delegate
+
+    @benchmark(number=3, warmup=1, repeat=10)
+    def bench_paint(self):
+        self.view.grab()
