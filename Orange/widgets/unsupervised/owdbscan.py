@@ -78,6 +78,7 @@ class OWDBSCAN(widget.OWWidget):
     min_samples = Setting(4)
     eps = Setting(0.5)
     metric_idx = Setting(0)
+    normalize = Setting(True)
     auto_commit = Setting(True)
     k_distances = None
     cut_point = None
@@ -102,6 +103,8 @@ class OWDBSCAN(widget.OWWidget):
         gui.comboBox(box, self, "metric_idx",
                      items=list(zip(*self.METRICS))[0],
                      callback=self._metirc_changed)
+        gui.checkBox(box, self, "normalize", "Normalize features",
+                     callback=self._on_normalize_changed)
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
         gui.rubber(self.controlArea)
@@ -161,9 +164,9 @@ class OWDBSCAN(widget.OWWidget):
         self.cut_point = int(DEFAULT_CUT_POINT * len(self.k_distances))
         self.eps = self.k_distances[self.cut_point]
 
-        if self.eps < EPS_BOTTOM_LIMIT:
-            self.eps = np.min(
-                self.k_distances[self.k_distances >= EPS_BOTTOM_LIMIT])
+        mask = self.k_distances >= EPS_BOTTOM_LIMIT
+        if self.eps < EPS_BOTTOM_LIMIT and sum(mask):
+            self.eps = np.min(self.k_distances[mask])
             self.cut_point = self._find_nearest_dist(self.eps)
 
     @Inputs.data
@@ -180,12 +183,17 @@ class OWDBSCAN(widget.OWWidget):
         if self.data is None:
             return
 
-        # preprocess data
-        for pp in PREPROCESSORS:
-            self.data_normalized = pp(self.data_normalized)
+        self._preprocess_data()
 
         self._compute_and_plot()
         self.unconditional_commit()
+
+    def _preprocess_data(self):
+        self.data_normalized = self.data
+        for pp in PREPROCESSORS:
+            if isinstance(pp, Normalize) and not self.normalize:
+                continue
+            self.data_normalized = pp(self.data_normalized)
 
     def send_data(self):
         model = self.model
@@ -246,6 +254,13 @@ class OWDBSCAN(widget.OWWidget):
         if self.data is None:
             return
         self._compute_and_plot(cut_point=self.cut_point)
+        self._invalidate()
+
+    def _on_normalize_changed(self):
+        if not self.data:
+            return
+        self._preprocess_data()
+        self._compute_and_plot()
         self._invalidate()
 
 

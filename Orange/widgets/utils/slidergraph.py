@@ -104,6 +104,7 @@ class SliderGraph(PlotWidget):
         This function clears the plot and removes data.
         """
         self.clear()
+        self.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
         self.plot_horlabel = []
         self.plot_horline = []
         self._line = None
