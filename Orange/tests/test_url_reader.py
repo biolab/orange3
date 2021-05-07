@@ -17,3 +17,14 @@ class TestUrlReader(unittest.TestCase):
             "http://datasets.biolab.si/core/philadelphia-crime.csv.xz"
         ).read()
         self.assertEqual(9666, len(data))
+
+    def test_special_characters(self):
+        # TO-DO - replace this file with a more appropriate one (e.g. .csv)
+        #  and change the assertion accordingly
+        path = "http://file.biolab.si/text-semantics/data/elektrotehniski-" \
+               "vestnik-clanki/detektiranje-utrdb-v-šahu-.txt"
+        self.assertRaises(OSError, UrlReader(path).read)
+
+
+if __name__ == "__main__":
+    unittest.main()
