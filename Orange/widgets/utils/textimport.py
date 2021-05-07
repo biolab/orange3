@@ -320,7 +320,7 @@ class CSVOptionsWidget(QWidget):
         delimlayout.addWidget(self.delimiteredit)
         self.quoteedit = TextEditCombo(
             editable=True, minimumContentsLength=1,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             objectName="quote-edit-combo-box"
         )
         self.quoteedit.addItems(["\"", "'"])
@@ -648,7 +648,7 @@ class CSVImportWidget(QWidget):
             editable=True, objectName="grouping-separator-combo-box",
             toolTip="Thousands group separator",
             minimumContentsLength=1,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         items = [
             {Qt.DisplayRole: "None", Qt.EditRole: "",
@@ -675,7 +675,7 @@ class CSVImportWidget(QWidget):
             editable=True, objectName="decimal-separator-combo-box",
             toolTip="Decimal separator",
             minimumContentsLength=1,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         self.decimal_sep_edit_cb.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"(\.|,)"), self))

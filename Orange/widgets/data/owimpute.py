@@ -271,7 +271,7 @@ class OWImpute(OWWidget):
 
         self.value_combo = QComboBox(
             minimumContentsLength=8,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             activated=self._on_value_selected
             )
         self.value_double = DoubleSpinBox(

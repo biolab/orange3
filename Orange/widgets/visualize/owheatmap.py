@@ -348,7 +348,7 @@ class OWHeatMap(widget.OWWidget):
             parent=self,
         )
         self.col_split_cb = cb = ComboBoxSearch(
-            sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLengthWithIcon,
             minimumContentsLength=14,
             toolTip="Split the heatmap horizontally by column annotation"
         )
@@ -379,7 +379,7 @@ class OWHeatMap(widget.OWWidget):
         self.annotation_model = DomainModel(placeholder="(None)")
         self.annotation_text_cb = ComboBoxSearch(
             minimumContentsLength=12,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         self.annotation_text_cb.setModel(self.annotation_model)
         self.annotation_text_cb.activated.connect(self.set_annotation_var)
@@ -393,7 +393,7 @@ class OWHeatMap(widget.OWWidget):
             parent=self,
         )
         self.row_side_color_cb = ComboBoxSearch(
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             minimumContentsLength=12
         )
         self.row_side_color_cb.setModel(self.row_side_color_model)
@@ -415,7 +415,7 @@ class OWHeatMap(widget.OWWidget):
             parent=self
         )
         self.col_side_color_cb = cb = ComboBoxSearch(
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             minimumContentsLength=12
         )
         self.col_side_color_cb.setModel(self.col_side_color_model)
