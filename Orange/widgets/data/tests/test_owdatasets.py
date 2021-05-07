@@ -7,7 +7,6 @@ from AnyQt.QtCore import QItemSelectionModel
 
 from Orange.widgets.data.owdatasets import OWDataSets
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWDataSets(WidgetTest):
@@ -76,24 +75,6 @@ class TestOWDataSets(WidgetTest):
         self.wait_until_stop_blocking(w)
         self.assertEqual(w.view.model().rowCount(), 2)
 
-    @patch("Orange.widgets.data.owdatasets.list_remote",
-           Mock(return_value={('core', 'iris.tab'): {}}))
-    @patch("Orange.widgets.data.owdatasets.list_local",
-           Mock(return_value={}))
-    @patch("Orange.widgets.data.owdatasets.ensure_local",
-           Mock(return_value="iris.tab"))
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        widget = self.create_widget(OWDataSets)
-        output_sum = widget.info.set_output_summary = Mock()
-        self.wait_until_stop_blocking(widget)
-        # select the only dataset
-        sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
-        widget.view.selectionModel().select(widget.view.model().index(0, 0), sel_type)
-        widget.commit()
-        output = self.get_output(widget.Outputs.data, widget)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
 
 if __name__ == "__main__":
     unittest.main()

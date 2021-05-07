@@ -5,15 +5,12 @@ from unittest.mock import patch
 
 import numpy as np
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table, StringVariable, DiscreteVariable, Domain
 from Orange.widgets.data.owcreateclass import (
     OWCreateClass,
     map_by_substring, ValueFromStringSubstring, ValueFromDiscreteSubstring,
     unique_in_order_mapping)
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestHelpers(unittest.TestCase):
@@ -568,37 +565,6 @@ class TestOWCreateClass(WidgetTest):
             self.get_output(widget1.Outputs.data, widget=widget1).domain.class_var,
             self.get_output(widget2.Outputs.data, widget=widget2).domain.class_var
         )
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data = self.zoo
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.data, data)
-        summary, details = f"{len(data)}", format_summary_details(data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.class_name = ""
-        self.widget.apply()
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-        self.widget.class_name = "type"
-        self.widget.apply()
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 
 if __name__ == "__main__":

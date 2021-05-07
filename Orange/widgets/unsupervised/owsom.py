@@ -23,7 +23,6 @@ from Orange.widgets.settings import \
     DomainContextHandler, ContextSetting, Setting
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.annotated_data import \
     create_annotated_table, create_groups_table, ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.colorpalettes import \
@@ -231,9 +230,6 @@ class OWSOM(OWWidget):
         self.selection = None
         self.colors = self.thresholds = self.bin_labels = None
 
-        self._set_input_summary(None)
-        self._set_output_summary(None)
-
         box = gui.vBox(self.controlArea, box="SOM")
         shape = gui.comboBox(
             box, self, "", items=("Hexagonal grid", "Square grid"))
@@ -358,18 +354,7 @@ class OWSOM(OWWidget):
         self.set_color_bins()
         self.create_legend()
         self.recompute_dimensions()
-        self._set_input_summary(data)
         self.start_som()
-
-    def _set_input_summary(self, data):
-        summary = len(data) if data else self.info.NoInput
-        details = format_summary_details(data) if data else ""
-        self.info.set_input_summary(summary, details)
-
-    def _set_output_summary(self, output):
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
 
     def clear(self):
         self.data = self.cont_x = None
@@ -812,7 +797,6 @@ class OWSOM(OWWidget):
         if self.data is None:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
-            self._set_output_summary(None)
             return
 
         indices = np.zeros(len(self.data), dtype=int)
@@ -825,10 +809,8 @@ class OWSOM(OWWidget):
         if np.any(indices):
             sel_data = create_groups_table(self.data, indices, False, "Group")
             self.Outputs.selected_data.send(sel_data)
-            self._set_output_summary(sel_data)
         else:
             self.Outputs.selected_data.send(None)
-            self._set_output_summary(None)
 
         if np.max(indices) > 1:
             annotated = create_groups_table(self.data, indices)

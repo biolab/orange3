@@ -18,8 +18,6 @@ from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_multiple_summaries, \
-    format_summary_details
 from Orange.widgets.widget import Input, Output, Msg
 
 INSTANCEID = "Instance id"
@@ -327,9 +325,6 @@ class OWMergeData(widget.OWWidget):
         self.model = DomainModelWithTooltips(content)
         self.extra_model = DomainModelWithTooltips(content)
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         grp = gui.radioButtons(
             self.controlArea, self, "merging", box="Merging",
             btnLabels=self.OptionNames, tooltips=self.OptionDescriptions,
@@ -371,20 +366,6 @@ class OWMergeData(widget.OWWidget):
         self.openContext(self.data and self.data.domain,
                          self.extra_data and self.extra_data.domain)
         self.attr_boxes.set_state(self.attr_pairs)
-
-        summary, details, kwargs = self.info.NoInput, "", {}
-        if self.data or self.extra_data:
-            n_data = len(self.data) if self.data else 0
-            n_extra_data = len(self.extra_data) if self.extra_data else 0
-            summary = f"{self.info.format_number(n_data)}, " \
-                      f"{self.info.format_number(n_extra_data)}"
-            kwargs = {"format": Qt.RichText}
-            details = format_multiple_summaries([
-                ("Data", self.data),
-                ("Extra data", self.extra_data)
-            ])
-        self.info.set_input_summary(summary, details, **kwargs)
-
         self.unconditional_commit()
 
     def _find_best_match(self):
@@ -409,9 +390,6 @@ class OWMergeData(widget.OWWidget):
         self.clear_messages()
         merged = self.merge() if self.data and self.extra_data else None
         self.Outputs.data.send(merged)
-        details = format_summary_details(merged) if merged else ""
-        summary = len(merged) if merged else self.info.NoOutput
-        self.info.set_output_summary(summary, details)
 
     def send_report(self):
         # pylint: disable=invalid-sequence-index

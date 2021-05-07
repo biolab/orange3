@@ -30,7 +30,6 @@ from Orange.widgets.data.owcsvimport import (
 )
 from Orange.widgets.utils.pathutils import PathItem, samepath
 from Orange.widgets.utils.settings import QSettings_writeArray
-from Orange.widgets.utils.state_summary import format_summary_details
 
 W = TypeVar("W", bound=OWBaseWidget)
 
@@ -146,25 +145,6 @@ class TestOWCSVFileImport(WidgetTest):
             "activated",
         )
         self._check_data_regions(self.get_output("Data", w))
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        dirname = os.path.dirname(__file__)
-        path = os.path.join(dirname, "data-regions.tab")
-        widget = self.create_widget(
-            owcsvimport.OWCSVFileImport,
-            stored_settings={
-                "_session_items": [
-                    (path, self.data_regions_options.as_dict())
-                ]
-            }
-        )
-        output_sum = widget.info.set_output_summary = mock.Mock()
-        widget.commit()
-        self.wait_until_finished(widget)
-        output = self.get_output("Data", widget)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
 
     data_csv_types_options = owcsvimport.Options(
         encoding="ascii", dialect=csv.excel_tab(),

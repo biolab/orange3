@@ -31,7 +31,6 @@ from Orange.widgets.settings import Setting, ContextSetting, \
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 def _categorical_entropy(x):
@@ -792,9 +791,6 @@ class OWFeatureStatistics(widget.OWWidget):
         gui.rubber(self.buttonsArea)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
     @staticmethod
     def sizeHint():
         return QSize(1050, 500)
@@ -823,14 +819,11 @@ class OWFeatureStatistics(widget.OWWidget):
         self.data = data
 
         if data is not None:
-            self.info.set_input_summary(len(data),
-                                        format_summary_details(data))
             self.color_var_model.set_domain(data.domain)
             self.color_var = None
             if self.data.domain.class_vars:
                 self.color_var = self.data.domain.class_vars[0]
         else:
-            self.info.set_input_summary(self.info.NoInput)
             self.color_var_model.set_domain(None)
             self.color_var = None
         self.model.set_data(data)
@@ -885,15 +878,12 @@ class OWFeatureStatistics(widget.OWWidget):
 
     def commit(self):
         if not self.selected_vars:
-            self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.reduced_data.send(None)
             self.Outputs.statistics.send(None)
             return
 
         # Send a table with only selected columns to output
         variables = self.selected_vars
-        self.info.set_output_summary(len(self.data[:, variables]),
-                                     format_summary_details(self.data[:, variables]))
         self.Outputs.reduced_data.send(self.data[:, variables])
 
         # Send the statistics of the selected variables to ouput

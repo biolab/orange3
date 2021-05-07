@@ -108,7 +108,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         output = self.get_output(self.widget.Outputs.selected_data)
         output, _ = output.get_column_view(0)
         output_sorted = output.tolist()
-        
+
         # the two outputs should not be the same.
         self.assertTrue(output_original != output_sorted)
 
@@ -131,46 +131,21 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-        self.widget.tabs.currentWidget().selectAll()
-        output = self.get_output(self.widget.Outputs.selected_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
 
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data, 2)
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-        self._select_data()
-        output = self.get_output(self.widget.Outputs.selected_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-        self.widget.tabs.setCurrentWidget(self.widget._inputs[1].view)
-        output = self.get_output(self.widget.Outputs.selected_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None, 1)
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.selected_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
 
         self.send_signal(self.widget.Inputs.data, None, 2)
         self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
         self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_info(self):
         info_text = self.widget.info_text

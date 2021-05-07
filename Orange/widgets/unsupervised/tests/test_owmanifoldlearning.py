@@ -6,13 +6,10 @@ from unittest.mock import patch, Mock
 import numpy as np
 from scipy import sparse
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate, possible_duplicate_table
 from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWManifoldLearning(WidgetTest):
@@ -161,24 +158,3 @@ class TestOWManifoldLearning(WidgetTest):
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.iris)
             apply.assert_called()
-
-    def test_summary(self):
-        """Check if the status bar updates when data on input"""
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        summary, details = f"{len(self.iris)}", format_summary_details(
-            self.iris)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.transformed_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)

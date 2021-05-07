@@ -30,7 +30,6 @@ from Orange.widgets import report
 from Orange.widgets.widget import Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class SelectRowsContextHandler(DomainContextHandler):
@@ -281,9 +280,6 @@ class OWSelectRows(widget.OWWidget):
         gui.rubber(self.buttonsArea.layout())
 
         acbox = gui.auto_send(self.buttonsArea, self, "auto_commit")
-
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
 
         self.set_data(None)
         self.resize(600, 400)
@@ -554,7 +550,6 @@ class OWSelectRows(widget.OWWidget):
             data is None or
             len(data.domain.variables) + len(data.domain.metas) > 100)
         if not data:
-            self.info.set_input_summary(self.info.NoInput)
             self.data_desc = None
             self.variable_model.set_domain(None)
             self.commit()
@@ -570,8 +565,6 @@ class OWSelectRows(widget.OWWidget):
         if not self.cond_list.model().rowCount():
             self.add_row()
 
-        self.info.set_input_summary(data.approx_len(),
-                                    format_summary_details(data))
         self.unconditional_commit()
 
     def conditions_changed(self):
@@ -711,11 +704,6 @@ class OWSelectRows(widget.OWWidget):
 
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
-
-        summary = matching_output.approx_len() if matching_output else \
-            self.info.NoOutput
-        details = format_summary_details(matching_output) if matching_output else ""
-        self.info.set_output_summary(summary, details)
 
     def send_report(self):
         if not self.data:

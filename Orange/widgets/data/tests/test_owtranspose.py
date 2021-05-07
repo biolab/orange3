@@ -6,13 +6,10 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table
 from Orange.widgets.data.owtranspose import OWTranspose, run
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.tests import test_filename
 
 
@@ -218,28 +215,6 @@ class TestOWTranspose(WidgetTest):
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.zoo)
             apply.assert_called()
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        self.wait_until_finished()
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        self.wait_until_finished()
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 if __name__ == "__main__":

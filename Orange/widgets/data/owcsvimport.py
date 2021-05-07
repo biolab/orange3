@@ -66,7 +66,6 @@ from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
 )
-from Orange.widgets.utils.state_summary import format_summary_details
 
 if typing.TYPE_CHECKING:
     # pylint: disable=invalid-name
@@ -605,17 +604,17 @@ class OWCSVFileImport(widget.OWWidget):
     category = "Data"
     keywords = ["file", "load", "read", "open", "csv"]
 
-    outputs = [
-        widget.OutputSignal(
+    class Outputs:
+        data = widget.Output(
             name="Data",
             type=Orange.data.Table,
-            doc="Loaded data set."),
-        widget.OutputSignal(
+            doc="Loaded data set.")
+        data_frame = widget.Output(
             name="Data Frame",
             type=pd.DataFrame,
-            doc=""
+            doc="",
+            auto_summary=False
         )
-    ]
 
     class Error(widget.OWWidget.Error):
         error = widget.Msg(
@@ -713,8 +712,6 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.setMinimumHeight(self.fontMetrics().ascent() * 2 + 4)
         self.summary_text.viewport().setAutoFillBackground(False)
         box.layout().addWidget(self.summary_text)
-
-        self.info.set_output_summary(self.info.NoOutput)
 
         button_box = QDialogButtonBox(
             orientation=Qt.Horizontal,
@@ -1216,14 +1213,11 @@ class OWCSVFileImport(widget.OWWidget):
             table.name = os.path.splitext(os.path.split(filename)[-1])[0]
         else:
             table = None
-        self.send("Data Frame", df)
-        self.send('Data', table)
+        self.Outputs.data_frame.send(df)
+        self.Outputs.data.send(table)
         self._update_status_messages(table)
 
     def _update_status_messages(self, data):
-        summary = len(data) if data else self.info.NoOutput
-        details = format_summary_details(data) if data else ""
-        self.info.set_output_summary(summary, details)
         if data is None:
             return
 

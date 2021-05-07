@@ -4,13 +4,9 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets.data.owneighbors import OWNeighbors, METRICS
 from Orange.widgets.tests.base import WidgetTest, ParameterMapping
-from Orange.widgets.utils.state_summary import format_summary_details, \
-    format_multiple_summaries
 
 
 class TestOWNeighbors(WidgetTest):
@@ -116,44 +112,6 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(widget.Inputs.reference, reference)
         widget.apply_button.button.click()
         self.assertIsNotNone(self.get_output("Neighbors"))
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        info = self.widget.info
-        data, reference = Table("iris"), Table("iris")[:5]
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.data, data)
-        data_list = [("Data", data), ("Reference", None)]
-        summary, details = "150, 0", format_multiple_summaries(data_list)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self.send_signal(self.widget.Inputs.reference, reference)
-        data_list = [("Data", data), ("Reference", reference)]
-        summary, details = "150, 5", format_multiple_summaries(data_list)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        data_list = [("Data", None), ("Reference", reference)]
-        summary, details = "0, 5", format_multiple_summaries(data_list)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self.send_signal(self.widget.Inputs.reference, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_compute_distances_apply_called(self):
         """Check compute distances and apply are called when receiving signal"""

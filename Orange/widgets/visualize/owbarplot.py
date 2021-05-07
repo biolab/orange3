@@ -24,7 +24,6 @@ from Orange.widgets.utils import instance_tooltip
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.plot import OWPlotGUI, SELECT, PANNING, ZOOMING
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owscatterplotgraph import LegendItem
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
@@ -482,9 +481,6 @@ class OWBarPlot(OWWidget):
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
-        self._set_input_summary(None)
-        self._set_output_summary(None)
-
     def __parameter_changed(self):
         self.graph.reset_graph()
 
@@ -519,7 +515,6 @@ class OWBarPlot(OWWidget):
         self.closeContext()
         self.clear()
         self.orig_data = self.data = data
-        self._set_input_summary(data)
         self.check_data()
         self.init_attr_values()
         self.openContext(self.data)
@@ -658,7 +653,6 @@ class OWBarPlot(OWWidget):
         if self.data is not None and bool(self.selection):
             selected = self.data[self.selection]
         annotated = create_annotated_table(self.orig_data, self.selection)
-        self._set_output_summary(selected)
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(annotated)
 
@@ -670,19 +664,6 @@ class OWBarPlot(OWWidget):
     @staticmethod
     def clear_cache():
         OWBarPlot.grouped_indices.fget.cache_clear()
-
-    def _set_input_summary(self, data: Optional[Table]):
-        self._set_summary(data, self.info.NoInput, self.info.set_input_summary)
-
-    def _set_output_summary(self, data: Optional[Table]):
-        self._set_summary(data, self.info.NoOutput,
-                          self.info.set_output_summary)
-
-    @staticmethod
-    def _set_summary(data, empty, setter):
-        summary = len(data) if data else empty
-        details = format_summary_details(data) if data else ""
-        setter(summary, details)
 
     def send_report(self):
         if self.data is None:

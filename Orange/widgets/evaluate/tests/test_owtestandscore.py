@@ -9,8 +9,6 @@ from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QApplication
 import baycomp
 
-from orangewidget.widget import StateInfo
-
 from Orange.classification import MajorityLearner, LogisticRegressionLearner, \
     RandomForestLearner
 from Orange.classification.majority import ConstantModel
@@ -28,8 +26,6 @@ from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate, possible_duplicate_table
-from Orange.widgets.utils.state_summary import (format_summary_details,
-                                                format_multiple_summaries)
 from Orange.tests import test_filename
 
 
@@ -685,46 +681,6 @@ class TestOWTestAndScore(WidgetTest):
                 w._fill_table(slots, scores)
                 label = w.comparison_table.cellWidget(1, 0)
                 self.assertEqual(label.text(), "NA")
-
-    def test_summary(self):
-        """Check if the status bar updates when data is on input"""
-        iris = Table("iris")
-        train, test = iris[:120], iris[120:]
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.train_data, train)
-        self.send_signal(self.widget.Inputs.learner, LogisticRegressionLearner(), 0)
-        summary, details = f"{len(train)}", format_summary_details(train)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.predictions)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.test_data, test)
-        summary = f"{len(train)}, {len(test)}"
-        details = format_multiple_summaries([("Data", train), ("Test data", test)])
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.predictions)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.train_data, None)
-        summary, details = f"{len(test)}", format_summary_details(test)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self.send_signal(self.widget.Inputs.test_data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_unique_output_domain(self):
         data = possible_duplicate_table('random forest')

@@ -34,7 +34,6 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details, format_multiple_summaries
 from Orange.widgets.widget import Input, Output, Msg
 
 
@@ -131,9 +130,6 @@ class OWVennDiagram(widget.OWWidget):
         self._resize()
         self.vennwidget.itemTextEdited.connect(self._on_itemTextEdited)
         self.scene.selectionChanged.connect(self._on_selectionChanged)
-
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
 
         self.scene.addItem(self.vennwidget)
 
@@ -239,7 +235,6 @@ class OWVennDiagram(widget.OWWidget):
 
     def handleNewSignals(self):
         self._inputUpdate = False
-        self.set_input_summary()
         self.vennwidget.clear()
         if not self.settings_compatible():
             self.invalidateOutput()
@@ -253,19 +248,6 @@ class OWVennDiagram(widget.OWWidget):
             self.unconditional_commit()
 
         super().handleNewSignals()
-
-    def set_input_summary(self):
-        names = [self.data[k].name for k in self.data.keys()]
-        tables = [self.data[k].table for k in self.data.keys()]
-        n_data = [self.info.format_number(len(self.data[k].table)) for k in
-                  self.data.keys()]
-
-        summary, details, kwargs = self.info.NoInput, "", {}
-        if self.data:
-            summary = ", ".join(n_data)
-            details = format_multiple_summaries(zip(names, tables))
-            kwargs = {"format": Qt.RichText}
-        self.info.set_input_summary(summary, details, **kwargs)
 
     def _intersection_string_attrs(self):
         sets = [set(string_attributes(data_.table.domain))
@@ -713,7 +695,6 @@ class OWVennDiagram(widget.OWWidget):
         if not self.vennwidget.vennareas() or not self.data:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
             return
 
         self.selected_items = reduce(
@@ -737,9 +718,6 @@ class OWVennDiagram(widget.OWWidget):
             if self.selected_items:
                 selected = self.create_from_columns(self.selected_items, selected_keys, True)
 
-        summary = len(selected) if selected else self.info.NoOutput
-        details = format_summary_details(selected) if selected else ""
-        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(annotated)
 

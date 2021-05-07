@@ -12,6 +12,8 @@ from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.report import DataReport as Report
 from Orange.widgets.utils.signals import AttributeList
 
+# import this to register auto_summary functions
+import Orange.widgets.utils.state_summary  # pylint: disable=unused-import
 
 __all__ = [
     "OWWidget", "Input", "Output", "AttributeList", "Message", "Msg",

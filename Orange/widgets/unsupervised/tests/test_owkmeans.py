@@ -9,14 +9,11 @@ from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QRadioButton
 from sklearn.metrics import silhouette_score
 
-from orangewidget.widget import StateInfo
-
 import Orange.clustering
 from Orange.data import Table, Domain
 from Orange.widgets import gui
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestClusterTableModel(unittest.TestCase):
@@ -566,26 +563,6 @@ class TestOWKMeans(WidgetTest):
         self.wait_until_finished(widget=w)
         self.assertEqual(w.send_data.call_count, 2)
         self.assertEqual(self.widget.selected_row(), w.selected_row())
-
-    def test_summary(self):
-        """Check if the status bar updates"""
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.data, self.data)
-        summary, details = f"{len(self.data)}", format_summary_details(self.data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.annotated_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 
 if __name__ == "__main__":

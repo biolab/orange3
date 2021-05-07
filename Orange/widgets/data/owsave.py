@@ -8,7 +8,6 @@ from Orange.widgets.widget import Input
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.save.owsavebase import OWSaveBase
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 _userhome = os.path.expanduser(f"~{os.sep}")
@@ -35,9 +34,6 @@ class OWSave(OWSaveBase):
 
     def __init__(self):
         super().__init__(2)
-
-        self.info.set_input_summary(self.info.NoInput)
-
         self.grid.addWidget(
             gui.checkBox(
                 None, self, "add_type_annotations",
@@ -80,11 +76,6 @@ class OWSave(OWSaveBase):
         self.Error.unsupported_sparse(
             shown=self.data is not None and self.data.is_sparse()
             and self.filename and not self.writer.SUPPORT_SPARSE_DATA)
-
-    def update_status(self):
-        summary = len(self.data) if self.data else self.info.NoInput
-        details = format_summary_details(self.data) if self.data else ""
-        self.info.set_input_summary(summary, details)
 
     def send_report(self):
         self.report_data_brief(self.data)

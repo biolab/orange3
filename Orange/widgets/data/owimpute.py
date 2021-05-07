@@ -26,7 +26,6 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils import concurrent as qconcurrent
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.spinbox import DoubleSpinBox
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
@@ -303,9 +302,6 @@ class OWImpute(OWWidget):
 
         gui.auto_apply(self.buttonsArea, self, "autocommit")
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
     def create_imputer(self, method, *args):
         # type: (Method, ...) -> impute.BaseImputeMethod
         if method == Method.Model:
@@ -371,9 +367,6 @@ class OWImpute(OWWidget):
             # restore per variable imputation state
             self._restore_state(self._variable_imputation_state)
         self.reset_button.setEnabled(len(self.varmodel) > 0)
-        summary = len(data) if data else self.info.NoInput
-        details = format_summary_details(data) if data else ""
-        self.info.set_input_summary(summary, details)
 
         self.update_varview()
         self.unconditional_commit()
@@ -418,9 +411,6 @@ class OWImpute(OWWidget):
         self.warning()
         self.Error.imputation_failed.clear()
         self.Error.model_based_imputer_sparse.clear()
-        summary = len(self.data) if self.data else self.info.NoOutput
-        detail = format_summary_details(self.data) if self.data else ""
-        self.info.set_output_summary(summary, detail)
 
         if not self.data or not self.varmodel.rowCount():
             self.Outputs.data.send(self.data)
@@ -530,9 +520,6 @@ class OWImpute(OWWidget):
 
         self.Outputs.data.send(data)
         self.modified = False
-        summary = len(data) if data else self.info.NoOutput
-        details = format_summary_details(data) if data else ""
-        self.info.set_output_summary(summary, details)
 
     @Slot(int, int)
     def __progress_changed(self, n, d):

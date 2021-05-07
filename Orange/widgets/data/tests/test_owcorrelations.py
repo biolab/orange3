@@ -8,8 +8,6 @@ import numpy.testing as npt
 
 from AnyQt.QtCore import Qt
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.tests import test_filename
 from Orange.widgets.data.owcorrelations import (
@@ -20,7 +18,6 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owscatterplot import OWScatterPlot
 from Orange.widgets.widget import AttributeList
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWCorrelations(WidgetTest):
@@ -302,26 +299,6 @@ class TestOWCorrelations(WidgetTest):
         self.wait_until_stop_blocking()
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data = Table("iris")
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 class TestCorrelationRank(WidgetTest):
