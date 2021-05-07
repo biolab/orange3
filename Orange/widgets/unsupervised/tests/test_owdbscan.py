@@ -1,9 +1,13 @@
 # pylint: disable=protected-access
+import unittest
+
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 
 from Orange.data import Table
+from Orange.clustering import DBSCAN
 from Orange.distance import Euclidean
+from Orange.preprocess import Normalize, Continuize, SklImpute
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate, possible_duplicate_table
 from Orange.widgets.unsupervised.owdbscan import OWDBSCAN, get_kth_distances
@@ -226,3 +230,45 @@ class TestOWDBSCAN(WidgetTest):
         self.send_signal(w.Inputs.data, self.iris)
         output = self.get_output(w.Outputs.annotated_data)
         self.assertTupleEqual((150, 1), output[:, "Cluster"].metas.shape)
+
+    def test_normalize_data(self):
+        # not normalized
+        self.widget.controls.normalize.setChecked(False)
+
+        data = Table("heart_disease")
+        self.send_signal(self.widget.Inputs.data, data)
+
+        kwargs = {"eps": self.widget.eps,
+                  "min_samples": self.widget.min_samples,
+                  "metric": "euclidean"}
+        clusters = DBSCAN(**kwargs)(data)
+
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        output_clusters = output.metas[:, 0]
+        output_clusters[np.isnan(output_clusters)] = -1
+        np.testing.assert_array_equal(output_clusters, clusters)
+
+        # normalized
+        self.widget.controls.normalize.setChecked(True)
+
+        kwargs = {"eps": self.widget.eps,
+                  "min_samples": self.widget.min_samples,
+                  "metric": "euclidean"}
+        for pp in (Continuize(), Normalize(), SklImpute()):
+            data = pp(data)
+        clusters = DBSCAN(**kwargs)(data)
+
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        output_clusters = output.metas[:, 0]
+        output_clusters[np.isnan(output_clusters)] = -1
+        np.testing.assert_array_equal(output_clusters, clusters)
+
+    def test_normalize_changed(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        simulate.combobox_run_through_all(self.widget.controls.metric_idx)
+        self.widget.controls.normalize.setChecked(False)
+        simulate.combobox_run_through_all(self.widget.controls.metric_idx)
+
+
+if __name__ == '__main__':
+    unittest.main()
