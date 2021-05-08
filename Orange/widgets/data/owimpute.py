@@ -184,7 +184,7 @@ class OWImpute(OWWidget):
         box.layout().addLayout(box_layout)
 
         button_group = QButtonGroup()
-        button_group.buttonClicked[int].connect(self.set_default_method)
+        button_group.idClicked.connect(self.set_default_method)
 
         for i, (method, _) in enumerate(list(METHODS.items())[1:-1]):
             imputer = self.create_imputer(method)
@@ -284,7 +284,7 @@ class OWImpute(OWWidget):
         value_stack.addWidget(self.value_double)
         method_layout.addWidget(value_stack)
 
-        button_group.buttonClicked[int].connect(
+        button_group.idClicked.connect(
             self.set_method_for_current_selection
         )
 

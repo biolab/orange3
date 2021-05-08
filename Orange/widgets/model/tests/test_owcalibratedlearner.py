@@ -140,7 +140,7 @@ class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
 
         widget.calibration = widget.IsotonicCalibration
         widget.threshold = widget.OptimizeCA
-        widget.controls.calibration.group.buttonClicked[int].emit(
+        widget.controls.calibration.group.idClicked.emit(
             widget.IsotonicCalibration)
 
         learner = self.get_output(widget.Outputs.learner)
@@ -148,7 +148,7 @@ class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
 
         widget.calibration = widget.NoCalibration
         widget.threshold = widget.OptimizeCA
-        widget.controls.calibration.group.buttonClicked[int].emit(
+        widget.controls.calibration.group.idClicked.emit(
             widget.NoCalibration)
         learner = self.get_output(widget.Outputs.learner)
         self.assertEqual(learner.name, "Foo + CA")

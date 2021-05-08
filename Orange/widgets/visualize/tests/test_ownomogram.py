@@ -240,7 +240,7 @@ class TestOWNomogram(WidgetTest):
 
         # Set to output all
         self.widget.display_index = 0
-        self.widget.controls.display_index.group.buttonClicked[int].emit(0)
+        self.widget.controls.display_index.group.idClicked.emit(0)
         attrs = self.get_output(self.widget.Outputs.features)
         self.assertEqual(attrs, [age, sex, status])
 

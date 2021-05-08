@@ -303,7 +303,7 @@ class OWDiscretize(widget.OWWidget):
         self.default_bbox = rbox = gui.radioButtons(
             box, self, "_default_method_", callback=self._default_disc_changed)
         self.default_button_group = bg = rbox.findChild(QButtonGroup)
-        bg.buttonClicked[int].connect(self.set_default_method)
+        bg.idClicked.connect(self.set_default_method)
 
         rb = gui.hBox(rbox)
         self.left = gui.vBox(rb)
