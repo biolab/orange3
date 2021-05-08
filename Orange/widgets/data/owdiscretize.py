@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union, Callable, NamedTuple, Dict, List
 
 from AnyQt.QtCore import (
     Qt, QTimer, QPoint, QItemSelectionModel, QSize, QAbstractListModel,
-    pyqtSignal as Signal)
+)
 from AnyQt.QtGui import (
     QValidator, QPalette, QDoubleValidator, QIntValidator,  QColor)
 from AnyQt.QtWidgets import (
@@ -25,18 +25,6 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.data.oweditdomain import FixedSizeButton
-
-
-# Remove this when we require PyQt 5.15
-if not hasattr(QButtonGroup, "idClicked"):
-    class QButtonGroup(QButtonGroup):  # pylint: disable=function-redefined
-        idClicked = Signal(int)
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.buttonClicked.connect(
-                lambda button: self.idClicked.emit(self.id(button)))
-
 
 re_custom_sep = re.compile(r"\s*,\s*")
 time_units = ["year", "month", "day", "week", "hour", "minute", "second"]
@@ -537,7 +525,6 @@ class OWDiscretize(widget.OWWidget):
         self._create_buttons(box)
         gui.auto_apply(self.buttonsArea, self, "autosend")
         gui.rubber(self.buttonsArea)
-
         self.varview.select_default()
 
     def _create_var_list(self, box):

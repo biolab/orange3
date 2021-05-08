@@ -345,7 +345,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setSpacing(6)
         self.selectButtons = QButtonGroup()
-        self.selectButtons.buttonClicked[int].connect(self.setSelectionMethod)
+        self.selectButtons.idClicked.connect(self.setSelectionMethod)
 
         def button(text, buttonid, toolTip=None):
             b = QRadioButton(text)
