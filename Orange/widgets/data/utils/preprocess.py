@@ -478,7 +478,7 @@ class SequenceFlow(QWidget):
             if title:
                 self.setTitle(title)
 
-            self.setFocusPolicy(Qt.ClickFocus | Qt.TabFocus)
+            self.setFocusPolicy(Qt.StrongFocus)
 
         def setTitle(self, title):
             if self.__title != title:
