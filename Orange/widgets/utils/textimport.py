@@ -668,7 +668,7 @@ class CSVImportWidget(QWidget):
         self.grouping_sep_edit_cb.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"(\.|,| |')?"), self)
         )
-        self.grouping_sep_edit_cb.activated[str].connect(
+        self.grouping_sep_edit_cb.textActivated.connect(
             self.__group_sep_activated)
 
         self.decimal_sep_edit_cb = TextEditCombo(
@@ -680,7 +680,7 @@ class CSVImportWidget(QWidget):
         self.decimal_sep_edit_cb.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"(\.|,)"), self))
         self.decimal_sep_edit_cb.addItems([".", ","])
-        self.decimal_sep_edit_cb.activated[str].connect(
+        self.decimal_sep_edit_cb.textActivated.connect(
             self.__decimal_sep_activated)
 
         number_sep_layout.addWidget(QLabel("Grouping:"))

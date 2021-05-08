@@ -214,7 +214,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = QComboBox()
-        self.sheet_combo.activated[str].connect(self.select_sheet)
+        self.sheet_combo.textActivated.connect(self.select_sheet)
         self.sheet_combo.setSizePolicy(Policy.Expanding, Policy.Fixed)
         self.sheet_combo.setMinimumSize(QSize(50, 1))
         self.sheet_label = QLabel()
