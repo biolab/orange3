@@ -9,7 +9,6 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from AnyQt.QtGui import QStandardItem, QColor
 from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
-from AnyQt.QtWidgets import qApp
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
@@ -124,10 +123,8 @@ class RadvizVizRank(VizRankDialog, OWComponent):
             self.button.setText("Continue")
         self.button.setEnabled(self.check_preconditions())
 
-    def progressBarSet(self, value, processEvents=None):
+    def progressBarSet(self, value):
         self.setWindowTitle(self.captionTitle + " Evaluated {} permutations".format(value))
-        if processEvents is not None and processEvents is not False:
-            qApp.processEvents(processEvents)
 
     def check_preconditions(self):
         master = self.master
