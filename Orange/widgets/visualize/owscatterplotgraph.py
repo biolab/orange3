@@ -615,10 +615,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                     ", ".join(part for _, part in tip_parts) + \
                     "</center>"
         self.tiptexts = {
-            int(modifier): all_parts.replace(part, "<b>{}</b>".format(part))
+            modifier: all_parts.replace(part, "<b>{}</b>".format(part))
             for modifier, part in tip_parts
         }
-        self.tiptexts[0] = all_parts
+        self.tiptexts[Qt.NoModifier] = all_parts
 
         self.tip_textitem = text = QGraphicsTextItem()
         # Set to the longest text
@@ -637,12 +637,12 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         return tooltip_group
 
     def update_tooltip(self, modifiers=Qt.NoModifier):
-        text = self.tiptexts[0]
+        text = self.tiptexts[Qt.NoModifier]
         for mod in [Qt.ControlModifier,
                     Qt.ShiftModifier,
                     Qt.AltModifier]:
             if modifiers & mod:
-                text = self.tiptexts.get(int(mod))
+                text = self.tiptexts.get(mod)
                 break
         self.tip_textitem.setHtml(text)
 
