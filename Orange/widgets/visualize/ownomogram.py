@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
-    QSizePolicy, QDesktopWidget,
+    QSizePolicy
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
@@ -56,7 +56,7 @@ class MovableToolTip(QLabel):
         self.adjustSize()
 
         x, y = pos.x(), (pos.y() + 15 if change_y else self.y())
-        avail = QDesktopWidget().availableGeometry(self)
+        avail = self.screen().availableGeometry()
         if x + self.width() > avail.right():
             x -= self.width()
         if y + self.height() > avail.bottom():
