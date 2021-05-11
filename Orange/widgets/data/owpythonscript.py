@@ -560,7 +560,6 @@ class OWPythonScript(OWWidget):
         self.textBox.layout().addWidget(self.text)
 
         self.textBox.setAlignment(Qt.AlignVCenter)
-        self.text.setTabStopWidth(4)
 
         self.text.modificationChanged[bool].connect(self.onModificationChanged)
 
@@ -575,7 +574,6 @@ class OWPythonScript(OWWidget):
         self.consoleBox.layout().addWidget(self.console)
         self.console.document().setDefaultFont(QFont(defaultFont))
         self.consoleBox.setAlignment(Qt.AlignBottom)
-        self.console.setTabStopWidth(4)
         self.splitCanvas.setSizes([2, 1])
         self.setAcceptDrops(True)
         self.controlArea.layout().addStretch(10)
