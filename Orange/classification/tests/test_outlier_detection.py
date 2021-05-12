@@ -3,7 +3,7 @@
 import pickle
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -36,6 +36,7 @@ class _TestDetector(unittest.TestCase):
         np.testing.assert_array_equal(table1.metas, table2.metas)
 
     def assert_table_appended_outlier(self, table1, table2, offset=1):
+        np.testing.assert_array_equal(table1.ids, table2.ids)
         np.testing.assert_array_equal(table1.X, table2.X)
         np.testing.assert_array_equal(table1.Y, table2.Y)
         np.testing.assert_array_equal(table1.metas, table2.metas[:, :-offset])
@@ -46,7 +47,6 @@ class _TestDetector(unittest.TestCase):
         self.assert_domain_equal(table1.domain, domain)
         self.assertEqual(table2.domain.metas[-offset].name, "Outlier")
         self.assertIsNotNone(table2.domain.metas[-offset].compute_value)
-
 
 class TestOneClassSVMLearner(_TestDetector):
     def test_OneClassSVM(self):
@@ -128,11 +128,18 @@ class TestEllipticEnvelopeLearner(_TestDetector):
     def test_mahalanobis(self):
         n = len(self.X_all)
         pred = self.model(self.X_all)
+
         y_pred = pred[:, self.model.outlier_var].metas
         y_mahal = pred[:, self.model.mahal_var].metas
         y_mahal, y_pred = zip(*sorted(zip(y_mahal, y_pred), reverse=True))
         self.assertTrue(all(i == 0 for i in y_pred[:int(self.cont * n)]))
         self.assertTrue(all(i == 1 for i in y_pred[int(self.cont * n):]))
+
+    def test_single_data_to_model_domain(self):
+        with patch.object(self.model, "data_to_model_domain",
+                          wraps=self.model.data_to_model_domain) as call:
+            self.model(self.X_all)
+            self.assertEqual(call.call_count, 1)
 
     def test_EllipticEnvelope_ignores_y(self):
         domain = Domain((ContinuousVariable("x1"), ContinuousVariable("x2")),
@@ -231,7 +238,6 @@ class TestOutlierModel(_TestDetector):
         detect = self.detector(self.iris)
         pred = detect(self.iris)
         var = pred.domain.metas[0]
-        self.assertIs(var, var.compute_value.variable)
         np.testing.assert_array_equal(pred[:, "Outlier"].metas.ravel(),
                                       var.compute_value(self.iris))
 
