@@ -579,21 +579,32 @@ class FileDialog(QFileDialog):
 
 def default_options_for_mime_type(
         path: str, mime_type: str
-) -> Tuple[csv.Dialect, bool]:
+) -> Options:
     defaults = {
         "text/csv": (csv.excel(), True),
         "text/tab-separated-values": (csv.excel_tab(), True)
     }
-    dialect, header = csv.excel(), True
+    dialect, header, encoding = csv.excel(), True, "utf-8"
     delimiters = None
+    try_encodings = ["utf-8", "utf-16", "iso8859-1"]
     if mime_type in defaults:
         dialect, header = defaults[mime_type]
         delimiters = [dialect.delimiter]
-    try:
-        dialect, header = sniff_csv_with_path(path, delimiters=delimiters)
-    except (OSError, UnicodeDecodeError, csv.Error):
-        pass
-    return dialect, header
+
+    for encoding_ in try_encodings:
+        try:
+            dialect, header = sniff_csv_with_path(
+                path, encoding=encoding_, delimiters=delimiters)
+            encoding = encoding_
+        except (OSError, UnicodeError, csv.Error):
+            pass
+        else:
+            break
+    if header:
+        rowspec = [(range(0, 1), RowSpec.Header)]
+    else:
+        rowspec = []
+    return Options(dialect=dialect, encoding=encoding, rowspec=rowspec)
 
 
 class OWCSVFileImport(widget.OWWidget):
@@ -910,11 +921,10 @@ class OWCSVFileImport(widget.OWWidget):
                 mb = self._might_be_binary_mb(path)
                 if mb.exec() == QMessageBox.Cancel:
                     return
-            # initialize dialect based on selected format
-            dialect, header = default_options_for_mime_type(
+            # initialize options based on selected format
+            options = default_options_for_mime_type(
                 path, selected_filter.mime_type,
             )
-            options = None
             # Search for path in history.
             # If found use the stored params to initialize the import dialog
             items = self.itemsFromSettings()
@@ -923,15 +933,6 @@ class OWCSVFileImport(widget.OWWidget):
                 _, options_ = items[idx]
                 if options_ is not None:
                     options = options_
-
-            if options is None:
-                if not header:
-                    rowspec = []
-                else:
-                    rowspec = [(range(0, 1), RowSpec.Header)]
-                options = Options(
-                    encoding="utf-8", dialect=dialect, rowspec=rowspec)
-
             dlg = CSVImportDialog(
                 self, windowTitle="Import Options", sizeGripEnabled=True)
             dlg.setWindowModality(Qt.WindowModal)
