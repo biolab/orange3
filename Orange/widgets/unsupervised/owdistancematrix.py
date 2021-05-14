@@ -1,10 +1,8 @@
 import itertools
-import math
 
 import numpy as np
 
-from AnyQt.QtWidgets import QTableView, QItemDelegate, QHeaderView, QStyle, \
-    QStyleOptionViewItem
+from AnyQt.QtWidgets import QTableView, QHeaderView
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtCore import Qt, QAbstractTableModel, QSize
 
@@ -13,6 +11,7 @@ from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
+from Orange.widgets.utils.itemdelegates import FixedFormatNumericColumnDelegate
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.itemselectionmodel import SymmetricSelectionModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -31,14 +30,13 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.label_colors = None
         self.zero_diag = True
         self.span = None
-        self.ndecimals = 3
 
     def set_data(self, distances):
         self.beginResetModel()
         self.distances = distances
         if distances is None:
             return
-        self.span = span = distances.max()
+        self.span = span = float(distances.max())
 
         self.colors = \
             (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
@@ -84,12 +82,14 @@ class DistanceMatrixModel(QAbstractTableModel):
             return
         if role == TableBorderItem.BorderColorRole:
             return self.color_for_label(col), self.color_for_label(row)
+        if role == FixedFormatNumericColumnDelegate.ColumnDataSpanRole:
+            return 0., self.span
         if row == col and self.zero_diag:
             if role == Qt.BackgroundColorRole and self.variable:
                 return self.color_for_label(row, 200)
             return
         if role == Qt.DisplayRole:
-            return "{:.{}f}".format(self.distances[row, col], self.ndecimals)
+            return float(self.distances[row, col])
         if role == Qt.BackgroundColorRole:
             return self.color_for_cell(row, col)
 
@@ -103,12 +103,12 @@ class DistanceMatrixModel(QAbstractTableModel):
             return self.color_for_label(ind, 150)
 
 
-class TableBorderItem(QItemDelegate):
+class TableBorderItem(FixedFormatNumericColumnDelegate):
     BorderColorRole = next(OrangeUserRole)
 
     def paint(self, painter, option, index):
         super().paint(painter, option, index)
-        colors = index.data(self.BorderColorRole)
+        colors = self.cachedData(index, self.BorderColorRole)
         vcolor, hcolor = colors or (None, None)
         if vcolor is not None or hcolor is not None:
             painter.save()
@@ -125,26 +125,7 @@ class TableBorderItem(QItemDelegate):
 
 
 class TableView(gui.HScrollStepMixin, QTableView):
-    def sizeHintForColumn(self, column: int) -> int:
-        model = self.model()
-        if model is None:  # pragma: no cover
-            return -1
-        assert isinstance(model, DistanceMatrixModel)
-        template = "XX.XXX"
-        if model.span is not None:
-            # number of digits (integer part)
-            ndigits = int(math.ceil(math.log10(model.span + 1)))
-            ndecimal = model.ndecimals
-            template = "X" * ndigits + "." + "X" * ndecimal
-
-        opt = self.viewOptions()
-        opt.text = template
-        opt.features |= QStyleOptionViewItem.HasDisplay
-        style = self.style()
-        sh = style.sizeFromContents(
-            QStyle.CT_ItemViewItem, opt, QSize(), self)
-        hint = sh.width()
-        return hint + 1 if self.showGrid() else hint
+    pass
 
 
 class DistanceMatrixContextHandler(ContextHandler):
@@ -212,7 +193,7 @@ class OWDistanceMatrix(widget.OWWidget):
         view.setWordWrap(False)
         view.setTextElideMode(Qt.ElideNone)
         view.setEditTriggers(QTableView.NoEditTriggers)
-        view.setItemDelegate(TableBorderItem())
+        view.setItemDelegate(TableBorderItem(roles=(Qt.DisplayRole, Qt.BackgroundRole)))
         view.setModel(self.tablemodel)
         view.setShowGrid(False)
         for header in (view.horizontalHeader(), view.verticalHeader()):
@@ -363,5 +344,5 @@ class OWDistanceMatrix(widget.OWWidget):
 if __name__ == "__main__":  # pragma: no cover
     import Orange.distance
     data = Orange.data.Table("iris")
-    dist = Orange.distance.Euclidean(data[::5])
+    dist = Orange.distance.Euclidean(data)
     WidgetPreview(OWDistanceMatrix).run(dist)

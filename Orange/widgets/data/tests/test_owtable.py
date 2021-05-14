@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import Mock, patch
 from AnyQt.QtCore import Qt
 
+from orangewidget.tests.utils import excepthook_catch
 from orangewidget.widget import StateInfo
 
 from Orange.widgets.data.owtable import OWDataTable
@@ -151,6 +152,21 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         info_text = self.widget.info_text
         no_input = "No data."
         self.assertEqual(info_text.text(), no_input)
+
+    def test_show_distributions(self):
+        w = self.widget
+        data = Table("heart_disease")[::3].copy()
+        self.send_signal(w.Inputs.data, data, 0)
+        # run through the delegate paint routines
+        with excepthook_catch():
+            w.grab()
+        w.controls.show_distributions.toggle()
+        with excepthook_catch():
+            w.grab()
+        w.controls.color_by_class.toggle()
+        with excepthook_catch():
+            w.grab()
+        w.controls.show_distributions.toggle()
 
 
 if __name__ == "__main__":
