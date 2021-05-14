@@ -9,7 +9,7 @@ from pandas.core.arrays import SparseArray
 from pandas.core.arrays.sparse.dtype import SparseDtype
 from pandas.api.types import (
     is_categorical_dtype, is_object_dtype,
-    is_datetime64_any_dtype, is_numeric_dtype,
+    is_datetime64_any_dtype, is_numeric_dtype, is_integer_dtype
 )
 
 from Orange.data import (
@@ -215,7 +215,10 @@ def vars_from_df(df, role=None, force_nominal=False):
                 s.astype('str').replace('NaT', np.nan).map(v.parse)
             ))
         elif is_numeric_dtype(s):
-            var = ContinuousVariable(str(column))
+            var = ContinuousVariable(
+                # set number of decimals to 0 if int else keeps default behaviour
+                str(column), number_of_decimals=(0 if is_integer_dtype(s) else None)
+            )
             attrs.append(var)
             Xcols.append(column)
             Xexpr.append(None)
