@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt, QRectF, QPoint, QPointF
-from PyQt5.QtGui import QBrush, QWheelEvent
-from PyQt5.QtWidgets import QGraphicsScene, QWidget, QApplication, QStyle
+from AnyQt.QtCore import Qt, QRectF, QPoint, QPointF
+from AnyQt.QtGui import QBrush, QWheelEvent
+from AnyQt.QtWidgets import QGraphicsScene, QWidget, QApplication, QStyle
 
 from Orange.widgets.tests.base import GuiTest
 

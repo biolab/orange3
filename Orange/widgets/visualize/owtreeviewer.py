@@ -77,7 +77,7 @@ class TreeNode(GraphicsNode):
 
         fm = QFontMetrics(self.document().defaultFont())
         attr = self.tree_adapter.attribute(node_inst)
-        self.attr_text_w = fm.width(attr.name if attr else "")
+        self.attr_text_w = fm.horizontalAdvance(attr.name if attr else "")
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
         self._rect = None
@@ -95,7 +95,7 @@ class TreeNode(GraphicsNode):
         self.droplet.setVisible(bool(self.branches))
         fm = QFontMetrics(self.document().defaultFont())
         attr = self.tree_adapter.attribute(self.node_inst)
-        self.attr_text_w = fm.width(attr.name if attr else "")
+        self.attr_text_w = fm.horizontalAdvance(attr.name if attr else "")
         self.attr_text_h = fm.lineSpacing()
         self.line_descent = fm.descent()
         if self.pie is not None:
@@ -136,7 +136,7 @@ class TreeNode(GraphicsNode):
             draw_text = str(self.tree_adapter.short_rule(self.node_inst))
             if self.parent.x() > self.x():  # node is to the left
                 fm = QFontMetrics(font)
-                x = rect.width() / 2 - fm.width(draw_text) - 4
+                x = rect.width() / 2 - fm.horizontalAdvance(draw_text) - 4
             else:
                 x = rect.width() / 2 + 4
             painter.drawText(QPointF(x, -self.line_descent - 1), draw_text)

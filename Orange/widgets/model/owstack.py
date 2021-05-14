@@ -65,5 +65,5 @@ if __name__ == "__main__":
     d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
     ow.set_data(d)
     ow.show()
-    a.exec_()
+    a.exec()
     ow.saveSettings()

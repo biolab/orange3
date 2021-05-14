@@ -2,8 +2,8 @@ import unittest
 import csv
 import io
 
-from PyQt5.QtWidgets import QComboBox, QWidget
-from PyQt5.QtTest import QSignalSpy
+from AnyQt.QtWidgets import QComboBox, QWidget
+from AnyQt.QtTest import QSignalSpy
 
 from Orange.widgets.utils import textimport
 from Orange.widgets.tests.base import GuiTest

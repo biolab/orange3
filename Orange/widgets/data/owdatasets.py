@@ -250,7 +250,7 @@ class OWDataSets(OWWidget):
 
         proxy = QSortFilterProxyModel()
         proxy.setFilterKeyColumn(-1)
-        proxy.setFilterCaseSensitivity(False)
+        proxy.setFilterCaseSensitivity(Qt.CaseInsensitive)
         self.view.setModel(proxy)
 
         if self.splitter_state:

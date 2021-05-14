@@ -466,7 +466,7 @@ class OWDataTable(OWWidget):
                 s = btn.style().sizeFromContents(
                     QStyle.CT_HeaderSection,
                     opt, QSize(),
-                    btn).expandedTo(QApplication.globalStrut())
+                    btn)
                 if s.isValid():
                     table.verticalHeader().setMinimumWidth(s.width())
             except Exception:

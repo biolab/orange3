@@ -6,7 +6,7 @@ from AnyQt.QtGui import QKeySequence, QTransform
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsWidget, QAction, QStyle, QApplication, QSizePolicy
 )
-from PyQt5.QtCore import (
+from AnyQt.QtCore import (
     pyqtSignal as Signal, pyqtProperty as Property, pyqtSlot as Slot
 )
 

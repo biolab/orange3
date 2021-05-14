@@ -39,7 +39,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
 
     def _create_spin_parameter(self, name, minv, maxv, label):
         self.__spin_parameter_update(name)
-        width = QFontMetrics(self.font()).width("0" * 10)
+        width = QFontMetrics(self.font()).horizontalAdvance("0" * 10)
         control = gui.spin(
             self, self, name, minv, maxv,
             alignment=Qt.AlignRight, callbackOnReturn=True,
@@ -248,7 +248,7 @@ class OWManifoldLearning(OWWidget):
         output_box = gui.vBox(self.controlArea, "Output")
         self.n_components_spin = gui.spin(
             output_box, self, "n_components", 1, 10, label="Components:",
-            controlWidth=QFontMetrics(self.font()).width("0" * 10),
+            controlWidth=QFontMetrics(self.font()).horizontalAdvance("0" * 10),
             alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
         gui.rubber(self.n_components_spin.box)

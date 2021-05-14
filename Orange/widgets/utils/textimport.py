@@ -36,17 +36,17 @@ from typing import (
     List, Tuple, Dict, Iterator, Optional, Any, Union, Callable, Mapping
 )
 
-from PyQt5.QtCore import (
-    Qt, QSize, QPoint, QRect, QRectF, QRegExp, QAbstractTableModel,
+from AnyQt.QtCore import (
+    Qt, QSize, QPoint, QRect, QRectF, QRegularExpression, QAbstractTableModel,
     QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent
 )
-from PyQt5.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-from PyQt5.QtGui import (
-    QRegExpValidator, QColor, QBrush, QPalette, QHelpEvent,
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from AnyQt.QtGui import (
+    QRegularExpressionValidator, QColor, QBrush, QPalette, QHelpEvent,
     QStandardItemModel, QStandardItem, QIcon, QIconEngine, QPainter, QPixmap,
     QFont
 )
-from PyQt5.QtWidgets import (
+from AnyQt.QtWidgets import (
     QWidget, QComboBox, QFormLayout, QHBoxLayout, QVBoxLayout, QLineEdit,
     QHeaderView, QFrame, QTableView, QMenu, QLabel, QAction, QActionGroup,
     QStyleOptionFrame, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
@@ -213,16 +213,14 @@ class LineEdit(QLineEdit):
         if nchar <= 0:
             nchar = 17
 
-        w = (fm.width("X") * nchar + 2 * self._horizontalMargin +
+        w = (fm.horizontalAdvance("X") * nchar + 2 * self._horizontalMargin +
              textmargins.left() + textmargins.right() +
              contentsmargins.left() + contentsmargins.right())
 
         opt = QStyleOptionFrame()
         self.initStyleOption(opt)
         size = self.style().sizeFromContents(
-            QStyle.CT_LineEdit, opt,
-            QSize(w, h).expandedTo(QApplication.globalStrut()),
-            self
+            QStyle.CT_LineEdit, opt, QSize(w, h), self
         )
         return size
 
@@ -306,7 +304,7 @@ class CSVOptionsWidget(QWidget):
         self.delimiter_cb.setCurrentIndex(self._delimiter_idx)
         self.delimiter_cb.activated.connect(self.__on_delimiter_idx_activated)
 
-        validator = QRegExpValidator(QRegExp("."))
+        validator = QRegularExpressionValidator(QRegularExpression("."))
         self.delimiteredit = LineEdit(
             self._delimiter_custom,
             enabled=self._delimiter_idx == CSVOptionsWidget.DelimiterOther,
@@ -322,7 +320,7 @@ class CSVOptionsWidget(QWidget):
         delimlayout.addWidget(self.delimiteredit)
         self.quoteedit = TextEditCombo(
             editable=True, minimumContentsLength=1,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             objectName="quote-edit-combo-box"
         )
         self.quoteedit.addItems(["\"", "'"])
@@ -650,7 +648,7 @@ class CSVImportWidget(QWidget):
             editable=True, objectName="grouping-separator-combo-box",
             toolTip="Thousands group separator",
             minimumContentsLength=1,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         items = [
             {Qt.DisplayRole: "None", Qt.EditRole: "",
@@ -668,7 +666,7 @@ class CSVImportWidget(QWidget):
         # Maybe just use unicodedata.normalize('NFKC', ...) as a converter?
         # For now only allow a limited set
         self.grouping_sep_edit_cb.setValidator(
-            QRegExpValidator(QRegExp(r"(\.|,| |')?"), self)
+            QRegularExpressionValidator(QRegularExpression(r"(\.|,| |')?"), self)
         )
         self.grouping_sep_edit_cb.activated[str].connect(
             self.__group_sep_activated)
@@ -677,10 +675,10 @@ class CSVImportWidget(QWidget):
             editable=True, objectName="decimal-separator-combo-box",
             toolTip="Decimal separator",
             minimumContentsLength=1,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         self.decimal_sep_edit_cb.setValidator(
-            QRegExpValidator(QRegExp(r"(\.|,)"), self))
+            QRegularExpressionValidator(QRegularExpression(r"(\.|,)"), self))
         self.decimal_sep_edit_cb.addItems([".", ","])
         self.decimal_sep_edit_cb.activated[str].connect(
             self.__decimal_sep_activated)
@@ -1750,7 +1748,7 @@ def main(argv=None):  # pragma: no cover
         f = io.BytesIO(TEST_DATA)
     try:
         w.setSampleContents(f)
-        app.exec_()
+        app.exec()
     finally:
         f.close()
 

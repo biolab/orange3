@@ -1,11 +1,11 @@
 import sys
 import math
 
-from PyQt5.QtCore import (
+from AnyQt.QtCore import (
     Qt, QRectF, QEvent, QCoreApplication, QObject, QPointF, QRect
 )
-from PyQt5.QtGui import QBrush, QPalette, QTransform, QPolygonF
-from PyQt5.QtWidgets import (
+from AnyQt.QtGui import QBrush, QPalette, QTransform, QPolygonF
+from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QWidget, QVBoxLayout, QSizePolicy,
     QScrollBar, QGraphicsDropShadowEffect
 )
@@ -279,8 +279,8 @@ def qrectf_to_inscribed_rect(rect: QRectF) -> QRect:
 
 def main(args):  # pragma: no cover
     # pylint: disable=import-outside-toplevel,protected-access
-    from PyQt5.QtWidgets import QApplication, QAction
-    from PyQt5.QtGui import QKeySequence
+    from AnyQt.QtWidgets import QApplication, QAction
+    from AnyQt.QtGui import QKeySequence
     app = QApplication(args)
     view = StickyGraphicsView()
     scene = QGraphicsScene(view)

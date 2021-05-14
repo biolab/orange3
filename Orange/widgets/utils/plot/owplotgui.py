@@ -142,7 +142,7 @@ class VariablesDelegate(QStyledItemDelegate):
         if option.state & QStyle.State_MouseOver:
             if not full_selection or (full_selection and is_selected):
                 txt = [" Add ", " Remove "][is_selected]
-                txtw = painter.fontMetrics().width(txt)
+                txtw = painter.fontMetrics().horizontalAdvance(txt)
                 painter.save()
                 painter.setPen(Qt.NoPen)
                 painter.setBrush(QColor("#ccc"))

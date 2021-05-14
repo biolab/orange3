@@ -700,7 +700,7 @@ class GroupItemsDialog(QDialog):
         spin2.setMaximum(max_val)
         spin2.setValue(dialog_settings.get("frequent_abs_spin", 10))
         spin2.setMinimumWidth(
-            self.fontMetrics().width("X") * (len(str(max_val)) + 1) + 20
+            self.fontMetrics().horizontalAdvance("X") * (len(str(max_val)) + 1) + 20
         )
         spin2.valueChanged.connect(self._frequent_abs_spin_changed)
 
@@ -710,7 +710,7 @@ class GroupItemsDialog(QDialog):
         spin3.setSingleStep(0.1)
         spin3.setMaximum(100)
         spin3.setValue(dialog_settings.get("frequent_rel_spin", 10))
-        spin3.setMinimumWidth(self.fontMetrics().width("X") * (2 + 1) + 20)
+        spin3.setMinimumWidth(self.fontMetrics().horizontalAdvance("X") * (2 + 1) + 20)
         spin3.setSuffix(" %")
         spin3.valueChanged.connect(self._frequent_rel_spin_changed)
 
@@ -723,7 +723,7 @@ class GroupItemsDialog(QDialog):
             )
         )
         spin4.setMinimumWidth(
-            self.fontMetrics().width("X") * (len(str(max_val)) + 1) + 20
+            self.fontMetrics().horizontalAdvance("X") * (len(str(max_val)) + 1) + 20
         )
         spin4.valueChanged.connect(self._n_values_spin_spin_changed)
 
@@ -1474,7 +1474,7 @@ class DiscreteVariableEditor(VariableEditor):
             sizeGripEnabled=True,
         )
         dlg.setWindowModality(Qt.WindowModal)
-        status = dlg.exec_()
+        status = dlg.exec()
         dlg.deleteLater()
         self.merge_dialog_settings[self.var] = dlg.get_dialog_settings()
 

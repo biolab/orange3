@@ -104,7 +104,7 @@ class TableView(QTableView):
 
     def setVHeaderFixedWidthFromLabel(self, max_label):
         header = self.verticalHeader()
-        width = QFontMetrics(header.font()).width(max_label)
+        width = QFontMetrics(header.font()).horizontalAdvance(max_label)
         header.setFixedWidth(min(width + 40, 400))
 
     def mousePressEvent(self, event):

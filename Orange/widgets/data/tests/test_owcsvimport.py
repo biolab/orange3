@@ -239,9 +239,9 @@ class TestOWCSVFileImport(WidgetTest):
             dlg = browse_dialog()
             dlg.setOption(QFileDialog.DontUseNativeDialog)
             dlg.selectFile(path)
-            dlg.exec_ = dlg.exec = lambda: QFileDialog.Accepted
+            dlg.exec = lambda: QFileDialog.Accepted
             r.return_value = dlg
-            with mock.patch.object(owcsvimport.CSVImportDialog, "exec_",
+            with mock.patch.object(owcsvimport.CSVImportDialog, "exec",
                                    lambda _: QFileDialog.Accepted):
                 yield
 

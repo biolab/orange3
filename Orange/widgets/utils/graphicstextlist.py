@@ -147,7 +147,7 @@ class TextListWidget(QGraphicsWidget):
         if key in self.__widthCache:
             return self.__widthCache[key]
         fm = QFontMetrics(font)
-        width = max((fm.width(text) for text in self.__items),
+        width = max((fm.horizontalAdvance(text) for text in self.__items),
                     default=0)
         self.__widthCache[key] = width
         return width

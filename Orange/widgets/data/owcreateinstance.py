@@ -500,7 +500,7 @@ class OWCreateInstance(OWWidget):
         self.model.dataHasNanColumn.connect(self.Information.nans_removed)
         self.proxy_model = QSortFilterProxyModel()
         self.proxy_model.setFilterKeyColumn(-1)
-        self.proxy_model.setFilterCaseSensitivity(False)
+        self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
         self.proxy_model.setSourceModel(self.model)
         self.view.setModel(self.proxy_model)
 

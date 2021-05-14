@@ -15,7 +15,7 @@ import numpy as np
 import scipy.stats as ss
 import scipy.sparse as sp
 from AnyQt.QtCore import Qt, QSize, QRectF, QModelIndex, pyqtSlot, \
-    QRegExp, QItemSelection, QItemSelectionRange, QItemSelectionModel
+    QItemSelection, QItemSelectionRange, QItemSelectionModel
 from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
     QHeaderView, QStyle, QStyleOptionViewItem
@@ -759,16 +759,6 @@ class OWFeatureStatistics(widget.OWWidget):
 
         self.data = None  # type: Optional[Table]
 
-        # TODO: Implement filtering on the model
-        # filter_box = gui.vBox(self.controlArea, 'Filter')
-        # self.filter_text = gui.lineEdit(
-        #     filter_box, self, value='filter_string',
-        #     placeholderText='Filter variables by name',
-        #     callback=self._filter_table_variables, callbackOnType=True,
-        # )
-        # shortcut = QShortcut(QKeySequence('Ctrl+f'), self, self.filter_text.setFocus)
-        # shortcut.setWhatsThis('Filter variables by name')
-
         # Main area
         self.model = FeatureStatisticsTableModel(parent=self)
         self.table_view = FeatureStatisticsTableView(self.model, parent=self)
@@ -795,17 +785,6 @@ class OWFeatureStatistics(widget.OWWidget):
     def sizeHint():
         return QSize(1050, 500)
 
-    def _filter_table_variables(self):
-        regex = QRegExp(self.filter_string)
-        # If the user explicitly types different cases, we assume they know
-        # what they are searching for and account for letter case in filter
-        different_case = (
-            any(c.islower() for c in self.filter_string) and
-            any(c.isupper() for c in self.filter_string)
-        )
-        if not different_case:
-            regex.setCaseSensitivity(Qt.CaseInsensitive)
-
     @Inputs.data
     def set_data(self, data):
         # Clear outputs and reset widget state
@@ -831,7 +810,6 @@ class OWFeatureStatistics(widget.OWWidget):
         self.openContext(self.data)
         self.__restore_selection()
         self.__restore_sorting()
-        # self._filter_table_variables()
         self.__color_var_changed()
 
         self.commit()

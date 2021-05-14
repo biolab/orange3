@@ -1,7 +1,7 @@
 import typing
 from typing import Any, Union, Tuple, Dict, List, Mapping, Sequence
 
-from PyQt5.QtCore import QSettings
+from AnyQt.QtCore import QSettings
 
 if typing.TYPE_CHECKING:  # pragma: no cover
     _T = typing.TypeVar("_T")

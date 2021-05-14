@@ -112,7 +112,7 @@ class OWSql(OWBaseSql):
 
         self.tablecombo = QComboBox(
             minimumContentsLength=35,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         self.tablecombo.setModel(self.tables)
         self.tablecombo.setToolTip('table')
