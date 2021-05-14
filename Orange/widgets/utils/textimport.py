@@ -991,9 +991,11 @@ class CSVImportWidget(QWidget):
             base = CachedBytesIOWrapper(self.__sample, self.__buffer)
 
         wrapper = io.TextIOWrapper(
-            base, encoding=self.encoding(), errors="replace"
+            base, encoding=self.encoding(),
+            # use surrogate escape to validate/detect encoding errors in
+            # delegates
+            errors="surrogateescape"
         )
-
         rows = csv.reader(
             wrapper, dialect=self.dialect()
         )
@@ -1372,6 +1374,11 @@ class TablePreview(QTableView):
         return sh.expandedTo(QSize(8 * hsection, 20 * vsection))
 
 
+def is_surrogate_escaped(text: str) -> bool:
+    """Does `text` contain any surrogate escape characters."""
+    return any("\udc80" <= c <= "\udcff" for c in text)
+
+
 class PreviewItemDelegate(QStyledItemDelegate):
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
@@ -1388,6 +1395,18 @@ class PreviewItemDelegate(QStyledItemDelegate):
                                    TablePreviewModel.ColumnTypeRole)
         if coltype == ColumnType.Numeric or coltype == ColumnType.Time:
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
+
+        if not self.validate(option.text):
+            option.palette.setBrush(
+                QPalette.All, QPalette.Text, QBrush(Qt.red, Qt.SolidPattern)
+            )
+            option.palette.setBrush(
+                QPalette.All, QPalette.HighlightedText,
+                QBrush(Qt.red, Qt.SolidPattern)
+            )
+
+    def validate(self, value: str) -> bool:  # pylint: disable=no-self-use
+        return not is_surrogate_escaped(value)
 
     def helpEvent(self, event, view, option, index):
         # type: (QHelpEvent, QAbstractItemView, QStyleOptionViewItem, QModelIndex) -> bool
@@ -1467,17 +1486,6 @@ class ColumnValidateItemDelegate(PreviewItemDelegate):
         super().__init__(*args, **kwargs)
         self.converter = converter or float
 
-    def initStyleOption(self, option, index):
-        super().initStyleOption(option, index)
-        if not self.validate(option.text):
-            option.palette.setBrush(
-                QPalette.All, QPalette.Text, QBrush(Qt.red, Qt.SolidPattern)
-            )
-            option.palette.setBrush(
-                QPalette.All, QPalette.HighlightedText,
-                QBrush(Qt.red, Qt.SolidPattern)
-            )
-
     def validate(self, value):
         if value in {"NA", "Na", "na", "n/a", "N/A", "?", "", "."}:
             return True
@@ -1486,7 +1494,7 @@ class ColumnValidateItemDelegate(PreviewItemDelegate):
         except ValueError:
             return False
         else:
-            return True
+            return super().validate(value)
 
 
 def number_parser(groupsep, decimalsep):
