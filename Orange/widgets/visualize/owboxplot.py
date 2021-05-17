@@ -1073,8 +1073,8 @@ class OWBoxPlot(widget.OWWidget):
         box.extend([whisker1, whisker2, vert_line, mean_line, var_line])
         if stat.q25 is not None or stat.q75 is not None:
             # if any of them is None it means that its value is equal to median
-            box_from = stat.q25 or stat.median
-            box_to = stat.q75 or stat.median
+            box_from = stat.median if stat.q25 is None else stat.q25
+            box_to = stat.median if stat.q75 is None else stat.q75
             mbox = FilterGraphicsRectItem(
                 stat.data_range, box_from * scale_x, -height / 2,
                 (box_to - box_from) * scale_x, height)
