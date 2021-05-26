@@ -53,21 +53,22 @@ class OWAggregateColumns(widget.OWWidget):
             order=DomainModel.MIXED, valid_types=(ContinuousVariable, ))
         var_list = gui.listView(
             box, self, "variables", model=self.variable_model,
-            callback=self.commit)
+            callback=lambda: self.commit()  # pylint: disable=W0108
+        )
         var_list.setSelectionMode(var_list.ExtendedSelection)
 
         combo = gui.comboBox(
             box, self, "operation",
             label="Operator: ", orientation=Qt.Horizontal,
             items=list(self.Operations), sendSelectedValue=True,
-            callback=self.commit
+            callback=lambda: self.commit()  # pylint: disable=W0108
         )
         combo.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
         gui.lineEdit(
             box, self, "var_name",
             label="Variable name: ", orientation=Qt.Horizontal,
-            callback=self.commit
+            callback=lambda: self.commit()  # pylint: disable=W0108
         )
 
         gui.auto_apply(self.controlArea, self)
