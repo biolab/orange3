@@ -289,13 +289,13 @@ class TestOWTestAndScore(WidgetTest):
         setosa = iris[:51]
         versicolor = iris[49:100]
 
-        class SetosaLearner:
+        class SetosaLearner(Learner):
             def __call__(self, data):
                 model = ConstantModel([1., 0, 0])
                 model.domain = iris.domain
                 return model
 
-        class VersicolorLearner:
+        class VersicolorLearner(Learner):
             def __call__(self, data):
                 model = ConstantModel([0, 1., 0])
                 model.domain = iris.domain
@@ -321,10 +321,10 @@ class TestOWTestAndScore(WidgetTest):
         # Ensure that the click on header caused an ascending sort
         # Ascending sort means that wrong model should be listed first
         self.assertEqual(header.sortIndicatorOrder(), Qt.AscendingOrder)
-        self.assertEqual(view.model().index(0, 0).data(), "VersicolorLearner")
+        self.assertEqual(view.model().index(0, 0).data(), "versicolor")
 
         self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
-        self.assertEqual(view.model().index(0, 0).data(), "SetosaLearner")
+        self.assertEqual(view.model().index(0, 0).data(), "setosa")
 
     def _retrieve_scores(self):
         w = self.widget
