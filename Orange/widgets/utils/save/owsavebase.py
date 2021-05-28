@@ -126,7 +126,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
             if os.path.exists(self.stored_path):
                 self.auto_save = False
                 return self.stored_path
-        elif workflow_dir:
+        elif workflow_dir is not None:
             return os.path.normpath(
                 os.path.join(workflow_dir, self.stored_path))
 
