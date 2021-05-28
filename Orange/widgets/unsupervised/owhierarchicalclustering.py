@@ -35,7 +35,6 @@ from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.dendrogram import DendrogramWidget
-from Orange.widgets.utils.state_summary import format_summary_details
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -163,9 +162,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._displayed_root = None
         self.cutoff_height = 0.0
 
-        self._set_input_summary(None)
-        self._set_output_summary(None)
-
         gui.comboBox(
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
             callback=self._invalidate_clustering)
@@ -204,7 +200,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.max_depth_spin = gui.spin(
             box, self, "max_depth", minv=1, maxv=100,
             callback=self._invalidate_pruning,
-            keyboardTracking=False
+            keyboardTracking=False, addToLayout=False
         )
 
         grid.addWidget(
@@ -231,7 +227,8 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.cut_ratio_spin = gui.spin(
             self.selection_box, self, "cut_ratio", 0, 100, step=1e-1,
-            spinType=float, callback=self._selection_method_changed
+            spinType=float, callback=self._selection_method_changed,
+            addToLayout=False
         )
         self.cut_ratio_spin.setSuffix("%")
 
@@ -243,11 +240,12 @@ class OWHierarchicalClustering(widget.OWWidget):
             2, 0
         )
         self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
-                                   callback=self._selection_method_changed)
+                                   callback=self._selection_method_changed,
+                                   addToLayout=False)
         grid.addWidget(self.top_n_spin, 2, 1)
 
         self.zoom_slider = gui.hSlider(
-            self.buttonsArea, self, "zoom_factor", box="Zoom",
+            self.controlArea, self, "zoom_factor", box="Zoom",
             minValue=-6, maxValue=3, step=1, ticks=True, createLabel=False,
             callback=self.__update_font_scale)
 
@@ -268,7 +266,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.controlArea.layout().addStretch()
 
-        gui.auto_send(box, self, "autocommit", box=False)
+        gui.auto_send(self.buttonsArea, self, "autocommit")
 
         self.scene = QGraphicsScene(self)
         self.view = StickyGraphicsView(
@@ -340,7 +338,6 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.error()
         self.Error.clear()
-        self._set_input_summary(matrix)
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
@@ -414,15 +411,6 @@ class OWHierarchicalClustering(widget.OWWidget):
             self._main_graphics.sizeHint(Qt.PreferredSize).height()
         )
         self._main_graphics.layout().activate()
-
-    def _set_input_summary(self, matrix):
-        summary = len(matrix) if matrix is not None else self.info.NoInput
-        self.info.set_input_summary(summary)
-
-    def _set_output_summary(self, output):
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
 
     def _update(self):
         self._clear_plot()
@@ -566,7 +554,6 @@ class OWHierarchicalClustering(widget.OWWidget):
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
         if not items:
-            self._set_output_summary(None)
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
@@ -584,7 +571,6 @@ class OWHierarchicalClustering(widget.OWWidget):
                                     set(selected_indices))
 
         if not selected_indices:
-            self._set_output_summary(None)
             self.Outputs.selected_data.send(None)
             annotated_data = create_annotated_table(items, []) \
                 if self.selection_method == 0 and self.matrix.axis else None
@@ -631,8 +617,6 @@ class OWHierarchicalClustering(widget.OWWidget):
                 items.domain.class_vars, items.domain.metas)
             selected_data = items.from_table(domain, items)
             data = None
-
-        self._set_output_summary(selected_data)
 
         self.Outputs.selected_data.send(selected_data)
         annotated_data = create_annotated_table(data, selected_indices)

@@ -498,16 +498,6 @@ class TestDiscreteVariable(VariableTest):
         var2 = var.copy(values=("W", "M"))
         self.assertEqual(var2.values, ("W", "M"))
 
-    def test_remove_ordered(self):
-        """
-        ordered is deprecated when this test starts to fail remove ordered
-        parameter. Remove also this test.
-        Ordered parameter should still be allowed in __init__ for backward
-        compatibilities in data-sets pickled with older versions, I suggest
-        adding **kwargs which is ignored
-        """
-        self.assertLess(Orange.__version__, "3.29.0")
-
     def test_pickle_backward_compatibility(self):
         """
         Test that pickle made with an older version of Orange are correctly
@@ -522,11 +512,9 @@ class TestDiscreteVariable(VariableTest):
                 this_dir, "..", "..", "tests", "datasets"
             )
             # pickle with values as list
-            with self.assertWarns(OrangeDeprecationWarning):
-                Table(os.path.join(datasets_dir, "sailing-orange-3-20.pkl"))
+            Table(os.path.join(datasets_dir, "sailing-orange-3-20.pkl"))
             # pickle with values as tuple list
-            with self.assertWarns(OrangeDeprecationWarning):
-                Table(os.path.join(datasets_dir, "iris-orange-3-25.pkl"))
+            Table(os.path.join(datasets_dir, "iris-orange-3-25.pkl"))
 
 
 @variabletest(ContinuousVariable)

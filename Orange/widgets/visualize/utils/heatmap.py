@@ -1243,7 +1243,7 @@ class _GradientLegendAxisItem(pg.AxisItem):
             if font is None:
                 font = self.font()
             fm = QFontMetrics(font)
-            w = fm.width('0.0000000') / 2  # bad, should use _tickValues
+            w = fm.horizontalAdvance('0.0000000') / 2  # bad, should use _tickValues
             geomw = self.geometry().size().width()
             maxw = max(geomw + 2 * w, br.width())
             if br.width() < maxw:
@@ -1397,7 +1397,7 @@ class CategoricalColorLegend(QGraphicsWidget):
         assert flow.count() == 0
         font = self.font()
         fm = QFontMetrics(font)
-        size = fm.width("X")
+        size = fm.horizontalAdvance("X")
         headeritem = None
         if title:
             headeritem = QGraphicsSimpleTextItem(title)
@@ -1433,7 +1433,7 @@ class CategoricalColorLegend(QGraphicsWidget):
         super().changeEvent(event)
 
     def _updateFont(self, font):
-        w = QFontMetrics(font).width("X")
+        w = QFontMetrics(font).horizontalAdvance("X")
         for item in filter(
                 lambda item: isinstance(item, SimpleLayoutItem),
                 layout_items_recursive(self.__layout)

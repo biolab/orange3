@@ -11,8 +11,6 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details,\
-    format_multiple_summaries
 
 METRICS = [
     ("Euclidean", distance.Euclidean),
@@ -84,23 +82,6 @@ class OWNeighbors(OWWidget):
             callback=lambda: self.apply())
 
         self.apply_button = gui.auto_apply(self.buttonsArea, self, commit=self.apply)
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
-    def _set_input_summary(self):
-        n_data = len(self.data) if self.data else 0
-        n_refs = len(self.reference) if self.reference else 0
-        summary, details, kwargs = self.info.NoInput, "", {}
-
-        if self.data or self.reference:
-            summary = f"{self.info.format_number(n_data)}, " \
-                      f"{self.info.format_number(n_refs)}"
-            details = format_multiple_summaries([
-                ("Data", self.data),
-                ("Reference", self.reference)
-            ])
-            kwargs = {"format": Qt.RichText}
-        self.info.set_input_summary(summary, details, **kwargs)
 
     @Inputs.data
     def set_data(self, data):
@@ -113,7 +94,6 @@ class OWNeighbors(OWWidget):
 
     def handleNewSignals(self):
         self.compute_distances()
-        self._set_input_summary()
         self.unconditional_apply()
 
     def recompute(self):
@@ -149,11 +129,8 @@ class OWNeighbors(OWWidget):
 
         if indices is None:
             neighbors = None
-            self.info.set_output_summary(self.info.NoOutput)
         else:
             neighbors = self._data_with_similarity(indices)
-            summary, details = len(neighbors), format_summary_details(neighbors)
-            self.info.set_output_summary(summary, details)
         self.Outputs.data.send(neighbors)
 
     def _compute_indices(self):

@@ -2,7 +2,7 @@
 import time
 import warnings
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
@@ -10,7 +10,6 @@ from sklearn.exceptions import ConvergenceWarning
 from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtWidgets import QCheckBox
 
-from orangewidget.widget import StateInfo
 from orangewidget.settings import Context, IncompatibleContext
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
@@ -22,7 +21,6 @@ from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class SlowScorer(Scorer):
@@ -471,28 +469,6 @@ class TestOWRank(WidgetTest):
         output = self.get_output(w.Outputs.reduced_data)
 
         self.assertEqual(len(output), len(self.iris))
-
-    def test_summary(self):
-        """Check if the status bar is updated when data is received"""
-        data = self.iris
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        self.wait_until_finished()
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.reduced_data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        self.wait_until_finished()
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_concurrent_cancel(self):
         """

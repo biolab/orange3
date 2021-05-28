@@ -224,10 +224,9 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             master=self.graph, value="connected_pairs", minValue=0,
             maxValue=20, createLabel=False, callback=self._on_connected_changed
         )
-        gui.rubber(self.controlArea)
 
     def _add_controls_optimization(self):
-        box = gui.vBox(self.controlArea, box=True)
+        box = gui.vBox(self.controlArea, box="Optimize", spacing=0)
         hbox = gui.hBox(box, margin=0)
         gui.button(hbox, self, "PCA", callback=self.do_PCA, autoDefault=False)
         gui.button(hbox, self, "Randomize", callback=self.do_random, autoDefault=False)
@@ -242,6 +241,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.task is not None:
             self._run()
 
+    @Inputs.data
     def set_data(self, data):
         """Set the input dataset.
 

@@ -7,13 +7,10 @@ from unittest.mock import Mock
 import numpy as np
 from AnyQt.QtCore import QItemSelection, Qt
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.owdistributions import OWDistributions
 
 
@@ -526,32 +523,6 @@ class TestOWDistributions(WidgetTest):
         widget = self.widget
         self.send_signal(widget.Inputs.data, self.iris)
         widget.send_report()
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data, info = self.iris, self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.send_signal(self.widget.Inputs.data, data)
-        summary, details = f"{len(data)}", format_summary_details(data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self._set_slider(0)
-        self.widget.selection = {1, 2, 3, 5, 6, 9}
-        self.widget._on_end_selecting()
-        output = self.get_output(self.widget.Outputs.selected_data)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
     def test_sort_by_freq_no_split(self):
         data = Table("heart_disease")

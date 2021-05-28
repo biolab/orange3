@@ -313,3 +313,13 @@ class TestInstance(unittest.TestCase):
         inst3 = Instance(domain, vals)
 
         self.assertNotEqual(inst2.id, inst3.id)
+
+    def test_no_hash(self):
+        domain = self.mock_domain()
+        inst = Instance(domain)
+        with self.assertRaises(TypeError):
+            {inst}  # pylint: disable=pointless-statement
+
+
+if __name__ == "__main__":
+    unittest.main()

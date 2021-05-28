@@ -6,17 +6,13 @@ import math
 import pickle
 import copy
 
-from unittest.mock import Mock
 import numpy as np
-
-from orangewidget.widget import StateInfo
 
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable, TimeVariable)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
@@ -132,6 +128,22 @@ class FeatureConstructorTest(unittest.TestCase):
         ndata = data.transform(Domain(nv))
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
+
+    @staticmethod
+    def test_unicode_normalization():
+        micro = "\u00b5"
+        domain = Domain([ContinuousVariable(micro)])
+        name = 'Micro Variable'
+        expression = micro
+        desc = PyListModel(
+            [ContinuousDescriptor(name=name, expression=expression,
+                                  number_of_decimals=2)]
+        )
+        data = Table.from_numpy(domain, np.arange(5).reshape(5, 1))
+        data = data.transform(Domain(data.domain.attributes,
+                                     [],
+                                     construct_variables(desc, data)))
+        np.testing.assert_equal(data.X, data.metas)
 
 
 class TestTools(unittest.TestCase):
@@ -360,26 +372,6 @@ class OWFeatureConstructorTests(WidgetTest):
         self.assertFalse(self.widget.Error.more_values_needed.is_shown())
         self.widget.apply()
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data = Table("iris")
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 class TestFeatureEditor(unittest.TestCase):

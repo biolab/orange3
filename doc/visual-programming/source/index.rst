@@ -31,6 +31,7 @@ Data
    widgets/data/sqltable
    widgets/data/save
    widgets/data/datainfo
+   widgets/data/aggregatecolumns
    widgets/data/datatable
    widgets/data/selectcolumns
    widgets/data/selectrows
@@ -58,7 +59,9 @@ Data
    widgets/data/correlations
    widgets/data/color
    widgets/data/featurestatistics
+   widgets/data/melt
    widgets/data/neighbors
+   widgets/data/unique
 
 
 Visualize

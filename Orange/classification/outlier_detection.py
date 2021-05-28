@@ -9,43 +9,51 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.svm import OneClassSVM
 
 from Orange.base import SklLearner, SklModel
-from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
-    Variable
-from Orange.data.util import get_unique_names
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data.util import get_unique_names, SharedComputeValue
 from Orange.preprocess import AdaptiveNormalize
-from Orange.util import wrap_callback, dummy_callback
+from Orange.util import dummy_callback
 
 __all__ = ["LocalOutlierFactorLearner", "IsolationForestLearner",
            "EllipticEnvelopeLearner", "OneClassSVMLearner"]
 
 
+class _CachedTransform:
+    # to be used with SharedComputeValue
+    def __init__(self, model):
+        self.model = model
+
+    def __call__(self, data):
+        return self.model.data_to_model_domain(data)
+
+
 class _OutlierModel(SklModel):
     def __init__(self, skl_model):
         super().__init__(skl_model)
-        self._cached_data = None
         self.outlier_var = None
+        self.cached_transform = _CachedTransform(self)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         pred = self.skl_model.predict(X)
         pred[pred == -1] = 0
         return pred[:, None]
 
+    def new_domain(self, data: Table) -> Domain:
+        assert self.outlier_var is not None
+        return Domain(data.domain.attributes, data.domain.class_vars,
+               data.domain.metas + (self.outlier_var,))
+
     def __call__(self, data: Table, progress_callback: Callable = None) \
             -> Table:
         assert isinstance(data, Table)
-        assert self.outlier_var is not None
 
-        domain = Domain(data.domain.attributes, data.domain.class_vars,
-                        data.domain.metas + (self.outlier_var,))
+        domain = self.new_domain(data)
         if progress_callback is None:
             progress_callback = dummy_callback
-        progress_callback(0, "Preprocessing...")
-        self._cached_data = self.data_to_model_domain(
-            data, wrap_callback(progress_callback, end=0.1))
-        progress_callback(0.1, "Predicting...")
-        metas = np.hstack((data.metas, self.predict(self._cached_data.X)))
+        progress_callback(0, "Predicting...")
+        new_table = data.transform(domain)
         progress_callback(1)
-        return Table.from_numpy(domain, data.X, data.Y, metas)
+        return new_table
 
 
 class _OutlierLearner(SklLearner):
@@ -64,27 +72,17 @@ class _OutlierLearner(SklLearner):
             compute_value=transformer
         )
 
-        transformer.variable = variable
         model.outlier_var = variable
         return model
 
 
-class _Transformer:
+class _Transformer(SharedComputeValue):
     def __init__(self, model: _OutlierModel):
+        super().__init__(model.cached_transform)
         self._model = model
-        self._variable = None
 
-    @property
-    def variable(self) -> Variable:
-        return self._variable
-
-    @variable.setter
-    def variable(self, var: Variable):
-        self._variable = var
-
-    def __call__(self, data: Table) -> np.ndarray:
-        assert isinstance(self._variable, Variable)
-        return self._model(data).get_column_view(self._variable)[0]
+    def compute(self, data: Table, shared_data: Table) -> np.ndarray:
+        return self._model.predict(shared_data.X)[:, 0]
 
 
 class OneClassSVMLearner(_OutlierLearner):
@@ -142,13 +140,16 @@ class EllipticEnvelopeClassifier(_OutlierModel):
         """
         return self.skl_model.mahalanobis(observations)[:, None]
 
-    def __call__(self, data: Table, progress_callback: Callable = None) \
-            -> Table:
-        pred = super().__call__(data, progress_callback)
-        domain = Domain(pred.domain.attributes, pred.domain.class_vars,
-                        pred.domain.metas + (self.mahal_var,))
-        metas = np.hstack((pred.metas, self.mahalanobis(self._cached_data.X)))
-        return Table.from_numpy(domain, pred.X, pred.Y, metas)
+    def new_domain(self, data: Table) -> Domain:
+        assert self.mahal_var is not None
+        domain = super().new_domain(data)
+        return Domain(domain.attributes, domain.class_vars,
+                        domain.metas + (self.mahal_var,))
+
+
+class _TransformerMahalanobis(_Transformer):
+    def compute(self, data: Table, shared_data: Table) -> np.ndarray:
+        return self._model.mahalanobis(shared_data.X)[:, 0]
 
 
 class EllipticEnvelopeLearner(_OutlierLearner):
@@ -166,13 +167,12 @@ class EllipticEnvelopeLearner(_OutlierLearner):
         domain = data.domain
         model = super()._fit_model(data.transform(Domain(domain.attributes)))
 
-        transformer = _Transformer(model)
+        transformer = _TransformerMahalanobis(model)
         names = [v.name for v in domain.variables + domain.metas]
         variable = ContinuousVariable(
             get_unique_names(names, "Mahalanobis"),
             compute_value=transformer
         )
 
-        transformer.variable = variable
         model.mahal_var = variable
         return model

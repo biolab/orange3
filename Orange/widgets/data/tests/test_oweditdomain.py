@@ -15,8 +15,6 @@ from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
     QStyleOptionViewItem, QDialog, QMenu
 from AnyQt.QtTest import QTest, QSignalSpy
 
-from orangewidget.widget import StateInfo
-
 from Orange.widgets.utils import colorpalettes
 from orangewidget.tests.utils import simulate
 from orangewidget.utils.itemmodels import PyListModel
@@ -42,7 +40,6 @@ from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.tests.utils import contextMenu
 from Orange.tests import test_filename, assert_array_nanequal
-from Orange.widgets.utils.state_summary import format_summary_details
 
 MArray = np.ma.MaskedArray
 
@@ -217,6 +214,30 @@ class TestOWEditDomain(WidgetTest):
         t2 = self.get_output(self.widget.Outputs.data)
         self.assertEqual(t2.domain["a"].attributes["list"], [1, 2, 4])
 
+    def test_annotation_bool(self):
+        """Check if bool labels remain bool"""
+        a = ContinuousVariable("a")
+        a.attributes["hidden"] = True
+        d = Domain([a])
+        t = Table.from_domain(d)
+
+        self.send_signal(self.widget.Inputs.data, t)
+
+        assert isinstance(self.widget, OWEditDomain)
+        # select first variable
+        idx = self.widget.domain_view.model().index(0)
+        self.widget.domain_view.setCurrentIndex(idx)
+
+        # change first attribute value
+        editor = self.widget.findChild(ContinuousVariableEditor)
+        assert isinstance(editor, ContinuousVariableEditor)
+        idx = editor.labels_model.index(0, 1)
+        editor.labels_model.setData(idx, "False", Qt.EditRole)
+
+        self.widget.commit()
+        t2 = self.get_output(self.widget.Outputs.data)
+        self.assertFalse(t2.domain["a"].attributes["hidden"])
+
     def test_duplicate_names(self):
         """
         Tests if widget shows error when duplicate name is entered.
@@ -277,8 +298,6 @@ class TestOWEditDomain(WidgetTest):
         self.assertIsNone(out1.compute_value)
         self.assertIsNone(out2.compute_value)
 
-
-
     def test_time_variable_preservation(self):
         """Test if time variables preserve format specific attributes"""
         table = Table(test_filename("datasets/cyber-security-breaches.tab"))
@@ -317,45 +336,6 @@ class TestOWEditDomain(WidgetTest):
         restore({viris: [("AsString", ()), ("Rename", ("Z",))]})
         tr = model.data(model.index(4), TransformRole)
         self.assertEqual(tr, [AsString(), Rename("Z")])
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data = Table("iris")
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        def enter_text(widget, text):
-            # type: (QLineEdit, str) -> None
-            widget.selectAll()
-            QTest.keyClick(widget, Qt.Key_Delete)
-            QTest.keyClicks(widget, text)
-            QTest.keyClick(widget, Qt.Key_Return)
-
-        editor = self.widget.findChild(ContinuousVariableEditor)
-        enter_text(editor.name_edit, "sepal height")
-        self.widget.commit()
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-        output_sum.reset_mock()
-        enter_text(editor.name_edit, "sepal width")
-        self.widget.commit()
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 class TestEditors(GuiTest):
@@ -491,9 +471,9 @@ class TestEditors(GuiTest):
         self.assertGreaterEqual(len(changedspy), 1, "Did not change data")
         w.grab()
 
-    # mocking exec_ make dialog never show - dialog blocks running until closed
+    # mocking exec make dialog never show - dialog blocks running until closed
     @patch(
-        "Orange.widgets.data.oweditdomain.GroupItemsDialog.exec_",
+        "Orange.widgets.data.oweditdomain.GroupItemsDialog.exec",
         Mock(side_effect=lambda: QDialog.Accepted)
     )
     def test_discrete_editor_merge_action(self):

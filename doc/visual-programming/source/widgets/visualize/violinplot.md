@@ -20,6 +20,7 @@ The **Violin Plot** widget plays a similar role as a [Box Plot](boxplot.md). It 
 1. Select the variable you want to plot. Tick *Order by relevance to subgroups* to order variables by Chi2 or ANOVA over the selected subgroup.
 2. Choose *Subgroups* to see [violin plots](https://en.wikipedia.org/wiki/Violin_plot) displayed by a discrete subgroup. Tick *Order by relevance to variable* to order subgroups by Chi2 or ANOVA over the selected variable.
 3.  *Box plot*: Tick to show the underlying box plot.
+    ![](images/ViolinPlot-boxplot.png)
 
     *Strip plot*: Tick to show the underlying data represented by points.
     
@@ -37,8 +38,8 @@ Examples
 
 The **Violin Plot** widget is most commonly used immediately after the [File](../data/file.md) widget to observe the statistical properties of a dataset. In the first example, we have used *heart-disease* data to inspect our variables.
 
-![](images/ViolinPlot-Example1.png)
+![](images/ViolinPlot-example1.png)
 
 The **Violin Plot** could also be used for *outlier detection*. In the next example we eliminate the outliers by selecting only instances that fall inside the [Q1 − 1.5  and Q3 + 1.5 IQR](https://en.wikipedia.org/wiki/Interquartile_range).
 
-![](images/ViolinPlot-Example2.png)
+![](images/ViolinPlot-example2.png)

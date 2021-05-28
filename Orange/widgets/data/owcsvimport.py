@@ -31,18 +31,18 @@ from typing import (
     Union, AnyStr, BinaryIO, Set, Type, Mapping, Sequence, NamedTuple
 )
 
-from PyQt5.QtCore import (
+from AnyQt.QtCore import (
     Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType
 )
-from PyQt5.QtGui import (
+from AnyQt.QtGui import (
     QStandardItem, QStandardItemModel, QPalette, QColor, QIcon
 )
-from PyQt5.QtWidgets import (
+from AnyQt.QtWidgets import (
     QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
     QVBoxLayout, QSizePolicy, QStyle, QFileIconProvider, QFileDialog,
     QApplication, QMessageBox, QTextBrowser, QMenu
 )
-from PyQt5.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
 import numpy as np
 import pandas.errors
@@ -66,7 +66,6 @@ from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
 )
-from Orange.widgets.utils.state_summary import format_summary_details
 
 if typing.TYPE_CHECKING:
     # pylint: disable=invalid-name
@@ -580,21 +579,32 @@ class FileDialog(QFileDialog):
 
 def default_options_for_mime_type(
         path: str, mime_type: str
-) -> Tuple[csv.Dialect, bool]:
+) -> Options:
     defaults = {
         "text/csv": (csv.excel(), True),
         "text/tab-separated-values": (csv.excel_tab(), True)
     }
-    dialect, header = csv.excel(), True
+    dialect, header, encoding = csv.excel(), True, "utf-8"
     delimiters = None
+    try_encodings = ["utf-8", "utf-16", "iso8859-1"]
     if mime_type in defaults:
         dialect, header = defaults[mime_type]
         delimiters = [dialect.delimiter]
-    try:
-        dialect, header = sniff_csv_with_path(path, delimiters=delimiters)
-    except (OSError, UnicodeDecodeError, csv.Error):
-        pass
-    return dialect, header
+
+    for encoding_ in try_encodings:
+        try:
+            dialect, header = sniff_csv_with_path(
+                path, encoding=encoding_, delimiters=delimiters)
+            encoding = encoding_
+        except (OSError, UnicodeError, csv.Error):
+            pass
+        else:
+            break
+    if header:
+        rowspec = [(range(0, 1), RowSpec.Header)]
+    else:
+        rowspec = []
+    return Options(dialect=dialect, encoding=encoding, rowspec=rowspec)
 
 
 class OWCSVFileImport(widget.OWWidget):
@@ -605,17 +615,17 @@ class OWCSVFileImport(widget.OWWidget):
     category = "Data"
     keywords = ["file", "load", "read", "open", "csv"]
 
-    outputs = [
-        widget.OutputSignal(
+    class Outputs:
+        data = widget.Output(
             name="Data",
             type=Orange.data.Table,
-            doc="Loaded data set."),
-        widget.OutputSignal(
+            doc="Loaded data set.")
+        data_frame = widget.Output(
             name="Data Frame",
             type=pd.DataFrame,
-            doc=""
+            doc="",
+            auto_summary=False
         )
-    ]
 
     class Error(widget.OWWidget.Error):
         error = widget.Msg(
@@ -713,8 +723,6 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.setMinimumHeight(self.fontMetrics().ascent() * 2 + 4)
         self.summary_text.viewport().setAutoFillBackground(False)
         box.layout().addWidget(self.summary_text)
-
-        self.info.set_output_summary(self.info.NoOutput)
 
         button_box = QDialogButtonBox(
             orientation=Qt.Horizontal,
@@ -892,7 +900,7 @@ class OWCSVFileImport(widget.OWWidget):
         if directory is not None:
             dlg.setDirectory(directory)
 
-        status = dlg.exec_()
+        status = dlg.exec()
         dlg.deleteLater()
         if status == QFileDialog.Accepted:
             selected_filter = dlg.selectedFileFormat()
@@ -913,11 +921,10 @@ class OWCSVFileImport(widget.OWWidget):
                 mb = self._might_be_binary_mb(path)
                 if mb.exec() == QMessageBox.Cancel:
                     return
-            # initialize dialect based on selected format
-            dialect, header = default_options_for_mime_type(
+            # initialize options based on selected format
+            options = default_options_for_mime_type(
                 path, selected_filter.mime_type,
             )
-            options = None
             # Search for path in history.
             # If found use the stored params to initialize the import dialog
             items = self.itemsFromSettings()
@@ -926,21 +933,12 @@ class OWCSVFileImport(widget.OWWidget):
                 _, options_ = items[idx]
                 if options_ is not None:
                     options = options_
-
-            if options is None:
-                if not header:
-                    rowspec = []
-                else:
-                    rowspec = [(range(0, 1), RowSpec.Header)]
-                options = Options(
-                    encoding="utf-8", dialect=dialect, rowspec=rowspec)
-
             dlg = CSVImportDialog(
                 self, windowTitle="Import Options", sizeGripEnabled=True)
             dlg.setWindowModality(Qt.WindowModal)
             dlg.setPath(path)
             dlg.setOptions(options)
-            status = dlg.exec_()
+            status = dlg.exec()
             dlg.deleteLater()
             if status == QDialog.Accepted:
                 self.set_selected_file(path, dlg.options())
@@ -1216,14 +1214,11 @@ class OWCSVFileImport(widget.OWWidget):
             table.name = os.path.splitext(os.path.split(filename)[-1])[0]
         else:
             table = None
-        self.send("Data Frame", df)
-        self.send('Data', table)
+        self.Outputs.data_frame.send(df)
+        self.Outputs.data.send(table)
         self._update_status_messages(table)
 
     def _update_status_messages(self, data):
-        summary = len(data) if data else self.info.NoOutput
-        details = format_summary_details(data) if data else ""
-        self.info.set_output_summary(summary, details)
         if data is None:
             return
 
@@ -1858,7 +1853,7 @@ def main(argv=None):  # pragma: no cover
     w = OWCSVFileImport()
     w.show()
     w.raise_()
-    app.exec_()
+    app.exec()
     w.saveSettings()
     w.onDeleteWidget()
     return 0

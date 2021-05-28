@@ -4,7 +4,6 @@ import textwrap
 
 from Orange.widgets import widget, gui
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input
 from Orange.data.table import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
@@ -43,8 +42,6 @@ class OWDataInfo(widget.OWWidget):
             bo = gui.vBox(self.controlArea, box)
             gui.label(bo, self, "%%(%s)s" % name)
 
-        self.info.set_input_summary(self.info.NoInput)
-
         # ensure the widget has some decent minimum width.
         self.targets = "Categorical outcome with 123 values"
         self.layout().activate()
@@ -59,12 +56,9 @@ class OWDataInfo(widget.OWWidget):
     def data(self, data):
         if data is None:
             self._clear_fields()
-            self.info.set_input_summary(self.info.NoInput)
         else:
             self._set_fields(data)
             self._set_report(data)
-            self.info.set_input_summary(data.approx_len(),
-                                        format_summary_details(data))
 
     def _clear_fields(self):
         self.data_set_name = ""
@@ -117,12 +111,12 @@ class OWDataInfo(widget.OWWidget):
             sparseness = ""
         self.data_set_size = pack_table((
             ("Rows", '~{}'.format(data.approx_len())),
-            ("Columns", len(domain)+len(domain.metas)))) + sparseness
+            ("Columns", len(domain.variables)+len(domain.metas)))) + sparseness
 
         def update_size():
             self.data_set_size = pack_table((
                 ("Rows", len(data)),
-                ("Columns", len(domain)+len(domain.metas)))) + sparseness
+                ("Columns", len(domain.variables)+len(domain.metas)))) + sparseness
 
         threading.Thread(target=update_size).start()
 

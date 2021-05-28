@@ -207,7 +207,7 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
                 if type(colors) == dict:
                     colors = colors[max(colors.keys())]
                 dlg = PaletteEditor(colors, parent=self)
-                if dlg.exec_() and colors != dlg.getRgbColors():
+                if dlg.exec() and colors != dlg.getRgbColors():
                     self.__dict__["disc" + paletteName + "View"].setDiscPalette(dlg.getRgbColors())
                 self.__dict__["disc" + paletteName + "EditButt"].setChecked(0)
                 return

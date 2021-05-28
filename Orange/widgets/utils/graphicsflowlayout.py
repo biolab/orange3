@@ -6,8 +6,7 @@ import numpy as np
 
 from AnyQt.QtCore import QRectF, QSizeF, Qt, QPointF, QMarginsF
 from AnyQt.QtWidgets import QGraphicsLayout, QGraphicsLayoutItem
-
-import sip
+from AnyQt import sip
 
 FLT_MAX = np.finfo(np.float32).max
 

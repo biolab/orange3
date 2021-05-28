@@ -245,8 +245,13 @@ class Domain:
     def metas(self):
         return self._metas
 
+    @deprecated("len(Domain.variables)")
     def __len__(self):
-        """The number of variables (features and class attributes)."""
+        """The number of variables (features and class attributes).
+
+        The current behavior returns the length of only features and
+        class attributes. In the near future, it will include the
+        length of metas, too, and __iter__ will act accordingly."""
         return len(self._variables)
 
     def __bool__(self):

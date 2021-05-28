@@ -9,7 +9,7 @@ from pandas.core.arrays import SparseArray
 from pandas.core.arrays.sparse.dtype import SparseDtype
 from pandas.api.types import (
     is_categorical_dtype, is_object_dtype,
-    is_datetime64_any_dtype, is_numeric_dtype,
+    is_datetime64_any_dtype, is_numeric_dtype, is_integer_dtype
 )
 
 from Orange.data import (
@@ -215,7 +215,10 @@ def vars_from_df(df, role=None, force_nominal=False):
                 s.astype('str').replace('NaT', np.nan).map(v.parse)
             ))
         elif is_numeric_dtype(s):
-            var = ContinuousVariable(str(column))
+            var = ContinuousVariable(
+                # set number of decimals to 0 if int else keeps default behaviour
+                str(column), number_of_decimals=(0 if is_integer_dtype(s) else None)
+            )
             attrs.append(var)
             Xcols.append(column)
             Xexpr.append(None)
@@ -368,8 +371,7 @@ def table_to_frame(tab, include_metas=False):
         elif col.is_continuous:
             dt = float
             # np.nan are not compatible with int column
-            nan_values_in_column = [t for t in vals if np.isnan(t)]
-            if col.number_of_decimals == 0 and len(nan_values_in_column) == 0:
+            if col.number_of_decimals == 0 and not np.any(np.isnan(vals)):
                 dt = int
             result = (col.name, pd.Series(vals).astype(dt))
         elif col.is_string:

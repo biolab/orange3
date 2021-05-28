@@ -9,8 +9,6 @@ import numpy as np
 from AnyQt.QtCore import QItemSelectionModel, QItemSelection
 from AnyQt.QtGui import QStandardItemModel
 
-from orangewidget.widget import StateInfo
-
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner
 from Orange.data.io import TabReader
@@ -28,7 +26,6 @@ from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch, \
     possible_duplicate_table
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWPredictions(WidgetTest):
@@ -479,63 +476,6 @@ class TestOWPredictions(WidgetTest):
         prev_model = self.widget.predictionsview.model()
         self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
         self.widget.selection_store.unregister.called_with(prev_model)
-
-    def test_summary(self):
-        """Check if the status bar updates when data is recieved"""
-        data = self.iris
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-        predictor1 = ConstantLearner()(self.iris)
-        predictor2 = LogisticRegressionLearner()(self.iris)
-
-        self.send_signal(self.widget.Inputs.predictors, predictor1)
-        details = f"Data:<br>{no_input}.<hr>" + \
-                  "Model: 1 model (1 failed)<ul><li>constant</li></ul>"
-        self.assertEqual(info._StateInfo__input_summary.brief, "0")
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self.send_signal(self.widget.Inputs.data, data)
-        details = "Data:<br>" + \
-                  format_summary_details(data).replace('\n', '<br>') + \
-                  "<hr>Model: 1 model<ul><li>constant</li></ul>"
-        self.assertEqual(info._StateInfo__input_summary.brief, "150")
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.predictions)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.predictors, predictor2, 1)
-        details = "Data:<br>"+ \
-                  format_summary_details(data).replace('\n', '<br>') + \
-                  "<hr>Model: 2 models<ul><li>constant</li>" + \
-                  "<li>logistic regression</li></ul>"
-        self.assertEqual(info._StateInfo__input_summary.brief, "150")
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.predictions)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.predictors, None)
-        self.send_signal(self.widget.Inputs.predictors, None, 1)
-        details = "Data:<br>" + \
-                  format_summary_details(data).replace('\n', '<br>') + \
-                  "<hr>Model:<br>No model on input."
-        self.assertEqual(info._StateInfo__input_summary.brief, "150")
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        output = self.get_output(self.widget.Outputs.predictions)
-        summary, details = f"{len(output)}", format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, summary)
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
 
 
 class SelectionModelTest(unittest.TestCase):

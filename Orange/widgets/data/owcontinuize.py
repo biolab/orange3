@@ -13,7 +13,6 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output
 
 
@@ -23,7 +22,8 @@ class OWContinuize(widget.OWWidget):
                    "optionally, normalize numeric values.")
     icon = "icons/Continuize.svg"
     category = "Data"
-    keywords = []
+    keywords = ["encode", "dummy", "numeric", "one-hot", "binary",
+                "treatment", "contrast"]
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -98,8 +98,6 @@ class OWContinuize(widget.OWWidget):
         gui.auto_apply(self.buttonsArea, self, "autosend")
 
         self.data = None
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
 
     def settings_changed(self):
         self.commit()
@@ -110,12 +108,8 @@ class OWContinuize(widget.OWWidget):
         self.data = data
         self.enable_normalization()
         if data is None:
-            self.info.set_input_summary(self.info.NoInput)
-            self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.data.send(None)
         else:
-            self.info.set_input_summary(len(data),
-                                        format_summary_details(data))
             self.unconditional_commit()
 
     def enable_normalization(self):
@@ -146,8 +140,6 @@ class OWContinuize(widget.OWWidget):
             domain = continuizer(self.data)
             data = self.data.transform(domain)
             self.Outputs.data.send(data)
-            self.info.set_output_summary(len(data),
-                                         format_summary_details(data))
         else:
             self.Outputs.data.send(self.data)  # None or empty data
 

@@ -1,15 +1,13 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from pickle import loads, dumps
 
 import numpy as np
 
 from AnyQt.QtCore import Qt, QPoint
 from AnyQt.QtTest import QTest
-
-from orangewidget.widget import StateInfo
 
 from Orange.data import (Table, Domain, ContinuousVariable as Cv,
                          StringVariable as sv, DiscreteVariable as Dv,
@@ -18,8 +16,6 @@ from Orange.widgets.data.owpivot import (OWPivot, Pivot,
                                          AggregationFunctionsEnum)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.utils.state_summary import format_summary_details, \
-    format_multiple_summaries
 
 
 class TestOWPivot(WidgetTest):
@@ -244,39 +240,6 @@ class TestOWPivot(WidgetTest):
         self.widget.report_button.click()
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
-
-    def test_summary(self):
-        """Check if the status bar is updated when data is received"""
-        data = self.iris
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.filtered_data)
-        self.assertIsNone(output)
-        simulate.combobox_activate_item(self.widget.controls.row_feature,
-                                        self.iris.domain.attributes[0].name)
-        simulate.combobox_activate_item(self.widget.controls.col_feature,
-                                        self.iris.domain.class_var.name)
-        self.widget.table_view.set_selection(set([(11, 0), (11, 1), (12, 0)]))
-        self.widget.table_view.selection_changed.emit()
-        filtered = self.get_output(self.widget.Outputs.filtered_data)
-        pivot = self.get_output(self.widget.Outputs.pivot_table)
-        grouped = self.get_output(self.widget.Outputs.grouped_data)
-        output_sum.assert_called_with(
-            f"{len(pivot)}, {len(filtered)}, {len(grouped)}",
-            format_multiple_summaries([("Pivot table", pivot),
-                                       ("Filtered data", filtered),
-                                       ("Grouped data", grouped)]),
-            format=1)
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_renaming_warning(self):
         data = Table('iris')

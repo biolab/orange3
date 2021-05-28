@@ -4,7 +4,6 @@ import warnings
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 from datetime import datetime, timezone
-from time import gmtime
 
 import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
@@ -20,11 +19,10 @@ from pyqtgraph.graphicsItems.LegendItem import LegendItem as PgLegendItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 
 from Orange.preprocess.discretize import _time_binnings
-from Orange.widgets.utils import colorpalettes
-from Orange.util import OrangeDeprecationWarning
+from Orange.util import utc_from_timestamp
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import classdensity
+from Orange.widgets.utils import classdensity, colorpalettes
 from Orange.widgets.utils.plot import OWPalette
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
@@ -32,13 +30,6 @@ from Orange.widgets.visualize.utils.plotutils import (
     HelpEventDelegate as EventDelegate, InteractiveViewBox as ViewBox,
     PaletteItemSample, SymbolItemSample, AxisItem
 )
-
-with warnings.catch_warnings():
-    # This just loads an obsolete module; proper warning is issued below
-    warnings.simplefilter("ignore", DeprecationWarning)
-    from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
-        OWScatterPlotGraph as OWScatterPlotGraphObs
-    )
 
 SELECTION_WIDTH = 5
 MAX_N_VALID_SIZE_ANIMATE = 1000
@@ -171,22 +162,6 @@ class DiscretizedScale:
 
     def get_bins(self):
         return self.offset + self.width * np.arange(self.bins + 1)
-
-
-class InteractiveViewBox(ViewBox):
-    def __init__(self, graph, enable_menu=False):
-        super().__init__(graph, enable_menu)
-        warnings.warn("InteractiveViewBox class has been deprecated since "
-                      "3.17. Use Orange.widgets.visualize.utils.plotutils."
-                      "InteractiveViewBox instead.", OrangeDeprecationWarning)
-
-
-class OWScatterPlotGraph(OWScatterPlotGraphObs):
-    def __init__(self, scatter_widget, parent=None, _="None", view_box=InteractiveViewBox):
-        super().__init__(scatter_widget, parent=parent, _=_, view_box=view_box)
-        warnings.warn("OWScatterPlotGraph class has been deprecated since "
-                      "3.17. Use OWScatterPlotBase instead.",
-                      OrangeDeprecationWarning)
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -336,8 +311,8 @@ class AxisItem(AxisItem):
                      datetime.min.replace(tzinfo=timezone.utc).timestamp() + 1)
         maxVal = min(maxVal,
                      datetime.max.replace(tzinfo=timezone.utc).timestamp() - 1)
-        mn, mx = gmtime(minVal), gmtime(maxVal)
-
+        mn = utc_from_timestamp(minVal).timetuple()
+        mx = utc_from_timestamp(maxVal).timetuple()
         try:
             bins = _time_binnings(mn, mx, 6, 30)[-1]
         except (IndexError, ValueError):
@@ -367,7 +342,16 @@ class AxisItem(AxisItem):
         elif spacing >= 3600 * 24:
             fmt = "%Y %b %d"
         elif spacing >= 3600:
-            fmt = "%d %Hh"
+            min_day = max_day = 1
+            if len(values) > 0:
+                min_day = datetime.fromtimestamp(
+                    min(values), tz=timezone.utc).day
+                max_day = datetime.fromtimestamp(
+                    max(values), tz=timezone.utc).day
+            if min_day == max_day:
+                fmt = "%Hh"
+            else:
+                fmt = "%d %Hh"
         elif spacing >= 60:
             fmt = "%H:%M"
         elif spacing >= 1:
@@ -375,10 +359,7 @@ class AxisItem(AxisItem):
         else:
             fmt = '%S.%f'
 
-        # if timezone is not set, then local timezone is used
-        # which cause exceptions for edge cases
-        return [datetime.fromtimestamp(x, tz=timezone.utc).strftime(fmt)
-                for x in values]
+        return [utc_from_timestamp(x).strftime(fmt) for x in values]
 
 
 class ScatterBaseParameterSetter(CommonParameterSetter):
@@ -634,10 +615,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                     ", ".join(part for _, part in tip_parts) + \
                     "</center>"
         self.tiptexts = {
-            int(modifier): all_parts.replace(part, "<b>{}</b>".format(part))
+            modifier: all_parts.replace(part, "<b>{}</b>".format(part))
             for modifier, part in tip_parts
         }
-        self.tiptexts[0] = all_parts
+        self.tiptexts[Qt.NoModifier] = all_parts
 
         self.tip_textitem = text = QGraphicsTextItem()
         # Set to the longest text
@@ -656,12 +637,12 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         return tooltip_group
 
     def update_tooltip(self, modifiers=Qt.NoModifier):
-        text = self.tiptexts[0]
+        text = self.tiptexts[Qt.NoModifier]
         for mod in [Qt.ControlModifier,
                     Qt.ShiftModifier,
                     Qt.AltModifier]:
             if modifiers & mod:
-                text = self.tiptexts.get(int(mod))
+                text = self.tiptexts.get(mod)
                 break
         self.tip_textitem.setHtml(text)
 
@@ -1635,11 +1616,3 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             return True
         else:
             return False
-
-
-class HelpEventDelegate(EventDelegate):
-    def __init__(self, delegate, parent=None):
-        super().__init__(delegate, parent)
-        warnings.warn("HelpEventDelegate class has been deprecated since 3.17."
-                      " Use Orange.widgets.visualize.utils.plotutils."
-                      "HelpEventDelegate instead.", OrangeDeprecationWarning)

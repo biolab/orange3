@@ -26,7 +26,6 @@ from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
@@ -429,7 +428,7 @@ a
         self.open_dataset("iris")
         data = self.get_output(self.widget.Outputs.data)
         self.assertTrue(len(data), 150)
-        self.assertTrue(len(data.domain), 5)
+        self.assertTrue(len(data.domain.variables), 5)
         for i in range(5):
             idx = self.widget.domain_editor.model().createIndex(i, 2)
             self.widget.domain_editor.model().setData(idx, "skip", Qt.EditRole)
@@ -545,14 +544,6 @@ a
         attrs = data1.domain["image"].attributes
         self.assertIn("origin", attrs)
         self.assertIn("origin1", attrs["origin"])
-
-    def test_summary(self):
-        """Check if the status bar is updated when data is received"""
-        output_sum = self.widget.info.set_output_summary = Mock()
-        self.open_dataset("iris")
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
 
     @patch("Orange.widgets.widget.OWWidget.workflowEnv",
            Mock(return_value={"basedir": getcwd()}))

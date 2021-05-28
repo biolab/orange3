@@ -19,7 +19,9 @@ from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
 )
-from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel, QSize
+from AnyQt.QtCore import (
+    Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize
+)
 
 from Orange.data import Table
 from Orange.base import Learner, Model
@@ -35,6 +37,18 @@ if TYPE_CHECKING:
 
 __all__ = ["OWPythonScript"]
 
+
+DEFAULT_SCRIPT = """import numpy as np
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+
+domain = Domain([ContinuousVariable("age"),
+                 ContinuousVariable("height"),
+                 DiscreteVariable("gender", values=("M", "F"))])
+arr = np.array([
+  [25, 186, 0],
+  [30, 164, 1]])
+out_data = Table.from_numpy(domain, arr)
+"""
 
 def text_format(foreground=Qt.black, weight=QFont.Normal):
     fmt = QTextCharFormat()
@@ -63,34 +77,37 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 
         self.keywords = list(keyword.kwlist)
 
-        self.rules = [(QRegExp(r"\b%s\b" % kwd), self.keywordFormat)
+        self.rules = [(QRegularExpression(r"\b%s\b" % kwd), self.keywordFormat)
                       for kwd in self.keywords] + \
-                     [(QRegExp(r"\bdef\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
+                     [(QRegularExpression(r"\bdef\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
                        self.defFormat),
-                      (QRegExp(r"\bclass\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
+                      (QRegularExpression(r"\bclass\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
                        self.defFormat),
-                      (QRegExp(r"'.*'"), self.stringFormat),
-                      (QRegExp(r'".*"'), self.stringFormat),
-                      (QRegExp(r"#.*"), self.commentFormat),
-                      (QRegExp(r"@[A-Za-z_]+[A-Za-z0-9_]+"),
+                      (QRegularExpression(r"'.*'"), self.stringFormat),
+                      (QRegularExpression(r'".*"'), self.stringFormat),
+                      (QRegularExpression(r"#.*"), self.commentFormat),
+                      (QRegularExpression(r"@[A-Za-z_]+[A-Za-z0-9_]+"),
                        self.decoratorFormat)]
 
-        self.multilineStart = QRegExp(r"(''')|" + r'(""")')
-        self.multilineEnd = QRegExp(r"(''')|" + r'(""")')
+        self.multilineStart = QRegularExpression(r"(''')|" + r'(""")')
+        self.multilineEnd = QRegularExpression(r"(''')|" + r'(""")')
 
         super().__init__(parent)
 
     def highlightBlock(self, text):
         for pattern, fmt in self.rules:
-            exp = QRegExp(pattern)
-            index = exp.indexIn(text)
+            exp = QRegularExpression(pattern)
+            match = exp.match(text)
+            index = match.capturedStart()
             while index >= 0:
-                length = exp.matchedLength()
-                if exp.captureCount() > 0:
-                    self.setFormat(exp.pos(1), len(str(exp.cap(1))), fmt)
+                if match.capturedStart(1) > 0:
+                    self.setFormat(match.capturedStart(1),
+                                   match.capturedLength(1), fmt)
                 else:
-                    self.setFormat(exp.pos(0), len(str(exp.cap(0))), fmt)
-                index = exp.indexIn(text, index + length)
+                    self.setFormat(match.capturedStart(0),
+                                   match.capturedLength(0), fmt)
+                match = exp.match(text, index + match.capturedLength())
+                index = match.capturedStart()
 
         # Multi line strings
         start = self.multilineStart
@@ -99,18 +116,19 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         self.setCurrentBlockState(0)
         startIndex, skip = 0, 0
         if self.previousBlockState() != 1:
-            startIndex, skip = start.indexIn(text), 3
+            startIndex, skip = start.match(text).capturedStart(), 3
         while startIndex >= 0:
-            endIndex = end.indexIn(text, startIndex + skip)
+            endIndex = end.match(text, startIndex + skip).capturedStart()
             if endIndex == -1:
                 self.setCurrentBlockState(1)
                 commentLen = len(text) - startIndex
             else:
                 commentLen = endIndex - startIndex + 3
             self.setFormat(startIndex, commentLen, self.stringFormat)
-            startIndex, skip = (start.indexIn(text,
-                                              startIndex + commentLen + 3),
-                                3)
+            startIndex, skip = (
+                start.match(text, startIndex + commentLen + 3).capturedStart(),
+                3
+            )
 
 
 class PythonScriptEditor(QPlainTextEdit):
@@ -423,8 +441,8 @@ class OWPythonScript(OWWidget):
 
     settings_version = 2
     scriptLibrary: 'List[_ScriptData]' = Setting([{
-        "name": "Hello world",
-        "script": "print('Hello world')\n",
+        "name": "Table from numpy",
+        "script": DEFAULT_SCRIPT,
         "filename": None
     }])
     currentScriptIndex = Setting(0)
@@ -542,7 +560,6 @@ class OWPythonScript(OWWidget):
         self.textBox.layout().addWidget(self.text)
 
         self.textBox.setAlignment(Qt.AlignVCenter)
-        self.text.setTabStopWidth(4)
 
         self.text.modificationChanged[bool].connect(self.onModificationChanged)
 
@@ -557,7 +574,6 @@ class OWPythonScript(OWWidget):
         self.consoleBox.layout().addWidget(self.console)
         self.console.document().setDefaultFont(QFont(defaultFont))
         self.consoleBox.setAlignment(Qt.AlignBottom)
-        self.console.setTabStopWidth(4)
         self.splitCanvas.setSizes([2, 1])
         self.setAcceptDrops(True)
         self.controlArea.layout().addStretch(10)

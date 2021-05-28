@@ -14,6 +14,7 @@ import random
 import logging
 import ast
 import types
+import unicodedata
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
@@ -38,7 +39,6 @@ from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets import report
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 FeatureDescriptor = \
@@ -493,9 +493,6 @@ class OWFeatureConstructor(OWWidget):
             self._on_selectedVariableChanged
         )
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         layout.addWidget(self.featureview)
 
         box.layout().addLayout(layout, 1)
@@ -562,14 +559,12 @@ class OWFeatureConstructor(OWWidget):
 
         self.data = data
 
-        self.info.set_input_summary(self.info.NoInput)
         if self.data is not None:
             descriptors = list(self.descriptors)
             currindex = self.currentIndex
             self.descriptors = []
             self.currentIndex = -1
             self.openContext(data)
-            self.info.set_input_summary(len(data), format_summary_details(data))
 
             if descriptors != self.descriptors or \
                     self.currentIndex != currindex:
@@ -590,7 +585,6 @@ class OWFeatureConstructor(OWWidget):
         if self.data is not None:
             self.apply()
         else:
-            self.info.set_output_summary(self.info.NoOutput)
             self.Outputs.data.send(None)
 
     def addFeature(self, descriptor):
@@ -697,7 +691,6 @@ class OWFeatureConstructor(OWWidget):
             self.Error.more_values_needed(disc_attrs_not_ok)
             return
 
-        self.info.set_output_summary(len(data), format_summary_details(data))
         self.Outputs.data.send(data)
 
     def send_report(self):
@@ -917,7 +910,8 @@ def bind_variable(descriptor, env, data):
 
     exp_ast = ast.parse(descriptor.expression, mode="eval")
     freev = unique(freevars(exp_ast, []))
-    variables = {sanitized_name(v.name): v for v in env}
+    variables = {unicodedata.normalize("NFKC", sanitized_name(v.name)): v
+                 for v in env}
     source_vars = [(name, variables[name]) for name in freev
                    if name in variables]
 

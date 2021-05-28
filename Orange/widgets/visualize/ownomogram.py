@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
-    QSizePolicy, QDesktopWidget,
+    QSizePolicy
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
@@ -27,7 +27,6 @@ from Orange.classification.logistic_regression import \
 from Orange.widgets.settings import Setting, ContextSetting, \
     ClassValuesContextHandler
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import OWWidget, Msg, Input, Output, AttributeList
 from Orange.widgets import gui
 
@@ -57,7 +56,7 @@ class MovableToolTip(QLabel):
         self.adjustSize()
 
         x, y = pos.x(), (pos.y() + 15 if change_y else self.y())
-        avail = QDesktopWidget().availableGeometry(self)
+        avail = self.screen().availableGeometry()
         if x + self.width() > avail.right():
             x -= self.width()
         if y + self.height() > avail.bottom():
@@ -704,8 +703,6 @@ class OWNomogram(OWWidget):
         self.old_target_class_index = self.target_class_index
         self.repaint = False
 
-        self.info.set_input_summary(self.info.NoInput)
-
         # GUI
         box = gui.vBox(self.controlArea, "Target class")
         self.class_combo = gui.comboBox(
@@ -864,9 +861,6 @@ class OWNomogram(OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.instances = data
-        summary = len(data) if data else self.info.NoInput
-        details = format_summary_details(data) if data else ""
-        self.info.set_input_summary(summary, details)
         self.feature_marker_values = []
         self.set_feature_marker_values()
         self.update_scene()
@@ -1285,6 +1279,7 @@ class OWNomogram(OWWidget):
         for attr in preprocessed.attributes:
             cv = attr._compute_value.variable._compute_value
             var = cv.variable if cv else original[attr.name]
+            var = original[var.name] if var.name in original else attr
             if var in attrs:    # the reason for OrderedDict
                 continue
             attrs[var] = None   # we only need keys

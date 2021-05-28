@@ -294,10 +294,9 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def _add_controls(self):
         self._add_controls_start_box()
         super()._add_controls()
-        gui.rubber(self.controlArea)
 
     def _add_controls_start_box(self):
-        box = gui.vBox(self.controlArea, True)
+        box = gui.vBox(self.controlArea, box="Optimize")
         form = QFormLayout(
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,

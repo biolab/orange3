@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
 from unittest.mock import Mock
 import numpy as np
 
@@ -129,3 +130,17 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.widget.setup_plot.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.setup_plot.assert_called_once()
+
+    def test_score_plots_feature_update(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        selected_vars = set(self.widget.selected_vars)
+        output1 = self.get_output(self.widget.Outputs.components)
+        self.widget.vizrank.toggle()
+        self.process_events(until=lambda: not self.widget.vizrank.keep_running)
+        self.assertNotEqual(selected_vars, set(self.widget.selected_vars))
+        output2 = self.get_output(self.widget.Outputs.components)
+        self.assertNotEqual(output1, output2)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.data.sql.table import AUTO_DL_LIMIT, SqlTable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.signals import Input
@@ -43,8 +43,10 @@ class TestSQLDecorator(WidgetTest):
 
         a_table = object()
         with patch("Orange.widgets.utils.sql.Table",
-                   MagicMock(return_value=a_table)) as table_mock:
+                   MagicMock(return_value=a_table)) as table_mock, \
+                patch("Orange.widgets.utils.state_summary.format_summary_details"):
             d = SqlTable(None, None, MagicMock())
+            d.domain = Domain([])
 
             d.approx_len = MagicMock(return_value=AUTO_DL_LIMIT - 1)
             self.send_signal(self.widget.Inputs.data, d)

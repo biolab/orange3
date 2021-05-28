@@ -1,12 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object,protected-access
 import unittest
-from unittest.mock import Mock
 
 from AnyQt.QtCore import Qt, QPoint
 from AnyQt.QtWidgets import QWidget, QApplication, QStyleOptionViewItem
-
-from orangewidget.widget import StateInfo
 
 from Orange.data import Table, DiscreteVariable
 from Orange.widgets.data.owdiscretize import OWDiscretize, Default, EqualFreq, \
@@ -14,7 +11,6 @@ from Orange.widgets.data.owdiscretize import OWDiscretize, Default, EqualFreq, \
     EqualWidth, DState, show_tip
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.base import GuiTest
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.itemmodels import select_row, VariableListModel
 
 
@@ -34,26 +30,6 @@ class TestOWDiscretize(WidgetTest):
             widget.default_method = m
             widget.unconditional_commit()
             self.assertIsNotNone(self.get_output(widget.Outputs.data))
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_select_method(self):
         widget = self.widget

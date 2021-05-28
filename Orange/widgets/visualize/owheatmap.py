@@ -39,7 +39,6 @@ from Orange.widgets.visualize.utils.heatmap import HeatmapGridWidget, \
     ColorMap, CategoricalColorMap, GradientColorMap
 from Orange.widgets.utils.colorgradientselection import ColorGradientSelection
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 __all__ = []
@@ -245,9 +244,6 @@ class OWHeatMap(widget.OWWidget):
         self.__rows_cache = {}
         self.__columns_cache = {}
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         # GUI definition
         colorbox = gui.vBox(self.controlArea, "Color")
 
@@ -352,7 +348,7 @@ class OWHeatMap(widget.OWWidget):
             parent=self,
         )
         self.col_split_cb = cb = ComboBoxSearch(
-            sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=ComboBox.AdjustToMinimumContentsLengthWithIcon,
             minimumContentsLength=14,
             toolTip="Split the heatmap horizontally by column annotation"
         )
@@ -383,7 +379,7 @@ class OWHeatMap(widget.OWWidget):
         self.annotation_model = DomainModel(placeholder="(None)")
         self.annotation_text_cb = ComboBoxSearch(
             minimumContentsLength=12,
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         self.annotation_text_cb.setModel(self.annotation_model)
         self.annotation_text_cb.activated.connect(self.set_annotation_var)
@@ -397,7 +393,7 @@ class OWHeatMap(widget.OWWidget):
             parent=self,
         )
         self.row_side_color_cb = ComboBoxSearch(
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             minimumContentsLength=12
         )
         self.row_side_color_cb.setModel(self.row_side_color_model)
@@ -419,7 +415,7 @@ class OWHeatMap(widget.OWWidget):
             parent=self
         )
         self.col_side_color_cb = cb = ComboBoxSearch(
-            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             minimumContentsLength=12
         )
         self.col_side_color_cb.setModel(self.col_side_color_model)
@@ -576,7 +572,6 @@ class OWHeatMap(widget.OWWidget):
         self.closeContext()
         self.clear()
         self.clear_messages()
-        self._set_input_summary(data)
 
         if isinstance(data, SqlTable):
             if data.approx_len() < 4000:
@@ -673,11 +668,6 @@ class OWHeatMap(widget.OWWidget):
             self.__pending_selection = None
 
         self.unconditional_commit()
-
-    def _set_input_summary(self, data):
-        summary = len(data) if data else self.info.NoInput
-        details = format_summary_details(data) if data else ""
-        self.info.set_input_summary(summary, details)
 
     def __on_split_rows_activated(self):
         self.set_split_variable(self.row_split_cb.currentData(Qt.EditRole))
@@ -1235,9 +1225,6 @@ class OWHeatMap(widget.OWWidget):
 
             data = self.input_data[indices]
 
-        summary = len(data) if data else self.info.NoOutput
-        details = format_summary_details(data) if data else ""
-        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(data)
         self.Outputs.annotated_data.send(create_annotated_table(self.input_data, indices))
 

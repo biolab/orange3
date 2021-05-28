@@ -7,7 +7,6 @@ from AnyQt.QtCore import QDateTime, QDate, QTime, QPoint, QObject
 from AnyQt.QtWidgets import QWidget, QLineEdit, QStyleOptionViewItem, QMenu, \
     QPushButton
 
-from orangewidget.widget import StateInfo
 from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table, ContinuousVariable, Domain, DiscreteVariable, \
@@ -16,8 +15,6 @@ from Orange.widgets.data.owcreateinstance import OWCreateInstance, \
     DiscreteVariableEditor, ContinuousVariableEditor, StringVariableEditor, \
     TimeVariableEditor, VariableDelegate, VariableItemModel, ValueRole
 from Orange.widgets.tests.base import WidgetTest, datasets
-from Orange.widgets.utils.state_summary import format_summary_details, \
-    format_multiple_summaries
 
 
 class TestOWCreateInstance(WidgetTest):
@@ -57,45 +54,6 @@ class TestOWCreateInstance(WidgetTest):
         self.assertIn("Source ID", [m.name for m in output.domain.metas])
         self.assertTupleEqual(output.domain.metas[0].values,
                               ("iris", "created"))
-
-    def test_summary(self):
-        info = self.widget.info
-        reference = self.data[:1]
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self.send_signal(self.widget.Inputs.data, self.data)
-        data_list = [("Data", self.data), ("Reference", None)]
-        summary, details = "150, 0", format_multiple_summaries(data_list)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-
-        output = self.get_output(self.widget.Outputs.data)
-        details = format_summary_details(output)
-        self.assertEqual(info._StateInfo__output_summary.brief, "151")
-        self.assertEqual(info._StateInfo__output_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.reference, reference)
-        data_list = [("Data", self.data), ("Reference", reference)]
-        summary, details = "150, 1", format_multiple_summaries(data_list)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None)
-        data_list = [("Data", None), ("Reference", reference)]
-        summary, details = "0, 1", format_multiple_summaries(data_list)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        self.send_signal(self.widget.Inputs.reference, None)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
 
     def _get_init_buttons(self, widget=None):
         if not widget:

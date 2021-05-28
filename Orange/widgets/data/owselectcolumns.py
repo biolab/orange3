@@ -18,7 +18,6 @@ from Orange.widgets.utils.listfilter import (
     VariablesListItemView, slices, variables_filter
 )
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Input, Output, AttributeList, Msg
 from Orange.data.table import Table
 from Orange.widgets.utils.itemmodels import VariableListModel
@@ -321,9 +320,6 @@ class OWSelectAttributes(widget.OWWidget):
         self.output_data = None
         self.original_completer_items = []
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         self.resize(600, 600)
 
     @property
@@ -367,7 +363,6 @@ class OWSelectAttributes(widget.OWWidget):
             self.class_attrs[:] = []
             self.meta_attrs[:] = []
             self.available_attrs[:] = []
-            self.info.set_input_summary(self.info.NoInput)
             return
 
         self.openContext(data)
@@ -384,7 +379,6 @@ class OWSelectAttributes(widget.OWWidget):
         self.class_attrs[:] = attrs_for_role("class")
         self.meta_attrs[:] = attrs_for_role("meta")
         self.available_attrs[:] = attrs_for_role("available")
-        self.info.set_input_summary(len(data), format_summary_details(data))
 
         self.update_interface_state(self.class_attrs_view)
 
@@ -607,14 +601,11 @@ class OWSelectAttributes(widget.OWWidget):
             self.output_data = newdata
             self.Outputs.data.send(newdata)
             self.Outputs.features.send(AttributeList(attributes))
-            self.info.set_output_summary(len(newdata),
-                                         format_summary_details(newdata))
             self.Warning.multiple_targets(shown=len(class_var) > 1)
         else:
             self.output_data = None
             self.Outputs.data.send(None)
             self.Outputs.features.send(None)
-            self.info.set_output_summary(self.info.NoOutput)
 
     def reset(self):
         self.enable_used_attrs()

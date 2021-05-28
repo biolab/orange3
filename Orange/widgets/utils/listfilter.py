@@ -77,7 +77,7 @@ class VariablesListItemView(QListView):
             elif (supported_actions & Qt.CopyAction and
                   self.dragDropMode() != self.InternalMove):
                 default_action = Qt.CopyAction
-            res = drag.exec_(supported_actions, default_action)
+            res = drag.exec(supported_actions, default_action)
             if res == Qt.MoveAction:
                 selected = self.selectionModel().selectedIndexes()
                 rows = list(map(QModelIndex.row, selected))

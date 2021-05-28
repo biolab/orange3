@@ -28,6 +28,11 @@ It can also be used for both classification and regression tasks.
 3. **Stop when majority reaches [%]**: stop splitting the nodes after a specified majority threshold is reached
 4. Produce a report. After changing the settings, you need to click *Apply*, which will put the new learner on the output and, if the training examples are given, construct a new classifier and output it as well. Alternatively, tick the box on the left and changes will be communicated automatically.
 
+Preprocessing
+-------------
+
+Tree does not use any preprocessing.
+
 Examples
 --------
 

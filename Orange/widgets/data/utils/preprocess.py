@@ -478,7 +478,7 @@ class SequenceFlow(QWidget):
             if title:
                 self.setTitle(title)
 
-            self.setFocusPolicy(Qt.ClickFocus | Qt.TabFocus)
+            self.setFocusPolicy(Qt.StrongFocus)
 
         def setTitle(self, title):
             if self.__title != title:
@@ -756,7 +756,7 @@ class SequenceFlow(QWidget):
         mime = QMimeData()
         mime.setData("application/x-internal-move", b"")
         drag.setMimeData(mime)
-        return drag.exec_(Qt.MoveAction)
+        return drag.exec(Qt.MoveAction)
 
     def __widgetFrame(self, widget):
         layout = self.__flowlayout

@@ -235,7 +235,7 @@ def pull_notifications():
                 contents = urlopen(request, timeout=10).read().decode()
             # Nothing that this fails with should make Orange crash
             except Exception:  # pylint: disable=broad-except
-                log.exception('Failed to pull notification feed')
+                log.warning('Failed to pull notification feed')
             else:
                 self.resultReady.emit(contents)
 
@@ -685,7 +685,7 @@ def main(argv=None):
              patch('sys.excepthook', excepthook),\
              patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):
-            status = app.exec_()
+            status = app.exec()
     except BaseException:
         log.error("Error in main event loop.", exc_info=True)
         status = 42

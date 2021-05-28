@@ -5,13 +5,11 @@ from collections import namedtuple
 from functools import partial
 from itertools import chain
 from typing import List
-from unittest.mock import Mock
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
     QItemSelectionModel, Qt
 
-from orangewidget.widget import StateInfo
 from orangewidget.settings import Context
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
@@ -20,7 +18,6 @@ from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.tests.utils import simulate, table_dense_sparse
 from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
-from Orange.widgets.utils.state_summary import format_summary_details
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
 
@@ -122,8 +119,12 @@ time_same = VarDataPair(
     TimeVariable('time_same', have_date=True, have_time=True),
     np.array(_to_timestamps([2004] * 5), dtype=float),
 )
+time_negative = VarDataPair(
+    TimeVariable('time_negative', have_date=True, have_time=True),
+    np.array([0, -1, 24 * 60 * 60], dtype=float),
+)
 time = [
-    time_full, time_missing, time_all_missing, time_same
+    time_full, time_missing, time_all_missing, time_same, time_negative
 ]
 
 # String variable variations
@@ -246,6 +247,12 @@ class TestVariousDataSets(WidgetTest):
     @table_dense_sparse
     def test_on_data_with_continuous_values_all_the_same(self, prepare_table):
         data = make_table([ints_full, ints_same], [continuous_same, continuous_full])
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
+        self.run_through_variables()
+
+    @table_dense_sparse
+    def test_on_data_with_negative_timestamps(self, prepare_table):
+        data = make_table([time_negative])
         self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
@@ -513,28 +520,6 @@ class TestSummary(WidgetTest):
             target=[rgb_full, rgb_missing], metas=[ints_full, ints_missing]
         )
         self.select_rows = partial(select_rows, widget=self.widget)
-
-    def test_summary(self):
-        """Check if the status bar is updated when data is received"""
-        data = self.data
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data), format_summary_details(data))
-
-        self.select_rows([0, 2])
-        self.widget.unconditional_commit()
-        output = self.get_output(self.widget.Outputs.reduced_data)
-        output_sum.assert_called_with(len(output), format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
 
 if __name__ == "__main__":

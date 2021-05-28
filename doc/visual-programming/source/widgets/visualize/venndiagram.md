@@ -19,9 +19,12 @@ The **Venn Diagram** widget displays logical relations between datasets by showi
 ![](images/VennDiagram-stamped.png)
 
 1. Select whether to count common features or instances.
-2. Select whether to include duplicates or to output only unique rows (applicable only when matching by instances). If *Auto commit* is on, changes are automatically communicated to other widgets.
+2. Select whether to include duplicates or to output only unique rows; applicable only when matching instances by values of variables.
 
-Rows can be matched by their identity, e.g. rows from different data sets match if they came from the same row in a file. Instead of using identities, we can choose a string variable to match the rows by. A warning is shown if data sets have no common string variable.
+Rows can be matched
+- by their identity, e.g. rows from different data sets match if they came from the same row in a file,
+- by equality, if all tables contain the same variables,
+- or by values of a string variable that appears in all tables.
 
 Examples
 --------

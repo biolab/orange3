@@ -74,6 +74,22 @@
     ]
    },
    {
+    "text": "Aggregate Columns",
+    "doc": "visual-programming/source/widgets/data/aggregatecolumns.md",
+    "icon": "../Orange/widgets/data/icons/AggregateColumns.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "aggregate",
+     "sum",
+     "product",
+     "max",
+     "min",
+     "mean",
+     "median",
+     "variance"
+    ]
+   },
+   {
     "text": "Data Sampler",
     "doc": "visual-programming/source/widgets/data/datasampler.md",
     "icon": "../Orange/widgets/data/icons/DataSampler.svg",
@@ -250,7 +266,15 @@
     "doc": "visual-programming/source/widgets/data/continuize.md",
     "icon": "../Orange/widgets/data/icons/Continuize.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "encode",
+     "dummy",
+     "numeric",
+     "one-hot",
+     "binary",
+     "treatment",
+     "contrast"
+    ]
    },
    {
     "text": "Create Class",
@@ -264,7 +288,12 @@
     "doc": "visual-programming/source/widgets/data/discretize.md",
     "icon": "../Orange/widgets/data/icons/Discretize.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "bin",
+     "categorical",
+     "nominal",
+     "ordinal"
+    ]
    },
    {
     "text": "Feature Constructor",
@@ -282,6 +311,17 @@
     "icon": "../Orange/widgets/data/icons/FeatureStatistics.svg",
     "background": "#FFD39F",
     "keywords": []
+   },
+   {
+    "text": "Melt",
+    "doc": "visual-programming/source/widgets/data/melt.md",
+    "icon": "../Orange/widgets/data/icons/Melt.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "shopping list",
+     "wide",
+     "narrow"
+    ]
    },
    {
     "text": "Neighbors",
@@ -309,6 +349,13 @@
     "keywords": [
      "export"
     ]
+   },
+   {
+    "text": "Unique",
+    "doc": "visual-programming/source/widgets/data/unique.md",
+    "icon": "../Orange/widgets/data/icons/Unique.svg",
+    "background": "#FFD39F",
+    "keywords": []
    }
   ]
  ],

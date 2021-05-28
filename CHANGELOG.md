@@ -5,6 +5,29 @@ Change Log
 ------------
 * ...
 
+[3.29.0] - 2021-05-28
+--------------------
+##### Enhancements
+* Scatter plot: Bring discrete attributes functionality back ([#5440](../../pull/5440))
+* Caching data delegate ([#5296](../../pull/5296))
+* textimport: Mark encoding errors in the preview ([#5438](../../pull/5438))
+* DBSCAN: Optional normalization ([#5428](../../pull/5428))
+* Automated and better summaries ([#5308](../../pull/5308))
+* Transpose: Offload work onto separate thread, remove redundant instance ([#5314](../../pull/5314))
+* Domain transformations in batches for less memory use ([#5218](../../pull/5218))
+* Feature Statistics: Add median ([#5325](../../pull/5325))
+* New widget: Aggregate Columns ([#5256](../../pull/5256))
+
+##### Bugfixes
+* Outlier detection: keep instance ids, make thread safe ([#5427](../../pull/5427))
+* UrlReader: Support urls with special characters ([#5412](../../pull/5412))
+* Speed-up slow table_to_frame ([#5413](../../pull/5413))
+* Line Plot: Single instance input fix ([#5408](../../pull/5408))
+* Pivot: Assign dataset name to output tables ([#5404](../../pull/5404))
+* setup.py: Exclude benchmark directory from the install ([#5392](../../pull/5392))
+* Errors when converting negative timestamps on Windows ([#5388](../../pull/5388))
+* Nomogram: Retain original compute_value ([#5382](../../pull/5382))
+* Radviz VizRank: Implement on_selection_changed ([#5338](../../pull/5338))
 
 [3.28.0] - 2021-03-05
 --------------------
@@ -1529,7 +1552,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.28.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.29.0...HEAD
+[3.29.0]: https://github.com/biolab/orange3/compare/3.28.0...3.29.0
 [3.28.0]: https://github.com/biolab/orange3/compare/3.27.1...3.28.0
 [3.27.1]: https://github.com/biolab/orange3/compare/3.27.0...3.27.1
 [3.27.0]: https://github.com/biolab/orange3/compare/3.26.0...3.27.0

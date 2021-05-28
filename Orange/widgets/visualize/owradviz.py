@@ -9,7 +9,6 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from AnyQt.QtGui import QStandardItem, QColor
 from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
-from AnyQt.QtWidgets import qApp
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
@@ -124,10 +123,8 @@ class RadvizVizRank(VizRankDialog, OWComponent):
             self.button.setText("Continue")
         self.button.setEnabled(self.check_preconditions())
 
-    def progressBarSet(self, value, processEvents=None):
+    def progressBarSet(self, value):
         self.setWindowTitle(self.captionTitle + " Evaluated {} permutations".format(value))
-        if processEvents is not None and processEvents is not False:
-            qApp.processEvents(processEvents)
 
     def check_preconditions(self):
         master = self.master
@@ -138,6 +135,9 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.n_attrs_spin.setMaximum(min(MAX_DISPLAYED_VARS,
                                          len(master.model_selected)))
         return True
+
+    def on_selection_changed(self, selected, _):
+        self.on_row_clicked(selected.indexes()[0])
 
     def on_row_clicked(self, index):
         self.selectionChanged.emit(index.data(self._AttrRole))
@@ -330,15 +330,20 @@ class OWRadviz(OWAnchorProjectionWidget):
         max_vars_selected = widget.Msg("Maximum number of selected variables reached.")
 
     def _add_controls(self):
+        box = gui.vBox(self.controlArea, box="Features")
         self.model_selected = VariableSelectionModel(self.selected_vars,
                                                      max_vars=20)
-        variables_selection(self.controlArea, self, self.model_selected)
+        variables_selection(box, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
             None, self, "Suggest features", self.vizrank_set_attrs)
-        self.controlArea.layout().addWidget(self.btn_vizrank)
+        box.layout().addWidget(self.btn_vizrank)
         super()._add_controls()
+
+    def _add_buttons(self):
+        self.gui.box_zoom_select(self.buttonsArea)
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
     @property
     def primitive_variables(self):

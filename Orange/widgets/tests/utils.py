@@ -82,7 +82,7 @@ class EventSpy(QObject):
         self.__timer.stop()
         self.__timer.setInterval(timeout)
         self.__timer.start()
-        self.__loop.exec_()
+        self.__loop.exec()
         self.__timer.stop()
         return len(self.__record) != count
 

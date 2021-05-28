@@ -27,7 +27,6 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialog)
 from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
@@ -354,9 +353,6 @@ class OWMosaicDisplay(OWWidget):
         self.canvas_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvas_view.setRenderHint(QPainter.Antialiasing)
 
-        self.info.set_input_summary(self.info.NoInput)
-        self.info.set_output_summary(self.info.NoOutput)
-
         box = gui.vBox(self.controlArea, box=True)
         self.model_1 = DomainModel(
             order=DomainModel.MIXED, valid_types=DomainModel.PRIMITIVE)
@@ -469,10 +465,8 @@ class OWMosaicDisplay(OWWidget):
         if self.data is None:
             self.discrete_data = None
             self.init_combos(None)
-            self.info.set_input_summary(self.info.NoInput)
             return
 
-        self.info.set_input_summary(len(data), format_summary_details(data))
         self.init_combos(self.data)
         self.openContext(self.data)
 
@@ -547,7 +541,6 @@ class OWMosaicDisplay(OWWidget):
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(
                 create_annotated_table(self.data, []))
-            self.info.set_output_summary(self.info.NoOutput)
             return
         filters = []
         self.Warning.no_cont_selection_sql.clear()
@@ -570,9 +563,6 @@ class OWMosaicDisplay(OWWidget):
         if self.discrete_data is not self.data:
             selection = self.data[sel_idx]
 
-        summary = len(selection) if selection else self.info.NoOutput
-        details = format_summary_details(selection) if selection else ""
-        self.info.set_output_summary(summary, details)
         self.Outputs.selected_data.send(selection)
         self.Outputs.annotated_data.send(
             create_annotated_table(self.data, sel_idx))

@@ -12,7 +12,7 @@ from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency, util as ut
 from Orange.statistics.basic_stats import BasicStats
-from Orange.util import Reprable
+from Orange.util import Reprable, utc_from_timestamp
 from .transformation import Transformation
 from . import _discretize
 
@@ -320,8 +320,11 @@ def decimal_binnings(
         nbins = np.round((mx_ - mn_) / width)
         if min_bins <= nbins <= max_bins \
                 and (not bins or bins[-1].nbins != nbins):
-            bin_def = BinDefinition(mn_ + width * np.arange(nbins + 1),
-                                    label_fmt, None, width)
+            bins_ = mn_ + width * np.arange(nbins + 1)
+            # to prevent values on the edge of the bin fall in the wrong bin
+            # due to precision error on decimals that are not precise
+            bins_ = np.around(bins_, decimals=np.finfo(bins_.dtype).precision)
+            bin_def = BinDefinition(bins_, label_fmt, None, width)
             bins.append(bin_def)
     return bins
 
@@ -359,7 +362,8 @@ def time_binnings(data, *, min_bins=2, max_bins=50, min_unique=5, add_unique=0):
             (number_of_seconds_since_epoch, label).
     """
     mn, mx, unique = _min_max_unique(data)
-    mn, mx = time.gmtime(mn), time.gmtime(mx)
+    mn = utc_from_timestamp(mn).timetuple()
+    mx = utc_from_timestamp(mx).timetuple()
     bins = []
     if len(unique) <= max(min_unique, add_unique):
         bins.append(_unique_time_bins(unique))
@@ -464,7 +468,7 @@ def _simplified_labels(labels):
 
 
 def _unique_time_bins(unique):
-    times = [time.gmtime(x) for x in unique]
+    times = [utc_from_timestamp(x).timetuple() for x in unique]
     fmt = f'%y %b %d'
     fmt += " %H:%M" * (len({t[2:] for t in times}) > 1)
     fmt += ":%S" * bool(np.all(unique % 60 == 0))

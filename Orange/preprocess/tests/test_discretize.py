@@ -727,6 +727,12 @@ class TestTimeBinning(unittest.TestCase):
         dates = np.array([np.nan, np.nan])
         self.assertRaises(ValueError, time_binnings, dates)
 
+    def test_before_epoch(self):
+        hour = 24 * 60 * 60
+        dates = [-hour, 0, hour,]
+        bins = time_binnings(dates)
+        self.assertEqual(list(bins[0].thresholds), [-hour, 0, hour, 2 * hour])
+
 
 class TestBinDefinition(unittest.TestCase):
     def test_labels(self):

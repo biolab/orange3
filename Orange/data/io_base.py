@@ -61,6 +61,9 @@ class Flags:
                         except SyntaxError:
                             # If parsing failed, treat value as string
                             pass
+                    # map True and False to booleans
+                    if v in ("True", "False"):
+                        v = {"True": True, "False": False}[v]
                     self.attributes[k] = v
                 else:
                     setattr(self, flag, True)

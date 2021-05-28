@@ -10,12 +10,11 @@ from Orange.preprocess import Normalize, Continuize, SklImpute
 from Orange.widgets import widget, gui
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.settings import Setting
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, DiscreteVariable
 from Orange.data.util import get_unique_names
 from Orange.clustering import DBSCAN
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.signals import Input, Output
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.widget import Msg
 
 
@@ -79,6 +78,7 @@ class OWDBSCAN(widget.OWWidget):
     min_samples = Setting(4)
     eps = Setting(0.5)
     metric_idx = Setting(0)
+    normalize = Setting(True)
     auto_commit = Setting(True)
     k_distances = None
     cut_point = None
@@ -90,8 +90,6 @@ class OWDBSCAN(widget.OWWidget):
         self.data_normalized = None
         self.db = None
         self.model = None
-        self._set_input_summary(None)
-        self._set_output_summary(None)
 
         box = gui.widgetBox(self.controlArea, "Parameters")
         gui.spin(box, self, "min_samples", 1, 100, 1,
@@ -105,6 +103,8 @@ class OWDBSCAN(widget.OWWidget):
         gui.comboBox(box, self, "metric_idx",
                      items=list(zip(*self.METRICS))[0],
                      callback=self._metirc_changed)
+        gui.checkBox(box, self, "normalize", "Normalize features",
+                     callback=self._on_normalize_changed)
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
         gui.rubber(self.controlArea)
@@ -164,20 +164,18 @@ class OWDBSCAN(widget.OWWidget):
         self.cut_point = int(DEFAULT_CUT_POINT * len(self.k_distances))
         self.eps = self.k_distances[self.cut_point]
 
-        if self.eps < EPS_BOTTOM_LIMIT:
-            self.eps = np.min(
-                self.k_distances[self.k_distances >= EPS_BOTTOM_LIMIT])
+        mask = self.k_distances >= EPS_BOTTOM_LIMIT
+        if self.eps < EPS_BOTTOM_LIMIT and sum(mask):
+            self.eps = np.min(self.k_distances[mask])
             self.cut_point = self._find_nearest_dist(self.eps)
 
     @Inputs.data
     def set_data(self, data):
         self.Error.clear()
-        self._set_input_summary(data)
         if not self.check_data_size(data):
             data = None
         self.data = self.data_normalized = data
         if self.data is None:
-            self._set_output_summary(None)
             self.Outputs.annotated_data.send(None)
             self.plot.clear_plot()
             return
@@ -185,23 +183,27 @@ class OWDBSCAN(widget.OWWidget):
         if self.data is None:
             return
 
-        # preprocess data
-        for pp in PREPROCESSORS:
-            self.data_normalized = pp(self.data_normalized)
+        self._preprocess_data()
 
         self._compute_and_plot()
         self.unconditional_commit()
+
+    def _preprocess_data(self):
+        self.data_normalized = self.data
+        for pp in PREPROCESSORS:
+            if isinstance(pp, Normalize) and not self.normalize:
+                continue
+            self.data_normalized = pp(self.data_normalized)
 
     def send_data(self):
         model = self.model
 
         clusters = [c if c >= 0 else np.nan for c in model.labels]
         k = len(set(clusters) - {np.nan})
-        clusters = np.array(clusters).reshape(len(self.data), 1)
+        clusters = np.array(clusters)
         core_samples = set(model.projector.core_sample_indices_)
         in_core = np.array([1 if (i in core_samples) else 0
                             for i in range(len(self.data))])
-        in_core = in_core.reshape(len(self.data), 1)
 
         domain = self.data.domain
         attributes, classes = domain.attributes, domain.class_vars
@@ -215,28 +217,10 @@ class OWDBSCAN(widget.OWWidget):
         u_in_core = get_unique_names(names + [u_clust_var], "DBSCAN Core")
         in_core_var = DiscreteVariable(u_in_core, values=("0", "1"))
 
-        x, y, metas = self.data.X, self.data.Y, self.data.metas
+        new_table = self.data.add_column(clust_var, clusters, to_metas=True)
+        new_table = new_table.add_column(in_core_var, in_core, to_metas=True)
 
-        meta_attrs += (clust_var, )
-        metas = np.hstack((metas, clusters))
-        meta_attrs += (in_core_var, )
-        metas = np.hstack((metas, in_core))
-
-        domain = Domain(attributes, classes, meta_attrs)
-        new_table = Table(domain, x, y, metas, self.data.W)
-
-        self._set_output_summary(new_table)
         self.Outputs.annotated_data.send(new_table)
-
-    def _set_input_summary(self, data):
-        summary = len(data) if data else self.info.NoInput
-        details = format_summary_details(data) if data else ""
-        self.info.set_input_summary(summary, details)
-
-    def _set_output_summary(self, output):
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
 
     def _invalidate(self):
         self.commit()
@@ -270,6 +254,13 @@ class OWDBSCAN(widget.OWWidget):
         if self.data is None:
             return
         self._compute_and_plot(cut_point=self.cut_point)
+        self._invalidate()
+
+    def _on_normalize_changed(self):
+        if not self.data:
+            return
+        self._preprocess_data()
+        self._compute_and_plot()
         self._invalidate()
 
 

@@ -12,7 +12,7 @@ from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import (
     QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
-    QStyle, QStylePainter, QStyledItemDelegate
+    QStyle, QStylePainter
 )
 from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
@@ -30,6 +30,7 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from Orange.widgets.utils.itemselectionmodel import (
     BlockSelectionModel, ranges, selection_blocks
 )
@@ -170,6 +171,10 @@ class DataTableView(gui.HScrollStepMixin, TableView):
     input_slot: TableSlot
 
 
+class TableBarItemDelegate(gui.TableBarItem, TableDataDelegate):
+    pass
+
+
 class OWDataTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
@@ -178,7 +183,7 @@ class OWDataTable(OWWidget):
     keywords = []
 
     class Inputs:
-        data = Input("Data", Table, multiple=True)
+        data = Input("Data", Table, multiple=True, auto_summary=False)
 
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
@@ -213,7 +218,6 @@ class OWDataTable(OWWidget):
         info_box = gui.vBox(self.controlArea, "Info")
         self.info_text = gui.widgetLabel(info_box)
         self._set_input_summary(None)
-        self._set_output_summary(None)
 
         box = gui.vBox(self.controlArea, "Variables")
         self.c_show_attribute_labels = gui.checkBox(
@@ -269,6 +273,7 @@ class OWDataTable(OWWidget):
             else:
                 view = DataTableView()
                 view.setSortingEnabled(True)
+                view.setItemDelegate(TableDataDelegate(view))
 
                 if self.select_rows:
                     view.setSelectionBehavior(QTableView.SelectRows)
@@ -356,11 +361,11 @@ class OWDataTable(OWWidget):
             color_schema = None
         if self.show_distributions:
             view.setItemDelegate(
-                gui.TableBarItem(
-                    self, color=self.dist_color, color_schema=color_schema)
+                TableBarItemDelegate(
+                    view, color=self.dist_color, color_schema=color_schema)
             )
         else:
-            view.setItemDelegate(QStyledItemDelegate(self))
+            view.setItemDelegate(TableDataDelegate(view))
 
         # Enable/disable view sorting based on data's type
         view.setSortingEnabled(is_sortable(data))
@@ -461,7 +466,7 @@ class OWDataTable(OWWidget):
                 s = btn.style().sizeFromContents(
                     QStyle.CT_HeaderSection,
                     opt, QSize(),
-                    btn).expandedTo(QApplication.globalStrut())
+                    btn)
                 if s.isValid():
                     table.verticalHeader().setMinimumWidth(s.width())
             except Exception:
@@ -543,15 +548,10 @@ class OWDataTable(OWWidget):
                     + format_part(summary.M))
         return text
 
-    def _set_output_summary(self, output):
-        summary = len(output) if output else self.info.NoOutput
-        details = format_summary_details(output) if output else ""
-        self.info.set_output_summary(summary, details)
-
     def _on_select_all(self, _):
         data_info = self.tabs.currentWidget().input_slot.summary
         if len(self.selected_rows) == data_info.len \
-                and len(self.selected_cols) == len(data_info.domain):
+                and len(self.selected_cols) == len(data_info.domain.variables):
             self.tabs.currentWidget().clearSelection()
         else:
             self.tabs.currentWidget().selectAll()
@@ -604,10 +604,10 @@ class OWDataTable(OWWidget):
             else:
                 color_schema = None
             if self.show_distributions:
-                delegate = gui.TableBarItem(self, color=self.dist_color,
-                                            color_schema=color_schema)
+                delegate = TableBarItemDelegate(widget, color=self.dist_color,
+                                                color_schema=color_schema)
             else:
-                delegate = QStyledItemDelegate(self)
+                delegate = TableDataDelegate(widget)
             widget.setItemDelegate(delegate)
         tab = self.tabs.currentWidget()
         if tab:
@@ -711,7 +711,6 @@ class OWDataTable(OWWidget):
             # Selections of individual instances are not implemented
             # for SqlTables
             if isinstance(table, SqlTable):
-                self._set_output_summary(selected_data)
                 self.Outputs.selected_data.send(selected_data)
                 self.Outputs.annotated_data.send(None)
                 return
@@ -721,7 +720,7 @@ class OWDataTable(OWWidget):
 
             domain = table.domain
 
-            if len(colsel) < len(domain) + len(domain.metas):
+            if len(colsel) < len(domain.variables) + len(domain.metas):
                 # only a subset of the columns is selected
                 allvars = domain.class_vars + domain.metas + domain.attributes
                 columns = [(c, model.headerData(c, Qt.Horizontal,
@@ -747,7 +746,6 @@ class OWDataTable(OWWidget):
             else:
                 selected_data = table.from_table(domain, table, rowsel)
 
-        self._set_output_summary(selected_data)
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(create_annotated_table(table, rowsel))
 

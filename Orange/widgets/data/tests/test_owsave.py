@@ -7,15 +7,12 @@ import sys
 import scipy.sparse as sp
 from AnyQt.QtWidgets import QFileDialog
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table
 from Orange.data.io import TabReader, PickleReader, ExcelReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.data.owsave import OWSave, OWSaveBase
 from Orange.widgets.utils.save.tests.test_owsavebase import \
     SaveWidgetsTestBaseMixin
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.tests.base import WidgetTest, open_widget_classes
 
 
@@ -53,31 +50,21 @@ class TestOWSave(OWSaveTestBase):
     def test_dataset(self):
         widget = self.widget
         widget.auto_save = True
-        insum = widget.info.set_input_summary = Mock()
         savefile = widget.save_file = Mock()
 
         datasig = widget.Inputs.data
         self.send_signal(datasig, self.iris)
-        insum.assert_called_with(len(self.iris), format_summary_details(self.iris))
-        insum.reset_mock()
         savefile.reset_mock()
 
         widget.filename = "foo.tab"
         widget.writer = TabReader
         widget.auto_save = False
         self.send_signal(datasig, self.iris)
-        insum.assert_called_with(len(self.iris), format_summary_details(self.iris))
         savefile.assert_not_called()
 
         widget.auto_save = True
         self.send_signal(datasig, self.iris)
-        insum.assert_called_with(len(self.iris), format_summary_details(self.iris))
         savefile.assert_called()
-
-        insum.reset_mock()
-        self.send_signal(datasig, None)
-        insum.assert_called_once()
-        self.assertIsInstance(insum.call_args[0][0], StateInfo.Empty)
 
     def test_initial_start_dir(self):
         widget = self.widget

@@ -90,7 +90,7 @@ class TestFSS(unittest.TestCase):
             UnivariateLinearRegression()(data)
 
         d1 = SelectBestFeatures(method=UnivariateLinearRegression())(data)
-        self.assertEqual(len(d1.domain), len(data.domain))
+        self.assertEqual(len(d1.domain.variables), len(data.domain.variables))
 
     def test_defaults(self):
         fs = SelectBestFeatures(k=3)

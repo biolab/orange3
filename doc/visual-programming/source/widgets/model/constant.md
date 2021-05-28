@@ -30,6 +30,11 @@ This widget provides the user with two options:
 
 If you change the widget's name, you need to click *Apply*. Alternatively, tick the box on the left side and changes will be communicated automatically.
 
+Preprocessing
+-------------
+
+Constant does not use any preprocessing.
+
 Examples
 --------
 

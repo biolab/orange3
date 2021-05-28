@@ -37,7 +37,7 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.28.0'
+VERSION = '3.29.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -172,7 +172,7 @@ if not release:
         a.close()
 
 
-PACKAGES = find_packages()
+PACKAGES = find_packages(include=("Orange*",))
 
 # Extra non .py, .{so,pyd} files that are installed within the package dir
 # hierarchy

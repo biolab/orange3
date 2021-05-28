@@ -4,13 +4,10 @@
 import unittest
 from unittest.mock import patch, Mock
 
-from orangewidget.widget import StateInfo
-
 from Orange.data import Table
 from Orange.classification import LocalOutlierFactorLearner
 from Orange.widgets.data.owoutliers import OWOutliers, run
 from Orange.widgets.tests.base import WidgetTest, simulate
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestRun(unittest.TestCase):
@@ -135,30 +132,6 @@ class TestOWOutliers(WidgetTest):
                                          self.widget.Covariance)
         self.assertIsNotNone(self.get_output(self.widget.Outputs.inliers))
         self.assertFalse(self.widget.Error.singular_cov.is_shown())
-
-    def test_in_out_summary(self):
-        info = self.widget.info
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, "No data on input")
-        self.assertEqual(info._StateInfo__output_summary.details, "No data on output")
-
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.wait_until_finished()
-        self.assertEqual(info._StateInfo__input_summary.brief, "150")
-        self.assertIn(info._StateInfo__output_summary.brief, ["135", "136"])
-        self.assertEqual(info._StateInfo__input_summary.details,
-                         format_summary_details(self.iris))
-        output = self.get_output(self.widget.Outputs.inliers)
-        self.assertEqual(info._StateInfo__output_summary.details,
-                         format_summary_details(output))
-
-        self.send_signal(self.widget.Inputs.data, None)
-        self.wait_until_finished()
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, "No data on input")
-        self.assertEqual(info._StateInfo__output_summary.details, "No data on output")
 
     @patch("Orange.widgets.data.owoutliers.OWOutliers.MAX_FEATURES", 3)
     @patch("Orange.widgets.data.owoutliers.OWOutliers.commit", Mock())

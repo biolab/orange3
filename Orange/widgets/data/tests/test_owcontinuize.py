@@ -1,18 +1,14 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
 import unittest
-from unittest.mock import Mock
 
 import numpy as np
-
-from orangewidget.widget import StateInfo
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.preprocess import transformation
 from Orange.widgets.data import owcontinuize
 from Orange.widgets.data.owcontinuize import OWContinuize, WeightedIndicator
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.state_summary import format_summary_details
 
 
 class TestOWContinuize(WidgetTest):
@@ -42,27 +38,6 @@ class TestOWContinuize(WidgetTest):
         widget.unconditional_commit()
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(imp_data)
-
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        data = Table("iris")
-        input_sum = self.widget.info.set_input_summary = Mock()
-        output_sum = self.widget.info.set_output_summary = Mock()
-
-        self.send_signal(self.widget.Inputs.data, data)
-        input_sum.assert_called_with(len(data),
-                                     format_summary_details(data))
-        output = self.get_output(self.widget.Outputs.data)
-        output_sum.assert_called_with(len(output),
-                                      format_summary_details(output))
-
-        input_sum.reset_mock()
-        output_sum.reset_mock()
-        self.send_signal(self.widget.Inputs.data, None)
-        input_sum.assert_called_once()
-        self.assertIsInstance(input_sum.call_args[0][0], StateInfo.Empty)
-        output_sum.assert_called_once()
-        self.assertIsInstance(output_sum.call_args[0][0], StateInfo.Empty)
 
     def test_continuous(self):
         table = Table("housing")
