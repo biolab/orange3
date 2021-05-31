@@ -23,3 +23,4 @@ try:
     from .xgb import *
 except Exception:
     pass
+from .curvefit import *
