@@ -5,6 +5,9 @@ Change Log
 ------------
 * ...
 
+[3.29.1] - 2021-05-31
+--------------------
+
 [3.29.0] - 2021-05-28
 --------------------
 ##### Enhancements
@@ -1552,7 +1555,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.29.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.29.1...HEAD
+[3.29.1]: https://github.com/biolab/orange3/compare/3.29.0...3.29.1
 [3.29.0]: https://github.com/biolab/orange3/compare/3.28.0...3.29.0
 [3.28.0]: https://github.com/biolab/orange3/compare/3.27.1...3.28.0
 [3.27.1]: https://github.com/biolab/orange3/compare/3.27.0...3.27.1
