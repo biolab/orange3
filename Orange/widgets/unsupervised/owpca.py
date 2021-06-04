@@ -203,9 +203,7 @@ class OWPCA(widget.OWWidget):
 
     def _on_cut_changed(self, components):
         if components == self.ncomponents \
-                or self.ncomponents == 0 \
-                or self._pca is not None \
-                and components == len(self._variance_ratio):
+                or self.ncomponents == 0:
             return
 
         self.ncomponents = components
