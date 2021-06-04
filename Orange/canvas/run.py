@@ -45,7 +45,9 @@ def main(argv=None):
     )
     widget_discovery.run(cfg.widgets_entry_points())
     model = cfg.workflow_constructor()
-    model.set_runtime_env("basedir", os.path.dirname(filename))
+    model.set_runtime_env(
+        "basedir", os.path.abspath(os.path.dirname(filename))
+    )
     sigprop = model.findChild(signalmanager.SignalManager)
     sigprop.pause()  # Pause signal propagation during load
 
