@@ -81,6 +81,18 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(list(df['sepal length'])[0:4], [5.1, 4.9, 4.7, 4.6])
         self.assertEqual(list(df['iris'])[0:2], ['Iris-setosa', 'Iris-setosa'])
 
+    def test_table_to_frame_object_dtype(self):
+        from Orange.data.pandas_compat import table_to_frame
+
+        domain = Domain([], metas=[ContinuousVariable("a", number_of_decimals=0)])
+        table = Table.from_numpy(
+            domain, np.empty((10, 0)), metas=np.ones((10, 1), dtype=object)
+        )
+
+        df = table_to_frame(table, include_metas=True)
+        self.assertEqual(["a"], df.columns)
+        np.testing.assert_array_equal(df["a"].values, np.ones((10,)))
+
     def test_table_to_frame_nans(self):
         from Orange.data.pandas_compat import table_to_frame
         domain = Domain(

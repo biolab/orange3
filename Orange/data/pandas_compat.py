@@ -371,7 +371,9 @@ def table_to_frame(tab, include_metas=False):
         elif col.is_continuous:
             dt = float
             # np.nan are not compatible with int column
-            if col.number_of_decimals == 0 and not np.any(np.isnan(vals)):
+            # using pd.isnull since np.isnan fails on array with dtype object
+            # which can happen when metas contain column with strings
+            if col.number_of_decimals == 0 and not np.any(pd.isnull(vals)):
                 dt = int
             result = (col.name, pd.Series(vals).astype(dt))
         elif col.is_string:
