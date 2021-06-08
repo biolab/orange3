@@ -10,7 +10,6 @@ from AnyQt.QtWidgets import QSizePolicy, QWidget, QGridLayout, QLabel, \
     QLineEdit, QVBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox
 
 from orangewidget.utils.combobox import ComboBoxSearch
-from Orange.base import Model, Learner
 from Orange.data import Table, ContinuousVariable
 from Orange.data.util import get_unique_names
 from Orange.regression import CurveFitLearner
@@ -20,9 +19,9 @@ from Orange.widgets.data.owfeatureconstructor import sanitized_name, \
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import DomainModel, PyListModel, \
     PyListModelTooltip
-from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Input, Output, Msg
+from Orange.widgets.widget import Output, Msg
 
 FUNCTIONS = {k: v for k, v in np.__dict__.items()
              if k in dir(math) and not k.startswith("_")
@@ -246,36 +245,29 @@ class ParametersWidget(QWidget):
         self.__button.setEnabled(enable)
 
 
-class OWCurveFit(OWWidget):
+class OWCurveFit(OWBaseLearner):
     name = "Curve Fit"
     description = "Fit a function to data."
     icon = "icons/CurveFit.svg"
     priority = 90
     keywords = ["function"]
 
-    class Inputs:
-        data = Input("Data", Table)
+    class Outputs(OWBaseLearner.Outputs):
+        coefficients = Output("Coefficients", Table, explicit=True)
 
-    class Outputs:
-        learner = Output("Learner", Learner)
-        model = Output("Model", Model)
-        coefficients = Output("Coefficients", Table)
-
-    class Warning(OWWidget.Warning):
+    class Warning(OWBaseLearner.Warning):
         duplicate_parameter = Msg("Duplicated parameter name.")
 
-    class Error(OWWidget.Error):
-        fitting_failed = Msg("Fitting failed.\n{}")
+    class Error(OWBaseLearner.Error):
         invalid_exp = Msg("Invalid expression.")
-        no_parameter = Msg("No fit parameter.\n"
+        no_parameter = Msg("Missing a fitting parameter.\n"
                            "Use 'Feature Constructor' widget instead.")
 
-    want_main_area = False
-    resizing_enabled = False
+    LEARNER = CurveFitLearner
+    supports_sparse = False
 
     parameters: Mapping[str, Tuple[Any, ...]] = Setting({}, schema_only=True)
     expression: str = Setting("", schema_only=True)
-    auto_commit: bool = Setting(True)
 
     FEATURE_PLACEHOLDER = "Select Feature"
     PARAM_PLACEHOLDER = "Select Parameter"
@@ -285,9 +277,7 @@ class OWCurveFit(OWWidget):
     _parameter: str = PARAM_PLACEHOLDER
     _function: str = FUNCTION_PLACEHOLDER
 
-    def __init__(self):
-        super().__init__()
-        self.data: Optional[Table] = None
+    def __init__(self, *args, **kwargs):
         self.__param_widget: ParametersWidget = None
         self.__expression_edit: QLineEdit = None
         self.__feature_combo: ComboBoxSearch = None
@@ -303,9 +293,9 @@ class OWCurveFit(OWWidget):
 
         self.__pending_parameters = self.parameters
 
-        self._setup_gui()
+        super().__init__(*args, **kwargs)
 
-    def _setup_gui(self):
+    def add_main_layout(self):
         box = gui.vBox(self.controlArea, "Parameters")
         self.__param_widget = ParametersWidget(self)
         self.__param_widget.set_add_enabled(False)
@@ -313,23 +303,20 @@ class OWCurveFit(OWWidget):
             self.__on_parameters_changed)
         box.layout().addWidget(self.__param_widget)
 
-        function_box = gui.vBox(self.controlArea, False)
-
+        function_box = gui.vBox(self.controlArea, box="Expression")
         self.__expression_edit = gui.lineEdit(
-            function_box, self, "expression", "  Expression:",
-            callback=self.__on_expression_changed,
-            labelWidth=80, orientation=Qt.Horizontal
+            function_box, self, "expression", placeholderText="Expression...",
+            callback=self.settings_changed
         )
-
-        ibox = gui.indentedBox(function_box, sep=84, orientation=Qt.Horizontal)
+        hbox = gui.hBox(function_box)
         combo_options = dict(sendSelectedValue=True, searchable=True,
-                             contentsLength=11)
+                             contentsLength=13)
         self.__feature_combo = gui.comboBox(
-            ibox, self, "_feature", model=self.__feature_model,
+            hbox, self, "_feature", model=self.__feature_model,
             callback=self.__on_feature_added, **combo_options
         )
         self.__parameter_combo = gui.comboBox(
-            ibox, self, "_parameter", model=self.__param_model,
+            hbox, self, "_parameter", model=self.__param_model,
             callback=self.__on_parameter_added, **combo_options
         )
         sorted_funcs = sorted(FUNCTIONS)
@@ -339,12 +326,9 @@ class OWCurveFit(OWWidget):
             parent=self
         )
         self.__function_combo = gui.comboBox(
-            ibox, self, "_function", model=function_model,
+            hbox, self, "_function", model=function_model,
             callback=self.__on_function_added, **combo_options
         )
-
-        gui.rubber(self.buttonsArea)
-        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
     def __on_parameters_changed(self, parameters: List[Parameter]):
         self.parameters = params = {p.name: p.to_tuple() for p in parameters}
@@ -353,22 +337,19 @@ class OWCurveFit(OWWidget):
         if len(self.parameters) != len(parameters):
             self.Warning.duplicate_parameter()
 
-    def __on_expression_changed(self):
-        self.commit()
-
     def __on_feature_added(self):
         index = self.__feature_combo.currentIndex()
         if index > 0:
             self.__insert_into_expression(sanitized_name(self._feature.name))
             self.__feature_combo.setCurrentIndex(0)
-            self.commit()
+            self.settings_changed()
 
     def __on_parameter_added(self):
         index = self.__parameter_combo.currentIndex()
         if index > 0:
             self.__insert_into_expression(sanitized_name(self._parameter))
             self.__parameter_combo.setCurrentIndex(0)
-            self.commit()
+            self.settings_changed()
 
     def __on_function_added(self):
         index = self.__function_combo.currentIndex()
@@ -383,7 +364,7 @@ class OWCurveFit(OWWidget):
             else:
                 self.__insert_into_expression(self._function + "()", 1)
             self.__function_combo.setCurrentIndex(0)
-            self.commit()
+            self.settings_changed()
 
     def __insert_into_expression(self, what: str, offset=0):
         pos = self.__expression_edit.cursorPosition()
@@ -392,15 +373,13 @@ class OWCurveFit(OWWidget):
         self.__expression_edit.setCursorPosition(pos + len(what) - offset)
         self.__expression_edit.setFocus()
 
-    @Inputs.data
-    @check_sql_input
     def set_data(self, data: Optional[Table]):
-        self.data = data
+        super().set_data(data)
         self.__clear()
         self.__init_models()
         self.__enable_controls()
         self.__set_parameters_box()
-        self.unconditional_commit()
+        self.unconditional_apply()
 
     def __clear(self):
         self.expression = ""
@@ -423,25 +402,33 @@ class OWCurveFit(OWWidget):
             self.__on_parameters_changed(parameters)
             self.__pending_parameters = []
 
-    def commit(self):
-        self.Error.fitting_failed.clear()
-        learner = model = coefficients = None
-        if self.data and self.expression:
-            learner = self.create_learner()
-            if learner:
-                try:
-                    model = learner(self.data)
-                except Exception as ex:
-                    self.Error.fitting_failed(ex)
-                else:
-                    coefficients = model.coefficients
-        self.Outputs.learner.send(learner)
-        self.Outputs.model.send(model)
+    def update_model(self):
+        """
+        The 'update_model' is invoked in 'set_data' and 'apply'.
+
+        Can't invoke the 'update_model' in set_data -> learner has not been
+        created yet, because learner needs data.
+        """
+        pass
+
+    def __update_model(self):
+        super().update_model()
+        coefficients = None
+        if self.model is not None:
+            coefficients = self.model.coefficients
         self.Outputs.coefficients.send(coefficients)
 
-    def create_learner(self) -> CurveFitLearner:
+    def apply(self):
+        # TODO - write test for this
+        super().apply()
+        self.__update_model()
+
+    def create_learner(self) -> Optional[CurveFitLearner]:
         self.Error.invalid_exp.clear()
         self.Error.no_parameter.clear()
+        if not self.data or not self.expression:
+            return None
+
         try:
             tree = ast.parse(self.expression, mode="eval")
         except SyntaxError:
@@ -462,7 +449,11 @@ class OWCurveFit(OWWidget):
             self.Error.no_parameter()
             return None
 
-        return CurveFitLearner(function, params_names)
+        return self.LEARNER(function, params_names,
+                            preprocessors=self.preprocessors)
+
+    def get_learner_parameters(self) -> Tuple[Tuple[str, Any]]:
+        return ("Function", self.expression),
 
     @staticmethod
     def __validate_expression(tree: ast.Expression):
@@ -517,6 +508,9 @@ class ParametersSearch(ast.NodeVisitor):
 
 
 class ReplaceVars(ast.NodeTransformer):
+    """
+    Replace feature names with X[:, i], where i is index of feature.
+    """
     def __init__(self, name: str, vars_mapper: Mapping, functions: List):
         super().__init__()
         self.__name = name
