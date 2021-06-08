@@ -21,7 +21,7 @@ class TestFunctions(unittest.TestCase):
         for f in FUNCTIONS:
             func = getattr(np, f)
             if isinstance(func, float):
-                continue
+                pass
             elif f in ["arctan2", "copysign", "fmod", "gcd", "hypot",
                        "isclose", "ldexp", "power", "remainder"]:
                 self.assertIsInstance(func(a, 2), np.ndarray)
@@ -318,7 +318,6 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(self.widget._OWCurveFit__expression_edit.text(), "p1")
 
         self.send_signal(self.widget.Inputs.data, None)
-        # TODO - empty the combo?? - po moje ja
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(combo.currentText(), "Select Parameter")
 
@@ -342,11 +341,10 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
     def test_expression(self):
         feature_combo = self.widget.controls._feature
         function_combo = self.widget.controls._function
-        self.__add_button.click()
         insert = self.widget._OWCurveFit__insert_into_expression
         for f in FUNCTIONS:
-            self.send_signal(self.widget.Inputs.data, self.housing)
-            self.widget._OWCurveFit__expression_edit.setText("p1 + ")
+            self.__init_widget()
+            insert(" + ")
             simulate.combobox_activate_item(function_combo, f)
             if isinstance(getattr(np, f), float):
                 insert(" + ")
@@ -384,11 +382,15 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
             self.assertIsNone(coefficients)
 
     def test_enable_controls(self):
+        function_box = self.widget._OWCurveFit__function_box
         self.assertFalse(self.__add_button.isEnabled())
+        self.assertFalse(function_box.isEnabled())
         self.send_signal(self.widget.Inputs.data, self.housing)
         self.assertTrue(self.__add_button.isEnabled())
+        self.assertTrue(function_box.isEnabled())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.__add_button.isEnabled())
+        self.assertFalse(function_box.isEnabled())
 
     def test_duplicated_parameter_name(self):
         self.send_signal(self.widget.Inputs.data, self.housing)
@@ -400,6 +402,42 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
         param_controls[1][1].setText("p2")
         self.assertFalse(self.widget.Warning.duplicate_parameter.is_shown())
+        param_controls[1][1].setText("p1")
+        self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.duplicate_parameter.is_shown())
+
+    def test_unused_parameter(self):
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.__add_button.click()
+        self.__add_button.click()
+        self.assertFalse(self.widget.Warning.unused_parameter.is_shown())
+
+        self.widget._OWCurveFit__expression_edit.setText("p1 + LSTAT + p2")
+        self.widget.apply_button.button.click()
+        self.assertFalse(self.widget.Warning.unused_parameter.is_shown())
+
+        self.widget._OWCurveFit__expression_edit.setText("p1 + LSTAT")
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Warning.unused_parameter.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.unused_parameter.is_shown())
+
+    def test_unknown_parameter(self):
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.__add_button.click()
+
+        self.widget._OWCurveFit__expression_edit.setText("p1 + LSTAT")
+        self.widget.apply_button.button.click()
+        self.assertFalse(self.widget.Error.unknown_parameter.is_shown())
+
+        self.widget._OWCurveFit__expression_edit.setText("p2 + LSTAT")
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.unknown_parameter.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.unknown_parameter.is_shown())
 
     def test_saved_parameters(self):
         self.send_signal(self.widget.Inputs.data, self.housing)

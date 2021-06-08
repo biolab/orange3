@@ -1,4 +1,4 @@
-from typing import Union, Iterable, Callable, List
+from typing import Iterable, Callable, List, Dict, Optional
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -43,8 +43,8 @@ class CurveFitLearner(Learner):
         super().__init__(preprocessors)
         self.__function = function
         self.__parameters_names = parameters_names
-        self.__p0: Union[Iterable, None] = p0
-        self.__bounds: Union[Iterable, None] = bounds
+        self.__p0: Optional[Iterable] = p0
+        self.__bounds: Iterable = bounds
 
     def fit_storage(self, data: Table) -> CurveFitModel:
         domain = data.domain

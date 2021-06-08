@@ -5,9 +5,9 @@ from typing import Optional, List, Tuple, Any, Mapping, Callable, Set, Union
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, Signal
+from AnyQt.QtCore import Signal
 from AnyQt.QtWidgets import QSizePolicy, QWidget, QGridLayout, QLabel, \
-    QLineEdit, QVBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox
+    QLineEdit, QVBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QGroupBox
 
 from orangewidget.utils.combobox import ComboBoxSearch
 from Orange.data import Table, ContinuousVariable
@@ -257,11 +257,15 @@ class OWCurveFit(OWBaseLearner):
 
     class Warning(OWBaseLearner.Warning):
         duplicate_parameter = Msg("Duplicated parameter name.")
+        unused_parameter = Msg("Unused parameter '{}' in "
+                               "'Parameters' declaration.")
 
     class Error(OWBaseLearner.Error):
         invalid_exp = Msg("Invalid expression.")
         no_parameter = Msg("Missing a fitting parameter.\n"
                            "Use 'Feature Constructor' widget instead.")
+        unknown_parameter = Msg("Unknown parameter '{}'.\n"
+                                "Declare the parameter in 'Parameters' box")
 
     LEARNER = CurveFitLearner
     supports_sparse = False
@@ -279,6 +283,7 @@ class OWCurveFit(OWBaseLearner):
 
     def __init__(self, *args, **kwargs):
         self.__param_widget: ParametersWidget = None
+        self.__function_box: QGroupBox = None
         self.__expression_edit: QLineEdit = None
         self.__feature_combo: ComboBoxSearch = None
         self.__parameter_combo: ComboBoxSearch = None
@@ -303,12 +308,13 @@ class OWCurveFit(OWBaseLearner):
             self.__on_parameters_changed)
         box.layout().addWidget(self.__param_widget)
 
-        function_box = gui.vBox(self.controlArea, box="Expression")
+        self.__function_box = gui.vBox(self.controlArea, box="Expression")
+        self.__function_box.setEnabled(False)
         self.__expression_edit = gui.lineEdit(
-            function_box, self, "expression", placeholderText="Expression...",
-            callback=self.settings_changed
+            self.__function_box, self, "expression",
+            placeholderText="Expression...", callback=self.settings_changed
         )
-        hbox = gui.hBox(function_box)
+        hbox = gui.hBox(self.__function_box)
         combo_options = dict(sendSelectedValue=True, searchable=True,
                              contentsLength=13)
         self.__feature_combo = gui.comboBox(
@@ -333,6 +339,7 @@ class OWCurveFit(OWBaseLearner):
     def __on_parameters_changed(self, parameters: List[Parameter]):
         self.parameters = params = {p.name: p.to_tuple() for p in parameters}
         self.__param_model[:] = chain([self.PARAM_PLACEHOLDER], params)
+        self.settings_changed()
         self.Warning.duplicate_parameter.clear()
         if len(self.parameters) != len(parameters):
             self.Warning.duplicate_parameter()
@@ -393,6 +400,7 @@ class OWCurveFit(OWBaseLearner):
 
     def __enable_controls(self):
         self.__param_widget.set_add_enabled(bool(self.data))
+        self.__function_box.setEnabled(bool(self.data))
 
     def __set_parameters_box(self):
         if self.__pending_parameters:
@@ -402,30 +410,11 @@ class OWCurveFit(OWBaseLearner):
             self.__on_parameters_changed(parameters)
             self.__pending_parameters = []
 
-    def update_model(self):
-        """
-        The 'update_model' is invoked in 'set_data' and 'apply'.
-
-        Can't invoke the 'update_model' in set_data -> learner has not been
-        created yet, because learner needs data.
-        """
-        pass
-
-    def __update_model(self):
-        super().update_model()
-        coefficients = None
-        if self.model is not None:
-            coefficients = self.model.coefficients
-        self.Outputs.coefficients.send(coefficients)
-
-    def apply(self):
-        # TODO - write test for this
-        super().apply()
-        self.__update_model()
-
     def create_learner(self) -> Optional[CurveFitLearner]:
         self.Error.invalid_exp.clear()
         self.Error.no_parameter.clear()
+        self.Error.unknown_parameter.clear()
+        self.Warning.unused_parameter.clear()
         if not self.data or not self.expression:
             return None
 
@@ -448,12 +437,35 @@ class OWCurveFit(OWBaseLearner):
         if not params_names:
             self.Error.no_parameter()
             return None
+        unknown = [p for p in params_names if p not in self.parameters]
+        if unknown:
+            self.Error.unknown_parameter(unknown[0])
+            return None
+        unused = [p for p in self.parameters if p not in params_names]
+        if unused:
+            self.Warning.unused_parameter(unused[0])
+
+        p0, lower_bounds, upper_bounds = [], [], []
+        for name in params_names:
+            param = Parameter(*self.parameters[name])
+            p0.append(param.initial)
+            lower_bounds.append(param.lower if param.use_lower else -np.inf)
+            upper_bounds.append(param.upper if param.use_upper else np.inf)
+        bounds = (lower_bounds, upper_bounds)
 
         return self.LEARNER(function, params_names,
+                            p0=p0, bounds=bounds,
                             preprocessors=self.preprocessors)
 
     def get_learner_parameters(self) -> Tuple[Tuple[str, Any]]:
-        return ("Function", self.expression),
+        return tuple(("Function", self.expression),)
+
+    def update_model(self):
+        super().update_model()
+        coefficients = None
+        if self.model is not None:
+            coefficients = self.model.coefficients
+        self.Outputs.coefficients.send(coefficients)
 
     @staticmethod
     def __validate_expression(tree: ast.Expression):
@@ -469,7 +481,7 @@ def _create_lambda(exp: ast.Expression, vars_mapper: Mapping[str, int],
                    functions: List[str]) -> Tuple[Callable, List[str]]:
     search = ParametersSearch(vars_mapper, functions)
     search.visit(exp)
-    args = list(search.parameters)
+    args = search.parameters
 
     name = sanitized_name(get_unique_names(args, "x"))
     exp = ReplaceVars(name, vars_mapper, functions).visit(exp)
@@ -495,7 +507,7 @@ class ParametersSearch(ast.NodeVisitor):
         super().__init__()
         self.__vars_mapper = vars_mapper
         self.__functions = functions
-        self.__parameters = set()
+        self.__parameters = []
 
     @property
     def parameters(self) -> Set[str]:
@@ -503,7 +515,9 @@ class ParametersSearch(ast.NodeVisitor):
 
     def visit_Name(self, node: ast.Name) -> ast.Name:
         if node.id not in list(self.__vars_mapper) + self.__functions:
-            self.__parameters.add(node.id)
+            # don't use Set in order to preserve parameters order
+            if node.id not in self.__parameters:
+                self.__parameters.append(node.id)
         return node
 
 
