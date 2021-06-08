@@ -5,6 +5,13 @@ Change Log
 ------------
 * ...
 
+[3.29.2] - 2021-06-08
+--------------------
+##### Bugfixes
+* Bump orange-canvas-core minimum version requirement ([#5472](../../pull/5472))
+* owpca: fix component selection when dragging selection line ([#5469](../../pull/5469))
+* Save File when workflow basedir is an empty string ([#5459](../../pull/5459))
+
 [3.29.1] - 2021-05-31
 --------------------
 
@@ -1555,7 +1562,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.29.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.29.2...HEAD
+[3.29.2]: https://github.com/biolab/orange3/compare/3.29.1...3.29.2
 [3.29.1]: https://github.com/biolab/orange3/compare/3.29.0...3.29.1
 [3.29.0]: https://github.com/biolab/orange3/compare/3.28.0...3.29.0
 [3.28.0]: https://github.com/biolab/orange3/compare/3.27.1...3.28.0
