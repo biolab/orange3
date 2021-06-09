@@ -7,6 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import QCheckBox, QLineEdit, QPushButton, QDoubleSpinBox
 
 from Orange.data import Table
+from Orange.preprocess import Discretize, Continuize
 from Orange.regression import CurveFitLearner
 from Orange.regression.curvefit import CurveFitModel
 from Orange.widgets.model.owcurvefit import OWCurveFit, ParametersWidget, \
@@ -31,62 +32,70 @@ class TestFunctions(unittest.TestCase):
 
 class TestCreateLambda(unittest.TestCase):
     def test_create_lambda_simple(self):
-        func, params = _create_lambda(ast.parse("a + b", mode="eval"), {}, [])
+        func, params, vars_ = _create_lambda(
+            ast.parse("a + b", mode="eval"), [], []
+        )
         self.assertTrue(callable(func))
-        self.assertEqual(set(params), set(["a", "b"]))
+        self.assertEqual(params, ["a", "b"])
+        self.assertEqual(vars_, [])
         self.assertEqual(func(np.array([[1, 11], [2, 22]]), 1, 2), 3)
 
     def test_create_lambda_var(self):
-        func, params = _create_lambda(
-            ast.parse("var + a + b", mode="eval"), {"var": 0}, []
+        func, params, vars_ = _create_lambda(
+            ast.parse("var + a + b", mode="eval"), ["var"], []
         )
         self.assertTrue(callable(func))
-        self.assertEqual(set(params), set(["a", "b"]))
+        self.assertEqual(params, ["a", "b"])
+        self.assertEqual(vars_, ["var"])
         np.testing.assert_array_equal(
             func(np.array([[1, 11], [2, 22]]), 1, 2),
             np.array([4, 5])
         )
 
     def test_create_lambda_fun(self):
-        func, params = _create_lambda(
-            ast.parse("pow(a, 2)", mode="eval"), {}, ["pow"]
+        func, params, vars_ = _create_lambda(
+            ast.parse("pow(a, 2)", mode="eval"), [], ["pow"]
         )
         self.assertTrue(callable(func))
         self.assertEqual(params, ["a"])
+        self.assertEqual(vars_, [])
         np.testing.assert_array_equal(
             func(np.array([[1, 11], [2, 22]]), 3),
             np.array([9, 9])
         )
 
     def test_create_lambda_var_fun(self):
-        func, params = _create_lambda(
+        func, params, vars_ = _create_lambda(
             ast.parse("var1 + pow(a, 2) + pow(a, 2)", mode="eval"),
-            {"var1": 0, "var2": 1}, ["pow"]
+            ["var1", "var2"], ["pow"]
         )
         self.assertTrue(callable(func))
         self.assertEqual(params, ["a"])
+        self.assertEqual(vars_, ["var1"])
         np.testing.assert_array_equal(
             func(np.array([[1, 11], [2, 22]]), 3),
             np.array([19, 20])
         )
 
     def test_create_lambda_x(self):
-        func, params = _create_lambda(
-            ast.parse("var + x", mode="eval"), {"var": 0}, []
+        func, params, vars_ = _create_lambda(
+            ast.parse("var1 + x", mode="eval"), ["var1", "var2"], []
         )
         self.assertTrue(callable(func))
         self.assertEqual(params, ["x"])
+        self.assertEqual(vars_, ["var1"])
         np.testing.assert_array_equal(
             func(np.array([[1, 11], [2, 22]]), 3), np.array([4, 5])
         )
 
     def test_create_lambda(self):
-        func, params = _create_lambda(
+        func, params, vars_ = _create_lambda(
             ast.parse("a * var1 + b * exp(var2 * power(pi, 0))", mode="eval"),
-            {"var1": 0, "var2": 1}, list(FUNCTIONS)
+            ["var1", "var2", "var3"], list(FUNCTIONS)
         )
         self.assertTrue(callable(func))
-        self.assertEqual(set(params), set(["a", "b"]))
+        self.assertEqual(params, ["a", "b"])
+        self.assertEqual(vars_, ["var1", "var2"])
         np.testing.assert_allclose(
             func(np.array([[1, 2], [3, 4]]), 3, 2),
             np.array([17.778112, 118.1963])
@@ -215,8 +224,9 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
             widget = self.widget
         self.send_signal(widget.Inputs.data, data, widget=widget)
         widget._OWCurveFit__param_widget._ParametersWidget__button.click()
-        widget._OWCurveFit__expression_edit.setText("p1")
-        self.widget.apply_button.button.click()
+        widget._OWCurveFit__expression_edit.setText("p1 + ")
+        simulate.combobox_activate_index(widget.controls._feature, 1)
+        widget.apply_button.button.click()
 
     def test_input_data_learner_adequacy(self):  # overwritten
         for inadequate in self.inadequate_dataset:
@@ -286,6 +296,27 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         coef = self.get_output(self.widget.Outputs.coefficients)
         self.assertTrue("coef" in coef.domain)
         self.assertTrue("name" in coef.domain)
+
+    def test_discrete_features(self):
+        combo = self.widget.controls._feature
+        model = combo.model()
+        disc_housing = Discretize()(self.housing)
+        self.send_signal(self.widget.Inputs.data, disc_housing)
+        self.assertEqual(model.rowCount(), 1)
+        self.assertTrue(self.widget.Error.data_error.is_shown())
+
+        continuizer = Continuize()
+        self.send_signal(self.widget.Inputs.preprocessor, continuizer)
+        self.assertGreater(model.rowCount(), 1)
+        self.assertFalse(self.widget.Error.data_error.is_shown())
+
+        self.send_signal(self.widget.Inputs.preprocessor, None)
+        self.assertEqual(model.rowCount(), 1)
+        self.assertTrue(self.widget.Error.data_error.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(model.rowCount(), 1)
+        self.assertFalse(self.widget.Error.data_error.is_shown())
 
     def test_features_combo(self):
         combo = self.widget.controls._feature
@@ -381,6 +412,21 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
             coefficients = self.get_output(self.widget.Outputs.coefficients)
             self.assertIsNone(coefficients)
 
+    def test_invalid_expression(self):
+        self.__init_widget()
+        self.assertFalse(self.widget.Error.invalid_exp.is_shown())
+        self.widget._OWCurveFit__insert_into_expression(" + ")
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.invalid_exp.is_shown())
+        self.widget._OWCurveFit__insert_into_expression(" 2 ")
+        self.widget.apply_button.button.click()
+        self.assertFalse(self.widget.Error.invalid_exp.is_shown())
+        self.widget._OWCurveFit__insert_into_expression(" + ")
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.invalid_exp.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.invalid_exp.is_shown())
+
     def test_enable_controls(self):
         function_box = self.widget._OWCurveFit__function_box
         self.assertFalse(self.__add_button.isEnabled())
@@ -406,6 +452,15 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.duplicate_parameter.is_shown())
+
+    def test_no_parameter(self):
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.widget._OWCurveFit__expression_edit.setText("LSTAT + 1")
+        self.widget.apply_button.button.click()
+        self.assertTrue(self.widget.Error.no_parameter.is_shown())
+        self.widget._OWCurveFit__expression_edit.setText("LSTAT + a")
+        self.widget.apply_button.button.click()
+        self.assertFalse(self.widget.Error.no_parameter.is_shown())
 
     def test_unused_parameter(self):
         self.send_signal(self.widget.Inputs.data, self.housing)
@@ -469,14 +524,16 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(param_controls[0][6].value(), 10)
         self.assertEqual(widget.controls._parameter.model().rowCount(), 2)
 
-    def test_no_parameter(self):
-        self.send_signal(self.widget.Inputs.data, self.housing)
-        self.widget._OWCurveFit__expression_edit.setText("LSTAT + 1")
-        self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.no_parameter.is_shown())
-        self.widget._OWCurveFit__expression_edit.setText("LSTAT + a")
-        self.widget.apply_button.button.click()
-        self.assertFalse(self.widget.Error.no_parameter.is_shown())
+    def test_saved_expression(self):
+        self.__init_widget()
+        exp1 = self.widget._OWCurveFit__expression_edit.text()
+        self.assertGreater(len(exp1), 0)
+
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        widget = self.create_widget(OWCurveFit, stored_settings=settings)
+        self.__init_widget(widget=widget)
+        exp2 = widget._OWCurveFit__expression_edit.text()
+        self.assertEqual(exp1, exp2)
 
     def test_output(self):
         self.send_signal(self.widget.Inputs.data, self.housing)

@@ -1,7 +1,7 @@
 import ast
 import math
 from itertools import chain
-from typing import Optional, List, Tuple, Any, Mapping, Callable, Set, Union
+from typing import Optional, List, Tuple, Any, Mapping, Callable, Union
 
 import numpy as np
 
@@ -10,8 +10,9 @@ from AnyQt.QtWidgets import QSizePolicy, QWidget, QGridLayout, QLabel, \
     QLineEdit, QVBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QGroupBox
 
 from orangewidget.utils.combobox import ComboBoxSearch
-from Orange.data import Table, ContinuousVariable
+from Orange.data import Table, ContinuousVariable, Domain
 from Orange.data.util import get_unique_names
+from Orange.preprocess import Preprocess
 from Orange.regression import CurveFitLearner
 from Orange.widgets import gui
 from Orange.widgets.data.owfeatureconstructor import sanitized_name, \
@@ -282,6 +283,7 @@ class OWCurveFit(OWBaseLearner):
     _function: str = FUNCTION_PLACEHOLDER
 
     def __init__(self, *args, **kwargs):
+        self.__pp_data: Optional[Table] = None
         self.__param_widget: ParametersWidget = None
         self.__function_box: QGroupBox = None
         self.__expression_edit: QLineEdit = None
@@ -297,6 +299,7 @@ class OWCurveFit(OWBaseLearner):
         self.__param_model = PyListModel([self.PARAM_PLACEHOLDER])
 
         self.__pending_parameters = self.parameters
+        self.__pending_expression = self.expression
 
         super().__init__(*args, **kwargs)
 
@@ -383,26 +386,49 @@ class OWCurveFit(OWBaseLearner):
     def set_data(self, data: Optional[Table]):
         super().set_data(data)
         self.__clear()
-        self.__init_models()
-        self.__enable_controls()
-        self.__set_parameters_box()
-        self.unconditional_apply()
+        # self.__init_models()
+        # self.__enable_controls()
+        # self.__set_pending()
+        # self.unconditional_apply()
 
     def __clear(self):
         self.expression = ""
         self.__param_widget.clear_all()
         self.__on_parameters_changed([])
 
+    def set_preprocessor(self, preprocessor: Preprocess):
+        self.preprocessors = preprocessor
+        feature_names_changed = False
+        if self.data and self.__pp_data:
+            pp_data = preprocess(self.data, preprocessor)
+            feature_names_changed = \
+                set(a.name for a in pp_data.domain.attributes) != \
+                set(a.name for a in self.__pp_data.domain.attributes)
+        if feature_names_changed:
+            self.expression = ""
+
+    def handleNewSignals(self):
+        self.__preprocess_data()
+        self.__init_models()
+        self.__enable_controls()
+        self.__set_pending()
+        self.unconditional_apply()
+
+    def __preprocess_data(self):
+        self.__pp_data = preprocess(self.data, self.preprocessors)
+
     def __init_models(self):
-        domain = self.data.domain if self.data else None
+        domain = self.__pp_data.domain if self.__pp_data else None
         self.__feature_model.set_domain(domain)
         self._feature = self.__feature_model[0]
 
     def __enable_controls(self):
-        self.__param_widget.set_add_enabled(bool(self.data))
-        self.__function_box.setEnabled(bool(self.data))
+        enable = bool(self.__pp_data) and \
+                 self.__pp_data.domain.has_continuous_attributes()
+        self.__param_widget.set_add_enabled(enable)
+        self.__function_box.setEnabled(enable)
 
-    def __set_parameters_box(self):
+    def __set_pending(self):
         if self.__pending_parameters:
             parameters = [Parameter(*p) for p in
                           self.__pending_parameters.values()]
@@ -410,12 +436,16 @@ class OWCurveFit(OWBaseLearner):
             self.__on_parameters_changed(parameters)
             self.__pending_parameters = []
 
+        if self.__pending_expression:
+            self.expression = self.__pending_expression
+            self.__pending_expression = ""
+
     def create_learner(self) -> Optional[CurveFitLearner]:
         self.Error.invalid_exp.clear()
         self.Error.no_parameter.clear()
         self.Error.unknown_parameter.clear()
         self.Warning.unused_parameter.clear()
-        if not self.data or not self.expression:
+        if not self.__pp_data or not self.expression:
             return None
 
         try:
@@ -428,11 +458,13 @@ class OWCurveFit(OWBaseLearner):
             self.Error.invalid_exp()
             return None
 
-        domain = self.data.domain
-        vars_names = {sanitized_name(var.name): i for i, var
-                      in enumerate(domain.attributes) if var.is_continuous}
-        function, params_names = \
+        vars_names = [sanitized_name(var.name) for var
+                      in self.__feature_model[1:]]
+        function, params_names, used_vars_names = \
             _create_lambda(tree, vars_names, list(FUNCTIONS))
+
+        feature_names = [a.name for a in self.__pp_data.domain.attributes
+                         if sanitized_name(a.name) in used_vars_names]
 
         if not params_names:
             self.Error.no_parameter()
@@ -453,7 +485,7 @@ class OWCurveFit(OWBaseLearner):
             upper_bounds.append(param.upper if param.use_upper else np.inf)
         bounds = (lower_bounds, upper_bounds)
 
-        return self.LEARNER(function, params_names,
+        return self.LEARNER(function, params_names, feature_names,
                             p0=p0, bounds=bounds,
                             preprocessors=self.preprocessors)
 
@@ -467,6 +499,26 @@ class OWCurveFit(OWBaseLearner):
             coefficients = self.model.coefficients
         self.Outputs.coefficients.send(coefficients)
 
+    def check_data(self):
+        learner_existed = self.learner is not None
+        if self.data:
+            data = preprocess(self.data, self.preprocessors)
+            dom = data.domain
+            cont_attrs =[a for a in dom.attributes if a.is_continuous]
+            if len(cont_attrs) == 0:
+                self.Error.data_error("Data has no continuous features.")
+            elif not self.learner:
+                # create dummy learner in order to check data
+                cont_domain = Domain(cont_attrs, dom.class_vars, dom.metas)
+                cont_data = self.data.transform(cont_domain)
+                self.learner = self.LEARNER(lambda: 1, [], cont_data)
+        # parent's check_data() needs learner instantiated
+        self.valid_data = super().check_data()
+        if not learner_existed:
+            self.valid_data = False
+            self.learner = None
+        return self.valid_data
+
     @staticmethod
     def __validate_expression(tree: ast.Expression):
         try:
@@ -477,13 +529,22 @@ class OWCurveFit(OWBaseLearner):
         return valid
 
 
-def _create_lambda(exp: ast.Expression, vars_mapper: Mapping[str, int],
+def preprocess(data: Optional[Table], preprocessor: Optional[Preprocess]) \
+        -> Optional[Table]:
+    if not data or not preprocessor:
+        return data
+    return preprocessor(data)
+
+
+def _create_lambda(exp: ast.Expression, vars_names: List[str],
                    functions: List[str]) -> Tuple[Callable, List[str]]:
-    search = ParametersSearch(vars_mapper, functions)
+    search = ParametersSearch(vars_names, functions)
     search.visit(exp)
     args = search.parameters
+    vars_ = search.variables
 
     name = sanitized_name(get_unique_names(args, "x"))
+    vars_mapper = {var: i for i, var in enumerate(vars_)}
     exp = ReplaceVars(name, vars_mapper, functions).visit(exp)
 
     lambda_ = ast.Lambda(
@@ -499,7 +560,7 @@ def _create_lambda(exp: ast.Expression, vars_mapper: Mapping[str, int],
     )
     exp = ast.Expression(body=lambda_)
     ast.fix_missing_locations(exp)
-    return eval(compile(exp, "<lambda>", mode="eval"), GLOBALS), args
+    return eval(compile(exp, "<lambda>", mode="eval"), GLOBALS), args, vars_
 
 
 class ParametersSearch(ast.NodeVisitor):
@@ -508,13 +569,22 @@ class ParametersSearch(ast.NodeVisitor):
         self.__vars_mapper = vars_mapper
         self.__functions = functions
         self.__parameters = []
+        self.__variables = []
 
     @property
-    def parameters(self) -> Set[str]:
+    def parameters(self) -> List[str]:
         return self.__parameters
 
+    @property
+    def variables(self) -> List[str]:
+        return self.__variables
+
     def visit_Name(self, node: ast.Name) -> ast.Name:
-        if node.id not in list(self.__vars_mapper) + self.__functions:
+        if node.id in list(self.__vars_mapper):
+            # don't use Set in order to preserve parameters order
+            if node.id not in self.__variables:
+                self.__variables.append(node.id)
+        elif node.id not in self.__functions:
             # don't use Set in order to preserve parameters order
             if node.id not in self.__parameters:
                 self.__parameters.append(node.id)

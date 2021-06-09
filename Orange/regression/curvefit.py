@@ -1,4 +1,4 @@
-from typing import Iterable, Callable, List, Dict, Optional
+from typing import Iterable, Callable, List, Optional
 
 import numpy as np
 from scipy.optimize import curve_fit
@@ -12,9 +12,10 @@ __all__ = ["CurveFitLearner"]
 
 
 class CurveFitModel(Model):
-    def __init__(self, domain: Domain, parameters_names: List[str],
+    def __init__(self, domain: Domain, original_domain: Domain,
+                 parameters_names: List[str],
                  parameters: np.ndarray, function: Callable):
-        super().__init__(domain)
+        super().__init__(domain, original_domain)
         self.__parameters_names = parameters_names
         self.__parameters = parameters
         self.__function = function
@@ -27,7 +28,11 @@ class CurveFitModel(Model):
                      metas=np.array(self.__parameters_names)[:, None])
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        return self.__function(X, *self.__parameters).flatten()
+        predicted = self.__function(X, *self.__parameters)
+        if isinstance(predicted, float):
+            # handle constant function; i.e. len(self.domain.attributes) == 0
+            return np.full(len(X), predicted)
+        return predicted.flatten()
 
 
 class CurveFitLearner(Learner):
@@ -36,26 +41,34 @@ class CurveFitLearner(Learner):
     name = "Curve Fit"
 
     def __init__(self, function: Callable, parameters_names: List[str],
-                 p0=None, bounds=(-np.inf, np.inf), preprocessors=None):
+                 feature_names: List[str], p0: Optional[Iterable] = None,
+                 bounds: Iterable = (-np.inf, np.inf), preprocessors=None):
+        super().__init__(preprocessors)
+
         if not callable(function):
             raise TypeError("Function is not callable.")
 
-        super().__init__(preprocessors)
         self.__function = function
         self.__parameters_names = parameters_names
-        self.__p0: Optional[Iterable] = p0
-        self.__bounds: Iterable = bounds
+        self.__feature_names = feature_names
+        self.__p0 = p0
+        self.__bounds = bounds
 
     def fit_storage(self, data: Table) -> CurveFitModel:
         domain = data.domain
+        attributes = []
         for attr in domain.attributes:
-            if not attr.is_continuous:
-                raise ValueError("Numeric feature expected.")
+            if attr.name in self.__feature_names:
+                if not attr.is_continuous:
+                    raise ValueError("Numeric feature expected.")
+                attributes.append(attr)
 
-        params, _ = curve_fit(self.__function, data.X, data.Y,
+        new_domain = Domain(attributes, domain.class_vars, domain.metas)
+        transformed = data.transform(new_domain)
+        params, _ = curve_fit(self.__function, transformed.X, transformed.Y,
                               p0=self.__p0, bounds=self.__bounds)
-        return CurveFitModel(domain, self.__parameters_names,
-                             params, self.__function)
+        return CurveFitModel(new_domain, domain,
+                             self.__parameters_names, params, self.__function)
 
 
 if __name__ == "__main__":
@@ -65,8 +78,8 @@ if __name__ == "__main__":
     xdata = housing.X
     ydata = housing.Y
 
-    func = lambda x, a, b, c: a * np.exp(-b * x[:, 12]) + c
-    pred = CurveFitLearner(func, ["a", "b", "c"])(housing)(housing)
+    func = lambda x, a, b, c: a * np.exp(-b * x[:, 0]) + c
+    pred = CurveFitLearner(func, ["a", "b", "c"], ["LSTAT"])(housing)(housing)
 
     plt.plot(xdata[:, 12], ydata, "o")
     indices = np.argsort(xdata[:, 12])
