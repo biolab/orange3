@@ -152,9 +152,14 @@ def unique_in_order_mapping(a):
     - unique elements of the input list (in the order of appearance)
     - indices of the input list onto the returned uniques
     """
-    u, idx, inv = np.unique(a, return_index=True, return_inverse=True)
-    unique_in_order = u[np.argsort(idx)]
-    mapping = np.argsort(idx)[inv]
+    first_position = {}
+    unique_in_order = []
+    mapping = []
+    for e in a:
+        if e not in first_position:
+            first_position[e] = len(unique_in_order)
+            unique_in_order.append(e)
+        mapping.append(first_position[e])
     return unique_in_order, mapping
 
 

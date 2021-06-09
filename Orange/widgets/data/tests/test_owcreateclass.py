@@ -89,6 +89,15 @@ class TestHelpers(unittest.TestCase):
         u, m = unique_in_order_mapping([2, 1, 2, 3])
         np.testing.assert_equal(u, [2, 1, 3])
         np.testing.assert_equal(m, [0, 1, 0, 2])
+        u, m = unique_in_order_mapping([2, 3, 1])
+        np.testing.assert_equal(u, [2, 3, 1])
+        np.testing.assert_equal(m, [0, 1, 2])
+        u, m = unique_in_order_mapping([2, 3, 1, 1])
+        np.testing.assert_equal(u, [2, 3, 1])
+        np.testing.assert_equal(m, [0, 1, 2, 2])
+        u, m = unique_in_order_mapping([2, 3, 1, 2])
+        np.testing.assert_equal(u, [2, 3, 1])
+        np.testing.assert_equal(m, [0, 1, 2, 0])
 
     def test_value_from_string_substring(self):
         trans = ValueFromStringSubstring(StringVariable("x"), self.patterns)

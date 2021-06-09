@@ -3,7 +3,12 @@ Change Log
 
 [next] - TBA
 ------------
-* ...
+
+[3.29.3] - 2021-06-09
+--------------------
+##### Bugfixes
+* Create Class: fix incorrect value assignment
+
 
 [3.29.2] - 2021-06-08
 --------------------
@@ -1562,7 +1567,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.29.2...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.29.3...HEAD
+[3.29.3]: https://github.com/biolab/orange3/compare/3.29.2...3.29.3
 [3.29.2]: https://github.com/biolab/orange3/compare/3.29.1...3.29.2
 [3.29.1]: https://github.com/biolab/orange3/compare/3.29.0...3.29.1
 [3.29.0]: https://github.com/biolab/orange3/compare/3.28.0...3.29.0

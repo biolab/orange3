@@ -369,6 +369,7 @@ class WidgetLearnerTestMixin:
         self.widget.apply_button.button.click()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
+        self.assertIsNotNone(model)
         pickle.dumps(model)
 
     @staticmethod
