@@ -1,17 +1,16 @@
 # pylint: disable=missing-docstring, protected-access
-import ast
 import pickle
 import unittest
 
 import numpy as np
 from AnyQt.QtWidgets import QCheckBox, QLineEdit, QPushButton, QDoubleSpinBox
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import Discretize, Continuize
 from Orange.regression import CurveFitLearner
 from Orange.regression.curvefit import CurveFitModel
 from Orange.widgets.model.owcurvefit import OWCurveFit, ParametersWidget, \
-    Parameter, _create_lambda, FUNCTIONS
+    Parameter, FUNCTIONS
 from Orange.widgets.tests.base import WidgetTest, WidgetLearnerTestMixin
 from Orange.widgets.tests.utils import simulate
 
@@ -28,78 +27,6 @@ class TestFunctions(unittest.TestCase):
                 self.assertIsInstance(func(a, 2), np.ndarray)
             else:
                 self.assertIsInstance(func(a), np.ndarray)
-
-
-class TestCreateLambda(unittest.TestCase):
-    def test_create_lambda_simple(self):
-        func, params, vars_ = _create_lambda(
-            ast.parse("a + b", mode="eval"), [], []
-        )
-        self.assertTrue(callable(func))
-        self.assertEqual(params, ["a", "b"])
-        self.assertEqual(vars_, [])
-        self.assertEqual(func(np.array([[1, 11], [2, 22]]), 1, 2), 3)
-
-    def test_create_lambda_var(self):
-        func, params, vars_ = _create_lambda(
-            ast.parse("var + a + b", mode="eval"), ["var"], []
-        )
-        self.assertTrue(callable(func))
-        self.assertEqual(params, ["a", "b"])
-        self.assertEqual(vars_, ["var"])
-        np.testing.assert_array_equal(
-            func(np.array([[1, 11], [2, 22]]), 1, 2),
-            np.array([4, 5])
-        )
-
-    def test_create_lambda_fun(self):
-        func, params, vars_ = _create_lambda(
-            ast.parse("pow(a, 2)", mode="eval"), [], ["pow"]
-        )
-        self.assertTrue(callable(func))
-        self.assertEqual(params, ["a"])
-        self.assertEqual(vars_, [])
-        np.testing.assert_array_equal(
-            func(np.array([[1, 11], [2, 22]]), 3),
-            np.array([9, 9])
-        )
-
-    def test_create_lambda_var_fun(self):
-        func, params, vars_ = _create_lambda(
-            ast.parse("var1 + pow(a, 2) + pow(a, 2)", mode="eval"),
-            ["var1", "var2"], ["pow"]
-        )
-        self.assertTrue(callable(func))
-        self.assertEqual(params, ["a"])
-        self.assertEqual(vars_, ["var1"])
-        np.testing.assert_array_equal(
-            func(np.array([[1, 11], [2, 22]]), 3),
-            np.array([19, 20])
-        )
-
-    def test_create_lambda_x(self):
-        func, params, vars_ = _create_lambda(
-            ast.parse("var1 + x", mode="eval"), ["var1", "var2"], []
-        )
-        self.assertTrue(callable(func))
-        self.assertEqual(params, ["x"])
-        self.assertEqual(vars_, ["var1"])
-        np.testing.assert_array_equal(
-            func(np.array([[1, 11], [2, 22]]), 3), np.array([4, 5])
-        )
-
-    def test_create_lambda(self):
-        func, params, vars_ = _create_lambda(
-            ast.parse("a * var1 + b * exp(var2 * power(pi, 0))", mode="eval"),
-            ["var1", "var2", "var3"], list(FUNCTIONS)
-        )
-        self.assertTrue(callable(func))
-        self.assertEqual(params, ["a", "b"])
-        self.assertEqual(vars_, ["var1", "var2"])
-        np.testing.assert_allclose(
-            func(np.array([[1, 2], [3, 4]]), 3, 2),
-            np.array([17.778112, 118.1963])
-        )
 
 
 class TestParametersWidget(WidgetTest):
@@ -412,6 +339,25 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
             coefficients = self.get_output(self.widget.Outputs.coefficients)
             self.assertIsNone(coefficients)
 
+    def test_sanitized_expression(self):
+        data = Table("heart_disease")
+        attrs = data.domain.attributes
+        domain = Domain(attrs[1:4], attrs[4])
+        data = data.transform(domain)
+        self.__init_widget(data)
+        self.assertEqual(self.widget.expression, "p1 + rest_SBP")
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.model))
+
+    def test_discrete_expression(self):
+        data = Table("heart_disease")
+        attrs = data.domain.attributes
+        domain = Domain(attrs[1:4], attrs[4])
+        data = data.transform(domain)
+        self.send_signal(self.widget.Inputs.preprocessor, Continuize())
+        self.__init_widget(data)
+        self.assertEqual(self.widget.expression, "p1 + gender_female")
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.model))
+
     def test_invalid_expression(self):
         self.__init_widget()
         self.assertFalse(self.widget.Error.invalid_exp.is_shown())
@@ -452,6 +398,18 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.duplicate_parameter.is_shown())
+
+    def test_parameter_name_in_features(self):
+        domain = Domain([ContinuousVariable("p1")],
+                        ContinuousVariable("cls"))
+        data = Table.from_numpy(domain, np.zeros((10, 1)), np.ones((10,)))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.__add_button.click()
+        self.assertTrue(self.widget.Error.parameter_in_attrs.is_shown())
+        param_controls = \
+            self.widget._OWCurveFit__param_widget._ParametersWidget__controls
+        param_controls[0][1].setText("a")
+        self.assertFalse(self.widget.Error.parameter_in_attrs.is_shown())
 
     def test_no_parameter(self):
         self.send_signal(self.widget.Inputs.data, self.housing)

@@ -1,7 +1,6 @@
 import ast
-import math
 from itertools import chain
-from typing import Optional, List, Tuple, Any, Mapping, Callable, Union
+from typing import Optional, List, Tuple, Any, Mapping
 
 import numpy as np
 
@@ -10,13 +9,12 @@ from AnyQt.QtWidgets import QSizePolicy, QWidget, QGridLayout, QLabel, \
     QLineEdit, QVBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QGroupBox
 
 from orangewidget.utils.combobox import ComboBoxSearch
-from Orange.data import Table, ContinuousVariable, Domain
-from Orange.data.util import get_unique_names
+from Orange.data import Table, ContinuousVariable
+from Orange.data.util import sanitized_name
 from Orange.preprocess import Preprocess
 from Orange.regression import CurveFitLearner
 from Orange.widgets import gui
-from Orange.widgets.data.owfeatureconstructor import sanitized_name, \
-    validate_exp
+from Orange.widgets.data.owfeatureconstructor import validate_exp
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import DomainModel, PyListModel, \
     PyListModelTooltip
@@ -24,12 +22,14 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 
-FUNCTIONS = {k: v for k, v in np.__dict__.items()
-             if k in dir(math) and not k.startswith("_")
-             and k not in ["prod", "frexp", "modf"]
-             or k in ["abs", "arccos", "arccosh", "arcsin", "arcsinh",
-                      "arctan", "arctan2", "arctanh", "power", "round"]}
-GLOBALS = {name: getattr(np, name) for name in FUNCTIONS}
+FUNCTIONS = {k: v for k, v in np.__dict__.items() if k in
+             ("isclose", "inf", "nan", "arccos", "arccosh", "arcsin",
+              "arcsinh", "arctan", "arctan2", "arctanh", "ceil", "copysign",
+              "cos", "cosh", "degrees", "e", "exp", "expm1", "fabs", "floor",
+              "fmod", "gcd", "hypot", "isfinite", "isinf", "isnan", "ldexp",
+              "log", "log10", "log1p", "log2", "pi", "power", "radians",
+              "remainder", "sin", "sinh", "sqrt", "tan", "tanh", "trunc",
+              "round", "abs")}
 
 
 class Parameter:
@@ -224,7 +224,7 @@ class ParametersWidget(QWidget):
         if len(self.__controls) == 0:
             self._set_labels_visible(False)
 
-    def _set_labels_visible(self, visible: True):
+    def _set_labels_visible(self, visible: bool):
         for label in self.__labels:
             label.setVisible(visible)
 
@@ -267,6 +267,8 @@ class OWCurveFit(OWBaseLearner):
                            "Use 'Feature Constructor' widget instead.")
         unknown_parameter = Msg("Unknown parameter '{}'.\n"
                                 "Declare the parameter in 'Parameters' box")
+        parameter_in_attrs = Msg("Some parameters and features have the same "
+                                 "name '{}'.")
 
     LEARNER = CurveFitLearner
     supports_sparse = False
@@ -343,9 +345,14 @@ class OWCurveFit(OWBaseLearner):
         self.parameters = params = {p.name: p.to_tuple() for p in parameters}
         self.__param_model[:] = chain([self.PARAM_PLACEHOLDER], params)
         self.settings_changed()
+        self.Error.parameter_in_attrs.clear()
         self.Warning.duplicate_parameter.clear()
         if len(self.parameters) != len(parameters):
             self.Warning.duplicate_parameter()
+        names = [f.name for f in self.__feature_model[1:]]
+        forbidden = [p.name for p in parameters if p.name in names]
+        if forbidden:
+            self.Error.parameter_in_attrs(forbidden[0])
 
     def __on_feature_added(self):
         index = self.__feature_combo.currentIndex()
@@ -448,24 +455,28 @@ class OWCurveFit(OWBaseLearner):
         if not self.__pp_data or not self.expression:
             return None
 
-        try:
-            tree = ast.parse(self.expression, mode="eval")
-        except SyntaxError:
+        if not self.__validate_expression(self.expression):
             self.Error.invalid_exp()
             return None
 
-        if not self.__validate_expression(tree):
-            self.Error.invalid_exp()
-            return None
+        p0, bounds = {}, {}
+        for name in self.parameters:
+            param = Parameter(*self.parameters[name])
+            p0[name] = param.initial
+            bounds[name] = (param.lower if param.use_lower else -np.inf,
+                            param.upper if param.use_upper else np.inf)
 
-        vars_names = [sanitized_name(var.name) for var
-                      in self.__feature_model[1:]]
-        function, params_names, used_vars_names = \
-            _create_lambda(tree, vars_names, list(FUNCTIONS))
+        learner = self.LEARNER(
+            self.expression,
+            available_feature_names=[a.name for a in self.__feature_model[1:]],
+            functions=FUNCTIONS,
+            sanitizer=sanitized_name,
+            p0=p0,
+            bounds=bounds,
+            preprocessors=self.preprocessors
+        )
 
-        feature_names = [a.name for a in self.__pp_data.domain.attributes
-                         if sanitized_name(a.name) in used_vars_names]
-
+        params_names = learner.parameters_names
         if not params_names:
             self.Error.no_parameter()
             return None
@@ -477,20 +488,10 @@ class OWCurveFit(OWBaseLearner):
         if unused:
             self.Warning.unused_parameter(unused[0])
 
-        p0, lower_bounds, upper_bounds = [], [], []
-        for name in params_names:
-            param = Parameter(*self.parameters[name])
-            p0.append(param.initial)
-            lower_bounds.append(param.lower if param.use_lower else -np.inf)
-            upper_bounds.append(param.upper if param.use_upper else np.inf)
-        bounds = (lower_bounds, upper_bounds)
-
-        return self.LEARNER(function, params_names, feature_names,
-                            p0=p0, bounds=bounds,
-                            preprocessors=self.preprocessors)
+        return learner
 
     def get_learner_parameters(self) -> Tuple[Tuple[str, Any]]:
-        return tuple(("Function", self.expression),)
+        return tuple(("Function", self.expression), )
 
     def update_model(self):
         super().update_model()
@@ -504,14 +505,12 @@ class OWCurveFit(OWBaseLearner):
         if self.data:
             data = preprocess(self.data, self.preprocessors)
             dom = data.domain
-            cont_attrs =[a for a in dom.attributes if a.is_continuous]
+            cont_attrs = [a for a in dom.attributes if a.is_continuous]
             if len(cont_attrs) == 0:
                 self.Error.data_error("Data has no continuous features.")
             elif not self.learner:
                 # create dummy learner in order to check data
-                cont_domain = Domain(cont_attrs, dom.class_vars, dom.metas)
-                cont_data = self.data.transform(cont_domain)
-                self.learner = self.LEARNER(lambda: 1, [], cont_data)
+                self.learner = self.LEARNER(lambda: 1, [], [])
         # parent's check_data() needs learner instantiated
         self.valid_data = super().check_data()
         if not learner_existed:
@@ -520,8 +519,9 @@ class OWCurveFit(OWBaseLearner):
         return self.valid_data
 
     @staticmethod
-    def __validate_expression(tree: ast.Expression):
+    def __validate_expression(expression: str):
         try:
+            tree = ast.parse(expression, mode="eval")
             valid = validate_exp(tree)
         # pylint: disable=broad-except
         except Exception:
@@ -534,85 +534,6 @@ def preprocess(data: Optional[Table], preprocessor: Optional[Preprocess]) \
     if not data or not preprocessor:
         return data
     return preprocessor(data)
-
-
-def _create_lambda(exp: ast.Expression, vars_names: List[str],
-                   functions: List[str]) -> Tuple[Callable, List[str]]:
-    search = ParametersSearch(vars_names, functions)
-    search.visit(exp)
-    args = search.parameters
-    vars_ = search.variables
-
-    name = sanitized_name(get_unique_names(args, "x"))
-    vars_mapper = {var: i for i, var in enumerate(vars_)}
-    exp = ReplaceVars(name, vars_mapper, functions).visit(exp)
-
-    lambda_ = ast.Lambda(
-        args=ast.arguments(
-            posonlyargs=[],
-            args=[ast.arg(arg=arg) for arg in [name] + args],
-            varargs=None,
-            kwonlyargs=[],
-            kw_defaults=[],
-            defaults=[],
-        ),
-        body=exp.body
-    )
-    exp = ast.Expression(body=lambda_)
-    ast.fix_missing_locations(exp)
-    return eval(compile(exp, "<lambda>", mode="eval"), GLOBALS), args, vars_
-
-
-class ParametersSearch(ast.NodeVisitor):
-    def __init__(self, vars_mapper: Mapping, functions: List):
-        super().__init__()
-        self.__vars_mapper = vars_mapper
-        self.__functions = functions
-        self.__parameters = []
-        self.__variables = []
-
-    @property
-    def parameters(self) -> List[str]:
-        return self.__parameters
-
-    @property
-    def variables(self) -> List[str]:
-        return self.__variables
-
-    def visit_Name(self, node: ast.Name) -> ast.Name:
-        if node.id in list(self.__vars_mapper):
-            # don't use Set in order to preserve parameters order
-            if node.id not in self.__variables:
-                self.__variables.append(node.id)
-        elif node.id not in self.__functions:
-            # don't use Set in order to preserve parameters order
-            if node.id not in self.__parameters:
-                self.__parameters.append(node.id)
-        return node
-
-
-class ReplaceVars(ast.NodeTransformer):
-    """
-    Replace feature names with X[:, i], where i is index of feature.
-    """
-    def __init__(self, name: str, vars_mapper: Mapping, functions: List):
-        super().__init__()
-        self.__name = name
-        self.__vars_mapper = vars_mapper
-        self.__functions = functions
-
-    def visit_Name(self, node: ast.Name) -> Union[ast.Name, ast.Subscript]:
-        if node.id not in self.__vars_mapper or node.id in self.__functions:
-            return node
-        else:
-            n = self.__vars_mapper[node.id]
-            return ast.Subscript(
-                value=ast.Name(id=self.__name, ctx=ast.Load()),
-                slice=ast.ExtSlice(
-                    dims=[ast.Slice(lower=None, upper=None, step=None),
-                          ast.Index(value=ast.Num(n=n))]),
-                ctx=node.ctx
-            )
 
 
 if __name__ == "__main__":  # pragma: no cover
