@@ -109,6 +109,7 @@ Model
    widgets/model/logisticregression
    widgets/model/naivebayes
    widgets/model/adaboost
+   widgets/model/curvefit
    widgets/model/neuralnetwork
    widgets/model/stochasticgradient
    widgets/model/stacking
