@@ -45,9 +45,9 @@ class CurveFitModel(Model):
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         predicted = self.__function(X, *self.__parameters)
-        if isinstance(predicted, float):
+        if not isinstance(predicted, np.ndarray):
             # handle constant function; i.e. len(self.domain.attributes) == 0
-            return np.full(len(X), predicted)
+            return np.full(len(X), predicted, dtype=float)
         return predicted.flatten()
 
     def __getstate__(self) -> Dict:
@@ -261,6 +261,8 @@ def _create_lambda(
 
     Examples
     --------
+    >>> from Orange.data import Table
+    >>> data = Table("housing")
     >>> sfun = "a * exp(-b * CRIM * LSTAT) + c"
     >>> names = [a.name for a in data.domain.attributes]
     >>> func, par, var = _create_lambda(sfun, available_feature_names=names,

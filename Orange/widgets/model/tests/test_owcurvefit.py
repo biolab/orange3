@@ -22,11 +22,29 @@ class TestFunctions(unittest.TestCase):
             func = getattr(np, f)
             if isinstance(func, float):
                 pass
+            elif f in ["any", "all"]:
+                self.assertTrue(func(a))
             elif f in ["arctan2", "copysign", "fmod", "gcd", "hypot",
                        "isclose", "ldexp", "power", "remainder"]:
                 self.assertIsInstance(func(a, 2), np.ndarray)
+                self.assertEqual(func(a, 2).shape, (5,))
             else:
                 self.assertIsInstance(func(a), np.ndarray)
+                self.assertEqual(func(a).shape, (5,))
+
+
+class TestParameter(unittest.TestCase):
+    def test_to_tuple(self):
+        args = ("foo", 2, True, 10, False, 50)
+        par = Parameter(*args)
+        self.assertEqual(par.to_tuple(), args)
+
+    def test_repr(self):
+        args = ("foo", 2, True, 10, False, 50)
+        par = Parameter(*args)
+        str_par = "Parameter(name=foo, initial=2, use_lower=True, " \
+                  "lower=10, use_upper=False, upper=50)"
+        self.assertEqual(str(par), str_par)
 
 
 class TestParametersWidget(WidgetTest):
@@ -65,6 +83,19 @@ class TestParametersWidget(WidgetTest):
         self.assertEqual(data.lower, 0)
         self.assertFalse(data.use_upper)
         self.assertEqual(data.upper, 100)
+
+    def test_remove(self):
+        n = 5
+        for _ in range(n):
+            self._widget._add_row()
+        self.assertEqual(len(self._widget._ParametersWidget__data), n)
+
+        k = 2
+        for _ in range(k):
+            button = self._widget._ParametersWidget__controls[0][0]
+            button.click()
+
+        self.assertEqual(len(self._widget._ParametersWidget__data), n - k)
 
     def test_add_row_with_data(self):
         param = Parameter("a", 3, True, 2, False, 4)
@@ -164,6 +195,13 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
             self.__init_widget(valid)
             self.wait_until_stop_blocking()
             self.assertFalse(self.widget.Error.data_error.is_shown())
+
+    def test_input_data_missing(self):
+        self.assertTrue(self.widget.Warning.data_missing.is_shown())
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.assertFalse(self.widget.Warning.data_missing.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertTrue(self.widget.Warning.data_missing.is_shown())
 
     def test_input_preprocessor(self):
         self.__init_widget()
@@ -282,18 +320,18 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
     def test_function_combo(self):
         combo = self.widget.controls._function
         model = combo.model()
-        self.assertEqual(model.rowCount(), 44)
+        self.assertEqual(model.rowCount(), 46)
         self.assertEqual(combo.currentText(), "Select Function")
 
         self.send_signal(self.widget.Inputs.data, self.housing)
-        self.assertEqual(model.rowCount(), 44)
+        self.assertEqual(model.rowCount(), 46)
         self.assertEqual(combo.currentText(), "Select Function")
         simulate.combobox_activate_index(combo, 1)
         self.assertEqual(self.widget._OWCurveFit__expression_edit.text(),
                          "abs()")
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(model.rowCount(), 44)
+        self.assertEqual(model.rowCount(), 46)
         self.assertEqual(combo.currentText(), "Select Function")
 
     def test_expression(self):

@@ -104,6 +104,9 @@ class TestCurveFitLearner(unittest.TestCase):
 
         self.assertRaises(TypeError, CurveFitLearner, "a + b")
 
+        kw = dict(available_feature_names=[])
+        self.assertRaises(TypeError, CurveFitLearner, "a + b", **kw)
+
     def test_init_ast(self):
         kw = dict(available_feature_names=[], functions=[])
         exp = ast.parse("a + b", mode="eval")
@@ -118,6 +121,9 @@ class TestCurveFitLearner(unittest.TestCase):
         self.assertIsInstance(learner, CurveFitLearner)
 
         self.assertRaises(TypeError, CurveFitLearner, lambda x, a: a)
+
+        kw = dict(parameters_names=[])
+        self.assertRaises(TypeError, CurveFitLearner, lambda x, a: a, **kw)
 
     def test_fit(self):
         learner = CurveFitLearner(func, [], ["CRIM"])

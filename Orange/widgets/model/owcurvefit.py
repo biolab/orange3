@@ -29,7 +29,7 @@ FUNCTIONS = {k: v for k, v in np.__dict__.items() if k in
               "fmod", "gcd", "hypot", "isfinite", "isinf", "isnan", "ldexp",
               "log", "log10", "log1p", "log2", "pi", "power", "radians",
               "remainder", "sin", "sinh", "sqrt", "tan", "tanh", "trunc",
-              "round", "abs")}
+              "round", "abs", "any", "all")}
 
 
 class Parameter:
@@ -260,6 +260,7 @@ class OWCurveFit(OWBaseLearner):
         duplicate_parameter = Msg("Duplicated parameter name.")
         unused_parameter = Msg("Unused parameter '{}' in "
                                "'Parameters' declaration.")
+        data_missing = Msg("Provide data on the input.")
 
     class Error(OWBaseLearner.Error):
         invalid_exp = Msg("Invalid expression.")
@@ -304,6 +305,8 @@ class OWCurveFit(OWBaseLearner):
         self.__pending_expression = self.expression
 
         super().__init__(*args, **kwargs)
+
+        self.Warning.data_missing()
 
     def add_main_layout(self):
         box = gui.vBox(self.controlArea, "Parameters")
@@ -391,12 +394,9 @@ class OWCurveFit(OWBaseLearner):
         self.__expression_edit.setFocus()
 
     def set_data(self, data: Optional[Table]):
+        self.Warning.data_missing(shown=not bool(data))
         super().set_data(data)
         self.__clear()
-        # self.__init_models()
-        # self.__enable_controls()
-        # self.__set_pending()
-        # self.unconditional_apply()
 
     def __clear(self):
         self.expression = ""
@@ -452,10 +452,11 @@ class OWCurveFit(OWBaseLearner):
         self.Error.no_parameter.clear()
         self.Error.unknown_parameter.clear()
         self.Warning.unused_parameter.clear()
-        if not self.__pp_data or not self.expression:
+        expression = self.expression.strip()
+        if not self.__pp_data or not expression:
             return None
 
-        if not self.__validate_expression(self.expression):
+        if not self.__validate_expression(expression):
             self.Error.invalid_exp()
             return None
 
@@ -467,7 +468,7 @@ class OWCurveFit(OWBaseLearner):
                             param.upper if param.use_upper else np.inf)
 
         learner = self.LEARNER(
-            self.expression,
+            expression,
             available_feature_names=[a.name for a in self.__feature_model[1:]],
             functions=FUNCTIONS,
             sanitizer=sanitized_name,
