@@ -1,4 +1,5 @@
 import unittest
+import os
 
 import numpy as np
 import scipy.sparse as sp
@@ -252,6 +253,18 @@ class TestTableInit(unittest.TestCase):
 
 
 class TestTableLocking(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.orig_locking = Table.LOCKING
+        if os.getenv("CI"):
+            assert Table.LOCKING
+        else:
+            Table.LOCKING = True
+
+    @classmethod
+    def tearDownClass(cls):
+        Table.LOCKING = cls.orig_locking
+
     def setUp(self):
         a, b, c, d, e, f, g = map(ContinuousVariable, "abcdefg")
         domain = Domain([a, b, c], d, [e, f])
@@ -325,6 +338,14 @@ class TestTableLocking(unittest.TestCase):
             tab.X[0, 0] = 0
             tab.Y[0] = 0
 
+    def test_locking_flag(self):
+        try:
+            default = Table.LOCKING
+            Table.LOCKING = False
+            self.setUp()
+            self.table.X[0, 0] = 0
+        finally:
+            Table.LOCKING = default
 
 class TestTableFilters(unittest.TestCase):
     def setUp(self):

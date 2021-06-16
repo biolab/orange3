@@ -359,6 +359,15 @@ class _FromTableConversion:
 
 # noinspection PyPep8Naming
 class Table(Sequence, Storage):
+
+    LOCKING = None
+    """ If the class attribute LOCKING is True, tables will throw exceptions
+    on in-place modifications unless unlocked explicitly. LOCKING is supposed
+    to be set to True for testing to help us find bugs. If set to False
+    or None, no safeguards are in place. Two different values are used for
+    the same behaviour to distinguish the unchanged default (None) form
+    explicit deactivation (False) that some add-ons might need. """
+
     __file__ = None
     name = "untitled"
 
@@ -446,6 +455,9 @@ class Table(Sequence, Storage):
                 (self._W, self._Unlocked_W, "weights"))
 
     def _update_locks(self, force=False, unlock_bases=()):
+        if not Table.LOCKING:
+            return
+
         def sync(*xs):
             for x in xs:
                 try:
@@ -540,7 +552,10 @@ class Table(Sequence, Storage):
         if not args:
             if not kwargs:
                 self = super().__new__(cls)
-                self._unlocked = 0
+                if Table.LOCKING:
+                    self._unlocked = 0
+                else:
+                    self._unlocked = sum(f for _, f, _ in self._lock_parts())
                 return self
             else:
                 raise TypeError("Table() must not be called directly")
