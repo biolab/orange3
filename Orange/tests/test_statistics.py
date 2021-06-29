@@ -596,9 +596,9 @@ class TestUnique(unittest.TestCase):
     def test_returns_unique_values(self, array):
         # pylint: disable=bad-whitespace
         x = array([[-1., 1., 0., 2., 3., np.nan],
-                   [ 0., 0., 0., 3., 5., np.nan],
+                   [ 0., 0., 0., 3., 5.,    42.],
                    [-1., 0., 0., 1., 7.,     6.]])
-        expected = [-1, 0, 1, 2, 3, 5, 6, 7, np.nan, np.nan]
+        expected = [-1, 0, 1, 2, 3, 5, 6, 7, 42, np.nan]
 
         np.testing.assert_equal(unique(x, return_counts=False), expected)
 
@@ -606,11 +606,15 @@ class TestUnique(unittest.TestCase):
     def test_returns_counts(self, array):
         # pylint: disable=bad-whitespace
         x = array([[-1., 1., 0., 2., 3., np.nan],
-                   [ 0., 0., 0., 3., 5., np.nan],
+                   [ 0., 0., 0., 3., 5.,    42.],
                    [-1., 0., 0., 1., 7.,     6.]])
-        expected = [2, 6, 2, 1, 2, 1, 1, 1, 1, 1]
+        expected = [-1, 0, 1, 2, 3, 5, 6, 7, 42, np.nan]
+        expected_counts = [2, 6, 2, 1, 2, 1, 1, 1, 1, 1]
 
-        np.testing.assert_equal(unique(x, return_counts=True)[1], expected)
+        vals, counts = unique(x, return_counts=True)
+
+        np.testing.assert_equal(vals, expected)
+        np.testing.assert_equal(counts, expected_counts)
 
     def test_sparse_explicit_zeros(self):
         # Use `lil_matrix` to fix sparse warning for matrix construction
