@@ -17,13 +17,22 @@ PCA linear transformation of input data.
 ![](images/PCA-stamped.png)
 
 1. Select how many principal components you wish in your output. It is best to choose as few as possible with variance covered as high as possible. You can also set how much variance you wish to cover with your principal components.
-2. You can normalize data to adjust the values to common scale.
+2. You can normalize data to adjust the values to common scale. If checked, columns are divided by their standard deviations.
 3. When *Apply Automatically* is ticked, the widget will automatically communicate all changes. Alternatively, click *Apply*.
 4. Press *Save Image* if you want to save the created image to your computer.
 5. Produce a report.
 6. Principal components graph, where the red (lower) line is the variance covered per component and the green (upper) line is cumulative variance covered by components.
 
 The number of components of the transformation can be selected either in the *Components Selection* input box or by dragging the vertical cutoff line in the graph.
+
+Preprocessing
+-------------
+
+The widget preprocesses the input data in the following order:
+
+- continuizes categorical variables (with one-hot-encoding)
+- imputes missing values with mean values
+- if *Normalize variables* is checked, it divides columns by their standard deviation.
 
 Examples
 --------
