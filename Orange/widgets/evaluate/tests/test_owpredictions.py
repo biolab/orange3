@@ -6,15 +6,15 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from AnyQt.QtCore import QItemSelectionModel, QItemSelection
-from AnyQt.QtGui import QStandardItemModel
+from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt
 
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner
 from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import (
-    OWPredictions, SortProxyModel, SharedSelectionModel, SharedSelectionStore)
+    OWPredictions, SharedSelectionModel, SharedSelectionStore, DataModel,
+    PredictionsModel)
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
@@ -202,11 +202,7 @@ class TestOWPredictions(WidgetTest):
 
     def test_sort_matching(self):
         def get_items_order(model):
-            n = pred_model.rowCount()
-            return [
-                pred_model.mapToSource(model.index(i, 0)).row()
-                for i in range(n)
-            ]
+            return model.mapToSourceRows(np.arange(model.rowCount()))
 
         w = self.widget
 
@@ -216,46 +212,42 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.data, titanic)
 
         pred_model = w.predictionsview.model()
-        data_model = w.predictionsview.model()
+        data_model = w.dataview.model()
         n = pred_model.rowCount()
 
         # no sort
         pred_order = get_items_order(pred_model)
         data_order = get_items_order(data_model)
-        self.assertListEqual(pred_order, list(range(n)))
-        self.assertListEqual(data_order, list(range(n)))
+        np.testing.assert_array_equal(pred_order, np.arange(n))
+        np.testing.assert_array_equal(data_order, np.arange(n))
 
         # sort by first column in prediction table
         pred_model.sort(0)
         w.predictionsview.horizontalHeader().sectionClicked.emit(0)
         pred_order = get_items_order(pred_model)
         data_order = get_items_order(data_model)
-        self.assertListEqual(pred_order, data_order)
+        np.testing.assert_array_equal(pred_order, data_order)
 
         # sort by second column in data table
         data_model.sort(1)
         w.dataview.horizontalHeader().sectionClicked.emit(0)
         pred_order = get_items_order(pred_model)
         data_order = get_items_order(data_model)
-        self.assertListEqual(pred_order, data_order)
+        np.testing.assert_array_equal(pred_order, data_order)
 
         # restore order
         w.reset_button.click()
         pred_order = get_items_order(pred_model)
         data_order = get_items_order(data_model)
-        self.assertListEqual(pred_order, list(range(n)))
-        self.assertListEqual(data_order, list(range(n)))
+        np.testing.assert_array_equal(pred_order, np.arange(n))
+        np.testing.assert_array_equal(data_order, np.arange(n))
 
     def test_sort_predictions(self):
         """
         Test whether sorting of probabilities by FilterSortProxy is correct.
         """
         def get_items_order(model):
-            n = pred_model.rowCount()
-            return [
-                pred_model.mapToSource(model.index(i, 0)).row()
-                for i in range(n)
-            ]
+            return model.mapToSourceRows(np.arange(model.rowCount()))
 
         log_reg_iris = LogisticRegressionLearner()(self.iris)
         self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
@@ -528,21 +520,19 @@ class TestOWPredictions(WidgetTest):
 
 class SelectionModelTest(unittest.TestCase):
     def setUp(self):
-        self.sourceModel1 = QStandardItemModel(5, 2)
-        self.proxyModel1 = SortProxyModel()
-        self.proxyModel1.setSourceModel(self.sourceModel1)
-        self.store = SharedSelectionStore(self.proxyModel1)
-        self.model1 = SharedSelectionModel(self.store, self.proxyModel1, None)
+        iris = Table("iris")
 
-        self.sourceModel2 = QStandardItemModel(5, 3)
-        self.proxyModel2 = SortProxyModel()
-        self.proxyModel2.setSourceModel(self.sourceModel2)
-        self.model2 = SharedSelectionModel(self.store, self.proxyModel2, None)
+        self.datamodel1 = DataModel(iris[:5, :2])
+        self.store = SharedSelectionStore(self.datamodel1)
+        self.model1 = SharedSelectionModel(self.store, self.datamodel1, None)
+
+        self.datamodel2 = DataModel(iris[-5:, :3])
+        self.model2 = SharedSelectionModel(self.store, self.datamodel2, None)
 
     def itsel(self, rows):
         sel = QItemSelection()
         for row in rows:
-            index = self.store.proxy.index(row, 0)
+            index = self.store.model.index(row, 0)
             sel.select(index, index)
         return sel
 
@@ -560,33 +550,33 @@ class SharedSelectionStoreTest(SelectionModelTest):
         store = self.store
         store.select_rows({1, 2}, QItemSelectionModel.Select)
         self.assertEqual(store.rows, {1, 2})
-        emit1.assert_called_with({1, 2}, set())
-        emit2.assert_called_with({1, 2}, set())
+        emit1.assert_called_with([1, 2], [])
+        emit2.assert_called_with([1, 2], [])
 
         store.select_rows({1, 2, 4}, QItemSelectionModel.Select)
         self.assertEqual(store.rows, {1, 2, 4})
-        emit1.assert_called_with({4}, set())
-        emit2.assert_called_with({4}, set())
+        emit1.assert_called_with([4], [])
+        emit2.assert_called_with([4], [])
 
         store.select_rows({3, 4}, QItemSelectionModel.Toggle)
         self.assertEqual(store.rows, {1, 2, 3})
-        emit1.assert_called_with({3}, {4})
-        emit2.assert_called_with({3}, {4})
+        emit1.assert_called_with([3], [4])
+        emit2.assert_called_with([3], [4])
 
         store.select_rows({0, 2}, QItemSelectionModel.Deselect)
         self.assertEqual(store.rows, {1, 3})
-        emit1.assert_called_with(set(), {2})
-        emit2.assert_called_with(set(), {2})
+        emit1.assert_called_with([], [2])
+        emit2.assert_called_with([], [2])
 
         store.select_rows({2, 3, 4}, QItemSelectionModel.ClearAndSelect)
         self.assertEqual(store.rows, {2, 3, 4})
-        emit1.assert_called_with({2, 4}, {1})
-        emit2.assert_called_with({2, 4}, {1})
+        emit1.assert_called_with([2, 4], [1])
+        emit2.assert_called_with([2, 4], [1])
 
         store.select_rows({2, 3, 4}, QItemSelectionModel.Clear)
         self.assertEqual(store.rows, set())
-        emit1.assert_called_with(set(), {2, 3, 4})
-        emit2.assert_called_with(set(), {2, 3, 4})
+        emit1.assert_called_with([], [2, 3, 4])
+        emit2.assert_called_with([], [2, 3, 4])
 
         store.select_rows({2, 3, 4}, QItemSelectionModel.ClearAndSelect)
         emit1.reset_mock()
@@ -600,13 +590,13 @@ class SharedSelectionStoreTest(SelectionModelTest):
         store.select_rows = Mock()
 
         # Map QItemSelection
-        store.proxy.setSortIndices([1, 2, 3, 4, 0])
+        store.model.setSortIndices(np.array([4, 0, 1, 2, 3]))
         store.select(self.itsel([1, 2]), QItemSelectionModel.Select)
         store.select_rows.assert_called_with({0, 1}, QItemSelectionModel.Select)
 
         # Map QModelIndex
-        store.proxy.setSortIndices([1, 2, 3, 4, 0])
-        store.select(store.proxy.index(0, 0), QItemSelectionModel.Select)
+        store.model.setSortIndices(np.array([4, 0, 1, 2, 3]))
+        store.select(store.model.index(0, 0), QItemSelectionModel.Select)
         store.select_rows.assert_called_with({4}, QItemSelectionModel.Select)
 
         # Map empty selection
@@ -624,8 +614,8 @@ class SharedSelectionStoreTest(SelectionModelTest):
 
         store.clear_selection()
         self.assertEqual(store.rows, set())
-        emit1.assert_called_with(set(), {1, 2, 4})
-        emit2.assert_called_with(set(), {1, 2, 4})
+        emit1.assert_called_with([], [1, 2, 4])
+        emit2.assert_called_with([], [1, 2, 4])
 
     def test_reset(self):
         store = self.store
@@ -644,20 +634,27 @@ class SharedSelectionStoreTest(SelectionModelTest):
     def test_emit_changed_maps_to_proxy(self):
         store = self.store
         emit1 = self.model1.emit_selection_rows_changed = Mock()
+        self.model2.emit_selection_rows_changed = Mock()
 
-        store.proxy.setSortIndices([1, 2, 3, 4, 0])
+        def assert_called(exp_selected, exp_deselected):
+            # pylint: disable=unsubscriptable-object
+            selected, deselected = emit1.call_args[0]
+            self.assertEqual(list(selected), exp_selected)
+            self.assertEqual(list(deselected), exp_deselected)
+
+
+        store.model.setSortIndices([4, 0, 1, 2, 3])
         store.select_rows({3, 4}, QItemSelectionModel.Select)
-        emit1.assert_called_with({4, 0}, set())
+        assert_called([4, 0], [])
 
-        store.proxy.setSortIndices(None)
+        store.model.setSortIndices(None)
         store.select_rows({4}, QItemSelectionModel.Deselect)
-        emit1.assert_called_with(set(), {0})
+        assert_called([], [4])
 
-        store.proxy.setSortIndices([1, 0, 3, 4, 2])
-        store.proxy.setSortIndices(None)
-        self.proxyModel1.sort(-1)
+        store.model.setSortIndices([1, 0, 3, 4, 2])
+        store.model.setSortIndices(None)
         store.select_rows({2, 3}, QItemSelectionModel.Deselect)
-        emit1.assert_called_with(set(), {3})
+        assert_called([], [3])
 
 
 class SharedSelectionModelTest(SelectionModelTest):
@@ -671,9 +668,9 @@ class SharedSelectionModelTest(SelectionModelTest):
         sel = self.model1.selection_from_rows({1, 2})
         self.assertEqual(len(sel), 2)
         ind1 = sel[0]
-        self.assertIs(ind1.model(), self.proxyModel1)
+        self.assertIs(ind1.model(), self.model1.model())
         self.assertEqual(ind1.left(), 0)
-        self.assertEqual(ind1.right(), self.proxyModel1.columnCount() - 1)
+        self.assertEqual(ind1.right(), self.model1.model().columnCount() - 1)
         self.assertEqual(ind1.top(), 1)
         self.assertEqual(ind1.bottom(), 1)
 
@@ -682,25 +679,26 @@ class SharedSelectionModelTest(SelectionModelTest):
         m2 = Mock()
         self.model1.selectionChanged.connect(m1)
         self.model2.selectionChanged.connect(m2)
-        self.proxyModel1.setSortIndices([1, 0, 2, 4, 3])
+        self.model1.model().setSortIndices(np.array([1, 0, 2, 4, 3]))
         self.model1.select(self.itsel({1, 3}), QItemSelectionModel.Select)
         self.assertEqual(self.store.rows, {0, 4})
 
-        for model, m in zip((self.proxyModel1, self.proxyModel2), (m1, m2)):
+        for model, m in zip((self.model1, self.model2), (m1, m2)):
             sel = m.call_args[0][0]
             self.assertEqual(len(sel), 2)
             for ind, row in zip(sel, (1, 3)):
-                self.assertIs(ind.model(), model)
+                self.assertIs(ind.model(), model.model())
                 self.assertEqual(ind.left(), 0)
-                self.assertEqual(ind.right(), model.columnCount() - 1)
+                self.assertEqual(ind.right(), model.model().columnCount() - 1)
                 self.assertEqual(ind.top(), row)
                 self.assertEqual(ind.bottom(), row)
 
     def test_methods(self):
         def rowcol(sel):
             return {(index.row(), index.column()) for index in sel}
-        self.proxyModel1.setSortIndices([1, 0, 2, 4, 3])
-        self.proxyModel2.setSortIndices([1, 0, 2, 4, 3])
+
+        self.model1.model().setSortIndices(np.array([1, 0, 2, 4, 3]))
+        self.model2.model().setSortIndices(np.array([1, 0, 2, 4, 3]))
 
         self.assertFalse(self.model1.hasSelection())
         self.assertFalse(self.model1.isColumnSelected(1))
@@ -745,6 +743,140 @@ class SharedSelectionModelTest(SelectionModelTest):
         self.assertEqual(self.model1.selectedColumns(1), [])
         self.assertEqual(self.model1.selectedRows(1), [])
         self.assertEqual(self.model1.selectedIndexes(), [])
+
+
+class PredictionsModelTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.values = np.array([[0, 1, 1, 2, 0], [0, 0, 0, 1, 0]], dtype=float)
+        cls.probs = [np.array([[80, 10, 10],
+                               [30, 70, 0],
+                               [15, 80, 5],
+                               [0,  10, 90],
+                               [55, 40, 5]]) / 100,
+                     np.array([[80, 0, 20],
+                               [90, 5, 5],
+                               [70, 10, 20],
+                               [10, 60, 30],
+                               [50, 25, 25]]) / 100]
+        cls.no_probs = [np.zeros((5, 0)), np.zeros((5, 0))]
+
+    def test_model_classification(self):
+        model = PredictionsModel(self.values, self.probs)
+        self.assertEqual(model.rowCount(), 5)
+        self.assertEqual(model.columnCount(), 2)
+
+        val, prob = model.data(model.index(0, 1))
+        self.assertEqual(val, 0)
+        np.testing.assert_equal(prob, [0.8, 0, 0.2])
+
+        val, prob = model.data(model.index(3, 1))
+        self.assertEqual(val, 1)
+        np.testing.assert_equal(prob, [0.1, 0.6, 0.3])
+
+    def test_model_regression(self):
+        model = PredictionsModel(self.values, self.no_probs)
+        self.assertEqual(model.rowCount(), 5)
+        self.assertEqual(model.columnCount(), 2)
+
+        val, prob = model.data(model.index(0, 1))
+        self.assertEqual(val, 0)
+        np.testing.assert_equal(prob, [])
+
+        val, prob = model.data(model.index(3, 1))
+        self.assertEqual(val, 1)
+        np.testing.assert_equal(prob, [])
+
+    def test_model_header(self):
+        model = PredictionsModel(self.values, self.probs)
+        self.assertIsNone(model.headerData(0, Qt.Horizontal))
+        self.assertEqual(model.headerData(3, Qt.Vertical), "4")
+
+        model = PredictionsModel(self.values, self.probs, ["a", "b"])
+        self.assertEqual(model.headerData(0, Qt.Horizontal), "a")
+        self.assertEqual(model.headerData(1, Qt.Horizontal), "b")
+        self.assertEqual(model.headerData(3, Qt.Vertical), "4")
+
+        model = PredictionsModel(self.values, self.probs, ["a"])
+        self.assertEqual(model.headerData(0, Qt.Horizontal), "a")
+        self.assertIsNone(model.headerData(1, Qt.Horizontal))
+        self.assertEqual(model.headerData(3, Qt.Vertical), "4")
+
+    def test_model_empty(self):
+        model = PredictionsModel()
+        self.assertEqual(model.rowCount(), 0)
+        self.assertEqual(model.columnCount(), 0)
+        self.assertIsNone(model.headerData(1, Qt.Horizontal))
+
+    def test_sorting_classification(self):
+        model = PredictionsModel(self.values, self.probs)
+
+        val, prob = model.data(model.index(0, 1))
+        self.assertEqual(val, 0)
+        np.testing.assert_equal(prob, [0.8, 0, 0.2])
+
+        val, prob = model.data(model.index(3, 1))
+        self.assertEqual(val, 1)
+        np.testing.assert_equal(prob, [0.1, 0.6, 0.3])
+
+        model.setProbInd([2])
+        model.sort(0, Qt.DescendingOrder)
+        val, prob = model.data(model.index(0, 0))
+        self.assertEqual(val, 2)
+        np.testing.assert_equal(prob, [0, 0.1, 0.9])
+        val, prob = model.data(model.index(0, 1))
+        self.assertEqual(val, 1)
+        np.testing.assert_equal(prob, [0.1, 0.6, 0.3])
+
+        model.setProbInd([2])
+        model.sort(1, Qt.AscendingOrder)
+        val, prob = model.data(model.index(0, 1))
+        self.assertEqual(val, 0)
+        np.testing.assert_equal(prob, [0.9, 0.05, 0.05])
+        val, prob = model.data(model.index(0, 0))
+        self.assertEqual(val, 1)
+        np.testing.assert_equal(prob, [0.3, 0.7, 0])
+
+        model.setProbInd([1, 0])
+        model.sort(0, Qt.AscendingOrder)
+        np.testing.assert_equal(model.data(model.index(0, 0))[1], [0, .1, .9])
+        np.testing.assert_equal(model.data(model.index(1, 0))[1], [0.8, .1, .1])
+
+        model.setProbInd([1, 2])
+        model.sort(0, Qt.AscendingOrder)
+        np.testing.assert_equal(model.data(model.index(0, 0))[1], [0.8, .1, .1])
+        np.testing.assert_equal(model.data(model.index(1, 0))[1], [0, .1, .9])
+
+        model.setProbInd([])
+        model.sort(0, Qt.AscendingOrder)
+        self.assertEqual([model.data(model.index(i, 0))[0]
+                          for i in range(model.rowCount())], [0, 0, 1, 1, 2])
+
+        model.setProbInd([])
+        model.sort(0, Qt.DescendingOrder)
+        self.assertEqual([model.data(model.index(i, 0))[0]
+                          for i in range(model.rowCount())], [2, 1, 1, 0, 0])
+
+    def test_sorting_regression(self):
+        model = PredictionsModel(self.values, self.no_probs)
+
+        self.assertEqual(model.data(model.index(0, 1))[0], 0)
+        self.assertEqual(model.data(model.index(3, 1))[0], 1)
+
+        model.setProbInd([2])
+        model.sort(0, Qt.AscendingOrder)
+        self.assertEqual([model.data(model.index(i, 0))[0]
+                          for i in range(model.rowCount())], [0, 0, 1, 1, 2])
+
+        model.setProbInd([])
+        model.sort(0, Qt.DescendingOrder)
+        self.assertEqual([model.data(model.index(i, 0))[0]
+                          for i in range(model.rowCount())], [2, 1, 1, 0, 0])
+
+        model.setProbInd(None)
+        model.sort(0, Qt.AscendingOrder)
+        self.assertEqual([model.data(model.index(i, 0))[0]
+                          for i in range(model.rowCount())], [0, 0, 1, 1, 2])
 
 
 if __name__ == "__main__":

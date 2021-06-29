@@ -12,15 +12,16 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
-    QModelIndex, QAbstractTableModel, QSortFilterProxyModel, pyqtSignal, QTimer,
+    QModelIndex, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
 from orangewidget.report import plural
+from orangewidget.utils.itemmodels import AbstractSortTableModel
 
 import Orange
 from Orange.evaluation import Results
 from Orange.base import Model
-from Orange.data import ContinuousVariable, DiscreteVariable, Value, Domain
+from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.data.table import DomainTransformationError
 from Orange.data.util import get_unique_names
 from Orange.widgets import gui, settings
@@ -137,11 +138,11 @@ class OWPredictions(OWWidget):
         self.vsplitter.layout().addWidget(self.splitter)
         self.vsplitter.layout().addWidget(self.score_table.view)
 
-    def get_selection_store(self, proxy):
-        # Both proxies map the same, so it doesn't matter which one is used
+    def get_selection_store(self, model):
+        # Both models map the same, so it doesn't matter which one is used
         # to initialize SharedSelectionStore
         if self.selection_store is None:
-            self.selection_store = SharedSelectionStore(proxy)
+            self.selection_store = SharedSelectionStore(model)
         return self.selection_store
 
     @Inputs.data
@@ -156,12 +157,10 @@ class OWPredictions(OWWidget):
         else:
             # force full reset of the view's HeaderView state
             self.dataview.setModel(None)
-            model = TableModel(data, parent=None)
-            modelproxy = SortProxyModel()
-            modelproxy.setSourceModel(model)
-            self.dataview.setModel(modelproxy)
+            model = DataModel(data, parent=None)
+            self.dataview.setModel(model)
             sel_model = SharedSelectionModel(
-                self.get_selection_store(modelproxy), modelproxy, self.dataview)
+                self.get_selection_store(model), model, self.dataview)
             self.dataview.setSelectionModel(sel_model)
             if self.__pending_selection is not None:
                 self.selection = self.__pending_selection
@@ -221,6 +220,9 @@ class OWPredictions(OWWidget):
             self.selected_classes = []
 
     def handleNewSignals(self):
+        # Disconnect the model: the model and the delegate will be inconsistent
+        # between _set_class_values and update_predictions_model.
+        self.predictionsview.setModel(None)
         self._set_class_values()
         self._call_predictors()
         self._update_scores()
@@ -296,6 +298,7 @@ class OWPredictions(OWWidget):
                     item.setText(f"{score:.3f}")
                 except Exception as exc:  # pylint: disable=broad-except
                     item.setToolTip(str(exc))
+                    # false pos.; pylint: disable=unsupported-membership-test
                     if scorer.name in self.score_table.shown_scores:
                         errors.append(str(exc))
                 row.append(item)
@@ -369,23 +372,28 @@ class OWPredictions(OWWidget):
         return new_probs
 
     def _update_predictions_model(self):
-        results = []
         headers = []
+        all_values = []
+        all_probs = []
         for p in self._non_errored_predictors():
             values = p.results.unmapped_predicted
             target = p.predictor.domain.class_var
             if target.is_discrete:
                 # order probabilities in order from Show prob. for
                 prob = self._reordered_probabilities(p)
-                values = [Value(target, v) for v in values]
+                values = numpy.array(target.values)[values.astype(int)]
             else:
                 prob = numpy.zeros((len(values), 0))
-            results.append((values, prob))
+            all_values.append(values)
+            all_probs.append(prob)
             headers.append(p.predictor.name)
 
-        if results:
-            results = list(zip(*(zip(*res) for res in results)))
-            model = PredictionsModel(results, headers)
+        if all_values:
+            model = PredictionsModel(all_values, all_probs, headers)
+            model.list_sorted.connect(
+                partial(
+                    self._update_data_sort_order, self.predictionsview,
+                    self.dataview))
         else:
             model = None
 
@@ -393,49 +401,27 @@ class OWPredictions(OWWidget):
             self.selection_store.unregister(
                 self.predictionsview.selectionModel())
 
-        predmodel = PredictionsSortProxyModel()
-        predmodel.setSourceModel(model)
-        predmodel.setDynamicSortFilter(True)
-        self.predictionsview.setModel(predmodel)
-
-        self.predictionsview.setSelectionModel(
-            SharedSelectionModel(self.get_selection_store(predmodel),
-                                 predmodel, self.predictionsview))
+        self.predictionsview.setModel(model)
+        if model is not None:
+            self.predictionsview.setSelectionModel(
+                SharedSelectionModel(self.get_selection_store(model),
+                                     model, self.predictionsview))
 
         hheader = self.predictionsview.horizontalHeader()
         hheader.setSortIndicatorShown(False)
-        # SortFilterProxyModel is slow due to large abstraction overhead
-        # (every comparison triggers multiple `model.index(...)`,
-        # model.rowCount(...), `model.parent`, ... calls)
-        hheader.setSectionsClickable(predmodel.rowCount() < 20000)
-
-        self.predictionsview.model().list_sorted.connect(
-            partial(
-                self._update_data_sort_order, self.predictionsview,
-                self.dataview))
+        hheader.setSectionsClickable(True)
 
     def _update_data_sort_order(self, sort_source_view, sort_dest_view):
+        sort_source_view.horizontalHeader().setSortIndicatorShown(True)
+        sort_dest_view.horizontalHeader().setSortIndicatorShown(False)
+
         sort_dest = sort_dest_view.model()
         sort_source = sort_source_view.model()
-        sortindicatorshown = False
         if sort_dest is not None:
-            assert isinstance(sort_dest, QSortFilterProxyModel)
-            n = sort_dest.rowCount()
             if sort_source is not None and sort_source.sortColumn() >= 0:
-                sortind = numpy.argsort(
-                    [sort_source.mapToSource(sort_source.index(i, 0)).row()
-                     for i in range(n)])
-                sortind = numpy.array(sortind, int)
-                sortindicatorshown = True
+                sort_dest.setSortIndices(sort_source.mapToSourceRows(...))
             else:
-                sortind = None
-
-            sort_dest.setSortIndices(sortind)
-
-        sort_dest_view.horizontalHeader().setSortIndicatorShown(
-            False)
-        sort_source_view.horizontalHeader().setSortIndicatorShown(
-            sortindicatorshown)
+                sort_dest.setSortIndices(None)
         self.commit()
 
     def _reset_order(self):
@@ -601,20 +587,20 @@ class OWPredictions(OWWidget):
                 [numpy.atleast_2d(cols) for cols in newcolumns])
             predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
 
-        index = self.dataview.model().index
-        map_to = self.dataview.model().mapToSource
+        datamodel = self.dataview.model()
+        predmodel = self.predictionsview.model()
+        assert datamodel is not None  # because we have data
         assert self.selection_store is not None
-        rows = None
-        if self.selection_store.rows:
-            rows = [ind.row()
-                    for ind in self.dataview.selectionModel().selectedRows(0)]
-            rows.sort()
-        elif self.dataview.model().isSorted() \
-                or self.predictionsview.model().isSorted():
-            rows = list(range(len(self.data)))
-        if rows:
-            source_rows = [map_to(index(row, 0)).row() for row in rows]
-            predictions = predictions[source_rows]
+        rows = numpy.array(list(self.selection_store.rows))
+        if rows.size:
+            # Reorder rows as they are ordered in view
+            shown_rows = datamodel.mapFromSourceRows(rows)
+            rows = rows[numpy.argsort(shown_rows)]
+            predictions = predictions[rows]
+        elif datamodel.sortColumn() >= 0 \
+                or predmodel is not None and predmodel.sortColumn() > 0:
+            # No selection: output all, but in the shown order
+            predictions = predictions[datamodel.mapToSourceRows(...)]
         self.Outputs.predictions.send(predictions)
 
     @staticmethod
@@ -663,7 +649,8 @@ class OWPredictions(OWWidget):
                           predictions_model.data(predictions_model.index(i, j)),
                           QLocale())
                        for j, delegate in enumerate(delegates)] + \
-                      [data_model.data(data_model.index(i, j))
+                      [data_model.data(data_model.index(i, j),
+                                       role=Qt.DisplayRole)
                        for j in iter_data_cols]
 
         if self.data:
@@ -737,7 +724,7 @@ class PredictionsItemDelegate(ItemDelegate):
             )
             self.tooltip = f"p({val})"
 
-    def displayText(self, value, _locale):
+    def displayText(self, value, _):
         try:
             value, dist = value
         except ValueError:
@@ -847,138 +834,85 @@ class PredictionsItemDelegate(ItemDelegate):
         painter.restore()
 
 
-class SortProxyModel(QSortFilterProxyModel):
-    """
-    QSortFilter model used in both TableView and PredictionsView
-    """
+class PredictionsModel(AbstractSortTableModel):
     list_sorted = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, values=None, probs=None, headers=None, parent=None):
         super().__init__(parent)
-        self.__sortInd = None
-
-    def setSortIndices(self, indices):
-        if indices is not None:
-            indices = numpy.array(indices, dtype=int)
-            if indices.shape != (self.rowCount(),):
-                raise ValueError("indices.shape != (self.rowCount(),)")
-            indices.flags.writeable = False
-
-        self.__sortInd = indices
-
-        if self.__sortInd is not None:
-            self.custom_sort(0)  # need valid order to call lessThan
-
-    def lessThan(self, left, right):
-        if self.__sortInd is None:
-            return super().lessThan(left, right)
-
-        assert not (left.parent().isValid() or right.parent().isValid()), \
-            "Not a table model"
-
-        rleft, rright = left.row(), right.row()
-        try:
-            ileft, iright = self.__sortInd[rleft], self.__sortInd[rright]
-        except IndexError:
-            return False
-        else:
-            return ileft < iright
-
-    def isSorted(self):
-        return self.__sortInd is not None
-
-    def sort(self, n, order=Qt.AscendingOrder):
-        """
-        This sort is called only on click, in other cases we manually call
-        custom_sort
-        """
-        # reset sort - otherwise when same parameters set by lessThan function
-        # clicking on header would not trigger resort
-        self.__sortInd = None
-        self.custom_sort(n, order=order)
-        self.list_sorted.emit()
-
-    def custom_sort(self, n, order=Qt.AscendingOrder):
-        """
-        When sorting is dmanded because of sort change in the other view
-        this sorting is called. It will not reset __sortInd to None.
-        """
-        if self.sortColumn() == n and self.sortOrder() == order:
-            self.invalidate()
-        else:
-            super().sort(n, order)  # need some valid sort column
-
-
-class PredictionsSortProxyModel(SortProxyModel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+        self._values = values
+        self._probs = probs
         self.__probInd = None
-
-    def setProbInd(self, indices):
-        self.__probInd = indices
-        self.invalidate()
-        self.list_sorted.emit()
-
-    def lessThan(self, left, right):
-        if self.isSorted():
-            return super().lessThan(left, right)
-
-        role = self.sortRole()
-        left_data = self.sourceModel().data(left, role)
-        right_data = self.sourceModel().data(right, role)
-
-        return self._key(left_data) < self._key(right_data)
-
-    def _key(self, prediction):
-        value, probs = prediction
-        if probs is not None:
-            if self.__probInd is not None:
-                probs = probs[self.__probInd]
-            probs = tuple(probs)
-
-        return probs, value
-
-
-class PredictionsModel(QAbstractTableModel):
-    def __init__(self, table=None, headers=None, parent=None):
-        super().__init__(parent)
-        self._table = [[]] if table is None else table
-        if headers is None:
-            headers = [None] * len(self._table)
+        if values is not None:
+            assert len(self._values) == len(self._probs) != 0
+            sizes = {len(x) for c in (values, probs) for x in c}
+            assert len(sizes) == 1
+            self.__columnCount = len(values)
+            self.__rowCount = sizes.pop()
+            if headers is None:
+                headers = [None] * self.__columnCount
+        else:
+            assert probs is None
+            assert headers is None
+            self.__columnCount = self.__rowCount = 0
         self._header = headers
-        self.__columnCount = max([len(row) for row in self._table] or [0])
 
     def rowCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else len(self._table)
+        return 0 if parent.isValid() else self.__rowCount
 
     def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else self.__columnCount
 
-    def _value(self, index):
-        return self._table[index.row()][index.column()]
-
     def data(self, index, role=Qt.DisplayRole):
         if role in (Qt.DisplayRole, Qt.EditRole):
-            return self._value(index)
+            column = index.column()
+            row = self.mapToSourceRows(index.row())
+            return self._values[column][row], self._probs[column][row]
         return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Vertical and role == Qt.DisplayRole:
-            return str(section + 1)
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return (self._header[section] if section < len(self._header)
-                    else str(section))
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Vertical:
+                return str(section + 1)
+            elif self._header is not None and section < len(self._header):
+                return self._header[section]
         return None
+
+    def setProbInd(self, indices):
+        self.__probInd = indices
+        self.sort(self.sortColumn())
+
+    def sortColumnData(self, column):
+        values = self._values[column]
+        probs = self._probs[column]
+        # Let us assume that probs can be None, numpy array or list of arrays
+        if probs is not None and len(probs) and len(probs[0]) \
+                and self.__probInd is not None and len(self.__probInd):
+            return probs[:, self.__probInd]
+        else:
+            return values
+
+    def sort(self, column, order=Qt.AscendingOrder):
+        super().sort(column, order)
+        self.list_sorted.emit()
+
+
+# PredictionsModel and DataModel have the same signal and sort method, but
+# extracting it into a common base class would require diamond inheritance
+# because they're derived from different classes. It's not worth it.
+class DataModel(TableModel):
+    list_sorted = pyqtSignal()
+
+    def sort(self, column, order=Qt.AscendingOrder):
+        super().sort(column, order)
+        self.list_sorted.emit()
 
 
 class SharedSelectionStore:
     """
     An object shared between multiple selection models
 
-    The object assumes that the underlying models are proxies.
-    - Method `select` and emit refer to indices in proxy.
-    - Internally, the object stores indices into source model (as int). Method
-      `select_rows` also uses internal, source-model indices.
+    The object assumes that the underlying models are AbstractSortTableModel.
+    Internally, the object stores indices of unmapped, source rows (as int).
 
     The class implements method `select` with the same signature as
     QItemSelectionModel.select. Selection models that share this object
@@ -986,10 +920,10 @@ class SharedSelectionStore:
     call `emit_selection_rows_changed` of all selection models, so they
     can emit the signal selectionChanged.
     """
-    def __init__(self, proxy):
-        # indices of selected rows in the original model, not in the proxy
+    def __init__(self, model):
+        # unmapped indices of selected rows
         self._rows: Set[int] = set()
-        self.proxy: SortProxyModel = proxy
+        self.model: AbstractSortTableModel = model
         self._selection_models: List[SharedSelectionModel] = []
 
     @property
@@ -1022,22 +956,19 @@ class SharedSelectionStore:
 
         Args:
             selection (QModelIndex or QItemSelection):
-                rows to select; indices refer to the proxy model, not the source
+                rows to select; indices are mapped to rows in the view
             flags (QItemSelectionModel.SelectionFlags):
                 flags that tell whether to Clear, Select, Deselect or Toggle
         """
+        rows = set()
         if isinstance(selection, QModelIndex):
             if selection.model() is not None:
-                rows = {selection.model().mapToSource(selection).row()}
-            else:
-                rows = set()
+                rows = {selection.model().mapToSourceRows(selection.row())}
         else:
             indices = selection.indexes()
             if indices:
-                selection = indices[0].model().mapSelectionToSource(selection)
-                rows = {index.row() for index in selection.indexes()}
-            else:
-                rows = set()
+                map_to = indices[0].model().mapToSourceRows
+                rows = set(map_to([index.row() for index in indices]))
         self.select_rows(rows, flags)
 
     def select_rows(self, rows: Set[int], flags):
@@ -1046,7 +977,7 @@ class SharedSelectionStore:
 
         Args:
             selection (set of int):
-                rows to select; indices refer to the source model.
+                rows to select; indices refer to unmapped rows in model, not view
             flags (QItemSelectionModel.SelectionFlags):
                 flags that tell whether to Clear, Select, Deselect or Toggle
         """
@@ -1076,18 +1007,16 @@ class SharedSelectionStore:
         changing a selection.
         """
         def map_from_source(rows):
-            from_src = self.proxy.mapFromSource
-            index = self.proxy.sourceModel().index
-            return {from_src(index(row, 0)).row() for row in rows}
+            return self.model.mapFromSourceRows(list(rows))
 
         old_rows = self._rows.copy()
         try:
             yield
         finally:
-            if self.proxy.sourceModel() is not None:
+            if self.model.rowCount() != 0:
                 deselected = map_from_source(old_rows - self._rows)
                 selected = map_from_source(self._rows - old_rows)
-                if selected or deselected:
+                if len(selected) != 0 or len(deselected) != 0:
                     for model in self._selection_models:
                         model.emit_selection_rows_changed(selected, deselected)
 
@@ -1096,28 +1025,26 @@ class SharedSelectionModel(QItemSelectionModel):
     """
     A selection model that shares the selection with its peers.
 
-    It assumes that the underlying model is a proxy.
+    It assumes that the underlying model is a AbstractTableModel.
     """
-    def __init__(self, shared_store, proxy, parent):
-        super().__init__(proxy, parent)
+    def __init__(self, shared_store, model, parent):
+        super().__init__(model, parent)
         self.store: SharedSelectionStore = shared_store
         self.store.register(self)
 
     def select(self, selection, flags):
         self.store.select(selection, flags)
 
-    def selection_from_rows(self, rows: Sequence[int],
-                            model=None) -> QItemSelection:
+    def selection_from_rows(self, rows: Sequence[int]) -> QItemSelection:
         """
         Return selection across all columns for given row indices (as ints)
 
         Args:
-            rows (sequence of int): row indices (in proxy model)
+            rows (sequence of int): row indices, as shown in the view, not model
 
         Returns: QItemSelection
         """
-        if model is None:
-            model = self.model()
+        model = self.model()
         index = model.index
         last_col = model.columnCount() - 1
         sel = QItemSelection()
@@ -1129,7 +1056,7 @@ class SharedSelectionModel(QItemSelectionModel):
             self, selected: Sequence[int], deselected: Sequence[int]):
         """
         Given a sequence of indices of selected and deselected rows,
-        emit a selectionChanged signal. Indices refer to proxy model.
+        emit a selectionChanged signal.
 
         Args:
             selected (Sequence[int]): indices of selected rows
@@ -1140,9 +1067,8 @@ class SharedSelectionModel(QItemSelectionModel):
             self.selection_from_rows(deselected))
 
     def selection(self):
-        src_sel = self.selection_from_rows(self.store.rows,
-                                           model=self.model().sourceModel())
-        return self.model().mapSelectionFromSource(src_sel)
+        rows = self.model().mapFromSourceRows(list(self.store.rows))
+        return self.selection_from_rows(rows)
 
     def hasSelection(self) -> bool:
         return bool(self.store.rows)
@@ -1151,12 +1077,13 @@ class SharedSelectionModel(QItemSelectionModel):
         return len(self.store.rows) == self.model().rowCount()
 
     def isRowSelected(self, row, _parent=None) -> bool:
-        return self.isSelected(self.model().index(row, 0))
+        mapped_row = self.model().mapToSourceRows(row)
+        return mapped_row in self.store.rows
 
     rowIntersectsSelection = isRowSelected
 
     def isSelected(self, index) -> bool:
-        return self.model().mapToSource(index).row() in self.store.rows
+        return self.model().mapToSourceRows(index.row()) in self.store.rows
 
     def selectedColumns(self, row: int):
         if self.isColumnSelected():
@@ -1166,14 +1093,17 @@ class SharedSelectionModel(QItemSelectionModel):
         else:
             return []
 
+    def _selected_rows_arr(self):
+        return numpy.fromiter(self.store.rows, int, len(self.store.rows))
+
     def selectedRows(self, col: int):
-        index = self.model().sourceModel().index
-        map_from = self.model().mapFromSource
-        return [map_from(index(row, col)) for row in self.store.rows]
+        index = self.model().index
+        rows = self.model().mapFromSourceRows(self._selected_rows_arr())
+        return [index(row, col) for row in rows]
 
     def selectedIndexes(self):
         index = self.model().index
-        rows = [index.row() for index in self.selectedRows(0)]
+        rows = self.model().mapFromSourceRows(self._selected_rows_arr())
         return [index(row, col)
                 for col in range(self.model().columnCount())
                 for row in rows]
@@ -1246,12 +1176,7 @@ def tool_tip(value):
 if __name__ == "__main__":  # pragma: no cover
     filename = "iris.tab"
     iris = Orange.data.Table(filename)
-    idom = iris.domain
-    dom = Domain(
-        idom.attributes,
-        DiscreteVariable(idom.class_var.name, idom.class_var.values[1::-1])
-    )
-    iris2 = iris[:100].transform(dom)
+    iris2 = iris[:100]
 
     def pred_error(data, *args, **kwargs):
         raise ValueError
@@ -1260,6 +1185,12 @@ if __name__ == "__main__":  # pragma: no cover
     pred_error.name = "To err is human"
 
     if iris.domain.has_discrete_class:
+        idom = iris.domain
+        dom = Domain(
+            idom.attributes,
+            DiscreteVariable(idom.class_var.name, idom.class_var.values[1::-1])
+        )
+        iris2 = iris2.transform(dom)
         predictors_ = [
             Orange.classification.SVMLearner(probability=True)(iris2),
             Orange.classification.LogisticRegressionLearner()(iris),
