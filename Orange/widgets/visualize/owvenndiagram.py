@@ -1469,18 +1469,18 @@ def main():  # pragma: no cover
         res = ShuffleSplit(n_resamples=5, test_size=0.7, stratified=False)
         indices = iter(res.get_indices(data))
         datasets = []
-        for i in range(1, 6):
+        for i in range(5):
             sample, _ = next(indices)
             data1 = data[sample]
             data1.name = chr(ord("A") + i)
-            datasets.append((data1, i))
+            datasets.append((i, data1))
     else:
         domain = data.domain
         data1 = data.transform(Domain(domain.attributes[:15], domain.class_var))
         data2 = data.transform(Domain(domain.attributes[10:], domain.class_var))
-        datasets = [(data1, 1), (data2, 2)]
+        datasets = [(0, data1), (1, data2)]
 
-    WidgetPreview(OWVennDiagram).run(setData=datasets)
+    WidgetPreview(OWVennDiagram).run(insertData=datasets)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -1231,5 +1231,5 @@ if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWTestAndScore).run(
         set_train_data=preview_data,
         set_test_data=preview_data,
-        set_learner=[(learner, i) for i, learner in enumerate(prev_learners)]
+        insert_learner=list(enumerate(prev_learners))
     )
