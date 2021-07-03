@@ -95,6 +95,27 @@ class TestOWPCA(WidgetTest):
         out = self.get_output(self.widget.Outputs.components)
         self.assertEqual(out.domain.metas[0].name, 'components (1)')
 
+    def test_variance_attr(self):
+        self.widget.ncomponents = 2
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_stop_blocking()
+        self.widget._variance_ratio = np.array([0.5, 0.25, 0.2, 0.05])
+        self.widget.unconditional_commit()
+
+        result = self.get_output(self.widget.Outputs.transformed_data)
+        pc1, pc2 = result.domain.attributes
+        self.assertEqual(pc1.attributes["variance"], 0.5)
+        self.assertEqual(pc2.attributes["variance"], 0.25)
+
+        result = self.get_output(self.widget.Outputs.data)
+        pc1, pc2 = result.domain.metas
+        self.assertEqual(pc1.attributes["variance"], 0.5)
+        self.assertEqual(pc2.attributes["variance"], 0.25)
+
+        result = self.get_output(self.widget.Outputs.components)
+        np.testing.assert_almost_equal(result.get_column_view("variance")[0].T,
+                                       [0.5, 0.25])
+
     def test_sparse_data(self):
         """Check that PCA returns the same results for both dense and sparse data."""
         dense_data, sparse_data = self.iris, self.iris.to_sparse()

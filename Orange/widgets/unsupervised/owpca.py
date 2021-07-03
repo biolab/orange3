@@ -293,22 +293,36 @@ class OWPCA(widget.OWWidget):
                 self._transformed = self._pca(self.data)
             transformed = self._transformed
 
+            if self._variance_ratio is not None:
+                for var, explvar in zip(
+                        transformed.domain.attributes,
+                        self._variance_ratio[:self.ncomponents]):
+                    var.attributes["variance"] = round(explvar, 6)
             domain = Domain(
                 transformed.domain.attributes[:self.ncomponents],
                 self.data.domain.class_vars,
                 self.data.domain.metas
             )
             transformed = transformed.from_table(domain, transformed)
+
             # prevent caching new features by defining compute_value
             proposed = [a.name for a in self._pca.orig_domain.attributes]
             meta_name = get_unique_names(proposed, 'components')
-            dom = Domain(
-                [ContinuousVariable(name, compute_value=lambda _: None)
-                 for name in proposed],
-                metas=[StringVariable(name=meta_name)])
+            meta_vars = [StringVariable(name=meta_name)]
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
                                 dtype=object).T
+            if self._variance_ratio is not None:
+                variance_name = get_unique_names(proposed, "variance")
+                meta_vars.append(ContinuousVariable(variance_name))
+                metas = numpy.hstack(
+                    (metas,
+                     self._variance_ratio[:self.ncomponents, None]))
+
+            dom = Domain(
+                [ContinuousVariable(name, compute_value=lambda _: None)
+                 for name in proposed],
+                metas=meta_vars)
             components = Table(dom, self._pca.components_[:self.ncomponents],
                                metas=metas)
             components.name = 'components'
