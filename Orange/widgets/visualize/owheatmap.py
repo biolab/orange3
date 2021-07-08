@@ -662,8 +662,8 @@ class OWHeatMap(widget.OWWidget):
 
         self.update_heatmaps()
         if data is not None and self.__pending_selection is not None:
-            assert self.scene.widget is not None
-            self.scene.widget.selectRows(self.__pending_selection)
+            if self.scene.widget is not None:
+                self.scene.widget.selectRows(self.__pending_selection)
             self.selected_rows = self.__pending_selection
             self.__pending_selection = None
 

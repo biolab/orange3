@@ -205,6 +205,20 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data, iris, widget=w)
         self.assertEqual(len(self.get_output(w.Outputs.selected_data)), 21)
 
+    def test_saved_selection_when_not_possible(self):
+        # Has stored selection but ot enough columns for clustering.
+        iris = Table("iris")[:, ["petal width"]]
+        w = self.create_widget(
+            OWHeatMap, stored_settings={
+                "__version__": 3,
+                "col_clustering_method": "Clustering",
+                "selected_rows": [1, 2, 3],
+            }
+        )
+        self.send_signal(w.Inputs.data, iris)
+        out = self.get_output(w.Outputs.selected_data)
+        self.assertSequenceEqual(list(out.ids), list(iris.ids[[1, 2, 3]]))
+
     def test_set_split_var(self):
         data = self.brown_selected[::3]
         w = self.widget
