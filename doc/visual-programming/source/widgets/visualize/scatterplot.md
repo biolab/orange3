@@ -18,7 +18,7 @@ The **Scatter Plot** widget provides a 2-dimensional scatter plot visualization 
 
 ![](images/Scatterplot-Iris-stamped.png)
 
-1. Select the x and y attribute. Optimize your projection by using **Rank Projections**. This feature scores attribute pairs by average classification accuracy and returns the top scoring pair with a simultaneous visualization update. Set [jittering](https://en.wikipedia.org/wiki/Jitter) to prevent the dots overlapping. If *Jitter continuous values* is ticked, continuous instances will be dispersed.
+1. Select the x and y attribute. Optimize your projection by using **Rank Projections**. This feature scores attribute pairs by average classification accuracy and returns the top scoring pair with a simultaneous visualization update. Set [jittering](https://en.wikipedia.org/wiki/Jitter) to prevent the dots overlapping. If Jitter continuous values is checked, points are scattered around their original locations.
 2. Set the color of the displayed points (you will get colors for discrete values and grey-scale points for continuous). Set label, shape and size to differentiate between points. Set symbol size and opacity for all data points. Set the desired colors scale.
 3. Adjust *plot properties*:
    - *Show legend* displays a legend on the right. Click and drag the legend to move it.
