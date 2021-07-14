@@ -87,7 +87,6 @@ class PythonEditor(QPlainTextEdit):
         self._indenter = Indenter(self)
         self._lineLengthEdge = None
         self._lineLengthEdgeColor = QColor(255, 0, 0, 128)
-        self._currentLineColor = QColor('#ffffff')
         self._atomicModificationDepth = 0
 
         self.drawIncorrectIndentation = True
@@ -104,8 +103,17 @@ class PythonEditor(QPlainTextEdit):
         Hardcode same palette for not highlighted text
         """
         palette = self.palette()
-        palette.setColor(QPalette.Base, QColor('#ffffff'))
-        palette.setColor(QPalette.Text, QColor('#000000'))
+        # don't clear syntax highlighting when highlighting text
+        palette.setBrush(QPalette.HighlightedText, QBrush(Qt.NoBrush))
+        if QApplication.instance().property('darkMode'):
+            palette.setColor(QPalette.Base, QColor('#111111'))
+            palette.setColor(QPalette.Text, QColor('#ffffff'))
+            palette.setColor(QPalette.Highlight, QColor('#444444'))
+            self._currentLineColor = QColor('#111111')
+        else:
+            palette.setColor(QPalette.Base, QColor('#ffffff'))
+            palette.setColor(QPalette.Text, QColor('#000000'))
+            self._currentLineColor = QColor('#ffffff')
         self.setPalette(palette)
 
         self._bracketHighlighter = BracketHighlighter()

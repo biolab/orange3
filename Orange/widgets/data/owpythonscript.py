@@ -1,7 +1,6 @@
 import sys
 import os
 import code
-import keyword
 import itertools
 import tokenize
 import unicodedata
@@ -11,21 +10,19 @@ from typing import Optional, List, Dict, Any, TYPE_CHECKING
 
 import pygments.style
 from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
-
+from qtconsole.pygments_highlighter import PygmentsHighlighter
 
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
     QStyleOptionViewItem, QPlainTextDocumentLayout,
-    QLabel, QWidget, QHBoxLayout)
+    QLabel, QWidget, QHBoxLayout, QApplication)
 from AnyQt.QtGui import (
-    QColor, QBrush, QPalette, QFont, QTextDocument,
-    QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
-    QFontMetrics, QPainter
+    QColor, QBrush, QPalette, QFont, QTextDocument, QTextCharFormat,
+    QTextCursor, QKeySequence, QFontMetrics, QPainter
 )
 from AnyQt.QtCore import (
-    Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize, QRectF,
-    QMimeDatabase
+    Qt, QByteArray, QItemSelectionModel, QSize, QRectF, QMimeDatabase,
 )
 
 from orangewidget.workflow.drophandler import SingleFileDropHandler
@@ -87,6 +84,7 @@ highlighting implementation.
 """
 SYNTAX_HIGHLIGHTING_STYLES = {
     'Light': {
+        Punctuation: "#000",
         Error: '#f00',
 
         Keyword: 'bold #008000',
@@ -108,7 +106,26 @@ SYNTAX_HIGHLIGHTING_STYLES = {
         Comment: 'italic #408080',
     },
     'Dark': {
-        # TODO
+        Punctuation: "#fff",
+        Error: '#f00',
+
+        Keyword: 'bold #4caf50',
+
+        Name: '#e0e0e0',
+        Name.Function: '#1e88e5',
+        Name.Variable: '#42a5f5',
+        Name.Decorator: '#aa22ff',
+        Name.Builtin: '#43a047',
+        Name.Builtin.Pseudo: '#42a5f5',
+
+        String: '#ff7070',
+
+        Number: '#66bb6a',
+
+        Operator: 'bold #aa22ff',
+        Operator.Word: 'bold #4caf50',
+
+        Comment: 'italic #408080',
     }
 }
 
@@ -123,74 +140,6 @@ def make_pygments_style(scheme_name):
         (pygments.style.Style,),
         {'styles': SYNTAX_HIGHLIGHTING_STYLES[scheme_name]}
     )
-
-
-PygmentsStyle = make_pygments_style('Light')
-
-
-class PythonSyntaxHighlighter(QSyntaxHighlighter):
-    def __init__(self, parent=None):
-
-        self.keywordFormat = text_format(Qt.blue, QFont.Bold)
-        self.stringFormat = text_format(Qt.darkGreen)
-        self.defFormat = text_format(Qt.black, QFont.Bold)
-        self.commentFormat = text_format(Qt.lightGray)
-        self.decoratorFormat = text_format(Qt.darkGray)
-
-        self.keywords = list(keyword.kwlist)
-
-        self.rules = [(QRegularExpression(r"\b%s\b" % kwd), self.keywordFormat)
-                      for kwd in self.keywords] + \
-                     [(QRegularExpression(r"\bdef\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
-                       self.defFormat),
-                      (QRegularExpression(r"\bclass\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
-                       self.defFormat),
-                      (QRegularExpression(r"'.*'"), self.stringFormat),
-                      (QRegularExpression(r'".*"'), self.stringFormat),
-                      (QRegularExpression(r"#.*"), self.commentFormat),
-                      (QRegularExpression(r"@[A-Za-z_]+[A-Za-z0-9_]+"),
-                       self.decoratorFormat)]
-
-        self.multilineStart = QRegularExpression(r"(''')|" + r'(""")')
-        self.multilineEnd = QRegularExpression(r"(''')|" + r'(""")')
-
-        super().__init__(parent)
-
-    def highlightBlock(self, text):
-        for pattern, fmt in self.rules:
-            exp = QRegularExpression(pattern)
-            match = exp.match(text)
-            index = match.capturedStart()
-            while index >= 0:
-                if match.capturedStart(1) > 0:
-                    self.setFormat(match.capturedStart(1),
-                                   match.capturedLength(1), fmt)
-                else:
-                    self.setFormat(match.capturedStart(0),
-                                   match.capturedLength(0), fmt)
-                match = exp.match(text, index + match.capturedLength())
-                index = match.capturedStart()
-
-        # Multi line strings
-        start = self.multilineStart
-        end = self.multilineEnd
-
-        self.setCurrentBlockState(0)
-        startIndex, skip = 0, 0
-        if self.previousBlockState() != 1:
-            startIndex, skip = start.match(text).capturedStart(), 3
-        while startIndex >= 0:
-            endIndex = end.match(text, startIndex + skip).capturedStart()
-            if endIndex == -1:
-                self.setCurrentBlockState(1)
-                commentLen = len(text) - startIndex
-            else:
-                commentLen = endIndex - startIndex + 3
-            self.setFormat(startIndex, commentLen, self.stringFormat)
-            startIndex, skip = (
-                start.match(text, startIndex + commentLen + 3).capturedStart(),
-                3
-            )
 
 
 class FakeSignatureMixin:
@@ -627,10 +576,13 @@ class OWPythonScript(OWWidget):
         )
         self.defaultFontSize = defaultFontSize = 13
 
-        self.editorBox = gui.vBox(self, box=True, spacing=4)
+        self.editorBox = gui.vBox(self, box="Editor", spacing=4)
         self.splitCanvas.addWidget(self.editorBox)
 
-        syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES['Light']
+        darkMode = QApplication.instance().property('darkMode')
+        scheme_name = 'Dark' if darkMode else 'Light'
+        syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES[scheme_name]
+        self.pygments_style_class = make_pygments_style(scheme_name)
 
         eFont = QFont(defaultFont)
         eFont.setPointSize(defaultFontSize)
@@ -916,7 +868,8 @@ class OWPythonScript(OWWidget):
             doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
             doc.setPlainText(script.script)
             doc.setDefaultFont(QFont(self.defaultFont))
-            doc.highlighter = PythonSyntaxHighlighter(doc)
+            doc.highlighter = PygmentsHighlighter(doc)
+            doc.highlighter.set_style(self.pygments_style_class)
             doc.setDefaultFont(QFont(self.defaultFont, pointSize=self.defaultFontSize))
             doc.modificationChanged[bool].connect(self.onModificationChanged)
             doc.setModified(False)

@@ -11,7 +11,7 @@ import time
 
 from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QTextCursor, QColor
-from AnyQt.QtWidgets import QTextEdit
+from AnyQt.QtWidgets import QTextEdit, QApplication
 
 # Bracket highlighter.
 # Calculates list of QTextEdit.ExtraSelection
@@ -108,6 +108,7 @@ class BracketHighlighter:
         """Make matched or unmatched QTextEdit.ExtraSelection
         """
         selection = QTextEdit.ExtraSelection()
+        darkMode = QApplication.instance().property('darkMode')
 
         if matched:
             fgColor = self.MATCHED_COLOR
@@ -115,7 +116,8 @@ class BracketHighlighter:
             fgColor = self.UNMATCHED_COLOR
 
         selection.format.setForeground(fgColor)
-        selection.format.setBackground(Qt.white)  # repaint hack
+        # repaint hack
+        selection.format.setBackground(Qt.white if not darkMode else QColor('#111111'))
         selection.cursor = QTextCursor(block)
         selection.cursor.setPosition(block.position() + columnIndex)
         selection.cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
