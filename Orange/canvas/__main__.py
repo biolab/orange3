@@ -560,6 +560,9 @@ def main(argv=None):
 
                 stylesheet_string = pattern.sub("", stylesheet_string)
 
+                if 'dark' in stylesheet:
+                    app.setProperty('darkMode', True)
+
             else:
                 log.info("%r style sheet not found.", stylesheet)
 
