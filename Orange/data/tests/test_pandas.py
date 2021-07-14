@@ -428,7 +428,7 @@ class TestDenseTablePandas(TestTablePandas):
         self.assertTrue(np.shares_memory(df.values, table.Y))
         self.assertTrue(np.shares_memory(df.values, table2.Y))
 
-    @unittest.skipUnless(pd.__version__ >= '1.3.0',
+    @unittest.skipUnless(pd.__version__ >= '1.4.0',
                          'pandas-dev/pandas#39263')
     def test_contiguous_metas(self):
         table = self.table
