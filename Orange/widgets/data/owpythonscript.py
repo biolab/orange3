@@ -690,9 +690,12 @@ class OWPythonScript(OWWidget):
 
         self.vim_box = gui.hBox(self.editor_controls, spacing=20)
         self.vim_indicator = VimIndicator(self.vim_box)
-        self.vim_indicator.setSizePolicy(
+
+        vim_sp = QSizePolicy(
             QSizePolicy.Expanding, QSizePolicy.Fixed
         )
+        vim_sp.setRetainSizeWhenHidden(True)
+        self.vim_indicator.setSizePolicy(vim_sp)
 
         def enable_vim_mode():
             editor.vimModeEnabled = self.vimModeEnabled
