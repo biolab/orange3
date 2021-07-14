@@ -686,7 +686,7 @@ class OWPythonScript(OWWidget):
 
         # Controls
 
-        self.editor_controls = gui.vBox(self.controlArea, box=True)
+        self.editor_controls = gui.vBox(self.controlArea, box='Preferences')
 
         self.vim_box = gui.hBox(self.editor_controls, spacing=20)
         self.vim_indicator = VimIndicator(self.vim_box)
