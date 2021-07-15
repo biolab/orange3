@@ -4,6 +4,8 @@ from unittest.mock import Mock
 
 import numpy as np
 
+from AnyQt.QtGui import QFont, QPen
+
 from Orange.data import Table
 import Orange.evaluation
 import Orange.classification
@@ -56,6 +58,88 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
         self.assertTrue(self.widget.Error.invalid_results.is_shown())
         self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.invalid_results.is_shown())
+
+    def test_visual_settings(self):
+        graph = self.widget.plot
+
+        def test_settings():
+            font = QFont("Helvetica", italic=True, pointSize=20)
+            self.assertFontEqual(
+                graph.parameter_setter.title_item.item.font(), font
+            )
+
+            font.setPointSize(16)
+            for item in graph.parameter_setter.axis_items:
+                self.assertFontEqual(item.label.font(), font)
+
+            font.setPointSize(15)
+            for item in graph.parameter_setter.axis_items:
+                self.assertFontEqual(item.style["tickFont"], font)
+
+            self.assertEqual(
+                graph.parameter_setter.title_item.item.toPlainText(), "Foo"
+            )
+            self.assertEqual(graph.parameter_setter.title_item.text, "Foo")
+
+            for line in graph.curve_items:
+                pen: QPen = line.opts["pen"]
+                self.assertEqual(pen.width(), 3)
+
+            for line in graph.hull_items:
+                pen: QPen = line.opts["pen"]
+                self.assertEqual(pen.width(), 10)
+
+            pen: QPen = graph.default_line_item.opts["pen"]
+            self.assertEqual(pen.width(), 4)
+
+        test_on_test = Orange.evaluation.TestOnTestData(store_data=True)
+        res = test_on_test(
+            data=self.lenses[::2], test_data=self.lenses[1::2],
+            learners=[Orange.classification.MajorityLearner(),
+                      Orange.classification.KNNLearner()]
+        )
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
+        key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Title", "Font size"), 20
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Axis title", "Font size"), 16
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Axis ticks", "Font size"), 15
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis ticks", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Annotations", "Title", "Title"), "Foo"
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Figure", "Wide line", "Width"), 10
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Figure", "Thin Line", "Width"), 3
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Figure", "Default Line", "Width"), 4
+        self.widget.set_visual_settings(key, value)
+
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
+        test_settings()
+
+        self.send_signal(self.widget.Inputs.evaluation_results, None)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
+        test_settings()
+
+    def assertFontEqual(self, font1, font2):
+        self.assertEqual(font1.family(), font2.family())
+        self.assertEqual(font1.pointSize(), font2.pointSize())
+        self.assertEqual(font1.italic(), font2.italic())
 
 
 class UtilsTest(unittest.TestCase):
