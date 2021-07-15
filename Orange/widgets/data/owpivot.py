@@ -855,9 +855,11 @@ class OWPivot(OWWidget):
     def skipped_aggs(self):
         def add(fun):
             data, var = self.data, self.val_feature
+            primitive_funcs = Pivot.ContVarFunctions + Pivot.DiscVarFunctions
             return data and not var and fun not in Pivot.AutonomousFunctions \
                 or var and var.is_discrete and fun in Pivot.ContVarFunctions \
-                or var and var.is_continuous and fun in Pivot.DiscVarFunctions
+                or var and var.is_continuous and fun in Pivot.DiscVarFunctions \
+                or var and not var.is_primitive() and fun in primitive_funcs
         skipped = [str(fun) for fun in self.sel_agg_functions if add(fun)]
         return ", ".join(sorted(skipped))
 
