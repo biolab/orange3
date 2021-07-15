@@ -109,9 +109,10 @@ class _Test(WidgetTest):
         QTest.keyClick(self.qpart, Qt.Key_Right, Qt.AltModifier | Qt.ShiftModifier)
         QTest.keyClick(self.qpart, Qt.Key_Delete)
 
-        # 2 variants, Qt bahavior differs on different systems
+        # 3 variants, Qt behavior differs on different systems
         self.assertIn(self.qpart.text, ('abcdefhh\n\tkl\n\t\tz',
-                                        'abcdefh\n\tkl\n\t\t'))
+                                        'abcdefh\n\tkl\n\t\t',
+                                        'abcdefhhh\n\tkl\n\t\tyz'))
 
     def test_delete(self):
         self.qpart.show()
