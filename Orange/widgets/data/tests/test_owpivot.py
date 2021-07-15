@@ -278,6 +278,14 @@ class TestOWPivot(WidgetTest):
         self.assertEqual(model.data(model.index(4, 4)), "114.0")
         self.assertEqual(model.data(model.index(5, 4)), "reversable defect")
 
+    def test_only_metas_table(self):
+        self.send_signal(self.widget.Inputs.data, self.zoo[:, 17:])
+        self.assertTrue(self.widget.Warning.no_variables.is_shown())
+
+        data = self.zoo.transform(Domain([], metas=self.zoo.domain.attributes))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(self.widget.Warning.no_variables.is_shown())
+
     def test_empty_table(self):
         data = self.heart_disease[:, :0]
         self.send_signal(self.widget.Inputs.data, data)

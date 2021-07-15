@@ -921,8 +921,8 @@ class OWPivot(OWWidget):
             self.row_feature = model[0]
         model = self.controls.val_feature.model()
         if model and len(model) > 2:
-            self.val_feature = domain.variables[0] \
-                if domain.variables[0] in model else model[2]
+            allvars = domain.variables + domain.metas
+            self.val_feature = allvars[0] if allvars[0] in model else model[2]
 
     def commit(self):
         def send_outputs(pivot_table, filtered_data, grouped_data):
