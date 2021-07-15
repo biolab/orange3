@@ -337,7 +337,7 @@ def send_usage_statistics():
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
                 log.warning("Error communicating with server while attempting to send "
-                            "usage statistics. Status code " + str(r.status_code))
+                            "usage statistics. Status code %d", r.status_code)
                 return
             # success - wipe statistics file
             log.info("Usage statistics sent.")
