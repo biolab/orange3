@@ -1,3 +1,4 @@
+import sys
 from _weakref import ref
 
 import logging
@@ -136,6 +137,7 @@ class OrangeZMQMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.is_ipc = 'win32' not in sys.platform
         self.__kernel_id = None
 
         self.__threads = []
@@ -202,7 +204,13 @@ class OrangeZMQMixin:
         return self.__kernel_id is not None
 
     def init_socket_kernel(self):
-        self.socket.bind('ipc://' + self.__kernel_id)
+        if self.is_ipc:
+            self.socket.bind('ipc://' + self.__kernel_id)
+        else:
+            port = self.socket.bind_to_random_port('tcp://127.0.0.1')
+            self.init_comm.send({
+                'port': str(port)
+            })
 
     def init_comms_kernel(self):
         def comm_init(comm_name, callback):
@@ -234,7 +242,6 @@ class OrangeZMQMixin:
         )
 
     def init_client(self):
-        self.socket.connect('ipc://' + self.__kernel_id)
         self.request_comm = self.kernel_client.comm_manager.new_comm(
             'request_comm', {}
         )
@@ -246,6 +253,11 @@ class OrangeZMQMixin:
         self.init_comm = self.kernel_client.comm_manager.new_comm(
             'init_comm', {}
         )
+        if self.is_ipc:
+            self.socket.connect('ipc://' + self.__kernel_id)
+        else:
+            # ipc is not supported on windows, so kernel needs to let us know tcp port after making first handshake
+            self.init_comm.on_msg(self.__on_comm_init)
         if self.__kernel_id is not None:
             self.init_comm.send({
                 'id': self.__kernel_id
@@ -301,8 +313,17 @@ class OrangeZMQMixin:
             self.__send_vars(payload)
 
     def __on_comm_init(self, msg):
-        i = msg['content']['data']['id']
-        self.set_kernel_id(i, kernel=True)
+        data = msg['content']['data']
+        if 'id' in data:
+            # client sending the kernel the id
+            i = data['id']
+            self.set_kernel_id(i, kernel=True)
+        elif 'port' in data:
+            # (windows-only) kernel sending tcp port to client
+            port = data['port']
+            self.socket.connect('tcp://127.0.0.1:' + port)
+        else:
+            raise Exception('Invalid comm_init msg')
 
     def __identify_vars(self, vars):
         vars_with_ids = defaultdict(list)
