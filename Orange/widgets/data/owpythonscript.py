@@ -969,7 +969,8 @@ class OWPythonScript(OWWidget):
             settings["scriptLibrary"] = library
 
     def onDeleteWidget(self):
-        self.text.terminate()
+        self.editor.terminate()
+        self.shutdown_kernel()
         super().onDeleteWidget()
 
 
