@@ -972,6 +972,10 @@ class OWPythonScript(OWWidget):
                        for s in scripts]  # type: List[_ScriptData]
             settings["scriptLibrary"] = library
 
+    def onDeleteWidget(self):
+        self.text.terminate()
+        super().onDeleteWidget()
+
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWPythonScript).run()
