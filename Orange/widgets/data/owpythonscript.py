@@ -649,7 +649,7 @@ class OWPythonScript(OWWidget):
         w.layout().setSpacing(1)
 
         self.controlBox.layout().addWidget(w)
-
+        gui.rubber(self.controlArea)
         self.execute_button = gui.button(self.buttonsArea, self, 'Run', callback=self.commit)
 
         self.run_action = QAction("Run script", self, triggered=self.commit,
