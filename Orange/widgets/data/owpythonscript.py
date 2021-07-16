@@ -974,6 +974,10 @@ class OWPythonScript(OWWidget):
                        for s in scripts]  # type: List[_ScriptData]
             settings["scriptLibrary"] = library
 
+    def onDeleteWidget(self):
+        self.text.terminate()
+        super().onDeleteWidget()
+
 
 class OWPythonScriptDropHandler(SingleFileDropHandler):
     WIDGET = OWPythonScript
