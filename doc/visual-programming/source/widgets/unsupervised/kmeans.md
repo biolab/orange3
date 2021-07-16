@@ -9,52 +9,36 @@ Groups items using the k-Means clustering algorithm.
 
 **Outputs**
 
-- Data: dataset with cluster index as a class attribute
+- Data: dataset with cluster label as a meta attribute
+- Centroids: table with initial centroid coordinates
 
-The widget applies the [k-Means clustering](https://en.wikipedia.org/wiki/K-means_clustering) algorithm to the data and outputs a new dataset in which the cluster index is used as a class attribute. The original class attribute, if it exists, is moved to meta attributes. Scores of clustering results for various k are also shown in the widget.
+The widget applies the [k-Means clustering](https://en.wikipedia.org/wiki/K-means_clustering) algorithm to the data and outputs a new dataset in which the cluster label is added as a meta attribute. Silhouette scores of clustering results for various k are also shown in the widget. When using the silhouette score option, the higher the silhouette score, the better the clustering.
 
 ![](images/kMeans-stamped.png)
 
 1. Select the number of clusters.
-   - **Fixed**: algorithm clusters data in a specified number of clusters.
-   - **Optimized**: widget shows clustering scores for the selected cluster range:
-     - [Silhouette](https://en.wikipedia.org/wiki/Silhouette_\(clustering\)) (contrasts average distance to elements in the same cluster with the average distance to elements in other clusters)
-     - **Inter-cluster distance** (measures distances between clusters,normally between centroids)
-     - **Distance to** [centroids](https://en.wikipedia.org/wiki/Centroid) (measures distances to the arithmetic means of clusters)
-2. Select the initialization method (the way the algorithm begins clustering):
+   - **Fixed**: algorithm clusters data to a specified number of clusters.
+   - **From X to Y**: widget shows clustering scores for the selected cluster range using the [Silhouette](https://en.wikipedia.org/wiki/Silhouette_\(clustering\)) score (contrasts average distance to elements in the same cluster with the average distance to elements in other clusters).
+2. **Preprocessing**: If the option is selected, columns are normalized (mean centered to 0 and standard deviation scaled to 1).
+3. Initialization method (the way the algorithm begins clustering):
    - [k-Means++](https://en.wikipedia.org/wiki/K-means%2B%2B) (first center is selected randomly, subsequent are chosen from the remaining points with probability proportioned to squared distance from the closest center)
    - **Random initialization** (clusters are assigned randomly at first and then updated with further iterations)
-  **Re-runs** (how many times the algorithm is run from random initial positions; the result with the lowest within-cluster sum of squares will be used) and **maximal iterations** (the maximum number of iterations within each algorithm run) can be set manually.
-3. The widget outputs a new dataset with appended cluster information. Select how to append cluster information (as class, feature or meta attribute) and name the column.
-4. If *Apply Automatically* is ticked, the widget will commit changes automatically. Alternatively, click *Apply*.
-5. Produce a report.
-6. Check scores of clustering results for various k.
+
+    **Re-runs** (how many times the algorithm is run from random initial positions; the result with the lowest within-cluster sum of squares will be used) and **Maximum iterations** (the maximum number of iterations within each algorithm run) can be set manually.
 
 Examples
 --------
 
-We are going to explore the widget with the following schema.
+First, we load the *Iris* dataset, run k-Means with three clusters, and show it in the [Scatter Plot](../visualize/scatterplot.md). To interactively explore the clusters, we can use [Select Rows](../data/selectrows.md) to select the cluster of interest (say, C1) and plot it in the scatter plot using interactive data analysis. That means if we pass a subset to the scatter plot, the subset will be exposed in the plot.
 
-![](images/K-MeansClustering-Schema.png)
+Try the same procedure for 2 or 4 clusters or explore different clusters in the plot (C2, C3).
 
-First, we load the *Iris* dataset, divide it into three clusters and show it in the [Data Table](../data/datatable.md), where we can observe which instance went into which cluster. The interesting parts are the [Scatter Plot](../visualize/scatterplot.md) and [Select Rows](../data/selectrows.md).
+![](images/kMeans-Example1.png)
 
-Since **k-Means** added the cluster index as a class attribute, the scatter plot will color the points according to the clusters they are in.
+But as we used silhouette score to estimate our cluster quality, we can plot the clusters in the [Silhouette Plot](../visualize/silhouetteplot.md) to observe inliers and outliers. Place Silhouette Plot in place of Select Rows.
 
-![](images/kMeans-Scatterplot.png)
+Silhouette Plot shows silhouette scores for individual data instances. High, positive scores represent instances that are highly representative of the clusters, while negative scores represent instances that are outliers (don't fit well with the cluster). Select negative scores from the green cluster C3 and plot them in a scatter plot as a subset.
 
-What we are really interested in is how well the clusters induced by the (unsupervised) clustering algorithm match the actual classes in the data. We thus take [Select Rows](../data/selectrows.md) widget, in which we can select individual classes and have the corresponding points marked in the scatter plot. The match is perfect for *setosa*, and pretty good for the other two classes.
+It seems like these are mostly iris versicolors, which are bordering the iris virginica region. Note that the green color of the cluster C3 doesn't coincide with the green color of the iris labels - these are two different things.
 
-![](images/K-MeansClustering-Example.png)
-
-You may have noticed that we left the **Remove unused values/attributes** and **Remove unused classes** in [Select Rows](../data/selectrows.md) unchecked. This is important: if the widget modifies the attributes, it outputs a list of modified instances and the scatter plot cannot compare them to the original data.
-
-Perhaps a simpler way to test the match between clusters and the original classes is to use the [Distributions](../visualize/distributions.md) widget.
-
-![](images/K-MeansClustering-Schema2.png)
-
-The only (minor) problem here is that this widget only visualizes normal (and not meta) attributes. We solve this by using [Select Columns](../data/selectcolumns.md): we reinstate the original class *Iris* as the class and put the cluster index among the attributes.
-
-The match is perfect for *setosa*: all instances of setosa are in the third cluster (blue). 48 *versicolors* are in the second cluster (red), while two ended up in the first. For *virginicae*, 36 are in the first cluster and 14 in the second.
-
-![](images/K-MeansClustering-Example2.png)
+![](images/kMeans-Example2.png)
