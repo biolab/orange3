@@ -492,7 +492,7 @@ class OWCurveFit(OWBaseLearner):
         return learner
 
     def get_learner_parameters(self) -> Tuple[Tuple[str, Any]]:
-        return tuple(("Function", self.expression), )
+        return (("Expression", self.expression),)
 
     def update_model(self):
         super().update_model()
