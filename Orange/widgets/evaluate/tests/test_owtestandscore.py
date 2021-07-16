@@ -598,7 +598,7 @@ class TestOWTestAndScore(WidgetTest):
         w = self.widget
         self._set_three_majorities()
         self._set_comparison_score("F1")
-        f1mock = Mock(wraps=scoring.F1)
+        f1mock = Mock(wraps=scoring.F1.compute_score)
 
         iris = Table("iris")
         with patch.object(scoring.F1, "compute_score", f1mock):
