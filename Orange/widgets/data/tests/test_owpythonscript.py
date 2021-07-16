@@ -319,6 +319,12 @@ class TestOWPythonScript(WidgetTest):
         })
         self.assertEqual(w.libraryListSource[0].name, "A")
 
+    def test_migrate_2(self):
+        w = self.create_widget(OWPythonScript, {
+            '__version__': 2
+        })
+        self.assertTrue(w.useInProcessKernel)
+
     def test_restore(self):
         w = self.create_widget(OWPythonScript, {
             "scriptLibrary": [dict(name="A", script="1", filename=None)],

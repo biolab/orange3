@@ -391,7 +391,7 @@ class OWPythonScript(OWWidget):
 
     signal_names = ("data", "learner", "classifier", "object")
 
-    settings_version = 2
+    settings_version = 3
     scriptLibrary: 'List[_ScriptData]' = Setting([{
         "name": "Table from numpy",
         "script": DEFAULT_SCRIPT,
@@ -962,11 +962,15 @@ class OWPythonScript(OWWidget):
 
     @classmethod
     def migrate_settings(cls, settings, version):
-        if version is not None and version < 2:
+        if version is None:
+            return
+        if version < 2 and 'libraryListSource' in settings:
             scripts = settings.pop("libraryListSource")  # type: List[Script]
             library = [dict(name=s.name, script=s.script, filename=s.filename)
                        for s in scripts]  # type: List[_ScriptData]
             settings["scriptLibrary"] = library
+        elif version < 3:  # qtconsole
+            settings['useInProcessKernel'] = True
 
     def onDeleteWidget(self):
         self.editor.terminate()
