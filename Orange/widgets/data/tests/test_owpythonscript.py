@@ -8,6 +8,7 @@ from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.tests import named_file
 from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content, Script
+from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget
 
 # import tests for python editor
@@ -19,21 +20,21 @@ from Orange.widgets.data.utils.pythoneditor.tests.test_indent import *
 from Orange.widgets.data.utils.pythoneditor.tests.test_indenter.test_python import *
 from Orange.widgets.data.utils.pythoneditor.tests.test_rectangular_selection import *
 from Orange.widgets.data.utils.pythoneditor.tests.test_vim import *
-from qtconsole.client import QtKernelClient
 
 
 class TestOWPythonScript(WidgetTest):
-    def setUp(self):
-        super().setUp()
-        self.widget = self.create_widget(OWPythonScript)
-        self.iris = Table("iris")
-        self.learner = LogisticRegressionLearner()
-        self.model = self.learner(self.iris)
-        # self.widget.show()
+    iris = Table("iris")
+    learner = LogisticRegressionLearner()
+    model = learner(iris)
+    default_settings = None
+    python_widget = None
 
-    def tearDown(self):
-        super().tearDown()
-        self.widget.onDeleteWidget()
+    def setUp(self):
+        if type(self).python_widget is None:
+            type(self).python_widget = self.create_widget(
+                OWPythonScript, stored_settings=self.default_settings)
+        self.widget = self.python_widget
+        self.wait_execute_script('clear')
 
     def wait_execute_script(self, script=None):
         """
@@ -237,6 +238,7 @@ class TestOWPythonScript(WidgetTest):
         self.assertEqual("42", script)
 
     def test_restore_from_library(self):
+        self.widget.restoreSaved()
         before = self.widget.editor.text
         self.widget.editor.text = "42"
         self.widget.restoreSaved()
@@ -246,12 +248,14 @@ class TestOWPythonScript(WidgetTest):
     def test_store_current_script(self):
         self.widget.editor.text = "42"
         settings = self.widget.settingsHandler.pack_data(self.widget)
-        self.widget = self.create_widget(OWPythonScript)
-        script = self.widget.editor.text
+        widget = self.create_widget(OWPythonScript)
+        script = widget.editor.text
         self.assertNotEqual("42", script)
-        self.widget = self.create_widget(OWPythonScript, stored_settings=settings)
-        script = self.widget.editor.text
+        widget2 = self.create_widget(OWPythonScript, stored_settings=settings)
+        script = widget2.editor.text
         self.assertEqual("42", script)
+        widget.onDeleteWidget()
+        widget2.onDeleteWidget()
 
     def test_read_file_content(self):
         with named_file("Content", suffix=".42") as fn:
@@ -356,6 +360,11 @@ class TestOWPythonScript(WidgetTest):
         self.assertEqual(self.get_output("Object"), 14)
         self.wait_execute_script('out_object = ("a",14)')
         self.assertEqual(self.get_output("Object"), ('a', 14))
+
+
+class TestInProcessOWPythonScript(TestOWPythonScript):
+    default_settings = {'useInProcessKernel': True}
+    python_widget = None
 
 
 if __name__ == '__main__':
