@@ -33,6 +33,7 @@ from AnyQt.QtCore import (
     Qt, QByteArray, QItemSelectionModel, QSize, QRectF, QTimer
 )
 
+from Orange.widgets.data.utils.python_kernel import OrangeInProcessKernelManager
 from orangewidget.widget import Msg
 
 from Orange.data import Table
@@ -695,7 +696,7 @@ class OWPythonScript(OWWidget):
         cf = os.path.join(self._temp_connection_dir, 'kernel-%s.json' % ident)
 
         if self.useInProcessKernel:
-            self.kernel_manager = QtInProcessKernelManager(
+            self.kernel_manager = OrangeInProcessKernelManager(
                 connection_file=cf
             )
         else:

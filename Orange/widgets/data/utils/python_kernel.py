@@ -2,7 +2,12 @@
 # it may hang kernel on startup
 from collections import defaultdict
 
+from ipykernel.inprocess.ipkernel import InProcessKernel
+from ipykernel.iostream import OutStream
 from ipykernel.ipkernel import IPythonKernel
+from qtconsole.inprocess import QtInProcessKernelManager
+from traitlets import default
+
 from Orange.widgets.data.utils.python_serialize import OrangeZMQMixin
 
 # Sometimes the comm's msg argument isn't used
@@ -64,3 +69,18 @@ def collect_kernel_vars(kernel, signals):
             var = kernel.shell.user_ns[name]
             variables[name] = var
     return variables
+
+
+class OrangeInProcessKernel(InProcessKernel):
+    @default('stdout')
+    def _default_stdout(self):
+        return OutStream(self.session, self.iopub_thread, 'stdout', watchfd=False)
+
+    @default('stderr')
+    def _default_stderr(self):
+        return OutStream(self.session, self.iopub_thread, 'stderr', watchfd=False)
+
+
+class OrangeInProcessKernelManager(QtInProcessKernelManager):
+    def start_kernel(self, **kwds):
+        self.kernel = OrangeInProcessKernel(parent=self, session=self.session)
