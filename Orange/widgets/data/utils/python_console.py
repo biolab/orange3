@@ -100,7 +100,8 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
             self.__queued_execution = (script, )
             return
 
-        if self.__executing or self.__broadcasting:
+        if self.__executing or self.__broadcasting or \
+                (self.is_in_process() and self.kernel_manager.kernel is None):
             self.__queued_execution = (script, )
             self.__is_ready = False
             if self.__executing:
@@ -130,7 +131,8 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
             self.__queued_broadcast = (vars, )
             return
 
-        if self.__executing or self.__broadcasting:
+        if self.__executing or self.__broadcasting or \
+                (self.is_in_process() and self.kernel_manager.kernel is None):
             self.__is_ready = False
             self.__queued_broadcast = (vars, )
             return
