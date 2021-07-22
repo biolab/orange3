@@ -35,6 +35,7 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
     def __init__(self, *args, style_sheet='', **kwargs):
         super().__init__(*args, **kwargs)
         self.__is_in_process = False
+        self.__is_starting_up = True
         self.__is_ready = False
 
         self.__queued_broadcast = None
@@ -48,21 +49,16 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
         self.style_sheet = style_sheet + \
                            '.run-prompt { color: #aa22ff; }'
 
-        self.queue_init_client()
+        self.becomes_ready.connect(self.__on_ready)
 
-    def queue_init_client(self):
+    def __on_ready(self):
         # Let the widget/kernel start up before trying to run a script,
         # by storing a queued execution payload when the widget's commit
         # method is invoked before <In [0]:> appears.
-        @self.becomes_ready.connect
-        def _():
-            self.becomes_ready.disconnect(_)  # reset callback
+        if self.__is_starting_up:
+            self.__is_starting_up = False
             if not self.is_in_process():
                 self.init_client()
-            self.becomes_ready.connect(self.__on_ready)
-            self.__on_ready()
-
-    def __on_ready(self):
         self.__is_ready = True
         self.__run_queued_broadcast()
         self.__run_queued_payload()
@@ -90,11 +86,7 @@ class OrangeConsoleWidget(OrangeZMQMixin, RichJupyterWidget):
         self.__broadcasting = False
         self.__prompt_num = 1
 
-        try:
-            self.becomes_ready.disconnect(self.__on_ready)
-        except:
-            pass
-        self.queue_init_client()
+        self.__is_starting_up = True
 
     def is_in_process(self):
         return self.__is_in_process
