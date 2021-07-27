@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
+import copy
 import unittest
 from unittest.mock import Mock
 
@@ -70,6 +70,13 @@ class TestDiscrete(unittest.TestCase):
             cont.col_unknowns, [0, 0, 0, 0, 0, 0, 0])
         np.testing.assert_almost_equal(cont.row_unknowns, [0, 0])
         self.assertEqual(1, cont.unknowns)
+
+    def test_deepcopy(self):
+        cont = contingency.Discrete(self.zoo, 0)
+        dc = copy.deepcopy(cont)
+        self.assertEqual(dc, cont)
+        self.assertEqual(dc.col_variable, cont.col_variable)
+        self.assertEqual(dc.row_variable, cont.row_variable)
 
     def test_array_with_unknowns(self):
         d = data.Table("zoo")

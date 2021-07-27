@@ -179,8 +179,19 @@ class Discrete(np.ndarray):
         return (
             _create_discrete,
             (Discrete, np.copy(self), self.col_variable, self.row_variable,
-             self.col_unknowns, self.row_unknowns)
+             self.col_unknowns, self.row_unknowns, self.unknowns)
         )
+
+    def __array_finalize__(self, obj):
+        # defined in __new__, pylint: disable=attribute-defined-outside-init
+        """See http://docs.scipy.org/doc/numpy/user/basics.subclassing.html"""
+        if obj is None:
+            return
+        self.col_variable = getattr(obj, 'col_variable', None)
+        self.row_variable = getattr(obj, 'row_variable', None)
+        self.col_unknowns = getattr(obj, 'col_unknowns', None)
+        self.row_unknowns = getattr(obj, 'row_unknowns', None)
+        self.unknowns = getattr(obj, 'unknowns', None)
 
 
 class Continuous:
