@@ -1,7 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # Test internal methods
 # pylint: disable=missing-docstring, protected-access
-
+import copy
+import pickle
 import unittest
 from unittest.mock import Mock
 import warnings
@@ -109,6 +110,32 @@ class TestDiscreteDistribution(unittest.TestCase):
         np.testing.assert_almost_equal(
             np.asarray(fallback), np.asarray(default))
         np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
+
+    def test_pickle(self):
+        d = data.Table("zoo")
+        d1 = distribution.Discrete(d, 0)
+        dc = pickle.loads(pickle.dumps(d1))
+        # This always worked because `other` wasn't required to have `unknowns`
+        self.assertEqual(d1, dc)
+        # This failed before implementing `__reduce__`
+        self.assertEqual(dc, d1)
+        self.assertEqual(hash(d1), hash(dc))
+        # Test that `dc` has the required attributes
+        self.assertEqual(dc.variable, d1.variable)
+        self.assertEqual(dc.unknowns, d1.unknowns)
+
+    def test_deepcopy(self):
+        d = data.Table("zoo")
+        d1 = distribution.Discrete(d, 0)
+        dc = copy.deepcopy(d1)
+        # This always worked because `other` wasn't required to have `unknowns`
+        self.assertEqual(d1, dc)
+        # This failed before implementing `__deepcopy__`
+        self.assertEqual(dc, d1)
+        self.assertEqual(hash(d1), hash(dc))
+        # Test that `dc` has the required attributes
+        self.assertEqual(dc.variable, d1.variable)
+        self.assertEqual(dc.unknowns, d1.unknowns)
 
     def test_equality(self):
         d = data.Table("zoo")
@@ -284,6 +311,30 @@ class TestContinuousDistribution(unittest.TestCase):
         self.assertIsNone(disc2.variable)
         self.assertEqual(disc2.unknowns, 0)
         assert_dist_equal(disc2, dd)
+
+    def test_pickle(self):
+        d1 = distribution.Continuous(self.iris, 0)
+        dc = pickle.loads(pickle.dumps(d1))
+        # This always worked because `other` wasn't required to have `unknowns`
+        self.assertEqual(d1, dc)
+        # This failed before implementing `__reduce__`
+        self.assertEqual(dc, d1)
+        self.assertEqual(hash(d1), hash(dc))
+        # Test that `dc` has the required attributes
+        self.assertEqual(dc.variable, d1.variable)
+        self.assertEqual(dc.unknowns, d1.unknowns)
+
+    def test_deepcopy(self):
+        d1 = distribution.Continuous(self.iris, 0)
+        dc = copy.deepcopy(d1)
+        # This always worked because `other` wasn't required to have `unknowns`
+        self.assertEqual(d1, dc)
+        # This failed before implementing `__deepcopy__`
+        self.assertEqual(dc, d1)
+        self.assertEqual(hash(d1), hash(dc))
+        # Test that `dc` has the required attributes
+        self.assertEqual(dc.variable, d1.variable)
+        self.assertEqual(dc.unknowns, d1.unknowns)
 
     def test_hash(self):
         d = self.iris

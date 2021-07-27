@@ -30,6 +30,26 @@ def _get_variable(dat, variable, expected_type=None, expected_name=""):
 
 
 class Distribution(np.ndarray):
+    def __array_finalize__(self, obj):
+        # defined in derived classes,
+        # pylint: disable=attribute-defined-outside-init
+        """See http://docs.scipy.org/doc/numpy/user/basics.subclassing.html"""
+        if obj is None:
+            return
+        self.variable = getattr(obj, 'variable', None)
+        self.unknowns = getattr(obj, 'unknowns', 0)
+
+    def __reduce__(self):
+        state = super().__reduce__()
+        newstate = state[2] + (self.variable, self.unknowns)
+        return state[0], state[1], newstate
+
+    def __setstate__(self, state):
+        # defined in derived classes,
+        # pylint: disable=attribute-defined-outside-init
+        super().__setstate__(state[:-2])
+        self.variable, self.unknowns = state[-2:]
+
     def __eq__(self, other):
         return (
             np.array_equal(self, other) and
