@@ -364,7 +364,29 @@ class TestOWPythonScript(WidgetTest):
 
 class TestInProcessOWPythonScript(TestOWPythonScript):
     default_settings = {'useInProcessKernel': True}
-    python_widget = None
+
+    def setUp(self):
+        self.widget = self.create_widget(OWPythonScript, stored_settings=self.default_settings)
+
+    def test_no_shared_namespaces(self):
+        """
+        Guess what, the ipykernel shell is a singleton :D This has the side
+        effect of not displaying 'Out' in any of the widgets except the last
+        created one (stdout still shows fine).
+        This test overrides the superclass test but really it tests for
+        shared namespaces. If you find a way to disable shared namespaces,
+        go for it my dude.
+        """
+        widget1 = self.create_widget(OWPythonScript, stored_settings=self.default_settings)
+        widget2 = self.create_widget(OWPythonScript, stored_settings=self.default_settings)
+
+        self.send_signal(widget1.Inputs.data, self.iris, (1,), widget=widget1)
+        self.widget = widget1
+        self.wait_execute_script("x = 42")
+
+        self.widget = widget2
+        self.wait_execute_script("x")
+        self.assertIn("42", self.widget.console._control.toPlainText())
 
 
 if __name__ == '__main__':
