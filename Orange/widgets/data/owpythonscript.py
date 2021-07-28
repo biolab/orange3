@@ -1,32 +1,46 @@
+import shutil
+import tempfile
+import uuid
+
 import sys
 import os
-import code
-import keyword
-import itertools
+import tokenize
 import unicodedata
-import weakref
-from functools import reduce
-from unittest.mock import patch
+
+from jupyter_client import KernelManager
 
 from typing import Optional, List, TYPE_CHECKING
 
+import pygments.style
+from pygments.token import Comment, Keyword, Number, String, Punctuation, Operator, Error, Name
+from qtconsole.pygments_highlighter import PygmentsHighlighter
+from qtconsole import styles
+from qtconsole.client import QtKernelClient
+from qtconsole.inprocess import QtInProcessKernelManager
+from qtconsole.manager import QtKernelManager
+
+
 from AnyQt.QtWidgets import (
-    QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
+    QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
-    QStyleOptionViewItem, QPlainTextDocumentLayout
-)
+    QStyleOptionViewItem, QPlainTextDocumentLayout,
+    QLabel, QWidget, QHBoxLayout, QApplication)
 from AnyQt.QtGui import (
-    QColor, QBrush, QPalette, QFont, QTextDocument,
-    QSyntaxHighlighter, QTextCharFormat, QTextCursor, QKeySequence,
+    QColor, QBrush, QPalette, QFont, QTextDocument, QTextCharFormat,
+    QKeySequence, QFontMetrics, QPainter
 )
 from AnyQt.QtCore import (
-    Qt, QRegularExpression, QByteArray, QItemSelectionModel, QSize
+    Qt, QByteArray, QItemSelectionModel, QSize, QRectF, QTimer
 )
+
+from Orange.widgets.data.utils.python_kernel import OrangeInProcessKernelManager
+from orangewidget.widget import Msg
 
 from Orange.data import Table
 from Orange.base import Learner, Model
-from Orange.util import interleave
 from Orange.widgets import gui
+from Orange.widgets.data.utils.python_console import OrangeConsoleWidget
+from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -66,290 +80,229 @@ def read_file_content(filename, limit=None):
         return None
 
 
-class PythonSyntaxHighlighter(QSyntaxHighlighter):
-    def __init__(self, parent=None):
+# pylint: disable=pointless-string-statement
+"""
+Adapted from jupyter notebook, which was adapted from GitHub.
 
-        self.keywordFormat = text_format(Qt.blue, QFont.Bold)
-        self.stringFormat = text_format(Qt.darkGreen)
-        self.defFormat = text_format(Qt.black, QFont.Bold)
-        self.commentFormat = text_format(Qt.lightGray)
-        self.decoratorFormat = text_format(Qt.darkGray)
+Highlighting styles are applied with pygments.
 
-        self.keywords = list(keyword.kwlist)
+pygments does not support partial highlighting; on every character
+typed, it performs a full pass of the code. If performance is ever
+an issue, revert to prior commit, which uses Qutepart's syntax
+highlighting implementation.
+"""
+SYNTAX_HIGHLIGHTING_STYLES = {
+    'Light': {
+        Punctuation: "#000",
+        Error: '#f00',
 
-        self.rules = [(QRegularExpression(r"\b%s\b" % kwd), self.keywordFormat)
-                      for kwd in self.keywords] + \
-                     [(QRegularExpression(r"\bdef\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
-                       self.defFormat),
-                      (QRegularExpression(r"\bclass\s+([A-Za-z_]+[A-Za-z0-9_]+)\s*\("),
-                       self.defFormat),
-                      (QRegularExpression(r"'.*'"), self.stringFormat),
-                      (QRegularExpression(r'".*"'), self.stringFormat),
-                      (QRegularExpression(r"#.*"), self.commentFormat),
-                      (QRegularExpression(r"@[A-Za-z_]+[A-Za-z0-9_]+"),
-                       self.decoratorFormat)]
+        Keyword: 'bold #008000',
 
-        self.multilineStart = QRegularExpression(r"(''')|" + r'(""")')
-        self.multilineEnd = QRegularExpression(r"(''')|" + r'(""")')
+        Name: '#212121',
+        Name.Function: '#00f',
+        Name.Variable: '#05a',
+        Name.Decorator: '#aa22ff',
+        Name.Builtin: '#008000',
+        Name.Builtin.Pseudo: '#05a',
 
+        String: '#ba2121',
+
+        Number: '#080',
+
+        Operator: 'bold #aa22ff',
+        Operator.Word: 'bold #008000',
+
+        Comment: 'italic #408080',
+    },
+    'Dark': {
+        Punctuation: "#fff",
+        Error: '#f00',
+
+        Keyword: 'bold #4caf50',
+
+        Name: '#e0e0e0',
+        Name.Function: '#1e88e5',
+        Name.Variable: '#42a5f5',
+        Name.Decorator: '#aa22ff',
+        Name.Builtin: '#43a047',
+        Name.Builtin.Pseudo: '#42a5f5',
+
+        String: '#ff7070',
+
+        Number: '#66bb6a',
+
+        Operator: 'bold #aa22ff',
+        Operator.Word: 'bold #4caf50',
+
+        Comment: 'italic #408080',
+    }
+}
+
+
+def make_pygments_style(scheme_name):
+    """
+    Dynamically create a PygmentsStyle class,
+    given the name of one of the above highlighting schemes.
+    """
+    return type(
+        'PygmentsStyle',
+        (pygments.style.Style,),
+        {'styles': SYNTAX_HIGHLIGHTING_STYLES[scheme_name]}
+    )
+
+
+class FakeSignatureMixin:
+    def __init__(self, parent, highlighting_scheme, font):
         super().__init__(parent)
+        self.highlighting_scheme = highlighting_scheme
+        self.setFont(font)
+        self.bold_font = QFont(font)
+        self.bold_font.setBold(True)
 
-    def highlightBlock(self, text):
-        for pattern, fmt in self.rules:
-            exp = QRegularExpression(pattern)
-            match = exp.match(text)
-            index = match.capturedStart()
-            while index >= 0:
-                if match.capturedStart(1) > 0:
-                    self.setFormat(match.capturedStart(1),
-                                   match.capturedLength(1), fmt)
-                else:
-                    self.setFormat(match.capturedStart(0),
-                                   match.capturedLength(0), fmt)
-                match = exp.match(text, index + match.capturedLength())
-                index = match.capturedStart()
+        self.indentation_level = 0
 
-        # Multi line strings
-        start = self.multilineStart
-        end = self.multilineEnd
+        self._char_4_width = QFontMetrics(font).horizontalAdvance('4444')
 
-        self.setCurrentBlockState(0)
-        startIndex, skip = 0, 0
-        if self.previousBlockState() != 1:
-            startIndex, skip = start.match(text).capturedStart(), 3
-        while startIndex >= 0:
-            endIndex = end.match(text, startIndex + skip).capturedStart()
-            if endIndex == -1:
-                self.setCurrentBlockState(1)
-                commentLen = len(text) - startIndex
-            else:
-                commentLen = endIndex - startIndex + 3
-            self.setFormat(startIndex, commentLen, self.stringFormat)
-            startIndex, skip = (
-                start.match(text, startIndex + commentLen + 3).capturedStart(),
-                3
-            )
+    def setIndent(self, margins_width):
+        self.setContentsMargins(max(0,
+                                    round(margins_width) +
+                                    (self.indentation_level - 1 * self._char_4_width)),
+                                0, 0, 0)
 
 
-class PythonScriptEditor(QPlainTextEdit):
-    INDENT = 4
+class FunctionSignature(FakeSignatureMixin, QLabel):
+    def __init__(self, parent, highlighting_scheme, font, function_name="python_script"):
+        super().__init__(parent, highlighting_scheme, font)
+        self.signal_prefix = 'in_'
 
-    def __init__(self, widget):
-        super().__init__()
-        self.widget = widget
+        # `def python_script(`
+        self.prefix = ('<b style="color: ' +
+                       self.highlighting_scheme[Keyword].split(' ')[-1] +
+                       ';">def </b>'
+                       '<span style="color: ' +
+                       self.highlighting_scheme[Name.Function].split(' ')[-1] +
+                       ';">' + function_name + '</span>'
+                       '<span style="color: ' +
+                       self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                       ';">(</span>')
 
-    def lastLine(self):
-        text = str(self.toPlainText())
-        pos = self.textCursor().position()
-        index = text.rfind("\n", 0, pos)
-        text = text[index: pos].lstrip("\n")
-        return text
+        # `):`
+        self.affix = ('<span style="color: ' +
+                      self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                      ';">):</span>')
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            if event.modifiers() & (
-                    Qt.ShiftModifier | Qt.ControlModifier | Qt.MetaModifier):
-                self.widget.commit()
-                return
-            text = self.lastLine()
-            indent = len(text) - len(text.lstrip())
-            if text.strip() == "pass" or text.strip().startswith("return "):
-                indent = max(0, indent - self.INDENT)
-            elif text.strip().endswith(":"):
-                indent += self.INDENT
-            super().keyPressEvent(event)
-            self.insertPlainText(" " * indent)
-        elif event.key() == Qt.Key_Tab:
-            self.insertPlainText(" " * self.INDENT)
-        elif event.key() == Qt.Key_Backspace:
-            text = self.lastLine()
-            if text and not text.strip():
-                cursor = self.textCursor()
-                for _ in range(min(self.INDENT, len(text))):
-                    cursor.deletePreviousChar()
-            else:
-                super().keyPressEvent(event)
+        self.update_signal_text({})
 
-        else:
-            super().keyPressEvent(event)
-
-    def insertFromMimeData(self, source):
-        """
-        Reimplemented from QPlainTextEdit.insertFromMimeData.
-        """
-        urls = source.urls()
-        if urls:
-            self.pasteFile(urls[0])
-        else:
-            super().insertFromMimeData(source)
-
-    def pasteFile(self, url):
-        new = read_file_content(url.toLocalFile())
-        if new:
-            # inserting text like this allows undo
-            cursor = QTextCursor(self.document())
-            cursor.select(QTextCursor.Document)
-            cursor.insertText(new)
-
-
-class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
-    # `locals` is reasonably used as argument name
-    # pylint: disable=redefined-builtin
-    def __init__(self, locals=None, parent=None):
-        QPlainTextEdit.__init__(self, parent)
-        code.InteractiveConsole.__init__(self, locals)
-        self.newPromptPos = 0
-        self.history, self.historyInd = [""], 0
-        self.loop = self.interact()
-        next(self.loop)
-
-    def setLocals(self, locals):
-        self.locals = locals
-
-    def updateLocals(self, locals):
-        self.locals.update(locals)
-
-    def interact(self, banner=None, _=None):
-        try:
-            sys.ps1
-        except AttributeError:
-            sys.ps1 = ">>> "
-        try:
-            sys.ps2
-        except AttributeError:
-            sys.ps2 = "... "
-        cprt = ('Type "help", "copyright", "credits" or "license" '
-                'for more information.')
-        if banner is None:
-            self.write("Python %s on %s\n%s\n(%s)\n" %
-                       (sys.version, sys.platform, cprt,
-                        self.__class__.__name__))
-        else:
-            self.write("%s\n" % str(banner))
-        more = 0
-        while 1:
-            try:
-                if more:
-                    prompt = sys.ps2
-                else:
-                    prompt = sys.ps1
-                self.new_prompt(prompt)
-                yield
-                try:
-                    line = self.raw_input(prompt)
-                except EOFError:
-                    self.write("\n")
-                    break
-                else:
-                    more = self.push(line)
-            except KeyboardInterrupt:
-                self.write("\nKeyboardInterrupt\n")
-                self.resetbuffer()
-                more = 0
-
-    def raw_input(self, prompt=""):
-        input_str = str(self.document().lastBlock().previous().text())
-        return input_str[len(prompt):]
-
-    def new_prompt(self, prompt):
-        self.write(prompt)
-        self.newPromptPos = self.textCursor().position()
-        self.repaint()
-
-    def write(self, data):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End, QTextCursor.MoveAnchor)
-        cursor.insertText(data)
-        self.setTextCursor(cursor)
-        self.ensureCursorVisible()
-
-    def writelines(self, lines):
-        for line in lines:
-            self.write(line)
-
-    def flush(self):
-        pass
-
-    def push(self, line):
-        if self.history[0] != line:
-            self.history.insert(0, line)
-        self.historyInd = 0
-
-        # prevent console errors to trigger error reporting & patch stdout, stderr
-        with patch('sys.excepthook', sys.__excepthook__),\
-             patch('sys.stdout', self),\
-             patch('sys.stderr', self):
-            return code.InteractiveConsole.push(self, line)
-
-    def setLine(self, line):
-        cursor = QTextCursor(self.document())
-        cursor.movePosition(QTextCursor.End)
-        cursor.setPosition(self.newPromptPos, QTextCursor.KeepAnchor)
-        cursor.removeSelectedText()
-        cursor.insertText(line)
-        self.setTextCursor(cursor)
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Return:
-            self.write("\n")
-            next(self.loop)
-        elif event.key() == Qt.Key_Up:
-            self.historyUp()
-        elif event.key() == Qt.Key_Down:
-            self.historyDown()
-        elif event.key() == Qt.Key_Tab:
-            self.complete()
-        elif event.key() in [Qt.Key_Left, Qt.Key_Backspace]:
-            if self.textCursor().position() > self.newPromptPos:
-                QPlainTextEdit.keyPressEvent(self, event)
-        else:
-            QPlainTextEdit.keyPressEvent(self, event)
-
-    def historyUp(self):
-        self.setLine(self.history[self.historyInd])
-        self.historyInd = min(self.historyInd + 1, len(self.history) - 1)
-
-    def historyDown(self):
-        self.setLine(self.history[self.historyInd])
-        self.historyInd = max(self.historyInd - 1, 0)
-
-    def complete(self):
-        pass
-
-    def _moveCursorToInputLine(self):
-        """
-        Move the cursor to the input line if not already there. If the cursor
-        if already in the input line (at position greater or equal to
-        `newPromptPos`) it is left unchanged, otherwise it is moved at the
-        end.
-
-        """
-        cursor = self.textCursor()
-        pos = cursor.position()
-        if pos < self.newPromptPos:
-            cursor.movePosition(QTextCursor.End)
-            self.setTextCursor(cursor)
-
-    def pasteCode(self, source):
-        """
-        Paste source code into the console.
-        """
-        self._moveCursorToInputLine()
-
-        for line in interleave(source.splitlines(), itertools.repeat("\n")):
-            if line != "\n":
-                self.insertPlainText(line)
-            else:
-                self.write("\n")
-                next(self.loop)
-
-    def insertFromMimeData(self, source):
-        """
-        Reimplemented from QPlainTextEdit.insertFromMimeData.
-        """
-        if source.hasText():
-            self.pasteCode(str(source.text()))
+    def update_signal_text(self, signal_values_lengths):
+        if not self.signal_prefix:
             return
+        lbl_text = self.prefix
+        if len(signal_values_lengths) > 0:
+            for name, value in signal_values_lengths.items():
+                if value == 1:
+                    lbl_text += self.signal_prefix + name + ', '
+                elif value > 1:
+                    lbl_text += self.signal_prefix + name + 's, '
+            lbl_text = lbl_text[:-2]  # shave off the trailing ', '
+        lbl_text += self.affix
+        if self.text() != lbl_text:
+            self.setText(lbl_text)
+            self.update()
+
+
+class ReturnStatement(FakeSignatureMixin, QWidget):
+    def __init__(self, parent, highlighting_scheme, font):
+        super().__init__(parent, highlighting_scheme, font)
+
+        self.indentation_level = 1
+        self.signal_labels = {}
+        self._prefix = None
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # `return `
+        ret_lbl = QLabel('<b style="color: ' + \
+                         highlighting_scheme[Keyword].split(' ')[-1] + \
+                         ';">return </b>', self)
+        ret_lbl.setFont(self.font())
+        ret_lbl.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(ret_lbl)
+
+        # `out_data[, ]` * 4
+        self.make_signal_labels('out_')
+
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def make_signal_labels(self, prefix):
+        self._prefix = prefix
+        # `in_data[, ]`
+        for i, signal in enumerate(OWPythonScript.signal_names):
+            # adding an empty b tag like this adjusts the
+            # line height to match the rest of the labels
+            signal_display_name = signal
+            signal_lbl = QLabel('<b></b>' + prefix + signal_display_name, self)
+            signal_lbl.setFont(self.font())
+            signal_lbl.setContentsMargins(0, 0, 0, 0)
+            self.layout().addWidget(signal_lbl)
+
+            self.signal_labels[signal] = signal_lbl
+
+            if i >= len(OWPythonScript.signal_names) - 1:
+                break
+
+            comma_lbl = QLabel(', ')
+            comma_lbl.setFont(self.font())
+            comma_lbl.setContentsMargins(0, 0, 0, 0)
+            comma_lbl.setStyleSheet('.QLabel { color: ' +
+                                    self.highlighting_scheme[Punctuation].split(' ')[-1] +
+                                    '; }')
+            self.layout().addWidget(comma_lbl)
+
+    def update_signal_text(self, signal_name, values_length):
+        if not self._prefix:
+            return
+        lbl = self.signal_labels[signal_name]
+        if values_length == 0:
+            text = '<b></b>' + self._prefix + signal_name
+        else:  # if values_length == 1:
+            text = '<b>' + self._prefix + signal_name + '</b>'
+        if lbl.text() != text:
+            lbl.setText(text)
+            lbl.update()
+
+
+class VimIndicator(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.indicator_color = QColor('#33cc33')
+        self.indicator_text = 'normal'
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setBrush(self.indicator_color)
+
+        p.save()
+        p.setPen(Qt.NoPen)
+        fm = QFontMetrics(self.font())
+        width = self.rect().width()
+        height = fm.height() + 6
+        rect = QRectF(0, 0, width, height)
+        p.drawRoundedRect(rect, 5, 5)
+        p.restore()
+
+        textstart = (width - fm.width(self.indicator_text)) / 2
+        p.drawText(textstart, height / 2 + 5, self.indicator_text)
+
+    def minimumSizeHint(self):
+        fm = QFontMetrics(self.font())
+        width = round(fm.width(self.indicator_text)) + 10
+        height = fm.height() + 6
+        return QSize(width, height)
 
 
 class Script:
@@ -419,7 +372,7 @@ class OWPythonScript(OWWidget):
     description = "Write a Python script and run it on input data or models."
     icon = "icons/PythonScript.svg"
     priority = 3150
-    keywords = ["file", "program", "function"]
+    keywords = ["program", "function"]
 
     class Inputs:
         data = Input("Data", Table, replaces=["in_data"],
@@ -439,7 +392,7 @@ class OWPythonScript(OWWidget):
 
     signal_names = ("data", "learner", "classifier", "object")
 
-    settings_version = 2
+    settings_version = 3
     scriptLibrary: 'List[_ScriptData]' = Setting([{
         "name": "Table from numpy",
         "script": DEFAULT_SCRIPT,
@@ -449,35 +402,191 @@ class OWPythonScript(OWWidget):
     scriptText: Optional[str] = Setting(None, schema_only=True)
     splitterState: Optional[bytes] = Setting(None)
 
-    # Widgets in the same schema share namespace through a dictionary whose
-    # key is self.signalManager. ales-erjavec expressed concern (and I fully
-    # agree!) about widget being aware of the outside world. I am leaving this
-    # anyway. If this causes any problems in the future, replace this with
-    # shared_namespaces = {} and thus use a common namespace for all instances
-    # of # PythonScript even if they are in different schemata.
-    shared_namespaces = weakref.WeakKeyDictionary()
+    vimModeEnabled = Setting(False)
+    useInProcessKernel = Setting(False)
+
+    class Warning(OWWidget.Warning):
+        illegal_var_type = Msg('{} should be of type {}, not {}.')
 
     class Error(OWWidget.Error):
         pass
 
     def __init__(self):
         super().__init__()
-        self.libraryListSource = []
 
         for name in self.signal_names:
             setattr(self, name, {})
 
-        self._cachedDocuments = {}
+        self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
+        self.mainArea.layout().addWidget(self.splitCanvas)
 
-        self.infoBox = gui.vBox(self.controlArea, 'Info')
-        gui.label(
-            self.infoBox, self,
-            "<p>Execute python script.</p><p>Input variables:<ul><li> " +
-            "<li>".join(map("in_{0}, in_{0}s".format, self.signal_names)) +
-            "</ul></p><p>Output variables:<ul><li>" +
-            "<li>".join(map("out_{0}".format, self.signal_names)) +
-            "</ul></p>"
+        # Styling
+
+        self.defaultFont = defaultFont = (
+            'Menlo' if sys.platform == 'darwin' else
+            'Courier' if sys.platform in ['win32', 'cygwin'] else
+            'DejaVu Sans Mono'
         )
+        self.defaultFontSize = defaultFontSize = 13
+
+        self.editorBox = gui.vBox(self, box="Editor", spacing=4)
+        self.splitCanvas.addWidget(self.editorBox)
+
+        darkMode = QApplication.instance().property('darkMode')
+        scheme_name = 'Dark' if darkMode else 'Light'
+        syntax_highlighting_scheme = SYNTAX_HIGHLIGHTING_STYLES[scheme_name]
+        self.pygments_style_class = make_pygments_style(scheme_name)
+
+        eFont = QFont(defaultFont)
+        eFont.setPointSize(defaultFontSize)
+
+        # Fake Signature
+
+        self.func_sig = func_sig = FunctionSignature(
+            self.editorBox,
+            syntax_highlighting_scheme,
+            eFont
+        )
+
+        # Editor
+
+        editor = PythonEditor(self)
+        editor.setFont(eFont)
+        editor.setup_completer_appearance((300, 180), eFont)
+
+        # Fake return
+
+        return_stmt = ReturnStatement(
+            self.editorBox,
+            syntax_highlighting_scheme,
+            eFont
+        )
+        self.return_stmt = return_stmt
+
+        # Match indentation
+        textEditBox = QWidget(self.editorBox)
+        textEditBox.setLayout(QHBoxLayout())
+        char_4_width = QFontMetrics(eFont).horizontalAdvance('0000')
+
+        @editor.viewport_margins_updated.connect
+        def _(width):
+            func_sig.setIndent(width)
+            textEditMargin = max(0, round(char_4_width - width))
+            return_stmt.setIndent(textEditMargin + width)
+            textEditBox.layout().setContentsMargins(
+                int(textEditMargin), 0, 0, 0
+            )
+
+        self.editor = editor
+        textEditBox.layout().addWidget(editor)
+        self.editorBox.layout().addWidget(func_sig)
+        self.editorBox.layout().addWidget(textEditBox)
+        self.editorBox.layout().addWidget(return_stmt)
+
+        self.editorBox.setAlignment(Qt.AlignVCenter)
+        self.editor.setTabStopWidth(4)
+
+        self.editor.modificationChanged[bool].connect(self.onModificationChanged)
+
+        # Console
+
+        self.consoleBox = gui.vBox(self, 'Console')
+        self.splitCanvas.addWidget(self.consoleBox)
+
+        # Qtconsole
+
+        jupyter_widget = OrangeConsoleWidget(
+            style_sheet=styles.default_light_style_sheet
+        )
+        jupyter_widget.results_ready.connect(self.receive_outputs)
+
+        jupyter_widget._highlighter.set_style(self.pygments_style_class)
+        jupyter_widget.font_family = defaultFont
+        jupyter_widget.font_size = defaultFontSize
+        jupyter_widget.reset_font()
+
+        self.console = jupyter_widget
+        self.consoleBox.layout().addWidget(self.console)
+        self.consoleBox.setAlignment(Qt.AlignBottom)
+        self.setAcceptDrops(True)
+
+        self.statuses = []
+
+        # 'Injecting variables...' is set in handleNewVars
+
+        @self.console.variables_finished_injecting.connect
+        def _():
+            self.clear_status('Injecting variables...')
+
+        @self.console.begun_collecting_variables.connect
+        def _():
+            self.set_status('Collecting variables...')
+
+        # 'Collecting variables...' is reset in receive_outputs
+
+        @self.console.execution_started.connect
+        def _():
+            self.set_status('Running script...', force=True)
+            # trigger console repaint
+            # (for some reason repaint is broken if not singleShotting)
+            QTimer.singleShot(0, self.console.update)
+
+        @self.console.execution_finished.connect
+        def _():
+            self.clear_status('Running script...')
+            # trigger console repaint
+            QTimer.singleShot(0, self.console.update)
+
+        # Kernel stuff
+
+        self.kernel_client: QtKernelClient = None
+        self.kernel_manager: KernelManager = None
+        self.init_kernel()
+
+        # Controls
+
+        self.editor_controls = gui.vBox(self.controlArea, box='Preferences')
+
+        # Vim
+
+        self.vim_box = gui.hBox(self.editor_controls, spacing=20)
+        self.vim_indicator = VimIndicator(self.vim_box)
+
+        vim_sp = QSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Fixed
+        )
+        vim_sp.setRetainSizeWhenHidden(True)
+        self.vim_indicator.setSizePolicy(vim_sp)
+
+        def enable_vim_mode():
+            editor.vimModeEnabled = self.vimModeEnabled
+            self.vim_indicator.setVisible(self.vimModeEnabled)
+        enable_vim_mode()
+
+        gui.checkBox(
+            self.vim_box, self, 'vimModeEnabled', 'Vim mode',
+            tooltip="Only for the coolest.",
+            callback=enable_vim_mode
+        )
+        self.vim_box.layout().addWidget(self.vim_indicator)
+        @editor.vimModeIndicationChanged.connect
+        def _(color, text):
+            self.vim_indicator.indicator_color = color
+            self.vim_indicator.indicator_text = text
+            self.vim_indicator.update()
+
+        # Kernel type
+
+        gui.checkBox(
+            self.editor_controls, self, 'useInProcessKernel', 'Use in-process kernel',
+            tooltip="Avoids initializing data, but freezes Orange during computation.",
+            callback=self.init_kernel
+        )
+
+        # Library
+
+        self.libraryListSource = []
+        self._cachedDocuments = {}
 
         self.libraryList = itemmodels.PyListModel(
             [], self,
@@ -489,8 +598,7 @@ class OWPythonScript(OWWidget):
         self.controlBox.layout().setSpacing(1)
 
         self.libraryView = QListView(
-            editTriggers=QListView.DoubleClicked |
-            QListView.EditKeyPressed,
+            editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed,
             sizePolicy=QSizePolicy(QSizePolicy.Ignored,
                                    QSizePolicy.Preferred)
         )
@@ -542,47 +650,27 @@ class OWPythonScript(OWWidget):
         w.layout().setSpacing(1)
 
         self.controlBox.layout().addWidget(w)
-
+        gui.rubber(self.controlArea)
         self.execute_button = gui.button(self.buttonsArea, self, 'Run', callback=self.commit)
 
-        run = QAction("Run script", self, triggered=self.commit,
-                      shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
-        self.addAction(run)
+        self.run_action = QAction("Run script", self, triggered=self.commit,
+                                  shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
+        self.addAction(self.run_action)
 
-        self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
-        self.mainArea.layout().addWidget(self.splitCanvas)
-
-        self.defaultFont = defaultFont = \
-            "Monaco" if sys.platform == "darwin" else "Courier"
-
-        self.textBox = gui.vBox(self.splitCanvas, 'Python Script')
-        self.text = PythonScriptEditor(self)
-        self.textBox.layout().addWidget(self.text)
-
-        self.textBox.setAlignment(Qt.AlignVCenter)
-
-        self.text.modificationChanged[bool].connect(self.onModificationChanged)
-
-        self.saveAction = action = QAction("&Save", self.text)
+        self.saveAction = action = QAction("&Save", self.editor)
         action.setToolTip("Save script to file")
         action.setShortcut(QKeySequence(QKeySequence.Save))
         action.setShortcutContext(Qt.WidgetWithChildrenShortcut)
         action.triggered.connect(self.saveScript)
 
-        self.consoleBox = gui.vBox(self.splitCanvas, 'Console')
-        self.console = PythonConsole({}, self)
-        self.consoleBox.layout().addWidget(self.console)
-        self.console.document().setDefaultFont(QFont(defaultFont))
-        self.consoleBox.setAlignment(Qt.AlignBottom)
-        self.splitCanvas.setSizes([2, 1])
-        self.setAcceptDrops(True)
-        self.controlArea.layout().addStretch(10)
+        # And finally,
 
+        self.splitCanvas.setSizes([2, 1])
         self._restoreState()
         self.settingsAboutToBePacked.connect(self._saveState)
 
     def sizeHint(self) -> QSize:
-        return super().sizeHint().expandedTo(QSize(800, 600))
+        return super().sizeHint().expandedTo(QSize(810, 600))
 
     def _restoreState(self):
         self.libraryListSource = [Script.fromdict(s) for s in self.scriptLibrary]
@@ -590,17 +678,61 @@ class OWPythonScript(OWWidget):
         select_row(self.libraryView, self.currentScriptIndex)
 
         if self.scriptText is not None:
-            current = self.text.toPlainText()
+            current = self.editor.toPlainText()
             # do not mark scripts as modified
             if self.scriptText != current:
-                self.text.document().setPlainText(self.scriptText)
+                self.editor.document().setPlainText(self.scriptText)
 
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
 
+    def init_kernel(self):
+        if self.kernel_manager is not None:
+            self.shutdown_kernel()
+
+        self._temp_connection_dir = tempfile.mkdtemp()
+
+        ident = str(uuid.uuid4()).split('-')[-1]
+        cf = os.path.join(self._temp_connection_dir, 'kernel-%s.json' % ident)
+
+        if self.useInProcessKernel:
+            self.kernel_manager = OrangeInProcessKernelManager(
+                connection_file=cf
+            )
+        else:
+            self.kernel_manager = QtKernelManager(
+                connection_file=cf
+            )
+
+        self.kernel_manager.start_kernel(
+            extra_arguments=[
+                '--IPKernelApp.kernel_class='
+                'Orange.widgets.data.utils.python_kernel.OrangeIPythonKernel',
+                '--matplotlib='
+                'inline'
+            ]
+        )
+        self.kernel_client = self.kernel_manager.client()
+        self.kernel_client.start_channels()
+
+        if self.editor is not None:
+            self.editor.kernel_manager = self.kernel_manager
+            self.editor.kernel_client = self.kernel_client
+        if self.console is not None:
+            self.console.set_in_process(self.useInProcessKernel)
+            self.console.kernel_manager = self.kernel_manager
+            self.console.kernel_client = self.kernel_client
+            self.console.set_kernel_id(ident)
+            self.update_variables_in_console()
+
+    def shutdown_kernel(self):
+        self.kernel_client.stop_channels()
+        self.kernel_manager.shutdown_kernel()
+        shutil.rmtree(self._temp_connection_dir)
+
     def _saveState(self):
         self.scriptLibrary = [s.asdict() for s in self.libraryListSource]
-        self.scriptText = self.text.toPlainText()
+        self.scriptText = self.editor.toPlainText()
         self.splitterState = bytes(self.splitCanvas.saveState())
 
     def handle_input(self, obj, sig_id, signal):
@@ -610,6 +742,55 @@ class OWPythonScript(OWWidget):
                 del dic[sig_id]
         else:
             dic[sig_id] = obj
+
+    def clear_status(self, msg):
+        if msg not in self.statuses:
+            return
+        self.statuses.remove(msg)
+        self.__update_status()
+
+    def set_status(self, msg, force=False):
+        if msg in self.statuses:
+            if force:
+                self.statuses.remove(msg)
+                self.statuses.insert(0, msg)
+            return
+        if force:
+            self.statuses.insert(0, msg)
+        else:
+            self.statuses.append(msg)
+        self.__update_status()
+
+    def __update_status(self):
+        if self.statuses:
+            msg = self.statuses[0]
+        else:
+            msg = ''
+
+        self.setStatusMessage(msg)
+
+    def receive_outputs(self, out_vars):
+        self.clear_status('Collecting variables...')
+        self.progressBar()
+        for signal in self.signal_names:
+            out_name = "out_" + signal
+            req_type = self.Outputs.__dict__[signal].type
+
+            output = getattr(self.Outputs, signal)
+            if out_name not in out_vars:
+                output.send(None)
+                continue
+            var = out_vars[out_name]
+
+            if not isinstance(var, req_type):
+                output.send(None)
+                actual_type = type(var)
+                self.Warning.illegal_var_type(out_name,
+                                              req_type.__module__ + '.' + req_type.__name__,
+                                              actual_type.__module__ + '.' + actual_type.__name__)
+                continue
+
+            output.send(var)
 
     @Inputs.data
     def set_data(self, data, sig_id):
@@ -628,7 +809,16 @@ class OWPythonScript(OWWidget):
         self.handle_input(data, sig_id, "object")
 
     def handleNewSignals(self):
-        self.commit()
+        # update fake signature labels
+        self.func_sig.update_signal_text({
+            n: len(getattr(self, n)) for n in self.signal_names
+        })
+        self.update_variables_in_console()
+
+    def update_variables_in_console(self):
+        self.set_status('Injecting variables...')
+        vars = self.initial_locals_state()
+        self.console.set_vars(vars)
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()
@@ -641,7 +831,7 @@ class OWPythonScript(OWWidget):
         select_row(self.libraryView, index)
 
     def onAddScript(self, *_):
-        self.libraryList.append(Script("New script", self.text.toPlainText(), 0))
+        self.libraryList.append(Script("New script", self.editor.toPlainText(), 0))
         self.setSelectedScript(len(self.libraryList) - 1)
 
     def onAddScriptFromFile(self, *_):
@@ -652,8 +842,7 @@ class OWPythonScript(OWWidget):
         )
         if filename:
             name = os.path.basename(filename)
-            # TODO: use `tokenize.detect_encoding`
-            with open(filename, encoding="utf-8") as f:
+            with tokenize.open(filename) as f:
                 contents = f.read()
             self.libraryList.append(Script(name, contents, 0, filename))
             self.setSelectedScript(len(self.libraryList) - 1)
@@ -677,7 +866,7 @@ class OWPythonScript(OWWidget):
                 self.addNewScriptAction.trigger()
                 return
 
-            self.text.setDocument(self.documentForScript(current))
+            self.editor.setDocument(self.documentForScript(current))
             self.currentScriptIndex = current
 
     def documentForScript(self, script=0):
@@ -688,7 +877,9 @@ class OWPythonScript(OWWidget):
             doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
             doc.setPlainText(script.script)
             doc.setDefaultFont(QFont(self.defaultFont))
-            doc.highlighter = PythonSyntaxHighlighter(doc)
+            doc.highlighter = PygmentsHighlighter(doc)
+            doc.highlighter.set_style(self.pygments_style_class)
+            doc.setDefaultFont(QFont(self.defaultFont, pointSize=self.defaultFontSize))
             doc.modificationChanged[bool].connect(self.onModificationChanged)
             doc.setModified(False)
             self._cachedDocuments[script] = doc
@@ -697,8 +888,8 @@ class OWPythonScript(OWWidget):
     def commitChangesToLibrary(self, *_):
         index = self.selectedScriptIndex()
         if index is not None:
-            self.libraryList[index].script = self.text.toPlainText()
-            self.text.document().setModified(False)
+            self.libraryList[index].script = self.editor.toPlainText()
+            self.editor.document().setModified(False)
             self.libraryList.emitDataChanged(index)
 
     def onModificationChanged(self, modified):
@@ -710,8 +901,8 @@ class OWPythonScript(OWWidget):
     def restoreSaved(self):
         index = self.selectedScriptIndex()
         if index is not None:
-            self.text.document().setPlainText(self.libraryList[index].script)
-            self.text.document().setModified(False)
+            self.editor.document().setPlainText(self.libraryList[index].script)
+            self.editor.document().setModified(False)
 
     def saveScript(self):
         index = self.selectedScriptIndex()
@@ -736,46 +927,31 @@ class OWPythonScript(OWWidget):
                 fn = filename
 
             f = open(fn, 'w')
-            f.write(self.text.toPlainText())
+            f.write(self.editor.toPlainText())
             f.close()
 
     def initial_locals_state(self):
-        d = self.shared_namespaces.setdefault(self.signalManager, {}).copy()
+        d = {}
         for name in self.signal_names:
             value = getattr(self, name)
             all_values = list(value.values())
-            one_value = all_values[0] if len(all_values) == 1 else None
-            d["in_" + name + "s"] = all_values
-            d["in_" + name] = one_value
+            d[name + "s"] = all_values
         return d
 
-    def update_namespace(self, namespace):
-        not_saved = reduce(set.union,
-                           ({f"in_{name}s", f"in_{name}", f"out_{name}"}
-                            for name in self.signal_names))
-        self.shared_namespaces.setdefault(self.signalManager, {}).update(
-            {name: value for name, value in namespace.items()
-             if name not in not_saved})
-
     def commit(self):
+        self.Warning.clear()
         self.Error.clear()
-        lcls = self.initial_locals_state()
-        lcls["_script"] = str(self.text.toPlainText())
-        self.console.updateLocals(lcls)
-        self.console.write("\nRunning script:\n")
-        self.console.push("exec(_script)")
-        self.console.new_prompt(sys.ps1)
-        self.update_namespace(self.console.locals)
-        for signal in self.signal_names:
-            out_var = self.console.locals.get("out_" + signal)
-            signal_type = getattr(self.Outputs, signal).type
-            if not isinstance(out_var, signal_type) and out_var is not None:
-                self.Error.add_message(signal,
-                                       "'{}' has to be an instance of '{}'.".
-                                       format(signal, signal_type.__name__))
-                getattr(self.Error, signal)()
-                out_var = None
-            getattr(self.Outputs, signal).send(out_var)
+
+        script = str(self.editor.text)
+        self.console.run_script(script)
+
+    def keyPressEvent(self, event):
+        if event.matches(QKeySequence.InsertLineSeparator):
+            # run on Shift+Enter, Ctrl+Enter
+            self.run_action.trigger()
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()
@@ -785,19 +961,22 @@ class OWPythonScript(OWWidget):
             if c is not None:
                 event.acceptProposedAction()
 
-    def dropEvent(self, event):
-        """Handle file drops"""
-        urls = event.mimeData().urls()
-        if urls:
-            self.text.pasteFile(urls[0])
-
     @classmethod
     def migrate_settings(cls, settings, version):
-        if version is not None and version < 2:
+        if version is None:
+            return
+        if version < 2 and 'libraryListSource' in settings:
             scripts = settings.pop("libraryListSource")  # type: List[Script]
             library = [dict(name=s.name, script=s.script, filename=s.filename)
                        for s in scripts]  # type: List[_ScriptData]
             settings["scriptLibrary"] = library
+        elif version < 3:  # qtconsole
+            settings['useInProcessKernel'] = True
+
+    def onDeleteWidget(self):
+        self.editor.terminate()
+        self.shutdown_kernel()
+        super().onDeleteWidget()
 
 
 if __name__ == "__main__":  # pragma: no cover

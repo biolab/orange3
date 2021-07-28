@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   inkscape:version="1.0 (4035a4f, 2020-05-01)"
+   sodipodi:docname="property.svg"
+   id="svg1308"
+   viewBox="0 0 24 24"
+   height="24"
+   width="24"
+   version="1.1">
+  <metadata
+     id="metadata1314">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs1312" />
+  <sodipodi:namedview
+     inkscape:current-layer="layer12"
+     inkscape:window-maximized="0"
+     inkscape:window-y="23"
+     inkscape:window-x="0"
+     inkscape:cy="12"
+     inkscape:cx="12"
+     inkscape:zoom="48"
+     showgrid="false"
+     id="namedview1310"
+     inkscape:window-height="1263"
+     inkscape:window-width="2246"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0"
+     guidetolerance="10"
+     gridtolerance="10"
+     objecttolerance="10"
+     borderopacity="1"
+     bordercolor="#666666"
+     pagecolor="#ffffff" />
+  <g
+     inkscape:label="Layer 1"
+     id="layer11"
+     inkscape:groupmode="layer">
+    <path
+       style="fill:#ffffff;stroke-width:0.822653"
+       sodipodi:nodetypes="sssssssss"
+       fill="#ffffff"
+       d="M 6.5208334,4.1875 H 17.75 c 0.885957,0 1.604167,0.7555195 1.604167,1.6875 v 11.8125 c 0,0.93198 -0.71821,1.6875 -1.604167,1.6875 H 6.5208334 c -0.8859568,0 -1.6041667,-0.75552 -1.6041667,-1.6875 V 5.875 c 0,-0.9319805 0.7182099,-1.6875 1.6041667,-1.6875 z"
+       id="path1316" />
+  </g>
+  <g
+     inkscape:label="Layer 2"
+     id="layer12"
+     inkscape:groupmode="layer">
+    <path
+       id="path1306"
+       d="M9,7V17H11V13H13A2,2 0 0,0 15,11V9A2,2 0 0,0 13,7H9M11,9H13V11H11V9M5,3H19A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3Z"
+       fill="purple" />
+  </g>
+</svg>

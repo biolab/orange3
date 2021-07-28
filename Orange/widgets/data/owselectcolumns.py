@@ -134,7 +134,8 @@ class SelectAttributesDomainContextHandler(DomainContextHandler):
 
     def filter_value(self, setting, data, domain, attrs, metas):
         if setting.name != "domain_role_hints":
-            return super().filter_value(setting, data, domain, attrs, metas)
+            super().filter_value(setting, data, domain, attrs, metas)
+            return
 
         all_vars = attrs.copy()
         all_vars.update(metas)

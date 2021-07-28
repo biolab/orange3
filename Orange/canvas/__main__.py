@@ -337,7 +337,7 @@ def send_usage_statistics():
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
                 log.warning("Error communicating with server while attempting to send "
-                            "usage statistics. Status code " + str(r.status_code))
+                            "usage statistics. Status code %d", r.status_code)
                 return
             # success - wipe statistics file
             log.info("Usage statistics sent.")
@@ -457,6 +457,20 @@ def main(argv=None):
             app.setPalette(breeze_dark())
             defaultstylesheet = "darkorange.qss"
 
+    # set pyqtgraph colors
+    def onPaletteChange():
+        p = app.palette()
+        bg = p.base().color().name()
+        fg = p.windowText().color().name()
+
+        log.info('Setting pyqtgraph background to %s', bg)
+        pyqtgraph.setConfigOption('background', bg)
+        log.info('Setting pyqtgraph foreground to %s', fg)
+        pyqtgraph.setConfigOption('foreground', fg)
+
+    app.paletteChanged.connect(onPaletteChange)
+    onPaletteChange()
+
     palette = app.palette()
     if style is None and palette.color(QPalette.Window).value() < 127:
         log.info("Switching default stylesheet to darkorange")
@@ -559,6 +573,9 @@ def main(argv=None):
                              search_path, prefix)
 
                 stylesheet_string = pattern.sub("", stylesheet_string)
+
+                if 'dark' in stylesheet:
+                    app.setProperty('darkMode', True)
 
             else:
                 log.info("%r style sheet not found.", stylesheet)
