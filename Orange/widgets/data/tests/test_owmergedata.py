@@ -214,9 +214,11 @@ class TestOWMergeData(WidgetTest):
     def test_add_row_button(self):
         boxes = self.widget.attr_boxes
         boxes.set_state([(INSTANCEID, INSTANCEID), (INSTANCEID, INSTANCEID)])
-        boxes.rows[-1].add_button.clicked.emit()
+        layout = boxes.layout()
+        add_button = layout.itemAt(layout.count() - 1).itemAt(1).widget()
+        add_button.clicked.emit()
         self.assertEqual(len(boxes.rows), 3)
-        self.assertEqual(boxes.layout().count(), 3)
+        self.assertEqual(boxes.layout().count(), 4)
 
     def test_remove_row(self):
         widget = self.widget
@@ -228,38 +230,26 @@ class TestOWMergeData(WidgetTest):
 
         boxes.set_state(
             [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
-        for i, row in enumerate(boxes.rows):
+        for row in boxes.rows:
             self.assertTrue(row.remove_button.isEnabled())
-            self.assertEqual(row.remove_button.text(), "×")
-            self.assertEqual(row.add_button.isEnabled(), i == 2)
-            self.assertEqual(row.add_button.text(), ["", "+"][i == 2])
 
         boxes.rows[1].remove_button.clicked.emit()
         self.assertEqual(boxes.current_state(), [(INDEX, INDEX), (var0, var1)])
-        for i, row in enumerate(boxes.rows):
+        for row in boxes.rows:
             self.assertTrue(row.remove_button.isEnabled())
-            self.assertEqual(row.remove_button.text(), "×")
-            self.assertEqual(row.add_button.isEnabled(), i == 1)
-            self.assertEqual(row.add_button.text(), ["", "+"][i])
 
         boxes.rows[1].remove_button.clicked.emit()
         self.assertEqual(boxes.current_state(), [(INDEX, INDEX)])
         row = boxes.rows[0]
         self.assertFalse(row.remove_button.isEnabled())
-        self.assertEqual(row.remove_button.text(), "")
-        self.assertTrue(row.add_button.isEnabled())
-        self.assertEqual(row.add_button.text(), "+")
 
         boxes.set_state(
             [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
         boxes.rows[2].remove_button.clicked.emit()
         self.assertEqual(
             boxes.current_state(), [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
-        for i, row in enumerate(boxes.rows):
+        for row in boxes.rows:
             self.assertTrue(row.remove_button.isEnabled())
-            self.assertEqual(row.remove_button.text(), "×")
-            self.assertEqual(row.add_button.isEnabled(), i == 1)
-            self.assertEqual(row.add_button.text(), ["", "+"][i == 1])
 
     def test_dont_remove_single_row(self):
         widget = self.widget
