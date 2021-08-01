@@ -5,8 +5,9 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QModelIndex, pyqtSignal as Signal
 from AnyQt.QtWidgets import (
-    QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout
+    QWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy
 )
+
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
@@ -79,11 +80,10 @@ class ConditionBox(QWidget):
             return combo
 
         def get_button(label, callback):
-            button = QPushButton(label, self)
-            button.setFlat(True)
-            button.setFixedWidth(12)
-            button.clicked.connect(callback)
-            return button
+            return gui.button(
+                None, self, label, callback=callback,
+                addToLayout=False, autoDefault=False, width=34,
+                sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Maximum))
 
         row = self.layout().count()
         row_items = self.RowItems(
@@ -125,16 +125,15 @@ class ConditionBox(QWidget):
         self.emit_list()
 
     def _reset_buttons(self):
-        def endis(button, enable, text):
-            button.setEnabled(enable)
-            button.setText(text if enable else "")
+        def endis(button, enable):
+            button.setHidden(not enable)
 
         self.rows[0].pre_label.setText(self.pre_label)
         single_row = len(self.rows) == 1
-        endis(self.rows[0].remove_button, not single_row, "×")
-        endis(self.rows[-1].add_button, True, "+")
+        endis(self.rows[0].remove_button, not single_row)
+        endis(self.rows[-1].add_button, True)
         if not single_row:
-            endis(self.rows[-2].add_button, False, "")
+            endis(self.rows[-2].add_button, False)
 
     def current_state(self):
         def get_var(model, combo):
