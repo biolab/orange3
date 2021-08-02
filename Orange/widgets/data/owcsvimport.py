@@ -73,6 +73,7 @@ from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
 )
+from orangewidget.settings import Setting
 
 if typing.TYPE_CHECKING:
     # pylint: disable=invalid-name
@@ -670,6 +671,8 @@ class OWCSVFileImport(widget.OWWidget):
 
     MaxHistorySize = 50
 
+    auto_apply = Setting(True)
+
     want_main_area = True
     buttons_area_orientation = None
     resizing_enabled = True
@@ -783,6 +786,14 @@ class OWCSVFileImport(widget.OWWidget):
         box.layout().addWidget(self.domain_editor)
 
         self.editor_model.dataChanged.connect(self.__handle_domain_edit)
+
+        box = gui.hBox(box)
+        gui.button(
+            box, self, "Reset", callback=self.reset_domain_edit,
+            autoDefault=False
+        )
+        gui.rubber(box)
+        gui.auto_apply(box, self, commit=self.apply_domain_edit)
 
         ############
         # Table view
@@ -1275,7 +1286,16 @@ class OWCSVFileImport(widget.OWWidget):
         
         self._update_table(table)
 
+    def reset_domain_edit(self):
+        self.domain_editor.reset_domain()
+        self.apply_domain_edit()
+
     def __handle_domain_edit(self):
+        self.Warning.clear()
+        self.apply_domain_edit()
+
+    def apply_domain_edit(self):
+        # commit data to output
         if self.data is None:
             table = None
         else:
