@@ -36,7 +36,7 @@ from AnyQt.QtCore import (
     Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType
 )
 from AnyQt.QtGui import (
-    QStandardItem, QStandardItemModel, QPalette, QColor, QIcon
+    QStandardItem, QStandardItemModel, QPalette, QColor, QIcon, QTextOption
 )
 from AnyQt.QtWidgets import (
     QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
@@ -716,8 +716,9 @@ class OWCSVFileImport(widget.OWWidget):
         # Info text
         ###########
         box = gui.widgetBox(self.controlArea, "Info")
+        box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
         self.summary_text = QTextBrowser(
-            verticalScrollBarPolicy=Qt.ScrollBarAsNeeded,
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             readOnly=True,
         )
         self.summary_text.viewport().setBackgroundRole(QPalette.NoRole)
@@ -725,6 +726,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.setMinimumHeight(self.fontMetrics().ascent() * 2 + 4)
         self.summary_text.viewport().setAutoFillBackground(False)
         box.layout().addWidget(self.summary_text)
+        QTimer.singleShot(0, lambda: self._set_summary_text(None))
 
         self.info.set_output_summary(self.info.NoOutput)
 
@@ -1139,7 +1141,7 @@ class OWCSVFileImport(widget.OWWidget):
             self.__cancel_task()
             self.__clear_running_state()
             self.setStatusMessage("Cancelled")
-            self.summary_text.setText(
+            self._set_summary_text(
                 "<div>Cancelled<br/><small>Press 'Reload' to try again</small></div>"
             )
 
@@ -1151,7 +1153,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.load_button.setText("Restart")
         path = self.current_item().path()
         self.Error.clear()
-        self.summary_text.setText(
+        self._set_summary_text(
             "<div>Loading: <i>{}</i><br/>".format(prettyfypath(path))
         )
         self.domain_editor.setEnabled(False)
@@ -1189,11 +1191,11 @@ class OWCSVFileImport(widget.OWWidget):
                 basename=escape(basename),
                 err="".join(traceback.format_exception_only(type(err), err))
             )
-        self.summary_text.setText(text)
+        self._set_summary_text(text)
 
     def __clear_error_state(self):
         self.Error.error.clear()
-        self.summary_text.setText("")
+        self._set_summary_text("")
 
     def onDeleteWidget(self):
         """Reimplemented."""
@@ -1282,7 +1284,17 @@ class OWCSVFileImport(widget.OWWidget):
                        plural_2=pluralize(data.domain.attributes),
                        n_meta=len(data.domain.metas),
                        plural_3=pluralize(data.domain.metas))
-        self.summary_text.setText(summary)
+        self._set_summary_text(summary)
+
+    def _set_summary_text(self, text):
+        if not text:
+            text = '<div>Choose a file or input a URL above to get started.</div>'
+        self.summary_text.setText(text)
+        if self.summary_text.isVisible():
+            height = self.summary_text.document().size().height()
+        else:
+            height = self.fontMetrics().height()
+        self.summary_text.setFixedHeight(height)
 
     def itemsFromSettings(self):
         # type: () -> List[Tuple[str, Options]]
