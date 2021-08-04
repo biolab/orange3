@@ -56,7 +56,7 @@ import pandas as pd
 from pandas.api import types as pdtypes
 
 import Orange.data
-from Orange.data import Table
+from Orange.data import Table, ContinuousVariable, StringVariable
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui, settings
@@ -66,7 +66,7 @@ from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get, qname
 )
 from Orange.widgets.utils.combobox import ItemStyledComboBox
-from Orange.widgets.utils.domaineditor import DomainEditor
+from Orange.widgets.utils.domaineditor import DomainEditor, Column
 from Orange.widgets.utils.pathutils import (
     PathItem, VarPath, AbsPath, samepath, prettyfypath, isprefixed,
 )
@@ -651,6 +651,11 @@ class OWCSVFileImport(widget.OWWidget):
             "Categorical variables with >100 values may decrease performance.")
         renamed_vars = widget.Msg("Some variables have been renamed "
                                   "to avoid duplicates.\n{}")
+        numeric_cast = widget.Msg('Loading data as numeric and changing it to text '
+                                  'may result in altered values.\n'
+                                  'For example, 001 turns into 1.\n'
+                                  'Change the variable type to String in '
+                                  'the Import Options to avoid this.')
 
     #: Paths and options of files accessed in a 'session'
     _session_items = settings.Setting(
@@ -1322,6 +1327,7 @@ class OWCSVFileImport(widget.OWWidget):
                 table.ids = np.array(self.data.ids)
                 table.attributes = getattr(self.data, 'attributes', {})
                 self._inspect_discrete_variables(domain)
+                self._inspect_unsafe_cast()
             if renamed:
                 self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
         self.Outputs.data.send(table)
@@ -1331,6 +1337,15 @@ class OWCSVFileImport(widget.OWWidget):
         for var in chain(domain.variables, domain.metas):
             if var.is_discrete and len(var.values) > 100:
                 self.Warning.performance_warning()
+
+    def _inspect_unsafe_cast(self):
+        for orig_var, var in zip(
+            self.domain_editor.model().orig_variables,
+            self.domain_editor.model().variables
+        ):
+            if orig_var[Column.tpe] is ContinuousVariable and \
+                    var[Column.tpe] is StringVariable:
+                self.Warning.numeric_cast()
 
     def _update_table(self, data):
         # TODO consolidate, most of this is copied from OWTable
