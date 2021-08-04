@@ -21,6 +21,7 @@ import lzma
 import bz2
 import zipfile
 
+from Orange.widgets.settings import PerfectDomainContextHandler
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from itertools import chain
 
@@ -73,7 +74,7 @@ from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
 )
-from orangewidget.settings import Setting
+from orangewidget.settings import Setting, ContextSetting, SettingProvider
 
 if typing.TYPE_CHECKING:
     # pylint: disable=invalid-name
@@ -663,6 +664,11 @@ class OWCSVFileImport(widget.OWWidget):
         "filter": ""
     })  # type: Dict[str, str]
 
+    settingsHandler = PerfectDomainContextHandler(
+        match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
+    )
+    domain_editor = SettingProvider(DomainEditor)
+
     # we added column type guessing to this widget, which breaks compatibility
     # with older saved workflows, where types not guessed differently, when
     # compatibility_mode=True widget have older guessing behaviour
@@ -1133,6 +1139,7 @@ class OWCSVFileImport(widget.OWWidget):
         Any existing pending task is canceled.
         """
         self.__committimer.stop()
+        self.closeContext()
         if self.__watcher is not None:
             self.__cancel_task()
         self.error()
@@ -1279,14 +1286,16 @@ class OWCSVFileImport(widget.OWWidget):
             domain = None
 
         self.data = table
-        self.domain_editor.set_domain(domain)
+        self.Warning.clear()
+        self.openContext(domain)
+        self.apply_domain_edit()
 
         self.Outputs.data_frame.send(df)
-        self.Outputs.data.send(table)
-        
+
         self._update_table(table)
 
     def reset_domain_edit(self):
+        self.Warning.clear()
         self.domain_editor.reset_domain()
         self.apply_domain_edit()
 
