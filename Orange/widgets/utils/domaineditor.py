@@ -156,7 +156,7 @@ class ComboDelegate(HorizontalGridDelegate):
                 if me.popup_shown:
                     self.view.model().setData(
                         index, me.highlighted_text, Qt.EditRole)
-                    self.popup_shown = False
+                    me.popup_shown = False
                 super().hidePopup()
                 self.view.closeEditor(me, self.NoHint)
 
