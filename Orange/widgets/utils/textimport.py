@@ -37,7 +37,7 @@ from typing import (
 )
 
 from AnyQt.QtCore import (
-    Qt, QSize, QPoint, QRect, QRectF, QRegularExpression, QAbstractTableModel,
+    Qt, QSize, QRect, QRectF, QRegularExpression, QAbstractTableModel,
     QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
@@ -1123,7 +1123,6 @@ class CSVImportWidget(QWidget):
             current = None
         cb = self.column_type_edit_cb
         g = QActionGroup(menu)
-        current_action = None
         # 'Copy' the column types model into a menu
         for i in range(cb.count()):
             if cb.itemData(i, Qt.AccessibleDescriptionRole) == "separator":
@@ -1135,7 +1134,6 @@ class CSVImportWidget(QWidget):
             ac.setCheckable(True)
             if ac.data() == current:
                 ac.setChecked(True)
-                current_action = ac
             g.addAction(ac)
 
         def update_types(action):
@@ -1736,7 +1734,7 @@ _to_datetime = None
 def parse_datetime(text):
     global _to_datetime
     if _to_datetime is None:
-        from pandas import to_datetime as _to_datetime
+        from pandas import to_datetime as _to_datetime  # pylint: disable=redefined-outer-name
     return _to_datetime(text)
 
 

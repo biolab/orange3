@@ -20,9 +20,6 @@ import gzip
 import lzma
 import bz2
 import zipfile
-
-from Orange.widgets.settings import PerfectDomainContextHandler
-from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from itertools import chain
 
 from xml.sax.saxutils import escape
@@ -39,10 +36,10 @@ from AnyQt.QtCore import (
     Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType
 )
 from AnyQt.QtGui import (
-    QStandardItem, QStandardItemModel, QPalette, QColor, QIcon, QTextOption
+    QStandardItem, QStandardItemModel, QPalette, QColor, QIcon,
 )
 from AnyQt.QtWidgets import (
-    QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
+    QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox,
     QVBoxLayout, QSizePolicy, QFileIconProvider, QFileDialog,
     QApplication, QMessageBox, QTextBrowser,
     QStyle, QMenu, QHBoxLayout, QTableView, QHeaderView
@@ -55,12 +52,18 @@ import pandas as pd
 
 from pandas.api import types as pdtypes
 
+from orangewidget.settings import Setting, SettingProvider, widget_settings_dir
+
 import Orange.data
 from Orange.data import Table, ContinuousVariable, StringVariable
 from Orange.misc.collections import natural_sorted
 
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
 from Orange.widgets.data.owtable import DataTableView, RichTableModel, is_sortable, TableSliceProxy
+from Orange.widgets.settings import PerfectDomainContextHandler
+from Orange.widgets.utils.settings import (
+    QSettings_readArray, QSettings_writeArray
+)
 from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get, qname
@@ -71,10 +74,7 @@ from Orange.widgets.utils.pathutils import (
     PathItem, VarPath, AbsPath, samepath, prettyfypath, isprefixed,
 )
 from Orange.widgets.utils.overlay import OverlayWidget
-from Orange.widgets.utils.settings import (
-    QSettings_readArray, QSettings_writeArray
-)
-from orangewidget.settings import Setting, ContextSetting, SettingProvider
+from Orange.widgets.utils.itemdelegates import TableDataDelegate
 
 if typing.TYPE_CHECKING:
     # pylint: disable=invalid-name
@@ -658,13 +658,13 @@ class OWCSVFileImport(widget.OWWidget):
                                   'the Import Options to avoid this.')
 
     #: Paths and options of files accessed in a 'session'
-    _session_items = settings.Setting(
+    _session_items = Setting(
         [], schema_only=True)  # type: List[Tuple[str, dict]]
 
-    _session_items_v2 = settings.Setting(
+    _session_items_v2 = Setting(
         [], schema_only=True)  # type: List[Tuple[Dict[str, str], dict]]
     #: Saved dialog state (last directory and selected filter)
-    dialog_state = settings.Setting({
+    dialog_state = Setting({
         "directory": "",
         "filter": ""
     })  # type: Dict[str, str]
@@ -678,7 +678,7 @@ class OWCSVFileImport(widget.OWWidget):
     # with older saved workflows, where types not guessed differently, when
     # compatibility_mode=True widget have older guessing behaviour
     settings_version = 3
-    compatibility_mode = settings.Setting(False, schema_only=True)
+    compatibility_mode = Setting(False, schema_only=True)
 
     MaxHistorySize = 50
 
@@ -963,7 +963,7 @@ class OWCSVFileImport(widget.OWWidget):
         return mb
 
     @Slot()
-    def browse(self, prefixname=None, directory=None):
+    def browse(self):
         """
         Open a file dialog and select a user specified file.
         """
@@ -1084,7 +1084,7 @@ class OWCSVFileImport(widget.OWWidget):
         # type: () -> QSettings
         """Return a QSettings instance with local persistent settings."""
         filename = "{}.ini".format(qname(cls))
-        fname = os.path.join(settings.widget_settings_dir(), filename)
+        fname = os.path.join(widget_settings_dir(), filename)
         return QSettings(fname, QSettings.IniFormat)
 
     def _add_recent(self, filename, options=None):
