@@ -24,7 +24,7 @@ from Orange.util import OrangeDeprecationWarning
 
 from Orange.data.io import TabReader
 from Orange.tests import named_file
-from Orange.widgets.data.owfile import OWFile
+from Orange.widgets.data.owfile import OWFile, OWFileDropHandler
 from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
@@ -664,6 +664,22 @@ a
         self.widget._try_load()
         self.assertTrue(self.widget.Warning.load_warning.is_shown())
         self.assertIn(WARNING_MSG, str(self.widget.Warning.load_warning))
+
+
+class TestOWFileDropHandler(unittest.TestCase):
+    def test_canDropUrl(self):
+        handler = OWFileDropHandler()
+        self.assertTrue(handler.canDropUrl(QUrl("https://example.com/test.tab")))
+        self.assertTrue(handler.canDropUrl(QUrl.fromLocalFile("test.tab")))
+
+    def test_parametersFromUrl(self):
+        handler = OWFileDropHandler()
+        r = handler.parametersFromUrl(QUrl("https://example.com/test.tab"))
+        self.assertEqual(r["source"], OWFile.URL)
+        self.assertEqual(r["recent_urls"], ["https://example.com/test.tab"])
+        r = handler.parametersFromUrl(QUrl.fromLocalFile("test.tab"))
+        self.assertEqual(r["source"], OWFile.LOCAL_FILE)
+        self.assertEqual(r["recent_paths"][0].basename, "test.tab")
 
 
 if __name__ == "__main__":

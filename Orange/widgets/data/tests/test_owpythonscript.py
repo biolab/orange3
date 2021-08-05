@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import sys
+import unittest
 
 from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
@@ -8,7 +9,8 @@ from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.tests import named_file
-from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content, Script
+from Orange.widgets.data.owpythonscript import OWPythonScript, \
+    read_file_content, Script, OWPythonScriptDropHandler
 from Orange.widgets.tests.base import WidgetTest, DummySignalManager
 from Orange.widgets.widget import OWWidget
 
@@ -260,3 +262,16 @@ class TestOWPythonScript(WidgetTest):
             "__version__": 2
         })
         self.assertEqual(w.libraryListSource[0].name, "A")
+
+
+class TestOWPythonScriptDropHandler(unittest.TestCase):
+    def test_canDropFile(self):
+        handler = OWPythonScriptDropHandler()
+        self.assertTrue(handler.canDropFile(__file__))
+        self.assertFalse(handler.canDropFile("test.tab"))
+
+    def test_parametersFromFile(self):
+        handler = OWPythonScriptDropHandler()
+        r = handler.parametersFromFile(__file__)
+        item = r["scriptLibrary"][0]
+        self.assertEqual(item["filename"], __file__)
