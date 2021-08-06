@@ -61,6 +61,7 @@ from Orange.util import log_warnings
 import Orange.data
 from Orange.data import Table, ContinuousVariable, StringVariable, FileFormat
 from Orange.data.io import class_from_qualified_name, CSVReader, UrlReader
+from Orange.data.io_base import DataTableMixin, _TableHeader
 
 from Orange.misc.collections import natural_sorted
 
@@ -1047,34 +1048,51 @@ class OWCSVFileImport(widget.OWWidget):
 
         status = dlg.exec()
         dlg.deleteLater()
-        if status == QFileDialog.Accepted:
-            reader = dlg.selectedFileFormat()
-            path = dlg.selectedFiles()[0]
-            assert os.path.isfile(path)
+        if status != QFileDialog.Accepted:
+            return
 
-            if directory and os.path.commonprefix([directory, path]) == directory:
-                varpath = VarPath("basedir", os.path.relpath(path, directory))
-            else:
-                varpath = PathItem.AbsPath(path)
+        reader = dlg.selectedFileFormat()
+        path = dlg.selectedFiles()[0]
+        assert os.path.isfile(path)
 
-            if reader is None:
-                proposed_reader = FileFormat.get_reader(path)
-                if not isinstance(proposed_reader, CSVReader):
-                    reader = proposed_reader
+        if directory and os.path.commonprefix([directory, path]) == directory:
+            varpath = VarPath("basedir", os.path.relpath(path, directory))
+        else:
+            varpath = PathItem.AbsPath(path)
 
-            if reader is not None:
-                self._prepare_reader(reader, path, varpath)
-            else:
-                self._prepare_csv_import(path, varpath)
+        options = default_options_for_path(path)
+        if not reader:
+            reader = self._choose_reader(path, options)
+
+        if reader is not None:
+            self._prepare_reader(reader, path, varpath)
+        else:
+            self._prepare_csv_import(options, path, varpath)
+
+    def _choose_reader(self, path, options):
+        try:
+            proposed_reader = FileFormat.get_reader(path)
+            if not isinstance(proposed_reader, CSVReader):
+                return proposed_reader
+
+            sample = _open(path, 'rb')
+            wrapper = io.TextIOWrapper(sample, newline='')
+            rows = csv.reader(wrapper, dialect=options.dialect)
+            headers, data = DataTableMixin.parse_headers(rows)
+            header = _TableHeader(headers)
+
+            if any(header.types) or any(header.flags):
+                return proposed_reader
+        except IOError:
+            pass
+        return None
 
     def _prepare_reader(self, reader, path, varpath):
         options = Options(reader=reader.qualified_name())
         self.set_selected_file(path, options)
         self.current_item().setVarPath(varpath)
 
-    def _prepare_csv_import(self, path, varpath):
-        # initialize options based on selected format
-        options = default_options_for_path(path)
+    def _prepare_csv_import(self, options, path, varpath):
         # Search for path in history.
         # If found use the stored params to initialize the import dialog
         items = self.itemsFromSettings()
