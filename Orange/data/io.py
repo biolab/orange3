@@ -464,7 +464,7 @@ class UrlReader(FileFormat):
         match = re.match(r'(?:https?://)?(?:www\.)?'
                          r'docs\.google\.com/spreadsheets/d/'
                          r'(?P<workbook_id>[-\w_]+)'
-                         r'(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
+                         r'(?:/.*?gid(=|%3D)(?P<sheet_id>\d+).*|.*)?',
                          url, re.IGNORECASE)
         try:
             workbook, sheet = match.group('workbook_id'), match.group('sheet_id')
