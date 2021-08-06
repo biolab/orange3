@@ -17,11 +17,12 @@ from AnyQt.QtGui import QIcon
 from AnyQt.QtWidgets import QFileDialog
 from AnyQt.QtTest import QSignalSpy
 
+from Orange.data.io import CSVReader
 from orangewidget.tests.utils import simulate
 from orangewidget.widget import OWBaseWidget
 
 from Orange.data import DiscreteVariable, TimeVariable, ContinuousVariable, \
-    StringVariable
+    StringVariable, Table
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.data import owcsvimport
@@ -233,7 +234,7 @@ class TestOWCSVFileImport(WidgetTest):
 
     @staticmethod
     @contextmanager
-    def _browse_setup(widget: OWCSVFileImport, path: str):
+    def _browse_setup(widget: OWCSVFileImport, path: str, reader=None):
         browse_dialog = widget._browse_dialog
         with mock.patch.object(widget, "_browse_dialog") as r:
             dlg = browse_dialog()
@@ -242,7 +243,9 @@ class TestOWCSVFileImport(WidgetTest):
             dlg.exec = lambda: QFileDialog.Accepted
             r.return_value = dlg
             with mock.patch.object(owcsvimport.CSVImportDialog, "exec",
-                                   lambda _: QFileDialog.Accepted):
+                                   lambda _: QFileDialog.Accepted), \
+                    mock.patch.object(owcsvimport.FileDialog, "selectedFileFormat",
+                                      lambda _: reader):
                 yield
 
     def test_browse(self):
@@ -365,6 +368,19 @@ class TestOWCSVFileImport(WidgetTest):
         w.domain_editor.model().setData(index, 'text')
         w.apply_domain_edit()
         self.assertTrue(w.Warning.numeric_cast.is_shown())
+
+    def load_dataset(self, path, reader=None):
+        with self._browse_setup(self.widget, path, reader):
+            self.widget.browse()
+
+    def test_load_iris(self):
+        self.load_dataset(os.path.join(
+            os.path.dirname(__file__), '../../../datasets/iris.tab'
+        ), CSVReader)
+        self.process_events(until=lambda: self.widget.data is not None)
+        data = Table('iris')
+        self.assertEqual(self.widget.table_view.model().rowCount(),
+                         len(data))
 
 
 class TestImportDialog(GuiTest):

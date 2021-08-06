@@ -29,7 +29,7 @@ from contextlib import ExitStack
 import typing
 from typing import (
     List, Tuple, Dict, Optional, Any, Callable, Iterable,
-    Union, AnyStr, BinaryIO, Set, Type, Mapping, Sequence, NamedTuple
+    Union, AnyStr, BinaryIO, Set, Type, Mapping, Sequence
 )
 
 from AnyQt.QtCore import (
@@ -52,15 +52,21 @@ import pandas as pd
 
 from pandas.api import types as pdtypes
 
+from orangewidget.utils.filedialogs import format_filter
 from orangewidget.settings import Setting, SettingProvider, widget_settings_dir
 
+from Orange.util import log_warnings
+
 import Orange.data
-from Orange.data import Table, ContinuousVariable, StringVariable
+from Orange.data import Table, ContinuousVariable, StringVariable, FileFormat
+from Orange.data.io import class_from_qualified_name
+
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui
 from Orange.widgets.data.owtable import DataTableView, RichTableModel, is_sortable, TableSliceProxy
 from Orange.widgets.settings import PerfectDomainContextHandler
+from Orange.widgets.utils.textimport import CSVOptionsWidget
 from Orange.widgets.utils.settings import (
     QSettings_readArray, QSettings_writeArray
 )
@@ -129,13 +135,15 @@ class Options:
     def __init__(self, encoding='utf-8', dialect=csv.excel(),
                  columntypes: Iterable[Tuple[range, 'ColumnType']] = (),
                  rowspec=((range(0, 1), RowSpec.Header),),
-                 decimal_separator=".", group_separator="") -> None:
+                 decimal_separator=".", group_separator="",
+                 reader=None) -> None:
         self.encoding = encoding
         self.dialect = dialect
         self.columntypes = list(columntypes)  # type: List[Tuple[range, ColumnType]]
         self.rowspec = list(rowspec)  # type: List[Tuple[range, RowSpec]]
         self.decimal_separator = decimal_separator
         self.group_separator = group_separator
+        self.reader = reader
 
     def __eq__(self, other):
         """
@@ -177,6 +185,7 @@ class Options:
             "rowspec": Options.spec_as_encodable(self.rowspec),
             "decimal_separator": self.decimal_separator,
             "group_separator": self.group_separator,
+            "reader": self.reader,
         }
 
     @staticmethod
@@ -202,10 +211,11 @@ class Options:
         rowspec = Options.spec_from_encodable(rowspec, RowSpec)
         decimal = mapping.get("decimal_separator", ".")
         group = mapping.get("group_separator", "")
+        reader = mapping.get("reader", None)
 
         return Options(encoding, dialect, colspec, rowspec,
                        decimal_separator=decimal,
-                       group_separator=group)
+                       group_separator=group, reader=reader)
 
     @staticmethod
     def spec_as_encodable(spec):
@@ -550,29 +560,23 @@ def move_item_to_index(model: QStandardItemModel, item: QStandardItem, index: in
     model.insertRow(index, [item])
 
 
-class FileFormat(NamedTuple):
-    mime_type: str
-    name: str
-    globs: Sequence[str]
-
-
-FileFormats = [
-    FileFormat("text/csv", "Text - comma separated", ("*.csv", "*")),
-    FileFormat("text/tab-separated-values", "Text - tab separated", ("*.tsv", "*")),
-    FileFormat("text/plain", "Text - all files", ("*.txt", "*")),
-]
-
-
 class FileDialog(QFileDialog):
-    __formats: Sequence[FileFormat] = ()
-
-    @staticmethod
-    def filterStr(f: FileFormat) -> str:
-        return f"{f.name} ({', '.join(f.globs)})"
+    __filters: Sequence[FileFormat] = ()
+    __file_formats: Sequence[str] = ()
 
     def setFileFormats(self, formats: Sequence[FileFormat]):
-        filters = [FileDialog.filterStr(f) for f in formats]
-        self.__formats = tuple(formats)
+        file_formats = sorted(set(formats), key=lambda w: (w.PRIORITY, w.DESCRIPTION))
+        self.__file_formats = file_formats
+        filters = [format_filter(f) for f in file_formats]
+        self.__filters = filters
+
+        all_extensions = set()
+        for f in file_formats:
+            all_extensions.update(f.EXTENSIONS)
+        file_formats.insert(0, None)
+        filters.insert(0, "All readable files (*{})".format(
+            ' *'.join(sorted(all_extensions))))
+
         self.setNameFilters(filters)
 
     def fileFormats(self) -> Sequence[FileFormat]:
@@ -580,24 +584,14 @@ class FileDialog(QFileDialog):
 
     def selectedFileFormat(self) -> FileFormat:
         filter_ = self.selectedNameFilter()
-        index = index_where(
-            self.__formats, lambda f: FileDialog.filterStr(f) == filter_
-        )
-        return self.__formats[index]
+        index = self.__filters.index(filter_)
+        return self.__file_formats[index]
 
 
-def default_options_for_mime_type(
-        path: str, mime_type: str
-) -> Options:
-    defaults = {
-        "text/csv": (csv.excel(), True),
-        "text/tab-separated-values": (csv.excel_tab(), True)
-    }
+def default_options_for_path(path: str) -> Options:
     dialect, header, encoding = csv.excel(), True, "utf-8"
     try_encodings = ["utf-8", "utf-16", "iso8859-1"]
     delimiters = [d[1] for d in CSVOptionsWidget.PresetDelimiters]
-    if mime_type in defaults:
-        dialect, header = defaults[mime_type]
 
     for encoding_ in try_encodings:
         try:
@@ -636,6 +630,7 @@ class OWCSVFileImport(widget.OWWidget):
         )
 
     class Error(widget.OWWidget.Error):
+        unknown = widget.Msg("Read error:\n{}")
         error = widget.Msg(
             "Unexpected error"
         )
@@ -646,6 +641,7 @@ class OWCSVFileImport(widget.OWWidget):
         )
 
     class Warning(widget.OWWidget.Warning):
+        load_warning = widget.Msg("Read warning:\n{}")
         performance_warning = widget.Msg(
             "Categorical variables with >100 values may decrease performance.")
         renamed_vars = widget.Msg("Some variables have been renamed "
@@ -921,8 +917,10 @@ class OWCSVFileImport(widget.OWWidget):
             acceptMode=QFileDialog.AcceptOpen,
             fileMode=QFileDialog.ExistingFile
         )
-
-        dlg.setFileFormats(FileFormats)
+        readers = [f for f in FileFormat.formats
+                   if getattr(f, 'read', None)
+                   and getattr(f, "EXTENSIONS", None)]
+        dlg.setFileFormats(readers)
         state = self.dialog_state
         lastdir = state.get("directory", "")
         lastfilter = state.get("filter", "")
@@ -977,42 +975,52 @@ class OWCSVFileImport(widget.OWWidget):
         status = dlg.exec()
         dlg.deleteLater()
         if status == QFileDialog.Accepted:
-            selected_filter = dlg.selectedFileFormat()
+            reader = dlg.selectedFileFormat()
             path = dlg.selectedFiles()[0]
             assert os.path.isfile(path)
+
             if directory and os.path.commonprefix([directory, path]) == directory:
                 varpath = VarPath("basedir", os.path.relpath(path, directory))
             else:
                 varpath = PathItem.AbsPath(path)
 
-            # pre-flight check; try to determine the nature of the file
-            mtype = _mime_type_for_path(path)
-            if not mtype.inherits("text/plain"):
-                mb = self._might_be_binary_mb(path)
-                if mb.exec() == QMessageBox.Cancel:
-                    return
-            # initialize options based on selected format
-            options = default_options_for_mime_type(
-                path, selected_filter.mime_type,
-            )
-            # Search for path in history.
-            # If found use the stored params to initialize the import dialog
-            items = self.itemsFromSettings()
-            idx = index_where(items, lambda t: samepath(t[0], path))
-            if idx is not None:
-                _, options_ = items[idx]
-                if options_ is not None:
-                    options = options_
-            dlg = CSVImportDialog(
-                self, windowTitle="Import Options", sizeGripEnabled=True)
-            dlg.setWindowModality(Qt.WindowModal)
-            dlg.setPath(path)
-            dlg.setOptions(options)
-            status = dlg.exec()
-            dlg.deleteLater()
-            if status == QDialog.Accepted:
-                self.set_selected_file(path, dlg.options())
-                self.current_item().setVarPath(varpath)
+            if reader is not None:
+                self._prepare_reader(reader, path, varpath)
+            else:
+                self._prepare_csv_import(path, varpath)
+
+    def _prepare_reader(self, reader, path, varpath):
+        options = Options(reader=reader.qualified_name())
+        self.set_selected_file(path, options)
+        self.current_item().setVarPath(varpath)
+
+    def _prepare_csv_import(self, path, varpath):
+        # pre-flight check; try to determine the nature of the file
+        mtype = _mime_type_for_path(path)
+        if not mtype.inherits("text/plain"):
+            mb = self._might_be_binary_mb(path)
+            if mb.exec() == QMessageBox.Cancel:
+                return
+        # initialize options based on selected format
+        options = default_options_for_path(path)
+        # Search for path in history.
+        # If found use the stored params to initialize the import dialog
+        items = self.itemsFromSettings()
+        idx = index_where(items, lambda t: samepath(t[0], path))
+        if idx is not None:
+            _, options_ = items[idx]
+            if options_ is not None and options_.reader is None:
+                options = options_
+        dlg = CSVImportDialog(
+            self, windowTitle="Import Options", sizeGripEnabled=True)
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.setPath(path)
+        dlg.setOptions(options)
+        status = dlg.exec()
+        dlg.deleteLater()
+        if status == QDialog.Accepted:
+            self.set_selected_file(path, dlg.options())
+            self.current_item().setVarPath(varpath)
 
     def current_item(self):
         # type: () -> Optional[ImportItem]
@@ -1156,6 +1164,11 @@ class OWCSVFileImport(widget.OWWidget):
         if not isinstance(opts, Options):
             return
 
+        if opts.reader:
+            reader = class_from_qualified_name(opts.reader)
+            self._use_reader(path, reader)
+            return
+
         task = state = TaskState()
         state.future = ...
         state.watcher = qconcurrent.FutureWatcher()
@@ -1175,6 +1188,20 @@ class OWCSVFileImport(widget.OWWidget):
         w.progress = state
         self.__watcher = w
         self.__set_running_state()
+
+    def _use_reader(self, path, reader):
+        with log_warnings() as warnings:
+            try:
+                data = reader(path).read()
+            except Exception as ex:
+                _log.exception(ex)
+                return lambda x=ex: self.Error.unknown(str(x))
+            if warnings:
+                self.Warning.load_warning(warnings[-1].message.args[0])
+        self.__clear_running_state()
+        self.data = data
+        self.openContext(data.domain)
+        self.apply_domain_edit()
 
     @Slot('qint64', 'qint64')
     def __set_read_progress(self, read, count):
@@ -1295,8 +1322,6 @@ class OWCSVFileImport(widget.OWWidget):
         self.apply_domain_edit()
 
         self.Outputs.data_frame.send(df)
-
-        self._update_table(table)
 
     def reset_domain_edit(self):
         self.Warning.clear()
