@@ -594,11 +594,10 @@ def default_options_for_mime_type(
         "text/tab-separated-values": (csv.excel_tab(), True)
     }
     dialect, header, encoding = csv.excel(), True, "utf-8"
-    delimiters = None
     try_encodings = ["utf-8", "utf-16", "iso8859-1"]
+    delimiters = [d[1] for d in CSVOptionsWidget.PresetDelimiters]
     if mime_type in defaults:
         dialect, header = defaults[mime_type]
-        delimiters = [dialect.delimiter]
 
     for encoding_ in try_encodings:
         try:
