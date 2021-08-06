@@ -21,6 +21,7 @@ import lzma
 import bz2
 import zipfile
 from itertools import chain
+from urllib.parse import urlparse
 
 from xml.sax.saxutils import escape
 from functools import singledispatch
@@ -42,7 +43,7 @@ from AnyQt.QtWidgets import (
     QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox,
     QVBoxLayout, QSizePolicy, QFileIconProvider, QFileDialog,
     QApplication, QMessageBox, QTextBrowser,
-    QStyle, QMenu, QHBoxLayout, QTableView, QHeaderView
+    QStyle, QMenu, QHBoxLayout, QTableView, QHeaderView, QGridLayout, QCompleter
 )
 from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
@@ -59,11 +60,12 @@ from Orange.util import log_warnings
 
 import Orange.data
 from Orange.data import Table, ContinuousVariable, StringVariable, FileFormat
-from Orange.data.io import class_from_qualified_name
+from Orange.data.io import class_from_qualified_name, CSVReader, UrlReader
 
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui
+from Orange.widgets.data.owfile import NamedURLModel, LineEditSelectOnFocus
 from Orange.widgets.data.owtable import DataTableView, RichTableModel, is_sortable, TableSliceProxy
 from Orange.widgets.settings import PerfectDomainContextHandler
 from Orange.widgets.utils.textimport import CSVOptionsWidget
@@ -136,7 +138,7 @@ class Options:
                  columntypes: Iterable[Tuple[range, 'ColumnType']] = (),
                  rowspec=((range(0, 1), RowSpec.Header),),
                  decimal_separator=".", group_separator="",
-                 reader=None) -> None:
+                 reader=None, sheet=None) -> None:
         self.encoding = encoding
         self.dialect = dialect
         self.columntypes = list(columntypes)  # type: List[Tuple[range, ColumnType]]
@@ -144,6 +146,7 @@ class Options:
         self.decimal_separator = decimal_separator
         self.group_separator = group_separator
         self.reader = reader
+        self.sheet = sheet
 
     def __eq__(self, other):
         """
@@ -186,6 +189,7 @@ class Options:
             "decimal_separator": self.decimal_separator,
             "group_separator": self.group_separator,
             "reader": self.reader,
+            "sheet": self.sheet,
         }
 
     @staticmethod
@@ -212,10 +216,12 @@ class Options:
         decimal = mapping.get("decimal_separator", ".")
         group = mapping.get("group_separator", "")
         reader = mapping.get("reader", None)
+        sheet = mapping.get("sheet", None)
 
         return Options(encoding, dialect, colspec, rowspec,
                        decimal_separator=decimal,
-                       group_separator=group, reader=reader)
+                       group_separator=group, reader=reader,
+                       sheet=sheet)
 
     @staticmethod
     def spec_as_encodable(spec):
@@ -630,6 +636,7 @@ class OWCSVFileImport(widget.OWWidget):
         )
 
     class Error(widget.OWWidget.Error):
+        sheet_error = widget.Msg("Error listing available sheets.")
         unknown = widget.Msg("Read error:\n{}")
         error = widget.Msg(
             "Unexpected error"
@@ -651,6 +658,14 @@ class OWCSVFileImport(widget.OWWidget):
                                   'For example, 001 turns into 1.\n'
                                   'Change the variable type to String in '
                                   'the Import Options to avoid this.')
+
+    class NoFileSelected:
+        pass
+
+    LOCAL_FILE, URL = range(2)
+    source = Setting(LOCAL_FILE)
+    sheet_names = Setting({})
+    recent_urls = Setting([])
 
     #: Paths and options of files accessed in a 'session'
     _session_items = Setting(
@@ -693,18 +708,31 @@ class OWCSVFileImport(widget.OWWidget):
         self.__executor = qconcurrent.ThreadExecutor()
         self.__watcher = None  # type: Optional[qconcurrent.FutureWatcher]
 
+        self.reader = None
         self.data = None
 
         self.controlArea.layout().setSpacing(-1)  # reset spacing
 
+        ########
+        # Source
+        ########
+        layout = QGridLayout()
+        layout.setSpacing(4)
+        gui.widgetBox(self.controlArea, orientation=layout, box='Source')
+        vbox = gui.radioButtons(None, self, "source", box=True,
+                                callback=self._invalidate, addToLayout=False)
+
         #############
         # File select
         #############
-        box = QHBoxLayout()
-        box.addWidget(QLabel("File:", self))
-
         self.import_items_model = VarPathItemModel(self)
         self.import_items_model.setReplacementEnv(self._replacements())
+
+        rb_button = gui.appendRadioButton(vbox, "File:", addToLayout=False)
+        layout.addWidget(rb_button, 0, 0, Qt.AlignVCenter)
+
+        # box = gui.hBox(None, addToLayout=False, margin=0)
+        # box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         self.recent_combo = ItemStyledComboBox(
             self, objectName="recent-combo",
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
@@ -714,6 +742,8 @@ class OWCSVFileImport(widget.OWWidget):
         self.recent_combo.activated.connect(self.activate_recent)
         self.recent_combo.setSizePolicy(
             QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        # box.layout().addWidget(self.recent_combo)
+        layout.addWidget(self.recent_combo, 0, 1)
 
         self.browse_button = QPushButton(
             "…", icon=self.style().standardIcon(QStyle.SP_DirOpenIcon),
@@ -734,6 +764,52 @@ class OWCSVFileImport(widget.OWWidget):
 
         self.browse_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.browse_button.clicked.connect(self.browse)
+        layout.addWidget(self.browse_button, 0, 2)
+
+        ###############################
+        # Sheet combo (on opening xlsx)
+
+        self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
+        self.sheet_combo = QComboBox()
+        self.sheet_combo.activated[str].connect(self.select_sheet)
+        self.sheet_combo.setSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        self.sheet_label = QLabel()
+        self.sheet_label.setText('Sheet')
+        self.sheet_label.setSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        self.sheet_box.layout().addWidget(
+            self.sheet_label, Qt.AlignLeft)
+        self.sheet_box.layout().addWidget(
+            self.sheet_combo, Qt.AlignVCenter)
+        layout.addWidget(self.sheet_box, 1, 1)
+        self.sheet_box.hide()
+
+        #####
+        # URL
+        #####
+
+        rb_button = gui.appendRadioButton(vbox, "URL:", addToLayout=False)
+        layout.addWidget(rb_button, 2, 0, Qt.AlignVCenter)
+
+        self.url_combo = url_combo = QComboBox()
+        url_model = NamedURLModel(self.sheet_names)
+        url_model.wrap(self.recent_urls)
+        url_combo.setLineEdit(LineEditSelectOnFocus())
+        url_combo.setModel(url_model)
+        url_combo.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+        url_combo.setEditable(True)
+        url_combo.setInsertPolicy(url_combo.InsertAtTop)
+        url_edit = url_combo.lineEdit()
+        l, t, r, b = url_edit.getTextMargins()
+        url_edit.setTextMargins(l + 5, t, r, b)
+        layout.addWidget(url_combo, 2, 1, 1, 3)
+        url_combo.activated.connect(self._url_set)
+        # whit completer we set that combo box is case sensitive when
+        # matching the history
+        completer = QCompleter()
+        completer.setCaseSensitivity(Qt.CaseSensitive)
+        url_combo.setCompleter(completer)
 
         #########
         # Buttons
@@ -749,9 +825,6 @@ class OWCSVFileImport(widget.OWWidget):
             clicked=self.__committimer.start
         )
 
-        box.addWidget(self.recent_combo)
-        box.addWidget(self.browse_button)
-        self.controlArea.layout().addLayout(box)
         box = QHBoxLayout()
         box.addWidget(self.import_options_button)
         box.addWidget(self.load_button)
@@ -984,6 +1057,11 @@ class OWCSVFileImport(widget.OWWidget):
             else:
                 varpath = PathItem.AbsPath(path)
 
+            if reader is None:
+                proposed_reader = FileFormat.get_reader(path)
+                if not isinstance(proposed_reader, CSVReader):
+                    reader = proposed_reader
+
             if reader is not None:
                 self._prepare_reader(reader, path, varpath)
             else:
@@ -995,12 +1073,6 @@ class OWCSVFileImport(widget.OWWidget):
         self.current_item().setVarPath(varpath)
 
     def _prepare_csv_import(self, path, varpath):
-        # pre-flight check; try to determine the nature of the file
-        mtype = _mime_type_for_path(path)
-        if not mtype.inherits("text/plain"):
-            mb = self._might_be_binary_mb(path)
-            if mb.exec() == QMessageBox.Cancel:
-                return
         # initialize options based on selected format
         options = default_options_for_path(path)
         # Search for path in history.
@@ -1140,7 +1212,7 @@ class OWCSVFileImport(widget.OWWidget):
         self.__committimer.start()
         if self.__watcher is not None:
             self.__cancel_task()
-        self.setBlocking(True)
+        # self.setBlocking(True)
 
     def commit(self):
         """
@@ -1156,6 +1228,15 @@ class OWCSVFileImport(widget.OWWidget):
             self.__cancel_task()
         self.error()
 
+        if self.source == self.URL:
+            url = self.url_combo.currentText().strip()
+            if url:
+                self.reader = UrlReader(url)
+            else:
+                self.reader = self.NoFileSelected
+            self._use_reader()
+            return
+
         item = self.current_item()
         if item is None:
             return
@@ -1166,7 +1247,8 @@ class OWCSVFileImport(widget.OWWidget):
 
         if opts.reader:
             reader = class_from_qualified_name(opts.reader)
-            self._use_reader(path, reader)
+            self.reader = reader(path)
+            self._use_reader()
             return
 
         task = state = TaskState()
@@ -1189,19 +1271,74 @@ class OWCSVFileImport(widget.OWWidget):
         self.__watcher = w
         self.__set_running_state()
 
-    def _use_reader(self, path, reader):
+    def _use_reader(self):
+        if self.reader is self.NoFileSelected:
+            self.Outputs.data.send(None)
+            return
+
+        try:
+            self._update_sheet_combo()
+        except Exception:
+            self.Error.sheet_error()
+            return
+
+        options = self.current_item().options()
+        if options.sheet:
+            self.reader.select_sheet(options.sheet)
+
         with log_warnings() as warnings:
             try:
-                data = reader(path).read()
+                data = self.reader.read()
             except Exception as ex:
                 _log.exception(ex)
-                return lambda x=ex: self.Error.unknown(str(x))
+                self.Error.unknown(str(ex))
+                return
             if warnings:
                 self.Warning.load_warning(warnings[-1].message.args[0])
+
         self.__clear_running_state()
         self.data = data
         self.openContext(data.domain)
         self.apply_domain_edit()
+
+    def _update_sheet_combo(self):
+        if len(self.reader.sheets) < 2:
+            self.sheet_box.hide()
+            self.reader.select_sheet(None)
+            return
+
+        self.sheet_combo.clear()
+        self.sheet_combo.addItems(self.reader.sheets)
+        self._select_active_sheet()
+        self.sheet_box.show()
+
+    def _select_active_sheet(self):
+        try:
+            idx = self.reader.sheets.index(self.reader.sheet)
+            self.sheet_combo.setCurrentIndex(idx)
+        except ValueError:
+            # Requested sheet does not exist in this file
+            self.reader.select_sheet(None)
+            self.sheet_combo.setCurrentIndex(0)
+
+    def select_sheet(self):
+        opts = self.current_item().options()
+        opts.sheet = self.sheet_combo.currentText()
+        self.current_item().setOptions(opts)
+        self._invalidate()
+
+    def _url_set(self):
+        url = self.url_combo.currentText()
+        pos = self.recent_urls.index(url)
+        url = url.strip()
+
+        if not urlparse(url).scheme:
+            url = 'https://' + url
+            self.url_combo.setItemText(pos, url)
+            self.recent_urls[pos] = url
+
+        self.source = self.URL
+        self._invalidate()
 
     @Slot('qint64', 'qint64')
     def __set_read_progress(self, read, count):
