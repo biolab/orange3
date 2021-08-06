@@ -1232,6 +1232,17 @@ class OWCSVFileImport(widget.OWWidget):
             self.__cancel_task()
         # self.setBlocking(True)
 
+    def _update_buttons(self):
+        cbindex = self.recent_combo.currentIndex()
+        self.load_button.setEnabled(cbindex != -1)
+
+        import_enabled = (cbindex != -1 and
+                          self.source == self.LOCAL_FILE and
+                          self.reader is None)
+        self.import_options_button.setEnabled(import_enabled)
+
+        self._update_sheet_combo()
+
     def commit(self):
         """
         Commit the current state and submit the load task for execution.
@@ -1242,6 +1253,8 @@ class OWCSVFileImport(widget.OWWidget):
         """
         self.__committimer.stop()
         self.closeContext()
+        self._set_summary_text(None)
+        self._update_table(None)
         if self.__watcher is not None:
             self.__cancel_task()
         self.error()
@@ -1269,6 +1282,9 @@ class OWCSVFileImport(widget.OWWidget):
             self._use_reader()
             return
 
+        self.reader = None
+        self._update_buttons()
+
         task = state = TaskState()
         state.future = ...
         state.watcher = qconcurrent.FutureWatcher()
@@ -1294,12 +1310,6 @@ class OWCSVFileImport(widget.OWWidget):
             self.Outputs.data.send(None)
             return
 
-        try:
-            self._update_sheet_combo()
-        except Exception:
-            self.Error.sheet_error()
-            return
-
         options = self.current_item().options()
         if options.sheet:
             self.reader.select_sheet(options.sheet)
@@ -1314,12 +1324,17 @@ class OWCSVFileImport(widget.OWWidget):
             if warnings:
                 self.Warning.load_warning(warnings[-1].message.args[0])
 
+        self._update_buttons()
         self.__clear_running_state()
         self.data = data
         self.openContext(data.domain)
         self.apply_domain_edit()
 
     def _update_sheet_combo(self):
+        if not hasattr(self.reader, 'sheets'):
+            self.sheet_box.hide()
+            return
+
         if len(self.reader.sheets) < 2:
             self.sheet_box.hide()
             self.reader.select_sheet(None)
