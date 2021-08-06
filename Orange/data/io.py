@@ -406,7 +406,7 @@ class UrlReader(FileFormat):
     def __init__(self, filename):
         filename = filename.strip()
         if not urlparse(filename).scheme:
-            filename = 'http://' + filename
+            filename = 'https://' + filename
         filename = quote(filename, safe="/:")
         super().__init__(filename)
 
