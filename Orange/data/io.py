@@ -13,6 +13,7 @@ from itertools import chain
 
 from os import path, remove
 from tempfile import NamedTemporaryFile
+from urllib.error import HTTPError
 from urllib.parse import urlparse, urlsplit, urlunsplit, \
     unquote as urlunquote, quote
 from urllib.request import urlopen, Request
@@ -437,8 +438,11 @@ class UrlReader(FileFormat):
 
     def _resolve_redirects(self, url):
         # Resolve (potential) redirects to a final URL
-        with contextlib.closing(self.urlopen(url)) as response:
-            return response.url
+        try:
+            with contextlib.closing(self.urlopen(url)) as response:
+                return response.url
+        except HTTPError:
+            return url
 
     @classmethod
     def _trim(cls, url):
