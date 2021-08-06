@@ -934,13 +934,29 @@ class TimeVariable(ContinuousVariable):
     # UTC offset and associated timezone. If parsed datetime values provide an
     # offset, it is used for display. If not all values have the same offset,
     # +0000 (=UTC) timezone is used and utc_offset is set to False.
-    utc_offset = None
+    _utc_offset = None
     timezone = timezone.utc
 
     def __init__(self, *args, have_date=0, have_time=0, **kwargs):
         super().__init__(*args, **kwargs)
         self.have_date = have_date
         self.have_time = have_time
+
+    @property
+    def utc_offset(self):
+        warnings.warn(
+            "utc_offset is deprecated and will be removed in Orange 3.31",
+            OrangeDeprecationWarning
+        )
+        return self._utc_offset
+
+    @utc_offset.setter
+    def utc_offset(self, val):
+        warnings.warn(
+            "utc_offset is deprecated and will be removed in Orange 3.31",
+            OrangeDeprecationWarning
+        )
+        self._utc_offset = val
 
     def copy(self, compute_value=Variable._CopyComputeValue, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
@@ -1030,12 +1046,12 @@ class TimeVariable(ContinuousVariable):
         # Remember UTC offset. If not all parsed values share the same offset,
         # remember none of it.
         offset = dt.utcoffset()
-        if self.utc_offset is not False:
-            if offset and self.utc_offset is None:
-                self.utc_offset = offset
+        if self._utc_offset is not False:
+            if offset and self._utc_offset is None:
+                self._utc_offset = offset
                 self.timezone = timezone(offset)
-            elif self.utc_offset != offset:
-                self.utc_offset = False
+            elif self._utc_offset != offset:
+                self._utc_offset = False
                 self.timezone = timezone.utc
 
         # Convert time to UTC timezone. In dates without timezone,

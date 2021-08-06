@@ -1,13 +1,16 @@
 # pylint: disable=import-outside-toplevel
-
 import unittest
+from datetime import date, datetime, timezone
+
 import numpy as np
+import pytz
 from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 
 from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, Table, Domain, \
     StringVariable
 from Orange.data.pandas_compat import OrangeDataFrame
+from Orange.data.tests.test_variable import TestTimeVariable
 
 try:
     import pandas as pd
@@ -163,6 +166,245 @@ class TestPandasCompat(unittest.TestCase):
 
         for v1, v2 in zip(vars1, vars2):
             self.assertEqual(type(v1), type(v2))
+
+    def test_table_from_frame_date(self):
+        from Orange.data.pandas_compat import table_from_frame
+
+        df = pd.DataFrame(
+            [[pd.Timestamp("2017-12-19")], [pd.Timestamp("1724-12-20")], [np.nan]]
+        )
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19").timestamp()],
+                [pd.Timestamp("1724-12-20").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 0)
+        self.assertEqual(table.domain.variables[0].have_date, 1)
+
+        df = pd.DataFrame([["2017-12-19"], ["1724-12-20"], [np.nan]])
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19").timestamp()],
+                [pd.Timestamp("1724-12-20").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 0)
+        self.assertEqual(table.domain.variables[0].have_date, 1)
+
+        df = pd.DataFrame([[date(2017, 12, 19)], [date(1724, 12, 20)], [np.nan]])
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19").timestamp()],
+                [pd.Timestamp("1724-12-20").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 0)
+        self.assertEqual(table.domain.variables[0].have_date, 1)
+
+    def test_table_from_frame_time(self):
+        from Orange.data.pandas_compat import table_from_frame
+
+        df = pd.DataFrame(
+            [[pd.Timestamp("00:00:00.25")], [pd.Timestamp("20:20:20.30")], [np.nan]]
+        )
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("1970-01-01 00:00:00.25").timestamp()],
+                [pd.Timestamp("1970-01-01 20:20:20.30").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 1)
+        self.assertEqual(table.domain.variables[0].have_date, 0)
+
+        df = pd.DataFrame([["00:00:00.25"], ["20:20:20.30"], [np.nan]])
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("1970-01-01 00:00:00.25").timestamp()],
+                [pd.Timestamp("1970-01-01 20:20:20.30").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 1)
+        self.assertEqual(table.domain.variables[0].have_date, 0)
+
+    def test_table_from_frame_datetime(self):
+        from Orange.data.pandas_compat import table_from_frame
+
+        df = pd.DataFrame(
+            [
+                [pd.Timestamp("2017-12-19 00:00:00.50")],
+                [pd.Timestamp("1724-12-20 20:20:20.30")],
+                [np.nan],
+            ]
+        )
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19 00:00:00.50").timestamp()],
+                [pd.Timestamp("1724-12-20 20:20:20.30").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 1)
+        self.assertEqual(table.domain.variables[0].have_date, 1)
+
+        df = pd.DataFrame(
+            [["2017-12-19 00:00:00.50"], ["1724-12-20 20:20:20.30"], [np.nan]]
+        )
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19 00:00:00.50").timestamp()],
+                [pd.Timestamp("1724-12-20 20:20:20.30").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 1)
+        self.assertEqual(table.domain.variables[0].have_date, 1)
+
+        df = pd.DataFrame(
+            [
+                [datetime(2017, 12, 19, 0, 0, 0, 500000)],
+                [datetime(1724, 12, 20, 20, 20, 20, 300000)],
+                [np.nan],
+            ]
+        )
+        table = table_from_frame(df)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19 00:00:00.50").timestamp()],
+                [pd.Timestamp("1724-12-20 20:20:20.30").timestamp()],
+                [np.nan],
+            ],
+        )
+        self.assertEqual(table.domain.variables[0].have_time, 1)
+        self.assertEqual(table.domain.variables[0].have_date, 1)
+
+    def test_table_from_frame_timezones(self):
+        from Orange.data.pandas_compat import table_from_frame
+
+        df = pd.DataFrame(
+            [
+                [pd.Timestamp("2017-12-19 00:00:00")],
+                [pd.Timestamp("1724-12-20 20:20:20")],
+                [np.nan],
+            ]
+        )
+        table = table_from_frame(df)
+        self.assertIsNone(table.domain.variables[0].utc_offset)
+        self.assertEqual(table.domain.variables[0].timezone, timezone.utc)
+
+        df = pd.DataFrame(
+            [
+                [pd.Timestamp("2017-12-19 00:00:00Z")],
+                [pd.Timestamp("1724-12-20 20:20:20Z")],
+                [np.nan],
+            ]
+        )
+        table = table_from_frame(df)
+        self.assertEqual(pytz.utc, table.domain.variables[0].timezone)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19 00:00:00").timestamp()],
+                [pd.Timestamp("1724-12-20 20:20:20").timestamp()],
+                [np.nan],
+            ],
+        )
+
+        df = pd.DataFrame(
+            [
+                [pd.Timestamp("2017-12-19 00:00:00+1")],
+                [pd.Timestamp("1724-12-20 20:20:20+1")],
+                [np.nan],
+            ]
+        )
+        table = table_from_frame(df)
+        self.assertEqual(pytz.FixedOffset(60), table.domain.variables[0].timezone)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19 00:00:00+1").timestamp()],
+                [pd.Timestamp("1724-12-20 20:20:20+1").timestamp()],
+                [np.nan],
+            ],
+        )
+
+        df = pd.DataFrame(
+            [
+                [pd.Timestamp("2017-12-19 00:00:00", tz="CET")],
+                [pd.Timestamp("1724-12-20 20:20:20", tz="CET")],
+                [np.nan],
+            ]
+        )
+        table = table_from_frame(df)
+        self.assertEqual(pytz.timezone("CET"), table.domain.variables[0].timezone)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19 00:00:00+1").timestamp()],
+                [pd.Timestamp("1724-12-20 20:20:20+1").timestamp()],
+                [np.nan],
+            ],
+        )
+
+        df = pd.DataFrame(
+            [
+                [pd.Timestamp("2017-12-19 00:00:00", tz="CET")],
+                [pd.Timestamp("1724-12-20 20:20:20")],
+                [np.nan],
+            ]
+        )
+        table = table_from_frame(df)
+        self.assertEqual(pytz.utc, table.domain.variables[0].timezone)
+        np.testing.assert_equal(
+            table.X,
+            [
+                [pd.Timestamp("2017-12-19 00:00:00+1").timestamp()],
+                [pd.Timestamp("1724-12-20 20:20:20").timestamp()],
+                [np.nan],
+            ],
+        )
+
+    def test_time_variable_compatible(self):
+        from Orange.data.pandas_compat import table_from_frame
+
+        def to_df(val):
+            return pd.DataFrame([[pd.Timestamp(val)]])
+
+        for datestr, timestamp, outstr in TestTimeVariable.TESTS:
+            var = TimeVariable("time")
+            var_parse = var.to_val(datestr)
+            try:
+                pandas_parse = table_from_frame(to_df(datestr)).X[0, 0]
+            except ValueError:
+                # pandas cannot parse some formats in the list skip them
+                continue
+            if not (np.isnan(var_parse) and np.isnan(pandas_parse)):
+                # nan == nan => False
+                self.assertEqual(var_parse, pandas_parse)
+                self.assertEqual(pandas_parse, timestamp)
+
+            self.assertEqual(var.repr_val(var_parse), var.repr_val(var_parse))
+            self.assertEqual(outstr, var.repr_val(var_parse))
 
     @unittest.skip("Convert all Orange demo dataset. It takes about 5s which is way to slow")
     def test_table_to_frame_on_all_orange_dataset(self):
