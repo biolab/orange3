@@ -610,16 +610,29 @@ class OWHierarchicalClustering(widget.OWWidget):
                 selected_data.domain = Domain(
                     attrs, classes, metas + (clust_var, ))
 
+            annotated_data = create_annotated_table(data, selected_indices)
+
         elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
             # Select columns
+            attrs = []
+            for clust, indices in chain(enumerate(maps, start=1),
+                                        [(0, unselected_indices)]):
+                for i in indices:
+                    attr = items.domain[i].copy()
+                    attr.attributes["cluster"] = clust
+                    attrs.append(attr)
             domain = Orange.data.Domain(
-                [items.domain[i] for i in selected_indices],
+                # len(unselected_indices) can be 0
+                attrs[:len(attrs) - len(unselected_indices)],
                 items.domain.class_vars, items.domain.metas)
             selected_data = items.from_table(domain, items)
-            data = None
+
+            domain = Orange.data.Domain(
+                attrs,
+                items.domain.class_vars, items.domain.metas)
+            annotated_data = items.from_table(domain, items)
 
         self.Outputs.selected_data.send(selected_data)
-        annotated_data = create_annotated_table(data, selected_indices)
         self.Outputs.annotated_data.send(annotated_data)
 
     def eventFilter(self, obj, event):
