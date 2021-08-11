@@ -309,7 +309,6 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        self.assertIsNone(table.domain.variables[0].utc_offset)
         self.assertEqual(table.domain.variables[0].timezone, timezone.utc)
 
         df = pd.DataFrame(
