@@ -933,8 +933,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             widget = self
 
             class Timeout:
-                # 0.5 - np.cos(np.arange(0.17, 1, 0.17) * np.pi) / 2
-                factors = [0.07, 0.26, 0.52, 0.77, 0.95, 1]
+                # 0.5 - np.cos(np.arange(0.17, 1, 0.09) * np.pi) / 2
+                factors = [0.07, 0.16, 0.27, 0.41, 0.55,
+                           0.68, 0.81, 0.9, 0.97, 1]
 
                 def __init__(self):
                     self._counter = 0
@@ -959,7 +960,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 # If encountered any strange behaviour when updating sizes,
                 # implement it with threads
                 self.begin_resizing.emit()
-                self.timer = QTimer(self.scatterplot_item, interval=50)
+                interval = int(500 / len(Timeout.factors))
+                self.timer = QTimer(self.scatterplot_item, interval=interval)
                 self.timer.timeout.connect(Timeout())
                 self.timer.start()
             else:

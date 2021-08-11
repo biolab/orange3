@@ -514,10 +514,10 @@ class TestOWScatterPlotBase(WidgetTest):
         step_resizing.wait(200)
         end_resizing.wait(200)
         self.assertEqual(len(begin_resizing), 2)  # reset and update
-        self.assertEqual(len(step_resizing), 5)
+        self.assertEqual(len(step_resizing), 9)
         self.assertEqual(len(end_resizing), 2)  # reset and update
-        self.assertEqual(self.graph.scatterplot_item.setSize.call_count, 6)
-        self._update_sizes_for_points(6)
+        self.assertEqual(self.graph.scatterplot_item.setSize.call_count, 10)
+        self._update_sizes_for_points(10)
         self.graph.scatterplot_item.setSize.assert_called_once()
 
     def _update_sizes_for_points(self, n: int):
