@@ -358,9 +358,9 @@ class PyTableModel(AbstractSortTableModel):
 
 
 class PyListModelTooltip(PyListModel):
-    def __init__(self):
-        super().__init__()
-        self.tooltips = []
+    def __init__(self, iterable=None, tooltips=[], **kwargs):
+        super().__init__(iterable, **kwargs)
+        self.tooltips = tooltips
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.ToolTipRole:
