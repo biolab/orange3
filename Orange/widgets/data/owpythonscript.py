@@ -950,13 +950,13 @@ class OWPythonScript(OWWidget):
                 out_var = None
             getattr(self.Outputs, signal).send(out_var)
 
-    def keyPressEvent(self, event):
-        if event.matches(QKeySequence.InsertLineSeparator):
+    def keyPressEvent(self, e):
+        if e.matches(QKeySequence.InsertLineSeparator):
             # run on Shift+Enter, Ctrl+Enter
             self.run_action.trigger()
-            event.accept()
+            e.accept()
         else:
-            super().keyPressEvent(event)
+            super().keyPressEvent(e)
 
     def dragEnterEvent(self, event):  # pylint: disable=no-self-use
         urls = event.mimeData().urls()
