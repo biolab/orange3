@@ -56,6 +56,7 @@ Change Log
 * Distribution: Show equal bar widths on unique-valued bins ([#5139](../../pull/5139))
 * Implement proper Lift curve; keep Cumulative gains as an option ([#5075](../../pull/5075))
 * Create Instance: New widget ([#5033](../../pull/5033))
+* Add add_column and concatenate methods to Table ([#5251](../../pull/5251))
 
 ##### Bugfixes
 * Calibration model: Work with numpy data ([#5159](../../pull/5159))
