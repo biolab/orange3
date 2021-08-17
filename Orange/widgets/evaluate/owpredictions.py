@@ -33,7 +33,7 @@ from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
-from Orange.widgets.utils.itemdelegates import DataDelegate, TableDataDelegate
+from Orange.widgets.utils.itemdelegates import TableDataDelegate
 
 # Input slot for the Predictors channel
 PredictorSlot = namedtuple(
@@ -686,16 +686,20 @@ class OWPredictions(OWWidget):
         QTimer.singleShot(0, self._update_splitter)
 
 
-class DataItemDelegate(TableDataDelegate):
+class ItemDelegate(TableDataDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
         if self.parent().selectionModel().isSelected(index):
-            option.state |= QStyle.State_Selected \
-                            | QStyle.State_HasFocus \
-                            | QStyle.State_Active
+            option.state |= QStyle.State_Selected
+        if self.parent().window().isActiveWindow():
+            option.state |= QStyle.State_Active | QStyle.State_HasFocus
 
 
-class PredictionsItemDelegate(DataDelegate):
+class DataItemDelegate(ItemDelegate):
+    pass
+
+
+class PredictionsItemDelegate(ItemDelegate):
     """
     A Item Delegate for custom formatting of predictions/probabilities
     """
@@ -750,11 +754,6 @@ class PredictionsItemDelegate(DataDelegate):
 
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
-        if self.parent().selectionModel().isSelected(index):
-            option.state |= QStyle.State_Selected \
-                            | QStyle.State_HasFocus \
-                            | QStyle.State_Active
-
         if self.class_values is None:
             option.displayAlignment = \
                 (option.displayAlignment & Qt.AlignVertical_Mask) | \
