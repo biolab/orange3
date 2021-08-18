@@ -7,3 +7,4 @@ AnyQt>=0.0.11
 
 pyqtgraph>=0.11.1
 matplotlib>=2.0.0
+qtconsole>=4.7.2

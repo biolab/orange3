@@ -1,18 +1,29 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, unused-wildcard-import
+# pylint: disable=wildcard-import, protected-access
 import sys
 import unittest
 
 from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
-from AnyQt.QtGui import QDragEnterEvent, QDropEvent
+from AnyQt.QtGui import QDragEnterEvent
 
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.tests import named_file
 from Orange.widgets.data.owpythonscript import OWPythonScript, \
     read_file_content, Script, OWPythonScriptDropHandler
-from Orange.widgets.tests.base import WidgetTest, DummySignalManager
+from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget
+
+# import tests for python editor
+from Orange.widgets.data.utils.pythoneditor.tests.test_api import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_bracket_highlighter import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_draw_whitespace import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_edit import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_indent import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_indenter.test_python import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_rectangular_selection import *
+from Orange.widgets.data.utils.pythoneditor.tests.test_vim import *
 
 
 class TestOWPythonScript(WidgetTest):
@@ -176,7 +187,11 @@ class TestOWPythonScript(WidgetTest):
             url = QUrl.fromLocalFile(fn)
             mime.setUrls([url])
             self.widget.text.insertFromMimeData(mime)
-            self.assertEqual("test", self.widget.text.toPlainText())
+            text = self.widget.text.toPlainText().split("print('Hello world')")[0]
+            self.assertTrue(
+                "'" + fn + "'",
+                text
+            )
             self.widget.text.undo()
             self.assertEqual(previous, self.widget.text.toPlainText())
 
@@ -203,52 +218,6 @@ class TestOWPythonScript(WidgetTest):
             QPoint(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier)
 
-    def test_dropEvent_replaces_file(self):
-        with named_file("test", suffix=".42") as fn:
-            previous = self.widget.text.toPlainText()
-            event = self._drop_event(QUrl.fromLocalFile(fn))
-            self.widget.dropEvent(event)
-            self.assertEqual("test", self.widget.text.toPlainText())
-            self.widget.text.undo()
-            self.assertEqual(previous, self.widget.text.toPlainText())
-
-    def _drop_event(self, url):
-        # make sure data does not get garbage collected before it used
-        # pylint: disable=attribute-defined-outside-init
-        self.event_data = data = QMimeData()
-        data.setUrls([QUrl(url)])
-
-        return QDropEvent(
-            QPoint(0, 0), Qt.MoveAction, data,
-            Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
-
-    def test_shared_namespaces(self):
-        widget1 = self.create_widget(OWPythonScript)
-        widget2 = self.create_widget(OWPythonScript)
-        self.signal_manager = DummySignalManager()
-        widget3 = self.create_widget(OWPythonScript)
-
-        self.send_signal(widget1.Inputs.data, self.iris, 1, widget=widget1)
-        widget1.text.setPlainText("x = 42\n"
-                                  "out_data = in_data\n")
-        widget1.execute_button.click()
-        self.assertIs(
-            self.get_output(widget1.Outputs.data, widget=widget1),
-            self.iris)
-
-        widget2.text.setPlainText("out_object = 2 * x\n"
-                                  "out_data = in_data")
-        widget2.execute_button.click()
-        self.assertEqual(
-            self.get_output(widget1.Outputs.object, widget=widget2),
-            84)
-        self.assertIsNone(self.get_output(widget1.Outputs.data, widget=widget2))
-
-        sys.last_traceback = None
-        widget3.text.setPlainText("out_object = 2 * x")
-        widget3.execute_button.click()
-        self.assertIsNotNone(sys.last_traceback)
-
     def test_migrate(self):
         w = self.create_widget(OWPythonScript, {
             "libraryListSource": [Script("A", "1")],
@@ -263,6 +232,27 @@ class TestOWPythonScript(WidgetTest):
         })
         self.assertEqual(w.libraryListSource[0].name, "A")
 
+    def test_no_shared_namespaces(self):
+        """
+        Previously, Python Script widgets in the same schema shared a namespace.
+        I (irgolic) think this is just a way to encourage users in writing
+        messy workflows with race conditions, so I encourage them to share
+        between Python Script widgets with Object signals.
+        """
+        widget1 = self.create_widget(OWPythonScript)
+        widget2 = self.create_widget(OWPythonScript)
+
+        click1 = widget1.execute_button.click
+        click2 = widget2.execute_button.click
+
+        widget1.text.text = "x = 42"
+        click1()
+
+        widget2.text.text = "y = 2 * x"
+        click2()
+        self.assertIn("NameError: name 'x' is not defined",
+                      widget2.console.toPlainText())
+
 
 class TestOWPythonScriptDropHandler(unittest.TestCase):
     def test_canDropFile(self):
@@ -275,3 +265,7 @@ class TestOWPythonScriptDropHandler(unittest.TestCase):
         r = handler.parametersFromFile(__file__)
         item = r["scriptLibrary"][0]
         self.assertEqual(item["filename"], __file__)
+
+
+if __name__ == '__main__':
+    unittest.main()
