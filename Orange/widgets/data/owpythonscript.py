@@ -157,7 +157,7 @@ class FakeSignatureMixin:
     def setIndent(self, margins_width):
         self.setContentsMargins(max(0,
                                     round(margins_width) +
-                                    (self.indentation_level - 1 * self._char_4_width)),
+                                    ((self.indentation_level - 1) * self._char_4_width)),
                                 0, 0, 0)
 
 
