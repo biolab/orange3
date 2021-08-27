@@ -138,7 +138,7 @@ def assure_array_sparse(a, sparse_class: Callable = sp.csc_matrix):
     if not sp.issparse(a):
         # since x can be a list, cast to np.array
         # since x can come from metas with string, cast to float
-        a = np.asarray(a).astype(np.float)
+        a = np.asarray(a).astype(float)
     return sparse_class(a)
 
 

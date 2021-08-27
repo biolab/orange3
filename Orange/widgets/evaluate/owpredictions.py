@@ -424,7 +424,7 @@ class OWPredictions(OWWidget):
                 sortind = numpy.argsort(
                     [sort_source.mapToSource(sort_source.index(i, 0)).row()
                      for i in range(n)])
-                sortind = numpy.array(sortind, numpy.int)
+                sortind = numpy.array(sortind, int)
                 sortindicatorshown = True
             else:
                 sortind = None
@@ -859,7 +859,7 @@ class SortProxyModel(QSortFilterProxyModel):
 
     def setSortIndices(self, indices):
         if indices is not None:
-            indices = numpy.array(indices, dtype=numpy.int)
+            indices = numpy.array(indices, dtype=int)
             if indices.shape != (self.rowCount(),):
                 raise ValueError("indices.shape != (self.rowCount(),)")
             indices.flags.writeable = False

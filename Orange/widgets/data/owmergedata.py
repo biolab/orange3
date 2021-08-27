@@ -496,7 +496,7 @@ class OWMergeData(widget.OWWidget):
             return np.arange(len(data))
         if var == INSTANCEID:
             return np.fromiter(
-                (inst.id for inst in data), count=len(data), dtype=np.int)
+                (inst.id for inst in data), count=len(data), dtype=int)
         col = data.get_column_view(var)[0]
         if var.is_primitive():
             col = col.astype(float, copy=False)

@@ -115,7 +115,7 @@ class FreeViz(LinearProjector):
         # handle repulsive force
         mask = (diffclass &
                 (distances > np.finfo(distances.dtype).eps * 100))
-        assert mask.shape == F.shape and mask.dtype == np.bool
+        assert mask.shape == F.shape and mask.dtype == bool
         if p == 1:
             F[mask] = 1 / distances[mask]
         else:
