@@ -1,7 +1,7 @@
 Scatter Plot
 ============
 
-Scatter plot visualization with explorative analysis and intelligent data visualization enhancements.
+Scatter plot visualization with exploratory analysis and intelligent data visualization enhancements.
 
 **Inputs**
 
@@ -14,25 +14,23 @@ Scatter plot visualization with explorative analysis and intelligent data visual
 - Selected Data: instances selected from the plot
 - Data: data with an additional column showing whether a point is selected
 
-The **Scatter Plot** widget provides a 2-dimensional scatter plot visualization for continuous attributes. The data is displayed as a collection of points, each having the value of the x-axis attribute determining the position on the horizontal axis and the value of the y-axis attribute determining the position on the vertical axis. Various properties of the graph, like color, size and shape of the points, axis titles, maximum point size and jittering can be adjusted on the left side of the widget. A snapshot below shows the scatter plot of the *Iris* dataset with the coloring matching of the class attribute.
+The **Scatter Plot** widget provides a 2-dimensional scatter plot visualization. The data is displayed as a collection of points, each having the value of the x-axis attribute determining the position on the horizontal axis and the value of the y-axis attribute determining the position on the vertical axis. Various properties of the graph, like color, size and shape of the points, axis titles, maximum point size and jittering can be adjusted on the left side of the widget. A snapshot below shows the scatter plot of the *Iris* dataset with the coloring matching of the class attribute.
 
 ![](images/Scatterplot-Iris-stamped.png)
 
-1. Select the x and y attribute. Optimize your projection by using **Rank Projections**. This feature scores attribute pairs by average classification accuracy and returns the top scoring pair with a simultaneous visualization update. Set [jittering](https://en.wikipedia.org/wiki/Jitter) to prevent the dots overlapping. If Jitter continuous values is checked, points are scattered around their original locations.
-2. Set the color of the displayed points (you will get colors for discrete values and grey-scale points for continuous). Set label, shape and size to differentiate between points. Set symbol size and opacity for all data points. Set the desired colors scale.
-3. Adjust *plot properties*:
+1. Select the x and y attribute. Optimize your projection with **Find Informative Projections**. This feature scores attribute pairs by average classification accuracy and returns the top scoring pair with a simultaneous visualization update.
+2. *Attributes*: Set the color of the displayed points (you will get colors for categorical values and blue-green-yellow points for numeric). Set label, shape and size to differentiate between points. *Label only selected points* allows you to select individual data instances and label only those.
+3. Set symbol size and opacity for all data points. Set [jittering](https://en.wikipedia.org/wiki/Jitter) to prevent the dots overlapping. Jittering will randomly scatter point only around categorical values. If *Jitter numeric values* is checked, points are also scattered around their actual numeric values.
+   - *Show color regions* colors the graph by class (see the screenshot below).
    - *Show legend* displays a legend on the right. Click and drag the legend to move it.
    - *Show gridlines* displays the grid behind the plot.
    - *Show all data on mouse hover* enables information bubbles if the cursor is placed on a dot.
-   - *Show class density* colors the graph by class (see the screenshot below).
-   - *Show regression line* draws the regression line for pair of continuous attributes.
-   - *Label only selected points* allows you to select individual data instances and label them.
+   - *Show regression line* draws the regression line for pair of numeric attributes. If a categorical variable is selected for coloring the plot, individual regression lines for each class value will be displayed. The reported r value corresponds to the `rvalue` from [linear least-squares regression](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.linregress.html), which is equal to the Pearson's correlation coefficient.
+   - *Treat variables as independent* fits regression line to a group of points (minimize distance from points), rather than fitting y as a function of x (minimize vertical distances).
 4. *Select, zoom, pan and zoom to fit* are the options for exploring the graph. The manual selection of data instances works as an angular/square selection tool. Double click to move the projection. Scroll in or out for zoom.
 5. If *Send automatically* is ticked, changes are communicated automatically. Alternatively, press *Send*.
-6. *Save Image* saves the created image to your computer in a .svg or .png format.
-7. Produce a report.
 
-Here is an example of the **Scatter Plot** widget if the *Show class density* and *Show regression line* boxes are ticked.
+Here is an example of the **Scatter Plot** widget if the *Show color regions* and *Show regression line* boxes are ticked.
 
 ![](images/Scatterplot-ClassDensity.png)
 
@@ -43,7 +41,7 @@ If a dataset has many attributes, it is impossible to manually scan through all 
 
 If a categorical variable is selected in the Color section, the [score](http://eprints.fri.uni-lj.si/210/) is computed as follows. For each data instance, the method finds 10 nearest neighbors in the projected 2D space, that is, on the combination of attribute pairs. It then checks how many of them have the same color. The total score of the projection is then the average number of same-colored neighbors.
 
-Computation for continuous colors is similar, except that the [coefficient of determination](https://en.wikipedia.org/wiki/Coefficient_of_determination) is used for measuring the local homogeneity of the projection.
+Computation for numeric colors is similar, except that the [coefficient of determination](https://en.wikipedia.org/wiki/Coefficient_of_determination) is used for measuring the local homogeneity of the projection.
 
 To use this method, go to the *Find Informative Projections* option in the widget, open the subwindow and press *Start Evaluation*. The feature will return a list of attribute pairs by average classification accuracy score.
 
@@ -60,7 +58,7 @@ Signal data outputs a data table with an additional column that contains group i
 
 ![](images/ScatterPlot-selection.png)
 
-Explorative Data Analysis
+Exploratory Data Analysis
 -------------------------
 
 The **Scatter Plot**, as the rest of Orange widgets, supports zooming-in and out of part of the plot and a manual selection of data instances. These functions are available in the lower left corner of the widget.
