@@ -934,13 +934,52 @@ class TimeVariable(ContinuousVariable):
     # UTC offset and associated timezone. If parsed datetime values provide an
     # offset, it is used for display. If not all values have the same offset,
     # +0000 (=UTC) timezone is used and utc_offset is set to False.
-    utc_offset = None
-    timezone = timezone.utc
+    _utc_offset = None  # deprecated - remove in 3.32
+    _timezone = None
 
     def __init__(self, *args, have_date=0, have_time=0, **kwargs):
         super().__init__(*args, **kwargs)
         self.have_date = have_date
         self.have_time = have_time
+
+    # deprecated - remove in 3.32 - from here
+    @property
+    def utc_offset(self):
+        warnings.warn(
+            "utc_offset is deprecated and will be removed in Orange 3.32",
+            OrangeDeprecationWarning
+        )
+        return self._utc_offset
+
+    @utc_offset.setter
+    def utc_offset(self, val):
+        warnings.warn(
+            "utc_offset is deprecated and will be removed in Orange 3.32ß",
+            OrangeDeprecationWarning
+        )
+        self._utc_offset = val
+    # remove to here
+
+    @property
+    def timezone(self):
+        if self._timezone is None or self._timezone == "different timezones":
+            return timezone.utc
+        else:
+            return self._timezone
+
+    @timezone.setter
+    def timezone(self, tz):
+        """
+        Set timezone value:
+        - if self._timezone is None set it to  new timezone
+        - if current timezone is different that new indicate that TimeVariable
+          have two date-times with different timezones
+        - if timezones are same keep it
+        """
+        if self._timezone is None:
+            self._timezone = tz
+        elif tz != self.timezone:
+            self._timezone = "different timezones"
 
     def copy(self, compute_value=Variable._CopyComputeValue, *, name=None, **_):
         return super().copy(compute_value=compute_value, name=name,
@@ -1027,16 +1066,15 @@ class TimeVariable(ContinuousVariable):
         else:
             raise self.InvalidDateTimeFormatError(datestr)
 
-        # Remember UTC offset. If not all parsed values share the same offset,
-        # remember none of it.
         offset = dt.utcoffset()
-        if self.utc_offset is not False:
-            if offset and self.utc_offset is None:
-                self.utc_offset = offset
-                self.timezone = timezone(offset)
-            elif self.utc_offset != offset:
-                self.utc_offset = False
-                self.timezone = timezone.utc
+        self.timezone = timezone(offset) if offset is not None else None
+        # deprecated - remove in 3.32 - from here
+        if self._utc_offset is not False:
+            if offset and self._utc_offset is None:
+                self._utc_offset = offset
+            elif self._utc_offset != offset:
+                self._utc_offset = False
+        # remove to here
 
         # Convert time to UTC timezone. In dates without timezone,
         # localtime is assumed. See also:

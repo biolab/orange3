@@ -157,11 +157,54 @@ def _is_datetime(s):
         return True
     try:
         if is_object_dtype(s):
-            pd.to_datetime(s, infer_datetime_format=True)
+            # utc=True - to allow different timezones in a series object
+            pd.to_datetime(s, infer_datetime_format=True, utc=True)
             return True
     except Exception:  # pylint: disable=broad-except
         pass
     return False
+
+
+def _convert_datetime(series, var):
+    def col_type(dt):
+        """Test if is date, time or datetime"""
+        dt_nonnat = dt[~pd.isnull(dt)]  # nat == nat is False
+        if (dt_nonnat.dt.floor("d") == dt_nonnat).all():
+            # all times are 00:00:00.0 - pure date
+            return 1, 0
+        elif (dt_nonnat.dt.date == pd.Timestamp("now").date()).all():
+            # all dates are today's date - pure time
+            return 0, 1  # pure time
+        else:
+            # else datetime
+            return 1, 1
+
+    try:
+        dt = pd.to_datetime(series)
+    except ValueError:
+        # series with type object and different timezones will raise a
+        # ValueError - normalizing to utc
+        dt = pd.to_datetime(series, utc=True)
+
+    # set variable type to date, time or datetime
+    var.have_date, var.have_time = col_type(dt)
+
+    if dt.dt.tz is not None:
+        # set timezone if available and convert to utc
+        var.timezone = dt.dt.tz
+        dt = dt.dt.tz_convert("UTC")
+
+    if var.have_time and not var.have_date:
+        # if time only measure seconds from midnight - equal to setting date
+        # to unix epoch
+        return (
+            (dt.dt.tz_localize(None) - pd.Timestamp("now").normalize())
+            / pd.Timedelta("1s")
+        ).values
+
+    return (
+        (dt.dt.tz_localize(None) - pd.Timestamp("1970-01-01")) / pd.Timedelta("1s")
+    ).values
 
 
 def vars_from_df(df, role=None, force_nominal=False):
@@ -210,6 +253,11 @@ def vars_from_df(df, role=None, force_nominal=False):
                 Mcols.append(column)
                 Mexpr.append(None)
                 metas.append(var)
+        elif _is_datetime(s):
+            var = TimeVariable(str(column))
+            attrs.append(var)
+            Xcols.append(column)
+            Xexpr.append(_convert_datetime)
         elif _is_discrete(s, force_nominal):
             discrete = s.astype('category').cat
             var = DiscreteVariable(str(column),
@@ -224,13 +272,6 @@ def vars_from_df(df, role=None, force_nominal=False):
                 return np.asarray(x)
 
             Xexpr.append(to_cat)
-        elif _is_datetime(s):
-            var = TimeVariable(str(column))
-            attrs.append(var)
-            Xcols.append(column)
-            Xexpr.append(lambda s, v: np.asarray(
-                s.astype('str').replace('NaT', np.nan).map(v.parse)
-            ))
         elif is_numeric_dtype(s):
             var = ContinuousVariable(
                 # set number of decimals to 0 if int else keeps default behaviour

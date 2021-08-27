@@ -15,7 +15,6 @@ from io import StringIO
 import numpy as np
 import scipy.sparse as sp
 
-import Orange
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value, Table
 from Orange.data.io import CSVReader
@@ -694,6 +693,15 @@ time,continuous
         var.have_date = 1
         var.have_time = 1
         return var
+
+    def test_remove_deprecated_utc_offset(self):
+        """ When this test start to fail:
+        - remove all marked locations in TimeVariable class
+        - uncomment new implementation for setting timezones in parse method
+        - remove this test
+        """
+        import Orange  # pylint: disable=import-outside-toplevel
+        self.assertLess(Orange.__version__, "3.32")
 
 
 PickleContinuousVariable = create_pickling_tests(
