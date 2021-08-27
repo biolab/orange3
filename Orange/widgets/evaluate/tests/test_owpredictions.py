@@ -175,6 +175,21 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, cl_data, 1)
         self.send_signal(self.widget.Inputs.data, data)
 
+    def test_changed_class_var(self):
+        def set_input(data, model):
+            self.send_signals([
+                (self.widget.Inputs.data, data),
+                (self.widget.Inputs.predictors, model)
+            ])
+        iris = self.iris
+        learner = ConstantLearner()
+        heart_disease = Table("heart_disease")
+        # catch exceptions in item delegates etc. during switching inputs
+        with excepthook_catch():
+            set_input(iris[:5], learner(iris))
+            set_input(Table("housing"), None)
+            set_input(heart_disease[:5], learner(heart_disease))
+
     def test_predictor_fails(self):
         titanic = Table("titanic")
         failing_model = ConstantLearner()(titanic)

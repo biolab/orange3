@@ -411,8 +411,6 @@ class OWPredictions(OWWidget):
                 self._update_data_sort_order, self.predictionsview,
                 self.dataview))
 
-        self.predictionsview.resizeColumnsToContents()
-
     def _update_data_sort_order(self, sort_source_view, sort_dest_view):
         sort_dest = sort_dest_view.model()
         sort_source = sort_source_view.model()
