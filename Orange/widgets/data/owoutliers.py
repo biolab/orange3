@@ -240,7 +240,7 @@ class OWOutliers(OWWidget, ConcurrentWidgetMixin):
         self.editors = (self.svm_editor, self.cov_editor,
                         self.lof_editor, self.isf_editor)
         for editor in self.editors:
-            editor.param_changed.connect(lambda: self.commit())
+            editor.param_changed.connect(self.commit.deferred)
             box.layout().addWidget(editor)
             editor.hide()
 
@@ -248,7 +248,7 @@ class OWOutliers(OWWidget, ConcurrentWidgetMixin):
 
     def __method_changed(self):
         self.set_current_editor()
-        self.commit()
+        self.commit.deferred()
 
     def set_current_editor(self):
         if self.current_editor:
@@ -263,7 +263,7 @@ class OWOutliers(OWWidget, ConcurrentWidgetMixin):
         self.clear_messages()
         self.data = data
         self.enable_controls()
-        self.unconditional_commit()
+        self.commit.now()
 
     def enable_controls(self):
         self.method_combo.model().item(self.Covariance).setEnabled(True)
@@ -273,6 +273,7 @@ class OWOutliers(OWWidget, ConcurrentWidgetMixin):
             self.method_combo.model().item(self.Covariance).setEnabled(False)
             self.Warning.disabled_cov()
 
+    @gui.deferred
     def commit(self):
         self.Error.singular_cov.clear()
         self.Error.memory_error.clear()

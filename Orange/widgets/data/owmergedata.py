@@ -334,13 +334,13 @@ class OWMergeData(widget.OWWidget):
         box.layout().addWidget(self.attr_boxes)
 
         gui.auto_apply(self.buttonsArea, self)
-        # connect after wrapping self.commit with gui.auto_commit!
-        self.attr_boxes.vars_changed.connect(self.commit)
+
+        self.attr_boxes.vars_changed.connect(self.commit.deferred)
         self.attr_boxes.vars_changed.connect(self.store_combo_state)
         self.settingsAboutToBePacked.connect(self.store_combo_state)
 
     def change_merging(self):
-        self.commit()
+        self.commit.deferred()
 
     @Inputs.data
     @check_sql_input
@@ -363,7 +363,7 @@ class OWMergeData(widget.OWWidget):
         self.openContext(self.data and self.data.domain,
                          self.extra_data and self.extra_data.domain)
         self.attr_boxes.set_state(self.attr_pairs)
-        self.unconditional_commit()
+        self.commit.now()
 
     def _find_best_match(self):
         def get_unique_str_metas_names(model_):
@@ -383,6 +383,7 @@ class OWMergeData(widget.OWWidget):
                     n_max_intersect, attr, extra_attr = n_inter, m_a, m_b
         return attr, extra_attr
 
+    @gui.deferred
     def commit(self):
         self.clear_messages()
         merged = self.merge() if self.data and self.extra_data else None

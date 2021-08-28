@@ -45,7 +45,7 @@ class OWUnique(widget.OWWidget):
         self.var_model = DomainModel(parent=self, order=DomainModel.MIXED)
         var_list = gui.listView(
             self.controlArea, self, "selected_vars", box="Group by",
-            model=self.var_model, callback=lambda: self.commit(),
+            model=self.var_model, callback=self.commit.deferred,
             viewType=ListViewSearch
         )
         var_list.setSelectionMode(var_list.ExtendedSelection)
@@ -54,7 +54,7 @@ class OWUnique(widget.OWWidget):
             self.controlArea, self, 'tiebreaker', box=True,
             label='Instance to select in each group:',
             items=tuple(self.TIEBREAKERS),
-            callback=lambda: self.commit(), sendSelectedValue=True)
+            callback=self.commit.deferred, sendSelectedValue=True)
         gui.auto_commit(
             self.controlArea, self, 'autocommit', 'Commit',
             orientation=Qt.Horizontal)
@@ -71,8 +71,9 @@ class OWUnique(widget.OWWidget):
         else:
             self.var_model.set_domain(None)
 
-        self.unconditional_commit()
+        self.commit.now()
 
+    @gui.deferred
     def commit(self):
         if self.data is None:
             self.Outputs.data.send(None)

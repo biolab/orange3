@@ -279,7 +279,7 @@ class OWSelectRows(widget.OWWidget):
         self.report_button.setFixedWidth(120)
         gui.rubber(self.buttonsArea.layout())
 
-        acbox = gui.auto_send(self.buttonsArea, self, "auto_commit")
+        gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.set_data(None)
         self.resize(600, 400)
@@ -552,7 +552,7 @@ class OWSelectRows(widget.OWWidget):
         if not data:
             self.data_desc = None
             self.variable_model.set_domain(None)
-            self.commit()
+            self.commit.deferred()
             return
         self.data_desc = report.describe_data_brief(data)
         self.variable_model.set_domain(data.domain)
@@ -565,7 +565,7 @@ class OWSelectRows(widget.OWWidget):
         if not self.cond_list.model().rowCount():
             self.add_row()
 
-        self.unconditional_commit()
+        self.commit.now()
 
     def conditions_changed(self):
         try:
@@ -581,7 +581,7 @@ class OWSelectRows(widget.OWWidget):
             if self.update_on_change and (
                     self.last_output_conditions is None or
                     self.last_output_conditions != self.conditions):
-                self.commit()
+                self.commit.deferred()
         except AttributeError:
             # Attribute error appears if the signal is triggered when the
             # controls are being constructed
@@ -609,6 +609,7 @@ class OWSelectRows(widget.OWWidget):
         assert all(isinstance(v, float) for v in floats)
         return floats
 
+    @gui.deferred
     def commit(self):
         matching_output = self.data
         non_matching_output = None

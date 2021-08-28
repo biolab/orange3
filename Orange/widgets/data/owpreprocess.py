@@ -1282,7 +1282,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
 
     def __on_modelchanged(self):
         self.__update_overlay()
-        self.commit()
+        self.commit.deferred()
 
     @Inputs.data
     @check_sql_input
@@ -1338,6 +1338,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         self.Outputs.preprocessor.send(preprocessor)
         self.Outputs.preprocessed_data.send(data)
 
+    @gui.deferred
     def commit(self):
         if not self._invalidated:
             self._invalidated = True

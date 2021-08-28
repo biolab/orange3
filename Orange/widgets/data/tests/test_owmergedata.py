@@ -549,7 +549,7 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.dataA)
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
         self.widget.attr_boxes.set_state([(domainA[0], domainB[0])])
-        self.widget.commit()
+        self.widget.commit.now()
         output = self.get_output(self.widget.Outputs.data)
         self.assertTablesEqual(output, result)
         self.assertEqual(output.name, self.dataA.name)
@@ -635,7 +635,7 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.dataA)
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
         self.widget.attr_boxes.set_state([(domainA[2], domainB[2])])
-        self.widget.commit()
+        self.widget.commit.now()
         self.assertTablesEqual(self.get_output(self.widget.Outputs.data), result)
 
     def test_output_merge_by_class_inner(self):
@@ -699,7 +699,7 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.dataA)
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
         self.widget.attr_boxes.set_state([(domainA[-2], domainB[-1])])
-        self.widget.commit()
+        self.widget.commit.now()
         self.assertTablesEqual(self.get_output(self.widget.Outputs.data), result)
 
     def test_output_merge_by_meta_inner(self):
@@ -814,7 +814,7 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.extra_data, dataB)
         self.widget.attr_boxes.set_state(
             [(domainA[0], domainB[0]), (domainA[1], domainB[1])])
-        self.widget.commit()
+        self.widget.commit.now()
         output = self.get_output(self.widget.Outputs.data)
 
         self.assertEqual(output.name, dataA.name)
@@ -840,50 +840,50 @@ class TestOWMergeData(WidgetTest):
         self.assertFalse(widget.Error.nonunique_right.is_shown())
 
         widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.attr_boxes.set_state([(INDEX, INDEX)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.attr_boxes.set_state([(x, x)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertTrue(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.LeftJoin
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.InnerJoin
         widget.attr_boxes.set_state([(x, x), (d, d)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.attr_boxes.set_state([(d, d)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertTrue(widget.Error.nonunique_left.is_shown())
         self.assertTrue(widget.Error.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.LeftJoin
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertTrue(widget.Error.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.InnerJoin
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertTrue(widget.Error.nonunique_left.is_shown())
         self.assertTrue(widget.Error.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
@@ -908,43 +908,43 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(widget.Inputs.extra_data, dataB)
 
         widget.attr_boxes.set_state([(x, x), (d, d)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.matching_id_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_index_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_numeric_with_nonnum.is_shown())
 
         widget.attr_boxes.set_state([(x, x), (INDEX, d)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.matching_id_with_sth.is_shown())
         self.assertTrue(widget.Error.matching_index_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_numeric_with_nonnum.is_shown())
 
         widget.attr_boxes.set_state([(x, x), (d, INDEX)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.matching_id_with_sth.is_shown())
         self.assertTrue(widget.Error.matching_index_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_numeric_with_nonnum.is_shown())
 
         widget.attr_boxes.set_state([(x, x), (INSTANCEID, d)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertTrue(widget.Error.matching_id_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_index_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_numeric_with_nonnum.is_shown())
 
         widget.attr_boxes.set_state([(x, x), (d, INSTANCEID)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertTrue(widget.Error.matching_id_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_index_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_numeric_with_nonnum.is_shown())
 
         widget.attr_boxes.set_state([(x, x), (INDEX, INSTANCEID)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertTrue(widget.Error.matching_id_with_sth.is_shown()
                         or widget.Error.matching_index_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_numeric_with_nonnum.is_shown())
 
         widget.attr_boxes.set_state([(x, x), (x, d)])
-        widget.unconditional_commit()
+        widget.commit.now()
         self.assertFalse(widget.Error.matching_id_with_sth.is_shown())
         self.assertFalse(widget.Error.matching_index_with_sth.is_shown())
         self.assertTrue(widget.Error.matching_numeric_with_nonnum.is_shown())
@@ -988,14 +988,14 @@ class TestOWMergeData(WidgetTest):
         # Only one row is matched; A has different values and it's duplicated,
         # and B has the same values, so we get only one copy
         self.widget.merging = self.widget.InnerJoin
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         merged_data = self.get_output(self.widget.Outputs.data)
         self.assertListEqual([m.name for m in merged_data.domain.variables],
                              ["A (1)", "B", "C", "A (2)"])
 
         # Table has additional rows; keep all columns
         self.widget.merging = self.widget.OuterJoin
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         merged_data = self.get_output(self.widget.Outputs.data)
         self.assertListEqual(
             [m.name for m in merged_data.domain.variables],
@@ -1006,7 +1006,7 @@ class TestOWMergeData(WidgetTest):
         extra_data = Table(domain, np.array([[1., 1, 1], [0, 1, 2]]))
         self.send_signal(self.widget.Inputs.extra_data, extra_data)
         self.widget.merging = self.widget.LeftJoin
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         merged_data = self.get_output(self.widget.Outputs.data)
         self.assertListEqual([m.name for m in merged_data.domain.variables],
                              ["A", "B", "C"])

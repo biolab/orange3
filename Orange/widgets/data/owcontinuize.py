@@ -77,30 +77,27 @@ class OWContinuize(widget.OWWidget):
         box = gui.radioButtonsInBox(
             None, self, "multinomial_treatment", box="Categorical Features",
             btnLabels=[x[0] for x in self.multinomial_treats],
-            callback=self.settings_changed)
+            callback=self.commit.deferred)
         gui.rubber(box)
         layout.addWidget(box, 0, 0, 2, 1)
 
         box = gui.radioButtonsInBox(
             None, self, "continuous_treatment", box = "Numeric Features",
             btnLabels=[x[0] for x in self.continuous_treats],
-            callback=self.settings_changed)
+            callback=self.commit.deferred)
         gui.rubber(box)
         layout.addWidget(box, 0, 1, 2, 1)
 
         box = gui.radioButtonsInBox(
             None, self, "class_treatment", box="Categorical Outcome(s)",
             btnLabels=[t[0] for t in self.class_treats],
-            callback=self.settings_changed)
+            callback=self.commit.deferred)
         gui.rubber(box)
         layout.addWidget(box, 0, 2, 2, 1)
 
         gui.auto_apply(self.buttonsArea, self, "autosend")
 
         self.data = None
-
-    def settings_changed(self):
-        self.commit()
 
     @Inputs.data
     @check_sql_input
@@ -110,7 +107,7 @@ class OWContinuize(widget.OWWidget):
         if data is None:
             self.Outputs.data.send(None)
         else:
-            self.unconditional_commit()
+            self.commit.now()
 
     def enable_normalization(self):
         buttons = self.controls.continuous_treatment.buttons
@@ -134,6 +131,7 @@ class OWContinuize(widget.OWWidget):
         )
         return conzer
 
+    @gui.deferred
     def commit(self):
         continuizer = self.constructContinuizer()
         if self.data:

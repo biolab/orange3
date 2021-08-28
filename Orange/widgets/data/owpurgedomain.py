@@ -78,7 +78,7 @@ class OWPurgeDomain(widget.OWWidget):
         boxAt = gui.vBox(self.controlArea, "Features")
         for value, label in self.feature_options:
             gui.checkBox(boxAt, self, value, label,
-                         callback=self.optionsChanged)
+                         callback=self.commit.deferred)
         add_line(boxAt)
         gui.label(boxAt, self,
                   "Sorted: %(resortedAttrs)s, "
@@ -87,7 +87,7 @@ class OWPurgeDomain(widget.OWWidget):
         boxAt = gui.vBox(self.controlArea, "Classes")
         for value, label in self.class_options:
             gui.checkBox(boxAt, self, value, label,
-                         callback=self.optionsChanged)
+                         callback=self.commit.deferred)
         add_line(boxAt)
         gui.label(boxAt, self,
                   "Sorted: %(resortedClasses)s,"
@@ -96,7 +96,7 @@ class OWPurgeDomain(widget.OWWidget):
         boxAt = gui.vBox(self.controlArea, "Meta attributes")
         for value, label in self.meta_options:
             gui.checkBox(boxAt, self, value, label,
-                         callback=self.optionsChanged)
+                         callback=self.commit.deferred)
         add_line(boxAt)
         gui.label(boxAt, self,
                   "Reduced: %(reducedMetas)s, removed: %(removedMetas)s")
@@ -108,7 +108,7 @@ class OWPurgeDomain(widget.OWWidget):
     def setData(self, dataset):
         if dataset is not None:
             self.data = dataset
-            self.unconditional_commit()
+            self.commit.now()
         else:
             self.removedAttrs = "-"
             self.reducedAttrs = "-"
@@ -121,9 +121,7 @@ class OWPurgeDomain(widget.OWWidget):
             self.Outputs.data.send(None)
             self.data = None
 
-    def optionsChanged(self):
-        self.commit()
-
+    @gui.deferred
     def commit(self):
         if self.data is None:
             return

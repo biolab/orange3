@@ -79,7 +79,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
             self.widget.set_corner_text.call_args[0][1], "\na\nb\nc")
 
     def test_unconditional_commit_on_new_signal(self):
-        with patch.object(self.widget, 'unconditional_commit') as commit:
+        with patch.object(self.widget.commit, 'now') as commit:
             self.widget.auto_commit = False
             commit.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.data)

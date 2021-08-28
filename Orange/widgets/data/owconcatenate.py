@@ -111,7 +111,7 @@ class OWConcatenate(widget.OWWidget):
             box, self, "ignore_compute_value",
             "Treat variables with the same name as the same variable,\n"
             "even if they are computed using different formulae.",
-            callback=self.apply, stateWhenDisabled=False)
+            callback=self.commit.deferred, stateWhenDisabled=False)
         ###
         box = gui.vBox(
             self.controlArea, self.tr("Source Identification"),
@@ -148,7 +148,7 @@ class OWConcatenate(widget.OWWidget):
         cb.disables.append(ibox)
         cb.makeConsistent()
 
-        gui.auto_apply(self.buttonsArea, self, "auto_commit", commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
     @Inputs.primary_data
     @check_sql_input
@@ -179,7 +179,7 @@ class OWConcatenate(widget.OWWidget):
             self.Error.bow_concatenation()
         else:
             self.Error.bow_concatenation.clear()
-            self.unconditional_apply()
+            self.commit.now()
 
     def incompatible_types(self):
         types_ = set()
@@ -192,7 +192,8 @@ class OWConcatenate(widget.OWWidget):
 
         return False
 
-    def apply(self):
+    @gui.deferred
+    def commit(self):
         self.Warning.renamed_variables.clear()
         tables, domain, source_var = [], None, None
         if self.primary_data is not None:
@@ -270,10 +271,10 @@ class OWConcatenate(widget.OWWidget):
         else:
             self.Error.bow_concatenation.clear()
             if self.primary_data is None and self.more_data:
-                self.apply()
+                self.commit.deferred()
 
     def _source_changed(self):
-        self.apply()
+        self.commit.deferred()
 
     def send_report(self):
         items = OrderedDict()

@@ -603,15 +603,17 @@ class OWColor(widget.OWWidget):
         self.openContext(data)
         self.disc_view.resizeColumnsToContents()
         self.cont_view.resizeColumnsToContents()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _on_data_changed(self):
-        self.commit()
+        self.commit.deferred()
 
     def reset(self):
         self.disc_model.reset()
         self.cont_model.reset()
-        self.commit()
+        # Reset button is in the same box as Load, which has commit.now,
+        # and Apply, hence let Reset commit now, too.
+        self.commit.now()
 
     def save(self):
         fname, _ = QFileDialog.getSaveFileName(
@@ -714,13 +716,14 @@ class OWColor(widget.OWWidget):
 
         self.disc_model.set_data(self.disc_descs)
         self.cont_model.set_data(self.cont_descs)
-        self.unconditional_commit()
+        self.commit.now()
 
     def _start_dir(self):
         return self.workflowEnv().get("basedir") \
                or QSettings().value("colorwidget/last-location") \
                or os.path.expanduser(f"~{os.sep}")
 
+    @gui.deferred
     def commit(self):
         def make(variables):
             new_vars = []

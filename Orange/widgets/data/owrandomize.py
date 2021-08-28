@@ -66,18 +66,18 @@ class OWRandomize(OWWidget):
             box, self, "random_seed", "Replicable shuffling",
             callback=self._shuffle_check_changed)
 
-        gui.auto_apply(self.buttonsArea, self, commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self)
 
     @property
     def parts(self):
         return [self.shuffle_class, self.shuffle_attrs, self.shuffle_metas]
 
     def _shuffle_check_changed(self):
-        self.apply()
+        self.commit.deferred()
 
     def _scope_slider_changed(self):
         self._set_scope_label()
-        self.apply()
+        self.commit.deferred()
 
     def _set_scope_label(self):
         self.scope_label.setText("{}%".format(self.scope_prop))
@@ -85,9 +85,10 @@ class OWRandomize(OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.data = data
-        self.unconditional_apply()
+        self.commit.now()
 
-    def apply(self):
+    @gui.deferred
+    def commit(self):
         data = None
         if self.data:
             rand_seed = self.random_seed or None

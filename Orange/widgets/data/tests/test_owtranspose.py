@@ -74,7 +74,7 @@ class TestOWTranspose(WidgetTest):
 
         # Test that the widget takes the correct column
         widget.feature_names_column = metas[4]
-        widget.apply()
+        widget.commit.now()
         output = self.get_output(widget.Outputs.data)
         self.assertTrue(
             all(a.name.startswith(metas[1].to_val(m))
@@ -83,7 +83,7 @@ class TestOWTranspose(WidgetTest):
         # Switch to generic
         self.assertEqual(widget.DEFAULT_PREFIX, "Feature")
         widget.feature_type = widget.GENERIC
-        widget.apply()
+        widget.commit.now()
         output = self.get_output(widget.Outputs.data)
         self.assertTrue(
             all(x.name.startswith(widget.DEFAULT_PREFIX)
@@ -91,14 +91,14 @@ class TestOWTranspose(WidgetTest):
 
         # Check that the widget uses the supplied name
         widget.feature_name = "Foo"
-        widget.apply()
+        widget.commit.now()
         output = self.get_output(widget.Outputs.data)
         self.assertTrue(
             all(x.name.startswith("Foo ") for x in output.domain.attributes))
 
         # Check that the widget uses default when name is not given
         widget.feature_name = ""
-        widget.apply()
+        widget.commit.now()
         output = self.get_output(widget.Outputs.data)
         self.assertTrue(
             all(x.name.startswith(widget.DEFAULT_PREFIX)
@@ -136,7 +136,7 @@ class TestOWTranspose(WidgetTest):
 
     def test_gui_behaviour(self):
         widget = self.widget
-        widget.unconditional_apply = unittest.mock.Mock()
+        widget.commit.now = unittest.mock.Mock()
 
         # widget.apply must be called
         widget.auto_apply = False
@@ -144,40 +144,40 @@ class TestOWTranspose(WidgetTest):
         # No data: type is generic, meta radio disabled
         self.assertEqual(widget.feature_type, widget.GENERIC)
         self.assertFalse(widget.meta_button.isEnabled())
-        self.assertFalse(widget.unconditional_apply.called)
+        self.assertFalse(widget.commit.now.called)
 
         # Data with metas: default type is meta, radio enabled
         self.send_signal(widget.Inputs.data, self.zoo)
         self.assertTrue(widget.meta_button.isEnabled())
         self.assertEqual(widget.feature_type, widget.FROM_VAR)
         self.assertIs(widget.feature_names_column, widget.feature_model[0])
-        self.assertTrue(widget.unconditional_apply.called)
+        self.assertTrue(widget.commit.now.called)
 
         # Editing the line edit changes the radio button to generic
-        widget.unconditional_apply.reset_mock()
+        widget.commit.now.reset_mock()
         widget.controls.feature_name.editingFinished.emit()
         self.assertEqual(widget.feature_type, widget.GENERIC)
-        self.assertFalse(widget.unconditional_apply.called)
+        self.assertFalse(widget.commit.now.called)
 
         # Changing combo changes the radio button to meta
-        widget.unconditional_apply.reset_mock()
+        widget.commit.now.reset_mock()
         widget.feature_combo.activated.emit(0)
         self.assertEqual(widget.feature_type, widget.FROM_VAR)
-        self.assertFalse(widget.unconditional_apply.called)
+        self.assertFalse(widget.commit.now.called)
 
-        widget.apply = unittest.mock.Mock()
+        widget.commit.deferred = unittest.mock.Mock()
 
         # Editing the line edit changes the radio button to generic
-        widget.apply.reset_mock()
+        widget.commit.deferred.reset_mock()
         widget.controls.feature_name.editingFinished.emit()
         self.assertEqual(widget.feature_type, widget.GENERIC)
-        self.assertTrue(widget.apply.called)
+        self.assertTrue(widget.commit.deferred.called)
 
         # Changing combo changes the radio button to meta
-        widget.apply.reset_mock()
+        widget.commit.deferred.reset_mock()
         widget.feature_combo.activated.emit(0)
         self.assertEqual(widget.feature_type, widget.FROM_VAR)
-        self.assertTrue(widget.apply.called)
+        self.assertTrue(widget.commit.deferred.called)
 
     def test_all_whitespace(self):
         widget = self.widget
@@ -210,7 +210,7 @@ class TestOWTranspose(WidgetTest):
         self.assertTrue(self.widget.Warning.duplicate_names.is_shown())
 
     def test_unconditional_commit_on_new_signal(self):
-        with patch.object(self.widget, 'unconditional_apply') as apply:
+        with patch.object(self.widget.commit, 'now') as apply:
             self.widget.auto_apply = False
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.zoo)

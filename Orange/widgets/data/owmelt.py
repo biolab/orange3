@@ -148,7 +148,7 @@ class OWMelt(widget.OWWidget):
                 self.idvar = self.idvar_model[1]
             self.openContext(self.idvar_model[1:])
 
-        self.commit()
+        self.commit.deferred()
 
     def _is_unique(self, var):
         col = self.data.get_column_view(var)[0]
@@ -160,8 +160,9 @@ class OWMelt(widget.OWWidget):
         return np.isfinite(col) if col.dtype == float else col != ""
 
     def _invalidate(self):
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         self.Error.clear()
         if self.data:

@@ -140,10 +140,10 @@ class TestOWMeltFunctional(TestOWMeltBase):
         self.send_signal(widget.Inputs.data, self.data)
         self.assertIs(widget.idvar, expected)
 
-    @data_without_commit
     def test_no_suitable_features(self):
         widget = self.widget
         heart = Table("heart_disease")
+        self.send_signal(self.widget.Inputs.data, self.data)
 
         self.assertFalse(widget.Information.no_suitable_features.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))

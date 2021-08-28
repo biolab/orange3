@@ -85,7 +85,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.remove_all()
             self.widget.add_row(iris.domain[0], i, CFValues[op])
             self.widget.conditions_changed()
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
         # continuous var in metas
         iris = Table.from_table(
@@ -96,7 +96,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.remove_all()
             self.widget.add_row(iris.domain.metas[0], i, CFValues[op])
             self.widget.conditions_changed()
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
     def test_filter_str(self):
         zoo = Table("zoo")[::5]
@@ -106,7 +106,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.remove_all()
             self.widget.add_row(zoo.domain.metas[0], i, SFValues[op])
             self.widget.conditions_changed()
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
     def test_filter_disc(self):
         lenses = Table(test_filename("datasets/lenses.tab"))
@@ -117,7 +117,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.remove_all()
             self.widget.add_row(0, i, DFValues[op])
             self.widget.conditions_changed()
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
         # discrete var in metas
         lenses = Table.from_table(
@@ -128,7 +128,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.remove_all()
             self.widget.add_row(lenses.domain.metas[0], i, DFValues[op])
             self.widget.conditions_changed()
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
     def test_filter_time(self):
         data = Table(test_filename("datasets/cyber-security-breaches.tab"))
@@ -139,7 +139,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.remove_all()
             self.widget.add_row(data.domain["breach_start"], i, TFValues[op])
             self.widget.conditions_changed()
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
         # time var in metas
         data = Table.from_table(
@@ -150,7 +150,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.remove_all()
             self.widget.add_row(data.domain.metas[0], i, TFValues[op])
             self.widget.conditions_changed()
-            self.widget.unconditional_commit()
+            self.widget.commit.now()
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):

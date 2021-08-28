@@ -212,7 +212,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         def dropcompleted(action):
             if action == Qt.MoveAction:
-                self.commit()
+                self.commit.deferred()
 
         self.available_attrs_view.selectionModel().selectionChanged.connect(
             partial(update_on_change, self.available_attrs_view))
@@ -346,6 +346,7 @@ class OWSelectAttributes(widget.OWWidget):
         if not self.use_input_features:
             self.enable_use_features_box()
 
+    @gui.deferred
     def __use_features_clicked(self):  # Use input features button
         self.use_features()
 
@@ -445,7 +446,7 @@ class OWSelectAttributes(widget.OWWidget):
         if self.use_input_features and self.features_from_data_attributes:
             self.enable_used_attrs(False)
             self.use_features()
-        self.unconditional_commit()
+        self.commit.now()
 
     def check_data(self):
         self.Warning.mismatching_domain.clear()
@@ -470,7 +471,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.available_attrs[:] = [attr for attr in used + available
                                    if attr not in attributes]
         self.used_attrs[:] = attributes
-        self.commit()
+        self.commit.deferred()
 
     @staticmethod
     def selected_rows(view):
@@ -504,7 +505,7 @@ class OWSelectAttributes(widget.OWWidget):
         view.selectionModel().select(
             selection, QItemSelectionModel.ClearAndSelect)
 
-        self.commit()
+        self.commit.deferred()
 
     def move_up(self, view: QListView):
         self.move_rows(view, -1)
@@ -532,7 +533,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         dst_model.extend(attrs)
 
-        self.commit()
+        self.commit.deferred()
 
     def __update_interface_state(self):
         last_view = self.__last_active_view
@@ -589,6 +590,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.__last_active_view = None
         self.__interface_update_timer.stop()
 
+    @gui.deferred
     def commit(self):
         self.update_domain_role_hints()
         self.Warning.multiple_targets.clear()
@@ -617,7 +619,7 @@ class OWSelectAttributes(widget.OWWidget):
             self.class_attrs[:] = self.data.domain.class_vars
             self.meta_attrs[:] = self.data.domain.metas
             self.update_domain_role_hints()
-            self.commit()
+            self.commit.now()
 
     def send_report(self):
         if not self.data or not self.output_data:
