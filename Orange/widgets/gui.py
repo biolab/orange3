@@ -25,6 +25,7 @@ from orangewidget.gui import (
     indentedBox, widgetLabel, label, spin, doubleSpin, checkBox, lineEdit,
     button, toolButton, radioButtons, radioButtonsInBox, appendRadioButton,
     hSlider, labeledSlider, valueSlider, auto_commit, auto_send, auto_apply,
+    deferred,
 
     # ItemDataRole's
     BarRatioRole, BarBrushRole, SortOrderRole, LinkRole,
