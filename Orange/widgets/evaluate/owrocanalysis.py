@@ -668,7 +668,7 @@ class OWROCAnalysis(widget.OWWidget):
 
             sp = curve.curve_item.childItems()[0]  # type: pg.ScatterPlotItem
             act_pos = sp.mapFromScene(pos)
-            pts = sp.pointsAt(act_pos)
+            pts = list(sp.pointsAt(act_pos))
 
             if pts:
                 mouse_pt = pts[0].pos()
