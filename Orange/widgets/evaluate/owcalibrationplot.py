@@ -184,12 +184,12 @@ class OWCalibrationPlot(widget.OWWidget):
         gui.radioButtons(
             box, self, value="output_calibration",
             btnLabels=("Sigmoid calibration", "Isotonic calibration"),
-            label="Output model calibration", callback=self.apply)
+            label="Output model calibration", callback=self.commit.deferred)
 
         self.info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(self.info_box)
 
-        gui.auto_apply(self.buttonsArea, self, "auto_commit", commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.plotview = pg.GraphicsView(background="w")
         axes = {"bottom": AxisItem(orientation="bottom"),
@@ -240,7 +240,7 @@ class OWCalibrationPlot(widget.OWWidget):
                 self.openContext(class_var, self.classifier_names)
                 self._replot()
 
-        self.apply()
+        self.commit.now()
 
     def clear(self):
         self.plot.clear()
@@ -255,13 +255,13 @@ class OWCalibrationPlot(widget.OWWidget):
             self.threshold = 1 - self.threshold
         self._set_explanation()
         self._replot()
-        self.apply()
+        self.commit.deferred()
 
     def score_changed(self):
         self._set_explanation()
         self._replot()
         if self._last_score_value != self.score:
-            self.apply()
+            self.commit.deferred()
             self._last_score_value = self.score
 
     def _set_explanation(self):
@@ -428,7 +428,7 @@ class OWCalibrationPlot(widget.OWWidget):
 
     def _on_selection_changed(self):
         self._replot()
-        self.apply()
+        self.commit.deferred()
 
     def threshold_change(self):
         self.threshold = round(self.line.pos().x(), 2)
@@ -481,9 +481,10 @@ class OWCalibrationPlot(widget.OWWidget):
         self.info_label.setText(self.get_info_text(short=True))
 
     def threshold_change_done(self):
-        self.apply()
+        self.commit.deferred()
 
-    def apply(self):
+    @gui.deferred
+    def commit(self):
         self.Information.no_output.clear()
         wrapped = None
         results = self.results
