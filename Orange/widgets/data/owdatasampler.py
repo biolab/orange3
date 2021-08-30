@@ -446,7 +446,7 @@ class SampleBootstrap(Reprable):
         rgen = np.random.RandomState(self.random_state)
         sample = rgen.randint(0, self.size, self.size)
         sample.sort()  # not needed for the code below, just for the user
-        insample = np.ones((self.size,), dtype=np.bool)
+        insample = np.ones((self.size,), dtype=bool)
         insample[sample] = False
         remaining = np.flatnonzero(insample)
         return remaining, sample

@@ -93,7 +93,7 @@ class SelectBestFeatures(Reprable):
     def score_only_nice_features(self, data, method):
         # dtype must be defined because array can be empty
         mask = np.array([isinstance(a, method.feature_type)
-                         for a in data.domain.attributes], dtype=np.bool)
+                         for a in data.domain.attributes], dtype=bool)
         features = [f for f in data.domain.attributes
                     if isinstance(f, method.feature_type)]
         scores = [method(data, f) for f in features]

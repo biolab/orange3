@@ -91,7 +91,7 @@ def lac(conts, k, nsteps=30, window_size=1):
     print("Done")
 
     w = [np.empty((k, len(c[0]),)) for c in conts]
-    active = np.ones(k, dtype=np.bool)
+    active = np.ones(k, dtype=bool)
 
     for i in range(1, nsteps + 1):
         for l, (c, cw) in enumerate(conts):
