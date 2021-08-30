@@ -126,7 +126,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         self.cancel()
         self.data = data
         self.refresh_metrics()
-        self.unconditional_commit()
+        self.commit.now()
 
     def refresh_metrics(self):
         sparse = self.data is not None and issparse(self.data.X)
@@ -134,6 +134,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             item = self.metrics_combo.model().item(i)
             item.setEnabled(not sparse or metric[1].supports_sparse)
 
+    @gui.deferred
     def commit(self):
         # pylint: disable=invalid-sequence-index
         metric = METRICS[self.metric_idx][1]
@@ -228,7 +229,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         super().onDeleteWidget()
 
     def _invalidate(self):
-        self.commit()
+        self.commit.deferred()
 
     def _metric_changed(self):
         metric = METRICS[self.metric_idx][1]

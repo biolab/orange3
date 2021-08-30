@@ -101,7 +101,7 @@ class TestOWPCA(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.wait_until_stop_blocking()
         self.widget._variance_ratio = np.array([0.5, 0.25, 0.2, 0.05])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         result = self.get_output(self.widget.Outputs.transformed_data)
         pc1, pc2 = result.domain.attributes

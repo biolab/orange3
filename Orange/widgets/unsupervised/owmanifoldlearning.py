@@ -252,25 +252,26 @@ class OWManifoldLearning(OWWidget):
             alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
         gui.rubber(self.n_components_spin.box)
-        self.apply_button = gui.auto_apply(self.buttonsArea, self, commit=self.apply)
+        self.apply_button = gui.auto_apply(self.buttonsArea, self)
 
     def manifold_method_changed(self):
         self.params_widget.hide()
         self.params_widget = self.parameter_editors[self.manifold_method_index]
         self.params_widget.show()
-        self.apply()
+        self.commit.deferred()
 
     def settings_changed(self):
-        self.apply()
+        self.commit.deferred()
 
     @Inputs.data
     def set_data(self, data):
         self.data = data
         self.n_components_spin.setMaximum(len(self.data.domain.attributes)
                                           if self.data else 10)
-        self.unconditional_apply()
+        self.commit.now()
 
-    def apply(self):
+    @gui.deferred
+    def commit(self):
         builtin_warn = warnings.warn
 
         def _handle_disconnected_graph_warning(msg, *args, **kwargs):

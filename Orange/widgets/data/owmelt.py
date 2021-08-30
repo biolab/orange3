@@ -148,7 +148,7 @@ class OWMelt(widget.OWWidget):
                 self.idvar = self.idvar_model[1]
             self.openContext(self.idvar_model[1:])
 
-        self.commit.deferred()
+        self.commit.now()
 
     def _is_unique(self, var):
         col = self.data.get_column_view(var)[0]

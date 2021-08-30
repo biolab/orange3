@@ -481,7 +481,7 @@ class OWDistanceMap(widget.OWWidget):
             if self.pending_selection is not None:
                 self.matrix_item.set_selections(self.pending_selection)
                 self.pending_selection = None
-        self.unconditional_commit()
+        self.commit.now()
 
     def _clear_plot(self):
         def remove(item):
@@ -631,8 +631,9 @@ class OWDistanceMap(widget.OWWidget):
             sortind = self._sort_indices
             indices = [sortind[i] for i in indices]
         self._selection = list(sorted(set(indices)))
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         datasubset = None
         featuresubset = None
