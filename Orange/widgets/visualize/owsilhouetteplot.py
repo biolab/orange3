@@ -246,7 +246,7 @@ class OWSilhouettePlot(widget.OWWidget):
         # Disable/enable the Distances GUI controls if applicable
         self._distances_gui_box.setEnabled(self.distances is None)
 
-        self.unconditional_commit()
+        self.commit.now()
 
     def _setup_control_models(self, domain: Domain):
         groupvars = [
@@ -305,7 +305,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._update()
         self._replot()
         if self.data is not None:
-            self.commit()
+            self.commit.deferred()
 
     def _ensure_matrix(self):
         # ensure self._matrix is computed if necessary
@@ -415,7 +415,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
             self.scene.addItem(silplot)
             self._update_annotations()
-            silplot.selectionChanged.connect(self.commit)
+            silplot.selectionChanged.connect(self.commit.deferred)
             silplot.layout().activate()
             self._update_scene_rect()
             silplot.geometryChanged.connect(self._update_scene_rect)
@@ -467,6 +467,7 @@ class OWSilhouettePlot(widget.OWWidget):
             self.view.setFooterSceneRect(
                 extend_horizontal(footer.geometry().adjusted(0, -margin, 0, 0)))
 
+    @gui.deferred
     def commit(self):
         """
         Commit/send the current selection to the output.

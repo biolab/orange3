@@ -261,7 +261,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, self.data[:0], 3)
 
     def test_unconditional_commit_on_new_signal(self):
-        with patch.object(self.widget, 'unconditional_commit') as commit:
+        with patch.object(self.widget.commit, 'now') as commit:
             self.widget.autocommit = False
             commit.reset_mock()
             self.send_signal(self.signal_name, self.data[:100], 1)

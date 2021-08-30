@@ -558,7 +558,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     def attr_changed(self):
         self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
 
     def get_axes(self):
         return {"bottom": self.attr_x, "left": self.attr_y}
@@ -567,6 +567,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         super().colors_changed()
         self._vizrank_color_change()
 
+    @gui.deferred
     def commit(self):
         super().commit()
         self.send_features()

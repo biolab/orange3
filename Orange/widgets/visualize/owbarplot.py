@@ -432,7 +432,7 @@ class OWBarPlot(OWWidget):
 
     def __selection_changed(self, indices: List):
         self.selection = list(set(self.grouped_indices[indices]))
-        self.commit()
+        self.commit.deferred()
 
     def _add_controls(self):
         box = gui.vBox(self.controlArea, True)
@@ -519,7 +519,7 @@ class OWBarPlot(OWWidget):
         self.init_attr_values()
         self.openContext(self.data)
         self.clear_cache()
-        self.unconditional_commit()
+        self.commit.now()
 
     def check_data(self):
         self.clear_messages()
@@ -648,6 +648,7 @@ class OWBarPlot(OWWidget):
             self.graph.select_by_indices(self.grouped_indices_inverted)
             self.__pending_selection = None
 
+    @gui.deferred
     def commit(self):
         selected = None
         if self.data is not None and bool(self.selection):

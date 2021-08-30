@@ -193,7 +193,7 @@ class TestOWDistributions(WidgetTest):
         valid_data = widget.valid_data.copy()
         widget.selection.add(1)
         widget._clear_plot = Mock()
-        widget.apply = Mock()
+        widget.apply.now = widget.apply.deferred = Mock()
 
         self._set_var(2)
         self.assertFalse(
@@ -204,7 +204,7 @@ class TestOWDistributions(WidgetTest):
                          and np.allclose(valid_data, widget.valid_data))
         self.assertEqual(widget.selection, set())
         widget._clear_plot.assert_called()
-        widget.apply.assert_called()
+        widget.apply.now.assert_called()
 
     def test_switch_cvar(self):
         """Widget reset and recomputes when changing splitting variable"""
@@ -225,7 +225,7 @@ class TestOWDistributions(WidgetTest):
         valid_data = widget.valid_data.copy()
         widget.selection.add(1)
         widget._clear_plot = Mock()
-        widget.apply = Mock()
+        widget.apply.now = widget.apply.deferred = Mock()
 
         self.assertEqual(len(widget.valid_group_data), 150)
 
@@ -235,9 +235,9 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(len(widget.valid_group_data), 120)
         self.assertEqual(widget.selection, {1})
         widget._clear_plot.assert_called()
-        widget.apply.assert_called()
+        widget.apply.now.assert_called()
         widget._clear_plot.reset_mock()
-        widget.apply.reset_mock()
+        widget.apply.now.reset_mock()
 
         self._set_cvar(None)
         self.assertIs(binnings, widget.binnings)
@@ -245,7 +245,7 @@ class TestOWDistributions(WidgetTest):
         self.assertIsNone(widget.valid_group_data)
         self.assertEqual(widget.selection, {1})
         widget._clear_plot.assert_called()
-        widget.apply.assert_called()
+        widget.apply.now.assert_called()
 
     def test_on_bins_changed(self):
         """Widget replots and outputs data when the number of bins is changed"""
@@ -255,12 +255,12 @@ class TestOWDistributions(WidgetTest):
         self._set_slider(0)
         widget.selection.add(1)
         n_bars = len(widget.bar_items)
-        widget.apply = Mock()
+        widget.apply.now = widget.apply.deferred = Mock()
 
         self._set_slider(1)
         self.assertEqual(widget.selection, set())
         self.assertGreater(n_bars, len(widget.bar_items))
-        widget.apply.assert_called_once()
+        widget.apply.now.assert_called_once()
 
     def test_set_valid_data(self):
         """Widget handles nans in data"""

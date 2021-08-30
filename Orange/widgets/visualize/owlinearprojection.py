@@ -343,7 +343,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self._check_options()
         self.init_projection()
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
 
     def __placement_radio_changed(self):
         self.controls.graph.hide_radius.setEnabled(
@@ -352,7 +352,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self._init_vizrank()
         self.init_projection()
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
 
     def __radius_slider_changed(self):
         self.graph.update_radius()

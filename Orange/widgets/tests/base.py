@@ -653,19 +653,19 @@ class ProjectionWidgetTestMixin:
         """Test if data is plotted only once but committed on every input change"""
         table = Table("heart_disease")
         self.widget.setup_plot = Mock()
-        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.widget.commit.now = self.widget.commit.deferred = Mock()
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
         self.wait_until_finished(timeout=timeout)
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
-        self.widget.commit.reset_mock()
+        self.widget.commit.now.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, table[::10])
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
     def test_subset_data_color(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.widget.Inputs.data, self.data)
