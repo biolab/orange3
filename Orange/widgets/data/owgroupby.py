@@ -289,7 +289,7 @@ def block_signals(widget):
 class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
     name = "Group by"
     description = ""
-    icon = "icons/aggregate.svg"
+    icon = "icons/GroupBy.svg"
     keywords = ["aggregate", "group by"]
 
     class Inputs:
