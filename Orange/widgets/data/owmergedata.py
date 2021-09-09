@@ -5,8 +5,9 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QModelIndex, pyqtSignal as Signal
 from AnyQt.QtWidgets import (
-    QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout
+    QWidget, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy
 )
+
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
@@ -29,8 +30,7 @@ class ConditionBox(QWidget):
 
     RowItems = namedtuple(
         "RowItems",
-        ("pre_label", "left_combo", "in_label", "right_combo",
-         "remove_button", "add_button"))
+        ("pre_label", "left_combo", "in_label", "right_combo", "remove_button"))
 
     def __init__(self, parent, model_left, model_right, pre_label, in_label):
         super().__init__(parent)
@@ -42,6 +42,12 @@ class ConditionBox(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
         self.setMouseTracking(True)
+
+    def get_button(self, label, callback):
+        return gui.button(
+            None, self, label, callback=callback,
+            addToLayout=False, autoDefault=False, width=34,
+            sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Maximum))
 
     def add_row(self):
         def sync_combos():
@@ -78,30 +84,28 @@ class ConditionBox(QWidget):
             combo.activated.connect(sync_combos)
             return combo
 
-        def get_button(label, callback):
-            button = QPushButton(label, self)
-            button.setFlat(True)
-            button.setFixedWidth(12)
-            button.clicked.connect(callback)
-            return button
-
         row = self.layout().count()
         row_items = self.RowItems(
             QLabel("and" if row else self.pre_label),
             get_combo(self.model_left),
             QLabel(self.in_label),
             get_combo(self.model_right),
-            get_button("×", self.on_remove_row),
-            get_button("+", self.on_add_row)
+            self.get_button("×", self.on_remove_row)
         )
         layout = QHBoxLayout()
         layout.setSpacing(10)
-        self.layout().addLayout(layout)
+        self.layout().insertLayout(self.layout().count() - 1, layout)
         layout.addStretch(10)
         for item in row_items:
             layout.addWidget(item)
         self.rows.append(row_items)
         self._reset_buttons()
+
+    def add_plus_row(self):
+        layout = QHBoxLayout()
+        self.layout().addLayout(layout)
+        layout.addStretch(1)
+        layout.addWidget(self.get_button("+", self.on_add_row))
 
     def remove_row(self, row):
         self.layout().takeAt(self.rows.index(row))
@@ -125,16 +129,8 @@ class ConditionBox(QWidget):
         self.emit_list()
 
     def _reset_buttons(self):
-        def endis(button, enable, text):
-            button.setEnabled(enable)
-            button.setText(text if enable else "")
-
         self.rows[0].pre_label.setText(self.pre_label)
-        single_row = len(self.rows) == 1
-        endis(self.rows[0].remove_button, not single_row, "×")
-        endis(self.rows[-1].add_button, True, "+")
-        if not single_row:
-            endis(self.rows[-2].add_button, False, "")
+        self.rows[0].remove_button.setDisabled(len(self.rows) == 1)
 
     def current_state(self):
         def get_var(model, combo):
@@ -333,6 +329,7 @@ class OWMergeData(widget.OWWidget):
         self.attr_boxes = ConditionBox(
             self, self.model, self.extra_model, "", "matches")
         self.attr_boxes.add_row()
+        self.attr_boxes.add_plus_row()
         box = gui.vBox(self.controlArea, box="Row matching")
         box.layout().addWidget(self.attr_boxes)
 
