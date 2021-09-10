@@ -23,4 +23,4 @@ baycomp>=1.0.2
 pandas>=1.0.0
 pyyaml
 openpyxl
-httpx>=0.14.0,<0.17
+httpx>=0.14.0,<0.20
