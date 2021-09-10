@@ -34,6 +34,13 @@ try:
 except ImportError:
     have_cython = False
 
+try:
+    import PyQt5.QtCore  # pylint: disable=unused-import
+    have_pyqt5 = True
+except ImportError:
+    have_pyqt5 = False
+
+is_conda = os.path.exists(os.path.join(sys.prefix, 'conda-meta'))
 
 NAME = 'Orange3'
 
@@ -77,6 +84,12 @@ CLASSIFIERS = [
 ]
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
+
+# pyqt5 is named pyqt5 on pypi and pyqt on conda
+# due to possible conflicts, skip the pyqt5 requirement in conda environments
+# that already have pyqt
+if not (is_conda and have_pyqt5):
+    requirements.append('requirements-pyqt.txt')
 
 INSTALL_REQUIRES = sorted(set(
     line.partition('#')[0].strip()
