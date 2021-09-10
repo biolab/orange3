@@ -363,7 +363,7 @@ class TestOWSave(OWSaveTestBase):
         OWSave.migrate_settings(settings)
         self.assertTrue(settings["filter"] in OWSave.get_filters())
 
-        # Unsupported file format (is this possible?)
+        # Unsupported file format
         settings = {**const_settings,
                     'compress': True, 'compression': 'lzma (.xz)',
                     'filetype': 'Bar file (.bar)'}
@@ -400,6 +400,33 @@ class TestFunctionalOWSave(WidgetTest):
                     widget.save_file()
                     if hasattr(writer, "read"):
                         self.assertEqual(len(writer(filename).read()), 150)
+
+    def test_unsupported_file_format(self):
+        widget = self.create_widget(
+            OWSave,
+            stored_settings=dict(
+                filter="Unsupported filter (*.foo)", stored_name="test.foo",
+                __version__=2)
+        )
+        filters = widget.get_filters()
+        def_filter = filters[widget.default_filter()]
+
+        iris = Table("iris")
+        self.send_signal(widget.Inputs.data, iris)
+
+        # With unsupported format from settings, the widget should indicate
+        # an error
+        with patch.object(def_filter, "write"):
+            widget.save_file()
+            self.assertTrue(widget.Error.unsupported_format.is_shown())
+            def_filter.write.assert_not_called()
+
+        # Without file name, if `filter` is set to unsupported format,
+        # initial_start_dir should choose the default filter
+        widget.stored_name = ""
+        widget.initial_start_dir()
+        self.assertIs(filters[widget.filter], def_filter)
+        self.assertIs(widget.writer, def_filter)
 
 
 @unittest.skipUnless(sys.platform == "linux", "Tests for dialog on Linux")

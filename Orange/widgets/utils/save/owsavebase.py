@@ -43,6 +43,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
 
     class Error(widget.OWWidget.Error):
         no_file_name = widget.Msg("File name is not set.")
+        unsupported_format = widget.Msg("File format is unsupported.\n{}")
         general_error = widget.Msg("{}")
 
     want_main_area = False
@@ -80,7 +81,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
 
         # This cannot be done outside because `filters` is defined by subclass
         if not self.filter:
-            self.filter = next(iter(self.get_filters()))
+            self.filter = self.default_filter()
 
         self.grid = grid = QGridLayout()
         gui.widgetBox(self.controlArea, orientation=grid, box=True)
@@ -97,6 +98,10 @@ class OWSaveBase(widget.OWWidget, openclass=True):
 
         self.adjustSize()
         self.update_messages()
+
+    def default_filter(self):
+        """Returns the first filter in the list"""
+        return next(iter(self.get_filters()))
 
     @property
     def last_dir(self):
@@ -158,13 +163,20 @@ class OWSaveBase(widget.OWWidget, openclass=True):
     @property
     def writer(self):
         """
-        Return the active writer
+        Return the active writer or None if there is no writer for this filter
 
         The base class uses this property only in `do_save` to find the writer
         corresponding to the filter. Derived classes (e.g. OWSave) may also use
         it elsewhere.
+
+        Filter may not exist if it comes from settings saved in Orange with
+        some add-ons that are not (or no longer) present, or if support for
+        some extension was dropped, like the old Excel format.
         """
-        return self.get_filters()[self.filter]
+        filters = self.get_filters()
+        if self.filter not in filters:
+            return None
+        return filters[self.filter]
 
     def on_new_input(self):
         """
@@ -194,6 +206,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
             return
         self.filename = filename
         self.filter = selected_filter
+        self.Error.unsupported_format.clear()
         self.bt_save.setText(f"Save as {self.stored_name}")
         self.update_messages()
         self._try_save()
@@ -233,6 +246,9 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         a single format.
         """
         # This method is separated out because it will usually be overriden
+        if self.writer is None:
+            self.Error.unsupported_format(self.filter)
+            return
         self.writer.write(self.filename, self.data)
 
     def update_messages(self):

@@ -67,6 +67,9 @@ class OWSave(OWSaveBase):
         self.on_new_input()
 
     def do_save(self):
+        if self.writer is None:
+            super().do_save()  # This will do nothing but indicate an error
+            return
         if self.data.is_sparse() and not self.writer.SUPPORT_SPARSE_DATA:
             return
         self.writer.write(self.filename, self.data, self.add_type_annotations)
@@ -75,7 +78,8 @@ class OWSave(OWSaveBase):
         super().update_messages()
         self.Error.unsupported_sparse(
             shown=self.data is not None and self.data.is_sparse()
-            and self.filename and not self.writer.SUPPORT_SPARSE_DATA)
+            and self.filename
+            and self.writer is not None and not self.writer.SUPPORT_SPARSE_DATA)
 
     def send_report(self):
         self.report_data_brief(self.data)
@@ -83,9 +87,9 @@ class OWSave(OWSaveBase):
         noyes = ["No", "Yes"]
         self.report_items((
             ("File name", self.filename or "not set"),
-            ("Format", writer.DESCRIPTION),
+            ("Format", writer and writer.DESCRIPTION),
             ("Type annotations",
-             writer.OPTIONAL_TYPE_ANNOTATIONS
+             writer and writer.OPTIONAL_TYPE_ANNOTATIONS
              and noyes[self.add_type_annotations])
         ))
 
@@ -122,6 +126,9 @@ class OWSave(OWSaveBase):
         else:
             data_name = getattr(self.data, 'name', '')
             if data_name:
+                if self.writer is None:
+                    self.filter = self.default_filter()
+                assert self.writer is not None
                 data_name += self.writer.EXTENSIONS[0]
             return os.path.join(self.last_dir or _userhome, data_name)
 
