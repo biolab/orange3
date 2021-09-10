@@ -14,6 +14,17 @@ if sys.version_info < (3, 4):
     sys.exit('Orange requires Python >= 3.4')
 
 try:
+    import PyQt5.QtCore
+    if PyQt5.QtCore.QT_VERSION < 0x050C00:  # 5.12
+        raise ImportError("Unsupported PyQt5 version is installed")
+except ImportError:
+    sys.exit('''Orange requires PyQt5 >= 5.12, which needs to be installed manually.
+On a pip-based installation, run:
+    pip install PyQt5>=5.12 pyqtwebengine>=5.12
+On a conda-based installation, run:
+    conda install pyqt>=5.12''')
+
+try:
     import numpy
     have_numpy = True
 except ImportError:
