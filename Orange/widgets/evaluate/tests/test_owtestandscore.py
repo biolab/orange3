@@ -71,14 +71,31 @@ class TestOWTestAndScore(WidgetTest):
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
 
-    def test_more_learners(self):
-        data = Table("iris")[::15]
+    def test_multiple_learners(self):
+        def check_evres_names(expeced):
+            res = self.get_output(self.widget.Outputs.evaluations_results)
+            self.assertSequenceEqual(res.learner_names, expeced)
+
+        data = Table("iris")[::15].copy()
+        m1 = MajorityLearner()
+        m1.name = "M1"
+        m2 = MajorityLearner()
+        m2.name = "M2"
         self.send_signal(self.widget.Inputs.train_data, data)
-        self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0)
-        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
-        self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 1)
-        res = self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.send_signal(self.widget.Inputs.learner, m1, 1)
+        self.send_signal(self.widget.Inputs.learner, m2, 2)
+        res = self.get_output(self.widget.Outputs.evaluations_results)
         np.testing.assert_equal(res.probabilities[0], res.probabilities[1])
+        check_evres_names(["M1", "M2"])
+        self.send_signal(self.widget.Inputs.learner, None, 1)
+        check_evres_names(["M2"])
+        self.send_signal(self.widget.Inputs.learner, m1, 1)
+        check_evres_names(["M1", "M2"])
+        self.send_signal(self.widget.Inputs.learner,
+                         self.widget.Inputs.learner.closing_sentinel, 1)
+        check_evres_names(["M2"])
+        self.send_signal(self.widget.Inputs.learner, m1, 1)
+        check_evres_names(["M2", "M1"])
 
     def test_testOnTest(self):
         data = Table("iris")
@@ -272,13 +289,13 @@ class TestOWTestAndScore(WidgetTest):
         setosa = iris[:51]
         versicolor = iris[49:100]
 
-        class SetosaLearner:
+        class SetosaLearner(Learner):
             def __call__(self, data):
                 model = ConstantModel([1., 0, 0])
                 model.domain = iris.domain
                 return model
 
-        class VersicolorLearner:
+        class VersicolorLearner(Learner):
             def __call__(self, data):
                 model = ConstantModel([0, 1., 0])
                 model.domain = iris.domain
@@ -287,9 +304,8 @@ class TestOWTestAndScore(WidgetTest):
         # this is done manually to avoid multiple computations
         self.widget.resampling = 5
         self.widget.set_train_data(iris)
-        self.widget.set_learner(SetosaLearner(), 1)
-        self.widget.set_learner(VersicolorLearner(), 2)
-
+        self.widget.insert_learner(0, SetosaLearner())
+        self.widget.insert_learner(1, VersicolorLearner())
         self.send_signal(self.widget.Inputs.test_data, setosa, wait=5000)
 
         self.widget.adjustSize()
@@ -305,10 +321,10 @@ class TestOWTestAndScore(WidgetTest):
         # Ensure that the click on header caused an ascending sort
         # Ascending sort means that wrong model should be listed first
         self.assertEqual(header.sortIndicatorOrder(), Qt.AscendingOrder)
-        self.assertEqual(view.model().index(0, 0).data(), "VersicolorLearner")
+        self.assertEqual(view.model().index(0, 0).data(), "versicolor")
 
         self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
-        self.assertEqual(view.model().index(0, 0).data(), "SetosaLearner")
+        self.assertEqual(view.model().index(0, 0).data(), "setosa")
 
     def _retrieve_scores(self):
         w = self.widget

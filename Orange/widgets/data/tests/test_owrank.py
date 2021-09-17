@@ -59,16 +59,16 @@ class TestOWRank(WidgetTest):
 
     def test_input_scorer(self):
         """Check widget's scorer with scorer on the input"""
-        self.assertEqual(self.widget.scorers, {})
+        self.assertEqual(self.widget.scorers, [])
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
         self.wait_until_finished()
-        value = self.widget.scorers[1]
+        value = self.widget.scorers[0]
         self.assertEqual(self.log_reg, value.scorer)
         self.assertIsInstance(value.scorer, Scorer)
 
     def test_input_scorer_fitter(self):
         heart_disease = Table('heart_disease')
-        self.assertEqual(self.widget.scorers, {})
+        self.assertEqual(self.widget.scorers, [])
 
         model = self.widget.ranksModel
 
@@ -94,14 +94,14 @@ class TestOWRank(WidgetTest):
                         self.assertIn(name, last_column)
 
                 self.send_signal("Scorer", None, 1)
-                self.assertEqual(self.widget.scorers, {})
+                self.assertEqual(self.widget.scorers, [])
 
     def test_input_scorer_disconnect(self):
         """Check widget's scorer after disconnecting scorer on the input"""
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
         self.assertEqual(len(self.widget.scorers), 1)
         self.send_signal(self.widget.Inputs.scorer, None, 1)
-        self.assertEqual(self.widget.scorers, {})
+        self.assertEqual(self.widget.scorers, [])
 
     def test_output_data(self):
         """Check data on the output after apply"""
