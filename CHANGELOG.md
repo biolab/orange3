@@ -4,11 +4,32 @@ Change Log
 [next] - TBA
 ------------
 
+[3.30.0] - 2021-09-22
+--------------------
+##### Enhancements
+* OWPythonScript: Better text editor ([#5208](../../pull/5208))
+* PCA: Output variance of components ([#5513](../../pull/5513))
+* Curve Fit: New widget ([#5481](../../pull/5481))
+* Hierarchical Clustering: Annotate variables with clusters ([#5514](../../pull/5514))
+* Create nodes on canvas drag/drop ([#5031](../../pull/5031))
+
+##### Bugfixes
+* setup.py: do not overwrite conda's PyQt5 ([#5593](../../pull/5593))
+* Use explicit ordered multiple inputs ([#4860](../../pull/4860))
+* Prevent crash when saving in unsupported format ([#5560](../../pull/5560))
+* owrocanalysis: Fix test for non empty points array ([#5571](../../pull/5571))
+* pandas_compat: fix conversion of datetime series ([#5547](../../pull/5547))
+* Fix deepcopy and pickle for classes derived from `np.ndarray` ([#5536](../../pull/5536))
+* owheatmap: Fix assertion error when restoring selection ([#5517](../../pull/5517))
+* Pivot: Handle empty data, metas only ([#5527](../../pull/5527))
+* table_to_frame - handle numeric columns with dtype=object ([#5474](../../pull/5474))
+* listfilter: Bypass QListView.dropEvent ([#5477](../../pull/5477))
+
+
 [3.29.3] - 2021-06-09
 --------------------
 ##### Bugfixes
 * Create Class: fix incorrect value assignment
-
 
 [3.29.2] - 2021-06-08
 --------------------
@@ -1568,7 +1589,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.29.3...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.30.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.29.3...3.30.0
 [3.29.3]: https://github.com/biolab/orange3/compare/3.29.2...3.29.3
 [3.29.2]: https://github.com/biolab/orange3/compare/3.29.1...3.29.2
 [3.29.1]: https://github.com/biolab/orange3/compare/3.29.0...3.29.1
