@@ -148,3 +148,12 @@ Gradient Boosted Trees
 
 .. autoclass:: XGBRFRegressor
    :members:
+
+
+Curve Fit
+----------------------
+
+.. automodule:: Orange.regression.curvefit
+
+.. autoclass:: CurveFitLearner
+   :members:

@@ -3,7 +3,8 @@ import threading
 import itertools
 import concurrent.futures
 
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
+from typing import List, Optional
 
 from math import isnan
 
@@ -37,7 +38,7 @@ from Orange.widgets.utils.itemselectionmodel import (
 from Orange.widgets.utils.tableview import TableView, \
     table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Input, Output
+from Orange.widgets.widget import OWWidget, MultiInput, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -183,7 +184,7 @@ class OWDataTable(OWWidget):
     keywords = []
 
     class Inputs:
-        data = Input("Data", Table, multiple=True, auto_summary=False)
+        data = MultiInput("Data", Table, auto_summary=False, filter_none=True)
 
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
@@ -205,9 +206,7 @@ class OWDataTable(OWWidget):
 
     def __init__(self):
         super().__init__()
-
-        self._inputs = OrderedDict()
-
+        self._inputs: List[TableSlot] = []
         self.__pending_selected_rows = self.selected_rows
         self.selected_rows = None
         self.__pending_selected_cols = self.selected_cols
@@ -256,79 +255,90 @@ class OWDataTable(OWWidget):
     def sizeHint():
         return QSize(800, 500)
 
+    def _create_table_view(self):
+        view = DataTableView()
+        view.setSortingEnabled(True)
+        view.setItemDelegate(TableDataDelegate(view))
+
+        if self.select_rows:
+            view.setSelectionBehavior(QTableView.SelectRows)
+
+        header = view.horizontalHeader()
+        header.setSectionsMovable(True)
+        header.setSectionsClickable(True)
+        header.setSortIndicatorShown(True)
+        header.setSortIndicator(-1, Qt.AscendingOrder)
+
+        # QHeaderView does not 'reset' the model sort column,
+        # because there is no guaranty (requirement) that the
+        # models understand the -1 sort column.
+        def sort_reset(index, order):
+            if view.model() is not None and index == -1:
+                view.model().sort(index, order)
+        header.sortIndicatorChanged.connect(sort_reset)
+        return view
+
     @Inputs.data
-    def set_dataset(self, data, tid=None):
+    def set_dataset(self, index: int, data: Table):
         """Set the input dataset."""
-        if data is not None:
-            datasetname = getattr(data, "name", "Data")
-            if tid in self._inputs:
-                # update existing input slot
-                slot = self._inputs[tid]
-                view = slot.view
-                # reset the (header) view state.
-                view.setModel(None)
-                view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
-                assert self.tabs.indexOf(view) != -1
-                self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
-            else:
-                view = DataTableView()
-                view.setSortingEnabled(True)
-                view.setItemDelegate(TableDataDelegate(view))
+        datasetname = getattr(data, "name", "Data")
+        slot = self._inputs[index]
+        view = slot.view
+        # reset the (header) view state.
+        view.setModel(None)
+        view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+        assert self.tabs.indexOf(view) != -1
+        self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
+        view.dataset = data
+        slot = TableSlot(index, data, table_summary(data), view)
+        view.input_slot = slot
+        self._inputs[index] = slot
+        self._setup_table_view(view, data)
+        self.tabs.setCurrentWidget(view)
 
-                if self.select_rows:
-                    view.setSelectionBehavior(QTableView.SelectRows)
+    @Inputs.data.insert
+    def insert_dataset(self, index: int, data: Table):
+        datasetname = getattr(data, "name", "Data")
+        view = self._create_table_view()
+        slot = TableSlot(None, data, table_summary(data), view)
+        view.dataset = data
+        view.input_slot = slot
+        self._inputs.insert(index, slot)
+        self.tabs.insertTab(index, view, datasetname)
+        self._setup_table_view(view, data)
+        self.tabs.setCurrentWidget(view)
 
-                header = view.horizontalHeader()
-                header.setSectionsMovable(True)
-                header.setSectionsClickable(True)
-                header.setSortIndicatorShown(True)
-                header.setSortIndicator(-1, Qt.AscendingOrder)
+    @Inputs.data.remove
+    def remove_dataset(self, index):
+        slot = self._inputs.pop(index)
+        view = slot.view
+        self.tabs.removeTab(self.tabs.indexOf(view))
+        view.setModel(None)
+        view.hide()
+        view.deleteLater()
 
-                # QHeaderView does not 'reset' the model sort column,
-                # because there is no guaranty (requirement) that the
-                # models understand the -1 sort column.
-                def sort_reset(index, order):
-                    if view.model() is not None and index == -1:
-                        view.model().sort(index, order)
+        current = self.tabs.currentWidget()
+        if current is not None:
+            self._set_input_summary(current.input_slot)
 
-                header.sortIndicatorChanged.connect(sort_reset)
-                self.tabs.addTab(view, datasetname)
-
-            view.dataset = data
-            self.tabs.setCurrentWidget(view)
-
-            self._setup_table_view(view, data)
-            slot = TableSlot(tid, data, table_summary(data), view)
-            view.input_slot = slot
-            self._inputs[tid] = slot
-
-            self.tabs.setCurrentIndex(self.tabs.indexOf(view))
-
-            self._set_input_summary(slot)
-
-            if isinstance(slot.summary.len, concurrent.futures.Future):
-                def update(_):
-                    QMetaObject.invokeMethod(
-                        self, "_update_info", Qt.QueuedConnection)
-
-                slot.summary.len.add_done_callback(update)
-
-        elif tid in self._inputs:
-            slot = self._inputs.pop(tid)
-            view = slot.view
-            view.hide()
-            view.deleteLater()
-            self.tabs.removeTab(self.tabs.indexOf(view))
-
-            current = self.tabs.currentWidget()
-            if current is not None:
-                self._set_input_summary(current.input_slot)
-        else:
-            self._set_input_summary(None)
-
+    def handleNewSignals(self):
+        super().handleNewSignals()
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
+        data: Optional[Table] = None
+        current = self.tabs.currentWidget()
+        slot = None
+        if current is not None:
+            data = current.dataset
+            slot = current.input_slot
 
-        if data and self.__pending_selected_rows is not None:
+        if slot and isinstance(slot.summary.len, concurrent.futures.Future):
+            def update(_):
+                QMetaObject.invokeMethod(
+                    self, "_update_info", Qt.QueuedConnection)
+            slot.summary.len.add_done_callback(update)
+        self._set_input_summary(slot)
+
+        if data is not None and self.__pending_selected_rows is not None:
             self.selected_rows = self.__pending_selected_rows
             self.__pending_selected_rows = None
         else:
@@ -346,12 +356,7 @@ class OWDataTable(OWWidget):
     def _setup_table_view(self, view, data):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)
         """
-        if data is None:
-            view.setModel(None)
-            return
-
         datamodel = RichTableModel(data)
-
         rowcount = data.approx_len()
 
         if self.color_by_class and data.domain.has_discrete_class:
@@ -849,6 +854,8 @@ def is_sortable(table):
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWDataTable).run(
-        [(Table("iris"), "iris"),
-         (Table("brown-selected"), "brown-selected"),
-         (Table("housing"), "housing")])
+        insert_dataset=[
+            (0, Table("iris")),
+            (1, Table("brown-selected")),
+            (2, Table("housing"))
+        ])

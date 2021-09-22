@@ -744,6 +744,7 @@ class OWPivot(OWWidget):
         renamed_vars = Msg("Some variables have been renamed in some tables"
                            "to avoid duplicates.\n{}")
         too_many_values = Msg("Selected variable has too many values.")
+        no_variables = Msg("At least 1 primitive variable is required.")
 
     settingsHandler = DomainContextHandler()
     row_feature = ContextSetting(None)
@@ -854,11 +855,20 @@ class OWPivot(OWWidget):
     def skipped_aggs(self):
         def add(fun):
             data, var = self.data, self.val_feature
+            primitive_funcs = Pivot.ContVarFunctions + Pivot.DiscVarFunctions
             return data and not var and fun not in Pivot.AutonomousFunctions \
                 or var and var.is_discrete and fun in Pivot.ContVarFunctions \
-                or var and var.is_continuous and fun in Pivot.DiscVarFunctions
+                or var and var.is_continuous and fun in Pivot.DiscVarFunctions \
+                or var and not var.is_primitive() and fun in primitive_funcs
         skipped = [str(fun) for fun in self.sel_agg_functions if add(fun)]
         return ", ".join(sorted(skipped))
+
+    @property
+    def data_has_primitives(self):
+        if not self.data:
+            return False
+        domain = self.data.domain
+        return any(v.is_primitive() for v in domain.variables + domain.metas)
 
     def __feature_changed(self):
         self.selection = set()
@@ -867,7 +877,7 @@ class OWPivot(OWWidget):
 
     def __val_feature_changed(self):
         self.selection = set()
-        if self.no_col_feature:
+        if self.no_col_feature or not self.pivot:
             return
         self.pivot.update_pivot_table(self.val_feature)
         self.commit()
@@ -896,7 +906,8 @@ class OWPivot(OWWidget):
         self.pivot = None
         self.check_data()
         self.init_attr_values()
-        self.openContext(self.data)
+        if self.data_has_primitives:
+            self.openContext(self.data)
         self.unconditional_commit()
 
     def check_data(self):
@@ -912,8 +923,8 @@ class OWPivot(OWWidget):
             self.row_feature = model[0]
         model = self.controls.val_feature.model()
         if model and len(model) > 2:
-            self.val_feature = domain.variables[0] \
-                if domain.variables[0] in model else model[2]
+            allvars = domain.variables + domain.metas
+            self.val_feature = allvars[0] if allvars[0] in model else model[2]
 
     def commit(self):
         def send_outputs(pivot_table, filtered_data, grouped_data):
@@ -933,9 +944,16 @@ class OWPivot(OWWidget):
         self.Warning.cannot_aggregate.clear()
         self.Warning.no_col_feature.clear()
 
+        self.table_view.clear()
+
         if self.pivot is None:
+            if self.data:
+                if not self.data_has_primitives:
+                    self.Warning.no_variables()
+                    send_outputs(None, None, None)
+                    return
+
             if self.no_col_feature:
-                self.table_view.clear()
                 self.Warning.no_col_feature()
                 send_outputs(None, None, None)
                 return
@@ -965,7 +983,6 @@ class OWPivot(OWWidget):
             self.Warning.renamed_vars(self.pivot.renamed)
 
     def _update_graph(self):
-        self.table_view.clear()
         if self.pivot.pivot_table:
             col_feature = self.col_feature or self.row_feature
             self.table_view.update_table(col_feature.name,

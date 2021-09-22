@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 import numpy as np
+from pandas.core.dtypes.common import is_string_dtype
 from scipy import sparse as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
@@ -156,11 +157,54 @@ def _is_datetime(s):
         return True
     try:
         if is_object_dtype(s):
-            pd.to_datetime(s, infer_datetime_format=True)
+            # utc=True - to allow different timezones in a series object
+            pd.to_datetime(s, infer_datetime_format=True, utc=True)
             return True
     except Exception:  # pylint: disable=broad-except
         pass
     return False
+
+
+def _convert_datetime(series, var):
+    def col_type(dt):
+        """Test if is date, time or datetime"""
+        dt_nonnat = dt[~pd.isnull(dt)]  # nat == nat is False
+        if (dt_nonnat.dt.floor("d") == dt_nonnat).all():
+            # all times are 00:00:00.0 - pure date
+            return 1, 0
+        elif (dt_nonnat.dt.date == pd.Timestamp("now").date()).all():
+            # all dates are today's date - pure time
+            return 0, 1  # pure time
+        else:
+            # else datetime
+            return 1, 1
+
+    try:
+        dt = pd.to_datetime(series)
+    except ValueError:
+        # series with type object and different timezones will raise a
+        # ValueError - normalizing to utc
+        dt = pd.to_datetime(series, utc=True)
+
+    # set variable type to date, time or datetime
+    var.have_date, var.have_time = col_type(dt)
+
+    if dt.dt.tz is not None:
+        # set timezone if available and convert to utc
+        var.timezone = dt.dt.tz
+        dt = dt.dt.tz_convert("UTC")
+
+    if var.have_time and not var.have_date:
+        # if time only measure seconds from midnight - equal to setting date
+        # to unix epoch
+        return (
+            (dt.dt.tz_localize(None) - pd.Timestamp("now").normalize())
+            / pd.Timedelta("1s")
+        ).values
+
+    return (
+        (dt.dt.tz_localize(None) - pd.Timestamp("1970-01-01")) / pd.Timedelta("1s")
+    ).values
 
 
 def vars_from_df(df, role=None, force_nominal=False):
@@ -170,9 +214,20 @@ def vars_from_df(df, role=None, force_nominal=False):
         _role = role
 
     # If df index is not a simple RangeIndex (or similar), put it into data
-    if not any(str(i).startswith('_o') for i in df.index) \
-            and not (df.index.is_integer() and (df.index.is_monotonic_increasing
-                                                or df.index.is_monotonic_decreasing)):
+    if (
+        # not range-like index - test first to skip slow startswith(_o) check
+        not (
+            df.index.is_integer()
+            and (df.index.is_monotonic_increasing or df.index.is_monotonic_decreasing)
+        )
+        # check that it does not contain Orange index
+        and (
+            # startswith is slow (for long drs) - firs check if col has strings
+            isinstance(df.index, pd.MultiIndex)
+            or not is_string_dtype(df.index)
+            or not any(str(i).startswith("_o") for i in df.index)
+        )
+    ):
         df = df.reset_index()
 
     Xcols, Ycols, Mcols = [], [], []
@@ -180,6 +235,7 @@ def vars_from_df(df, role=None, force_nominal=False):
     attrs, class_vars, metas = [], [], []
 
     contains_strings = _role == Role.Meta
+
     for column in df.columns:
         s = df[column]
         if hasattr(df, 'orange_variables') and column in df.orange_variables:
@@ -197,23 +253,25 @@ def vars_from_df(df, role=None, force_nominal=False):
                 Mcols.append(column)
                 Mexpr.append(None)
                 metas.append(var)
+        elif _is_datetime(s):
+            var = TimeVariable(str(column))
+            attrs.append(var)
+            Xcols.append(column)
+            Xexpr.append(_convert_datetime)
         elif _is_discrete(s, force_nominal):
             discrete = s.astype('category').cat
             var = DiscreteVariable(str(column),
                                    discrete.categories.astype(str).tolist())
             attrs.append(var)
             Xcols.append(column)
-            Xexpr.append(lambda s, _: np.asarray(
-                s.astype('category').cat.codes.replace(-1, np.nan)
-            ))
-        elif _is_datetime(s):
-            var = TimeVariable(str(column))
-            s = pd.to_datetime(s, infer_datetime_format=True)
-            attrs.append(var)
-            Xcols.append(column)
-            Xexpr.append(lambda s, v: np.asarray(
-                s.astype('str').replace('NaT', np.nan).map(v.parse)
-            ))
+
+            def to_cat(s, _):
+                x = s.astype("category").cat.codes
+                # it is same than x.replace(-1, np.nan), but much faster
+                x = x.where(x != -1, np.nan)
+                return np.asarray(x)
+
+            Xexpr.append(to_cat)
         elif is_numeric_dtype(s):
             var = ContinuousVariable(
                 # set number of decimals to 0 if int else keeps default behaviour
@@ -281,13 +339,21 @@ def table_from_frame(df, *, force_nominal=False):
     XYM, domain = vars_from_df(df, force_nominal=force_nominal)
 
     if hasattr(df, 'orange_weights') and hasattr(df, 'orange_attributes'):
-        W = [df.orange_weights[i] for i in df.index
-             if i in df.orange_weights]
+        W = [df.orange_weights[i] for i in df.index if i in df.orange_weights]
         if len(W) != len(df.index):
             W = None
         attributes = df.orange_attributes
-        ids = [int(i[2:]) if str(i).startswith('_o') else Table.new_id()
-               for i in df.index]
+        if isinstance(df.index, pd.MultiIndex) or not is_string_dtype(df.index):
+            # we can skip checking for Orange indices when MultiIndex an when
+            # not string dtype and so speedup the conversion
+            ids = None
+        else:
+            ids = [
+                int(i[2:])
+                if str(i).startswith("_o") and i[2:].isdigit()
+                else Table.new_id()
+                for i in df.index
+            ]
     else:
         W = None
         attributes = None
@@ -371,7 +437,9 @@ def table_to_frame(tab, include_metas=False):
         elif col.is_continuous:
             dt = float
             # np.nan are not compatible with int column
-            if col.number_of_decimals == 0 and not np.any(np.isnan(vals)):
+            # using pd.isnull since np.isnan fails on array with dtype object
+            # which can happen when metas contain column with strings
+            if col.number_of_decimals == 0 and not np.any(pd.isnull(vals)):
                 dt = int
             result = (col.name, pd.Series(vals).astype(dt))
         elif col.is_string:

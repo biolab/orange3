@@ -174,14 +174,6 @@ This part of documentation describes some classes and functions that are used
 internally. The classes will likely maintain compatibility in the future,
 while the functions may be changed.
 
-Wrappers for Qt classes
-=======================
-
-.. autoclass:: SpinBoxWFocusOut
-.. autoclass:: DoubleSpinBoxWFocusOut
-.. autoclass:: LineEditWFocusOut
-.. autoclass:: OrangeListBox
-
 Wrappers for Python classes
 ===========================
 

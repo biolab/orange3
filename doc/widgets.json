@@ -240,7 +240,6 @@
     "icon": "../Orange/widgets/data/icons/PythonScript.svg",
     "background": "#FFD39F",
     "keywords": [
-     "file",
      "program",
      "function"
     ]
@@ -629,6 +628,15 @@
     "background": "#FAC1D9",
     "keywords": [
      "boost"
+    ]
+   },
+   {
+    "text": "Curve Fit",
+    "doc": "visual-programming/source/widgets/model/curvefit.md",
+    "icon": "../Orange/widgets/model/icons/CurveFit.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "function"
     ]
    },
    {

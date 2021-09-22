@@ -3,6 +3,7 @@ from AnyQt.QtWidgets import (
     QFormLayout, QCheckBox, QLineEdit, QWidget, QVBoxLayout, QLabel
 )
 from orangecanvas.application.settings import UserSettingsDialog, FormLayout
+from orangecanvas.document.interactions import PluginDropHandler
 from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.utils.overlay import NotificationOverlay
 
@@ -107,6 +108,9 @@ class MainWindow(OWCanvasMainWindow):
         super().__init__(*args, **kwargs)
         self.notification_overlay = NotificationOverlay(self.scheme_widget)
         self.notification_server = None
+        self.scheme_widget.setDropHandlers([
+            PluginDropHandler("orange.canvas.drophandler")
+        ])
 
     def open_canvas_settings(self):
         # type: () -> None

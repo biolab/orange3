@@ -128,7 +128,7 @@ def delete(command, data, ):
         condition = indices_to_mask(command.indices, len(data))
     else:
         indices = np.asarray(command.indices)
-        if indices.dtype == np.bool:
+        if indices.dtype == bool:
             condition = indices
         else:
             condition = indices_to_mask(indices, len(data))

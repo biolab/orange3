@@ -14,7 +14,7 @@ To fix the bug, we need to be able to reproduce it. Please answer the following 
 -->
 
 
-- [ ] **What's wrong?**
+**What's wrong?**
 <!-- Be specific, clear, and concise. Include screenshots if relevant. -->
 <!-- If you're getting an error message, copy it, and enclose it with three backticks (```). -->
 
@@ -22,7 +22,7 @@ To fix the bug, we need to be able to reproduce it. Please answer the following 
 
 
 
-- [ ] **How can we reproduce the problem?** 
+**How can we reproduce the problem?** 
 <!-- Upload a zip with the .ows file and data. -->
 <!-- Describe the steps (open this widget, click there, then add this...) -->
 
@@ -30,7 +30,7 @@ To fix the bug, we need to be able to reproduce it. Please answer the following 
 
 
 
-- [ ] **What's your environment?**
+**What's your environment?**
 <!-- To find your Orange version, see "Help → About → Version" or `Orange.version.full_version` in code -->
 - Operating system:
 - Orange version:

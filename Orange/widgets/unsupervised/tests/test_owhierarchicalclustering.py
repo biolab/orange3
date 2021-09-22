@@ -26,6 +26,8 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         cls.signal_data = cls.distances
         cls.same_input_output_domain = False
 
+        cls.distances_cols = Euclidean(cls.data, axis=0)
+
     def setUp(self):
         self.widget = self.create_widget(OWHierarchicalClustering)
 
@@ -34,6 +36,11 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         cluster = items[sorted(list(items.keys()))[4]]
         self.widget.dendrogram.set_selected_items([cluster])
         return [14, 15, 32, 33]
+
+    def _select_data_columns(self):
+        items = self.widget.dendrogram._items
+        cluster = items[sorted(list(items.keys()))[5]]
+        self.widget.dendrogram.set_selected_items([cluster])
 
     def _compare_selected_annotated_domains(self, selected, annotated):
         self.assertEqual(annotated.domain.variables,
@@ -170,3 +177,17 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.distances, self.distances, widget=w)
         ids_2 = self.get_output(w.Outputs.selected_data, widget=w).ids
         self.assertSequenceEqual(list(ids_1), list(ids_2))
+
+    def test_column_distances(self):
+        self.send_signal(self.widget.Inputs.distances, self.distances_cols)
+        self._select_data_columns()
+        o = self.get_output(self.widget.Outputs.annotated_data)
+        annotated = [(a.name, a.attributes['cluster']) for a in o.domain.attributes]
+        self.assertEqual(annotated, [('sepal width', 1), ('petal length', 1),
+                                     ('sepal length', 0), ('petal width', 0)])
+
+        self.widget.selection_box.buttons[2].click()  # top N
+        o = self.get_output(self.widget.Outputs.annotated_data)
+        annotated = [(a.name, a.attributes['cluster']) for a in o.domain.attributes]
+        self.assertEqual(annotated, [('sepal length', 1), ('petal width', 2),
+                                     ('sepal width', 3), ('petal length', 3)])

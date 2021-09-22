@@ -138,7 +138,7 @@ def assure_array_sparse(a, sparse_class: Callable = sp.csc_matrix):
     if not sp.issparse(a):
         # since x can be a list, cast to np.array
         # since x can come from metas with string, cast to float
-        a = np.asarray(a).astype(np.float)
+        a = np.asarray(a).astype(float)
     return sparse_class(a)
 
 
@@ -268,3 +268,19 @@ def get_unique_names_domain(attributes, class_vars=(), metas=()):
                                  for old, new in zip(all_names, unique_names)
                                  if new != old))
     return (attributes, class_vars, metas), renamed
+
+
+def sanitized_name(name: str) -> str:
+    """
+    Replace non-alphanumeric characters and leading zero with `_`.
+
+    Args:
+        name (str): proposed name
+
+    Returns:
+        name (str): new name
+    """
+    sanitized = re.sub(r"\W", "_", name)
+    if sanitized[0].isdigit():
+        sanitized = "_" + sanitized
+    return sanitized

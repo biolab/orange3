@@ -216,6 +216,28 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(out_domain[3].attributes[selected_atr_name])
         self.assertFalse(out_domain[4].attributes[selected_atr_name])
 
+    def test_test_explicit_closing(self):
+        data = self.data[:3]
+        self.widget.rowwise = True
+        self.send_signal(self.signal_name, data[:1], 1)
+        self.send_signal(self.signal_name, data[1:2], 2)
+        self.send_signal(self.signal_name, data[2:3], 3)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(out.ids, data[:3].ids)
+
+        self.send_signal(self.signal_name, None, 2)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(out.ids, data[0:3:2].ids)
+
+        self.send_signal(self.signal_name, data[1:2], 2)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(out.ids, data[:3].ids)
+
+        self.send_signal(self.signal_name,
+                         self.widget.Inputs.data.closing_sentinel, 1)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(out.ids, data[1:3].ids)
+
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
         self.send_signal(self.signal_name, self.data[:0], 1)
@@ -285,7 +307,8 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, self.data, 6)
         self.assertTrue(self.widget.Error.too_many_inputs.is_shown())
 
-        self.send_signal(self.signal_name, None, 6)
+        self.send_signal(self.signal_name,
+                         self.widget.Inputs.data.closing_sentinel, 6)
         self.assertFalse(self.widget.Error.too_many_inputs.is_shown())
 
     def test_no_attributes(self):

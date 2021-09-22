@@ -13,7 +13,7 @@ A tree algorithm with forward pruning.
 - Learner: decision tree learning algorithm
 - Model: trained model
 
-**Tree** is a simple algorithm that splits the data into nodes by class purity. It is a precursor to [Random Forest](../model/randomforest.md). Tree in Orange is designed in-house and can handle both discrete and continuous datasets.
+**Tree** is a simple algorithm that splits the data into nodes by class purity (information gain for categorical and MSE for numeric target variable). It is a precursor to [Random Forest](../model/randomforest.md). Tree in Orange is designed in-house and can handle both categorical and numeric datasets.
 
 It can also be used for both classification and regression tasks.
 

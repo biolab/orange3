@@ -1,6 +1,6 @@
 import logging
 import warnings
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 from functools import partial
 from itertools import chain
 from types import SimpleNamespace
@@ -33,7 +33,7 @@ from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import AttributeList, Input, Msg, Output, OWWidget
+from Orange.widgets.widget import AttributeList, Input, MultiInput, Output, Msg, OWWidget
 
 log = logging.getLogger(__name__)
 
@@ -256,7 +256,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
     class Inputs:
         data = Input("Data", Table)
-        scorer = Input("Scorer", score.Scorer, multiple=True)
+        scorer = MultiInput("Scorer", score.Scorer, filter_none=True)
 
     class Outputs:
         reduced_data = Output("Reduced Data", Table, default=True)
@@ -292,7 +292,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
     def __init__(self):
         OWWidget.__init__(self)
         ConcurrentWidgetMixin.__init__(self)
-        self.scorers = OrderedDict()
+        self.scorers: List[ScoreMeta] = []
         self.out_domain_desc = None
         self.data = None
         self.problem_type_mode = ProblemType.CLASSIFICATION
@@ -440,18 +440,27 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         self.on_select()
 
     @Inputs.scorer
-    def set_learner(self, scorer, id):  # pylint: disable=redefined-builtin
-        if scorer is None:
-            self.scorers.pop(id, None)
-        else:
-            # Avoid caching a (possibly stale) previous instance of the same
-            # Scorer passed via the same signal
-            if id in self.scorers:
-                self.scorers_results = {}
+    def set_learner(self, index, scorer):
+        self.scorers[index] = ScoreMeta(
+            scorer.name, scorer.name, scorer,
+            ProblemType.from_variable(scorer.class_type),
+            False
+        )
+        self.scorers_results = {}
 
-            self.scorers[id] = ScoreMeta(scorer.name, scorer.name, scorer,
-                                         ProblemType.from_variable(scorer.class_type),
-                                         False)
+    @Inputs.scorer.insert
+    def insert_learner(self, index: int, scorer):
+        self.scorers.insert(index, ScoreMeta(
+            scorer.name, scorer.name, scorer,
+            ProblemType.from_variable(scorer.class_type),
+            False
+        ))
+        self.scorers_results = {}
+
+    @Inputs.scorer.remove
+    def remove_learner(self, index):
+        self.scorers.pop(index)
+        self.scorers_results = {}
 
     def _get_methods(self):
         return [
@@ -469,7 +478,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
     def _get_scorers(self):
         scorers = []
-        for scorer in self.scorers.values():
+        for scorer in self.scorers:
             if scorer.problem_type in (
                 self.problem_type_mode,
                 ProblemType.UNSUPERVISED,

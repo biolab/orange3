@@ -3,7 +3,7 @@ import numpy as np
 
 from Orange.data import Domain, ContinuousVariable
 from Orange.data.util import get_unique_names, get_unique_names_duplicates, \
-    get_unique_names_domain, one_hot
+    get_unique_names_domain, one_hot, sanitized_name
 
 
 class TestGetUniqueNames(unittest.TestCase):
@@ -258,6 +258,14 @@ class TestOneHot(unittest.TestCase):
     def test_dim_too_low(self):
         with self.assertRaises(ValueError):
             one_hot(self.values, dim=2)
+
+
+class TestSanitizedName(unittest.TestCase):
+    def test_sanitized_name(self):
+        self.assertEqual(sanitized_name("Foo"), "Foo")
+        self.assertEqual(sanitized_name("Foo Bar"), "Foo_Bar")
+        self.assertEqual(sanitized_name("0Foo"), "_0Foo")
+        self.assertEqual(sanitized_name("1 Foo Bar"), "_1_Foo_Bar")
 
 
 if __name__ == "__main__":

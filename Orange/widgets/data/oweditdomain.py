@@ -2481,7 +2481,7 @@ def apply_transform_discete(var, trs):
     dest_codes = positions(dest_values)
     if mapping is not None:
         # construct a lookup table
-        lookup = np.full(len(source_values), np.nan, dtype=np.float)
+        lookup = np.full(len(source_values), np.nan, dtype=float)
         for ci, cj in mapping:
             if ci is not None and cj is not None:
                 i, j = source_codes[ci], dest_codes[cj]
@@ -2631,7 +2631,7 @@ def as_float_or_nan(
     where conversion failed with NaN.
     """
     if out is None:
-        out = np.full(arr.shape, np.nan, np.float if dtype is None else dtype)
+        out = np.full(arr.shape, np.nan, float if dtype is None else dtype)
     if np.issubdtype(arr.dtype, np.inexact) or \
             np.issubdtype(arr.dtype, np.integer):
         np.copyto(out, arr, casting="unsafe", where=where)

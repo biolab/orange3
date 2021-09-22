@@ -276,6 +276,40 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             stored_settings=dict(stored_path="", stored_name="c.foo"))
         self.assertTrue(w.bt_save.text().endswith(" c.foo"))
 
+    def test_invalid_filter(self):
+        writer = Mock()
+
+        class OWSaveNoWriter(OWSaveBase):
+            name = "Mock save"
+            writers = {}
+            filters = {"csv (*.csv)": writer}
+
+        w = self.create_widget(
+            OWSaveNoWriter,
+            stored_settings=dict(
+                filter="Unsupported format (*.foo)", stored_path='test.foo')
+        )
+        w.data = Mock()
+        self.assertIsNone(w.writer)
+
+        w.do_save()
+        self.assertTrue(w.Error.unsupported_format.is_shown())
+
+        name = "/home/u/orange/a/b/c.csv"
+        w.get_save_filename = Mock(return_value=(name, "csv (*.csv)"))
+        w.save_file_as()
+        self.assertFalse(w.Error.unsupported_format.is_shown())
+        call_name, _ = writer.write.call_args[0]
+        self.assertPathEqual(call_name, name)
+
+    def test_default_filter(self):
+        class OWSave(OWSaveBase):
+            name = "Mock save"
+            filters = {"csv (*.csv)": Mock(), "txt (*.txt)": Mock()}
+
+        widget = self.create_widget(OWSave)
+        self.assertEqual(widget.default_filter(), "csv (*.csv)")
+
 
 class TestOWSaveBase(WidgetTest):
     # Tests for OWSaveBase methods with filters as list
@@ -316,6 +350,14 @@ class TestOWSaveBase(WidgetTest):
         self.assertEqual(widget.suggested_name(), "")
         self.assertIs(widget.valid_filters(), widget.get_filters())
         self.assertIs(widget.default_valid_filter(), widget.filter)
+
+    def test_default_filter(self):
+        class OWSave(OWSaveBase):
+            name = "Mock save"
+            filters = ["csv (*.csv)", "txt (*.txt)"]
+
+        widget = self.create_widget(OWSave)
+        self.assertEqual(widget.default_filter(), OWSave.filters[0])
 
 
 class TestOWSaveUtils(unittest.TestCase):

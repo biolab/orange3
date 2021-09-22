@@ -708,7 +708,7 @@ class NoFocusRectDelegate(QStyledItemDelegate):
         super().paint(painter, option, index)
 
 
-class DistributionDelegate(QStyledItemDelegate):
+class DistributionDelegate(NoFocusRectDelegate):
     def paint(self, painter, option, index):
         # type: (QPainter, QStyleOptionViewItem, QModelIndex) -> None
         scene = index.data(Qt.DisplayRole)  # type: Optional[QGraphicsScene]
@@ -716,14 +716,6 @@ class DistributionDelegate(QStyledItemDelegate):
             return super().paint(painter, option, index)
 
         painter.setRenderHint(QPainter.Antialiasing)
-
-        if option.state & QStyle.State_Selected:
-            background_color = option.palette.highlight()
-        else:
-            background_color = index.data(Qt.BackgroundRole)
-        if background_color is not None:
-            scene.setBackgroundBrush(background_color)
-
         scene.render(painter, target=QRectF(option.rect), mode=Qt.IgnoreAspectRatio)
 
         # pylint complains about inconsistent return statements
