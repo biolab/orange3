@@ -593,7 +593,7 @@ class OWDataTable(OWWidget):
 
     def _on_show_variable_labels_changed(self):
         """The variable labels (var.attribues) visibility was changed."""
-        for slot in self._inputs.values():
+        for slot in self._inputs:
             self._update_variable_labels(slot.view)
 
     def _on_distribution_color_changed(self):
@@ -619,7 +619,7 @@ class OWDataTable(OWWidget):
             tab.reset()
 
     def _on_select_rows_changed(self):
-        for slot in self._inputs.values():
+        for slot in self._inputs:
             selection_model = slot.view.selectionModel()
             selection_model.setSelectBlocks(not self.select_rows)
             if self.select_rows:
