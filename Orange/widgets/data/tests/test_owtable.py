@@ -60,7 +60,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
 
     def _select_data(self):
         self.widget.selected_cols = list(range(len(self.data.domain.variables)))
-        self.widget.selected_rows = list(range(0, len(self.data.domain.variables), 10))
+        self.widget.selected_rows = list(range(0, len(self.data), 10))
         self.widget.set_selection()
         return self.widget.selected_rows
 
@@ -167,6 +167,34 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         with excepthook_catch():
             w.grab()
         w.controls.show_distributions.toggle()
+
+    def test_whole_rows(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.data, 0)
+        self.assertTrue(w.select_rows)  # default value
+        with excepthook_catch():
+            w.controls.select_rows.toggle()
+        self.assertFalse(w.select_rows)
+        w.selected_cols = [0, 1]
+        w.selected_rows = [0, 1, 2, 3]
+        w.set_selection()
+        out = self.get_output(w.Outputs.selected_data)
+        self.assertEqual(out.domain,
+                         Domain([self.data.domain.attributes[0]], self.data.domain.class_var))
+        with excepthook_catch():
+            w.controls.select_rows.toggle()
+        out = self.get_output(w.Outputs.selected_data)
+        self.assertTrue(w.select_rows)
+        self.assertEqual(out.domain,
+                         self.data.domain)
+
+    def test_show_attribute_labels(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.data, 0)
+        self.assertTrue(w.show_attribute_labels)  # default value
+        with excepthook_catch():
+            w.controls.show_attribute_labels.toggle()
+        self.assertFalse(w.show_attribute_labels)
 
 
 if __name__ == "__main__":
