@@ -4,6 +4,11 @@ Change Log
 [next] - TBA
 ------------
 
+[3.30.1] - 2021-09-24
+--------------------
+##### Bugfixes
+* OWTable: fix select whole rows regression ([#5605](../../pull/5605))
+
 [3.30.0] - 2021-09-22
 --------------------
 ##### Enhancements
@@ -1589,8 +1594,9 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.30.0...HEAD
-[next]: https://github.com/biolab/orange3/compare/3.29.3...3.30.0
+[next]: https://github.com/biolab/orange3/compare/3.30.1...HEAD
+[3.30.1]: https://github.com/biolab/orange3/compare/3.30.0...3.30.1
+[3.30.0]: https://github.com/biolab/orange3/compare/3.29.3...3.30.0
 [3.29.3]: https://github.com/biolab/orange3/compare/3.29.2...3.29.3
 [3.29.2]: https://github.com/biolab/orange3/compare/3.29.1...3.29.2
 [3.29.1]: https://github.com/biolab/orange3/compare/3.29.0...3.29.1
