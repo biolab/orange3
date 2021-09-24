@@ -2,6 +2,7 @@ from itertools import chain
 from os import listdir, environ
 from os.path import isfile, join, dirname
 import unittest
+import pkg_resources
 
 from orangecanvas.registry import WidgetRegistry
 from orangewidget.workflow import widgetsscheme
@@ -54,3 +55,19 @@ class TestWorkflows(GuiTest):
                               format(ows_file, str(e)))
                 finally:
                     new_scheme.clear()
+
+    def test_examples_order(self):
+        # register test entrypoints
+        dist_orange = pkg_resources.working_set.by_key['orange3']
+        ep_map = dist_orange.get_entry_map()
+        ep_first = pkg_resources.EntryPoint('!Testname', 'orangecontrib.any_addon.tutorials')
+        ep_last = pkg_resources.EntryPoint('exampletutorials', 'orangecontrib.other_addon.tutorials')
+        ep_map['orange.widgets.tutorials'] = {ep_first.name: ep_first, ep_last.name: ep_last}
+
+        entry_points = list(Config.examples_entry_points())
+
+        self.assertEqual(entry_points[0].name, ep_first.name)
+        self.assertEqual(entry_points[1].name, '000-Orange3')
+        self.assertEqual(entry_points[2].name, ep_last.name)
+
+        del ep_map['orange.widgets.tutorials']
