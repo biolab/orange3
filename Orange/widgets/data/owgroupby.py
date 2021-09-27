@@ -75,12 +75,10 @@ AGGREGATIONS = {
         {ContinuousVariable, TimeVariable},
     ),
     "First value": Aggregation(
-        "first",
-        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+        "first", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
     ),
     "Last value": Aggregation(
-        "last",
-        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+        "last", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
     ),
     "Random value": Aggregation(
         lambda x: x.sample(1, random_state=0),
@@ -92,16 +90,19 @@ AGGREGATIONS = {
     "Count": Aggregation(
         "size", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
     ),
+    "Proportion defined": Aggregation(
+        lambda x: x.count() / x.size,
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+    ),
 }
 # list of ordered aggregation names is required on several locations so we
 # prepare it in advance
 AGGREGATIONS_ORD = list(AGGREGATIONS)
 
+# use first aggregation suitable for each type as default
 DEFAULT_AGGREGATIONS = {
-    ContinuousVariable: {next(iter(AGGREGATIONS.keys()))},
-    TimeVariable: {next(iter(AGGREGATIONS.keys()))},
-    DiscreteVariable: set(),
-    StringVariable: set(),
+    var: {next(name for name, agg in AGGREGATIONS.items() if var in agg.types)}
+    for var in (ContinuousVariable, TimeVariable, DiscreteVariable, StringVariable)
 }
 
 
@@ -114,7 +115,7 @@ class Result:
 def _run(
     data: Table,
     group_by_attrs: List[Variable],
-    aggregations: Dict[Variable, List[str]],
+    aggregations: Dict[Variable, Set[str]],
     result: Result,
     state: TaskState,
 ) -> Result:
@@ -383,7 +384,9 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
                 # check if aggregation active for all selected attributes,
                 # partially check if active for some else uncheck
                 cb.setCheckState(
-                    Qt.Checked if activated == {True} else (Qt.Unchecked if activated == {False} else Qt.PartiallyChecked)
+                    Qt.Checked
+                    if activated == {True}
+                    else (Qt.Unchecked if activated == {False} else Qt.PartiallyChecked)
                 )
 
     def __gb_changed(self) -> None:

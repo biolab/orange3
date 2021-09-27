@@ -99,7 +99,12 @@ class OrangeTableGroupBy:
 
     def _aggregations_to_table(self, aggregations: List[pd.Series]) -> Table:
         """Concatenate aggregation series and convert back to Table"""
-        df = pd.concat(aggregations, axis=1)
+        if aggregations:
+            df = pd.concat(aggregations, axis=1)
+        else:
+            # when no aggregation is computed return a table with gropby columns
+            df = self.group_by.first()
+            df = df.drop(columns=df.columns)
         gb_attributes = df.index.names
         df = df.reset_index()  # move group by var that are in index to columns
         table = table_from_frame(df)

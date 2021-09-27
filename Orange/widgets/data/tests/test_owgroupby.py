@@ -159,15 +159,36 @@ class TestOWGropBy(WidgetTest):
         )
         self.select_table_rows(table, [3])  # discrete variable
         self.assert_enabled_cbs(
-            {"Count defined", "Count", "Concatenate", "First value", "Last value", "Random value"}
+            {
+                "Count defined",
+                "Count",
+                "Concatenate",
+                "First value",
+                "Last value",
+                "Random value",
+            }
         )
         self.select_table_rows(table, [4])  # string variable
         self.assert_enabled_cbs(
-            {"Count defined", "Count", "Concatenate", "First value", "Last value", "Random value"}
+            {
+                "Count defined",
+                "Count",
+                "Concatenate",
+                "First value",
+                "Last value",
+                "Random value",
+            }
         )
         self.select_table_rows(table, [3, 4])  # string variable
         self.assert_enabled_cbs(
-            {"Count defined", "Count", "Concatenate", "First value", "Last value", "Random value"}
+            {
+                "Count defined",
+                "Count",
+                "Concatenate",
+                "First value",
+                "Last value",
+                "Random value",
+            }
         )
         self.select_table_rows(table, [2, 3, 4])  # string variable
         self.assert_enabled_cbs(
@@ -399,7 +420,13 @@ class TestOWGropBy(WidgetTest):
             Qt.PartiallyChecked, self.widget.agg_checkboxes["Mode"].checkState()
         )
         self.assert_aggregations_equal(
-            ["Mean, Mode, Count defined and 1 more", "Mean, Mode, Count defined", "Mean", "Count defined, Count", ""]
+            [
+                "Mean, Mode, Count defined and 1 more",
+                "Mean, Mode, Count defined",
+                "Mean",
+                "Count defined, Count",
+                "",
+            ]
         )
         self.assertDictEqual(
             {
