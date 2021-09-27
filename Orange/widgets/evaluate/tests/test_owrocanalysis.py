@@ -10,6 +10,7 @@ from AnyQt.QtWidgets import QToolTip
 from Orange.data import Table
 import Orange.evaluation
 import Orange.classification
+from Orange.evaluation import Results
 
 from Orange.widgets.evaluate import owrocanalysis
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
@@ -173,16 +174,34 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
         self.assertFalse(self.widget.Error.invalid_results.is_shown())
 
     def test_tooltips(self):
-        data_in = Orange.data.Table("titanic")
-        res = Orange.evaluation.TestOnTrainingData(
-            store_data=True
-        )
-        res = res(
-            data=data_in,
-            learners=[Orange.classification.KNNLearner(),
-                      Orange.classification.LogisticRegressionLearner()]
-        )
+        # See https://people.inf.elte.hu/kiss/11dwhdm/roc.pdf for the curve
+        # representing this data
+        actual = np.array([float(c == "n") for c in "ppnpppnnpnpnpnnnpnpn"])
+        p = np.array([.9, .8, .7, .6, .55, .54, .53, .52, .51, .505,
+                      .4, .39, .38, .37, .36, .35, .34, .33, .30, .1])
+        n = 1 - p
+        predicted = (p > .5).astype(float)
 
+        # The second curve is like the first except for the first three points:
+        # it goes to the right and then up
+        p2 = p.copy()
+        p2[:4] = [0.7, 0.8, 0.9, 0.59]
+        n2 = 1 - p2
+        predicted2 = (p2 < .5).astype(float)
+
+        data = Orange.data.Table(
+            Orange.data.Domain(
+                [],
+                [Orange.data.DiscreteVariable("y", values=tuple("pn"))]),
+            np.empty((len(p), 0), dtype=float),
+            actual
+        )
+        res = Results(
+            data=data,
+            actual=actual,
+            predicted=np.array([list(predicted), list(predicted2)]),
+            probabilities=np.array([list(zip(p, n)), list(zip(p2, n2))])
+        )
         self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.widget.roc_averaging = OWROCAnalysis.Merge
         self.widget.target_index = 0
@@ -203,11 +222,12 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
             show_text.assert_not_called()
 
             # test single point
-            pos = item.mapToScene(0.22504, 0.45400)
+            pos = item.mapToScene(0, 0.1)
             pos = view.mapFromScene(pos)
             mouseMove(view.viewport(), pos)
             (_, text), _ = show_text.call_args
-            self.assertIn("(#1) 0.400", text)
+            self.assertIn("(#1) 0.900", text)
+            self.assertNotIn("#2", text)
 
             # test overlapping points
             pos = item.mapToScene(0.0, 0.0)
@@ -216,19 +236,26 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
             (_, text), _ = show_text.call_args
             self.assertIn("(#1) 1.000\n(#2) 1.000", text)
 
+            pos = item.mapToScene(0.1, 0.3)
+            pos = view.mapFromScene(pos)
+            mouseMove(view.viewport(), pos)
+            (_, text), _ = show_text.call_args
+            self.assertIn("(#1) 0.600\n(#2) 0.590", text)
+            show_text.reset_mock()
+
             # test that cache is invalidated when changing averaging mode
             self.widget.roc_averaging = OWROCAnalysis.Threshold
             self.widget._replot()
             mouseMove(view.viewport(), pos)
             (_, text), _ = show_text.call_args
-            self.assertIn("(#1) 1.000\n(#2) 1.000", text)
+            self.assertIn("(#1) 0.600\n(#2) 0.590", text)
+            show_text.reset_mock()
 
             # test nan thresholds
             self.widget.roc_averaging = OWROCAnalysis.Vertical
             self.widget._replot()
             mouseMove(view.viewport(), pos)
-            (_, text), _ = show_text.call_args
-            self.assertEqual(text, "")
+            show_text.assert_not_called()
 
     def test_target_prior(self):
         w = self.widget
