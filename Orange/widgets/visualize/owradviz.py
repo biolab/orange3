@@ -176,7 +176,7 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         data = self.data.transform(domain)
         projector = RadViz()
         projection = projector(data)
-        radviz_xy = projection(data)
+        radviz_xy = projection(data).X
         y = projector.preprocess(data).Y
         return -self._evaluate_projection(radviz_xy, y)
 
