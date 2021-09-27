@@ -106,15 +106,15 @@ class TestOWGropBy(WidgetTest):
                 "Standard deviation",
                 "Variance",
                 "Sum",
-                "Min",
-                "Max",
+                "Min. value",
+                "Max. value",
                 "Count defined",
                 "Count",
                 "Concatenate",
-                "Delta",
-                "First",
-                "Last",
-                "Random",
+                "Span",
+                "First value",
+                "Last value",
+                "Random value",
             }
         )
         self.select_table_rows(table, [0, 1])
@@ -126,15 +126,15 @@ class TestOWGropBy(WidgetTest):
                 "Standard deviation",
                 "Variance",
                 "Sum",
-                "Min",
-                "Max",
+                "Min. value",
+                "Max. value",
                 "Count defined",
                 "Count",
                 "Concatenate",
-                "Delta",
-                "First",
-                "Last",
-                "Random",
+                "Span",
+                "First value",
+                "Last value",
+                "Random value",
             }
         )
         self.select_table_rows(table, [2])
@@ -146,28 +146,28 @@ class TestOWGropBy(WidgetTest):
                 "Standard deviation",
                 "Variance",
                 "Sum",
-                "Min",
-                "Max",
+                "Min. value",
+                "Max. value",
                 "Count defined",
                 "Count",
                 "Concatenate",
-                "Delta",
-                "First",
-                "Last",
-                "Random",
+                "Span",
+                "First value",
+                "Last value",
+                "Random value",
             }
         )
         self.select_table_rows(table, [3])  # discrete variable
         self.assert_enabled_cbs(
-            {"Count defined", "Count", "Concatenate", "First", "Last", "Random"}
+            {"Count defined", "Count", "Concatenate", "First value", "Last value", "Random value"}
         )
         self.select_table_rows(table, [4])  # string variable
         self.assert_enabled_cbs(
-            {"Count defined", "Count", "Concatenate", "First", "Last", "Random"}
+            {"Count defined", "Count", "Concatenate", "First value", "Last value", "Random value"}
         )
         self.select_table_rows(table, [3, 4])  # string variable
         self.assert_enabled_cbs(
-            {"Count defined", "Count", "Concatenate", "First", "Last", "Random"}
+            {"Count defined", "Count", "Concatenate", "First value", "Last value", "Random value"}
         )
         self.select_table_rows(table, [2, 3, 4])  # string variable
         self.assert_enabled_cbs(
@@ -178,15 +178,15 @@ class TestOWGropBy(WidgetTest):
                 "Standard deviation",
                 "Variance",
                 "Sum",
-                "Min",
-                "Max",
+                "Min. value",
+                "Max. value",
                 "Count defined",
                 "Count",
                 "Concatenate",
-                "Delta",
-                "First",
-                "Last",
-                "Random",
+                "Span",
+                "First value",
+                "Last value",
+                "Random value",
             }
         )
 
@@ -230,7 +230,7 @@ class TestOWGropBy(WidgetTest):
         self.select_table_rows(table, [0, 1])
         self.widget.agg_checkboxes["Mode"].click()
         self.assert_aggregations_equal(
-            ["Mean, Median and 1 more", "Mean, Mode", "Mean", "", ""]
+            ["Mean, Median, Mode", "Mean, Mode", "Mean", "", ""]
         )
         self.assertDictEqual(
             {
@@ -251,7 +251,7 @@ class TestOWGropBy(WidgetTest):
         self.widget.agg_checkboxes["Median"].click()
         self.assertEqual(Qt.Checked, self.widget.agg_checkboxes["Median"].checkState())
         self.assert_aggregations_equal(
-            ["Mean, Median and 1 more", "Mean, Median and 1 more", "Mean", "", ""]
+            ["Mean, Median, Mode", "Mean, Median, Mode", "Mean", "", ""]
         )
         self.assertDictEqual(
             {
@@ -290,7 +290,7 @@ class TestOWGropBy(WidgetTest):
             Qt.PartiallyChecked, self.widget.agg_checkboxes["Median"].checkState()
         )
         self.assert_aggregations_equal(
-            ["Mean, Median and 1 more", "Mean, Mode", "Mean", "", ""]
+            ["Mean, Median, Mode", "Mean, Mode", "Mean", "", ""]
         )
         self.assertDictEqual(
             {
@@ -322,7 +322,7 @@ class TestOWGropBy(WidgetTest):
         self.widget.agg_checkboxes["Count"].click()
         self.assertEqual(Qt.Checked, self.widget.agg_checkboxes["Count"].checkState())
         self.assert_aggregations_equal(
-            ["Mean, Mode and 1 more", "Mean, Mode", "Mean", "Count", ""]
+            ["Mean, Mode, Count", "Mean, Mode", "Mean", "Count", ""]
         )
         self.assertDictEqual(
             {
@@ -364,7 +364,7 @@ class TestOWGropBy(WidgetTest):
             Qt.PartiallyChecked, self.widget.agg_checkboxes["Mode"].checkState()
         )
         self.assert_aggregations_equal(
-            ["Mean, Mode and 1 more", "Mean, Mode", "Mean", "Count", ""]
+            ["Mean, Mode, Count", "Mean, Mode", "Mean", "Count", ""]
         )
         self.assertDictEqual(
             {
@@ -394,18 +394,19 @@ class TestOWGropBy(WidgetTest):
         )
 
         self.widget.agg_checkboxes["Mode"].click()
+        self.widget.agg_checkboxes["Count defined"].click()
         self.assertEqual(
             Qt.PartiallyChecked, self.widget.agg_checkboxes["Mode"].checkState()
         )
         self.assert_aggregations_equal(
-            ["Mean, Mode and 1 more", "Mean, Mode", "Mean", "Count", ""]
+            ["Mean, Mode, Count defined and 1 more", "Mean, Mode, Count defined", "Mean", "Count defined, Count", ""]
         )
         self.assertDictEqual(
             {
-                d["a"]: {"Mean", "Mode", "Count"},
-                d["b"]: {"Mean", "Mode"},
+                d["a"]: {"Mean", "Mode", "Count", "Count defined"},
+                d["b"]: {"Mean", "Mode", "Count defined"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: {"Count"},
+                d["dvar"]: {"Count", "Count defined"},
                 d["svar"]: set(),
             },
             self.widget.aggregations,
@@ -442,21 +443,21 @@ class TestOWGropBy(WidgetTest):
             "cvar - Standard deviation",
             "cvar - Variance",
             "cvar - Sum",
-            "cvar - Min",
-            "cvar - Max",
+            "cvar - Min. value",
+            "cvar - Max. value",
+            "cvar - Span",
+            "cvar - First value",
+            "cvar - Last value",
             "cvar - Count defined",
             "cvar - Count",
-            "cvar - Delta",
-            "cvar - First",
-            "cvar - Last",
+            "dvar - First value",
+            "dvar - Last value",
             "dvar - Count defined",
             "dvar - Count",
-            "dvar - First",
-            "dvar - Last",
+            "svar - First value",
+            "svar - Last value",
             "svar - Count defined",
             "svar - Count",
-            "svar - First",
-            "svar - Last",
             "cvar - Concatenate",
             "dvar - Concatenate",
             "svar - Concatenate",
@@ -466,22 +467,39 @@ class TestOWGropBy(WidgetTest):
 
         # fmt: off
         expected_df = pd.DataFrame([
-            [.15, .15, .1, .07, .005, .3, .1, .2, 2, 2, .1, 0.1, 0.2, 2, 2,
-             "val1", "val2", 2, 2, "sval1", "sval2", "0.1 0.2", "val1 val2",
-             "sval1 sval2", 1, 1],
-            [.3, .3, .3, np.nan, np.nan, .3, .3, .3, 1, 2, 0, .3, .3, 1, 2,
-             "val2", "val2", 2, 2, "", "sval2", "0.3", "val2", "sval2", 1, 2],
-            [.433, .4, .3, 0.153, 0.023, 1.3, .3, .6, 3, 3, .3, .3, .6, 3, 3,
-             "val1", "val1", 3, 3, "sval1", "sval1", "0.3 0.4 0.6",
-             "val1 val2 val1", "sval1 sval2 sval1", 1, 3],
-            [1.5, 1.5, 1, 0.707, 0.5, 3, 1, 2, 2, 2, 1, 1, 2, 2, 2,
-             "val2", "val1", 2, 2, "sval2", "sval1", "1.0 2.0",
-             "val2 val1", "sval2 sval1", 2, 1],
-            [-0.5, -0.5, -4, 4.95, 24.5, -1, -4, 3, 2, 2, 7, 3, -4, 2, 2,
-             "val2", "val1", 2, 2, "sval2", "sval1", "3.0 -4.0",
-             "val2 val1", "sval2 sval1", 2, 2],
-            [5, 5, 5, 0, 0, 10, 5, 5, 2, 2, 0, 5, 5, 2, 2, "val2", "val1", 2, 2,
-             "sval2", "sval1", "5.0 5.0", "val2 val1", "sval2 sval1", 2, 3]
+            [.15, .15, .1, .07, .005, .3, .1, .2, .1, 0.1, 0.2, 2, 2,
+             "val1", "val2", 2, 2,
+             "sval1", "sval2", 2, 2,
+             "0.1 0.2", "val1 val2", "sval1 sval2",
+             1, 1],
+            [.3, .3, .3, np.nan, np.nan, .3, .3, .3, 0, .3, .3, 1, 2,
+             "val2", "val2", 1, 2,
+             "", "sval2", 2, 2,
+             "0.3", "val2", "sval2",
+             1, 2],
+            [.433, .4, .3, 0.153, 0.023, 1.3, .3, .6, .3, .3, .6, 3, 3,
+             "val1", "val1", 3, 3,
+             "sval1", "sval1",
+             3, 3, "0.3 0.4 0.6",
+             "val1 val2 val1", "sval1 sval2 sval1",
+             1, 3],
+            [1.5, 1.5, 1, 0.707, 0.5, 3, 1, 2, 1, 1, 2, 2, 2,
+             "val2", "val1", 2, 2,
+             "sval2", "sval1", 2, 2,
+             "1.0 2.0",
+             "val2 val1", "sval2 sval1",
+             2, 1],
+            [-0.5, -0.5, -4, 4.95, 24.5, -1, -4, 3, 7, 3, -4, 2, 2,
+             "val2", "val1", 2, 2,
+             "sval2", "sval1", 2, 2,
+             "3.0 -4.0",
+             "val2 val1", "sval2 sval1",
+             2, 2],
+            [5, 5, 5, 0, 0, 10, 5, 5, 0, 5, 5, 2, 2,
+             "val2", "val1", 2, 2,
+             "sval2", "sval1", 2, 2,
+             "5.0 5.0", "val2 val1", "sval2 sval1",
+             2, 3]
             ], columns=expected_columns
         )
         # fmt: on
@@ -490,7 +508,7 @@ class TestOWGropBy(WidgetTest):
             self.get_output(self.widget.Outputs.data), include_metas=True
         )
         # remove random since it is not possible to test
-        output_df = output_df.loc[:, ~output_df.columns.str.endswith("Random")]
+        output_df = output_df.loc[:, ~output_df.columns.str.endswith("Random value")]
 
         pd.testing.assert_frame_equal(
             output_df,

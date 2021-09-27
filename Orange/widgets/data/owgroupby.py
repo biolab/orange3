@@ -64,31 +64,33 @@ AGGREGATIONS = {
     "Standard deviation": Aggregation("std", {ContinuousVariable, TimeVariable}),
     "Variance": Aggregation("var", {ContinuousVariable, TimeVariable}),
     "Sum": Aggregation("sum", {ContinuousVariable, TimeVariable}),
-    "Min": Aggregation("min", {ContinuousVariable, TimeVariable}),
-    "Max": Aggregation("max", {ContinuousVariable, TimeVariable}),
+    "Concatenate": Aggregation(
+        concatenate,
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+    ),
+    "Min. value": Aggregation("min", {ContinuousVariable, TimeVariable}),
+    "Max. value": Aggregation("max", {ContinuousVariable, TimeVariable}),
+    "Span": Aggregation(
+        lambda x: pd.Series.max(x) - pd.Series.min(x),
+        {ContinuousVariable, TimeVariable},
+    ),
+    "First value": Aggregation(
+        "first",
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+    ),
+    "Last value": Aggregation(
+        "last",
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+    ),
+    "Random value": Aggregation(
+        lambda x: x.sample(1, random_state=0),
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+    ),
     "Count defined": Aggregation(
         "count", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
     ),
     "Count": Aggregation(
         "size", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
-    ),
-    "Concatenate": Aggregation(
-        concatenate,
-        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
-    ),
-    "Delta": Aggregation(
-        lambda x: pd.Series.max(x) - pd.Series.min(x),
-        {ContinuousVariable, TimeVariable},
-    ),
-    "First": Aggregation(
-        "first", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
-    ),
-    "Last": Aggregation(
-        "last", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
-    ),
-    "Random": Aggregation(
-        lambda x: x.sample(1, random_state=0),
-        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
     ),
 }
 # list of ordered aggregation names is required on several locations so we
@@ -165,19 +167,23 @@ class VarTableModel(QAbstractTableModel):
         """
         Reset the aggregation values in the table for the attribute
         """
-        index = self.index(self.domain.index(attribute), 1)
+        index = self.domain.index(attribute)
+        if index < 0:
+            # indices of metas are negative: first meta -1, second meta -2, ...
+            index = len(self.domain.variables) - 1 - index
+        index = self.index(index, 1)
         self.dataChanged.emit(index, index)
 
-    def rowCount(self, parent=None) -> int:  # pylint: disable=unused-argument
+    def rowCount(self, parent=None) -> int:
         return (
             0
-            if self.domain is None
+            if self.domain is None or (parent is not None and parent.isValid())
             else len(self.domain.variables) + len(self.domain.metas)
         )
 
     @staticmethod
     def columnCount(parent=None) -> int:
-        return 0 if parent.isValid() else len(TABLE_COLUMN_NAMES)
+        return 0 if parent is not None and parent.isValid() else len(TABLE_COLUMN_NAMES)
 
     def data(self, index, role=Qt.DisplayRole) -> Any:
         row, col = index.row(), index.column()
@@ -191,8 +197,8 @@ class VarTableModel(QAbstractTableModel):
                 aggs = sorted(
                     self.parent.aggregations.get(val, []), key=AGGREGATIONS_ORD.index
                 )
-                n_more = "" if len(aggs) <= 2 else f" and {len(aggs) - 2} more"
-                return ", ".join(aggs[:2]) + n_more
+                n_more = "" if len(aggs) <= 3 else f" and {len(aggs) - 3} more"
+                return ", ".join(aggs[:3]) + n_more
         elif role == Qt.DecorationRole and col == TabColumn.attribute:
             return gui.attributeIconDict[val]
         return None
@@ -249,8 +255,8 @@ class CheckBox(QCheckBox):
         else:
             agg = self.text()
             selected_attrs = self.parent.get_selected_attributes()
-            types_ = set(type(attr) for attr in selected_attrs)
-            can_be_applied_all = (AGGREGATIONS[agg].types & types_) == types_
+            types = set(type(attr) for attr in selected_attrs)
+            can_be_applied_all = types <= AGGREGATIONS[agg].types
 
             # true if aggregation applied to all attributes that can be
             # aggregated with selected aggregation
@@ -282,8 +288,10 @@ class CheckBox(QCheckBox):
 @contextmanager
 def block_signals(widget):
     widget.blockSignals(True)
-    yield
-    widget.blockSignals(False)
+    try:
+        yield
+    finally:
+        widget.blockSignals(False)
 
 
 class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
@@ -315,7 +323,6 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
         self.result = None
 
         self.gb_attrs_model = DomainModel(
-            valid_types=(DiscreteVariable, ContinuousVariable, StringVariable),
             separators=False,
         )
         self.agg_table_model = VarTableModel(self)
@@ -366,19 +373,17 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
         """Callback for table selection change; update checkboxes"""
         selected_attrs = self.get_selected_attributes()
 
-        types_ = set(type(attr) for attr in selected_attrs)
+        types = {type(attr) for attr in selected_attrs}
         active_aggregations = [self.aggregations[attr] for attr in selected_attrs]
         for agg, cb in self.agg_checkboxes.items():
-            cb.setDisabled(len(types_ & AGGREGATIONS[agg].types) == 0)
+            cb.setDisabled(not types & AGGREGATIONS[agg].types)
 
-            activated = [agg in a for a in active_aggregations]
+            activated = {agg in a for a in active_aggregations}
             with block_signals(cb):
                 # check if aggregation active for all selected attributes,
                 # partially check if active for some else uncheck
                 cb.setCheckState(
-                    Qt.Checked
-                    if activated and all(activated)
-                    else (Qt.PartiallyChecked if any(activated) else Qt.Unchecked)
+                    Qt.Checked if activated == {True} else (Qt.Unchecked if activated == {False} else Qt.PartiallyChecked)
                 )
 
     def __gb_changed(self) -> None:

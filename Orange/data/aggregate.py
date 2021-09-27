@@ -9,7 +9,7 @@ from Orange.util import dummy_callback
 
 class OrangeTableGroupBy:
     """
-    The class which object is the result of the groupby operation on Orange's
+    A class representing the result of the groupby operation on Orange's
     Table and offers aggregation functionality on groupby object. It wraps
     Panda's GroupBy object.
 
