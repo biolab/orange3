@@ -15,7 +15,9 @@ from typing import Dict, Any, Optional, Iterable, List
 import pkg_resources
 import requests
 
-from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
+from AnyQt.QtGui import (
+    QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon, QGuiApplication
+)
 from AnyQt.QtCore import Qt, QPoint, QRect, QSettings
 
 from orangecanvas import config as occonfig
@@ -70,6 +72,7 @@ class Config(config.Config):
 
     def init(self):
         super().init()
+        QGuiApplication.setApplicationDisplayName(self.ApplicationName)
         widget_settings_dir_cfg = environ.get_path("widget_settings_dir", "")
         if widget_settings_dir_cfg:
             # widget_settings_dir is configured via config file
