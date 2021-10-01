@@ -428,6 +428,21 @@ class TestPandasCompat(unittest.TestCase):
             self.assertEqual(len(df), len(table), assert_message)
             self.assertEqual(len(df.columns), len(table.domain.variables), assert_message)
 
+    def test_table_from_frames(self):
+        table = Table("brown-selected")
+        table.ids = np.arange(100, len(table) + 100, 1, dtype=int)
+
+        x, y, m = table.to_pandas_dfs()
+        new_table = Table.from_pandas_dfs(x, y, m)
+
+        np.testing.assert_array_equal(table.X, new_table.X)
+        np.testing.assert_array_equal(table.Y, new_table.Y)
+        np.testing.assert_array_equal(table.metas, new_table.metas)
+        np.testing.assert_array_equal(table.ids, new_table.ids)
+        self.assertTupleEqual(table.domain.attributes, new_table.domain.attributes)
+        self.assertTupleEqual(table.domain.metas, new_table.domain.metas)
+        self.assertEqual(table.domain.class_var, new_table.domain.class_var)
+
 
 class TestTablePandas(unittest.TestCase):
     def setUp(self):
