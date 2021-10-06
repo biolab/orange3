@@ -57,17 +57,20 @@ class TestWorkflows(GuiTest):
                     new_scheme.clear()
 
     def test_examples_order(self):
+        sorted_entry_point_names = [point.name for point in Config.examples_entry_points()]
+
         # register test entrypoints
         dist_orange = pkg_resources.working_set.by_key['orange3']
         ep_map = dist_orange.get_entry_map()
         ep_first = pkg_resources.EntryPoint('!Testname', 'orangecontrib.any_addon.tutorials')
         ep_last = pkg_resources.EntryPoint('exampletutorials', 'orangecontrib.other_addon.tutorials')
+        sorted_entry_point_names.extend([ep_first.name, ep_last.name])
+        sorted_entry_point_names.sort()
         ep_map['orange.widgets.tutorials'] = {ep_first.name: ep_first, ep_last.name: ep_last}
 
         entry_points = list(Config.examples_entry_points())
 
-        self.assertEqual(entry_points[0].name, ep_first.name)
-        self.assertEqual(entry_points[1].name, '000-Orange3')
-        self.assertEqual(entry_points[2].name, ep_last.name)
+        for i, entry_point in enumerate(entry_points):
+            self.assertEqual(entry_point.name, sorted_entry_point_names[i])
 
         del ep_map['orange.widgets.tutorials']
