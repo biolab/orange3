@@ -281,7 +281,7 @@ class TestCatGBLearnerEditor(GuiTest):
         self.assertEqual(params["l2_leaf_reg"], self.editor.lambda_)
         self.assertEqual(params["rsm"], self.editor.colsample_bylevel)
         self.assertEqual(self.editor.learning_rate, 0.3)
-        self.assertEqual(round(params["learning_rate"], 3), 0.006)
+        # params["learning_rate"] is automatically defined so don't test it
 
     @unittest.skipIf(CatGBRegressor is None, "Missing 'catboost' package")
     def test_default_parameters_reg(self):
@@ -295,8 +295,7 @@ class TestCatGBLearnerEditor(GuiTest):
         self.assertEqual(params["l2_leaf_reg"], self.editor.lambda_)
         self.assertEqual(params["rsm"], self.editor.colsample_bylevel)
         self.assertEqual(self.editor.learning_rate, 0.3)
-        self.assertEqual(round(params["learning_rate"], 3), 0.035)
-
+        # params["learning_rate"] is automatically defined so don't test it
 
 class TestOWGradientBoosting(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
