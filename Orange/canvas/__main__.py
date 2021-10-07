@@ -358,7 +358,7 @@ class OMain(Main):
     def argument_parser(self) -> argparse.ArgumentParser:
         parser = super().argument_parser()
         parser.add_argument(
-            "--clear-widget-settings", default=False, type=bool,
+            "--clear-widget-settings", action="store_true",
             help="Clear stored widget setting/defaults",
         )
         return parser
