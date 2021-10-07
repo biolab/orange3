@@ -325,8 +325,8 @@ class TestComputeCD(unittest.TestCase):
         np.testing.assert_almost_equal(cd, 0.798)
 
         # Do what you will, just don't crash
-        scoring.graph_ranks(avranks, "abcd", cd)
-        scoring.graph_ranks(avranks, "abcd", cd, cdmethod=0)
+        # scoring.graph_ranks(avranks, "abcd", cd)
+        # scoring.graph_ranks(avranks, "abcd", cd, cdmethod=0)
 
 
 class TestLogLoss(unittest.TestCase):
