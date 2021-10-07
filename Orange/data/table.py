@@ -1616,9 +1616,6 @@ class Table(Sequence, Storage):
                 retain = bn.anynan(self._Y, axis=1)
             if not negate:
                 retain = np.logical_not(retain)
-        # TODO: Decide whether to keep this or not;
-        if np.all(retain):
-            return self
         return self.from_table_rows(self, retain)
 
     def _filter_same_value(self, column, value, negate=False):
@@ -2286,25 +2283,6 @@ def _subarray(arr, rows, cols):
         return arr[rows]
     cols = _optimize_indices(cols, arr.shape[1])
     return arr[_rxc_ix(rows, cols)]
-
-
-# TODO: Pick that one or the one above
-def _subarray2(arr, rows, cols):
-    rows = _optimize_indices(rows, arr.shape[0])
-    if arr.ndim == 1:
-        sub_arr = arr[rows]
-    else:
-        cols = _optimize_indices(cols, arr.shape[1])
-        sub_arr = arr[_rxc_ix(rows, cols)]
-    # Don't return a view when it is the same as the original
-    if isinstance(sub_arr, np.ndarray) \
-            and type(sub_arr) is type(arr) \
-            and sub_arr.base is arr \
-            and sub_arr.shape == arr.shape \
-            and sub_arr.strides == arr.strides:
-        return arr
-    else:
-        return sub_arr
 
 
 def _optimize_indices(indices, maxlen):
