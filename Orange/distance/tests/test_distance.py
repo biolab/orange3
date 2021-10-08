@@ -5,7 +5,8 @@ from math import sqrt
 import numpy as np
 from scipy.sparse import csr_matrix
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
+from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable,\
+    Domain, Table
 from Orange import distance
 
 
@@ -863,7 +864,6 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
         model = distance.Jaccard().fit(self.data)
         assert_almost_equal(model.ps, np.array([0.5, 2/3, 0.75]))
 
-        # pylint: disable=bad-whitespace
         assert_almost_equal(
             model(self.data),
             1 - np.array([[      1,        2 / 2.5,        1 / 2.5,        2/3 / 3],
@@ -902,6 +902,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
         dist_dense = self.Distance(dense_data)
         dist_sparse = self.Distance(sparse_data)
 
+        # false positive, pylint: disable=unsubscriptable-object
         self.assertEqual(dist_dense[0][1], 0)
         self.assertEqual(dist_sparse[0][1], 0)
         self.assertEqual(dist_dense[0][2], 1)
@@ -978,6 +979,43 @@ class TestHelperFunctions(unittest.TestCase):
         i = 9
         new_i = sqrt_(i, step=10)
         np.testing.assert_array_equal(new_i, np.sqrt(i))
+
+
+class TestDataUtilities(unittest.TestCase):
+    def test_remove_discrete(self):
+        d1, d2, d3 = (DiscreteVariable(c, values=tuple("123")) for c in "abc")
+        c1, c2 = (ContinuousVariable(c) for c in "xy")
+        t = StringVariable("t")
+        domain = Domain([d1, c1], d2, [c2, d3, t])
+        data = Table.from_domain(domain, 5)
+
+        reduced = distance.remove_discrete_features(data)
+        self.assertEqual(reduced.domain.attributes, (c1, ))
+        self.assertEqual(reduced.domain.class_var, d2)
+        self.assertEqual(reduced.domain.metas, (c2, d3, t))
+
+        reduced = distance.remove_discrete_features(data, to_metas=True)
+        self.assertEqual(reduced.domain.attributes, (c1, ))
+        self.assertEqual(reduced.domain.class_var, d2)
+        self.assertEqual(reduced.domain.metas, (c2, d3, t, d1))
+
+    def test_remove_non_binary(self):
+        b1, b2, b3 = (DiscreteVariable(c, values=tuple("12")) for c in "abc")
+        d1, d2, d3 = (DiscreteVariable(c, values=tuple("123")) for c in "def")
+        c1, c2 = (ContinuousVariable(c) for c in "xy")
+        t = StringVariable("t")
+        domain = Domain([d1, b1, b2, c1], d2, [c2, d3, t, b3])
+        data = Table.from_domain(domain, 5)
+
+        reduced = distance.remove_nonbinary_features(data)
+        self.assertEqual(reduced.domain.attributes, (b1, b2))
+        self.assertEqual(reduced.domain.class_var, d2)
+        self.assertEqual(reduced.domain.metas, (c2, d3, t, b3))
+
+        reduced = distance.remove_nonbinary_features(data, to_metas=True)
+        self.assertEqual(reduced.domain.attributes, (b1, b2))
+        self.assertEqual(reduced.domain.class_var, d2)
+        self.assertEqual(reduced.domain.metas, (c2, d3, t, b3, d1, c1))
 
 
 if __name__ == "__main__":

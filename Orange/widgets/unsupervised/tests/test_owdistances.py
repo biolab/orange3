@@ -228,6 +228,36 @@ class TestOWDistances(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
         assert_no_error()
 
+    def test_discrete_in_metas(self):
+        domain = self.iris.domain
+        data = self.iris.transform(
+            Domain(domain.attributes[:-1] + (domain.class_var, ),
+                   [],
+                   domain.attributes[-1:])
+        )
+        for self.widget.metric_idx, (_, metric) in enumerate(METRICS):
+            if metric == distance.Cosine:
+                break
+        self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_finished()
+        out = self.get_output(self.widget.Outputs.distances)
+        out_domain = out.row_items.domain
+        self.assertEqual(out_domain.attributes, domain.attributes[:-1])
+        self.assertEqual(out_domain.metas,
+                         (domain.attributes[-1], domain.class_var))
+
+    def test_non_binary_in_metas(self):
+        for self.widget.metric_idx, (_, metric) in enumerate(METRICS):
+            if metric == distance.Jaccard:
+                break
+        zoo = Table("zoo")[:20]
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.wait_until_finished()
+        out = self.get_output(self.widget.Outputs.distances)
+        domain = zoo.domain
+        out_domain = out.row_items.domain
+        self.assertEqual(out_domain.metas, (domain["name"], domain["legs"]))
+
 
 if __name__ == "__main__":
     unittest.main()
