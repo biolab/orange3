@@ -107,7 +107,8 @@ class TestOWNeighbors(WidgetTest):
         widget = self.widget
         data = Table("iris")
         reference = data[:3]
-        data.X[0:10, 0] = np.nan
+        with data.unlocked():
+            data.X[0:10, 0] = np.nan
         self.send_signal(widget.Inputs.data, self.iris)
         self.send_signal(widget.Inputs.reference, reference)
         widget.apply_button.button.click()

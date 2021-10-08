@@ -65,7 +65,8 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_unknowns_in_labels(self):
         data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
-        data.Y[::3] = np.nan
+        with data.unlocked(data.Y):
+            data.Y[::3] = np.nan
         valid = ~np.isnan(data.Y.flatten())
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
@@ -87,7 +88,8 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(self.widget.Distances[self.widget.distance_idx][0],
                          'Cosine')
         data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
-        data.X[::3] = 0
+        with data.unlocked(data.X):
+            data.X[::3] = 0
         valid = np.any(data.X != 0, axis=1)
         self.assertFalse(self.widget.Warning.nan_distances.is_shown())
         self.send_signal(self.widget.Inputs.data, data)

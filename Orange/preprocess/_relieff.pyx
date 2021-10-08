@@ -362,7 +362,12 @@ cdef tuple prepare(X, y, is_discrete, contingencies):
         row_ptp[row_ptp == 0] = np.inf  # Avoid zero-division
         X[:, is_continuous] -= row_min[is_continuous]
         X[:, is_continuous] /= row_ptp[is_continuous]
-    y = np.array(y, dtype=np.float64)
+    if y.ndim > 1:
+        if y.shape[1] > 1:
+            raise ValueError("ReliefF expects a single class")
+        y = np.array(y[:, 0], dtype=np.float64)
+    else:
+        y = np.array(y, dtype=np.float64)
     is_defined = np.logical_not(np.isnan(y))
     X = X[is_defined]
     y = y[is_defined]

@@ -143,7 +143,8 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         # Pearson distance used for clustering of columns does not
         # handle all zero columns well
         iris = Table("iris")
-        iris[:, 0] = 0
+        with iris.unlocked():
+            iris[:, 0] = 0
 
         self.widget.col_clustering = True
         self.widget.set_dataset(iris)
@@ -232,7 +233,8 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_set_split_var_missing(self):
         data = self.brown_selected[::3].copy()
-        data.Y[::5] = np.nan
+        with data.unlocked():
+            data.Y[::5] = np.nan
         w = self.widget
         self.send_signal(self.widget.Inputs.data, data, widget=w)
         self.assertIs(w.split_by_var, data.domain.class_var)
@@ -260,7 +262,8 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_set_split_column_key_missing(self):
         data = self._brown_selected_10()
-        data.Y[:5] = np.nan
+        with data.unlocked():
+            data.Y[:5] = np.nan
         data_t = data.transpose(data)
         function = data.domain["function"]
         w = self.widget
@@ -342,15 +345,17 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_row_color_annotations_with_na(self):
         widget = self.widget
-        data =  self._brown_selected_10()
-        data.Y[:3] = np.nan
-        data.metas[:3, -1] = np.nan
+        data = self._brown_selected_10()
+        with data.unlocked():
+            data.Y[:3] = np.nan
+            data.metas[:3, -1] = np.nan
         self.send_signal(widget.Inputs.data, data, widget=widget)
         widget.set_annotation_color_var(data.domain["function"])
         self.assertTrue(widget.scene.widget.right_side_colors[0].isVisible())
         widget.set_annotation_color_var(data.domain["diau g"])
-        data.Y[:] = np.nan
-        data.metas[:, -1] = np.nan
+        with data.unlocked():
+            data.Y[:] = np.nan
+            data.metas[:, -1] = np.nan
         self.send_signal(widget.Inputs.data, data, widget=widget)
         widget.set_annotation_color_var(data.domain["function"])
         widget.set_annotation_color_var(data.domain["diau g"])
@@ -373,15 +378,17 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
     def test_col_color_annotations_with_na(self):
         widget = self.widget
         data = self._brown_selected_10()
-        data.Y[:3] = np.nan
-        data.metas[:3, -1] = np.nan
+        with data.unlocked():
+            data.Y[:3] = np.nan
+            data.metas[:3, -1] = np.nan
         data_t = data.transpose(data)
         self.send_signal(widget.Inputs.data, data_t, widget=widget)
         widget.set_column_annotation_color_var(data.domain["function"])
         self.assertTrue(widget.scene.widget.top_side_colors[0].isVisible())
         widget.set_column_annotation_color_var(data.domain["diau g"])
-        data.Y[:] = np.nan
-        data.metas[:, -1] = np.nan
+        with data.unlocked():
+            data.Y[:] = np.nan
+            data.metas[:, -1] = np.nan
         data_t = data.transpose(data)
         self.send_signal(widget.Inputs.data, data_t, widget=widget)
         widget.set_column_annotation_color_var(data.domain["function"])

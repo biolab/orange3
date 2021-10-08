@@ -64,7 +64,7 @@ class TestOWCreateInstance(WidgetTest):
         self.widget.controls.append_to_data.setChecked(False)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.reference, self.data[:1])
-        output = self.get_output(self.widget.Outputs.data)
+        output = self.get_output(self.widget.Outputs.data).copy()
 
         buttons = self._get_init_buttons()
 
@@ -78,7 +78,8 @@ class TestOWCreateInstance(WidgetTest):
 
         buttons[1].click()  # Mean
         output_mean = self.get_output(self.widget.Outputs.data)
-        output.X = np.round(np.mean(self.data.X, axis=0), 1).reshape(1, 4)
+        with output.unlocked():
+            output.X = np.round(np.mean(self.data.X, axis=0), 1).reshape(1, 4)
         self.assert_table_equal(output_mean, output)
 
         buttons[2].click()  # Random
@@ -149,7 +150,8 @@ class TestOWCreateInstance(WidgetTest):
 
     def test_missing_values_reference(self):
         reference = self.data[:1].copy()
-        reference[:] = np.nan
+        with reference.unlocked():
+            reference[:] = np.nan
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.reference, reference)
         output1 = self.get_output(self.widget.Outputs.data)
@@ -160,7 +162,8 @@ class TestOWCreateInstance(WidgetTest):
 
     def test_saved_workflow(self):
         data = self.data
-        data.X[:, 0] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         buttons = self._get_init_buttons()
         buttons[2].click()  # Random

@@ -601,7 +601,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 var_name, values=values + ["Other"])
             domain = Orange.data.Domain(attrs, classes, metas + (clust_var,))
             data = items.transform(domain)
-            data.get_column_view(clust_var)[0][:] = c
+            with data.unlocked(data.metas):
+                data.get_column_view(clust_var)[0][:] = c
 
             if selected_indices:
                 selected_data = data[mask]

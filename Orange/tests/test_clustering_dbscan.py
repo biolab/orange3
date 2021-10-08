@@ -42,13 +42,15 @@ class TestDBSCAN(unittest.TestCase):
         self.assertEqual(len(self.iris), len(model.labels))
 
     def test_predict_sparse_csc(self):
-        self.iris.X = csc_matrix(self.iris.X[::20])
+        with self.iris.unlocked():
+            self.iris.X = csc_matrix(self.iris.X[::20])
         c = self.dbscan(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))
 
     def test_predict_spares_csr(self):
-        self.iris.X = csr_matrix(self.iris.X[::20])
+        with self.iris.unlocked():
+            self.iris.X = csr_matrix(self.iris.X[::20])
         c = self.dbscan(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))

@@ -115,11 +115,12 @@ class TestNormalizer(unittest.TestCase):
         self.assertEqual((normalized.X != solution).nnz, 0)
 
         # raise error for non-zero offsets
-        data.X = sp.csr_matrix(np.array([
-            [0, 0, 0],
-            [0, 1, 3],
-            [0, 2, 4],
-        ]))
+        with data.unlocked():
+            data.X = sp.csr_matrix(np.array([
+                [0, 0, 0],
+                [0, 1, 3],
+                [0, 2, 4],
+            ]))
         with self.assertRaises(ValueError):
             normalizer(data)
 

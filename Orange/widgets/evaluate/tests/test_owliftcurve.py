@@ -53,6 +53,7 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
 
     def test_nan_input(self):
         res = copy.copy(self.res)
+        res.actual = res.actual.copy()
         res.actual[0] = np.nan
         self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.assertTrue(self.widget.Error.invalid_results.is_shown())

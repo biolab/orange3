@@ -18,7 +18,8 @@ class TestSVMLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = Table(test_filename('datasets/ionosphere.tab'))
-        cls.data.shuffle()
+        with cls.data.unlocked():
+            cls.data.shuffle()
 
     def test_SVM(self):
         learn = SVMLearner()

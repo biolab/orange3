@@ -1,6 +1,11 @@
 import os
 import unittest
+
+import Orange
 import Orange.widgets
+
+if Orange.data.Table.LOCKING is None:
+    Orange.data.Table.LOCKING = True
 
 
 def load_tests(loader, tests, pattern):

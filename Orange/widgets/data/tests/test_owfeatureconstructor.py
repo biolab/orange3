@@ -306,7 +306,8 @@ class FeatureFuncTest(unittest.TestCase):
         iris = Table("iris")
         f = FeatureFunc("1 / petal_length",
                         [("petal_length", iris.domain["petal length"])])
-        iris[0]["petal length"] = 0
+        with iris.unlocked():
+            iris[0]["petal length"] = 0
 
         f.mask_exceptions = False
         self.assertRaises(Exception, f, iris)

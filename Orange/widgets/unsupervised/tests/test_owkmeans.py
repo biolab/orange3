@@ -490,7 +490,8 @@ class TestOWKMeans(WidgetTest):
         )
         # X is different, should cause update
         table3 = table1.copy()
-        table3.X[:, 0] = 1
+        with table3.unlocked():
+            table3.X[:, 0] = 1
 
         with patch.object(self.widget, 'unconditional_commit') as commit:
             self.send_signal(self.widget.Inputs.data, table1)

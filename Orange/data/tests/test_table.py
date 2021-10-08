@@ -1,4 +1,5 @@
 import unittest
+import os
 
 import numpy as np
 import scipy.sparse as sp
@@ -162,10 +163,12 @@ class TestTableInit(unittest.TestCase):
         tab1 = self._new_table((a, b), (c, ), (), 0)
         tab1.attributes = dict(a=5, b=7)
         tab2 = self._new_table((d, ), (e, ), (), 1000)
-        tab2.W = np.arange(5)
+        with tab2.unlocked():
+            tab2.W = np.arange(5)
         tab3 = self._new_table((f, g), (), (), 2000)
         tab3.attributes = dict(a=1, c=4)
-        tab3.W = np.arange(5, 10)
+        with tab3.unlocked():
+            tab3.W = np.arange(5, 10)
         joined = Table.concatenate((tab1, tab2, tab3), axis=1)
         domain = joined.domain
         self.assertEqual(domain.attributes, (a, b, d, f, g))
@@ -249,6 +252,101 @@ class TestTableInit(unittest.TestCase):
             np.hstack((tab.metas, np.array(list("abcde")).reshape(5, -1))))
 
 
+class TestTableLocking(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.orig_locking = Table.LOCKING
+        if os.getenv("CI"):
+            assert Table.LOCKING
+        else:
+            Table.LOCKING = True
+
+    @classmethod
+    def tearDownClass(cls):
+        Table.LOCKING = cls.orig_locking
+
+    def setUp(self):
+        a, b, c, d, e, f, g = map(ContinuousVariable, "abcdefg")
+        domain = Domain([a, b, c], d, [e, f])
+        self.table = Table.from_numpy(
+            domain,
+            np.random.random((5, 3)),
+            np.random.random(5),
+            np.random.random((5, 2)))
+
+    def test_tables_are_locked(self):
+        tab = self.table
+
+        with self.assertRaises(ValueError):
+            tab.X[0, 0] = 0
+        with self.assertRaises(ValueError):
+            tab.Y[0] = 0
+        with self.assertRaises(ValueError):
+            tab.metas[0, 0] = 0
+        with self.assertRaises(ValueError):
+            tab.W[0] = 0
+
+        with self.assertRaises(ValueError):
+            tab.X = np.random.random((5, 3))
+        with self.assertRaises(ValueError):
+            tab.Y = np.random.random(5)
+        with self.assertRaises(ValueError):
+            tab.metas = np.random.random((5, 2))
+        with self.assertRaises(ValueError):
+            tab.W = np.random.random(5)
+
+    def test_unlocking(self):
+        tab = self.table
+        with tab.unlocked():
+            tab.X[0, 0] = 0
+            tab.Y[0] = 0
+            tab.metas[0, 0] = 0
+            tab.W[0] = 0
+
+            tab.X = np.random.random((5, 3))
+            tab.Y = np.random.random(5)
+            tab.metas = np.random.random((5, 2))
+            tab.W = np.random.random(5)
+
+        with tab.unlocked(tab.Y):
+            tab.Y[0] = 0
+            with self.assertRaises(ValueError):
+                tab.X[0, 0] = 0
+            with tab.unlocked():
+                tab.X[0, 0] = 0
+            with self.assertRaises(ValueError):
+                tab.X[0, 0] = 0
+
+    def test_force_unlocking(self):
+        tab = self.table
+        with tab.unlocked():
+            tab.Y = np.arange(10)[:5]
+
+        # tab.Y is now a view and can't be unlocked
+        with self.assertRaises(ValueError):
+            with tab.unlocked(tab.X, tab.Y):
+                pass
+        # Tets that tab.X was not left unlocked
+        with self.assertRaises(ValueError):
+            tab.X[0, 0] = 0
+
+        # This is not how force unlocking should be used! Force unlocking is
+        # meant primarily for passing tables to Cython code that does not
+        # properly define ndarrays as const. They should not modify the table;
+        # modification here is meant only for testing.
+        with tab.force_unlocked(tab.X, tab.Y):
+            tab.X[0, 0] = 0
+            tab.Y[0] = 0
+
+    def test_locking_flag(self):
+        try:
+            default = Table.LOCKING
+            Table.LOCKING = False
+            self.setUp()
+            self.table.X[0, 0] = 0
+        finally:
+            Table.LOCKING = default
+
 class TestTableFilters(unittest.TestCase):
     def setUp(self):
         self.domain = Domain(
@@ -265,7 +363,7 @@ class TestTableFilters(unittest.TestCase):
             [0, 1, 0, 1, 1, np.nan, 1] +
             [0, 0, 0, 0, np.nan, 1, 1] +
             "a  b  c  d  e     f    g".split() +
-            list("ABCDEF") + [""], dtype=object).reshape(-1, 7).T
+            list("ABCDEF") + [""], dtype=object).reshape(-1, 7).T.copy()
         self.table = Table.from_numpy(
             self.domain,
             np.array(
@@ -331,7 +429,8 @@ class TestTableFilters(unittest.TestCase):
         self.assertEqual(list(filtered.metas[:, -2].flatten()), ["a"])
 
     def test_row_filter_string(self):
-        self.table.metas[:, -1] = self.table.metas[::-1, -2]
+        with self.table.unlocked():
+            self.table.metas[:, -1] = self.table.metas[::-1, -2]
         val_filter = Values([
             FilterString(None, FilterString.Between, "c", "e")])
         filtered = val_filter(self.table)

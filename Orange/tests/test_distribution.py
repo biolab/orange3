@@ -100,8 +100,9 @@ class TestDiscreteDistribution(unittest.TestCase):
 
     def test_fallback_with_weights_and_nan(self):
         d = data.Table("zoo")
-        d.set_weights(np.random.uniform(0., 1., size=len(d)))
-        d.Y[::10] = np.nan
+        with d.unlocked():
+            d.set_weights(np.random.uniform(0., 1., size=len(d)))
+            d.Y[::10] = np.nan
 
         default = distribution.Discrete(d, "type")
         d._compute_distributions = Mock(side_effect=NotImplementedError)
@@ -233,7 +234,8 @@ class TestDiscreteDistribution(unittest.TestCase):
 
     def test_array_with_unknowns(self):
         d = data.Table("zoo")
-        d.Y[0] = np.nan
+        with d.unlocked():
+            d.Y[0] = np.nan
         disc = distribution.Discrete(d, "type")
         self.assertIsInstance(disc, np.ndarray)
         self.assertEqual(disc.unknowns, 1)
@@ -524,7 +526,8 @@ class TestDomainDistribution(unittest.TestCase):
         assert_dist_and_unknowns(ddist[18], [[0, 2], [4, 1]])
         assert_dist_and_unknowns(ddist[19], zeros)
 
-        d.set_weights(np.array([1, 2, 3, 4, 5]))
+        with d.unlocked():
+            d.set_weights(np.array([1, 2, 3, 4, 5]))
         ddist = distribution.get_distributions(d)
 
         self.assertEqual(len(ddist), 20)
@@ -559,7 +562,9 @@ class TestDomainDistribution(unittest.TestCase):
         # repeat with nan values
         assert d.metas.dtype.kind == "O"
         assert d.metas[0, 1] == 0
-        d.metas[0, 1] = np.nan
+
+        with d.unlocked():
+            d.metas[0, 1] = np.nan
         dist, nanc = d._compute_distributions([variable])[0]
         assert_dist_equal(dist, [2, 3, 2])
         self.assertEqual(nanc, 1)

@@ -64,7 +64,8 @@ class TestOWLouvain(WidgetTest):
         meta = np.array([0] * 5)
         meta_var = ContinuousVariable(name='meta_var')
         table = Table.from_domain(domain=Domain([], metas=[meta_var]), n_rows=5)
-        table.get_column_view(meta_var)[0][:] = meta
+        with table.unlocked():
+            table.get_column_view(meta_var)[0][:] = meta
 
         self.send_signal(self.widget.Inputs.data, table)
         self.commit_and_wait()
@@ -89,7 +90,8 @@ class TestOWLouvain(WidgetTest):
         )
         # X is different, should cause update
         table3 = table1.copy()
-        table3.X[:, 0] = 1
+        with table3.unlocked():
+            table3.X[:, 0] = 1
 
         with patch.object(self.widget, '_invalidate_output') as commit:
             self.send_signal(self.widget.Inputs.data, table1)
@@ -216,7 +218,8 @@ class TestOWLouvain(WidgetTest):
         # Randomly set some values to zero
         dense_data = self.iris
         mask = random_state.beta(1, 2, size=self.iris.X.shape) > 0.5
-        dense_data.X[mask] = 0
+        with dense_data.unlocked():
+            dense_data.X[mask] = 0
         sparse_data = dense_data.to_sparse()
 
         def _compute_clustering(data):

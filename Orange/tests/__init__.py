@@ -12,6 +12,9 @@ except ImportError:
 import numpy as np
 import Orange
 
+if Orange.data.Table.LOCKING is None:
+    Orange.data.Table.LOCKING = True
+
 
 @contextmanager
 def named_file(content, encoding=None, suffix=''):

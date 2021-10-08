@@ -356,10 +356,12 @@ class TestFilterString(unittest.TestCase):
         flt = FilterString("name", FilterString.IsDefined)
         self.assertTrue(flt(self.inst))
         for s in ["?", "nan"]:
-            self.inst["name"] = s
+            with self.data.unlocked():
+                self.inst["name"] = s
             flt = FilterString("name", FilterString.IsDefined)
             self.assertTrue(flt(self.inst))
-        self.inst["name"] = ""
+            with self.data.unlocked():
+                self.inst["name"] = ""
         flt = FilterString("name", FilterString.IsDefined)
         self.assertFalse(flt(self.inst))
 

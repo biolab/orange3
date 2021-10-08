@@ -632,15 +632,16 @@ class OWCreateInstance(OWWidget):
 
     def _create_data_from_values(self) -> Table:
         data = Table.from_domain(self.data.domain, 1)
-        data.name = "created"
-        data.X[:] = np.nan
-        data.Y[:] = np.nan
-        for i, m in enumerate(self.data.domain.metas):
-            data.metas[:, i] = "" if m.is_string else np.nan
+        with data.unlocked():
+            data.name = "created"
+            data.X[:] = np.nan
+            data.Y[:] = np.nan
+            for i, m in enumerate(self.data.domain.metas):
+                data.metas[:, i] = "" if m.is_string else np.nan
 
-        values = self._get_values()
-        for var_name, value in values.items():
-            data[:, var_name] = value
+            values = self._get_values()
+            for var_name, value in values.items():
+                data[:, var_name] = value
         return data
 
     def _append_to_data(self, data: Table) -> Table:
@@ -652,8 +653,9 @@ class OWCreateInstance(OWWidget):
         domain = Domain(data.domain.attributes, data.domain.class_vars,
                         data.domain.metas + (var,))
         data = data.transform(domain)
-        data.metas[: len(self.data), -1] = 0
-        data.metas[len(self.data):, -1] = 1
+        with data.unlocked(data.metas):
+            data.metas[: len(self.data), -1] = 0
+            data.metas[len(self.data):, -1] = 1
         return data
 
     def _get_values(self) -> Dict[str, Union[str, float]]:

@@ -1,10 +1,12 @@
 import operator
 import os
+import sys
 import threading
 import warnings
 import weakref
 import zlib
 from collections.abc import Iterable, Sequence, Sized
+from contextlib import contextmanager
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
@@ -95,6 +97,7 @@ class RowInstance(Instance):
         if sp.issparse(self._y):
             self.sparse_y = sp.csr_matrix(self._y)
             self._y = np.asarray(self._y.todense())[0]
+        self._y = np.atleast_1d(self._y)
         self._metas = table.metas[row_index]
         if sp.issparse(self._metas):
             self.sparse_metas = sp.csr_matrix(self._metas)
@@ -113,12 +116,16 @@ class RowInstance(Instance):
         self.table.W[self.row_index] = weight
 
     def set_class(self, value):
+        # pylint: disable=protected-access
         self._check_single_class()
         if not isinstance(value, Real):
             value = self.table.domain.class_var.to_val(value)
-        self._y[0] = value
         if self.sparse_y:
             self.table._Y[self.row_index, 0] = value
+        else:
+            self.table._Y[self.row_index] = value
+            if self.table._Y.ndim == 1:  # if _y is not a view
+                self._y[0] = value
 
     def __setitem__(self, key, value):
         if not isinstance(key, Integral):
@@ -131,17 +138,21 @@ class RowInstance(Instance):
                 raise TypeError("Expected primitive value, got '%s'" %
                                 type(value).__name__)
             if key < len(self._x):
-                self._x[key] = value
+                # write to self.table.X to support table unlocking for live instances
+                self.table.X[self.row_index, key] = value
                 if self.sparse_x is not None:
-                    self.table.X[self.row_index, key] = value
+                    self._x[key] = value
             else:
-                self._y[key - len(self._x)] = value
                 if self.sparse_y is not None:
                     self.table._Y[self.row_index, key - len(self._x)] = value
+                else:
+                    self.table._Y[self.row_index] = value
+                    if self.table._Y.ndim == 1:  # if _y is not a view
+                        self._y[0] = value
         else:
-            self._metas[-1 - key] = value
-            if self.sparse_metas:
-                self.table.metas[self.row_index, -1 - key] = value
+            self.table.metas[self.row_index, -1 - key] = value
+            if self.sparse_metas is not None:
+                self._metas[-1 - key] = value
 
     def _str(self, limit):
         def sp_values(matrix, variables):
@@ -234,14 +245,15 @@ class _ArrayConversion:
             arr = match_density(_subarray(source.metas, row_indices,
                                           [-1 - x for x in self.src_cols]))
         elif self.subarray_from == "Y":
+            Y = source.Y if source.Y.ndim == 2 else source.Y[:, None]
             arr = match_density(_subarray(
-                source._Y, row_indices,
+                Y, row_indices,
                 [x - n_src_attrs for x in self.src_cols]))
         else:
             assert False
         if arr.dtype != self.dtype:
             arr = arr.astype(self.dtype)
-        assert arr.ndim == 2
+        assert arr.ndim == 2 or self.subarray_from == "Y" and arr.ndim == 1
         return arr
 
     def get_columns(self, source, row_indices, n_rows, out=None, target_indices=None):
@@ -257,8 +269,13 @@ class _ArrayConversion:
         # converting to csc before instead of each column is faster
         # do not convert if not required
         if any(isinstance(x, int) for x in self.src_cols):
-            X = csc_matrix(source.X) if self.is_sparse else source.X
-            Y = csc_matrix(source._Y) if self.is_sparse else source._Y
+            X = source.X
+            Y = source.Y
+            if Y.ndim == 1:
+                Y = Y[:, None]
+            if self.is_sparse:
+                X = csc_matrix(X)
+                Y = csc_matrix(Y)
 
         if self.row_selection_needed:
             if row_indices is ...:
@@ -342,15 +359,26 @@ class _FromTableConversion:
 
 # noinspection PyPep8Naming
 class Table(Sequence, Storage):
+
+    LOCKING = None
+    """ If the class attribute LOCKING is True, tables will throw exceptions
+    on in-place modifications unless unlocked explicitly. LOCKING is supposed
+    to be set to True for testing to help us find bugs. If set to False
+    or None, no safeguards are in place. Two different values are used for
+    the same behaviour to distinguish the unchanged default (None) form
+    explicit deactivation (False) that some add-ons might need. """
+
     __file__ = None
     name = "untitled"
 
     domain = Domain([])
-    X = _Y = metas = W = np.zeros((0, 0))
-    X.setflags(write=False)
+    _X = _Y = _metas = _W = np.zeros((0, 0))  # pylint: disable=invalid-name
+    _unlocked = 0  # pylint: disable=invalid-name
     ids = np.zeros(0)
     ids.setflags(write=False)
     attributes = frozendict()
+
+    _Unlocked_X, _Unlocked_Y, _Unlocked_metas, _Unlocked_W = 1, 2, 4, 8
 
     @property
     def columns(self):
@@ -365,21 +393,154 @@ class Table(Sequence, Storage):
     _next_instance_id = 0
     _next_instance_lock = Lock()
 
+    def _check_unlocked(self, partflag):
+        if not self._unlocked & partflag:
+            raise ValueError("Table is read-only unless unlocked")
+
     @property
-    def Y(self):
-        if self._Y.shape[1] == 1:
-            return self._Y[:, 0]
+    def X(self):  # pylint: disable=invalid-name
+        return self._X
+
+    @X.setter
+    def X(self, value):
+        self._check_unlocked(self._Unlocked_X)
+        self._X = _dereferenced(value)
+
+    @property
+    def Y(self):  # pylint: disable=invalid-name
         return self._Y
 
     @Y.setter
     def Y(self, value):
-        if len(value.shape) == 1:
-            value = value[:, None]
+        self._check_unlocked(self._Unlocked_Y)
         if sp.issparse(value) and len(self) != value.shape[0]:
             value = value.T
         if sp.issparse(value):
-            value = value.toarray()
+            value = _dereferenced(value.toarray())
+        if value.ndim == 2 and value.shape[1] == 1:
+            value = value[:, 0].copy()  # no views!
         self._Y = value
+
+    @property
+    def metas(self):
+        return self._metas
+
+    @metas.setter
+    def metas(self, value):
+        self._check_unlocked(self._Unlocked_metas)
+        self._metas = _dereferenced(value)
+
+    @property
+    def W(self):  # pylint: disable=invalid-name
+        return self._W
+
+    @W.setter
+    def W(self, value):
+        self._check_unlocked(self._Unlocked_W)
+        self._W = value
+
+    def __setstate__(self, state):
+        # Backward compatibility with pickles before table locking
+        self._unlocked = 0  # __dict__ seems to be cleared before calling __setstate__
+        with self.unlocked():
+            for k in ("X", "W", "metas"):
+                if k in state:
+                    setattr(self, k, state.pop(k))
+            self.__dict__.update(state)
+
+    def _lock_parts(self):
+        return ((self._X, self._Unlocked_X, "X"),
+                (self._Y, self._Unlocked_Y, "Y"),
+                (self._metas, self._Unlocked_metas, "metas"),
+                (self._W, self._Unlocked_W, "weights"))
+
+    def _update_locks(self, force=False, unlock_bases=()):
+        if not Table.LOCKING:
+            return
+
+        def sync(*xs):
+            for x in xs:
+                try:
+                    undo_on_fail.append((x, x.flags.writeable))
+                    x.flags.writeable = writeable
+                except ValueError:
+                    if force \
+                            and writeable \
+                            and x.base is not None \
+                            and not x.base.flags.writeable:
+                        x.base.flags.writeable = writeable
+                        x.flags.writeable = writeable
+                        forced_bases.append(x.base)
+                    else:
+                        raise
+
+        forced_bases = []
+        undo_on_fail = []
+        for base in unlock_bases:
+            base.flags.writeable = False
+        try:
+            for part, flag, _ in self._lock_parts():
+                if part is None:
+                    continue
+                writeable = bool(self._unlocked & flag)
+                if sp.isspmatrix_csr(part) or sp.isspmatrix_csc(part):
+                    sync(part.data, part.indices, part.indptr)
+                elif sp.isspmatrix_coo(part):
+                    sync(part.data, part.row, part.col)
+                elif sp.issparse(part):
+                    raise ValueError("Unsupported sparse data type")
+                else:
+                    sync(part)
+        except:
+            for part, flag in undo_on_fail:
+                part.flags.writeable = flag
+            raise
+        return tuple(forced_bases)
+
+    def __unlocked(self, *parts, force=False):
+        prev_state = self._unlocked
+        for part, flag, _ in self._lock_parts():
+            if not parts or any(ppart is part for ppart in parts):
+                self._unlocked |= flag
+        try:
+            forced_bases = self._update_locks(force)
+            yield
+        finally:
+            self._unlocked = prev_state
+            self._update_locks(unlock_bases=forced_bases)
+
+    def force_unlocked(self, *parts):
+        """
+        Unlocking without any checks.
+
+        Use with extreme caution. This is meant primarily for 3rd party
+        functions in Cython that expect read-write buffer, but do not
+        actually modify it. the given parts (default: all parts) of the table.
+
+        The function will still fail to unlock and raise an exception if the
+        table contains view to another table.
+        """
+        return contextmanager(self.__unlocked)(*parts, force=True)
+
+    def unlocked(self, *parts):
+        """
+        Unlock the given parts (default: all parts) of the table.
+
+        The caller must ensure that the table is safe to modify. The function
+        will raise an exception if the table contains view to other table.
+        """
+        def can_unlock(x):
+            if sp.issparse(x):
+                return can_unlock(x.data)
+            return x.flags.writeable or x.flags.owndata
+
+        for part, flag, name in self._lock_parts():
+            if not flag & self._unlocked \
+                    and (not parts or any(ppart is part for ppart in parts)) \
+                    and part is not None and not can_unlock(part):
+                raise ValueError(f"'{name}' is a view into another table "
+                                 "and cannot be unlocked")
+        return contextmanager(self.__unlocked)(*parts)
 
     def __new__(cls, *args, **kwargs):
         def warn_deprecated(method):
@@ -390,7 +551,12 @@ class Table(Sequence, Storage):
 
         if not args:
             if not kwargs:
-                return super().__new__(cls)
+                self = super().__new__(cls)
+                if Table.LOCKING:
+                    self._unlocked = 0
+                else:
+                    self._unlocked = sum(f for _, f, _ in self._lock_parts())
+                return self
             else:
                 raise TypeError("Table() must not be called directly")
 
@@ -405,7 +571,8 @@ class Table(Sequence, Storage):
         elif isinstance(args[0], Table):
             if len(args) > 1:
                 raise TypeError("Table(table: Table) expects just one argument")
-            return cls.from_table(args[0].domain, args[0], **kwargs)
+            return cls.from_table(args[0].domain, args[0],
+                                  copy=kwargs.pop("copy", False), **kwargs)
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
@@ -426,9 +593,8 @@ class Table(Sequence, Storage):
 
         return cls.from_numpy(domain, *args, **kwargs)
 
-    def __init__(self, *args, **kwargs):
-        # So subclasses can expect to call super without breakage; noop
-        pass
+    def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
+        self._update_locks()
 
     @classmethod
     def from_domain(cls, domain, n_rows=0, weights=False):
@@ -448,19 +614,23 @@ class Table(Sequence, Storage):
         self = cls()
         self.domain = domain
         self.n_rows = n_rows
-        self.X = np.zeros((n_rows, len(domain.attributes)))
-        self.Y = np.zeros((n_rows, len(domain.class_vars)))
-        if weights:
-            self.W = np.ones(n_rows)
-        else:
-            self.W = np.empty((n_rows, 0))
-        self.metas = np.empty((n_rows, len(self.domain.metas)), object)
-        cls._init_ids(self)
-        self.attributes = {}
+        with self.unlocked():
+            self.X = np.zeros((n_rows, len(domain.attributes)))
+            if len(domain.class_vars) != 1:
+                self.Y = np.zeros((n_rows, len(domain.class_vars)))
+            else:
+                self.Y = np.zeros(n_rows)
+            if weights:
+                self.W = np.ones(n_rows)
+            else:
+                self.W = np.empty((n_rows, 0))
+            self.metas = np.empty((n_rows, len(self.domain.metas)), object)
+            cls._init_ids(self)
+            self.attributes = {}
         return self
 
     @classmethod
-    def from_table(cls, domain, source, row_indices=...):
+    def from_table(cls, domain, source, row_indices=..., *, copy=False):
         """
         Create a new table from selected columns and/or rows of an existing
         one. The columns are chosen using a domain. The domain may also include
@@ -475,6 +645,8 @@ class Table(Sequence, Storage):
         :type source: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
+        :param copy: if True, copy all tables (default: False, create views)
+        :type copy: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
@@ -491,12 +663,13 @@ class Table(Sequence, Storage):
                 if cached is not None:
                     return cached
             if domain is source.domain:
-                table = cls.from_table_rows(source, row_indices)
+                table = cls.from_table_rows(source, row_indices, copy=copy)
                 # assure resulting domain is the instance passed on input
                 table.domain = domain
                 # since sparse flags are not considered when checking for
                 # domain equality, fix manually.
-                table = assure_domain_conversion_sparsity(table, source)
+                with table.unlocked():
+                    table = assure_domain_conversion_sparsity(table, source)
                 return table
 
             if row_indices is ...:
@@ -520,78 +693,81 @@ class Table(Sequence, Storage):
             # if an array can be a subarray of the input table, this needs to be done
             # on the whole table, because this avoids needless copies of contents
 
-            for array_conv in table_conversion.subarray:
-                out = array_conv.get_subarray(source, row_indices, n_rows)
-                setattr(self, array_conv.target, out)
-
-            parts = {}
-
-            for array_conv in table_conversion.columnwise:
-                if array_conv.is_sparse:
-                    parts[array_conv.target] = []
-                else:
-                    # F-order enables faster writing to the array while accessing and
-                    # matrix operations work with same speed (e.g. dot)
-                    parts[array_conv.target] = \
-                        np.zeros((n_rows, len(array_conv.src_cols)),
-                                 order="F", dtype=array_conv.dtype)
-
-            if n_rows <= PART:
-                for array_conv in table_conversion.columnwise:
-                    out = array_conv.get_columns(source, row_indices, n_rows,
-                                                 parts[array_conv.target],
-                                                 ...)
+            with self.unlocked():
+                for array_conv in table_conversion.subarray:
+                    out = array_conv.get_subarray(source, row_indices, n_rows)
                     setattr(self, array_conv.target, out)
-            else:
-                i_done = 0
 
-                while i_done < n_rows:
-                    target_indices = slice(i_done, min(n_rows, i_done + PART))
-                    if row_indices is ...:
-                        source_indices = target_indices
-                    elif isinstance(row_indices, slice):
-                        r = row_indices_range[target_indices]
-                        source_indices = slice(r.start, r.stop, r.step)
+                parts = {}
+
+                for array_conv in table_conversion.columnwise:
+                    if array_conv.is_sparse:
+                        parts[array_conv.target] = []
                     else:
-                        source_indices = row_indices[target_indices]
-                    part_rows = min(n_rows, i_done+PART) - i_done
+                        # F-order enables faster writing to the array while accessing and
+                        # matrix operations work with same speed (e.g. dot)
+                        parts[array_conv.target] = \
+                            np.zeros((n_rows, len(array_conv.src_cols)),
+                                     order="F", dtype=array_conv.dtype)
+
+                if n_rows <= PART:
+                    for array_conv in table_conversion.columnwise:
+                        out = array_conv.get_columns(source, row_indices, n_rows,
+                                                     parts[array_conv.target],
+                                                     ...)
+                        setattr(self, array_conv.target, out)
+                else:
+                    i_done = 0
+
+                    while i_done < n_rows:
+                        target_indices = slice(i_done, min(n_rows, i_done + PART))
+                        if row_indices is ...:
+                            source_indices = target_indices
+                        elif isinstance(row_indices, slice):
+                            r = row_indices_range[target_indices]
+                            source_indices = slice(r.start, r.stop, r.step)
+                        else:
+                            source_indices = row_indices[target_indices]
+                        part_rows = min(n_rows, i_done+PART) - i_done
+
+                        for array_conv in table_conversion.columnwise:
+                            out = array_conv.get_columns(source, source_indices, part_rows,
+                                                         parts[array_conv.target],
+                                                         target_indices)
+                            if array_conv.is_sparse:  # dense arrays are populated in-place
+                                parts[array_conv.target].append(out)
+
+                        i_done += PART
+
+                        # clear cache after a part is done
+                        if new_cache:
+                            _thread_local.conversion_cache = {}
 
                     for array_conv in table_conversion.columnwise:
-                        out = array_conv.get_columns(source, source_indices, part_rows,
-                                                     parts[array_conv.target],
-                                                     target_indices)
-                        if array_conv.is_sparse:  # dense arrays are populated in-place
-                            parts[array_conv.target].append(out)
+                        cparts = parts[array_conv.target]
+                        out = cparts if not array_conv.is_sparse else sp.vstack(cparts)
+                        setattr(self, array_conv.target, out)
 
-                    i_done += PART
-
-                    # clear cache after a part is done
-                    if new_cache:
-                        _thread_local.conversion_cache = {}
-
-                for array_conv in table_conversion.columnwise:
-                    cparts = parts[array_conv.target]
-                    out = cparts if not array_conv.is_sparse else sp.vstack(cparts)
-                    setattr(self, array_conv.target, out)
-
-            if source.has_weights():
-                self.W = source.W[row_indices]
-            else:
-                self.W = np.empty((n_rows, 0))
-            self.name = getattr(source, 'name', '')
-            if hasattr(source, 'ids'):
-                self.ids = source.ids[row_indices]
-            else:
-                cls._init_ids(self)
-            self.attributes = getattr(source, 'attributes', {})
-            _idcache_save(_thread_local.conversion_cache, (domain, source), self)
+                if source.has_weights():
+                    self.W = source.W[row_indices]
+                else:
+                    self.W = np.empty((n_rows, 0))
+                self.name = getattr(source, 'name', '')
+                if hasattr(source, 'ids'):
+                    self.ids = source.ids[row_indices]
+                else:
+                    cls._init_ids(self)
+                self.attributes = getattr(source, 'attributes', {})
+                _idcache_save(_thread_local.conversion_cache, (domain, source), self)
+            if copy:
+                self.ensure_copy()
             return self
         finally:
             if new_cache:
                 _thread_local.conversion_cache = None
                 _thread_local.domain_cache = None
 
-    def transform(self, domain):
+    def transform(self, domain, copy=False):
         """
         Construct a table with a different domain.
 
@@ -614,10 +790,10 @@ class Table(Sequence, Storage):
         Returns:
             A new table
         """
-        return type(self).from_table(domain, self)
+        return type(self).from_table(domain, self, copy=copy)
 
     @classmethod
-    def from_table_rows(cls, source, row_indices):
+    def from_table_rows(cls, source, row_indices, *, copy=False):
         """
         Construct a new table by selecting rows from the source table.
 
@@ -625,22 +801,31 @@ class Table(Sequence, Storage):
         :type source: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
+        :param copy: if True, copy all tables (default: False, create views)
+        :type copy: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
+        def get_rows(a):
+            a = a[row_indices]
+            if isinstance(row_indices, slice) or row_indices is ... or copy:
+                a = a.copy()
+            return a
+
         self = cls()
         self.domain = source.domain
-        self.X = source.X[row_indices]
-        if self.X.ndim == 1:
-            self.X = self.X.reshape(-1, len(self.domain.attributes))
-        self.Y = source._Y[row_indices]
-        self.metas = source.metas[row_indices]
-        if self.metas.ndim == 1:
-            self.metas = self.metas.reshape(-1, len(self.domain.metas))
-        self.W = source.W[row_indices]
-        self.name = getattr(source, 'name', '')
-        self.ids = np.array(source.ids[row_indices])
-        self.attributes = getattr(source, 'attributes', {})
+        with self.unlocked():
+            self.X = get_rows(source.X)
+            if self.X.ndim == 1:
+                self.X = self.X.reshape(-1, len(self.domain.attributes))
+            self.Y = get_rows(source.Y)
+            self.metas = get_rows(source.metas)
+            if self.metas.ndim == 1:
+                self.metas = self.metas.reshape(-1, len(self.domain.metas))
+            self.W = get_rows(source.W)
+            self.name = getattr(source, 'name', '')
+            self.ids = np.array(source.ids[row_indices])
+            self.attributes = getattr(source, 'attributes', {})
         return self
 
     @classmethod
@@ -668,30 +853,37 @@ class Table(Sequence, Storage):
         metas, = _check_arrays(metas, dtype=object, shape_1=X.shape[0])
         ids, = _check_arrays(ids, dtype=int, shape_1=X.shape[0])
 
-        if Y is not None and Y.ndim == 1:
-            Y = Y.reshape(Y.shape[0], 1)
         if domain is None:
             domain = Domain.from_numpy(X, Y, metas)
 
         if Y is None:
-            if sp.issparse(X):
+            if not domain.class_vars or sp.issparse(X):
                 Y = np.empty((X.shape[0], 0), dtype=np.float64)
             else:
+                own_data = X.flags.owndata and X.base is None
                 Y = X[:, len(domain.attributes):]
                 X = X[:, :len(domain.attributes)]
+                if own_data:
+                    Y = Y.copy()
+                    X = X.copy()
         if metas is None:
             metas = np.empty((X.shape[0], 0), object)
         if W is None or W.size == 0:
             W = np.empty((X.shape[0], 0))
-        else:
-            W = W.reshape(W.size)
+        elif W.shape != (W.size, ):
+            W = W.reshape(W.size).copy()
 
         if X.shape[1] != len(domain.attributes):
             raise ValueError(
                 "Invalid number of variable columns ({} != {})".format(
                     X.shape[1], len(domain.attributes))
             )
-        if Y.shape[1] != len(domain.class_vars):
+        if Y.ndim == 1:
+            if not domain.class_var:
+                raise ValueError(
+                    "Invalid number of class columns "
+                    f"(1 != {len(domain.class_vars)})")
+        elif Y.shape[1] != len(domain.class_vars):
             raise ValueError(
                 "Invalid number of class columns ({} != {})".format(
                     Y.shape[1], len(domain.class_vars))
@@ -706,17 +898,18 @@ class Table(Sequence, Storage):
                 "Parts of data contain different numbers of rows.")
 
         self = cls()
-        self.domain = domain
-        self.X = X
-        self.Y = Y
-        self.metas = metas
-        self.W = W
-        self.n_rows = self.X.shape[0]
-        if ids is None:
-            cls._init_ids(self)
-        else:
-            self.ids = ids
-        self.attributes = {} if attributes is None else attributes
+        with self.unlocked():
+            self.domain = domain
+            self.X = X
+            self.Y = Y
+            self.metas = metas
+            self.W = W
+            self.n_rows = self.X.shape[0]
+            if ids is None:
+                cls._init_ids(self)
+            else:
+                self.ids = ids
+            self.attributes = {} if attributes is None else attributes
         return self
 
     @classmethod
@@ -724,21 +917,24 @@ class Table(Sequence, Storage):
         if weights is not None and len(rows) != len(weights):
             raise ValueError("mismatching number of instances and weights")
         self = cls.from_domain(domain, len(rows), weights is not None)
-        attrs, classes = domain.attributes, domain.class_vars
-        metas = domain.metas
-        nattrs, ncls = len(domain.attributes), len(domain.class_vars)
-        for i, row in enumerate(rows):
-            if isinstance(row, Instance):
-                row = row.list
-            for j, (var, val) in enumerate(zip(attrs, row)):
-                self.X[i, j] = var.to_val(val)
-            for j, (var, val) in enumerate(zip(classes, row[nattrs:])):
-                self._Y[i, j] = var.to_val(val)
-            for j, (var, val) in enumerate(zip(metas, row[nattrs + ncls:])):
-                self.metas[i, j] = var.to_val(val)
-        if weights is not None:
-            self.W = np.array(weights)
-        self.attributes = {}
+        all_vars = domain.variables + domain.metas
+        nattrs = len(domain.attributes)
+        nattrscls = len(domain.variables)
+        with self.unlocked():
+            for i, row in enumerate(rows):
+                if isinstance(row, Instance):
+                    row = row.list
+                vals = [var.to_val(val) for var, val in zip(all_vars, row)]
+                self.X[i] = vals[:nattrs]
+                if self._Y.ndim == 1:
+                    self._Y[i] = vals[nattrs] if nattrs < len(vals) else np.nan
+                else:
+                    self._Y[i] = vals[nattrs:nattrscls]
+                # for backward compatibility: allow omittine some (or all) metas
+                self.metas[i, :len(vals) - nattrscls] = vals[nattrscls:]
+            if weights is not None:
+                self.W = np.array(weights)
+            self.attributes = {}
         return self
 
     @classmethod
@@ -859,15 +1055,15 @@ class Table(Sequence, Storage):
     # Set the row of table data matrices
     # noinspection PyProtectedMember
     def _set_row(self, example, row):
+        # pylint: disable=protected-access
         domain = self.domain
         if isinstance(example, Instance):
             if example.domain == domain:
-                if isinstance(example, RowInstance):
-                    self.X[row] = example._x
-                    self._Y[row] = example._y
+                self.X[row] = example._x
+                if self._Y.ndim == 1:
+                    self._Y[row] = float(example._y)
                 else:
-                    self.X[row] = example._x
-                    self._Y[row] = example._y
+                    self._Y[row] = np.atleast_1d(example._y)
                 self.metas[row] = example._metas
                 return
 
@@ -881,12 +1077,16 @@ class Table(Sequence, Storage):
                     type(self)._next_instance_id += 1
 
         else:
-            self.X[row] = [var.to_val(val)
-                           for var, val in zip(domain.attributes, example)]
-            self._Y[row] = [var.to_val(val)
-                            for var, val in
-                            zip(domain.class_vars,
-                                example[len(domain.attributes):])]
+            attrs = domain.attributes
+            if len(example) != len(domain.variables):
+                raise ValueError("invalid length")
+            self._X[row] = [var.to_val(val) for var, val in zip(attrs, example)]
+            if self._Y.ndim == 1:
+                self._Y[row] = domain.class_var.to_val(example[len(attrs)])
+            else:
+                self._Y[row] = [var.to_val(val)
+                                for var, val in zip(domain.class_vars,
+                                                    example[len(attrs):])]
             self.metas[row] = np.array([var.Unknown for var in domain.metas],
                                        dtype=object)
 
@@ -911,6 +1111,8 @@ class Table(Sequence, Storage):
                 var = self.domain[col_idx]
                 if 0 <= col_idx < len(self.domain.attributes):
                     val = self.X[row_idx, col_idx]
+                elif col_idx == len(self.domain.attributes) and self._Y.ndim == 1:
+                    val = self._Y[row_idx]
                 elif col_idx >= len(self.domain.attributes):
                     val = self._Y[row_idx,
                                   col_idx - len(self.domain.attributes)]
@@ -981,6 +1183,8 @@ class Table(Sequence, Storage):
                 if col_idx >= 0:
                     if col_idx < self.X.shape[1]:
                         self.X[row_idx, col_idx] = val
+                    elif self._Y.ndim == 1 and col_idx == self.X.shape[1]:
+                        self._Y[row_idx] = val
                     else:
                         self._Y[row_idx, col_idx - self.X.shape[1]] = val
                 else:
@@ -995,12 +1199,16 @@ class Table(Sequence, Storage):
             if not attributes:
                 attributes = self.domain.attributes
             for var, col in zip(attributes, col_indices):
+                val = var.to_val(value)
                 if 0 <= col < n_attrs:
-                    self.X[row_idx, col] = var.to_val(value)
+                    self.X[row_idx, col] = val
                 elif col >= n_attrs:
-                    self._Y[row_idx, col - n_attrs] = var.to_val(value)
+                    if self._Y.ndim == 1 and col == n_attrs:
+                        self._Y[row_idx] = val
+                    else:
+                        self._Y[row_idx, col - n_attrs] = val
                 else:
-                    self.metas[row_idx, -1 - col] = var.to_val(value)
+                    self.metas[row_idx, -1 - col] = val
         else:
             attr_cols = np.fromiter(
                 (col for col in col_indices if 0 <= col < n_attrs), int)
@@ -1018,7 +1226,14 @@ class Table(Sequence, Storage):
             if len(attr_cols):
                 self.X[row_idx, attr_cols] = value
             if len(class_cols):
-                self._Y[row_idx, class_cols] = value
+                if self._Y.ndim == 1 and np.all(class_cols == 0):
+                    if isinstance(value, np.ndarray):
+                        yshape = self._Y[row_idx].shape
+                        if value.shape != yshape:
+                            value = value.reshape(yshape)
+                    self._Y[row_idx] = value
+                else:
+                    self._Y[row_idx, class_cols] = value
             if len(meta_cols):
                 self.metas[row_idx, meta_cols] = value
 
@@ -1156,39 +1371,41 @@ class Table(Sequence, Storage):
             table (Table): a new table with the additional column
         """
         dom = self.domain
-        attrs, classes, metas = dom.attributes, dom.class_vars, dom.metas
-        if to_metas or not variable.is_primitive():
-            metas += (variable, )
+        attrs, classes, metavars = dom.attributes, dom.class_vars, dom.metas
+        to_metas = to_metas or not variable.is_primitive()
+        if to_metas:
+            metavars += (variable, )
         else:
             attrs += (variable, )
-        domain = Domain(attrs, classes, metas)
+        domain = Domain(attrs, classes, metavars)
         new_table = self.transform(domain)
-        new_table.get_column_view(variable)[0][:] = data
+        with new_table.unlocked(new_table.metas if to_metas else new_table.X):
+            new_table.get_column_view(variable)[0][:] = data
         return new_table
 
     def is_view(self):
         """
         Return `True` if all arrays represent a view referring to another table
         """
-        return ((not self.X.shape[-1] or self.X.base is not None) and
+        return ((not self._X.shape[-1] or self._X.base is not None) and
                 (not self._Y.shape[-1] or self._Y.base is not None) and
-                (not self.metas.shape[-1] or self.metas.base is not None) and
-                (not self._weights.shape[-1] or self.W.base is not None))
+                (not self._metas.shape[-1] or self._metas.base is not None) and
+                (not self._weights.shape[-1] or self._W.base is not None))
 
     def is_copy(self):
         """
         Return `True` if the table owns its data
         """
-        return ((not self.X.shape[-1] or self.X.base is None) and
+        return ((not self._X.shape[-1] or self._X.base is None) and
                 (self._Y.base is None) and
-                (self.metas.base is None) and
-                (self.W.base is None))
+                (self._metas.base is None) and
+                (self._W.base is None))
 
     def is_sparse(self):
         """
         Return `True` if the table stores data in sparse format
         """
-        return any(sp.issparse(i) for i in [self.X, self.Y, self.metas])
+        return any(sp.issparse(i) for i in [self._X, self._Y, self._metas])
 
     def ensure_copy(self):
         """
@@ -1200,14 +1417,14 @@ class Table(Sequence, Storage):
             # them creates copies in constructor we can skip this check here.
             return not sp.issparse(x) and x.base is not None
 
-        if is_view(self.X):
-            self.X = self.X.copy()
+        if is_view(self._X):
+            self._X = self._X.copy()
         if is_view(self._Y):
             self._Y = self._Y.copy()
-        if is_view(self.metas):
-            self.metas = self.metas.copy()
-        if is_view(self.W):
-            self.W = self.W.copy()
+        if is_view(self._metas):
+            self._metas = self._metas.copy()
+        if is_view(self._W):
+            self._W = self._W.copy()
 
     def copy(self):
         """
@@ -1290,11 +1507,11 @@ class Table(Sequence, Storage):
         # (after pickling and unpickling such arrays, checksum changes)
         # Why, and should we fix it or remove it?
         """Return a checksum over X, Y, metas and W."""
-        cs = zlib.adler32(np.ascontiguousarray(self.X))
+        cs = zlib.adler32(np.ascontiguousarray(self._X))
         cs = zlib.adler32(np.ascontiguousarray(self._Y), cs)
         if include_metas:
-            cs = zlib.adler32(np.ascontiguousarray(self.metas), cs)
-        cs = zlib.adler32(np.ascontiguousarray(self.W), cs)
+            cs = zlib.adler32(np.ascontiguousarray(self._metas), cs)
+        cs = zlib.adler32(np.ascontiguousarray(self._W), cs)
         return cs
 
     def shuffle(self):
@@ -1332,6 +1549,8 @@ class Table(Sequence, Storage):
         if col_index >= 0:
             if col_index < self.X.shape[1]:
                 col = rx(self.X[:, col_index])
+            elif self._Y.ndim == 1 and col_index == self._X.shape[1]:
+                col = rx(self._Y)
             else:
                 col = rx(self._Y[:, col_index - self.X.shape[1]])
         else:
@@ -1356,7 +1575,10 @@ class Table(Sequence, Storage):
             if sp.issparse(self._Y):
                 remove += _sp_anynan(self._Y)
             else:
-                remove += bn.anynan(self._Y, axis=1)
+                if self._Y.ndim == 1:
+                    remove += np.isnan(self._Y)
+                else:
+                    remove += bn.anynan(self._Y, axis=1)
             if sp.issparse(self.metas):
                 remove += _sp_anynan(self._metas)
             else:
@@ -1388,7 +1610,10 @@ class Table(Sequence, Storage):
                 retain = (self._Y.indptr[1:] ==
                           self._Y.indptr[-1:] + self._Y.shape[1])
         else:
-            retain = bn.anynan(self._Y, axis=1)
+            if self._Y.ndim == 1:
+                retain = np.isnan(self._Y)
+            else:
+                retain = bn.anynan(self._Y, axis=1)
             if not negate:
                 retain = np.logical_not(retain)
         return self.from_table_rows(self, retain)
@@ -1622,12 +1847,12 @@ class Table(Sequence, Storage):
         if compute_variance:
             raise NotImplementedError("computation of variance is "
                                       "not implemented yet")
-        W = self.W if self.has_weights() else None
+        W = self._W if self.has_weights() else None
         rr = []
         stats = []
         if not columns:
             if self.domain.attributes:
-                rr.append(fast_stats(self.X, W))
+                rr.append(fast_stats(self._X, W))
             if self.domain.class_vars:
                 rr.append(fast_stats(self._Y, W))
             if include_metas and self.domain.metas:
@@ -1639,11 +1864,14 @@ class Table(Sequence, Storage):
             for column in columns:
                 c = self.domain.index(column)
                 if 0 <= c < nattrs:
-                    S = fast_stats(self.X[:, [c]], W and W[:, [c]])
+                    S = fast_stats(self._X[:, [c]], W and W[:, [c]])
                 elif c >= nattrs:
-                    S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]])
+                    if self._Y.ndim == 1 and c == nattrs:
+                        S = fast_stats(self._Y[:, None], W and W[:, None])
+                    else:
+                        S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]])
                 else:
-                    S = fast_stats(self.metas[:, [-1 - c]], W and W[:, [-1 - c]])
+                    S = fast_stats(self._metas[:, [-1 - c]], W and W[:, [-1 - c]])
                 stats.append(S[0])
         return stats
 
@@ -1654,8 +1882,10 @@ class Table(Sequence, Storage):
             columns = [self.domain.index(var) for var in columns]
 
         distributions = []
-        if sp.issparse(self.X):
-            self.X = self.X.tocsc()
+        X = self.X
+        if sp.issparse(X):
+            X = X.tocsc()
+
 
         W = self.W.ravel() if self.has_weights() else None
 
@@ -1663,14 +1893,16 @@ class Table(Sequence, Storage):
             variable = self.domain[col]
 
             # Select the correct data column from X, Y or metas
-            if 0 <= col < self.X.shape[1]:
-                x = self.X[:, col]
+            if 0 <= col < X.shape[1]:
+                x = X[:, col]
             elif col < 0:
                 x = self.metas[:, col * (-1) - 1]
                 if np.issubdtype(x.dtype, np.dtype(object)):
                     x = x.astype(float)
+            elif self._Y.ndim == 1 and col == X.shape[1]:
+                x = self._Y
             else:
-                x = self._Y[:, col - self.X.shape[1]]
+                x = self._Y[:, col - X.shape[1]]
 
             if variable.is_discrete:
                 dist, unknowns = bincount(x, weights=W, max_val=len(variable.values) - 1)
@@ -1729,6 +1961,8 @@ class Table(Sequence, Storage):
             row_data = self.X[:, row_indi]
         elif row_indi < 0:
             row_data = self.metas[:, -1 - row_indi]
+        elif self._Y.ndim == 1 and row_indi == n_atts:
+            row_data = self._Y
         else:
             row_data = self._Y[:, row_indi - n_atts]
 
@@ -1774,8 +2008,9 @@ class Table(Sequence, Storage):
                             nans_rows[arr_i], nans[arr_i])
                 else:
                     for col_i, arr_i, var in disc_vars:
+                        col = arr if arr.ndim == 1 else arr[:, arr_i]
                         contingencies[col_i] = contingency(
-                            arr[:, arr_i].astype(float),
+                            col.astype(float),
                             row_data, len(var.values) - 1, n_rows - 1, W)
 
             cont_vars = [v for v in vars if v[2].is_continuous]
@@ -1842,107 +2077,108 @@ class Table(Sequence, Storage):
         # attributes
         # - classes and metas to attributes of attributes
         # - arbitrary meta column to feature names
-        self.X = table.X.T
-        if attr_index is not None:
-            self.X = np.delete(self.X, attr_index, 0)
-        if feature_names_column:
-            names = [str(row[feature_names_column]) for row in table]
-            progress_callback(0.1)
-            names = get_unique_names_duplicates(names)
-            progress_callback(0.3)
-            attributes = [ContinuousVariable(name) for name in names]
-        else:
-            places = int(np.ceil(np.log10(n_cols))) if n_cols else 1
-            attributes = [ContinuousVariable(f"{feature_name} {i:0{places}}")
-                          for i in range(1, n_cols + 1)]
-        progress_callback(0.4)
+        with self.unlocked():
+            self.X = table.X.T
+            if attr_index is not None:
+                self.X = np.delete(self.X, attr_index, 0)
+            if feature_names_column:
+                names = [str(row[feature_names_column]) for row in table]
+                progress_callback(0.1)
+                names = get_unique_names_duplicates(names)
+                progress_callback(0.3)
+                attributes = [ContinuousVariable(name) for name in names]
+            else:
+                places = int(np.ceil(np.log10(n_cols))) if n_cols else 1
+                attributes = [ContinuousVariable(f"{feature_name} {i:0{places}}")
+                              for i in range(1, n_cols + 1)]
+            progress_callback(0.4)
 
-        if old_domain is not None and feature_names_column:
-            for i, _ in enumerate(attributes):
-                if attributes[i].name in old_domain:
-                    var = old_domain[attributes[i].name]
-                    attr = ContinuousVariable(var.name) if var.is_continuous \
-                        else DiscreteVariable(var.name, var.values)
-                    attr.attributes = var.attributes.copy()
-                    attributes[i] = attr
+            if old_domain is not None and feature_names_column:
+                for i, _ in enumerate(attributes):
+                    if attributes[i].name in old_domain:
+                        var = old_domain[attributes[i].name]
+                        attr = ContinuousVariable(var.name) if var.is_continuous \
+                            else DiscreteVariable(var.name, var.values)
+                        attr.attributes = var.attributes.copy()
+                        attributes[i] = attr
 
-        def set_attributes_of_attributes(_vars, _table):
-            for i, variable in enumerate(_vars):
-                if variable.name == feature_names_column:
-                    continue
-                for j, row in enumerate(_table):
-                    value = variable.repr_val(row) if np.isscalar(row) \
-                        else row[i] if isinstance(row[i], str) \
-                        else variable.repr_val(row[i])
+            def set_attributes_of_attributes(_vars, _table):
+                for i, variable in enumerate(_vars):
+                    if variable.name == feature_names_column:
+                        continue
+                    for j, row in enumerate(_table):
+                        value = variable.repr_val(row) if np.isscalar(row) \
+                            else row[i] if isinstance(row[i], str) \
+                            else variable.repr_val(row[i])
 
-                    if value not in MISSING_VALUES:
-                        attributes[j].attributes[variable.name] = value
+                        if value not in MISSING_VALUES:
+                            attributes[j].attributes[variable.name] = value
 
-        set_attributes_of_attributes(table.domain.class_vars, table.Y)
-        progress_callback(0.5)
-        set_attributes_of_attributes(table.domain.metas, table.metas)
+            set_attributes_of_attributes(table.domain.class_vars, table.Y)
+            progress_callback(0.5)
+            set_attributes_of_attributes(table.domain.metas, table.metas)
 
-        # weights
-        self.W = np.empty((self.n_rows, 0))
+            # weights
+            self.W = np.empty((self.n_rows, 0))
 
-        def get_table_from_attributes_of_attributes(_vars, _dtype=float):
-            T = np.empty((self.n_rows, len(_vars)), dtype=_dtype)
-            for i, _attr in enumerate(table_domain_attributes):
-                for j, _var in enumerate(_vars):
-                    val = str(_attr.attributes.get(_var.name, ""))
-                    if not _var.is_string:
-                        val = np.nan if val in MISSING_VALUES else \
-                            _var.values.index(val) if \
-                                _var.is_discrete else float(val)
-                    T[i, j] = val
-            return T
+            def get_table_from_attributes_of_attributes(_vars, _dtype=float):
+                T = np.empty((self.n_rows, len(_vars)), dtype=_dtype)
+                for i, _attr in enumerate(table_domain_attributes):
+                    for j, _var in enumerate(_vars):
+                        val = str(_attr.attributes.get(_var.name, ""))
+                        if not _var.is_string:
+                            val = np.nan if val in MISSING_VALUES else \
+                                _var.values.index(val) if \
+                                    _var.is_discrete else float(val)
+                        T[i, j] = val
+                return T
 
-        # class_vars - attributes of attributes to class - from old domain
-        class_vars = []
-        if old_domain is not None:
-            class_vars = old_domain.class_vars
-        self.Y = get_table_from_attributes_of_attributes(class_vars)
+            # class_vars - attributes of attributes to class - from old domain
+            class_vars = []
+            if old_domain is not None:
+                class_vars = old_domain.class_vars
+            self.Y = get_table_from_attributes_of_attributes(class_vars)
 
-        # metas
-        # - feature names and attributes of attributes to metas
-        self.metas, metas = np.empty((self.n_rows, 0), dtype=object), []
-        if meta_attr_name not in [m.name for m in table.domain.metas] and \
-                table_domain_attributes:
-            self.metas = np.array([[a.name] for a in table_domain_attributes],
-                                  dtype=object)
-            metas.append(StringVariable(meta_attr_name))
+            # metas
+            # - feature names and attributes of attributes to metas
+            self.metas, metas = np.empty((self.n_rows, 0), dtype=object), []
+            if meta_attr_name not in [m.name for m in table.domain.metas] and \
+                    table_domain_attributes:
+                self.metas = np.array([[a.name] for a in table_domain_attributes],
+                                      dtype=object)
+                metas.append(StringVariable(meta_attr_name))
 
-        names = chain.from_iterable(list(attr.attributes)
-                                    for attr in table_domain_attributes)
-        names = sorted(set(names) - {var.name for var in class_vars})
-        progress_callback(0.6)
+            names = chain.from_iterable(list(attr.attributes)
+                                        for attr in table_domain_attributes)
+            names = sorted(set(names) - {var.name for var in class_vars})
+            progress_callback(0.6)
 
-        def guessed_var(i, var_name):
-            orig_vals = M[:, i]
-            val_map, vals, var_type = Orange.data.io.guess_data_type(orig_vals)
-            values, variable = Orange.data.io.sanitize_variable(
-                val_map, vals, orig_vals, var_type, {}, name=var_name)
-            M[:, i] = values
-            return variable
+            def guessed_var(i, var_name):
+                orig_vals = M[:, i]
+                val_map, vals, var_type = Orange.data.io.guess_data_type(orig_vals)
+                values, variable = Orange.data.io.sanitize_variable(
+                    val_map, vals, orig_vals, var_type, {}, name=var_name)
+                M[:, i] = values
+                return variable
 
-        _metas = [StringVariable(n) for n in names]
-        if old_domain is not None:
-            _metas = [m for m in old_domain.metas if m.name != meta_attr_name]
-        M = get_table_from_attributes_of_attributes(_metas, _dtype=object)
-        progress_callback(0.7)
-        if old_domain is None:
-            _metas = [guessed_var(i, m.name) for i, m in enumerate(_metas)]
-        if _metas:
-            self.metas = np.hstack((self.metas, M))
-            metas.extend(_metas)
+            _metas = [StringVariable(n) for n in names]
+            if old_domain is not None:
+                _metas = [m for m in old_domain.metas if m.name != meta_attr_name]
+            M = get_table_from_attributes_of_attributes(_metas, _dtype=object)
+            progress_callback(0.7)
+            if old_domain is None:
+                _metas = [guessed_var(i, m.name) for i, m in enumerate(_metas)]
+            if _metas:
+                self.metas = np.hstack((self.metas, M))
+                metas.extend(_metas)
 
-        self.domain = Domain(attributes, class_vars, metas)
-        progress_callback(0.9)
-        cls._init_ids(self)
-        self.attributes = table.attributes.copy()
-        self.attributes["old_domain"] = table.domain
-        progress_callback(1)
-        return self
+            self.domain = Domain(attributes, class_vars, metas)
+            progress_callback(0.9)
+            cls._init_ids(self)
+            self.attributes = table.attributes.copy()
+            self.attributes["old_domain"] = table.domain
+            progress_callback(1)
+            return self
 
     def to_sparse(self, sparse_attributes=True, sparse_class=False,
                   sparse_metas=False):
@@ -1979,6 +2215,19 @@ class Table(Sequence, Storage):
         return t
 
 
+def _dereferenced(array):
+    # CSR and CSC matrices are constructed so that array.data is a
+    # view to a base, which prevents unlocking them. Therefore, if
+    # sparse matrix doesn't own its data, but its base array is
+    # referenced only by this matrix, we copy it. This doesn't
+    # increase memory use, but allows unlocking.
+    if sp.issparse(array) \
+            and array.data.base is not None \
+            and sys.getrefcount(array.data.base) == 2:  # 2 = 1 real + 1 for arg
+        array.data = array.data.copy()
+    return array
+
+
 def _check_arrays(*arrays, dtype=None, shape_1=None):
     checked = []
     if not len(arrays):
@@ -2006,6 +2255,7 @@ def _check_arrays(*arrays, dtype=None, shape_1=None):
             if not (sp.isspmatrix_csr(array) or sp.isspmatrix_csc(array)):
                 array = array.tocsr()
             array.data = np.asarray(array.data)
+            array = _dereferenced(array)
             has_inf = _check_inf(array.data)
         else:
             if dtype is not None:
@@ -2029,6 +2279,8 @@ def _check_inf(array):
 
 def _subarray(arr, rows, cols):
     rows = _optimize_indices(rows, arr.shape[0])
+    if arr.ndim == 1:
+        return arr[rows]
     cols = _optimize_indices(cols, arr.shape[1])
     return arr[_rxc_ix(rows, cols)]
 

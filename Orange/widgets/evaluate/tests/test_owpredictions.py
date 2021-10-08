@@ -41,7 +41,8 @@ class TestOWPredictions(WidgetTest):
 
     def test_nan_target_input(self):
         data = self.iris[::10].copy()
-        data.Y[1] = np.nan
+        with data.unlocked():
+            data.Y[1] = np.nan
         yvec, _ = data.get_column_view(data.domain.class_var)
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.predictors, ConstantLearner()(data), 1)
@@ -58,7 +59,8 @@ class TestOWPredictions(WidgetTest):
         self.assertTrue(np.all(~np.isnan(ev_yvec)))
         self.assertTrue(np.all(~np.isnan(evres.actual)))
 
-        data.Y[:] = np.nan
+        with data.unlocked():
+            data.Y[:] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         evres = self.get_output(self.widget.Outputs.evaluation_results)
         self.assertEqual(len(evres.data), 0)

@@ -28,7 +28,8 @@ class TestOWPCA(WidgetTest):
 
     def test_constant_data(self):
         data = self.iris[::5]
-        data.X[:, :] = 1.0
+        with data.unlocked():
+            data.X[:, :] = 1.0
         # Ignore the warning: the test checks whether the widget shows
         # Warning.trivial_components when this happens
         with np.errstate(invalid="ignore"):
@@ -204,7 +205,8 @@ class TestOWPCA(WidgetTest):
         # Randomly set some values to zero
         random_state = check_random_state(42)
         mask = random_state.beta(1, 2, size=self.iris.X.shape) > 0.5
-        self.iris.X[mask] = 0
+        with self.iris.unlocked():
+            self.iris.X[mask] = 0
 
         data = prepare_table(self.iris)
 

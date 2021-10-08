@@ -18,13 +18,16 @@ class TestDistanceRunner(unittest.TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.iris = Table("iris")[::5]
-        cls.iris.X[0, 2] = np.nan
-        cls.iris.X[1, 3] = np.nan
-        cls.iris.X[2, 1] = np.nan
+        with cls.iris.unlocked():
+            cls.iris.X[0, 2] = np.nan
+            cls.iris.X[1, 3] = np.nan
+            cls.iris.X[2, 1] = np.nan
+
         cls.zoo = Table("zoo")[::5]
-        cls.zoo.X[0, 2] = np.nan
-        cls.zoo.X[1, 3] = np.nan
-        cls.zoo.X[2, 1] = np.nan
+        with cls.zoo.unlocked():
+            cls.zoo.X[0, 2] = np.nan
+            cls.zoo.X[1, 3] = np.nan
+            cls.zoo.X[2, 1] = np.nan
 
     def test_run(self):
         state = Mock()
@@ -66,13 +69,10 @@ class TestDistanceRunner(unittest.TestCase):
 
 
 class TestOWDistances(WidgetTest):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.iris = Table("iris")[::5]
-        cls.titanic = Table("titanic")[::10]
-
     def setUp(self):
+        super().setUp()
+        self.iris = Table("iris")[::5]
+        self.titanic = Table("titanic")[::10]
         self.widget = self.create_widget(OWDistances)
 
     def test_distance_combo(self):
@@ -171,14 +171,14 @@ class TestOWDistances(WidgetTest):
         self.assertFalse(w.normalized_dist)
 
     def test_negative_values_bhattacharyya(self):
-        self.iris.X[0, 0] *= -1
+        with self.iris.unlocked():
+            self.iris.X[0, 0] *= -1
         for self.widget.metric_idx, (_, metric) in enumerate(METRICS):
             if metric == distance.Bhattacharyya:
                 break
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.wait_until_finished()
         self.assertTrue(self.widget.Error.distances_value_error.is_shown())
-        self.iris.X[0, 0] *= -1
 
     def test_limit_mahalanobis(self):
         def assert_error_shown():

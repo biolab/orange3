@@ -155,6 +155,7 @@ class TestableDataProjectionWidget(OWDataProjectionWidget):
         if not len(x_data[self.valid_data]):
             return None
 
+        x_data = x_data.copy()
         x_data[x_data == np.inf] = np.nan
         x_data_ = np.ones(len(x_data))
         y_data = np.ones(len(x_data))
@@ -177,7 +178,8 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
 
     def test_annotation_with_nans(self):
         data = Table.from_table_rows(self.data, [0, 1, 2])
-        data.X[1, :] = np.nan
+        with data.unlocked():
+            data.X[1, :] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         points = self.widget.graph.scatterplot_item.points()
         self.widget.graph.select_by_click(None, [points[1]])

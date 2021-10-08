@@ -48,8 +48,9 @@ class TestDiscrete(unittest.TestCase):
 
     def test_discrete_missing(self):
         d = data.Table("zoo")
-        d.Y[25] = float("nan")
-        d[0][0] = float("nan")
+        with d.unlocked():
+            d.Y[25] = float("nan")
+            d[0][0] = float("nan")
         cont = contingency.Discrete(d, 0)
         assert_dist_equal(cont["amphibian"], [3, 0])
         assert_dist_equal(cont, [[3, 0], [20, 0], [13, 0], [4, 4],
@@ -60,8 +61,9 @@ class TestDiscrete(unittest.TestCase):
                                        [1, 0])
 
         d = data.Table("zoo")
-        d.Y[2] = float("nan")
-        d[2]["predator"] = float("nan")
+        with d.unlocked():
+            d.Y[2] = float("nan")
+            d[2]["predator"] = float("nan")
         cont = contingency.Discrete(d, "predator")
         assert_dist_equal(cont["fish"], [4, 8])
         assert_dist_equal(cont, [[1, 3], [11, 9], [4, 8], [7, 1],
@@ -80,10 +82,11 @@ class TestDiscrete(unittest.TestCase):
 
     def test_array_with_unknowns(self):
         d = data.Table("zoo")
-        d.Y[2] = float("nan")
-        d.Y[6] = float("nan")
-        d[2]["predator"] = float("nan")
-        d[4]["predator"] = float("nan")
+        with d.unlocked():
+            d.Y[2] = float("nan")
+            d.Y[6] = float("nan")
+            d[2]["predator"] = float("nan")
+            d[4]["predator"] = float("nan")
         cont = contingency.Discrete(d, "predator")
         assert_dist_equal(cont.array_with_unknowns,
                           [[1, 3, 0], [11, 9, 0], [4, 8, 0], [7, 1, 0],
@@ -91,10 +94,11 @@ class TestDiscrete(unittest.TestCase):
 
     def test_discrete_with_fallback(self):
         d = data.Table("zoo")
-        d.Y[25] = None
-        d.Y[24] = None
-        d.X[0, 0] = None
-        d.X[24, 0] = None
+        with d.unlocked():
+            d.Y[25] = None
+            d.Y[24] = None
+            d.X[0, 0] = None
+            d.X[24, 0] = None
         default = contingency.Discrete(d, 0)
 
         d._compute_contingency = Mock(side_effect=NotImplementedError)
@@ -130,7 +134,8 @@ class TestDiscrete(unittest.TestCase):
 
     def test_continuous_missing(self):
         d = data.Table("iris")
-        d[1][1] = float("nan")
+        with d.unlocked():
+            d[1][1] = float("nan")
         cont = contingency.Continuous(d, "sepal width")
         correct = [[2.3, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7,
                     3.8, 3.9, 4.0, 4.1, 4.2, 4.4],
@@ -140,7 +145,8 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont["Iris-setosa"], correct)
         self.assertEqual(cont.unknowns, 0)
 
-        d.Y[0] = float("nan")
+        with d.unlocked():
+            d.Y[0] = float("nan")
         cont = contingency.Continuous(d, "sepal width")
         correct = [[2.2, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.6, 3.8],
                    [1, 4, 2, 4, 8, 2, 12, 4, 5, 3, 2, 1, 2]]
@@ -153,7 +159,8 @@ class TestDiscrete(unittest.TestCase):
              0., 0., 0., 0., 0., 0., 0.])
         self.assertEqual(cont.unknowns, 0)
 
-        d.Y[1] = float("nan")
+        with d.unlocked():
+            d.Y[1] = float("nan")
         cont = contingency.Continuous(d, "sepal width")
         np.testing.assert_almost_equal(cont.col_unknowns, [0, 0, 0])
         np.testing.assert_almost_equal(
@@ -163,7 +170,8 @@ class TestDiscrete(unittest.TestCase):
         self.assertEqual(cont.unknowns, 1)
 
         # this one was failing before since the issue in _contingecy.pyx
-        d.Y[:50] = np.zeros(50) * float("nan")
+        with d.unlocked():
+            d.Y[:50] = np.zeros(50) * float("nan")
         cont = contingency.Continuous(d, "sepal width")
         np.testing.assert_almost_equal(cont.col_unknowns, [0, 0, 0])
         np.testing.assert_almost_equal(
@@ -178,7 +186,8 @@ class TestDiscrete(unittest.TestCase):
         Test array_with_unknowns function
         """
         d = data.Table("iris")
-        d.Y[:50] = np.zeros(50) * float("nan")
+        with d.unlocked():
+            d.Y[:50] = np.zeros(50) * float("nan")
         cont = contingency.Continuous(d, "sepal width")
         correct_row_unknowns = [0., 0., 1., 0., 0., 0., 0., 0., 1., 6., 5., 5.,
                                 2., 9., 6., 2., 3., 4., 2., 1., 1., 1., 1.]
@@ -207,8 +216,9 @@ class TestDiscrete(unittest.TestCase):
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
         assert_dist_equal(cont["1"], [38, 5])
         assert_dist_equal(cont, [[4, 54], [38, 5]])
-        zoo[25][t.domain.metas[1]] = float("nan")
-        zoo[0][2] = float("nan")
+        with zoo.unlocked():
+            zoo[25][t.domain.metas[1]] = float("nan")
+            zoo[0][2] = float("nan")
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
         assert_dist_equal(cont["1"], [37, 5])
         assert_dist_equal(cont, [[4, 53], [37, 5]])
@@ -242,6 +252,7 @@ class TestDiscrete(unittest.TestCase):
                    2, 5, 6, 13]
         indptr = [0, 11, 20, 23, 23, 27]
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
+        X.data = X.data.copy()  # make it the owner of it's data
         Y = np.array([[1, 2, 1, 0, 0]]).T
         return data.Table.from_numpy(domain, X, Y)
 
@@ -262,7 +273,8 @@ class TestDiscrete(unittest.TestCase):
         assert_dist_equal(cont["b"], [[1], [1]])
         assert_dist_equal(cont[2], [[], []])
 
-        d[4].set_class(1)
+        with d.unlocked():
+            d[4].set_class(1)
         cont = contingency.Continuous(d, 13)
         assert_dist_equal(cont[0], [[], []])
         assert_dist_equal(cont["b"], [[1, 1.1], [1, 1]])
@@ -340,9 +352,10 @@ class TestDiscrete(unittest.TestCase):
         Testing with sparse row variable since currently we do not test the
         situation when a row variable is sparse.
         """
-        d = self.test9
         # make X sparse
-        d.X = csr_matrix(d.X)
+        d = self.test9.copy()
+        with d.unlocked():
+            d.X = csr_matrix(d.X)
         var1, var2 = d.domain[0], d.domain[1]
         cont = contingency.Discrete(d, var1, var2)
         assert_dist_equal(cont, [[1, 0], [1, 0], [1, 0], [1, 0],
@@ -351,7 +364,9 @@ class TestDiscrete(unittest.TestCase):
         assert_dist_equal(cont, [[1, 1, 1, 1, 0, 0, 0, 0],
                                  [0, 0, 0, 0, 1, 1, 1, 1]])
 
-        d.X = csc_matrix(d.X)
+        d = self.test9.copy()
+        with d.unlocked():
+            d.X = csc_matrix(d.X)
         cont = contingency.Discrete(d, var1, var2)
         assert_dist_equal(cont, [[1, 0], [1, 0], [1, 0], [1, 0],
                                  [0, 1], [0, 1], [0, 1], [0, 1]])
@@ -372,7 +387,8 @@ class TestDiscrete(unittest.TestCase):
         c = contingency.get_contingency(d, X, C)
         self.assertEqual(c.counts.shape[0], 1024)
 
-        d.Y[5] = 1024
+        with d.unlocked():
+            d.Y[5] = 1024
         with self.assertRaises(IndexError):
             contingency.get_contingency(d, X, C)
 

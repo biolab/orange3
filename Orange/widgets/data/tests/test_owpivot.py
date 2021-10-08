@@ -371,8 +371,10 @@ class TestPivot(unittest.TestCase):
                          Dv("d2", ("a", "b")), Cv("c2")])
         X = np.array([[0, 1, 0, 2], [1, 2, np.nan, 3], [0, 3, 1, np.nan]])
         table = Table(domain, X).transform(
-            Domain(domain.attributes[:2], metas=domain.attributes[2:]))
-        table.metas = table.metas.astype(object)
+            Domain(domain.attributes[:2], metas=domain.attributes[2:]),
+            copy=True)
+        with table.unlocked():
+            table.metas = table.metas.astype(object)
 
         pivot = Pivot(table, Pivot.Functions, table.domain[-1])
         group_tab = pivot.group_table

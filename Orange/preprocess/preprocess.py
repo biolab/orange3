@@ -171,7 +171,8 @@ class SklImpute(Preprocess):
         domain = Orange.data.Domain(features, data.domain.class_vars,
                                     data.domain.metas)
         new_data = data.transform(domain)
-        new_data.X = X
+        with new_data.unlocked(new_data.X):
+            new_data.X = X
         return new_data
 
 
@@ -414,12 +415,13 @@ class Randomize(Preprocess):
         rstate = np.random.RandomState(self.rand_seed)
         # ensure the same seed is not used to shuffle X and Y at the same time
         r1, r2, r3 = rstate.randint(0, 2 ** 32 - 1, size=3, dtype=np.int64)
-        if self.rand_type & Randomize.RandomizeClasses:
-            new_data.Y = self.randomize(new_data.Y, r1)
-        if self.rand_type & Randomize.RandomizeAttributes:
-            new_data.X = self.randomize(new_data.X, r2)
-        if self.rand_type & Randomize.RandomizeMetas:
-            new_data.metas = self.randomize(new_data.metas, r3)
+        with new_data.unlocked():
+            if self.rand_type & Randomize.RandomizeClasses:
+                new_data.Y = self.randomize(new_data.Y, r1)
+            if self.rand_type & Randomize.RandomizeAttributes:
+                new_data.X = self.randomize(new_data.X, r2)
+            if self.rand_type & Randomize.RandomizeMetas:
+                new_data.metas = self.randomize(new_data.metas, r3)
         return new_data
 
     @staticmethod
