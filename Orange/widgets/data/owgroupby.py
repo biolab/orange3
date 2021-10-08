@@ -2,7 +2,6 @@ from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import partial
-from math import ceil
 from typing import Any, Dict, List, Optional, Set
 
 import pandas as pd
@@ -359,13 +358,19 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
         # aggregations checkboxes
         grid_layout = QGridLayout()
         gui.widgetBox(self.mainArea, orientation=grid_layout, box="Aggregations")
-        itm_col = ceil(len(AGGREGATIONS) / 3)
 
-        for i, agg in enumerate(AGGREGATIONS):
+        col = 0
+        row = 0
+        break_rows = (5, 5, 99)
+        for agg in AGGREGATIONS:
             self.agg_checkboxes[agg] = cb = CheckBox(agg, self)
             cb.setDisabled(True)
             cb.stateChanged.connect(partial(self.__aggregation_changed, agg))
-            grid_layout.addWidget(cb, i % itm_col, i // itm_col)
+            grid_layout.addWidget(cb, row, col)
+            row += 1
+            if row == break_rows[col]:
+                row = 0
+                col += 1
 
     ############
     # Callbacks
@@ -455,7 +460,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
             self.start(_run, self.data, self.gb_attrs, self.aggregations, self.result)
 
     def on_done(self, result: Result) -> None:
-        self.result = self.result
+        self.result = result
         self.Outputs.data.send(result.result_table)
 
     def on_partial_result(self, result: Result) -> None:

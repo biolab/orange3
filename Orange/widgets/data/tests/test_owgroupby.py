@@ -115,6 +115,7 @@ class TestOWGropBy(WidgetTest):
                 "First value",
                 "Last value",
                 "Random value",
+                "Proportion defined",
             }
         )
         self.select_table_rows(table, [0, 1])
@@ -135,6 +136,7 @@ class TestOWGropBy(WidgetTest):
                 "First value",
                 "Last value",
                 "Random value",
+                "Proportion defined",
             }
         )
         self.select_table_rows(table, [2])
@@ -155,6 +157,7 @@ class TestOWGropBy(WidgetTest):
                 "First value",
                 "Last value",
                 "Random value",
+                "Proportion defined",
             }
         )
         self.select_table_rows(table, [3])  # discrete variable
@@ -166,6 +169,7 @@ class TestOWGropBy(WidgetTest):
                 "First value",
                 "Last value",
                 "Random value",
+                "Proportion defined",
             }
         )
         self.select_table_rows(table, [4])  # string variable
@@ -177,6 +181,7 @@ class TestOWGropBy(WidgetTest):
                 "First value",
                 "Last value",
                 "Random value",
+                "Proportion defined",
             }
         )
         self.select_table_rows(table, [3, 4])  # string variable
@@ -188,6 +193,7 @@ class TestOWGropBy(WidgetTest):
                 "First value",
                 "Last value",
                 "Random value",
+                "Proportion defined",
             }
         )
         self.select_table_rows(table, [2, 3, 4])  # string variable
@@ -208,6 +214,7 @@ class TestOWGropBy(WidgetTest):
                 "First value",
                 "Last value",
                 "Random value",
+                "Proportion defined",
             }
         )
 
@@ -222,28 +229,32 @@ class TestOWGropBy(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, self.data)
 
-        self.assert_aggregations_equal(["Mean", "Mean", "Mean", "", ""])
+        self.assert_aggregations_equal(
+            ["Mean", "Mean", "Mean", "Concatenate", "Concatenate"]
+        )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean"},
                 d["b"]: {"Mean"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
 
         self.select_table_rows(table, [0])
         self.widget.agg_checkboxes["Median"].click()
-        self.assert_aggregations_equal(["Mean, Median", "Mean", "Mean", "", ""])
+        self.assert_aggregations_equal(
+            ["Mean, Median", "Mean", "Mean", "Concatenate", "Concatenate"]
+        )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Median"},
                 d["b"]: {"Mean"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -251,15 +262,15 @@ class TestOWGropBy(WidgetTest):
         self.select_table_rows(table, [0, 1])
         self.widget.agg_checkboxes["Mode"].click()
         self.assert_aggregations_equal(
-            ["Mean, Median, Mode", "Mean, Mode", "Mean", "", ""]
+            ["Mean, Median, Mode", "Mean, Mode", "Mean", "Concatenate", "Concatenate"]
         )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Median", "Mode"},
                 d["b"]: {"Mean", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -272,15 +283,21 @@ class TestOWGropBy(WidgetTest):
         self.widget.agg_checkboxes["Median"].click()
         self.assertEqual(Qt.Checked, self.widget.agg_checkboxes["Median"].checkState())
         self.assert_aggregations_equal(
-            ["Mean, Median, Mode", "Mean, Median, Mode", "Mean", "", ""]
+            [
+                "Mean, Median, Mode",
+                "Mean, Median, Mode",
+                "Mean",
+                "Concatenate",
+                "Concatenate",
+            ]
         )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Median", "Mode"},
                 d["b"]: {"Mean", "Median", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -289,14 +306,16 @@ class TestOWGropBy(WidgetTest):
         self.assertEqual(
             Qt.Unchecked, self.widget.agg_checkboxes["Median"].checkState()
         )
-        self.assert_aggregations_equal(["Mean, Mode", "Mean, Mode", "Mean", "", ""])
+        self.assert_aggregations_equal(
+            ["Mean, Mode", "Mean, Mode", "Mean", "Concatenate", "Concatenate"]
+        )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Mode"},
                 d["b"]: {"Mean", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -311,15 +330,15 @@ class TestOWGropBy(WidgetTest):
             Qt.PartiallyChecked, self.widget.agg_checkboxes["Median"].checkState()
         )
         self.assert_aggregations_equal(
-            ["Mean, Median, Mode", "Mean, Mode", "Mean", "", ""]
+            ["Mean, Median, Mode", "Mean, Mode", "Mean", "Concatenate", "Concatenate"]
         )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Median", "Mode"},
                 d["b"]: {"Mean", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -328,14 +347,16 @@ class TestOWGropBy(WidgetTest):
         self.assertEqual(
             Qt.Unchecked, self.widget.agg_checkboxes["Median"].checkState()
         )
-        self.assert_aggregations_equal(["Mean, Mode", "Mean, Mode", "Mean", "", ""])
+        self.assert_aggregations_equal(
+            ["Mean, Mode", "Mean, Mode", "Mean", "Concatenate", "Concatenate"]
+        )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Mode"},
                 d["b"]: {"Mean", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -343,15 +364,21 @@ class TestOWGropBy(WidgetTest):
         self.widget.agg_checkboxes["Count"].click()
         self.assertEqual(Qt.Checked, self.widget.agg_checkboxes["Count"].checkState())
         self.assert_aggregations_equal(
-            ["Mean, Mode, Count", "Mean, Mode", "Mean", "Count", ""]
+            [
+                "Mean, Mode, Count",
+                "Mean, Mode",
+                "Mean",
+                "Concatenate, Count",
+                "Concatenate",
+            ]
         )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Mode", "Count"},
                 d["b"]: {"Mean", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: {"Count"},
-                d["svar"]: set(),
+                d["dvar"]: {"Count", "Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -361,15 +388,15 @@ class TestOWGropBy(WidgetTest):
         self.select_table_rows(table, [0])
         self.widget.agg_checkboxes["Mode"].click()
         self.assert_aggregations_equal(
-            ["Mean, Count", "Mean, Mode", "Mean", "Count", ""]
+            ["Mean, Count", "Mean, Mode", "Mean", "Concatenate, Count", "Concatenate"]
         )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Count"},
                 d["b"]: {"Mean", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: {"Count"},
-                d["svar"]: set(),
+                d["dvar"]: {"Count", "Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -385,15 +412,21 @@ class TestOWGropBy(WidgetTest):
             Qt.PartiallyChecked, self.widget.agg_checkboxes["Mode"].checkState()
         )
         self.assert_aggregations_equal(
-            ["Mean, Mode, Count", "Mean, Mode", "Mean", "Count", ""]
+            [
+                "Mean, Mode, Count",
+                "Mean, Mode",
+                "Mean",
+                "Concatenate, Count",
+                "Concatenate",
+            ]
         )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Mode", "Count"},
                 d["b"]: {"Mean", "Mode"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: {"Count"},
-                d["svar"]: set(),
+                d["dvar"]: {"Count", "Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -402,14 +435,16 @@ class TestOWGropBy(WidgetTest):
         # unchecked on the next click
         self.widget.agg_checkboxes["Mode"].click()
         self.assertEqual(Qt.Unchecked, self.widget.agg_checkboxes["Mode"].checkState())
-        self.assert_aggregations_equal(["Mean, Count", "Mean", "Mean", "Count", ""])
+        self.assert_aggregations_equal(
+            ["Mean, Count", "Mean", "Mean", "Concatenate, Count", "Concatenate"]
+        )
         self.assertDictEqual(
             {
                 d["a"]: {"Mean", "Count"},
                 d["b"]: {"Mean"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: {"Count"},
-                d["svar"]: set(),
+                d["dvar"]: {"Count", "Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -424,8 +459,8 @@ class TestOWGropBy(WidgetTest):
                 "Mean, Mode, Count defined and 1 more",
                 "Mean, Mode, Count defined",
                 "Mean",
-                "Count defined, Count",
-                "",
+                "Concatenate, Count defined, Count",
+                "Concatenate",
             ]
         )
         self.assertDictEqual(
@@ -433,8 +468,8 @@ class TestOWGropBy(WidgetTest):
                 d["a"]: {"Mean", "Mode", "Count", "Count defined"},
                 d["b"]: {"Mean", "Mode", "Count defined"},
                 d["cvar"]: {"Mean"},
-                d["dvar"]: {"Count", "Count defined"},
-                d["svar"]: set(),
+                d["dvar"]: {"Count", "Count defined", "Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -447,13 +482,31 @@ class TestOWGropBy(WidgetTest):
         np.testing.assert_array_almost_equal(
             output.X, [[1, 2.143, 0.317], [2, 2, 2]], decimal=3
         )
-        np.testing.assert_array_almost_equal(output.metas, [[1], [2]], decimal=3)
+        np.testing.assert_array_equal(
+            output.metas,
+            np.array(
+                [
+                    [
+                        "val1 val2 val2 val1 val2 val1",
+                        "sval1 sval2 sval2 sval1 sval2 sval1",
+                        1.0,
+                    ],
+                    [
+                        "val2 val1 val2 val1 val2 val1",
+                        "sval2 sval1 sval2 sval1 sval2 sval1",
+                        2.0,
+                    ],
+                ],
+                dtype=object,
+            ),
+        )
 
         # select all aggregations for all features except a and b
         self._set_selection(self.widget.gb_attrs_view, [1, 2])
         self.select_table_rows(self.widget.agg_table_view, [2, 3, 4])
         # select all aggregations
         for cb in self.widget.agg_checkboxes.values():
+            cb.click()
             while not cb.isChecked():
                 cb.click()
 
@@ -477,14 +530,17 @@ class TestOWGropBy(WidgetTest):
             "cvar - Last value",
             "cvar - Count defined",
             "cvar - Count",
+            "cvar - Proportion defined",
             "dvar - First value",
             "dvar - Last value",
             "dvar - Count defined",
             "dvar - Count",
+            "dvar - Proportion defined",
             "svar - First value",
             "svar - Last value",
             "svar - Count defined",
             "svar - Count",
+            "svar - Proportion defined",
             "cvar - Concatenate",
             "dvar - Concatenate",
             "svar - Concatenate",
@@ -494,37 +550,34 @@ class TestOWGropBy(WidgetTest):
 
         # fmt: off
         expected_df = pd.DataFrame([
-            [.15, .15, .1, .07, .005, .3, .1, .2, .1, 0.1, 0.2, 2, 2,
-             "val1", "val2", 2, 2,
-             "sval1", "sval2", 2, 2,
+            [.15, .15, .1, .07, .005, .3, .1, .2, .1, 0.1, 0.2, 2, 2, 1,
+             "val1", "val2", 2, 2, 1,
+             "sval1", "sval2", 2, 2, 1,
              "0.1 0.2", "val1 val2", "sval1 sval2",
              1, 1],
-            [.3, .3, .3, np.nan, np.nan, .3, .3, .3, 0, .3, .3, 1, 2,
-             "val2", "val2", 1, 2,
-             "", "sval2", 2, 2,
+            [.3, .3, .3, np.nan, np.nan, .3, .3, .3, 0, .3, .3, 1, 2, 0.5,
+             "val2", "val2", 1, 2, 0.5,
+             "", "sval2", 2, 2, 1,
              "0.3", "val2", "sval2",
              1, 2],
-            [.433, .4, .3, 0.153, 0.023, 1.3, .3, .6, .3, .3, .6, 3, 3,
-             "val1", "val1", 3, 3,
-             "sval1", "sval1",
-             3, 3, "0.3 0.4 0.6",
-             "val1 val2 val1", "sval1 sval2 sval1",
+            [.433, .4, .3, 0.153, 0.023, 1.3, .3, .6, .3, .3, .6, 3, 3, 1,
+             "val1", "val1", 3, 3, 1,
+             "sval1", "sval1", 3, 3, 1,
+             "0.3 0.4 0.6", "val1 val2 val1", "sval1 sval2 sval1",
              1, 3],
-            [1.5, 1.5, 1, 0.707, 0.5, 3, 1, 2, 1, 1, 2, 2, 2,
-             "val2", "val1", 2, 2,
-             "sval2", "sval1", 2, 2,
-             "1.0 2.0",
-             "val2 val1", "sval2 sval1",
+            [1.5, 1.5, 1, 0.707, 0.5, 3, 1, 2, 1, 1, 2, 2, 2, 1,
+             "val2", "val1", 2, 2, 1,
+             "sval2", "sval1", 2, 2, 1,
+             "1.0 2.0", "val2 val1", "sval2 sval1",
              2, 1],
-            [-0.5, -0.5, -4, 4.95, 24.5, -1, -4, 3, 7, 3, -4, 2, 2,
-             "val2", "val1", 2, 2,
-             "sval2", "sval1", 2, 2,
-             "3.0 -4.0",
-             "val2 val1", "sval2 sval1",
+            [-0.5, -0.5, -4, 4.95, 24.5, -1, -4, 3, 7, 3, -4, 2, 2, 1,
+             "val2", "val1", 2, 2, 1,
+             "sval2", "sval1", 2, 2, 1,
+             "3.0 -4.0", "val2 val1", "sval2 sval1",
              2, 2],
-            [5, 5, 5, 0, 0, 10, 5, 5, 0, 5, 5, 2, 2,
-             "val2", "val1", 2, 2,
-             "sval2", "sval1", 2, 2,
+            [5, 5, 5, 0, 0, 10, 5, 5, 0, 5, 5, 2, 2, 1,
+             "val2", "val1", 2, 2, 1,
+             "sval2", "sval1", 2, 2, 1,
              "5.0 5.0", "val2 val1", "sval2 sval1",
              2, 3]
             ], columns=expected_columns
@@ -547,21 +600,26 @@ class TestOWGropBy(WidgetTest):
         )
 
     def test_metas_results(self):
+        """Test if variable that is in meta in input table remains in metas"""
         self.send_signal(self.widget.Inputs.data, self.data)
         self._set_selection(self.widget.gb_attrs_view, [0, 1])
 
         output = self.get_output(self.widget.Outputs.data)
-        self.assertEqual("svar", output.domain.metas[0].name)
+        self.assertIn(self.data.domain["svar"], output.domain.metas)
 
     def test_context(self):
         d = self.data.domain
         self.send_signal(self.widget.Inputs.data, self.data)
 
-        self.assert_aggregations_equal(["Mean", "Mean", "Mean", "", ""])
+        self.assert_aggregations_equal(
+            ["Mean", "Mean", "Mean", "Concatenate", "Concatenate"]
+        )
 
         self.select_table_rows(self.widget.agg_table_view, [0, 2])
         self.widget.agg_checkboxes["Median"].click()
-        self.assert_aggregations_equal(["Mean, Median", "Mean", "Mean, Median", "", ""])
+        self.assert_aggregations_equal(
+            ["Mean, Median", "Mean", "Mean, Median", "Concatenate", "Concatenate"]
+        )
 
         self._set_selection(self.widget.gb_attrs_view, [1, 2])
         self.assertListEqual([d["a"], d["b"]], self.widget.gb_attrs)
@@ -570,8 +628,8 @@ class TestOWGropBy(WidgetTest):
                 d["a"]: {"Mean", "Median"},
                 d["b"]: {"Mean"},
                 d["cvar"]: {"Mean", "Median"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
@@ -580,7 +638,9 @@ class TestOWGropBy(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.send_signal(self.widget.Inputs.data, self.data)
 
-        self.assert_aggregations_equal(["Mean, Median", "Mean", "Mean, Median", "", ""])
+        self.assert_aggregations_equal(
+            ["Mean, Median", "Mean", "Mean, Median", "Concatenate", "Concatenate"]
+        )
         self._set_selection(self.widget.gb_attrs_view, [1, 2])
         self.assertListEqual([d["a"], d["b"]], self.widget.gb_attrs)
         self.assertDictEqual(
@@ -588,8 +648,8 @@ class TestOWGropBy(WidgetTest):
                 d["a"]: {"Mean", "Median"},
                 d["b"]: {"Mean"},
                 d["cvar"]: {"Mean", "Median"},
-                d["dvar"]: set(),
-                d["svar"]: set(),
+                d["dvar"]: {"Concatenate"},
+                d["svar"]: {"Concatenate"},
             },
             self.widget.aggregations,
         )
