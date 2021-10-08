@@ -64,10 +64,10 @@ class TestWorkflows(GuiTest):
         ep_last = pkg_resources.EntryPoint('exampletutorials', 'orangecontrib.other_addon.tutorials')
         ep_map['orange.widgets.tutorials'] = {ep_first.name: ep_first, ep_last.name: ep_last}
 
-        entry_points = list(Config.examples_entry_points())
-
-        self.assertEqual(entry_points[0].name, ep_first.name)
-        self.assertEqual(entry_points[1].name, '000-Orange3')
-        self.assertEqual(entry_points[2].name, ep_last.name)
+        ep_names = [point.name for point in Config.examples_entry_points()]
+        self.assertLess(ep_names.index(ep_first.name),
+                        ep_names.index("000-Orange3"))
+        self.assertLess(ep_names.index("000-Orange3"),
+                        ep_names.index(ep_last.name))
 
         del ep_map['orange.widgets.tutorials']
