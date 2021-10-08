@@ -170,7 +170,7 @@ class SklImpute(Preprocess):
         assert X.shape[1] == len(features)
         domain = Orange.data.Domain(features, data.domain.class_vars,
                                     data.domain.metas)
-        new_data = data.transform(domain, copy=True)
+        new_data = data.transform(domain)
         with new_data.unlocked(new_data.X):
             new_data.X = X
         return new_data
