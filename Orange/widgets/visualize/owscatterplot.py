@@ -225,6 +225,17 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         self.plot_widget.addItem(line)
         self.reg_line_items.append(line)
 
+    def _update_reg_line_label_colors(self):
+        for line in self.reg_line_items:
+            if hasattr(line, "label"):
+                color = 0.0 if self.class_density \
+                    else line.pen.color().darker(175)
+                line.label.setColor(color)
+
+    def update_density(self):
+        super().update_density()
+        self._update_reg_line_label_colors()
+
     def update_regression_line(self):
         for line in self.reg_line_items:
             self.plot_widget.removeItem(line)
@@ -235,7 +246,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         x, y = self.master.get_coordinates_data()
         if x is None:
             return
-        self._add_line(x, y, QColor("#505050"), width=2)
+        self._add_line(x, y, QColor("#505050"), width=3)
         if self.master.is_continuous_color() or self.palette is None:
             return
         c_data = self.master.get_color_data()
@@ -245,7 +256,10 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         for val in range(c_data.max() + 1):
             mask = c_data == val
             if mask.sum() > 1:
-                self._add_line(x[mask], y[mask], self.palette[val], width=2)
+                self._add_line(x[mask], y[mask],
+                               self.palette[val].darker(135),
+                               width=3)
+        self._update_reg_line_label_colors()
 
 
 class OWScatterPlot(OWDataProjectionWidget):
