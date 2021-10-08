@@ -429,7 +429,7 @@ class TestPandasCompat(unittest.TestCase):
             self.assertEqual(len(df.columns), len(table.domain.variables), assert_message)
 
     def test_table_from_frames(self):
-        table = Table("brown-selected")
+        table = Table("brown-selected")  # dataset with all X, Y and metas
         table.ids = np.arange(100, len(table) + 100, 1, dtype=int)
 
         x, y, m = table.to_pandas_dfs()
