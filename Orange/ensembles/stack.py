@@ -81,7 +81,7 @@ class StackedLearner(Learner):
         dom = Domain([ContinuousVariable('f{}'.format(i + 1))
                       for i in range(X.shape[1])],
                      data.domain.class_var)
-        stacked_data = data.transform(dom, copy=True)
+        stacked_data = data.transform(dom).copy()
         with stacked_data.unlocked():
             stacked_data.X = X
             stacked_data.Y = res.actual

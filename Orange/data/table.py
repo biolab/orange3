@@ -571,8 +571,7 @@ class Table(Sequence, Storage):
         elif isinstance(args[0], Table):
             if len(args) > 1:
                 raise TypeError("Table(table: Table) expects just one argument")
-            return cls.from_table(args[0].domain, args[0],
-                                  copy=kwargs.pop("copy", False), **kwargs)
+            return cls.from_table(args[0].domain, args[0], **kwargs)
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
@@ -630,7 +629,7 @@ class Table(Sequence, Storage):
         return self
 
     @classmethod
-    def from_table(cls, domain, source, row_indices=..., *, copy=False):
+    def from_table(cls, domain, source, row_indices=...):
         """
         Create a new table from selected columns and/or rows of an existing
         one. The columns are chosen using a domain. The domain may also include
@@ -645,8 +644,6 @@ class Table(Sequence, Storage):
         :type source: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
-        :param copy: if True, copy all tables (default: False, create views)
-        :type copy: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
@@ -663,7 +660,7 @@ class Table(Sequence, Storage):
                 if cached is not None:
                     return cached
             if domain is source.domain:
-                table = cls.from_table_rows(source, row_indices, copy=copy)
+                table = cls.from_table_rows(source, row_indices)
                 # assure resulting domain is the instance passed on input
                 table.domain = domain
                 # since sparse flags are not considered when checking for
@@ -759,15 +756,13 @@ class Table(Sequence, Storage):
                     cls._init_ids(self)
                 self.attributes = getattr(source, 'attributes', {})
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
-            if copy:
-                self.ensure_copy()
             return self
         finally:
             if new_cache:
                 _thread_local.conversion_cache = None
                 _thread_local.domain_cache = None
 
-    def transform(self, domain, copy=False):
+    def transform(self, domain):
         """
         Construct a table with a different domain.
 
@@ -790,10 +785,10 @@ class Table(Sequence, Storage):
         Returns:
             A new table
         """
-        return type(self).from_table(domain, self, copy=copy)
+        return type(self).from_table(domain, self)
 
     @classmethod
-    def from_table_rows(cls, source, row_indices, *, copy=False):
+    def from_table_rows(cls, source, row_indices):
         """
         Construct a new table by selecting rows from the source table.
 
@@ -801,14 +796,12 @@ class Table(Sequence, Storage):
         :type source: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
-        :param copy: if True, copy all tables (default: False, create views)
-        :type copy: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
         def get_rows(a):
             a = a[row_indices]
-            if isinstance(row_indices, slice) or row_indices is ... or copy:
+            if isinstance(row_indices, slice) or row_indices is ...:
                 a = a.copy()
             return a
 

@@ -178,7 +178,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         selected_atr_name = 'Selected'
         input2 = self.data.transform(Domain([self.data.domain.attributes[0]],
                                             self.data.domain.class_vars,
-                                            self.data.domain.metas), copy=True)
+                                            self.data.domain.metas)).copy()
         self.send_signal(self.signal_name, self.data, (1, 'Data', None))
         self.send_signal(self.signal_name, input2, (2, 'Data', None))
 
