@@ -373,12 +373,13 @@ class Table(Sequence, Storage):
 
     domain = Domain([])
     _X = _Y = _metas = _W = np.zeros((0, 0))  # pylint: disable=invalid-name
-    _unlocked = 0  # pylint: disable=invalid-name
     ids = np.zeros(0)
     ids.setflags(write=False)
     attributes = frozendict()
 
     _Unlocked_X, _Unlocked_Y, _Unlocked_metas, _Unlocked_W = 1, 2, 4, 8
+    _unlocked = _Unlocked_X + _Unlocked_Y + \
+                _Unlocked_metas + _Unlocked_W  # pylint: disable=invalid-name
 
     @property
     def columns(self):
@@ -441,7 +442,7 @@ class Table(Sequence, Storage):
 
     def __setstate__(self, state):
         # Backward compatibility with pickles before table locking
-        self._unlocked = 0  # __dict__ seems to be cleared before calling __setstate__
+        self._initialize_unlocked()  # __dict__ seems to be cleared before calling __setstate__
         with self.unlocked():
             for k in ("X", "W", "metas"):
                 if k in state:
@@ -453,6 +454,12 @@ class Table(Sequence, Storage):
                 (self._Y, self._Unlocked_Y, "Y"),
                 (self._metas, self._Unlocked_metas, "metas"),
                 (self._W, self._Unlocked_W, "weights"))
+
+    def _initialize_unlocked(self):
+        if Table.LOCKING:
+            self._unlocked = 0
+        else:
+            self._unlocked = sum(f for _, f, _ in self._lock_parts())
 
     def _update_locks(self, force=False, unlock_bases=()):
         if not Table.LOCKING:
@@ -551,12 +558,7 @@ class Table(Sequence, Storage):
 
         if not args:
             if not kwargs:
-                self = super().__new__(cls)
-                if Table.LOCKING:
-                    self._unlocked = 0
-                else:
-                    self._unlocked = sum(f for _, f, _ in self._lock_parts())
-                return self
+                return super().__new__(cls)
             else:
                 raise TypeError("Table() must not be called directly")
 
@@ -593,6 +595,7 @@ class Table(Sequence, Storage):
         return cls.from_numpy(domain, *args, **kwargs)
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
+        self._initialize_unlocked()
         self._update_locks()
 
     @classmethod
