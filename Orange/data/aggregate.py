@@ -20,6 +20,10 @@ class OrangeTableGroupBy:
     by
         Variable used for grouping. Resulting groups are defined with unique
         combinations of those values.
+    preprocess_settings
+        A DataFrame function to be applied to each group before aggregation.
+        Tuple of the function name, the parameter of the function, and the
+        time variable name to use as index, if needed.
 
     Examples
     --------
@@ -31,12 +35,26 @@ class OrangeTableGroupBy:
         {table.domain["sepal length"]: ["mean", "median"],
          table.domain["petal length"]: ["mean"]}
     )
+
+    # With preprocessing:
+    # Group by US States and take only the n newest instances from each group
+    # within a year (31536000 sec), starting from the newest event. And
+    # calculate the mean value of each group from the Individuals_affected variable.
+    table = Table("Orange/tests/datasets/cyber-security-breaches.tab")
+    gb = table.groupby([table.domain["US State"]], ('last', 31_536_000, 'breach_start'))
+    agg_table = gb.aggregate({table.domain["Individuals_Affected"]: ["mean"]})
     """
 
-    def __init__(self, table: Table, by: List[Variable]):
+    def __init__(self, table: Table, by: List[Variable],
+                 preprocess_settings: Tuple[str, float, str] = None):
         self.table = table
 
         df = table_to_frame(table, include_metas=True)
+
+        if preprocess_settings is not None:
+            self.group_by = df.groupby([a.name for a in by], observed=True, as_index=False)
+            df = self.group_by.apply(self._preprocess, preprocess_settings)
+
         # observed=True keeps only groups with at leas one instance
         self.group_by = df.groupby([a.name for a in by], observed=True)
 
@@ -120,3 +138,16 @@ class OrangeTableGroupBy:
         )
         # keeps input table's type - e.g. output is Corpus if input Corpus
         return self.table.from_table(new_domain, table)
+
+    @staticmethod
+    def _preprocess(df, settings):
+        func, delta, time_variable_name = settings
+        if func in ['last', 'first']:
+            df.set_index(time_variable_name, drop=False, inplace=True)
+            df.sort_index(inplace=True)
+            df.index.name = None
+            delta = pd.Timedelta(seconds=delta)
+        else:
+            delta = int(delta)
+
+        return df.apply(func, args=(delta,))

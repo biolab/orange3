@@ -10,6 +10,7 @@ from Orange.data import (
     StringVariable,
     Table,
     table_to_frame,
+    TimeVariable
 )
 
 
@@ -138,6 +139,26 @@ class DomainTest(unittest.TestCase):
         gb = data.groupby([data.domain["a"]])
         output = gb.aggregate({data.domain["a"]: ["mean"]})
         self.assertIsInstance(output, AlternativeTable)
+
+    def test_range_selection(self):
+        gb = self.data.groupby([self.data.domain["a"]], ('head', 2, None))
+        output = gb.aggregate({self.data.domain["cvar"]: [("Mean", "mean")]})
+
+        np.testing.assert_array_almost_equal(output.X, [[0.15], [1.5]], decimal=3)
+        np.testing.assert_array_almost_equal(output.metas, [[1], [2]], decimal=3)
+
+    def test_time_range_selection(self):
+        time = TimeVariable("time")
+        new_domain = Domain(self.data.domain.attributes + (time, ))
+        table = self.data.transform(new_domain)
+        time_values = np.array([0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6])
+        table[:, time] = time_values.reshape(-1, 1)
+
+        gb = table.groupby([table.domain["a"]], ('last', 1.5, 'time'))
+        output = gb.aggregate({table.domain["cvar"]: [("Mean", "mean")]})
+
+        np.testing.assert_array_almost_equal(output.X, [[0.433], [2.0]], decimal=3)
+        np.testing.assert_array_almost_equal(output.metas, [[1], [2]], decimal=3)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
 from threading import Lock
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Tuple
 
 import bottleneck as bn
 import numpy as np
@@ -2248,7 +2248,8 @@ class Table(Sequence, Storage):
         t.ids = self.ids  # preserve indices
         return t
 
-    def groupby(self, columns: List[Variable]) -> "OrangeTableGroupBy":
+    def groupby(self, columns: List[Variable],
+                preprocess_settings: Tuple[str, float, str] = None) -> "OrangeTableGroupBy":
         """
         Group Table by variables defined in the columns list. Behaviour is
         similar to Pandas groupby.
@@ -2257,13 +2258,17 @@ class Table(Sequence, Storage):
         ----------
         columns
             List of variables used to determine the groups
+        preprocess_settings
+            A DataFrame function to be applied to each group before aggregation.
+            Tuple of the function name, the parameter of the function, and the
+            time variable name to use as index, if needed.
 
         Returns
         -------
         GroupBy object of type OrangeTableGroupBy which holds information about
         groups.
         """
-        return Orange.data.aggregate.OrangeTableGroupBy(self, columns)
+        return Orange.data.aggregate.OrangeTableGroupBy(self, columns, preprocess_settings)
 
 
 def _dereferenced(array):
