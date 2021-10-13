@@ -2,7 +2,7 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from AnyQt.QtTest import QSignalSpy
+from AnyQt.QtTest import QSignalSpy, QTest
 from AnyQt.QtCore import Qt, QStringListModel, QModelIndex
 
 from Orange.widgets.utils import itemmodels
@@ -105,7 +105,9 @@ class TestColorGradientSelection(GuiTest):
     def test_center_changed(self):
         w = ColorGradientSelection(center=42)
         changed = QSignalSpy(w.centerChanged)
-        w.center_edit.setText("41")
-        w.center_edit.editingFinished.emit()
-        self.assertEqual(w.center(), 41)
-        self.assertEqual(list(changed), [[41]])
+        ledit = w.center_edit.lineEdit()
+        ledit.selectAll()
+        QTest.keyClicks(ledit, "41")
+        QTest.keyClick(ledit, Qt.Key_Return)
+        self.assertEqual(w.center(), 41.0)
+        self.assertEqual(list(changed), [[41.0]])
