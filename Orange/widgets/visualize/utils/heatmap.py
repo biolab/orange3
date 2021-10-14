@@ -405,6 +405,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         for i, rowitem in enumerate(parts.rows):
             if rowitem.title:
                 item = QGraphicsSimpleTextItem(rowitem.title, parent=self)
+                item.setBrush(self.palette().text())
                 item.setTransform(item.transform().rotate(-90))
                 item = SimpleLayoutItem(item, parent=grid, anchor=(0, 1),
                                         anchorItem=(0, 0))
@@ -433,10 +434,10 @@ class HeatmapGridWidget(QGraphicsWidget):
 
         for j, colitem in enumerate(parts.columns):
             if colitem.title:
-                item = SimpleLayoutItem(
-                    QGraphicsSimpleTextItem(colitem.title, parent=self),
-                    parent=grid, anchor=(0.5, 0.5), anchorItem=(0.5, 0.5)
-                )
+                item = QGraphicsSimpleTextItem(colitem.title, parent=self)
+                item.setBrush(self.palette().text())
+                item = SimpleLayoutItem(item, parent=grid, anchor=(0.5, 0.5),
+                                        anchorItem=(0.5, 0.5))
                 item.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
                 grid.addItem(item, self.GroupTitleRow, Col0 + 2 * j + 1)
 
