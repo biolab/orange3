@@ -27,7 +27,7 @@ from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import (
     HelpEventDelegate as EventDelegate, InteractiveViewBox as ViewBox,
-    PaletteItemSample, SymbolItemSample, AxisItem
+    PaletteItemSample, SymbolItemSample, AxisItem, PlotWidget
 )
 
 SELECTION_WIDTH = 5
@@ -546,8 +546,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
         self.view_box = view_box(self)
         _axis = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
-        self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
-                                         background="w", axisItems=_axis)
+        self.plot_widget = PlotWidget(
+            viewBox=self.view_box, parent=parent, background=None,
+            axisItems=_axis
+        )
         self.plot_widget.hideAxis("left")
         self.plot_widget.hideAxis("bottom")
         self.plot_widget.getPlotItem().buttonsHidden = True
