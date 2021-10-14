@@ -123,7 +123,7 @@ class TreeNode(GraphicsNode):
                                QSizeF(self.attr_text_w, self.attr_text_h))
         else:
             attr_rect = QRectF(0, 0, 1, 1)
-        rect = self.rect().adjusted(-5, -5, 5, 5)
+        rect = self.rect().adjusted(-6, -6, 6, 6)
         return rect | attr_rect
 
     def paint(self, painter, option, widget=None):
@@ -142,7 +142,11 @@ class TreeNode(GraphicsNode):
             painter.drawText(QPointF(x, -self.line_descent - 1), draw_text)
         painter.save()
         painter.setBrush(self.backgroundBrush)
-        painter.setPen(QPen(Qt.black, 3 if self.isSelected() else 0))
+        if self.isSelected():
+            outline = QPen(option.palette.highlight(), 3)
+        else:
+            outline = QPen(option.palette.dark(), 1)
+        painter.setPen(outline)
         adjrect = rect.adjusted(-3, 0, 0, 0)
         if not self.tree_adapter.has_children(self.node_inst):
             painter.drawRoundedRect(adjrect, 4, 4)
