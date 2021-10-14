@@ -11,10 +11,8 @@ from AnyQt.QtWidgets import (
     QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent
 )
 from AnyQt.QtGui import QColor, QPen, QFont, QKeySequence
-from AnyQt.QtCore import Qt, QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-
-import pyqtgraph as pg
 
 import Orange.data
 from Orange.data.domain import filter_visible
@@ -30,6 +28,7 @@ from Orange.widgets.utils import itemmodels, combobox
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
@@ -867,7 +866,7 @@ def qfont_scaled(font, factor):
     return scaled
 
 
-class AxisItem(pg.AxisItem):
+class AxisItem(AxisItem):
     mousePressed = Signal(QPointF, Qt.MouseButton)
     mouseMoved = Signal(QPointF, Qt.MouseButtons)
     mouseReleased = Signal(QPointF, Qt.MouseButton)
