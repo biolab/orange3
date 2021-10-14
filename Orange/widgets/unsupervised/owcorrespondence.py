@@ -4,7 +4,7 @@ from collections import namedtuple, OrderedDict
 import numpy as np
 
 from AnyQt.QtWidgets import QListView, QApplication, QSizePolicy
-from AnyQt.QtGui import QBrush, QColor, QPainter
+from AnyQt.QtGui import QBrush, QColor, QPainter, QPalette
 from AnyQt.QtCore import QEvent, Qt
 from orangewidget.utils.listview import ListViewSearch
 
@@ -277,6 +277,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         margin = margin * 0.05 if margin > 1e-10 else 1
         self.plot.setYRange(minmax[2] - margin, minmax[3] + margin)
 
+        foreground = self.palette().color(QPalette.Text)
         for i, (v, points) in enumerate(zip(variables, points)):
             color_outline = colors[i]
             color_outline.setAlpha(200)
@@ -290,7 +291,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             self.plot.addItem(item)
 
             for name, point in zip(v.values, points):
-                item = pg.TextItem(name, anchor=(0.5, 0))
+                item = pg.TextItem(name, anchor=(0.5, 0), color=foreground)
                 self.plot.addItem(item)
                 item.setPos(point[0], point[1])
 

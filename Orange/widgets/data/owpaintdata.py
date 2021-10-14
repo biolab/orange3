@@ -512,7 +512,8 @@ class SelectTool(DataTool):
 
     def activate(self):
         if self._item is None:
-            self._item = _RectROI((0, 0), (0, 0), pen=(25, 25, 25))
+            pen = self._plot.palette().color(QPalette.Text)
+            self._item = _RectROI((0, 0), (0, 0), pen=pen)
             self._item.setAcceptedMouseButtons(Qt.LeftButton)
             self._item.setVisible(False)
             self._item.setCursor(Qt.OpenHandCursor)
@@ -938,8 +939,8 @@ class OWPaintData(OWWidget):
 
         # main area GUI
         viewbox = PaintViewBox(enableMouse=False)
-        self.plotview = pg.PlotWidget(background="w", viewBox=viewbox)
-        self.plotview.sizeHint = lambda: QSize(200, 100)  # Minimum size for 1-d painting
+        self.plotview = pg.PlotWidget(background=None, viewBox=viewbox)
+        self.plotview.setBackgroundRole(QPalette.Base)
         self.plot = self.plotview.getPlotItem()
 
         axis_color = self.palette().color(QPalette.Text)

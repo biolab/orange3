@@ -7,7 +7,7 @@ import numpy
 from AnyQt.QtWidgets import (
     QGraphicsRectItem, QGraphicsGridLayout, QApplication, QSizePolicy
 )
-from AnyQt.QtGui import QFontMetrics, QPen, QTransform, QFont
+from AnyQt.QtGui import QFontMetrics, QPen, QTransform, QFont, QPalette
 from AnyQt.QtCore import Qt, QRect, QRectF, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal
 
@@ -344,7 +344,8 @@ class OWDistanceMap(widget.OWWidget):
 
         gui.auto_send(self.buttonsArea, self, "autocommit")
 
-        self.view = GraphicsView(background="w")
+        self.view = GraphicsView(background=None)
+        self.view.setBackgroundRole(QPalette.Base)
         self.mainArea.layout().addWidget(self.view)
 
         self.grid_widget = pg.GraphicsWidget()

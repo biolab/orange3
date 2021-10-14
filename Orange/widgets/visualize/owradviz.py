@@ -7,7 +7,7 @@ from scipy.spatial import distance
 from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
-from AnyQt.QtGui import QStandardItem, QColor
+from AnyQt.QtGui import QStandardItem, QColor, QPalette
 from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
 
 import pyqtgraph as pg
@@ -244,8 +244,9 @@ class OWRadvizGraph(OWGraphWithAnchors):
 
         self.anchor_items = []
         label_len = 1
+        foreground = self.plot_widget.palette().color(QPalette.Text)
         for point, label in zip(points, labels):
-            anchor = TextItem()
+            anchor = TextItem(color=foreground)
             anchor.textItem.setToolTip(f"<b>{label}</b>")
 
             if len(label) > MAX_LABEL_LEN:
@@ -266,7 +267,6 @@ class OWRadvizGraph(OWGraphWithAnchors):
             anchor.setText(label)
             anchor.setFont(self.parameter_setter.anchor_font)
             label_len = min(MAX_LABEL_LEN, len(label))
-            anchor.setColor(QColor(0, 0, 0))
 
             x, y = point
             angle = np.rad2deg(np.arctan2(y, x))

@@ -299,8 +299,8 @@ class OWSelectRows(widget.OWWidget):
 
         index = QPersistentModelIndex(model.index(row, 3))
         temp_button = QPushButton('×', self, flat=True,
-                                  styleSheet='* {font-size: 16pt; color: silver}'
-                                             '*:hover {color: black}')
+                                  styleSheet='* {font-size: 16pt; color: palette(button-text) }'
+                                             '*:hover {color: palette(bright-text)}')
         temp_button.clicked.connect(lambda: self.remove_one(index.row()))
         self.cond_list.setCellWidget(row, 3, temp_button)
 

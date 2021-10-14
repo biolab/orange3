@@ -214,7 +214,8 @@ class OWLiftCurve(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        self.plotview = pg.GraphicsView(background="w")
+        self.plotview = pg.GraphicsView(background=None)
+        self.plotview.setBackgroundRole(QPalette.Base)
         self.plotview.setFrameStyle(QFrame.StyledPanel)
 
         axes = {"bottom": AxisItem(orientation="bottom"),

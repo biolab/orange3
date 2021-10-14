@@ -3,6 +3,7 @@ from collections import namedtuple
 import numpy as np
 
 from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtGui import QPalette, QPen
 from AnyQt.QtWidgets import QListWidget, QSizePolicy
 
 import pyqtgraph as pg
@@ -191,17 +192,18 @@ class OWCalibrationPlot(widget.OWWidget):
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
-        self.plotview = pg.GraphicsView(background="w")
+        self.plotview = pg.GraphicsView(background=None)
+        self.plotview.setBackgroundRole(QPalette.Base)
         axes = {"bottom": AxisItem(orientation="bottom"),
                 "left": AxisItem(orientation="left")}
         self.plot = pg.PlotItem(enableMenu=False, axisItems=axes)
         self.plot.parameter_setter = ParameterSetter(self.plot)
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
-
+        pen = QPen(self.palette().color(QPalette.Text))
         for axis_name in ("bottom", "left"):
             axis = self.plot.getAxis(axis_name)
-            axis.setPen(pg.mkPen(color=0.0))
+            axis.setPen(pen)
             # Remove the condition (that is, allow setting this for bottom
             # axis) when pyqtgraph is fixed
             # Issue: https://github.com/pyqtgraph/pyqtgraph/issues/930

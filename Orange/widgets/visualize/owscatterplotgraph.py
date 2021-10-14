@@ -9,7 +9,7 @@ import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
     QObject
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
-    QPainter
+    QPainter, QPalette
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
     QGraphicsRectItem, QGraphicsItemGroup
 
@@ -1290,12 +1290,12 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         if self._too_many_labels or mask is None or not np.any(mask):
             return
 
-        black = pg.mkColor(0, 0, 0)
+        foreground = self.plot_widget.palette().color(QPalette.Text)
         labels = labels[mask]
         x = x[mask]
         y = y[mask]
         for label, xp, yp in zip(labels, x, y):
-            ti = TextItem(label, black)
+            ti = TextItem(label, foreground)
             ti.setPos(xp, yp)
             self.plot_widget.addItem(ti)
             self.labels.append(ti)
