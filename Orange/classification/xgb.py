@@ -1,6 +1,5 @@
 # pylint: disable=too-many-arguments
 from typing import Tuple
-import sys
 
 import numpy as np
 
@@ -12,9 +11,6 @@ from Orange.data import Variable, DiscreteVariable, Table
 from Orange.preprocess.score import LearnerScorer
 
 __all__ = ["XGBClassifier", "XGBRFClassifier"]
-
-# Temporary workaround for https://github.com/dmlc/xgboost/issues/7156
-N_JOBS = 1 if sys.platform == "darwin" else None
 
 
 class _FeatureScorerMixin(LearnerScorer):
@@ -37,7 +33,7 @@ class XGBClassifier(XGBBase, Learner, _FeatureScorerMixin):
                  objective="binary:logistic",
                  booster=None,
                  tree_method=None,
-                 n_jobs=N_JOBS,
+                 n_jobs=None,
                  gamma=None,
                  min_child_weight=None,
                  max_delta_step=None,
@@ -100,7 +96,7 @@ class XGBRFClassifier(XGBBase, Learner, _FeatureScorerMixin):
                  objective="binary:logistic",
                  booster=None,
                  tree_method=None,
-                 n_jobs=N_JOBS,
+                 n_jobs=None,
                  gamma=None,
                  min_child_weight=None,
                  max_delta_step=None,

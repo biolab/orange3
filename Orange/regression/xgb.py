@@ -1,6 +1,5 @@
 # pylint: disable=too-many-arguments
 from typing import Tuple
-import sys
 
 import numpy as np
 import xgboost
@@ -11,9 +10,6 @@ from Orange.preprocess.score import LearnerScorer
 from Orange.regression import Learner
 
 __all__ = ["XGBRegressor", "XGBRFRegressor"]
-
-# Temporary workaround for https://github.com/dmlc/xgboost/issues/7156
-N_JOBS = 1 if sys.platform == "darwin" else None
 
 
 class _FeatureScorerMixin(LearnerScorer):
@@ -36,7 +32,7 @@ class XGBRegressor(XGBBase, Learner, _FeatureScorerMixin):
                  objective="reg:squarederror",
                  booster=None,
                  tree_method=None,
-                 n_jobs=N_JOBS,
+                 n_jobs=None,
                  gamma=None,
                  min_child_weight=None,
                  max_delta_step=None,
@@ -88,7 +84,7 @@ class XGBRFRegressor(XGBBase, Learner, _FeatureScorerMixin):
                  objective="reg:squarederror",
                  booster=None,
                  tree_method=None,
-                 n_jobs=N_JOBS,
+                 n_jobs=None,
                  gamma=None,
                  min_child_weight=None,
                  max_delta_step=None,
