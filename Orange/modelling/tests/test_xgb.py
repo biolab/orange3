@@ -1,7 +1,6 @@
 import unittest
 from typing import Callable, Union
-from datetime import datetime
-
+import xgboost
 
 from Orange.data import Table
 from Orange.evaluation import CrossValidation
@@ -28,9 +27,12 @@ class TestXGB(unittest.TestCase):
         cls.housing = Table("housing")
 
     def test_xgboost_workaround(self):
-        self.assertLess(datetime.today(), datetime(2021, 10, 15),
-                        "\nCheck the new release of xgboost and revert this "
-                        "commit if possible, or do something else if not.")
+        self.assertLessEqual(
+            list(map(int, xgboost.__version__.split("."))),
+            [1, 5, 0],
+            "\nCheck the new release of xgboost and revert this "
+            "commit if possible, or do something else if not."
+        )
 
     @test_learners
     def test_cls(self, learner_class: Union[XGBLearner, XGBRFLearner]):
