@@ -462,6 +462,20 @@ class TestPandasCompat(unittest.TestCase):
         self.assertTupleEqual(table.domain.metas, new_table.domain.metas)
         self.assertEqual(table.domain.class_var, new_table.domain.class_var)
 
+    def test_table_from_frames_not_orange_dataframe(self):
+        x = pd.DataFrame([[1, 2, 3], [4, 5, 6]], columns=["x1", "x2", "x3"])
+        y = pd.DataFrame([[5], [6]], columns=["y"])
+        m = pd.DataFrame([[1, 2], [4, 5]], columns=["m1", "m2"])
+        new_table = Table.from_pandas_dfs(x, y, m)
+
+        np.testing.assert_array_equal(x, new_table.X)
+        np.testing.assert_array_equal(y.values.flatten(), new_table.Y)
+        np.testing.assert_array_equal(m, new_table.metas)
+        d = new_table.domain
+        self.assertListEqual(x.columns.tolist(), [a.name for a in d.attributes])
+        self.assertEqual(y.columns[0], d.class_var.name)
+        self.assertListEqual(m.columns.tolist(), [a.name for a in d.metas])
+
 
 class TestTablePandas(unittest.TestCase):
     def setUp(self):
