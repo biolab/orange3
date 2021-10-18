@@ -859,13 +859,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertEqual(line1.pos().y(), 0)
         self.assertEqual(line1.angle, 45)
-        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
+        self.assertEqual(line1.pen.color().hue(), graph.palette[0].hue())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
+        self.assertEqual(line2.pen.color().hue(), graph.palette[1].hue())
 
         graph.orthonormal_regression = True
         graph.update_regression_line()
@@ -874,13 +874,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertAlmostEqual(line1.pos().y(), -0.6180339887498949)
         self.assertAlmostEqual(line1.angle, 58.28252558853899)
-        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
+        self.assertEqual(line1.pen.color().hue(), graph.palette[0].hue())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
+        self.assertEqual(line2.pen.color().hue(), graph.palette[1].hue())
 
     def test_orthonormal_line(self):
         color = QColor(1, 2, 3)
@@ -1013,11 +1013,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         np.testing.assert_equal(args2[0], x[:4])
         np.testing.assert_equal(args2[1], y[:4])
-        self.assertEqual(args2[2], graph.palette[0])
+        self.assertEqual(args2[2].hue(), graph.palette[0].hue())
 
         np.testing.assert_equal(args3[0], x[4:])
         np.testing.assert_equal(args3[1], y[4:])
-        self.assertEqual(args3[2], graph.palette[1])
+        self.assertEqual(args3[2].hue(), graph.palette[1].hue())
         graph._add_line.reset_mock()
 
         # Continuous color - just a single line
@@ -1027,7 +1027,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         args1, _ = graph._add_line.call_args_list[0]
         np.testing.assert_equal(args1[0], x)
         np.testing.assert_equal(args1[1], y)
-        self.assertEqual(args1[2], QColor("#505050"))
+        self.assertEqual(args1[2].hue(), QColor("#505050").hue())
         graph._add_line.reset_mock()
         widget.is_continuous_color = lambda: False
 
@@ -1064,11 +1064,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         (args1, _), (args2, _) = graph._add_line.call_args_list
         np.testing.assert_equal(args1[0], x)
         np.testing.assert_equal(args1[1], y)
-        self.assertEqual(args1[2], QColor("#505050"))
+        self.assertEqual(args1[2].hue(), QColor("#505050").hue())
 
         np.testing.assert_equal(args2[0], x[1:])
         np.testing.assert_equal(args2[1], y[1:])
-        self.assertEqual(args2[2], graph.palette[1])
+        self.assertEqual(args2[2].hue(), graph.palette[1].hue())
 
     def test_update_regression_line_is_called(self):
         widget = self.widget
