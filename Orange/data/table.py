@@ -447,7 +447,23 @@ class Table(Sequence, Storage):
             for k in ("X", "W", "metas"):
                 if k in state:
                     setattr(self, k, state.pop(k))
+            if "_Y" in state:
+                setattr(self, "Y", state.pop("_Y"))  # state["_Y"] is a 2d array
             self.__dict__.update(state)
+
+    def __getstate__(self):
+        # Compatibility with pickles before table locking:
+        # return the same state as before table lock
+        state = self.__dict__.copy()
+        for k in ["X", "metas", "W"]:
+            if "_" + k in state:  # Check existence; SQL tables do not contain them
+                state[k] = state.pop("_" + k)
+        # before locking, _Y was always a 2d array: save it as such
+        if "_Y" in state:
+            y = state.pop("_Y")
+            y2d = y.reshape(-1, 1) if y.ndim == 1 else y
+            state["_Y"] = y2d
+        return state
 
     def _lock_parts(self):
         return ((self._X, self._Unlocked_X, "X"),
