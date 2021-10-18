@@ -30,6 +30,7 @@ from Orange.widgets.utils import itemmodels, colorpalettes
 
 from Orange.util import scale, namegen
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import PlotWidget
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -939,8 +940,7 @@ class OWPaintData(OWWidget):
 
         # main area GUI
         viewbox = PaintViewBox(enableMouse=False)
-        self.plotview = pg.PlotWidget(background=None, viewBox=viewbox)
-        self.plotview.setBackgroundRole(QPalette.Base)
+        self.plotview = PlotWidget(viewBox=viewbox)
         self.plot = self.plotview.getPlotItem()
 
         axis_color = self.palette().color(QPalette.Text)

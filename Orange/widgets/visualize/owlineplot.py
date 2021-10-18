@@ -32,7 +32,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owdistributions import LegendItem
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
-from Orange.widgets.visualize.utils.plotutils import AxisItem
+from Orange.widgets.visualize.utils.plotutils import AxisItem, PlotWidget
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -349,7 +349,7 @@ class ParameterSetter(CommonParameterSetter):
         return self.master.getAxis
 
 # Customizable plot widget
-class LinePlotGraph(pg.PlotWidget):
+class LinePlotGraph(PlotWidget):
     def __init__(self, parent):
         self.groups: List[ProfileGroup] = []
         self.bottom_axis = BottomAxisItem(orientation="bottom")
@@ -357,7 +357,7 @@ class LinePlotGraph(pg.PlotWidget):
         left_axis = AxisItem(orientation="left")
         left_axis.setLabel("")
         super().__init__(parent, viewBox=LinePlotViewBox(),
-                         background="w", enableMenu=False,
+                         enableMenu=False,
                          axisItems={"bottom": self.bottom_axis,
                                     "left": left_axis})
         self.view_box = self.getViewBox()

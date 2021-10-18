@@ -6,18 +6,18 @@ import numpy as np
 from AnyQt.QtWidgets import QListView, QApplication, QSizePolicy
 from AnyQt.QtGui import QBrush, QColor, QPainter, QPalette
 from AnyQt.QtCore import QEvent, Qt
-from orangewidget.utils.listview import ListViewSearch
 
 import pyqtgraph as pg
+
+from orangewidget.utils.listview import ListViewSearch
+
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.statistics import contingency
-
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.itemmodels import select_rows
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-
-from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
+from Orange.widgets.visualize.utils.plotutils import PlotWidget
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.settings import Setting
 
@@ -93,7 +93,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
-        self.plot = pg.PlotWidget(background="w")
+        self.plot = PlotWidget()
         self.plot.setMenuEnabled(False)
         self.mainArea.layout().addWidget(self.plot)
 

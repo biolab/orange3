@@ -28,7 +28,7 @@ from Orange.widgets.visualize.owscatterplotgraph import LegendItem
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import AxisItem, \
-    HelpEventDelegate
+    HelpEventDelegate, PlotWidget
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 MAX_INSTANCES = 200
@@ -140,7 +140,7 @@ class ParameterSetter(CommonParameterSetter):
         return self.master.legend.items
 
 
-class BarPlotGraph(pg.PlotWidget):
+class BarPlotGraph(PlotWidget):
     selection_changed = Signal(list)
     bar_width = 0.7
 
@@ -152,7 +152,7 @@ class BarPlotGraph(pg.PlotWidget):
         super().__init__(
             parent=parent,
             viewBox=BarPlotViewBox(self),
-            background="w", enableMenu=False,
+            enableMenu=False,
             axisItems={"bottom": AxisItem(orientation="bottom",
                                           rotate_ticks=True),
                        "left": AxisItem(orientation="left")}
