@@ -463,6 +463,7 @@ class Table(Sequence, Storage):
             y = state.pop("_Y")
             y2d = y.reshape(-1, 1) if y.ndim == 1 else y
             state["_Y"] = y2d
+        state.pop("_unlocked", None)
         return state
 
     def _lock_parts(self):

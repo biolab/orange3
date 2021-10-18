@@ -1,3 +1,4 @@
+import pickle
 import unittest
 import os
 
@@ -346,6 +347,32 @@ class TestTableLocking(unittest.TestCase):
             self.table.X[0, 0] = 0
         finally:
             Table.LOCKING = default
+
+    def test_unpickling_resets_locks(self):
+        default = Table.LOCKING
+        try:
+            self.setUp()
+            pickled_locked = pickle.dumps(self.table)
+            Table.LOCKING = False
+            tab = pickle.loads(pickled_locked)
+            tab.X[0, 0] = 1
+            Table.LOCKING = True
+            tab = pickle.loads(pickled_locked)
+            with self.assertRaises(ValueError):
+                tab.X[0, 0] = 1
+        finally:
+            Table.LOCKING = default
+
+    def test_numpy_pickle_flags_copy(self):
+        # test should warn if numpy starts behaving differently
+        a = np.arange(10).view()
+        a.flags.writeable = False
+        self.assertFalse(a.flags.writeable)
+        self.assertIsNotNone(a.base)
+        b = pickle.loads(pickle.dumps(a))
+        self.assertTrue(b.flags.writeable)
+        self.assertIsNone(b.base)
+
 
 class TestTableFilters(unittest.TestCase):
     def setUp(self):
