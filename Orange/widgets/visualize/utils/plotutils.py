@@ -33,7 +33,7 @@ class TextItem(pg.TextItem):
         return point.x(), point.y()
 
 
-class AnchorItem(pg.GraphicsObject):
+class AnchorItem(pg.GraphicsWidget):
     def __init__(self, parent=None, line=QLineF(), text="", **kwargs):
         super().__init__(parent, **kwargs)
         self._text = text
@@ -50,6 +50,7 @@ class AnchorItem(pg.GraphicsObject):
         self._label = TextItem(text=text, color=(10, 10, 10))
         self._label.setParentItem(self)
         self._label.setPos(*self.get_xy())
+        self._label.setColor(self.palette().color(QPalette.Text))
 
         if parent is not None:
             self.setParentItem(parent)
@@ -122,6 +123,11 @@ class AnchorItem(pg.GraphicsObject):
 
         self._arrow.setPos(self._spine.line().p2())
         self._arrow.setRotation(180 - angle)
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self._label.setColor(self.palette().color(QPalette.Text))
+        super().changeEvent(event)
 
 
 class HelpEventDelegate(QObject):
