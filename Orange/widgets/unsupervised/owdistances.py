@@ -158,7 +158,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                     self.Error.no_continuous_features()
                     return False
                 self.Warning.ignoring_discrete()
-                data = distance.remove_discrete_features(data)
+                data = distance.remove_discrete_features(data, to_metas=True)
             return True
 
         def _fix_nonbinary():
@@ -171,7 +171,8 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                     return False
                 elif nbinary < len(data.domain.attributes):
                     self.Warning.ignoring_nonbinary()
-                    data = distance.remove_nonbinary_features(data)
+                    data = distance.remove_nonbinary_features(data,
+                                                              to_metas=True)
             return True
 
         def _fix_missing():

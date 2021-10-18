@@ -34,22 +34,29 @@ def _preprocess(table, impute=True):
 
 # TODO I have put this function here as a substitute the above `_preprocess`.
 # None of them really belongs here; (re?)move them, eventually.
-def remove_discrete_features(data):
+def remove_discrete_features(data, to_metas=False):
     """Remove discrete columns from the data."""
     new_domain = Domain(
         [a for a in data.domain.attributes if a.is_continuous],
         data.domain.class_vars,
-        data.domain.metas)
+        data.domain.metas
+        + (() if not to_metas
+           else tuple(a for a in data.domain.attributes if not a.is_continuous))
+    )
     return data.transform(new_domain)
 
 
-def remove_nonbinary_features(data):
+def remove_nonbinary_features(data, to_metas=False):
     """Remove non-binary columns from the data."""
     new_domain = Domain(
         [a for a in data.domain.attributes
          if a.is_discrete and len(a.values) == 2],
         data.domain.class_vars,
-        data.domain.metas)
+        data.domain.metas +
+        (() if not to_metas
+         else tuple(a for a in data.domain.attributes
+               if not (a.is_discrete and len(a.values) == 2))
+         if to_metas else ()))
     return data.transform(new_domain)
 
 def impute(data):
