@@ -626,7 +626,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         r = text.boundingRect()
         text.setTextWidth(r.width())
         rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
-        rect.setBrush(QColor(224, 224, 224, 212))
+        color = self.plot_widget.palette().color(QPalette.Disabled, QPalette.Window)
+        color.setAlpha(212)
+        rect.setBrush(color)
         rect.setPen(QPen(Qt.NoPen))
         self.update_tooltip()
 
