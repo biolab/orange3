@@ -27,7 +27,7 @@ class TestOWPCA(WidgetTest):
         self.widget._update_selection_variance_spin()
 
     def test_constant_data(self):
-        data = self.iris[::5]
+        data = self.iris[::5].copy()
         with data.unlocked():
             data.X[:, :] = 1.0
         # Ignore the warning: the test checks whether the widget shows

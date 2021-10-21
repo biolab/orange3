@@ -377,9 +377,9 @@ class Table(Sequence, Storage):
     ids.setflags(write=False)
     attributes = frozendict()
 
-    _Unlocked_X, _Unlocked_Y, _Unlocked_metas, _Unlocked_W = 1, 2, 4, 8
-    _unlocked = _Unlocked_X + _Unlocked_Y + \
-                _Unlocked_metas + _Unlocked_W  # pylint: disable=invalid-name
+    _Unlocked_X_val, _Unlocked_Y_val, _Unlocked_metas_val, _Unlocked_W_val = 1, 2, 4, 8
+    _Unlocked_X_ref, _Unlocked_Y_ref, _Unlocked_metas_ref, _Unlocked_W_ref = 16, 32, 64, 128
+    _unlocked = 0xff  # pylint: disable=invalid-name
 
     @property
     def columns(self):
@@ -404,7 +404,7 @@ class Table(Sequence, Storage):
 
     @X.setter
     def X(self, value):
-        self._check_unlocked(self._Unlocked_X)
+        self._check_unlocked(self._Unlocked_X_ref)
         self._X = _dereferenced(value)
 
     @property
@@ -413,7 +413,7 @@ class Table(Sequence, Storage):
 
     @Y.setter
     def Y(self, value):
-        self._check_unlocked(self._Unlocked_Y)
+        self._check_unlocked(self._Unlocked_Y_ref)
         if sp.issparse(value) and len(self) != value.shape[0]:
             value = value.T
         if sp.issparse(value):
@@ -428,7 +428,7 @@ class Table(Sequence, Storage):
 
     @metas.setter
     def metas(self, value):
-        self._check_unlocked(self._Unlocked_metas)
+        self._check_unlocked(self._Unlocked_metas_ref)
         self._metas = _dereferenced(value)
 
     @property
@@ -437,13 +437,13 @@ class Table(Sequence, Storage):
 
     @W.setter
     def W(self, value):
-        self._check_unlocked(self._Unlocked_W)
+        self._check_unlocked(self._Unlocked_W_ref)
         self._W = value
 
     def __setstate__(self, state):
         # Backward compatibility with pickles before table locking
         self._initialize_unlocked()  # __dict__ seems to be cleared before calling __setstate__
-        with self.unlocked():
+        with self.unlocked_reference():
             for k in ("X", "W", "metas"):
                 if k in state:
                     setattr(self, k, state.pop(k))
@@ -466,17 +466,23 @@ class Table(Sequence, Storage):
         state.pop("_unlocked", None)
         return state
 
-    def _lock_parts(self):
-        return ((self._X, self._Unlocked_X, "X"),
-                (self._Y, self._Unlocked_Y, "Y"),
-                (self._metas, self._Unlocked_metas, "metas"),
-                (self._W, self._Unlocked_W, "weights"))
+    def _lock_parts_val(self):
+        return ((self._X, self._Unlocked_X_val, "X"),
+                (self._Y, self._Unlocked_Y_val, "Y"),
+                (self._metas, self._Unlocked_metas_val, "metas"),
+                (self._W, self._Unlocked_W_val, "weights"))
+
+    def _lock_parts_ref(self):
+        return ((self._X, self._Unlocked_X_ref, "X"),
+                (self._Y, self._Unlocked_Y_ref, "Y"),
+                (self._metas, self._Unlocked_metas_ref, "metas"),
+                (self._W, self._Unlocked_W_ref, "weights"))
 
     def _initialize_unlocked(self):
         if Table.LOCKING:
             self._unlocked = 0
         else:
-            self._unlocked = sum(f for _, f, _ in self._lock_parts())
+            self._unlocked = sum(f for _, f, _ in (self._lock_parts_val() + self._lock_parts_ref()))
 
     def _update_locks(self, force=False, lock_bases=()):
         if not Table.LOCKING:
@@ -503,7 +509,7 @@ class Table(Sequence, Storage):
         for base in lock_bases:
             base.flags.writeable = False
         try:
-            for part, flag, _ in self._lock_parts():
+            for part, flag, _ in self._lock_parts_val():
                 if part is None:
                     continue
                 writeable = bool(self._unlocked & flag)
@@ -521,9 +527,13 @@ class Table(Sequence, Storage):
             raise
         return tuple(forced_bases)
 
-    def __unlocked(self, *parts, force=False):
+    def __unlocked(self, *parts, force=False, reference_only=False):
         prev_state = self._unlocked
-        for part, flag, _ in self._lock_parts():
+        if reference_only:
+            lock_parts = self._lock_parts_ref()
+        else:
+            lock_parts = self._lock_parts_val() + self._lock_parts_ref()
+        for part, flag, _ in lock_parts:
             if not parts or any(ppart is part for ppart in parts):
                 self._unlocked |= flag
         try:
@@ -546,6 +556,14 @@ class Table(Sequence, Storage):
         """
         return contextmanager(self.__unlocked)(*parts, force=True)
 
+    def unlocked_reference(self, *parts):
+        """
+        Unlock references to the given parts (default: all parts) of the table.
+
+        The caller must ensure that the table is safe to modify.
+        """
+        return contextmanager(self.__unlocked)(*parts, reference_only=True)
+
     def unlocked(self, *parts):
         """
         Unlock the given parts (default: all parts) of the table.
@@ -558,7 +576,7 @@ class Table(Sequence, Storage):
                 return can_unlock(x.data)
             return x.flags.writeable or x.flags.owndata
 
-        for part, flag, name in self._lock_parts():
+        for part, flag, name in self._lock_parts_val():
             if not flag & self._unlocked \
                     and (not parts or any(ppart is part for ppart in parts)) \
                     and part is not None and not can_unlock(part):
@@ -685,7 +703,7 @@ class Table(Sequence, Storage):
                 table.domain = domain
                 # since sparse flags are not considered when checking for
                 # domain equality, fix manually.
-                with table.unlocked():
+                with table.unlocked_reference():
                     table = assure_domain_conversion_sparsity(table, source)
                 return table
 
@@ -819,23 +837,17 @@ class Table(Sequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
-        def get_rows(a):
-            a = a[row_indices]
-            if isinstance(row_indices, slice) or row_indices is ...:
-                a = a.copy()
-            return a
-
         self = cls()
         self.domain = source.domain
-        with self.unlocked():
-            self.X = get_rows(source.X)
+        with self.unlocked_reference():
+            self.X = source.X[row_indices]
             if self.X.ndim == 1:
                 self.X = self.X.reshape(-1, len(self.domain.attributes))
-            self.Y = get_rows(source.Y)
-            self.metas = get_rows(source.metas)
+            self.Y = source.Y[row_indices]
+            self.metas = source.metas[row_indices]
             if self.metas.ndim == 1:
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
-            self.W = get_rows(source.W)
+            self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
             self.ids = np.array(source.ids[row_indices])
             self.attributes = getattr(source, 'attributes', {})
