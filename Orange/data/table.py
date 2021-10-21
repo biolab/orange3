@@ -478,7 +478,7 @@ class Table(Sequence, Storage):
         else:
             self._unlocked = sum(f for _, f, _ in self._lock_parts())
 
-    def _update_locks(self, force=False, unlock_bases=()):
+    def _update_locks(self, force=False, lock_bases=()):
         if not Table.LOCKING:
             return
 
@@ -500,7 +500,7 @@ class Table(Sequence, Storage):
 
         forced_bases = []
         undo_on_fail = []
-        for base in unlock_bases:
+        for base in lock_bases:
             base.flags.writeable = False
         try:
             for part, flag, _ in self._lock_parts():
@@ -531,7 +531,7 @@ class Table(Sequence, Storage):
             yield
         finally:
             self._unlocked = prev_state
-            self._update_locks(unlock_bases=forced_bases)
+            self._update_locks(lock_bases=forced_bases)
 
     def force_unlocked(self, *parts):
         """
