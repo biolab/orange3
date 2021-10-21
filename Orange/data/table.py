@@ -406,6 +406,7 @@ class Table(Sequence, Storage):
     def X(self, value):
         self._check_unlocked(self._Unlocked_X_ref)
         self._X = _dereferenced(value)
+        self._update_locks()
 
     @property
     def Y(self):  # pylint: disable=invalid-name
@@ -421,6 +422,7 @@ class Table(Sequence, Storage):
         if value.ndim == 2 and value.shape[1] == 1:
             value = value[:, 0].copy()  # no views!
         self._Y = value
+        self._update_locks()
 
     @property
     def metas(self):
@@ -430,6 +432,7 @@ class Table(Sequence, Storage):
     def metas(self, value):
         self._check_unlocked(self._Unlocked_metas_ref)
         self._metas = _dereferenced(value)
+        self._update_locks()
 
     @property
     def W(self):  # pylint: disable=invalid-name
@@ -439,6 +442,7 @@ class Table(Sequence, Storage):
     def W(self, value):
         self._check_unlocked(self._Unlocked_W_ref)
         self._W = value
+        self._update_locks()
 
     def __setstate__(self, state):
         # Backward compatibility with pickles before table locking
@@ -728,7 +732,7 @@ class Table(Sequence, Storage):
             # if an array can be a subarray of the input table, this needs to be done
             # on the whole table, because this avoids needless copies of contents
 
-            with self.unlocked():
+            with self.unlocked_reference():
                 for array_conv in table_conversion.subarray:
                     out = array_conv.get_subarray(source, row_indices, n_rows)
                     setattr(self, array_conv.target, out)
@@ -923,7 +927,7 @@ class Table(Sequence, Storage):
                 "Parts of data contain different numbers of rows.")
 
         self = cls()
-        with self.unlocked():
+        with self.unlocked_reference():
             self.domain = domain
             self.X = X
             self.Y = Y
@@ -2102,7 +2106,7 @@ class Table(Sequence, Storage):
         # attributes
         # - classes and metas to attributes of attributes
         # - arbitrary meta column to feature names
-        with self.unlocked():
+        with self.unlocked_reference():
             self.X = table.X.T
             if attr_index is not None:
                 self.X = np.delete(self.X, attr_index, 0)
