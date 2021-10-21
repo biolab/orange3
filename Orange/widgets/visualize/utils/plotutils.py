@@ -625,13 +625,56 @@ class PlotWidget(pg.PlotWidget):
         self.__updateScenePalette()
 
     def changeEvent(self, event):
-        if event.type() == QEvent.PaletteChange and \
-                self.scene() is not None and self.scene().parent() is self:
+        if event.type() == QEvent.PaletteChange:
             self.__updateScenePalette()
             self.resetCachedContent()
         super().changeEvent(event)
 
     def __updateScenePalette(self):
         scene = self.scene()
-        if scene is not None and scene.palette() != self.palette():
+        if scene is not None:
             scene.setPalette(self.palette())
+
+
+class GraphicsView(pg.GraphicsView):
+    """
+    A pyqtgraph.GraphicsView with better QPalette integration.
+
+    A default constructed plot will respect and adapt to the current palette
+    """
+    def __init__(self, *args, background=None, **kwargs):
+        super().__init__(*args, background=background, **kwargs)
+        if background is None:
+            # Revert the pg.PlotWidget's modifications, use default
+            # for QGraphicsView
+            self.setBackgroundRole(QPalette.Base)
+        self.__updateScenePalette()
+
+    def setScene(self, scene):
+        super().setScene(scene)
+        self.__updateScenePalette()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self.__updateScenePalette()
+            self.resetCachedContent()
+
+        super().changeEvent(event)
+
+    def __updateScenePalette(self):
+        scene = self.scene()
+        if scene is not None:
+            scene.setPalette(self.palette())
+
+
+class PlotItem(pg.PlotItem):
+    """
+    A pyqtgraph.PlotItem with better QPalette integration.
+
+    A default constructed plot will respect and adapt to the current palette
+    """
+    def __init__(self, *args, **kwargs):
+        axisItems = kwargs.pop("axisItems", None)
+        if axisItems is None:
+            axisItems = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
+        super().__init__(*args, axisItems=axisItems, **kwargs)
