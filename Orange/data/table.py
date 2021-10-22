@@ -11,6 +11,7 @@ from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
 from threading import Lock
+from typing import List, TYPE_CHECKING
 
 import bottleneck as bn
 import numpy as np
@@ -32,6 +33,9 @@ from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
     sparse_implicit_zero_weights
 from Orange.util import OrangeDeprecationWarning, dummy_callback
+if TYPE_CHECKING:
+    # import just for type checking - avoid circular import
+    from Orange.data.aggregate import OrangeTableGroupBy
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
 
@@ -2226,6 +2230,23 @@ class Table(Sequence, Storage):
         t = self.transform(new_domain)
         t.ids = self.ids  # preserve indices
         return t
+
+    def groupby(self, columns: List[Variable]) -> "OrangeTableGroupBy":
+        """
+        Group Table by variables defined in the columns list. Behaviour is
+        similar to Pandas groupby.
+
+        Parameters
+        ----------
+        columns
+            List of variables used to determine the groups
+
+        Returns
+        -------
+        GroupBy object of type OrangeTableGroupBy which holds information about
+        groups.
+        """
+        return Orange.data.aggregate.OrangeTableGroupBy(self, columns)
 
 
 def _dereferenced(array):

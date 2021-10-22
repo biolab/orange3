@@ -312,6 +312,16 @@
     "keywords": []
    },
    {
+    "text": "Group by",
+    "doc": null,
+    "icon": "../Orange/widgets/data/icons/GroupBy.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "aggregate",
+     "group by"
+    ]
+   },
+   {
     "text": "Melt",
     "doc": "visual-programming/source/widgets/data/melt.md",
     "icon": "../Orange/widgets/data/icons/Melt.svg",
