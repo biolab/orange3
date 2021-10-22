@@ -55,6 +55,23 @@ Preprocessors
 4. Principal component analysis outputs results of a PCA transformation. Similar to the [PCA](../unsupervised/PCA.md) widget.
 5. [CUR matrix decomposition](https://en.wikipedia.org/wiki/CUR_matrix_approximation) is a dimensionality reduction method, similar to SVD.
 
+Preprocessing for predictive modeling
+--------------------------------------
+
+When building predictive models, one has to be careful about how to do preprocessing. There are two possible ways to do it in Orange, each slightly different:
+
+1. Connect **Preprocess** to the learner. This will override the default preprocessing pipeline for the learner and apply only custom preprocessing pipeline (default preprocessing steps are described in each learner's documentation).
+
+   ![](images/Preprocess-Models1.png)
+
+2. Connect **Preprocess** to Test and Score. This will apply the preprocessors to each batch within cross-validation. Then the learner's preprocessors will be applied to the preprocessed subset.
+
+   ![](images/Preprocess-Models2.png)
+
+Finally, there's a wrong way to do it. Connecting **Preprocess** directly to the original data and outputting preprocessed data set will likely overfit the model. Don't do it.
+
+   ![](images/Preprocess-Models3.png)
+
 Examples
 --------
 
