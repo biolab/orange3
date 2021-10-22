@@ -52,6 +52,23 @@ The *Learner* signal has an uncommon property: it can be connected to more than 
 5. Pairwise comparison of models using the selected score (available only for cross-validation). The number in the table gives the probability that the model corresponding to the row has a higher score than the model corresponding to the column. What the higher score means depends on the metric: a higher score can either mean a model is better (for example, CA or AUC) or the opposite (for example, RMSE). If negligible difference is enabled, the smaller number below shows the probability that the difference between the pair is negligible. The test is based on the [Bayesian interpretation of the t-test](https://link.springer.com/article/10.1007/s10994-015-5486-z) ([shorter introduction](https://baycomp.readthedocs.io/en/latest/introduction.html)).
 6. Get help and produce a report.
 
+Preprocessing for predictive modeling
+--------------------------------------
+
+When building predictive models, one has to be careful about how to preprocess the data. There are two possible ways to do it in Orange, each slightly different:
+
+1. Connect [Preprocess](../data/preprocess.md) to the learner. This will override the default preprocessing pipeline for the learner and apply only custom preprocessing pipeline (default preprocessing steps are described in each learner's documentation). The procedure might lead to errors within the learner.
+
+   ![](../data/images/Preprocess-Models1.png)
+
+2. Connect **Preprocess** to Test and Score. This will apply the preprocessors to each batch within cross-validation. Then the learner's preprocessors will be applied to the preprocessed subset.
+
+   ![](../data/images/Preprocess-Models2.png)
+
+Finally, there's a wrong way to do it. Connecting **Preprocess** directly to the original data and outputting preprocessed data set will likely overfit the model. Don't do it.
+
+   ![](../data/images/Preprocess-Models3.png)
+
 Example
 -------
 
