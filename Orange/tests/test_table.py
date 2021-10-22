@@ -417,11 +417,13 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("zoo")
         crc = d.checksum()
         names = set(str(x["name"]) for x in d)
+        ids = d.ids
 
         with d.unlocked_reference():
             d.shuffle()
         self.assertNotEqual(crc, d.checksum())
         self.assertSetEqual(names, set(str(x["name"]) for x in d))
+        self.assertTrue(np.any(ids - d.ids != 0))
         crc2 = d.checksum()
 
         x = d[2:10]
@@ -436,6 +438,7 @@ class TableTestCase(unittest.TestCase):
             x.shuffle()
         self.assertNotEqual(crcx, x.checksum())
         self.assertEqual(crc2, d.checksum())
+        self.assertLess(set(x.ids), set(ids))
 
     @staticmethod
     def not_less_ex(ex1, ex2):

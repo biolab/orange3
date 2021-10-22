@@ -1553,6 +1553,7 @@ class Table(Sequence, Storage):
         self._Y = self._Y[ind]
         self.metas = self.metas[ind]
         self.W = self.W[ind]
+        self.ids = self.ids[ind]
 
     def get_column_view(self, index):
         """
