@@ -99,9 +99,7 @@ INSTALL_REQUIRES = sorted(set(
 ) - {''})
 
 
-EXTRAS_REQUIRE = {
-    ':python_version<="3.4"': ["typing"],
-}
+EXTRAS_REQUIRE = {}
 
 ENTRY_POINTS = {
     "orange.widgets": (
