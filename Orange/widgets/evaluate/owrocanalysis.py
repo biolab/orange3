@@ -19,6 +19,7 @@ from Orange.widgets.evaluate.contexthandlers import \
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem
 from Orange.widgets.widget import Input
 from Orange.widgets import report
 
@@ -395,30 +396,24 @@ class OWROCAnalysis(widget.OWWidget):
         grid.addWidget(QLabel("Prior probability:"))
         grid.addWidget(self.target_prior_sp, 2, 1)
 
-        self.plotview = pg.GraphicsView(background=None)
-        self.plotview.setBackgroundRole(QPalette.Base)
+        self.plotview = GraphicsView(background=None)
         self.plotview.setFrameStyle(QFrame.StyledPanel)
         self.plotview.scene().sigMouseMoved.connect(self._on_mouse_moved)
-        self.plotview.scene().setPalette(self.palette())
 
-        self.plot = pg.PlotItem(enableMenu=False)
+        self.plot = PlotItem(enableMenu=False)
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
-
-        pen = QPen(self.palette().color(QPalette.Text))
 
         tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         axis = self.plot.getAxis("bottom")
         axis.setTickFont(tickfont)
-        axis.setPen(pen)
         axis.setLabel("FP Rate (1-Specificity)")
         axis.setGrid(16)
 
         axis = self.plot.getAxis("left")
         axis.setTickFont(tickfont)
-        axis.setPen(pen)
         axis.setLabel("TP Rate (Sensitivity)")
         axis.setGrid(16)
 

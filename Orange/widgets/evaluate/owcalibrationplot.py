@@ -3,7 +3,6 @@ from collections import namedtuple
 import numpy as np
 
 from AnyQt.QtCore import Qt, QSize
-from AnyQt.QtGui import QPalette, QPen
 from AnyQt.QtWidgets import QListWidget, QSizePolicy
 
 import pyqtgraph as pg
@@ -22,7 +21,7 @@ from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.customizableplot import \
     CommonParameterSetter
-from Orange.widgets.visualize.utils.plotutils import AxisItem
+from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem
 from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
 
@@ -192,18 +191,13 @@ class OWCalibrationPlot(widget.OWWidget):
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
-        self.plotview = pg.GraphicsView(background=None)
-        self.plotview.setBackgroundRole(QPalette.Base)
-        axes = {"bottom": AxisItem(orientation="bottom"),
-                "left": AxisItem(orientation="left")}
-        self.plot = pg.PlotItem(enableMenu=False, axisItems=axes)
+        self.plotview = GraphicsView()
+        self.plot = PlotItem(enableMenu=False)
         self.plot.parameter_setter = ParameterSetter(self.plot)
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
-        pen = QPen(self.palette().color(QPalette.Text))
         for axis_name in ("bottom", "left"):
             axis = self.plot.getAxis(axis_name)
-            axis.setPen(pen)
             # Remove the condition (that is, allow setting this for bottom
             # axis) when pyqtgraph is fixed
             # Issue: https://github.com/pyqtgraph/pyqtgraph/issues/930
