@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
-    QObject
+    QObject, QEvent
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
     QPainter, QPalette
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
@@ -38,20 +38,19 @@ MAX_COLORS = 11
 
 
 class LegendItem(PgLegendItem):
-    def __init__(self, size=None, offset=None, pen=None, brush=None):
+    def __init__(
+            self, size=None, offset=None, pen=None, brush=None,
+    ):
         super().__init__(size, offset)
 
         self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setHorizontalSpacing(15)
         self.layout.setColumnAlignment(1, Qt.AlignLeft | Qt.AlignVCenter)
-
-        if pen is None:
-            pen = QPen(QColor(196, 197, 193, 200), 1)
-            pen.setCosmetic(True)
+        if pen is not None:
+            pen = QPen(pen)
+        if brush is not None:
+            brush = QBrush(brush)
         self.__pen = pen
-
-        if brush is None:
-            brush = QBrush(QColor(232, 232, 232, 100))
         self.__brush = brush
 
     def restoreAnchor(self, anchors):
@@ -65,16 +64,17 @@ class LegendItem(PgLegendItem):
 
     # pylint: disable=arguments-differ
     def paint(self, painter, _option, _widget=None):
-        painter.setPen(self.__pen)
-        painter.setBrush(self.__brush)
+        painter.setPen(self.pen())
+        painter.setBrush(self.brush())
         rect = self.contentsRect()
         painter.drawRoundedRect(rect, 2, 2)
 
     def addItem(self, item, name):
         super().addItem(item, name)
-        # Fix-up the label alignment
+        # Fix-up the label alignment, and color
+        color = self.palette().color(QPalette.Text)
         _, label = self.items[-1]
-        label.setText(name, justify="left")
+        label.setText(name, justify="left", color=color)
 
     def clear(self):
         """
@@ -89,6 +89,31 @@ class LegendItem(PgLegendItem):
             label.hide()
 
         self.updateSize()
+
+    def pen(self):
+        if self.__pen is not None:
+            return QPen(self.__pen)
+        else:
+            color = self.palette().color(QPalette.Disabled, QPalette.Text)
+            color.setAlpha(100)
+            pen = QPen(color, 1)
+            pen.setCosmetic(True)
+            return pen
+
+    def brush(self):
+        if self.__brush is not None:
+            return QBrush(self.__brush)
+        else:
+            color = self.palette().color(QPalette.Window)
+            color.setAlpha(150)
+            return QBrush(color)
+
+    def changeEvent(self, event: QEvent):
+        if event.type() == QEvent.PaletteChange:
+            color = self.palette().color(QPalette.Text)
+            for _, label in self.items:
+                label.setText(label.text, color=color)
+        super().changeEvent(event)
 
 
 def bound_anchor_pos(corner, parentpos):

@@ -481,12 +481,13 @@ class PaletteItemSample(ItemSample):
         p.translate(5, 5)
         p.setFont(self.font)
         colors = self.palette.qcolors
+        foreground = super().palette().color(QPalette.Text)
         h = self.bin_height
         for i, color, label in zip(itertools.count(), colors, self.labels):
             p.setPen(Qt.NoPen)
             p.setBrush(QBrush(color))
             p.drawRect(0, i * h, h, h)
-            p.setPen(QPen(Qt.black))
+            p.setPen(QPen(foreground))
             p.drawStaticText(h + 5, i * h + 1, label)
 
 
