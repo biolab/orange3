@@ -44,6 +44,11 @@ Random Forest uses default preprocessing when no other preprocessors are given. 
 
 To remove default preprocessing, connect an empty [Preprocess](../data/preprocess.md) widget to the learner.
 
+Feature Scoring
+---------------
+
+Random Forest can be used with Rank for feature scoring. See [Learners as Scorers](../../learners-as-scorers/index.md) for an example.
+
 Examples
 --------
 
