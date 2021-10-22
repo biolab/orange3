@@ -14,7 +14,7 @@ Plots a heat map for a pair of attributes.
 
 [Heat map](https://en.wikipedia.org/wiki/Heat_map) is a graphical method for visualizing attribute values in a two-way matrix. It only works on datasets containing numeric variables. The values are represented by color according to the selected color pallette. By combining class variable and attributes on x and y axes, we see where the attribute values are the strongest and where the weakest, thus enabling us to find typical features for each class.
 
-The widget enables row selection with click and drag.
+The widget enables row selection with click and drag. One can zoom in with Ctrl++ (Cmd++) and zoom out with Ctrl+- (Cmd+-). Cmd+0 resets zoom to the default.
 
 ![](images/HeatMap.png)
 
