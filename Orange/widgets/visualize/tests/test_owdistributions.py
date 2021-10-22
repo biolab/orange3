@@ -213,7 +213,7 @@ class TestOWDistributions(WidgetTest):
         y = self.iris.domain.class_var
         extra = DiscreteVariable("foo", values=("a", "b"))
         domain = Domain(self.iris.domain.attributes + (extra, ), y)
-        data = self.iris.transform(domain, copy=True)
+        data = self.iris.transform(domain).copy()
         with data.unlocked():
             data.X[:75, -1] = 0
             data.X[75:120, -1] = 1

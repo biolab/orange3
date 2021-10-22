@@ -125,7 +125,7 @@ class TestOWBaseLearner(WidgetTest):
             multinomial_treatment=continuize.Continuize.AsOrdinal,
             transform_class=True,
         )
-        data = self.iris.transform(pp(self.iris), copy=True)
+        data = self.iris.transform(pp(self.iris)).copy()
         with data.unlocked():
             data.Y = sp.csr_matrix(data.Y)
 

@@ -155,7 +155,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
                         if v.is_continuous and v is not attr_color],
             class_vars=attr_color
         )
-        data = self.master.data.transform(domain, copy=True)
+        data = self.master.data.transform(domain).copy()
         with data.unlocked():
             data.X = normalized(data.X)
         relief = ReliefF if attr_color.is_discrete else RReliefF

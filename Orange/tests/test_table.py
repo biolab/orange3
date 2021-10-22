@@ -3,6 +3,7 @@
 
 import copy
 import os
+import pickle
 import random
 import unittest
 import warnings
@@ -591,8 +592,6 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(len(new.ids), 300)
 
     def test_pickle(self):
-        import pickle
-
         d = data.Table("zoo")
         s = pickle.dumps(d)
         d2 = pickle.loads(s)
@@ -607,6 +606,20 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(d[0], d2[0])
         self.assertEqual(d.checksum(include_metas=False),
                          d2.checksum(include_metas=False))
+
+    def test_pickle_setstate(self):
+        d = data.Table("zoo")
+        s = pickle.dumps(d)
+        with patch("Orange.data.Table.__setstate__", Mock()) as mock:
+            pickle.loads(s)
+            state = mock.call_args[0][0]
+            for k in ["X", "_Y", "metas"]:
+                self.assertIn(k, state)
+                self.assertEqual(state[k].ndim, 2)
+            self.assertIn("W", state)
+            for k in ["_X", "Y", "_metas", "_W"]:
+                self.assertNotIn(k, state)
+
 
     def test_translate_through_slice(self):
         d = data.Table("iris")

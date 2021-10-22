@@ -403,7 +403,7 @@ class TestOWSOM(WidgetTest):
         domain = table.domain
         new_domain = Domain(
             domain.attributes[3:], domain.class_var, domain.attributes[:3])
-        new_table = table.transform(new_domain, copy=True)
+        new_table = table.transform(new_domain).copy()
         with new_table.unlocked(new_table.metas):
             new_table.metas = new_table.metas.astype(object)
         self.send_signal(widget.Inputs.data, new_table)

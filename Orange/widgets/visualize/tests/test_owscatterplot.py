@@ -553,7 +553,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             class_vars=data.domain.class_vars,
             metas=data.domain.attributes[2:]
         )
-        data = data.transform(domain, copy=True)
+        data = data.transform(domain).copy()
         # Sometimes floats in metas are saved as objects
         with data.unlocked():
             data.metas = data.metas.astype(object)
@@ -601,7 +601,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = Table("iris")
         domain = data.domain
         domain = Domain(domain.attributes[:3], domain.class_vars, domain.attributes[3:])
-        data = data.transform(domain, copy=True)
+        data = data.transform(domain).copy()
         with data.unlocked():
             data.metas[:, 0] = 0
         w = self.widget
@@ -675,8 +675,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             class_var = DiscreteVariable("iris5", values=[str(v) for v in values])
             data = data.transform(
                 Domain(attributes=data.domain.attributes,
-                       class_vars=[class_var]),
-                copy=True)
+                       class_vars=[class_var])).copy()
             with data.unlocked():
                 data.Y = np.array(values * 10, dtype=float)
             return data

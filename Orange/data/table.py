@@ -373,12 +373,13 @@ class Table(Sequence, Storage):
 
     domain = Domain([])
     _X = _Y = _metas = _W = np.zeros((0, 0))  # pylint: disable=invalid-name
-    _unlocked = 0  # pylint: disable=invalid-name
     ids = np.zeros(0)
     ids.setflags(write=False)
     attributes = frozendict()
 
     _Unlocked_X, _Unlocked_Y, _Unlocked_metas, _Unlocked_W = 1, 2, 4, 8
+    _unlocked = _Unlocked_X + _Unlocked_Y + \
+                _Unlocked_metas + _Unlocked_W  # pylint: disable=invalid-name
 
     @property
     def columns(self):
@@ -441,18 +442,41 @@ class Table(Sequence, Storage):
 
     def __setstate__(self, state):
         # Backward compatibility with pickles before table locking
-        self._unlocked = 0  # __dict__ seems to be cleared before calling __setstate__
+        self._initialize_unlocked()  # __dict__ seems to be cleared before calling __setstate__
         with self.unlocked():
             for k in ("X", "W", "metas"):
                 if k in state:
                     setattr(self, k, state.pop(k))
+            if "_Y" in state:
+                setattr(self, "Y", state.pop("_Y"))  # state["_Y"] is a 2d array
             self.__dict__.update(state)
+
+    def __getstate__(self):
+        # Compatibility with pickles before table locking:
+        # return the same state as before table lock
+        state = self.__dict__.copy()
+        for k in ["X", "metas", "W"]:
+            if "_" + k in state:  # Check existence; SQL tables do not contain them
+                state[k] = state.pop("_" + k)
+        # before locking, _Y was always a 2d array: save it as such
+        if "_Y" in state:
+            y = state.pop("_Y")
+            y2d = y.reshape(-1, 1) if y.ndim == 1 else y
+            state["_Y"] = y2d
+        state.pop("_unlocked", None)
+        return state
 
     def _lock_parts(self):
         return ((self._X, self._Unlocked_X, "X"),
                 (self._Y, self._Unlocked_Y, "Y"),
                 (self._metas, self._Unlocked_metas, "metas"),
                 (self._W, self._Unlocked_W, "weights"))
+
+    def _initialize_unlocked(self):
+        if Table.LOCKING:
+            self._unlocked = 0
+        else:
+            self._unlocked = sum(f for _, f, _ in self._lock_parts())
 
     def _update_locks(self, force=False, unlock_bases=()):
         if not Table.LOCKING:
@@ -551,12 +575,7 @@ class Table(Sequence, Storage):
 
         if not args:
             if not kwargs:
-                self = super().__new__(cls)
-                if Table.LOCKING:
-                    self._unlocked = 0
-                else:
-                    self._unlocked = sum(f for _, f, _ in self._lock_parts())
-                return self
+                return super().__new__(cls)
             else:
                 raise TypeError("Table() must not be called directly")
 
@@ -571,8 +590,7 @@ class Table(Sequence, Storage):
         elif isinstance(args[0], Table):
             if len(args) > 1:
                 raise TypeError("Table(table: Table) expects just one argument")
-            return cls.from_table(args[0].domain, args[0],
-                                  copy=kwargs.pop("copy", False), **kwargs)
+            return cls.from_table(args[0].domain, args[0], **kwargs)
         elif isinstance(args[0], Domain):
             domain, args = args[0], args[1:]
             if not args:
@@ -594,6 +612,7 @@ class Table(Sequence, Storage):
         return cls.from_numpy(domain, *args, **kwargs)
 
     def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
+        self._initialize_unlocked()
         self._update_locks()
 
     @classmethod
@@ -630,7 +649,7 @@ class Table(Sequence, Storage):
         return self
 
     @classmethod
-    def from_table(cls, domain, source, row_indices=..., *, copy=False):
+    def from_table(cls, domain, source, row_indices=...):
         """
         Create a new table from selected columns and/or rows of an existing
         one. The columns are chosen using a domain. The domain may also include
@@ -645,8 +664,6 @@ class Table(Sequence, Storage):
         :type source: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
-        :param copy: if True, copy all tables (default: False, create views)
-        :type copy: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
@@ -663,7 +680,7 @@ class Table(Sequence, Storage):
                 if cached is not None:
                     return cached
             if domain is source.domain:
-                table = cls.from_table_rows(source, row_indices, copy=copy)
+                table = cls.from_table_rows(source, row_indices)
                 # assure resulting domain is the instance passed on input
                 table.domain = domain
                 # since sparse flags are not considered when checking for
@@ -759,15 +776,13 @@ class Table(Sequence, Storage):
                     cls._init_ids(self)
                 self.attributes = getattr(source, 'attributes', {})
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
-            if copy:
-                self.ensure_copy()
             return self
         finally:
             if new_cache:
                 _thread_local.conversion_cache = None
                 _thread_local.domain_cache = None
 
-    def transform(self, domain, copy=False):
+    def transform(self, domain):
         """
         Construct a table with a different domain.
 
@@ -790,10 +805,10 @@ class Table(Sequence, Storage):
         Returns:
             A new table
         """
-        return type(self).from_table(domain, self, copy=copy)
+        return type(self).from_table(domain, self)
 
     @classmethod
-    def from_table_rows(cls, source, row_indices, *, copy=False):
+    def from_table_rows(cls, source, row_indices):
         """
         Construct a new table by selecting rows from the source table.
 
@@ -801,14 +816,12 @@ class Table(Sequence, Storage):
         :type source: Orange.data.Table
         :param row_indices: indices of the rows to include
         :type row_indices: a slice or a sequence
-        :param copy: if True, copy all tables (default: False, create views)
-        :type copy: bool
         :return: a new table
         :rtype: Orange.data.Table
         """
         def get_rows(a):
             a = a[row_indices]
-            if isinstance(row_indices, slice) or row_indices is ... or copy:
+            if isinstance(row_indices, slice) or row_indices is ...:
                 a = a.copy()
             return a
 
