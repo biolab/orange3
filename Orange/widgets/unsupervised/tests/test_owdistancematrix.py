@@ -9,7 +9,7 @@ from AnyQt.QtWidgets import QStyleOptionViewItem
 
 from orangewidget.tests.base import GuiTest
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owdistancematrix import OWDistanceMatrix, \
@@ -56,6 +56,22 @@ class TestOWDistanceMatrix(WidgetTest):
         ac.setCurrentIndex(idx)
         ac.activated.emit(idx)
         self.assertIsNone(self.widget.tablemodel.label_colors)
+
+    def test_num_meta_labels(self):
+        x, y = (ContinuousVariable(c) for c in "xy")
+        s = StringVariable("s")
+        data = Table.from_list(
+            Domain([x], [], [y, s]),
+            [[0, 1, "a"],
+             [1, np.nan, "b"]]
+        )
+        distances = Euclidean(data)
+        self.widget.set_distances(distances)
+        ac = self.widget.annot_combo
+        idx = ac.model().indexOf(y)
+        ac.setCurrentIndex(idx)
+        ac.activated.emit(idx)
+        self.assertEqual(self.widget.tablemodel.labels, ["1", "?"])
 
 
 class TestDelegates(GuiTest):
