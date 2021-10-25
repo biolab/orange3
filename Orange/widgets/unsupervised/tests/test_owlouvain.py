@@ -21,7 +21,7 @@ class TestOWLouvain(WidgetTest):
         self.widget = self.create_widget(
             OWLouvainClustering, stored_settings={'auto_commit': False}
         )
-        self.iris = Table('iris')[::5]
+        self.iris = Table('iris')[::5].copy()
 
     def tearDown(self):
         self.widget.onDeleteWidget()

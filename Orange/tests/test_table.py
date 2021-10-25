@@ -417,25 +417,28 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("zoo")
         crc = d.checksum()
         names = set(str(x["name"]) for x in d)
+        ids = d.ids
 
-        with d.unlocked():
+        with d.unlocked_reference():
             d.shuffle()
         self.assertNotEqual(crc, d.checksum())
         self.assertSetEqual(names, set(str(x["name"]) for x in d))
+        self.assertTrue(np.any(ids - d.ids != 0))
         crc2 = d.checksum()
 
         x = d[2:10]
         crcx = x.checksum()
-        with d.unlocked():
+        with d.unlocked_reference():
             d.shuffle()
         self.assertNotEqual(crc2, d.checksum())
         self.assertEqual(crcx, x.checksum())
 
         crc2 = d.checksum()
-        with x.unlocked():
+        with x.unlocked_reference():
             x.shuffle()
         self.assertNotEqual(crcx, x.checksum())
         self.assertEqual(crc2, d.checksum())
+        self.assertLess(set(x.ids), set(ids))
 
     @staticmethod
     def not_less_ex(ex1, ex2):
@@ -1170,7 +1173,7 @@ class TableTestCase(unittest.TestCase):
 
     def test_repr_sparse_with_one_row(self):
         table = data.Table("iris")[:1]
-        with table.unlocked():
+        with table.unlocked_reference():
             table.X = sp.csr_matrix(table.X)
         repr(table)     # make sure repr does not crash
 

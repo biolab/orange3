@@ -108,7 +108,7 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
             self.send_signal(self.widget.Inputs.data, data)
             self.assertEqual(is_shown, self.widget.Error.no_valid_data.is_shown())
 
-        data = Table("iris")[::30]
+        data = Table("iris")[::30].copy()
         with data.unlocked():
             data[:, 0] = np.nan
         for data, is_shown in zip([None, data, Table("iris")[:30]], [False, True, False]):

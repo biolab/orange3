@@ -49,7 +49,7 @@ class TestMajorityLearner(unittest.TestCase):
     def test_missing(self):
         iris = Table('iris')
         learn = MajorityLearner()
-        sub_table = iris[: len(iris) // 2: 2]
+        sub_table = iris[: len(iris) // 2: 2].copy()
         with sub_table.unlocked():
             for e in sub_table:
                 e.set_class("?")

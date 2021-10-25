@@ -17,13 +17,13 @@ class TestDistanceRunner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.iris = Table("iris")[::5]
+        cls.iris = Table("iris")[::5].copy()
         with cls.iris.unlocked():
             cls.iris.X[0, 2] = np.nan
             cls.iris.X[1, 3] = np.nan
             cls.iris.X[2, 1] = np.nan
 
-        cls.zoo = Table("zoo")[::5]
+        cls.zoo = Table("zoo")[::5].copy()
         with cls.zoo.unlocked():
             cls.zoo.X[0, 2] = np.nan
             cls.zoo.X[1, 3] = np.nan
@@ -71,8 +71,8 @@ class TestDistanceRunner(unittest.TestCase):
 class TestOWDistances(WidgetTest):
     def setUp(self):
         super().setUp()
-        self.iris = Table("iris")[::5]
-        self.titanic = Table("titanic")[::10]
+        self.iris = Table("iris")[::5].copy()
+        self.titanic = Table("titanic")[::10].copy()
         self.widget = self.create_widget(OWDistances)
 
     def test_distance_combo(self):

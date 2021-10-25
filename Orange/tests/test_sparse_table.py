@@ -60,7 +60,7 @@ class InterfaceTest(tabletests.InterfaceTest):
         iris = Table('iris')[:1]
         # Convert iris.Y to (1, 1) shape
         new_y = iris.Y[:, np.newaxis]
-        with iris.unlocked():
+        with iris.unlocked_reference():
             iris.Y = np.hstack((new_y, new_y))
             iris.Y = csr_matrix(iris.Y)
         # We expect the Y shape to match the X shape, which is (1, 4) in iris

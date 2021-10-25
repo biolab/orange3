@@ -288,7 +288,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             OWScatterPlot, stored_settings={
                 "selection_group": [(i, 1) for i in range(50)]}
         )
-        data = self.data.copy()[:11]
+        data = self.data[:11].copy()
         with data.unlocked():
             data[0, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
@@ -395,13 +395,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             self.assertEqual(is_enabled, self.widget.vizrank_button.isEnabled())
 
         data1 = Table("iris")[::30]
-        data2 = Table("iris")[::30]
+        data2 = Table("iris")[::30].copy()
         with data2.unlocked():
             data2.Y[:] = np.nan
         domain = Domain(
             attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=()))
         data2 = Table(domain, data2.X, Y=data2.Y)
-        data3 = Table("iris")[::30]
+        data3 = Table("iris")[::30].copy()
         with data3.unlocked():
             data3.Y[:] = np.nan
 
