@@ -1176,8 +1176,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             if c_data is None:
                 return
             visible_c_data = self._filter_visible(c_data)
-            mask = np.bitwise_and(np.isfinite(visible_c_data),
-                                  visible_c_data < MAX_COLORS - 1)
+            mask = np.isfinite(visible_c_data)
+            if not self.master.is_continuous_color():
+                mask = np.bitwise_and(mask, visible_c_data < MAX_COLORS - 1)
             pens = self.scatterplot_item.data['pen']
             rgb_data = [
                 pen.color().getRgb()[:3] if pen is not None else (255, 255, 255)
