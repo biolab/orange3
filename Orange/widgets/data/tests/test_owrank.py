@@ -7,10 +7,11 @@ from unittest.mock import patch
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
-from AnyQt.QtCore import Qt, QItemSelection
-from AnyQt.QtWidgets import QCheckBox
+from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
+from AnyQt.QtWidgets import QCheckBox, QApplication
 
 from orangewidget.settings import Context, IncompatibleContext
+from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.modelling import RandomForestLearner, SGDLearner
@@ -18,7 +19,8 @@ from Orange.preprocess.score import Scorer
 from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
-from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
+from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, \
+    REG_SCORES, TableModel
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 
@@ -308,7 +310,7 @@ class TestOWRank(WidgetTest):
         order1 = self.widget.ranksModel.mapToSourceRows(...).tolist()
         self._get_checkbox('FCBF').setChecked(True)
         self.wait_until_finished()
-        self.widget.ranksView.horizontalHeader().setSortIndicator(3, Qt.DescendingOrder)
+        self.widget.ranksView.horizontalHeader().setSortIndicator(4, Qt.DescendingOrder)
         order2 = self.widget.ranksModel.mapToSourceRows(...).tolist()
         self.assertNotEqual(order1, order2)
 
@@ -323,9 +325,9 @@ class TestOWRank(WidgetTest):
         # Assert last row is all nan
         for order in (Qt.AscendingOrder,
                       Qt.DescendingOrder):
-            self.widget.ranksView.horizontalHeader().setSortIndicator(1, order)
+            self.widget.ranksView.horizontalHeader().setSortIndicator(2, order)
             last_row = self.widget.ranksModel[self.widget.ranksModel.mapToSourceRows(...)[-1]]
-            np.testing.assert_array_equal(last_row, np.repeat(np.nan, 3))
+            np.testing.assert_array_equal(last_row[1:], np.repeat(np.nan, 3))
 
     def test_default_sort_indicator(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
@@ -396,7 +398,7 @@ class TestOWRank(WidgetTest):
 
         # Sort by number of values and set selection to attributes with most
         # values. This must select the top 4 rows.
-        self.widget.ranksView.horizontalHeader().setSortIndicator(0, Qt.DescendingOrder)
+        self.widget.ranksView.horizontalHeader().setSortIndicator(1, Qt.DescendingOrder)
         w.selectionMethod = w.SelectManual
         w.selected_attrs = [dom["chest pain"], dom["rest ECG"],
                             dom["slope peak exc ST"], dom["thal"]]
@@ -404,6 +406,69 @@ class TestOWRank(WidgetTest):
         self.assertEqual(
             sorted({idx.row() for idx in w.ranksView.selectedIndexes()}),
             [0, 1, 2, 3])
+
+    def test_resorting_and_selection(self):
+        def sortby(col):
+            model.sort(col)
+            view.horizontalHeader().sectionClicked.emit(col)
+            QApplication.processEvents()
+
+        Names, Values, Gain = range(3)
+
+        w = self.widget
+
+        data = Table("heart_disease")
+        self.send_signal(w.Inputs.data, data)
+        self.wait_until_finished()
+
+        first4 = set(sorted((var.name for var in data.domain.attributes), key=str.lower)[:4])
+
+        view = w.ranksView
+        model = w.ranksModel
+        selModel = view.selectionModel()
+        columnCount = model.columnCount()
+
+        w.selectionMethod = w.SelectNBest
+        w.nSelected = 4
+
+        # Sort by gain ratio, store selection
+        sortby(Gain)
+        gain_sel_4 = w.selected_attrs[:]
+        self.assertEqual(len(gain_sel_4), 4)
+
+        # Sort by names or number of values: selection unchanged
+        sortby(Values)
+        self.assertEqual(w.selected_attrs[:], gain_sel_4)
+
+        sortby(Names)
+        self.assertEqual(w.selected_attrs[:], gain_sel_4)
+
+        # Select first four (alphabetically)
+        w.selectionMethod = w.SelectManual
+        selection = QItemSelection(
+            model.index(0, 0),
+            model.index(3, columnCount - 1)
+        )
+        selModel.select(selection, QItemSelectionModel.ClearAndSelect)
+        # Sanity check
+        self.assertEqual({var.name for var in w.selected_attrs}, first4)
+
+        # Manual sorting: sorting by score does not change selection
+        sortby(Gain)
+        self.assertEqual({var.name for var in w.selected_attrs}, first4)
+
+        # Sort by first four, again
+        sortby(Names)
+        # Sanity check
+        self.assertEqual({var.name for var in w.selected_attrs}, first4)
+
+        w.selectionMethod = w.SelectNBest
+        # Sanity check
+        self.assertEqual({var.name for var in w.selected_attrs}, first4)
+
+        # Sorting by gain must change selection
+        sortby(Gain)
+        self.assertEqual(set(w.selected_attrs), set(gain_sel_4))
 
     def test_auto_send(self):
         widget = self.widget
@@ -483,6 +548,25 @@ class TestOWRank(WidgetTest):
         self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.reduced_data)
         self.assertEqual(len(output), len(self.housing))
+
+
+class TestRankModel(GuiTest):
+    @staticmethod
+    def test_argsort():
+        func = TableModel()._argsortData  # pylint: disable=protected-access
+        assert_equal = np.testing.assert_equal
+
+        test_array = np.array([4.2, 7.2, np.nan, 1.3, np.nan])
+        assert_equal(func(test_array, Qt.AscendingOrder)[:3], [3, 0, 1])
+        assert_equal(func(test_array, Qt.DescendingOrder)[:3], [1, 0, 3])
+
+        test_array = np.array([4, 7, 2])
+        assert_equal(func(test_array, Qt.AscendingOrder), [2, 0, 1])
+        assert_equal(func(test_array, Qt.DescendingOrder), [1, 0, 2])
+
+        test_array = np.array(["Bertha", "daniela", "ann", "Cecilia"])
+        assert_equal(func(test_array, Qt.AscendingOrder), [2, 0, 3, 1])
+        assert_equal(func(test_array, Qt.DescendingOrder), [1, 3, 0, 2])
 
 
 if __name__ == "__main__":
