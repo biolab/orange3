@@ -54,7 +54,3 @@ SQL table (``data.sql``)
         :obj:`Orange.data.sql.filter` contains classes derived from filters in
         :obj:`Orange.data.filter` with the appropriate implementation of the
         method.
-
-
-.. autoclass:: Orange.data.sql.table.SqlRowInstance
-    :members:

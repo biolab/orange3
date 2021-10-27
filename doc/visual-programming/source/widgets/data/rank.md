@@ -49,6 +49,11 @@ Scoring method (unsupervised)
 
 Currently, only [PCA](../unsupervised/PCA.md) is supported for unsupervised data. Connect PCA to Rank to obtain the scores. The scores correspond to the correlation of a variable with the individual principal component.
 
+Scoring with learners
+---------------------
+
+Rank can also use certain learners for feature scoring. See [Learners as Scorers](../../learners-as-scorers/index.md) for an example.
+
 Example: Attribute Ranking and Selection
 ----------------------------------------
 

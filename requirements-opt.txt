@@ -1,2 +1,2 @@
-catboost
+catboost!=1.0.0  # 1.0.0 segfaults on Macs
 xgboost

@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
+import pickle
+import platform
 import unittest
 
 import numpy as np
@@ -245,3 +246,22 @@ class TestTSNE(unittest.TestCase):
         knn.fit(model.embedding_, self.iris.Y)
         predicted = knn.predict(model.embedding_)
         self.assertTrue(accuracy_score(predicted, self.iris.Y) > 0.95)
+
+    @unittest.skipIf(platform.system() == "Windows", "Files locked on Windows")
+    def test_pickle(self):
+        for neighbors in ("exact", "approx"):
+            tsne = TSNE(early_exaggeration_iter=0, n_iter=10, perplexity=30,
+                        neighbors=neighbors, random_state=0)
+            model = tsne(self.iris[::2])
+
+            loaded_model = pickle.loads(pickle.dumps(model))
+
+            new_embedding = loaded_model(self.iris[1::2]).X
+
+            knn = KNeighborsClassifier(n_neighbors=5)
+            knn.fit(new_embedding, self.iris[1::2].Y)
+            predicted = knn.predict(new_embedding)
+            self.assertTrue(
+                accuracy_score(predicted, self.iris[1::2].Y) > 0.95,
+                msg=f"Pickling failed with `neighbors={neighbors}`",
+            )

@@ -2,3 +2,6 @@ cython
 -r requirements-core.txt
 -r requirements-doc.txt
 -r requirements-gui.txt
+-r requirements-pyqt.txt
+# for orange data mining library catboost and xgboost required
+-r requirements-opt.txt

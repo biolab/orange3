@@ -406,7 +406,7 @@ class BinnedContinuousPalette(IndexedPalette):
             return palette.copy()
         if isinstance(palette, ContinuousPalette):
             assert len(bins) >= 2
-            mids = (bins[:-1] + bins[1:]) / 2
+            mids = bins[:-1] / 2 + bins[1:] / 2
             bin_colors = palette.values_to_colors(mids, bins[0], bins[-1])
             return cls(
                 palette.friendly_name, palette.name, bin_colors, bins,

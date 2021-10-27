@@ -1032,6 +1032,7 @@ class TimeVariable(ContinuousVariable):
         if datestr in MISSING_VALUES:
             return Unknown
         datestr = datestr.strip().rstrip('Z')
+        datestr = self._tzre_sub(datestr)
 
         if not self._matches_iso_format(datestr):
             try:

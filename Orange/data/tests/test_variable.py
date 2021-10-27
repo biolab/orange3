@@ -630,6 +630,10 @@ class TestTimeVariable(VariableTest):
         ts2 = var.parse(datestr)
         self.assertEqual(var.repr_val(ts2), datestr)
         self.assertEqual(var.repr_val(ts1), '2015-10-18 20:48:20')
+        # TZ is reset to UTC.
+        datestr, offset = '2015-10-18T22:48:20', '+02:00'
+        ts3 = var.parse(datestr + offset)
+        self.assertEqual(var.repr_val(ts3), '2015-10-18 20:48:20')
 
     def test_parse_timestamp(self):
         var = TimeVariable("time")

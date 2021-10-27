@@ -382,11 +382,13 @@ def table_from_frames(xdf, ydf, mdf):
     XYM = (xXYM[0], yXYM[1], mXYM[2])
     domain = Domain(xDomain.attributes, yDomain.class_vars, mDomain.metas)
 
-    index_iter = (filter(lambda ind: ind.startswith('_o'),
-                         set(df.index[i] for df in dfs))
-                  for i in range(len(xdf.shape[0])))
-    ids = (i[0] if len(i) == 1 else Table.new_id()
-           for i in index_iter)
+    indexes = [df.index for df in dfs]
+    ids = [
+        int(x[2:])
+        if str(x).startswith("_o") and x[2:].isdigit() and x == y == m
+        else Table.new_id()
+        for x, y, m in zip(*indexes)
+    ]
 
     attributes = {}
     W = None
