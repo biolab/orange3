@@ -4,6 +4,21 @@ Change Log
 [next] - TBA
 ------------
 
+[3.30.2] - 2021-10-27
+--------------------
+##### Bugfixes
+* Projections: Fix color density for continuous color palettes ([#5665](../../pull/5665))
+* Fixes for scikit-learn 1.0 ([#5608](../../pull/5608))
+* table_from_grames: fix indices parsing ([#5620](../../pull/5620))
+* Fix overflow in bin calculations for time variables.  ([#5667](../../pull/5667))
+* Variable: fix timezone when parsing time variable ([#5617](../../pull/5617))
+* Require widget-base 4.15.1 and canvas-core 0.1.23 to fix some bugs/crashes
+
+[3.30.1] - 2021-09-24
+--------------------
+##### Bugfixes
+* OWTable: fix select whole rows regression ([#5605](../../pull/5605))
+
 [3.30.0] - 2021-09-22
 --------------------
 ##### Enhancements
@@ -1589,8 +1604,10 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.30.0...HEAD
-[next]: https://github.com/biolab/orange3/compare/3.29.3...3.30.0
+[next]: https://github.com/biolab/orange3/compare/3.30.2...HEAD
+[3.30.2]: https://github.com/biolab/orange3/compare/3.30.1...3.30.2
+[3.30.1]: https://github.com/biolab/orange3/compare/3.30.0...3.30.1
+[3.30.0]: https://github.com/biolab/orange3/compare/3.29.3...3.30.0
 [3.29.3]: https://github.com/biolab/orange3/compare/3.29.2...3.29.3
 [3.29.2]: https://github.com/biolab/orange3/compare/3.29.1...3.29.2
 [3.29.1]: https://github.com/biolab/orange3/compare/3.29.0...3.29.1
