@@ -351,7 +351,7 @@ class OWDataTable(OWWidget):
             self.selected_cols = []
 
         self.set_selection()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _setup_table_view(self, view, data):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)
@@ -645,7 +645,7 @@ class OWDataTable(OWWidget):
             self._set_input_summary(current.input_slot)
 
     def update_selection(self, *_):
-        self.commit()
+        self.commit.deferred()
 
     def set_selection(self):
         if self.selected_rows and self.selected_cols:
@@ -703,6 +703,7 @@ class OWDataTable(OWWidget):
             model = model.sourceModel()
         return model
 
+    @gui.deferred
     def commit(self):
         """
         Commit/send the current selected row/column selection.

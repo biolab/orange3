@@ -369,7 +369,7 @@ class OWImpute(OWWidget):
         self.reset_button.setEnabled(len(self.varmodel) > 0)
 
         self.update_varview()
-        self.unconditional_commit()
+        self.commit.now()
 
     @Inputs.learner
     def set_learner(self, learner):
@@ -386,7 +386,7 @@ class OWImpute(OWWidget):
             self.default_method_index = Method.Model
 
         self.update_varview()
-        self.commit()
+        self.commit.deferred()
 
     def get_method_for_column(self, column_index):
         # type: (int) -> impute.BaseImputeMethod
@@ -404,8 +404,9 @@ class OWImpute(OWWidget):
         self.modified = True
         if self.__task is not None:
             self.cancel()
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         self.cancel()
         self.warning()

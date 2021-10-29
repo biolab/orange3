@@ -98,15 +98,15 @@ class TestOWCreateInstance(WidgetTest):
         self.assert_table_equal(output_random, output)
 
     def test_initialize_buttons_commit_once(self):
-        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.widget.commit.deferred = self.widget.commit.now = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.reference, self.data[:1])
-        self.widget.unconditional_commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
-        self.widget.commit.reset_mock()
+        self.widget.commit.now.reset_mock()
         buttons = self._get_init_buttons()
         buttons[3].click()  # Input
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
 
     def test_table(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -176,17 +176,17 @@ class TestOWCreateInstance(WidgetTest):
         self.assert_table_equal(output1, output2)
 
     def test_commit_once(self):
-        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.widget.commit.now = self.widget.commit.deferred = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.unconditional_commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
-        self.widget.commit.reset_mock()
+        self.widget.commit.now.reset_mock()
         self.send_signal(self.widget.Inputs.data, None)
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
 
-        self.widget.commit.reset_mock()
+        self.widget.commit.deferred.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
 
     def test_context_menu(self):
         self.send_signal(self.widget.Inputs.data, self.data)

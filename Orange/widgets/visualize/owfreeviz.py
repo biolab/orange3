@@ -187,7 +187,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         self.Error.proj_error.clear()
         self.init_projection()
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
         if self.task is not None:
             self._run()
 
@@ -196,7 +196,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
             self.cancel()
             self.graph.set_sample_size(None)
             self.run_button.setText("Resume")
-            self.commit()
+            self.commit.deferred()
         else:
             self._run()
 
@@ -223,7 +223,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         self.projection = result.projection
         self.graph.set_sample_size(None)
         self.run_button.setText("Start")
-        self.commit()
+        self.commit.deferred()
 
     def on_exception(self, ex: Exception):
         self.Error.proj_error(ex)

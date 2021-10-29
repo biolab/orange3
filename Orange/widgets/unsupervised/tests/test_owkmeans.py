@@ -463,7 +463,7 @@ class TestOWKMeans(WidgetTest):
 
         # Send the data without waiting
         self.send_signal(widget.Inputs.data, self.data)
-        widget.unconditional_commit()
+        widget.commit.now()
         # Now, invalidate by changing max_iter
         widget.max_iterations = widget.max_iterations + 1
         widget.invalidate()
@@ -493,7 +493,7 @@ class TestOWKMeans(WidgetTest):
         with table3.unlocked():
             table3.X[:, 0] = 1
 
-        with patch.object(self.widget, 'unconditional_commit') as commit:
+        with patch.object(self.widget.commit, 'now') as commit:
             self.send_signal(self.widget.Inputs.data, table1)
             self.commit_and_wait()
             commit.reset_mock()

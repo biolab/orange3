@@ -484,7 +484,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         else:
             self.graph.update_point_props()
         self._update_opacity_warning()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _handle_subset_data(self):
         self.Warning.subset_independent.clear()
@@ -558,9 +558,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
             else self.graph.selection
         self.selection = [(i, x) for i, x in enumerate(sel) if x] \
             if sel is not None else None
-        self.commit()
+        self.commit.deferred()
 
     # Output
+    @gui.deferred
     def commit(self):
         self.send_data()
 
@@ -727,7 +728,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     def _manual_move_finish(self, anchor_idx, x, y):
         self._manual_move(anchor_idx, x, y)
         self.graph.set_sample_size(None)
-        self.commit()
+        self.commit.deferred()
 
     def _get_projection_data(self):
         if self.data is None or self.projection is None:
@@ -745,6 +746,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
                    self.data.domain.class_vars,
                    self.data.domain.metas + attributes))
 
+    @gui.deferred
     def commit(self):
         super().commit()
         self.send_components()

@@ -204,6 +204,7 @@ class OWDistanceMatrix(widget.OWWidget):
         view.verticalHeader().setDefaultAlignment(
             Qt.AlignRight | Qt.AlignVCenter)
         selmodel = SymmetricSelectionModel(view.model(), view)
+        selmodel.selectionChanged.connect(self.commit.deferred)
         view.setSelectionModel(selmodel)
         view.setSelectionBehavior(QTableView.SelectItems)
         self.controlArea.layout().addWidget(view)
@@ -217,8 +218,6 @@ class OWDistanceMatrix(widget.OWWidget):
         gui.rubber(self.buttonsArea)
         acb = gui.auto_send(self.buttonsArea, self, "auto_commit", box=False)
         acb.setFixedWidth(200)
-        # Signal must be connected after self.commit is redirected
-        selmodel.selectionChanged.connect(self.commit)
 
     def sizeHint(self):
         return QSize(800, 500)
@@ -253,7 +252,7 @@ class OWDistanceMatrix(widget.OWWidget):
             self.openContext(distances, annotations)
             self._update_labels()
             self.tableview.resizeColumnsToContents()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _invalidate_annotations(self):
         if self.distances is not None:
@@ -284,6 +283,7 @@ class OWDistanceMatrix(widget.OWWidget):
         self.tablemodel.set_labels(labels, var, column)
         self.tableview.resizeColumnsToContents()
 
+    @gui.deferred
     def commit(self):
         sub_table = sub_distances = None
         if self.distances is not None:

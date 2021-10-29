@@ -76,7 +76,7 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         # self.apply is changed later, pylint: disable=unnecessary-lambda
         box = gui.radioButtons(
             self.controlArea, self, "feature_type", box="Feature names",
-            callback=lambda: self.apply())
+            callback=self.commit.deferred)
 
         button = gui.appendRadioButton(box, "Generic")
         edit = gui.lineEdit(
@@ -97,20 +97,20 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         self.remove_check = gui.checkBox(
             gui.indentedBox(box, gui.checkButtonOffsetHint(button)), self,
             "remove_redundant_inst", "Remove redundant instance",
-            callback=lambda: self.apply())
+            callback=self.commit.deferred)
 
-        gui.auto_apply(self.buttonsArea, self, commit=self.apply)
+        gui.auto_apply(self.buttonsArea, self)
 
         self.set_controls()
 
     def _apply_editing(self):
         self.feature_type = self.GENERIC
         self.feature_name = self.feature_name.strip()
-        self.apply()
+        self.commit.deferred()
 
     def _feature_combo_changed(self):
         self.feature_type = self.FROM_VAR
-        self.apply()
+        self.commit.deferred()
 
     @Inputs.data
     def set_data(self, data):
@@ -122,7 +122,7 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         self.set_controls()
         if self.feature_model:
             self.openContext(data)
-        self.unconditional_apply()
+        self.commit.now()
 
     def set_controls(self):
         self.feature_model.set_domain(self.data.domain if self.data else None)
@@ -133,7 +133,8 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         else:
             self.feature_names_column = None
 
-    def apply(self):
+    @gui.deferred
+    def commit(self):
         self.clear_messages()
         variable = self.feature_type == self.FROM_VAR and \
             self.feature_names_column

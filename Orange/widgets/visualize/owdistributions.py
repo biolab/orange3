@@ -448,27 +448,27 @@ class OWDistributions(OWWidget):
         self.set_valid_data()
         self.recompute_binnings()
         self.replot()
-        self.apply()
+        self.apply.now()
 
     def _on_var_changed(self):
         self.reset_select()
         self.set_valid_data()
         self.recompute_binnings()
         self.replot()
-        self.apply()
+        self.apply.deferred()
 
     def _on_cvar_changed(self):
         self.set_valid_data()
         self.replot()
-        self.apply()
+        self.apply.deferred()
 
     def _on_show_cumulative(self):
         self.replot()
-        self.apply()
+        self.apply.deferred()
 
     def _on_sort_by_freq(self):
         self.replot()
-        self.apply()
+        self.apply.deferred()
 
     def _on_bins_changed(self):
         self.reset_select()
@@ -479,7 +479,7 @@ class OWDistributions(OWWidget):
 
     def _on_bin_slider_released(self):
         self._user_var_bins[self.var] = self.number_of_bins
-        self.apply()
+        self.apply.deferred()
 
     def _on_fitted_dist_changed(self):
         self.controls.hide_bars.setDisabled(not self.fitted_distribution)
@@ -983,7 +983,7 @@ class OWDistributions(OWWidget):
         self.show_selection()
 
     def _on_end_selecting(self):
-        self.apply()
+        self.apply.deferred()
 
     def show_selection(self):
         self.plot_mark.clear()
@@ -1093,7 +1093,7 @@ class OWDistributions(OWWidget):
         if self.selection != prev_selection:
             self.drag_operation = self.DragAdd
             self.show_selection()
-            self.apply()
+            self.apply.deferred()
 
     def keyReleaseEvent(self, ev):
         if ev.key() == Qt.Key_Shift:
@@ -1104,6 +1104,7 @@ class OWDistributions(OWWidget):
     # -----------------------------
     # Output
 
+    @gui.deferred
     def apply(self):
         data = self.data
         selected_data = annotated_data = histogram_data = None

@@ -560,7 +560,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         row_indices = [i.row() for i in selected_rows]
         attr_indices = self.ranksModel.mapToSourceRows(row_indices)
         self.selected_attrs = [self.data.domain[idx] for idx in attr_indices]
-        self.commit()
+        self.commit.deferred()
 
     def setSelectionMethod(self, method):
         self.selectionMethod = method
@@ -623,6 +623,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         if self.out_domain_desc is not None:
             self.report_items("Output", self.out_domain_desc)
 
+    @gui.deferred
     def commit(self):
         if not self.selected_attrs:
             self.Outputs.reduced_data.send(None)

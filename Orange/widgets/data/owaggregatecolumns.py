@@ -53,7 +53,7 @@ class OWAggregateColumns(widget.OWWidget):
             order=DomainModel.MIXED, valid_types=(ContinuousVariable, ))
         var_list = gui.listView(
             box, self, "variables", model=self.variable_model,
-            callback=lambda: self.commit()  # pylint: disable=W0108
+            callback=self.commit.deferred
         )
         var_list.setSelectionMode(var_list.ExtendedSelection)
 
@@ -61,14 +61,14 @@ class OWAggregateColumns(widget.OWWidget):
             box, self, "operation",
             label="Operator: ", orientation=Qt.Horizontal,
             items=list(self.Operations), sendSelectedValue=True,
-            callback=lambda: self.commit()  # pylint: disable=W0108
+            callback=self.commit.deferred
         )
         combo.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
 
         gui.lineEdit(
             box, self, "var_name",
             label="Variable name: ", orientation=Qt.Horizontal,
-            callback=lambda: self.commit()  # pylint: disable=W0108
+            callback=self.commit.deferred
         )
 
         gui.auto_apply(self.controlArea, self)
@@ -83,8 +83,9 @@ class OWAggregateColumns(widget.OWWidget):
             self.openContext(data)
         else:
             self.variable_model.set_domain(None)
-        self.unconditional_commit()
+        self.commit.now()
 
+    @gui.deferred
     def commit(self):
         augmented = self._compute_data()
         self.Outputs.data.send(augmented)

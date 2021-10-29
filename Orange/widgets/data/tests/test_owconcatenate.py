@@ -26,9 +26,9 @@ class TestOWConcatenate(WidgetTest):
         self.titanic = Table("titanic")
 
     def test_no_input(self):
-        self.widget.apply()
+        self.widget.commit.now()
         self.widget.controls.append_source_column.toggle()
-        self.widget.apply()
+        self.widget.commit.now()
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
     def test_single_input(self):
@@ -93,7 +93,7 @@ class TestOWConcatenate(WidgetTest):
         places = ["class_vars", "attributes", "metas"]
         for i, place in enumerate(places):
             self.widget.source_column_role = i
-            self.widget.apply()
+            self.widget.commit.now()
             source = get_source()
             output = self.get_output(self.widget.Outputs.data)
             self.assertTrue(source in getattr(output.domain, place))
@@ -114,7 +114,7 @@ class TestOWConcatenate(WidgetTest):
         self.assertTrue(self.widget.mergebox.isEnabled())
 
     def test_unconditional_commit_on_new_signal(self):
-        with patch.object(self.widget, 'unconditional_apply') as apply:
+        with patch.object(self.widget.commit, 'now') as apply:
             self.widget.auto_commit = False
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.primary_data, self.iris)
@@ -399,7 +399,7 @@ class TestOWConcatenate(WidgetTest):
         return table_n, table_m
 
     def test_dumb_tables(self):
-        self.widget.apply = Mock()
+        self.widget.commit.deferred = Mock()
         table_n, table_m = self._create_compute_values()
         na1, na2, na3, na4, nc1 = table_n.domain.variables
         ma1, ma2, ma3 = table_m.domain.attributes
@@ -450,7 +450,7 @@ class TestOWConcatenate(WidgetTest):
         self.send_signal(self.widget.Inputs.additional_data, table_m, 2)
 
         self.widget.ignore_compute_value = False
-        self.widget.apply()
+        self.widget.commit.now()
 
         output = self.get_output(self.widget.Outputs.data)
         attributes = output.domain.attributes
@@ -476,7 +476,7 @@ class TestOWConcatenate(WidgetTest):
         self.send_signal(self.widget.Inputs.additional_data, table_m, 2)
 
         self.widget.ignore_compute_value = True
-        self.widget.apply()
+        self.widget.commit.now()
 
         output = self.get_output(self.widget.Outputs.data)
         attributes = output.domain.attributes

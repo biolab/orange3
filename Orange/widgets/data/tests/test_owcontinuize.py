@@ -22,7 +22,7 @@ class TestOWContinuize(WidgetTest):
         widget.multinomial_treatment = 1
 
         self.send_signal(self.widget.Inputs.data, data)
-        widget.unconditional_commit()
+        widget.commit.now()
         imp_data = self.get_output(self.widget.Outputs.data)
         np.testing.assert_equal(imp_data.X, data.X)
         np.testing.assert_equal(imp_data.Y, data.Y)
@@ -30,19 +30,19 @@ class TestOWContinuize(WidgetTest):
         widget.continuous_treatment = 1
         self.send_signal(self.widget.Inputs.data,
                          Table.from_domain(data.domain))
-        widget.unconditional_commit()
+        widget.commit.now()
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(imp_data), 0)
 
         self.send_signal(self.widget.Inputs.data, None)
-        widget.unconditional_commit()
+        widget.commit.now()
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(imp_data)
 
     def test_continuous(self):
         table = Table("housing")
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
     def test_one_column_equal_values(self):
         """
@@ -57,7 +57,7 @@ class TestOWContinuize(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
     def test_one_column_nan_values_normalize_sd(self):
         """
@@ -72,13 +72,13 @@ class TestOWContinuize(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         table = Table("iris")
         with table.unlocked():
             table[1, 2] = np.NaN
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
     def test_one_column_nan_values_normalize_span(self):
         """
@@ -92,13 +92,13 @@ class TestOWContinuize(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySpan
         self.widget.continuous_treatment = 1
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         table = Table("iris")
         with table.unlocked():
             table[1, 2] = np.NaN
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
     def test_disable_normalize_sparse(self):
         def assert_enabled(enabled):

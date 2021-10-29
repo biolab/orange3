@@ -299,7 +299,7 @@ class OWConfusionMatrix(widget.OWWidget):
             self.selected_learner[:] = prev_sel_learner
         self._update()
         self._set_selection()
-        self.unconditional_commit()
+        self.commit.now()
 
     def clear(self):
         """Reset the widget, clear controls"""
@@ -407,6 +407,7 @@ class OWConfusionMatrix(widget.OWWidget):
 
         return data, annotated_data
 
+    @gui.deferred
     def commit(self):
         """Output data instances corresponding to selected cells"""
         if self.results is not None and self.data is not None \
@@ -422,7 +423,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def _invalidate(self):
         indices = self.tableview.selectedIndexes()
         self.selection = {(ind.row() - 2, ind.column() - 2) for ind in indices}
-        self.commit()
+        self.commit.deferred()
 
     def _set_selection(self):
         selection = QItemSelection()
@@ -436,7 +437,7 @@ class OWConfusionMatrix(widget.OWWidget):
     def _learner_changed(self):
         self._update()
         self._set_selection()
-        self.commit()
+        self.commit.deferred()
 
     def _update(self):
         def _isinvalid(x):

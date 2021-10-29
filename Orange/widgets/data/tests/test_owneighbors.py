@@ -118,25 +118,25 @@ class TestOWNeighbors(WidgetTest):
         """Check compute distances and apply are called when receiving signal"""
         widget = self.widget
         cdist = widget.compute_distances = Mock()
-        apply = widget.unconditional_apply = Mock()
+        def_commit = widget.commit.now = Mock()
         self.widget.auto_apply = False
         data = Table("iris")
         self.send_signal(widget.Inputs.data, data)
         cdist.assert_called()
-        apply.assert_called()
+        def_commit.assert_called()
         cdist.reset_mock()
-        apply.reset_mock()
+        def_commit.reset_mock()
 
         self.send_signal(widget.Inputs.reference, data[:10])
         cdist.assert_called()
-        apply.assert_called()
+        def_commit.assert_called()
         cdist.reset_mock()
-        apply.reset_mock()
+        def_commit.reset_mock()
 
         self.send_signals([(widget.Inputs.data, data),
                            (widget.Inputs.reference, data[:10])])
         self.assertEqual(cdist.call_count, 1)
-        self.assertEqual(apply.call_count, 1)
+        self.assertEqual(def_commit.call_count, 1)
 
     def test_compute_distances_calls_distance(self):
         widget = self.widget
@@ -284,7 +284,6 @@ class TestOWNeighbors(WidgetTest):
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         self.send_signal(widget.Inputs.data, data[:15])
-        widget.apply()
         self.assertFalse(widget.Warning.all_data_as_reference.is_shown())
         self.assertTrue(widget.Info.removed_references.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))

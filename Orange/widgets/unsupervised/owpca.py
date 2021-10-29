@@ -170,7 +170,7 @@ class OWPCA(widget.OWWidget):
             else:
                 self.Warning.trivial_components()
 
-            self.unconditional_commit()
+            self.commit.now()
 
     def clear(self):
         self._pca = None
@@ -277,7 +277,7 @@ class OWPCA(widget.OWWidget):
         return cut
 
     def _invalidate_selection(self):
-        self.commit()
+        self.commit.deferred()
 
     def _update_axis(self):
         p = min(len(self._variance_ratio), self.maxp)
@@ -285,6 +285,7 @@ class OWPCA(widget.OWWidget):
         d = max((p-1)//(self.axis_labels-1), 1)
         axis.setTicks([[(i, str(i)) for i in range(1, p + 1, d)]])
 
+    @gui.deferred
     def commit(self):
         transformed = data = components = None
         if self._pca is not None:

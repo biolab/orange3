@@ -818,7 +818,7 @@ class OWPaintData(OWWidget):
         self.tools_cache = {}
 
         self._init_ui()
-        self.commit()
+        self.commit.now()
 
     def _init_ui(self):
         namesBox = gui.vBox(self.controlArea, "Names")
@@ -1032,7 +1032,7 @@ class OWPaintData(OWWidget):
         else:
             self.input_data = np.column_stack((X, y))
         self.reset_to_input()
-        self.unconditional_commit()
+        self.commit.now()
 
     def reset_to_input(self):
         """Reset the painting to input data if present."""
@@ -1062,7 +1062,7 @@ class OWPaintData(OWWidget):
         else:  # set_dimensions already calls _replot, no need to call it again
             self._replot()
 
-        self.commit()
+        self.commit.deferred()
 
     def add_new_class_label(self, undoable=True):
 
@@ -1261,8 +1261,9 @@ class OWPaintData(OWWidget):
 
     def invalidate(self):
         self.data = self.__buffer.tolist()
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         self.Warning.renamed_vars.clear()
 

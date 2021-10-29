@@ -502,7 +502,7 @@ class OWDiscretize(widget.OWWidget):
             self._update_points()
         else:
             self._clear()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _initialize(self, data):
         # Initialize the default variable states for new data.
@@ -651,7 +651,7 @@ class OWDiscretize(widget.OWWidget):
             if isinstance(self.var_state[i].method, Default):
                 self._set_var_state(i, state)
         self._update_points()
-        self.commit()
+        self.commit.deferred()
 
     def _disc_method_changed(self):
         self._update_spin_positions()
@@ -662,7 +662,7 @@ class OWDiscretize(widget.OWWidget):
             self._set_var_state(idx, state)
         self._update_points()
         self._copy_to_manual_update_enabled()
-        self.commit()
+        self.commit.deferred()
 
     def _copy_to_manual(self):
         indices = self.selected_indices()
@@ -684,7 +684,7 @@ class OWDiscretize(widget.OWWidget):
         self.cutpoints = points
         self.manual_cuts_specific.setText(", ".join(map(fmt, points)))
         self._update_points()
-        self.commit()
+        self.commit.deferred()
 
     def _copy_to_manual_update_enabled(self):
         indices = self.selected_indices()
@@ -763,6 +763,7 @@ class OWDiscretize(widget.OWWidget):
         )
         return domain
 
+    @gui.deferred
     def commit(self):
         output = None
         if self.data is not None:

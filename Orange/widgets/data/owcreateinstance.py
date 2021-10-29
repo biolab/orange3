@@ -520,12 +520,11 @@ class OWCreateInstance(OWWidget):
             )
         gui.rubber(box)
 
-        # pylint: disable=unnecessary-lambda
-        append = gui.checkBox(self.buttonsArea, self, "append_to_data",
-                              "Append this instance to input data",
-                              callback=lambda: self.commit())
+        gui.checkBox(self.buttonsArea, self, "append_to_data",
+                     "Append this instance to input data",
+                     callback=self.commit.deferred)
         gui.rubber(self.buttonsArea)
-        box = gui.auto_apply(self.buttonsArea, self, "auto_commit")
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.settingsAboutToBePacked.connect(self.pack_settings)
 
@@ -533,7 +532,7 @@ class OWCreateInstance(OWWidget):
         self.proxy_model.setFilterFixedString(self.filter_edit.text().strip())
 
     def __table_data_changed(self):
-        self.commit()
+        self.commit.deferred()
 
     def __menu_requested(self, point: QPoint):
         index = self.view.indexAt(point)
@@ -597,13 +596,13 @@ class OWCreateInstance(OWWidget):
 
             self.model.setData(index, value, ValueRole)
         self.model.dataChanged.connect(self.__table_data_changed)
-        self.commit()
+        self.commit.deferred()
 
     @Inputs.data
     def set_data(self, data: Table):
         self.data = data
         self._set_model_data()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _set_model_data(self):
         self.Information.nans_removed.clear()
@@ -622,6 +621,7 @@ class OWCreateInstance(OWWidget):
     def set_reference(self, data: Table):
         self.reference = data
 
+    @gui.deferred
     def commit(self):
         output_data = None
         if self.data:

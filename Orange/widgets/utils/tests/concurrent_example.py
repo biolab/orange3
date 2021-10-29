@@ -97,7 +97,7 @@ class OWConcurrentWidget(OWDataProjectionWidget, ConcurrentWidgetMixin):
         assert len(result.embedding) == len(self.data)
         self.embedding = result.embedding
         self.run_button.setText("Start")
-        self.commit()
+        self.commit.deferred()
 
     def on_exception(self, ex: Exception):
         raise ex

@@ -71,22 +71,22 @@ class TestOWUnique(WidgetTest):
         w.selected_vars = w.var_model[:2]
 
         w.tiebreaker = "Last instance"
-        w.commit()
+        w.commit.now()
         out = self.get_output(w.Outputs.data)
         np.testing.assert_equal(out.Y, [2, 3, 4, 5])
 
         w.tiebreaker = "First instance"
-        w.commit()
+        w.commit.now()
         out = self.get_output(w.Outputs.data)
         np.testing.assert_equal(out.Y, [0, 3, 4, 5])
 
         w.tiebreaker = "Middle instance"
-        w.commit()
+        w.commit.now()
         out = self.get_output(w.Outputs.data)
         np.testing.assert_equal(out.Y, [1, 3, 4, 5])
 
         w.tiebreaker = "Discard non-unique instances"
-        w.commit()
+        w.commit.now()
         out = self.get_output(w.Outputs.data)
         np.testing.assert_equal(out.Y, [3, 4, 5])
 
@@ -101,7 +101,7 @@ class TestOWUnique(WidgetTest):
         np.testing.assert_equal(out.X, data.X[2:])
 
         w.selected_vars.clear()
-        w.unconditional_commit()
+        w.commit.now()
         out = self.get_output(w.Outputs.data)
         np.testing.assert_equal(out.X, data.X[2:])
 

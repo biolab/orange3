@@ -873,14 +873,14 @@ class OWPivot(OWWidget):
     def __feature_changed(self):
         self.selection = set()
         self.pivot = None
-        self.commit()
+        self.commit.deferred()
 
     def __val_feature_changed(self):
         self.selection = set()
         if self.no_col_feature or not self.pivot:
             return
         self.pivot.update_pivot_table(self.val_feature)
-        self.commit()
+        self.commit.deferred()
 
     def __aggregation_cb_clicked(self, agg_fun: Pivot.Functions, checked: bool):
         self.selection = set()
@@ -891,11 +891,11 @@ class OWPivot(OWWidget):
         if self.no_col_feature or not self.pivot or not self.data:
             return
         self.pivot.update_group_table(self.sel_agg_functions, self.val_feature)
-        self.commit()
+        self.commit.deferred()
 
     def __invalidate_filtered(self):
         self.selection = self.table_view.get_selection()
-        self.commit()
+        self.commit.deferred()
 
     @Inputs.data
     @check_sql_input
@@ -908,7 +908,7 @@ class OWPivot(OWWidget):
         self.init_attr_values()
         if self.data_has_primitives:
             self.openContext(self.data)
-        self.unconditional_commit()
+        self.commit.now()
 
     def check_data(self):
         self.clear_messages()
@@ -926,6 +926,7 @@ class OWPivot(OWWidget):
             allvars = domain.variables + domain.metas
             self.val_feature = allvars[0] if allvars[0] in model else model[2]
 
+    @gui.deferred
     def commit(self):
         def send_outputs(pivot_table, filtered_data, grouped_data):
             if self.data:

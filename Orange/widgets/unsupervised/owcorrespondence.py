@@ -130,7 +130,9 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
                 self.openContext(data)
                 self._restore_selection()
         self._update_CA()
+        self.commit.now()
 
+    @gui.deferred
     def commit(self):
         output_table = None
         if self.ca is not None:
@@ -194,6 +196,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
             self.ca = None
             self.plot.clear()
             self._update_CA()
+            self.commit.deferred()
             return
         return super().customEvent(event)
 
@@ -208,7 +211,6 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         self._setup_plot()
         self._update_info()
-        self.commit()
 
     def update_XY(self):
         self.axis_x_cb.clear()

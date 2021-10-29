@@ -127,6 +127,7 @@ class OWDBSCAN(widget.OWWidget):
             return False
         return True
 
+    @gui.deferred
     def commit(self):
         self.cluster()
 
@@ -186,7 +187,7 @@ class OWDBSCAN(widget.OWWidget):
         self._preprocess_data()
 
         self._compute_and_plot()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _preprocess_data(self):
         self.data_normalized = self.data
@@ -223,7 +224,7 @@ class OWDBSCAN(widget.OWWidget):
         self.Outputs.annotated_data.send(new_table)
 
     def _invalidate(self):
-        self.commit()
+        self.commit.deferred()
 
     def _find_nearest_dist(self, value):
         array = np.asarray(self.k_distances)
@@ -248,7 +249,7 @@ class OWDBSCAN(widget.OWWidget):
         self.cut_point = value
         self.eps = self.k_distances[value]
 
-        self.commit()
+        self.commit.deferred()
 
     def _min_samples_changed(self):
         if self.data is None:

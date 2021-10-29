@@ -727,7 +727,7 @@ class OWLinePlot(OWWidget):
 
         self.openContext(data)
         self.setup_plot()
-        self.unconditional_commit()
+        self.commit.now()
 
     def check_data(self):
         def error(err):
@@ -908,8 +908,9 @@ class OWLinePlot(OWWidget):
             self._update_profiles_color()
         self._update_sel_profiles_and_range()
         self._update_sel_profiles_color()
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         selected = self.data[self.selection] \
             if self.data is not None and bool(self.selection) else None

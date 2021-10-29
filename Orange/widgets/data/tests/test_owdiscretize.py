@@ -28,7 +28,7 @@ class TestOWDiscretize(WidgetTest):
                   OWDiscretize.EqualWidth, OWDiscretize.Remove,
                   OWDiscretize.Custom):
             widget.default_method = m
-            widget.unconditional_commit()
+            widget.commit.now()
             self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
     def test_select_method(self):

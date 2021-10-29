@@ -78,10 +78,10 @@ class OWNeighbors(OWWidget):
             box, self, "n_neighbors", label="Limit number of neighbors to:",
             step=1, spinType=int, minv=0, maxv=100, checked='limit_neighbors',
             # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
-            checkCallback=lambda: self.apply(),
-            callback=lambda: self.apply())
+            checkCallback=self.commit.deferred,
+            callback=self.commit.deferred)
 
-        self.apply_button = gui.auto_apply(self.buttonsArea, self, commit=self.apply)
+        self.apply_button = gui.auto_apply(self.buttonsArea, self)
 
     @Inputs.data
     def set_data(self, data):
@@ -94,11 +94,11 @@ class OWNeighbors(OWWidget):
 
     def handleNewSignals(self):
         self.compute_distances()
-        self.unconditional_apply()
+        self.commit.now()
 
     def recompute(self):
         self.compute_distances()
-        self.apply()
+        self.commit.deferred()
 
     def compute_distances(self):
         self.Error.diff_domains.clear()
@@ -124,7 +124,8 @@ class OWNeighbors(OWWidget):
         pp_reference, pp_data = pp_all_data[:n_ref], pp_all_data[n_ref:]
         self.distances = metric(pp_data, pp_reference).min(axis=1)
 
-    def apply(self):
+    @gui.deferred
+    def commit(self):
         indices = self._compute_indices()
 
         if indices is None:
