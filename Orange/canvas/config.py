@@ -69,6 +69,7 @@ class Config(config.Config):
     OrganizationDomain = "biolab.si"
     ApplicationName = "Orange"
     ApplicationVersion = Orange.__version__
+    AppUserModelID = "Biolab.Orange"  # AppUserModelID for windows task bar
 
     def init(self):
         super().init()
