@@ -49,6 +49,9 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.values = values
         if self.values is not None and not isinstance(self.variable,
                                                       StringVariable):
+            # Meta variables can be of type np.object
+            if values.dtype is not float:
+                values = values.astype(float)
             self.label_colors = variable.palette.values_to_qcolors(values)
         else:
             self.label_colors = None
