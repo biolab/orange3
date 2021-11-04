@@ -157,6 +157,16 @@ def _is_datetime(s):
         return True
     try:
         if is_object_dtype(s):
+            # pd.to_datetime would sucessfuly parse column of numbers to datetime
+            # but for column of object dtype with numbers we want to be either
+            # discret or string - following code try to parse column to numeric
+            # if connversion to numeric is sucessful return False
+            try:
+                pd.to_numeric(s)
+                return False
+            except (ValueError, TypeError):
+                pass
+
             # utc=True - to allow different timezones in a series object
             pd.to_datetime(s, infer_datetime_format=True, utc=True)
             return True

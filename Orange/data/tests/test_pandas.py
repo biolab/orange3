@@ -383,6 +383,25 @@ class TestPandasCompat(unittest.TestCase):
             ],
         )
 
+    def test_table_from_frame_no_datetim(self):
+        """
+        In case when dtype of column is object and column contains numbers only,
+        column could be recognized as a TimeVarialbe since pd.to_datetime can parse
+        numbers as datetime. That column must be result either in StringVariable
+        or DiscreteVariable since it's dtype is object.
+        """
+        from Orange.data.pandas_compat import table_from_frame
+
+        df = pd.DataFrame([[1], [2], [3]], dtype="object")
+        table = table_from_frame(df)
+        # check if exactly ContinuousVariable and not subtype TimeVariable
+        self.assertIsInstance(table.domain.metas[0], StringVariable)
+
+        df = pd.DataFrame([[1], [2], [2]], dtype="object")
+        table = table_from_frame(df)
+        # check if exactly ContinuousVariable and not subtype TimeVariable
+        self.assertIsInstance(table.domain.attributes[0], DiscreteVariable)
+
     def test_time_variable_compatible(self):
         from Orange.data.pandas_compat import table_from_frame
 
