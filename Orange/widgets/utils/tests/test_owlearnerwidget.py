@@ -183,3 +183,38 @@ class TestOWBaseLearner(WidgetTest):
 
         self.send_signal(w.Inputs.data, None)
         self.assertFalse(error.is_shown())
+
+    def test_default_name(self):
+        class TestLearner(Fitter):
+            name = "Test"
+            __returns__ = Mock()
+
+        class TestWidget(OWBaseLearner):
+            name = "Test"
+            LEARNER = TestLearner
+
+        def check_name(name):
+            self.assertEqual(name, w.effective_learner_name())
+            self.assertEqual(name, self.get_output(w.Outputs.learner, widget=w).name)
+
+        w = self.create_widget(TestWidget)
+
+        check_name("Test")
+        w.setCaption("Foo")
+        check_name("Foo")
+        w.set_default_learner_name("Bar")
+        check_name("Bar")
+        w.setCaption("Frob")
+        check_name("Bar")
+        w.learner_name = "This is not a test"
+        w.learner_name_changed()
+        check_name("This is not a test")
+        w.set_default_learner_name("Bar")
+        check_name("This is not a test")
+        w.setCaption("Blarg")
+        check_name("This is not a test")
+        w.learner_name = ""
+        w.learner_name_changed()
+        check_name("Bar")
+        w.set_default_learner_name("")
+        check_name("Blarg")
