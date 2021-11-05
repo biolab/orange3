@@ -12,6 +12,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table)
 class OWSelectByDataIndex(widget.OWWidget):
     name = "Select by Data Index"
     description = "Match instances by index from data subset."
+    category = "Transform"
     icon = "icons/SelectByDataIndex.svg"
     priority = 1112
 

@@ -365,6 +365,7 @@ class OWFeatureConstructor(OWWidget):
     name = "Feature Constructor"
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input dataset."
+    category = "Transform"
     icon = "icons/FeatureConstructor.svg"
     keywords = ['function', 'lambda']
 

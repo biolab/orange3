@@ -237,6 +237,7 @@ class OWCorrelations(OWWidget):
     description = "Compute all pairwise attribute correlations."
     icon = "icons/Correlations.svg"
     priority = 1106
+    category = "Unsupervised"
 
     class Inputs:
         data = Input("Data", Table)

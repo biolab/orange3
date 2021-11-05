@@ -15,6 +15,7 @@ class OWUnique(widget.OWWidget):
     name = 'Unique'
     icon = 'icons/Unique.svg'
     description = 'Filter instances unique by specified key attribute(s).'
+    category = "Transform"
 
     class Inputs:
         data = widget.Input("Data", Table)

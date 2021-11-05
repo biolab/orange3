@@ -153,11 +153,10 @@ def _plural(s):
 
 class OWSelectRows(widget.OWWidget):
     name = "Select Rows"
-    id = "Orange.widgets.data.file"
     description = "Select rows from the data based on values of variables."
     icon = "icons/SelectRows.svg"
     priority = 100
-    category = "Data"
+    category = "Transform"
     keywords = ["filter"]
 
     class Inputs:

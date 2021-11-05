@@ -244,6 +244,7 @@ class MergeDataContextHandler(ContextHandler):
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
     description = "Merge datasets based on the values of selected features."
+    category = "Transform"
     icon = "icons/MergeData.svg"
     priority = 1110
     keywords = ["join"]

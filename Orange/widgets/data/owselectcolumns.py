@@ -150,6 +150,7 @@ class OWSelectAttributes(widget.OWWidget):
     name = "Select Columns"
     description = "Select columns from the data table and assign them to " \
                   "data features, classes or meta variables."
+    category = "Transform"
     icon = "icons/SelectColumns.svg"
     priority = 100
     keywords = ["filter", "attributes", "target", "variable"]

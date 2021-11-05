@@ -136,6 +136,7 @@ class OWImpute(OWWidget):
     icon = "icons/Impute.svg"
     priority = 2130
     keywords = ["substitute", "missing"]
+    category = "Transform"
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

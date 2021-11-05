@@ -14,6 +14,7 @@ from Orange.widgets import gui
 class OWRandomize(OWWidget):
     name = "Randomize"
     description = "Randomize features, class and/or metas in data table."
+    category = "Transform"
     icon = "icons/Random.svg"
     priority = 2100
     keywords = []
