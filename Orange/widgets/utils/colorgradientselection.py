@@ -2,14 +2,15 @@ from typing import Any, Tuple
 
 from AnyQt.QtCore import Qt, QSize, QAbstractItemModel, Property
 from AnyQt.QtWidgets import (
-    QWidget, QSlider, QFormLayout, QComboBox, QStyle,
-    QHBoxLayout, QLineEdit, QLabel)
+    QWidget, QSlider, QFormLayout, QComboBox, QStyle, QHBoxLayout, QLabel,
+    QSizePolicy
+)
 from AnyQt.QtCore import Signal
-from AnyQt.QtGui import QFontMetrics, QDoubleValidator
 
 from orangewidget.gui import Slider
 
 from Orange.widgets.utils import itemmodels, colorpalettes
+from Orange.widgets.utils.spinbox import DoubleSpinBox, DBL_MIN, DBL_MAX
 
 
 class ColorGradientSelection(QWidget):
@@ -49,19 +50,23 @@ class ColorGradientSelection(QWidget):
         self.gradient_cb.currentIndexChanged.connect(self.currentIndexChanged)
 
         if center is not None:
-            def __on_center_changed():
-                self.__center = float(self.center_edit.text() or "0")
-                self.centerChanged.emit(self.__center)
+            def on_center_spin_value_changed(value):
+                if self.__center != value:
+                    self.__center = value
+                    self.centerChanged.emit(self.__center)
 
             self.center_box = QWidget()
             center_layout = QHBoxLayout()
             self.center_box.setLayout(center_layout)
-            width = QFontMetrics(self.font()).boundingRect("9999999").width()
-            self.center_edit = QLineEdit(
-                text=f"{self.__center}",
-                maximumWidth=width, placeholderText="0", alignment=Qt.AlignRight)
-            self.center_edit.setValidator(QDoubleValidator())
-            self.center_edit.editingFinished.connect(__on_center_changed)
+            self.center_edit = DoubleSpinBox(
+                value=self.__center,
+                minimum=DBL_MIN, maximum=DBL_MAX, minimumStep=0.01,
+                minimumContentsLenght=8,
+                stepType=DoubleSpinBox.AdaptiveDecimalStepType,
+                keyboardTracking=False,
+                sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            )
+            self.center_edit.valueChanged.connect(on_center_spin_value_changed)
             center_layout.setContentsMargins(0, 0, 0, 0)
             center_layout.addStretch(1)
             center_layout.addWidget(QLabel("Centered at"))
@@ -140,14 +145,6 @@ class ColorGradientSelection(QWidget):
     def setThresholdHigh(self, high: float) -> None:
         self.setThresholds(min(self.__threshold_low, high), high)
 
-    def center(self) -> float:
-        return self.__center
-
-    def setCenter(self, center: float) -> None:
-        self.__center = center
-        self.center_edit.setText(f"{center}")
-        self.centerChanged.emit(center)
-
     thresholdHigh_ = Property(
         float, thresholdLow, setThresholdLow, notify=thresholdsChanged)
 
@@ -193,6 +190,17 @@ class ColorGradientSelection(QWidget):
         self.center_box.setVisible(
             isinstance(palette, colorpalettes.Palette)
             and palette.flags & palette.Flags.Diverging != 0)
+
+    def center(self) -> float:
+        return self.__center
+
+    def setCenter(self, center: float) -> None:
+        if self.__center != center:
+            self.__center = center
+            self.center_edit.setValue(center)
+            self.centerChanged.emit(center)
+
+    center_ = Property(float, center, setCenter, notify=centerChanged)
 
 
 def clip(a, amin, amax):

@@ -3,8 +3,8 @@ from decimal import Decimal
 
 import numpy as np
 
-from AnyQt.QtCore import QLocale
-from AnyQt.QtWidgets import QDoubleSpinBox
+from AnyQt.QtCore import QLocale, QSize
+from AnyQt.QtWidgets import QDoubleSpinBox, QStyle, QStyleOptionSpinBox
 
 DBL_MIN = float(np.finfo(float).min)
 DBL_MAX = float(np.finfo(float).max)
@@ -16,9 +16,11 @@ class DoubleSpinBox(QDoubleSpinBox):
     """
     A QDoubleSpinSubclass with non-fixed decimal precision/rounding.
     """
-    def __init__(self, parent=None, decimals=-1, minimumStep=1e-5, **kwargs):
+    def __init__(self, parent=None, decimals=-1, minimumStep=1e-5,
+                 minimumContentsLenght=-1, **kwargs):
         self.__decimals = decimals
         self.__minimumStep = minimumStep
+        self.__minimumContentsLength = minimumContentsLenght
         stepType = kwargs.pop("stepType", DoubleSpinBox.DefaultStepType)
         super().__init__(parent, **kwargs)
         if decimals < 0:
@@ -107,3 +109,42 @@ class DoubleSpinBox(QDoubleSpinBox):
 
         def stepType(self):
             return self.__stepType
+
+    def setMinimumContentsLength(self, characters: int):
+        self.__minimumContentsLength = characters
+        self.updateGeometry()
+
+    def minimumContentsLength(self):
+        return self.__minimumContentsLength
+
+    def sizeHint(self) -> QSize:
+        if self.minimumContentsLength() < 0:
+            return super().sizeHint()
+        self.ensurePolished()
+        fm = self.fontMetrics()
+        template = "X" * self.minimumContentsLength()
+        template += "."
+        if self.prefix():
+            template = self.prefix() + " " + template
+        if self.suffix():
+            template = template + self.suffix()
+        if self.minimum() < 0.0:
+            template = "-" + template
+        if self.specialValueText():
+            templates = [template, self.specialValueText()]
+        else:
+            templates = [template]
+        height = self.lineEdit().sizeHint().height()
+        width = max(map(fm.horizontalAdvance, templates))
+        width += 2  # cursor blinking space
+        hint = QSize(width, height)
+        opt = QStyleOptionSpinBox()
+        self.initStyleOption(opt)
+        sh = self.style().sizeFromContents(QStyle.CT_SpinBox, opt, hint, self)
+        return sh
+
+    def minimumSizeHint(self) -> QSize:
+        if self.minimumContentsLength() < 0:
+            return super().minimumSizeHint()
+        else:
+            return self.sizeHint()
