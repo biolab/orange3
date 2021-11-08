@@ -348,6 +348,15 @@ def table_from_frame(df, *, force_nominal=False):
 
 
 def table_from_frames(xdf, ydf, mdf):
+    if not (xdf.index.equals(ydf.index) and xdf.index.equals(mdf.index)):
+        raise ValueError(
+            "Indexes not equal. Make sure that all three dataframes have equal index"
+        )
+
+    # drop index from x and y - it makes sure that index if not range will be
+    # placed in metas
+    xdf = xdf.reset_index(drop=True)
+    ydf = ydf.reset_index(drop=True)
     dfs = xdf, ydf, mdf
 
     if not all(df.shape[0] == xdf.shape[0] for df in dfs):
@@ -361,12 +370,11 @@ def table_from_frames(xdf, ydf, mdf):
     XYM = (xXYM[0], yXYM[1], mXYM[2])
     domain = Domain(xDomain.attributes, yDomain.class_vars, mDomain.metas)
 
-    indexes = [df.index for df in dfs]
     ids = [
-        int(x[2:])
-        if str(x).startswith("_o") and x[2:].isdigit() and x == y == m
+        int(idx[2:])
+        if str(idx).startswith("_o") and idx[2:].isdigit()
         else Table.new_id()
-        for x, y, m in zip(*indexes)
+        for idx in mdf.index
     ]
 
     attributes = {}
