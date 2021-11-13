@@ -26,7 +26,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
     QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
-    QPushButton, QMenu, QListView, QFrame, QLabel)
+    QPushButton, QMenu, QListView, QFrame, QLabel, QMessageBox)
 from AnyQt.QtGui import QKeySequence, QColor
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 from orangewidget.utils.combobox import ComboBoxSearch
@@ -101,6 +101,13 @@ def selected_row(view):
 
 
 class FeatureEditor(QFrame):
+    ExpressionTooltip = """
+Use variable names as values in expression.
+Categorical features are passed as strings
+(note the change in behaviour from Orange 3.30).
+
+""".lstrip()
+
     FUNCTIONS = dict(chain([(key, val) for key, val in math.__dict__.items()
                             if not key.startswith("_")],
                            [(key, val) for key, val in builtins.__dict__.items()
@@ -231,7 +238,8 @@ class FeatureEditor(QFrame):
 
 
 class ContinuousFeatureEditor(FeatureEditor):
-    ExpressionTooltip = "A numeric expression"
+    ExpressionTooltip = "A numeric expression\n\n" \
+                        + FeatureEditor.ExpressionTooltip
 
     def editorData(self):
         return ContinuousDescriptor(
@@ -242,7 +250,7 @@ class ContinuousFeatureEditor(FeatureEditor):
 
 
 class DateTimeFeatureEditor(FeatureEditor):
-    ExpressionTooltip = \
+    ExpressionTooltip = FeatureEditor.ExpressionTooltip + \
         "Result must be a string in ISO-8601 format " \
         "(e.g. 2019-07-30T15:37:27 or a part thereof),\n" \
         "or a number of seconds since Jan 1, 1970."
@@ -255,7 +263,7 @@ class DateTimeFeatureEditor(FeatureEditor):
 
 
 class DiscreteFeatureEditor(FeatureEditor):
-    ExpressionTooltip = \
+    ExpressionTooltip = FeatureEditor.ExpressionTooltip + \
         "Result must be a string, if values are not explicitly given\n" \
         "or a zero-based integer indices into a list of values given below."
 
@@ -292,7 +300,8 @@ class DiscreteFeatureEditor(FeatureEditor):
 
 
 class StringFeatureEditor(FeatureEditor):
-    ExpressionTooltip = "A string expression"
+    ExpressionTooltip = "A string expression\n\n" \
+                        + FeatureEditor.ExpressionTooltip
 
     def editorData(self):
         return StringDescriptor(
@@ -328,6 +337,111 @@ class DescriptorModel(itemmodels.PyListModel):
             return variable_icon(type(value))
         else:
             return super().data(index, role)
+
+
+def freevars(exp, env):
+    """
+    Return names of all free variables in a parsed (expression) AST.
+
+    Parameters
+    ----------
+    exp : ast.AST
+        An expression ast (ast.parse(..., mode="single"))
+    env : List[str]
+        Environment
+
+    Returns
+    -------
+    freevars : List[str]
+
+    See also
+    --------
+    ast
+
+    """
+    # pylint: disable=too-many-return-statements,too-many-branches
+    etype = type(exp)
+    if etype in [ast.Expr, ast.Expression]:
+        return freevars(exp.body, env)
+    elif etype == ast.BoolOp:
+        return sum((freevars(v, env) for v in exp.values), [])
+    elif etype == ast.BinOp:
+        return freevars(exp.left, env) + freevars(exp.right, env)
+    elif etype == ast.UnaryOp:
+        return freevars(exp.operand, env)
+    elif etype == ast.Lambda:
+        args = exp.args
+        assert isinstance(args, ast.arguments)
+        argnames = [a.arg for a in args.args]
+        argnames += [args.vararg.arg] if args.vararg else []
+        argnames += [a.arg for a in args.kwonlyargs] if args.kwonlyargs else []
+        argnames += [args.kwarg] if args.kwarg else []
+        return freevars(exp.body, env + argnames)
+    elif etype == ast.IfExp:
+        return (freevars(exp.test, env) + freevars(exp.body, env) +
+                freevars(exp.orelse, env))
+    elif etype == ast.Dict:
+        return sum((freevars(v, env)
+                    for v in chain(exp.keys, exp.values)), [])
+    elif etype == ast.Set:
+        return sum((freevars(v, env) for v in exp.elts), [])
+    elif etype in [ast.SetComp, ast.ListComp, ast.GeneratorExp, ast.DictComp]:
+        env_ext = []
+        vars_ = []
+        for gen in exp.generators:
+            target_names = freevars(gen.target, [])  # assigned names
+            vars_iter = freevars(gen.iter, env)
+            env_ext += target_names
+            vars_ifs = list(chain(*(freevars(ifexp, env + target_names)
+                                    for ifexp in gen.ifs or [])))
+            vars_ += vars_iter + vars_ifs
+
+        if etype == ast.DictComp:
+            vars_ = (freevars(exp.key, env_ext) +
+                     freevars(exp.value, env_ext) +
+                     vars_)
+        else:
+            vars_ = freevars(exp.elt, env + env_ext) + vars_
+        return vars_
+    # Yield, YieldFrom???
+    elif etype == ast.Compare:
+        return sum((freevars(v, env)
+                    for v in [exp.left] + exp.comparators), [])
+    elif etype == ast.Call:
+        return sum(map(lambda e: freevars(e, env),
+                       chain([exp.func],
+                             exp.args or [],
+                             [k.value for k in exp.keywords or []])),
+                   [])
+    elif etype == ast.Starred:
+        # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
+        return freevars(exp.value, env)
+    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes, ast.NameConstant]:
+        return []
+    elif etype == ast.Constant:
+        return []
+    elif etype == ast.Attribute:
+        return freevars(exp.value, env)
+    elif etype == ast.Subscript:
+        return freevars(exp.value, env) + freevars(exp.slice, env)
+    elif etype == ast.Name:
+        return [exp.id] if exp.id not in env else []
+    elif etype == ast.List:
+        return sum((freevars(e, env) for e in exp.elts), [])
+    elif etype == ast.Tuple:
+        return sum((freevars(e, env) for e in exp.elts), [])
+    elif etype == ast.Slice:
+        return sum((freevars(e, env)
+                    for e in filter(None, [exp.lower, exp.upper, exp.step])),
+                   [])
+    elif etype == ast.ExtSlice:
+        return sum((freevars(e, env) for e in exp.dims), [])
+    elif etype == ast.Index:
+        return freevars(exp.value, env)
+    elif etype == ast.keyword:
+        return freevars(exp.value, env)
+    else:
+        raise ValueError(exp)
 
 
 class FeatureConstructorHandler(DomainContextHandler):
@@ -379,6 +493,8 @@ class OWFeatureConstructor(OWWidget):
     settingsHandler = FeatureConstructorHandler()
     descriptors = ContextSetting([])
     currentIndex = ContextSetting(-1)
+    expressions_with_values = ContextSetting(False)
+    settings_version = 2
 
     EDITORS = [
         (ContinuousDescriptor, ContinuousFeatureEditor),
@@ -497,6 +613,10 @@ class OWFeatureConstructor(OWWidget):
 
         box.layout().addLayout(layout, 1)
 
+        self.fix_button = gui.button(
+            self.buttonsArea, self, "Upgrade Expressions",
+            callback=self.fix_expressions)
+        self.fix_button.setHidden(True)
         gui.button(self.buttonsArea, self, "Send", callback=self.apply, default=True)
 
     def setCurrentIndex(self, index):
@@ -565,6 +685,7 @@ class OWFeatureConstructor(OWWidget):
             self.descriptors = []
             self.currentIndex = -1
             self.openContext(data)
+            self.fix_button.setHidden(not self.expressions_with_values)
 
             if descriptors != self.descriptors or \
                     self.currentIndex != currindex:
@@ -586,6 +707,7 @@ class OWFeatureConstructor(OWWidget):
             self.apply()
         else:
             self.Outputs.data.send(None)
+            self.fix_button.setHidden(True)
 
     def addFeature(self, descriptor):
         self.featuremodel.append(descriptor)
@@ -658,7 +780,8 @@ class OWFeatureConstructor(OWWidget):
         desc = list(self.featuremodel)
         desc = self._validate_descriptors(desc)
         try:
-            new_variables = construct_variables(desc, self.data)
+            new_variables = construct_variables(
+                desc, self.data, self.expressions_with_values)
         # user's expression can contain arbitrary errors
         except Exception as err:  # pylint: disable=broad-except
             report_error(err)
@@ -709,110 +832,61 @@ class OWFeatureConstructor(OWWidget):
         self.report_items(
             report.plural("Constructed feature{s}", len(items)), items)
 
+    def fix_expressions(self):
+        dlg = QMessageBox(
+            QMessageBox.Question,
+            "Fix Expressions",
+            "This widget's behaviour has changed. Values of categorical "
+            "variables are now inserted as their textual representations "
+            "(strings); previously they appeared as integer numbers, with an "
+            "attribute '.value' that contained the text.\n\n"
+            "The widget currently runs in compatibility mode. After "
+            "expressions are updated, manually check for their correctness.")
+        dlg.addButton("Update", QMessageBox.ApplyRole)
+        dlg.addButton("Cancel", QMessageBox.RejectRole)
+        if dlg.exec() == QMessageBox.RejectRole:
+            return
 
-def freevars(exp, env):
-    """
-    Return names of all free variables in a parsed (expression) AST.
+        def fixer(mo):
+            var = domain[mo.group(2)]
+            if mo.group(3) == ".value":  # uses string; remove `.value`
+                return "".join(mo.group(1, 2, 4))
+            # Uses ints: get them by indexing
+            return mo.group(1) + "{" + \
+                   ", ".join(f"'{val}': {i}"
+                             for i, val in enumerate(var.values)) + \
+                   f"}}[{var.name}]" + mo.group(4)
 
-    Parameters
-    ----------
-    exp : ast.AST
-        An expression ast (ast.parse(..., mode="single"))
-    env : List[str]
-        Environment
+        domain = self.data.domain
+        disc_vars = "|".join(f"{var.name}"
+                             for var in chain(domain.variables, domain.metas)
+                             if var.is_discrete)
+        expr = re.compile(r"(^|\W)(" + disc_vars + r")(\.value)?(\W|$)")
+        self.descriptors[:] = [
+            descriptor._replace(
+                expression=expr.sub(fixer, descriptor.expression))
+            for descriptor in self.descriptors]
 
-    Returns
-    -------
-    freevars : List[str]
+        self.expressions_with_values = False
+        self.fix_button.hide()
+        index = self.currentIndex
+        self.featuremodel[:] = list(self.descriptors)
+        self.setCurrentIndex(index)
+        self.apply()
 
-    See also
-    --------
-    ast
-
-    """
-    # pylint: disable=too-many-return-statements,too-many-branches
-    etype = type(exp)
-    if etype in [ast.Expr, ast.Expression]:
-        return freevars(exp.body, env)
-    elif etype == ast.BoolOp:
-        return sum((freevars(v, env) for v in exp.values), [])
-    elif etype == ast.BinOp:
-        return freevars(exp.left, env) + freevars(exp.right, env)
-    elif etype == ast.UnaryOp:
-        return freevars(exp.operand, env)
-    elif etype == ast.Lambda:
-        args = exp.args
-        assert isinstance(args, ast.arguments)
-        argnames = [a.arg for a in args.args]
-        argnames += [args.vararg.arg] if args.vararg else []
-        argnames += [a.arg for a in args.kwonlyargs] if args.kwonlyargs else []
-        argnames += [args.kwarg] if args.kwarg else []
-        return freevars(exp.body, env + argnames)
-    elif etype == ast.IfExp:
-        return (freevars(exp.test, env) + freevars(exp.body, env) +
-                freevars(exp.orelse, env))
-    elif etype == ast.Dict:
-        return sum((freevars(v, env)
-                    for v in chain(exp.keys, exp.values)), [])
-    elif etype == ast.Set:
-        return sum((freevars(v, env) for v in exp.elts), [])
-    elif etype in [ast.SetComp, ast.ListComp, ast.GeneratorExp, ast.DictComp]:
-        env_ext = []
-        vars_ = []
-        for gen in exp.generators:
-            target_names = freevars(gen.target, [])  # assigned names
-            vars_iter = freevars(gen.iter, env)
-            env_ext += target_names
-            vars_ifs = list(chain(*(freevars(ifexp, env + target_names)
-                                    for ifexp in gen.ifs or [])))
-            vars_ += vars_iter + vars_ifs
-
-        if etype == ast.DictComp:
-            vars_ = (freevars(exp.key, env_ext) +
-                     freevars(exp.value, env_ext) +
-                     vars_)
-        else:
-            vars_ = freevars(exp.elt, env + env_ext) + vars_
-        return vars_
-    # Yield, YieldFrom???
-    elif etype == ast.Compare:
-        return sum((freevars(v, env)
-                    for v in [exp.left] + exp.comparators), [])
-    elif etype == ast.Call:
-        return sum(map(lambda e: freevars(e, env),
-                       chain([exp.func],
-                             exp.args or [],
-                             [k.value for k in exp.keywords or []])),
-                   [])
-    elif etype == ast.Starred:
-        # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
-        return freevars(exp.value, env)
-    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes, ast.NameConstant]:
-        return []
-    elif etype == ast.Constant:
-        return []
-    elif etype == ast.Attribute:
-        return freevars(exp.value, env)
-    elif etype == ast.Subscript:
-        return freevars(exp.value, env) + freevars(exp.slice, env)
-    elif etype == ast.Name:
-        return [exp.id] if exp.id not in env else []
-    elif etype == ast.List:
-        return sum((freevars(e, env) for e in exp.elts), [])
-    elif etype == ast.Tuple:
-        return sum((freevars(e, env) for e in exp.elts), [])
-    elif etype == ast.Slice:
-        return sum((freevars(e, env)
-                    for e in filter(None, [exp.lower, exp.upper, exp.step])),
-                   [])
-    elif etype == ast.ExtSlice:
-        return sum((freevars(e, env) for e in exp.dims), [])
-    elif etype == ast.Index:
-        return freevars(exp.value, env)
-    elif etype == ast.keyword:
-        return freevars(exp.value, env)
-    else:
-        raise ValueError(exp)
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version is None or version < 2:
+            used_vars = set(chain(*(
+                freevars(ast.parse(descriptor.expression, mode="eval"), [])
+                for descriptor in context.values["descriptors"]
+                if descriptor.expression)))
+            disc_vars = {name
+                         for (name, vtype) in chain(context.attributes.items(),
+                                                    context.metas.items())
+                         if vtype == 1}
+            if used_vars & disc_vars:
+                context.values["expressions_with_values"] = True
 
 
 def validate_exp(exp):
@@ -882,12 +956,12 @@ def validate_exp(exp):
         raise ValueError(exp)
 
 
-def construct_variables(descriptions, data):
+def construct_variables(descriptions, data, use_values=False):
     # subs
     variables = []
     source_vars = data.domain.variables + data.domain.metas
     for desc in descriptions:
-        desc, func = bind_variable(desc, source_vars, data)
+        desc, func = bind_variable(desc, source_vars, data, use_values)
         var = make_variable(desc, func)
         variables.append(var)
     return variables
@@ -900,7 +974,7 @@ def sanitized_name(name):
     return sanitized
 
 
-def bind_variable(descriptor, env, data):
+def bind_variable(descriptor, env, data, use_values):
     """
     (descriptor, env) ->
         (descriptor, (instance -> value) | (table -> value list))
@@ -921,7 +995,8 @@ def bind_variable(descriptor, env, data):
 
     if isinstance(descriptor, DiscreteDescriptor):
         if not descriptor.values:
-            str_func = FeatureFunc(descriptor.expression, source_vars)
+            str_func = FeatureFunc(descriptor.expression, source_vars,
+                                   use_values=use_values)
             values = sorted({str(x) for x in str_func(data)})
             values = {name: i for i, name in enumerate(values)}
             descriptor = descriptor._replace(values=values)
@@ -943,7 +1018,8 @@ def bind_variable(descriptor, env, data):
                 return np.nan
             return parse(e)
 
-    func = FeatureFunc(descriptor.expression, source_vars, values, cast)
+    func = FeatureFunc(descriptor.expression, source_vars, values, cast,
+                       use_values=use_values)
     return descriptor, func
 
 
@@ -1078,7 +1154,7 @@ class FeatureFunc:
         A function for casting the expressions result to the appropriate
         type (e.g. string representation of date/time variables to floats)
     """
-    def __init__(self, expression, args, extra_env=None, cast=None):
+    def __init__(self, expression, args, extra_env=None, cast=None, use_values=False):
         self.expression = expression
         self.args = args
         self.extra_env = dict(extra_env or {})
@@ -1086,15 +1162,17 @@ class FeatureFunc:
                                 [name for name, _ in args], self.extra_env)
         self.cast = cast
         self.mask_exceptions = True
+        self.use_values = use_values
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
             return [self(inst) for inst in instance]
         else:
             try:
-                args = [str(instance[var])
-                        if instance.domain[var].is_string else instance[var]
-                        for _, var in self.args]
+                args = [str(instance[var]) if var.is_string
+                    else var.values[int(instance[var])] if var.is_discrete and not self.use_values
+                    else instance[var]
+                    for _, var in self.args]
                 y = self.func(*args)
             # user's expression can contain arbitrary errors
             # this also covers missing attributes
