@@ -146,6 +146,26 @@ class OrangeDataFrame(pd.DataFrame):
     pd.DataFrame.__finalize__ = __finalize__
 
 
+def _reset_index(df: pd.DataFrame) -> pd.DataFrame:
+    """If df index is not a simple RangeIndex (or similar), include it into a table"""
+    if (
+        # not range-like index - test first to skip slow startswith(_o) check
+        not (
+            df.index.is_integer()
+            and (df.index.is_monotonic_increasing or df.index.is_monotonic_decreasing)
+        )
+        # check that it does not contain Orange index
+        and (
+            # startswith is slow (for long dfs) - firs check if col has strings
+            isinstance(df.index, pd.MultiIndex)
+            or not is_string_dtype(df.index)
+            or not any(str(i).startswith("_o") for i in df.index)
+        )
+    ):
+        df = df.reset_index()
+    return df
+
+
 def _is_discrete(s, force_nominal):
     return (is_categorical_dtype(s) or
             is_object_dtype(s) and (force_nominal or
@@ -217,136 +237,81 @@ def _convert_datetime(series, var):
     ).values
 
 
+def to_categorical(s, _):
+    x = s.astype("category").cat.codes
+    # it is same than x.replace(-1, np.nan), but much faster
+    x = x.where(x != -1, np.nan)
+    return np.asarray(x)
+
+
 def vars_from_df(df, role=None, force_nominal=False):
     if role is None and hasattr(df, 'orange_role'):
-        _role = df.orange_role
-    else:
-        _role = role
+        role = df.orange_role
+    df = _reset_index(df)
 
-    # If df index is not a simple RangeIndex (or similar), put it into data
-    if (
-        # not range-like index - test first to skip slow startswith(_o) check
-        not (
-            df.index.is_integer()
-            and (df.index.is_monotonic_increasing or df.index.is_monotonic_decreasing)
-        )
-        # check that it does not contain Orange index
-        and (
-            # startswith is slow (for long drs) - firs check if col has strings
-            isinstance(df.index, pd.MultiIndex)
-            or not is_string_dtype(df.index)
-            or not any(str(i).startswith("_o") for i in df.index)
-        )
-    ):
-        df = df.reset_index()
-
-    Xcols, Ycols, Mcols = [], [], []
-    Xexpr, Yexpr, Mexpr = [], [], []
-    attrs, class_vars, metas = [], [], []
-
-    contains_strings = _role == Role.Meta
+    cols = [], [], []
+    exprs = [], [], []
+    vars_ = [], [], []
 
     for column in df.columns:
         s = df[column]
+        _role = Role.Attribute if role is None else role
         if hasattr(df, 'orange_variables') and column in df.orange_variables:
             original_var = df.orange_variables[column]
             var = original_var.copy(compute_value=None)
-            if _role == Role.Attribute:
-                Xcols.append(column)
-                Xexpr.append(None)
-                attrs.append(var)
-            elif _role == Role.ClassAttribute:
-                Ycols.append(column)
-                Yexpr.append(None)
-                class_vars.append(var)
-            else:  # if role == Role.Meta:
-                Mcols.append(column)
-                Mexpr.append(None)
-                metas.append(var)
+            expr = None
         elif _is_datetime(s):
             var = TimeVariable(str(column))
-            attrs.append(var)
-            Xcols.append(column)
-            Xexpr.append(_convert_datetime)
+            expr = _convert_datetime
         elif _is_discrete(s, force_nominal):
-            discrete = s.astype('category').cat
-            var = DiscreteVariable(str(column),
-                                   discrete.categories.astype(str).tolist())
-            attrs.append(var)
-            Xcols.append(column)
-
-            def to_cat(s, _):
-                x = s.astype("category").cat.codes
-                # it is same than x.replace(-1, np.nan), but much faster
-                x = x.where(x != -1, np.nan)
-                return np.asarray(x)
-
-            Xexpr.append(to_cat)
+            discrete = s.astype("category").cat
+            var = DiscreteVariable(
+                str(column), discrete.categories.astype(str).tolist()
+            )
+            expr = to_categorical
         elif is_numeric_dtype(s):
             var = ContinuousVariable(
                 # set number of decimals to 0 if int else keeps default behaviour
                 str(column), number_of_decimals=(0 if is_integer_dtype(s) else None)
             )
-            attrs.append(var)
-            Xcols.append(column)
-            Xexpr.append(None)
+            expr = None
         else:
-            contains_strings = True
+            if role is not None and role != Role.Meta:
+                raise ValueError("String variable must be in metas.")
+            _role = Role.Meta
             var = StringVariable(str(column))
-            metas.append(var)
-            Mcols.append(column)
-            Mexpr.append(lambda s, _: np.asarray(s, dtype=object))
+            expr = lambda s, _: np.asarray(s, dtype=object)
 
-    # if role isn't explicitly set, try to
-    # export dataframes into one contiguous block.
-    # for this all columns must be of the same role
-    if isinstance(df, OrangeDataFrame) \
-            and not role \
-            and contains_strings \
-            and not force_nominal:
-        attrs.extend(class_vars)
-        attrs.extend(metas)
-        metas = attrs
-        Xcols.extend(Ycols)
-        Xcols.extend(Mcols)
-        Mcols = Xcols
-        Xexpr.extend(Yexpr)
-        Xexpr.extend(Mexpr)
-        Mexpr = Xexpr
+        cols[_role].append(column)
+        exprs[_role].append(expr)
+        vars_[_role].append(var)
 
-        attrs, class_vars = [], []
-        Xcols, Ycols = [], []
-        Xexpr, Yexpr = [], []
-
-    XYM = []
-    for Avars, Acols, Aexpr in zip(
-            (attrs, class_vars, metas),
-            (Xcols, Ycols, Mcols),
-            (Xexpr, Yexpr, Mexpr)):
-        if not Acols:
-            A = None if Acols != Xcols else np.empty((df.shape[0], 0))
-            XYM.append(A)
-            continue
-        if not any(Aexpr):
-            Adf = df if all(c in Acols
-                            for c in df.columns) else df[Acols]
-            if all(isinstance(a, SparseDtype) for a in Adf.dtypes):
-                A = csr_matrix(Adf.sparse.to_coo())
+    xym = []
+    for a_vars, a_cols, a_expr in zip(vars_, cols, exprs):
+        if not a_cols:
+            arr = None if a_cols != cols[0] else np.empty((df.shape[0], 0))
+        elif not any(a_expr):
+            # if all c in columns table will share memory with dataframe
+            a_df = df if all(c in a_cols for c in df.columns) else df[a_cols]
+            if all(isinstance(a, SparseDtype) for a in a_df.dtypes):
+                arr = csr_matrix(a_df.sparse.to_coo())
             else:
-                A = np.asarray(Adf)
-            XYM.append(A)
-            continue
-        # we'll have to copy the table to resolve any expressions
-        # TODO eliminate expr (preprocessing for pandas -> table)
-        A = np.array([expr(df[col], var) if expr else np.asarray(df[col])
-                      for var, col, expr in zip(Avars, Acols, Aexpr)]).T
-        XYM.append(A)
+                arr = np.asarray(a_df)
+        else:
+            # we'll have to copy the table to resolve any expressions
+            arr = np.array(
+                [
+                    expr(df[col], var) if expr else np.asarray(df[col])
+                    for var, col, expr in zip(a_vars, a_cols, a_expr)
+                ]
+            ).T
+        xym.append(arr)
 
     # Let the tables share memory with pandas frame
-    if XYM[1] is not None and XYM[1].ndim == 2 and XYM[1].shape[1] == 1:
-        XYM[1] = XYM[1][:, 0]
+    if xym[1] is not None and xym[1].ndim == 2 and xym[1].shape[1] == 1:
+        xym[1] = xym[1][:, 0]
 
-    return XYM, Domain(attrs, class_vars, metas)
+    return xym, Domain(*vars_)
 
 
 def table_from_frame(df, *, force_nominal=False):
@@ -383,6 +348,15 @@ def table_from_frame(df, *, force_nominal=False):
 
 
 def table_from_frames(xdf, ydf, mdf):
+    if not (xdf.index.equals(ydf.index) and xdf.index.equals(mdf.index)):
+        raise ValueError(
+            "Indexes not equal. Make sure that all three dataframes have equal index"
+        )
+
+    # drop index from x and y - it makes sure that index if not range will be
+    # placed in metas
+    xdf = xdf.reset_index(drop=True)
+    ydf = ydf.reset_index(drop=True)
     dfs = xdf, ydf, mdf
 
     if not all(df.shape[0] == xdf.shape[0] for df in dfs):
@@ -396,25 +370,23 @@ def table_from_frames(xdf, ydf, mdf):
     XYM = (xXYM[0], yXYM[1], mXYM[2])
     domain = Domain(xDomain.attributes, yDomain.class_vars, mDomain.metas)
 
-    indexes = [df.index for df in dfs]
     ids = [
-        int(x[2:])
-        if str(x).startswith("_o") and x[2:].isdigit() and x == y == m
+        int(idx[2:])
+        if str(idx).startswith("_o") and idx[2:].isdigit()
         else Table.new_id()
-        for x, y, m in zip(*indexes)
+        for idx in mdf.index
     ]
 
     attributes = {}
     W = None
     for df in dfs:
         if isinstance(df, OrangeDataFrame):
-            W = [df.orange_weights[i] for i in df.index
-                 if i in df.orange_weights]
+            W = [df.orange_weights[i] for i in df.index if i in df.orange_weights]
             if len(W) != len(df.index):
                 W = None
+            attributes.update(df.orange_attributes)
         else:
             W = None
-        attributes.update(df.orange_attributes)
 
     return Table.from_numpy(
         domain,

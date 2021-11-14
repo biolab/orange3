@@ -462,6 +462,53 @@ class TestPandasCompat(unittest.TestCase):
         self.assertTupleEqual(table.domain.metas, new_table.domain.metas)
         self.assertEqual(table.domain.class_var, new_table.domain.class_var)
 
+    def test_table_from_frames_not_orange_dataframe(self):
+        x = pd.DataFrame([[1, 2, 3], [4, 5, 6]], columns=["x1", "x2", "x3"])
+        y = pd.DataFrame([[5], [6]], columns=["y"])
+        m = pd.DataFrame([[1, 2], [4, 5]], columns=["m1", "m2"])
+        new_table = Table.from_pandas_dfs(x, y, m)
+
+        np.testing.assert_array_equal(x, new_table.X)
+        np.testing.assert_array_equal(y.values.flatten(), new_table.Y)
+        np.testing.assert_array_equal(m, new_table.metas)
+        d = new_table.domain
+        self.assertListEqual(x.columns.tolist(), [a.name for a in d.attributes])
+        self.assertEqual(y.columns[0], d.class_var.name)
+        self.assertListEqual(m.columns.tolist(), [a.name for a in d.metas])
+
+    def test_table_from_frames_same_index(self):
+        """
+        Test that index column is placed in metas. Function should fail
+        with ValueError when indexes are different
+        """
+        index = np.array(["a", "b"])
+        x = pd.DataFrame(
+            [[1, 2, 3], [4, 5, 6]], columns=["x1", "x2", "x3"], index=index
+        )
+        y = pd.DataFrame([[5], [6]], columns=["y"], index=index)
+        m = pd.DataFrame([[1, 2], [4, 5]], columns=["m1", "m2"], index=index)
+        new_table = Table.from_pandas_dfs(x, y, m)
+
+        # index should be placed in metas
+        np.testing.assert_array_equal(x, new_table.X)
+        np.testing.assert_array_equal(y.values.flatten(), new_table.Y)
+        np.testing.assert_array_equal(
+            np.hstack((index[:, None], m.values.astype("object"))), new_table.metas
+        )
+        d = new_table.domain
+        self.assertListEqual(x.columns.tolist(), [a.name for a in d.attributes])
+        self.assertEqual(y.columns[0], d.class_var.name)
+        self.assertListEqual(["index"] + m.columns.tolist(), [a.name for a in d.metas])
+
+        index2 = np.array(["a", "c"])
+        x = pd.DataFrame(
+            [[1, 2, 3], [4, 5, 6]], columns=["x1", "x2", "x3"], index=index
+        )
+        y = pd.DataFrame([[5], [6]], columns=["y"], index=index2)
+        m = pd.DataFrame([[1, 2], [4, 5]], columns=["m1", "m2"], index=index)
+        with self.assertRaises(ValueError):
+            Table.from_pandas_dfs(x, y, m)
+
 
 class TestTablePandas(unittest.TestCase):
     def setUp(self):
@@ -598,7 +645,7 @@ class TestTablePandas(unittest.TestCase):
         table3 = df3.to_orange_table()
 
         self.assertEqual(len(table2), len(table3))
-        self.assertFalse(any(table3.W))
+        self.assertEqual(0, table3.W.size)
         self.assertEqual(self.table.attributes, table3.attributes)
 
         d1 = table2.domain
