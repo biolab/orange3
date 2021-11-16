@@ -42,6 +42,9 @@ Then, create a new conda environment, and install orange3:
 # Add conda-forge to your channels for access to the latest release
 conda config --add channels conda-forge
 
+# Perhaps enforce strict conda-forge priority
+conda config --set channel_priority strict
+
 # Create and activate an environment for Orange
 conda create python=3 --yes --name orange3
 conda activate orange3
