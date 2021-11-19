@@ -5,8 +5,11 @@ import sys
 import math
 import pickle
 import copy
+from unittest.mock import patch, Mock
 
 import numpy as np
+
+from orangewidget.settings import Context
 
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable, TimeVariable)
@@ -94,7 +97,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], TimeVariable))
         for row in data:
-            self.assertEqual("2019-07-{:02}".format(int(row["MEDV"] / 3)),
+            self.assertEqual(f"2019-07-{int(row['MEDV'] / 3):02}",
                              str(row["Date"])[:10])
 
     def test_construct_variables_string(self):
@@ -366,13 +369,132 @@ class OWFeatureConstructorTests(WidgetTest):
 
         discreteFeatureEditor.valuesedit.setText("A")
         discreteFeatureEditor.nameedit.setText("D1")
-        discreteFeatureEditor.expressionedit.setText("iris")
+        discreteFeatureEditor.expressionedit.setText("1")
         self.widget.addFeature(
             discreteFeatureEditor.editorData()
         )
         self.assertFalse(self.widget.Error.more_values_needed.is_shown())
         self.widget.apply()
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
+
+    @patch("Orange.widgets.data.owfeatureconstructor.QMessageBox")
+    def test_fix_values(self, msgbox):
+        w = self.widget
+
+        msgbox.ApplyRole, msgbox.RejectRole = object(), object()
+        msgbox.return_value = Mock()
+        dlgexec = msgbox.return_value.exec = Mock()
+
+        v = [DiscreteVariable(name, values=tuple("abc"))
+             for name in ("ana", "berta", "cilka")]
+        domain = Domain(v, [])
+        self.send_signal(w.Inputs.data, Table.from_numpy(domain, [[0, 1, 2]]))
+
+        w.descriptors = [StringDescriptor(
+            "y", "ana.value + berta.value + cilka.value")]
+
+        # Reject fixing - no changes
+        dlgexec.return_value=msgbox.RejectRole
+        w.fix_expressions()
+        self.assertEqual(w.descriptors[0].expression,
+                         "ana.value + berta.value + cilka.value")
+
+        dlgexec.return_value = Mock(return_value=msgbox.AcceptRole)
+
+        w.fix_expressions()
+        self.assertEqual(w.descriptors[0].expression, "ana + berta + cilka")
+
+        w.descriptors = [StringDescriptor(
+            "y", "ana.value + dani.value + cilka.value")]
+        with patch.object(w, "apply"):  # dani doesn't exist and will fail
+            w.fix_expressions()
+        self.assertEqual(w.descriptors[0].expression,
+                         "ana + dani.value + cilka")
+
+        w.descriptors = [ContinuousDescriptor("y", "sqrt(berta)", 1)]
+        w.fix_expressions()
+        self.assertEqual(w.descriptors[0].expression,
+                         "sqrt({'a': 0, 'b': 1, 'c': 2}[berta])")
+
+    def test_migration_discrete_strings(self):
+        v = [DiscreteVariable("Ana", values=tuple("012")),
+             ContinuousVariable("Cilka")]
+        domain = Domain(v)
+        data = Table.from_numpy(domain, [[1, 3.14]])
+
+        settings_w_discrete = {
+            "context_settings":
+            [Context(
+                attributes=dict(Ana=1, Cilka=2), metas={},
+                values=dict(
+                    descriptors=[
+                        ContinuousDescriptor("y", "Ana + int(Cilka)", 1),
+                        StringDescriptor("u", "Ana.value + 'X'")
+                    ],
+                    currentIndex=0)
+             )]
+        }
+        widget = self.create_widget(OWFeatureConstructor, settings_w_discrete)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertTrue(widget.expressions_with_values)
+        self.assertFalse(widget.fix_button.isHidden())
+        out = self.get_output(widget.Outputs.data)
+        np.testing.assert_almost_equal(out.X, [[1, 3.14, 4]])
+        np.testing.assert_equal(out.metas, [["1X"]])
+
+        settings_no_discrete = {
+            "context_settings":
+            [Context(
+                attributes=dict(Ana=1, Cilka=2), metas={},
+                values=dict(
+                    descriptors=[
+                        ContinuousDescriptor("y", "int(Cilka)", 1),
+                    ],
+                    currentIndex=0)
+             )]
+        }
+        widget = self.create_widget(OWFeatureConstructor, settings_no_discrete)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertFalse(widget.expressions_with_values)
+        self.assertTrue(widget.fix_button.isHidden())
+        out = self.get_output(widget.Outputs.data)
+        np.testing.assert_almost_equal(out.X, [[1, 3.14, 3]])
+
+        widget = self.create_widget(OWFeatureConstructor, settings_w_discrete)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertTrue(widget.expressions_with_values)
+        self.assertFalse(widget.fix_button.isHidden())
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.expressions_with_values)
+        self.assertTrue(widget.fix_button.isHidden())
+
+    def test_report(self):
+        settings = {
+            "context_settings":
+                [Context(
+                    attributes=dict(x=2, y=2, z=2), metas={},
+                    values=dict(
+                        descriptors=[
+                            ContinuousDescriptor("a", "x + 2", 1),
+                            DiscreteDescriptor("b", "x < 3", (), False),
+                            DiscreteDescriptor("c", "x > 15", (), True),
+                            DiscreteDescriptor("d", "y > x", ("foo", "bar"), False),
+                            DiscreteDescriptor("e", "x ** 2 + y == 5", ("foo", "bar"), True),
+                            StringDescriptor("f", "str(x)"),
+                            DateTimeDescriptor("g", "z")
+                        ],
+                        currentIndex=0)
+                )]
+        }
+
+        w = self.create_widget(OWFeatureConstructor, settings)
+        v = [ContinuousVariable(name) for name in "xyz"]
+        domain = Domain(v, [])
+        self.send_signal(w.Inputs.data, Table.from_numpy(domain, [[0, 1, 2]]))
+        w.report_items = Mock()
+        w.send_report()
+        args = w.report_items.call_args[0][1]
+        self.assertEqual(list(args), list("abcdefg"))
 
 
 class TestFeatureEditor(unittest.TestCase):
