@@ -27,7 +27,7 @@ from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
     QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
     QPushButton, QMenu, QListView, QFrame, QLabel, QMessageBox)
-from AnyQt.QtGui import QKeySequence, QColor
+from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 from orangewidget.utils.combobox import ComboBoxSearch
 
@@ -644,13 +644,13 @@ class OWFeatureConstructor(OWWidget):
             self.Warning.clear()
             editor = self.editorstack.currentWidget()
             proposed = editor.editorData().name
-            unique = get_unique_names(self.reserved_names(self.currentIndex),
-                                      proposed)
+            uniq = get_unique_names(self.reserved_names(self.currentIndex),
+                                    proposed)
 
             feature = editor.editorData()
-            if editor.editorData().name != unique:
+            if editor.editorData().name != uniq:
                 self.Warning.renamed_var()
-                feature = feature.__class__(unique, *feature[1:])
+                feature = feature.__class__(uniq, *feature[1:])
 
             self.featuremodel[self.currentIndex] = feature
             self.descriptors = list(self.featuremodel)
@@ -820,15 +820,19 @@ class OWFeatureConstructor(OWWidget):
         items = OrderedDict()
         for feature in self.featuremodel:
             if isinstance(feature, DiscreteDescriptor):
-                items[feature.name] = "{} (categorical with values {}{})".format(
-                    feature.expression, feature.values,
-                    "; ordered" * feature.ordered)
+                desc = "categorical"
+                if feature.values:
+                    desc += " with values " \
+                            + ", ".join(f"'{val}'" for val in feature.values)
+                if feature.ordered:
+                    desc += "; ordered"
             elif isinstance(feature, ContinuousDescriptor):
-                items[feature.name] = "{} (numeric)".format(feature.expression)
+                desc = "numeric"
             elif isinstance(feature, DateTimeDescriptor):
-                items[feature.name] = "{} (date/time)".format(feature.expression)
+                desc = "date/time"
             else:
-                items[feature.name] = "{} (text)".format(feature.expression)
+                desc = "text"
+            items[feature.name] = f"{feature.expression} ({desc})"
         self.report_items(
             report.plural("Constructed feature{s}", len(items)), items)
 

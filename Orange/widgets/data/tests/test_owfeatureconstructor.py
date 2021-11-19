@@ -97,7 +97,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], TimeVariable))
         for row in data:
-            self.assertEqual("2019-07-{:02}".format(int(row["MEDV"] / 3)),
+            self.assertEqual(f"2019-07-{int(row['MEDV'] / 3):02}",
                              str(row["Date"])[:10])
 
     def test_construct_variables_string(self):
@@ -377,13 +377,6 @@ class OWFeatureConstructorTests(WidgetTest):
         self.widget.apply()
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
 
-    @patch("Orange.widgets.data.owfeatureconstructor.QMessageBox")
-    def test_fix_values_dlg_reject(self, msgbox):
-        w = self.widget
-
-        msgbox.ApplyRole, msgbox.RejectRole = object(), object()
-
-
 
     @patch("Orange.widgets.data.owfeatureconstructor.QMessageBox")
     def test_fix_values(self, msgbox):
@@ -391,7 +384,7 @@ class OWFeatureConstructorTests(WidgetTest):
 
         msgbox.ApplyRole, msgbox.RejectRole = object(), object()
         msgbox.return_value = Mock()
-        exec = msgbox.return_value.exec = Mock()
+        dlgexec = msgbox.return_value.exec = Mock()
 
         v = [DiscreteVariable(name, values=tuple("abc"))
              for name in ("ana", "berta", "cilka")]
@@ -402,12 +395,12 @@ class OWFeatureConstructorTests(WidgetTest):
             "y", "ana.value + berta.value + cilka.value")]
 
         # Reject fixing - no changes
-        exec.return_value=msgbox.RejectRole
+        dlgexec.return_value=msgbox.RejectRole
         w.fix_expressions()
         self.assertEqual(w.descriptors[0].expression,
                          "ana.value + berta.value + cilka.value")
 
-        exec.return_value = Mock(return_value=msgbox.AcceptRole)
+        dlgexec.return_value = Mock(return_value=msgbox.AcceptRole)
 
         w.fix_expressions()
         self.assertEqual(w.descriptors[0].expression, "ana + berta + cilka")
