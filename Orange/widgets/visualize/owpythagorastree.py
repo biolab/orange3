@@ -96,9 +96,11 @@ class OWPythagorasTree(OWWidget):
 
         # Display settings area
         box_display = gui.widgetBox(self.controlArea, 'Display Settings')
+        # maxValue is set to a wide three-digit number to probably ensure the
+        # proper label width. The maximum is later set to match the tree depth
         self.depth_slider = gui.hSlider(
             box_display, self, 'depth_limit', label='Depth', ticks=False,
-            callback=self.update_depth)
+            maxValue=900, callback=self.update_depth)
         self.target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
             orientation=Qt.Horizontal, items=[], contentsLength=8,
