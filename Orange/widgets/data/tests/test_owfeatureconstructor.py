@@ -377,7 +377,6 @@ class OWFeatureConstructorTests(WidgetTest):
         self.widget.apply()
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
 
-
     @patch("Orange.widgets.data.owfeatureconstructor.QMessageBox")
     def test_fix_values(self, msgbox):
         w = self.widget
@@ -423,7 +422,7 @@ class OWFeatureConstructorTests(WidgetTest):
         domain = Domain(v)
         data = Table.from_numpy(domain, [[1, 3.14]])
 
-        settings = {
+        settings_w_discrete = {
             "context_settings":
             [Context(
                 attributes=dict(Ana=1, Cilka=2), metas={},
@@ -435,7 +434,7 @@ class OWFeatureConstructorTests(WidgetTest):
                     currentIndex=0)
              )]
         }
-        widget = self.create_widget(OWFeatureConstructor, settings)
+        widget = self.create_widget(OWFeatureConstructor, settings_w_discrete)
         self.send_signal(widget.Inputs.data, data)
         self.assertTrue(widget.expressions_with_values)
         self.assertFalse(widget.fix_button.isHidden())
@@ -443,7 +442,7 @@ class OWFeatureConstructorTests(WidgetTest):
         np.testing.assert_almost_equal(out.X, [[1, 3.14, 4]])
         np.testing.assert_equal(out.metas, [["1X"]])
 
-        settings = {
+        settings_no_discrete = {
             "context_settings":
             [Context(
                 attributes=dict(Ana=1, Cilka=2), metas={},
@@ -454,12 +453,48 @@ class OWFeatureConstructorTests(WidgetTest):
                     currentIndex=0)
              )]
         }
-        widget = self.create_widget(OWFeatureConstructor, settings)
+        widget = self.create_widget(OWFeatureConstructor, settings_no_discrete)
         self.send_signal(widget.Inputs.data, data)
         self.assertFalse(widget.expressions_with_values)
         self.assertTrue(widget.fix_button.isHidden())
         out = self.get_output(widget.Outputs.data)
         np.testing.assert_almost_equal(out.X, [[1, 3.14, 3]])
+
+        widget = self.create_widget(OWFeatureConstructor, settings_w_discrete)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertTrue(widget.expressions_with_values)
+        self.assertFalse(widget.fix_button.isHidden())
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.expressions_with_values)
+        self.assertTrue(widget.fix_button.isHidden())
+
+    def test_report(self):
+        settings = {
+            "context_settings":
+                [Context(
+                    attributes=dict(x=2, y=2, z=2), metas={},
+                    values=dict(
+                        descriptors=[
+                            ContinuousDescriptor("a", "x + 2", 1),
+                            DiscreteDescriptor("b", "x < 3", (), False),
+                            DiscreteDescriptor("c", "x > 15", (), True),
+                            DiscreteDescriptor("d", "y > x", ("foo", "bar"), False),
+                            DiscreteDescriptor("e", "x ** 2 + y == 5", ("foo", "bar"), True),
+                            StringDescriptor("f", "str(x)"),
+                            DateTimeDescriptor("g", "z")
+                        ],
+                        currentIndex=0)
+                )]
+        }
+
+        w = self.create_widget(OWFeatureConstructor, settings)
+        v = [ContinuousVariable(name) for name in "xyz"]
+        domain = Domain(v, [])
+        self.send_signal(w.Inputs.data, Table.from_numpy(domain, [[0, 1, 2]]))
+        w.report_items = Mock()
+        w.send_report()
+        args = w.report_items.call_args[0][1]
+        self.assertEqual(list(args), list("abcdefg"))
 
 
 class TestFeatureEditor(unittest.TestCase):

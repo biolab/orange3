@@ -678,6 +678,7 @@ class OWFeatureConstructor(OWWidget):
         self.closeContext()
 
         self.data = data
+        self.expressions_with_values = False
 
         if self.data is not None:
             descriptors = list(self.descriptors)
