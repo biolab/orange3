@@ -511,7 +511,8 @@ class TestOWDistributions(WidgetTest):
             self._set_check(cb, False)
             self.assertTrue(all(not bar.hidden
                                 for bar in widget.bar_items))
-            self.assertTrue(all(curve.opts["brush"].style() == Qt.NoBrush
+            self.assertTrue(all(curve.opts["brush"] is None or
+                                curve.opts["brush"].style() == Qt.NoBrush
                                 for curve in widget.curve_items))
 
             self._set_check(cb, True)
