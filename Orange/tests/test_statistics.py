@@ -236,9 +236,9 @@ class TestUtil(unittest.TestCase):
     def test_nanvar(self, array):
         for X in self.data:
             X_sparse = array(X)
-            np.testing.assert_array_equal(
+            np.testing.assert_almost_equal(
                 nanvar(X_sparse),
-                np.nanvar(X))
+                np.nanvar(X), decimal=14)  # np.nanvar and bn.nanvar differ slightly
 
     def test_nanvar_with_ddof(self):
         x = np.random.uniform(0, 10, (20, 100))

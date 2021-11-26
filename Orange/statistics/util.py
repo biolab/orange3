@@ -347,15 +347,15 @@ def stats(X, weights=None, compute_variance=False):
             w_X = X.multiply(sp.csr_matrix(np.c_[weights] / sum(weights)))
             return np.asarray(w_X.sum(axis=0)).ravel()
         else:
-            return np.nansum(X * np.c_[weights] / sum(weights), axis=0)
+            return bn.nansum(X * np.c_[weights] / sum(weights), axis=0)
 
     if X.size and is_numeric and not is_sparse:
         nans = np.isnan(X).sum(axis=0)
         return np.column_stack((
             np.nanmin(X, axis=0),
             np.nanmax(X, axis=0),
-            np.nanmean(X, axis=0) if not weighted else weighted_mean(),
-            np.nanvar(X, axis=0) if compute_variance else \
+            nanmean(X, axis=0) if not weighted else weighted_mean(),
+            nanvar(X, axis=0) if compute_variance else \
                 np.zeros(X.shape[1] if X.ndim == 2 else 1),
             nans,
             X.shape[0] - nans))
@@ -456,7 +456,7 @@ def nansum(x, axis=None):
 def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
     if not sp.issparse(x):
-        means = np.nanmean(x, axis=axis)
+        means = bn.nanmean(x, axis=axis)
     elif axis is None:
         means, _ = mean_variance_axis(x, axis=0)
         means = np.nanmean(means)
@@ -474,7 +474,7 @@ def nanvar(x, axis=None, ddof=0):
         avg = np.nansum(x.data) / n_vals
         return (np.nansum((x.data - avg) ** 2) + avg ** 2 * n_zeros) / (n_vals - ddof)
 
-    return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
+    return _apply_func(x, bn.nanvar, nanvar_sparse, axis=axis)
 
 
 def nanstd(x, axis=None, ddof=0):
