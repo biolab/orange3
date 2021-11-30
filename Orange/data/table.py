@@ -1430,7 +1430,7 @@ class Table(Sequence, Storage):
         return ((not self._X.shape[-1] or self._X.base is not None) and
                 (not self._Y.shape[-1] or self._Y.base is not None) and
                 (not self._metas.shape[-1] or self._metas.base is not None) and
-                (not self._weights.shape[-1] or self._W.base is not None))
+                (not self._W.shape[-1] or self._W.base is not None))
 
     def is_copy(self):
         """
