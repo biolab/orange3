@@ -582,7 +582,7 @@ class Table(Sequence, Storage):
         def can_unlock(x):
             if sp.issparse(x):
                 return can_unlock(x.data)
-            return x.flags.writeable or x.flags.owndata
+            return x.flags.writeable or x.flags.owndata or x.size == 0
 
         for part, flag, name in self._lock_parts_val():
             if not flag & self._unlocked \
