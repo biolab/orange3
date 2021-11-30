@@ -450,13 +450,20 @@ class Table(Sequence, Storage):
 
     def __setstate__(self, state):
         # Backward compatibility with pickles before table locking
+
+        def no_view(x):
+            # Some arrays can be unpickled as views; ensure they are not
+            if isinstance(x, np.ndarray) and x.base is not None:
+                return x.copy()
+            return x
+
         self._initialize_unlocked()  # __dict__ seems to be cleared before calling __setstate__
         with self.unlocked_reference():
             for k in ("X", "W", "metas"):
                 if k in state:
-                    setattr(self, k, state.pop(k))
+                    setattr(self, k, no_view(state.pop(k)))
             if "_Y" in state:
-                setattr(self, "Y", state.pop("_Y"))  # state["_Y"] is a 2d array
+                setattr(self, "Y", no_view(state.pop("_Y")))  # state["_Y"] is a 2d array
             self.__dict__.update(state)
 
     def __getstate__(self):
