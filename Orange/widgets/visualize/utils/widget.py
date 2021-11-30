@@ -585,8 +585,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         data = self.data.transform(Domain(self.data.domain.attributes,
                                           self.data.domain.class_vars,
                                           self.data.domain.metas + variables))
-        with data.unlocked(data.metas):
-            data.metas[:, -2:] = self.get_embedding()
+        if data.metas.size:
+            with data.unlocked(data.metas):
+                data.metas[:, -2:] = self.get_embedding()
         return data
 
     def _get_projection_variables(self):

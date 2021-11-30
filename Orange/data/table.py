@@ -505,6 +505,9 @@ class Table(Sequence, Storage):
 
         def sync(*xs):
             for x in xs:
+                # no need to make empty arrays writable, as nothing can get written
+                if writeable and x.size == 0:
+                    continue
                 try:
                     undo_on_fail.append((x, x.flags.writeable))
                     x.flags.writeable = writeable
@@ -965,13 +968,16 @@ class Table(Sequence, Storage):
                 if isinstance(row, Instance):
                     row = row.list
                 vals = [var.to_val(val) for var, val in zip(all_vars, row)]
-                self.X[i] = vals[:nattrs]
-                if self._Y.ndim == 1:
-                    self._Y[i] = vals[nattrs] if nattrs < len(vals) else np.nan
-                else:
-                    self._Y[i] = vals[nattrs:nattrscls]
+                if self.X.size:
+                    self.X[i] = vals[:nattrs]
+                if self.Y.size:
+                    if self._Y.ndim == 1:
+                        self._Y[i] = vals[nattrs] if nattrs < len(vals) else np.nan
+                    else:
+                        self._Y[i] = vals[nattrs:nattrscls]
                 # for backward compatibility: allow omittine some (or all) metas
-                self.metas[i, :len(vals) - nattrscls] = vals[nattrscls:]
+                if self.metas.size:
+                    self.metas[i, :len(vals) - nattrscls] = vals[nattrscls:]
             if weights is not None:
                 self.W = np.array(weights)
             self.attributes = {}
@@ -1120,14 +1126,17 @@ class Table(Sequence, Storage):
             attrs = domain.attributes
             if len(example) != len(domain.variables):
                 raise ValueError("invalid length")
-            self._X[row] = [var.to_val(val) for var, val in zip(attrs, example)]
-            if self._Y.ndim == 1:
-                self._Y[row] = domain.class_var.to_val(example[len(attrs)])
-            else:
-                self._Y[row] = [var.to_val(val)
-                                for var, val in zip(domain.class_vars,
-                                                    example[len(attrs):])]
-            self.metas[row] = np.array([var.Unknown for var in domain.metas],
+            if self._X.size:
+                self._X[row] = [var.to_val(val) for var, val in zip(attrs, example)]
+            if self._Y.size:
+                if self._Y.ndim == 1:
+                    self._Y[row] = domain.class_var.to_val(example[len(attrs)])
+                else:
+                    self._Y[row] = [var.to_val(val)
+                                    for var, val in zip(domain.class_vars,
+                                                        example[len(attrs):])]
+            if self._metas.size:
+                self.metas[row] = np.array([var.Unknown for var in domain.metas],
                                        dtype=object)
 
     def _check_all_dense(self):
@@ -1264,18 +1273,21 @@ class Table(Sequence, Storage):
                 raise TypeError(
                     "Ordinary attributes can only have primitive values")
             if len(attr_cols):
-                self.X[row_idx, attr_cols] = value
+                if self.X.size:
+                    self.X[row_idx, attr_cols] = value
             if len(class_cols):
-                if self._Y.ndim == 1 and np.all(class_cols == 0):
-                    if isinstance(value, np.ndarray):
-                        yshape = self._Y[row_idx].shape
-                        if value.shape != yshape:
-                            value = value.reshape(yshape)
-                    self._Y[row_idx] = value
-                else:
-                    self._Y[row_idx, class_cols] = value
+                if self._Y.size:
+                    if self._Y.ndim == 1 and np.all(class_cols == 0):
+                        if isinstance(value, np.ndarray):
+                            yshape = self._Y[row_idx].shape
+                            if value.shape != yshape:
+                                value = value.reshape(yshape)
+                        self._Y[row_idx] = value
+                    else:
+                        self._Y[row_idx, class_cols] = value
             if len(meta_cols):
-                self.metas[row_idx, meta_cols] = value
+                if self._metas.size:
+                    self.metas[row_idx, meta_cols] = value
 
     def __len__(self):
         return self.X.shape[0]

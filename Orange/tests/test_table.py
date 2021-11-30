@@ -720,10 +720,12 @@ class TableTestCase(unittest.TestCase):
 
     def test_from_numpy(self):
         a = np.arange(20, dtype="d").reshape((4, 5)).copy()
+        m = np.arange(4, dtype="d").reshape((4, 1)).copy()
         a[:, -1] = [0, 0, 0, 1]
         dom = data.Domain([data.ContinuousVariable(x) for x in "abcd"],
-                          data.DiscreteVariable("e", values=("no", "yes")))
-        table = data.Table(dom, a)
+                          data.DiscreteVariable("e", values=("no", "yes")),
+                          metas=[data.ContinuousVariable(x) for x in "f"])
+        table = data.Table(dom, a, metas=m)
         with table.unlocked():
             for i in range(4):
                 self.assertEqual(table[i].get_class(), "no" if i < 3 else "yes")
@@ -731,7 +733,7 @@ class TableTestCase(unittest.TestCase):
                     self.assertEqual(a[i, j], table[i, j])
 
         with table.unlocked(), self.assertRaises(IndexError):
-            table[0, -5] = 5
+            table[0, -6] = 5
 
     def test_filter_is_defined(self):
         d = data.Table("iris")

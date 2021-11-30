@@ -302,7 +302,6 @@ class TestTableLocking(unittest.TestCase):
             tab.X[0, 0] = 0
             tab.Y[0] = 0
             tab.metas[0, 0] = 0
-            tab.W[0] = 0
 
             tab.X = np.random.random((5, 3))
             tab.Y = np.random.random(5)

@@ -634,8 +634,10 @@ class OWCreateInstance(OWWidget):
         data = Table.from_domain(self.data.domain, 1)
         with data.unlocked():
             data.name = "created"
-            data.X[:] = np.nan
-            data.Y[:] = np.nan
+            if data.X.size:
+                data.X[:] = np.nan
+            if data.Y.size:
+                data.Y[:] = np.nan
             for i, m in enumerate(self.data.domain.metas):
                 data.metas[:, i] = "" if m.is_string else np.nan
 
