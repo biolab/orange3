@@ -39,7 +39,7 @@ requirements:
     - setuptools >=36.3
     - numpy >=1.16.0
     - scipy >=0.16.1
-    - scikit-learn >=0.22.0,!=0.23.0
+    - scikit-learn >0.23.0
     - bottleneck >=1.0.0
     - chardet >=3.0.2
     - xlrd >=0.9.2
@@ -57,10 +57,10 @@ requirements:
     - requests
     - matplotlib-base >=2.0.0
     - openTSNE >=0.6.1
-    - pandas >=1.0.0
+    - pandas >=1.1.0
     - pyyaml
-    - orange-canvas-core >=0.1.21,<0.2a
-    - orange-widget-base >=4.14.0
+    - orange-canvas-core >=0.1.23,<0.2a
+    - orange-widget-base >=4.15.1
     - openpyxl
     - httpx >=0.14
     - baycomp >=1.0.2
