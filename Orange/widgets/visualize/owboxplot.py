@@ -46,38 +46,6 @@ def compute_scale(min_, max_):
     return first_val, step
 
 
-def _quantiles(a, freq, q, interpolation="midpoint"):
-    """
-    Somewhat like np.quantiles, but with explicit sample frequencies.
-
-    * Only 'higher', 'lower' and 'midpoint' interpolation.
-    * `a` MUST be sorted.
-    """
-    a = np.asarray(a)
-    freq = np.asarray(freq)
-    assert a.size > 0 and a.size == freq.size
-    cumdist = np.cumsum(freq)
-    cumdist /= cumdist[-1]
-
-    if interpolation == "midpoint":  # R quantile(..., type=2)
-        left = np.searchsorted(cumdist, q, side="left")
-        right = np.searchsorted(cumdist, q, side="right")
-        # no mid point for the right most position
-        np.clip(right, 0, a.size - 1, out=right)
-        # right and left will be different only on the `q` boundaries
-        # (excluding the right most sample)
-        return (a[left] + a[right]) / 2
-    elif interpolation == "higher":  # R quantile(... type=1)
-        right = np.searchsorted(cumdist, q, side="right")
-        np.clip(right, 0, a.size - 1, out=right)
-        return a[right]
-    elif interpolation == "lower":
-        left = np.searchsorted(cumdist, q, side="left")
-        return a[left]
-    else:  # pragma: no cover
-        raise ValueError("invalid interpolation: '{}'".format(interpolation))
-
-
 ContDataRange = namedtuple("ContDataRange", ["low", "high", "group_value"])
 DiscDataRange = namedtuple("DiscDataRange", ["value", "group_value"])
 
@@ -92,7 +60,8 @@ class BoxData:
         self.mean = np.nanmean(col)
         self.var = np.nanvar(col)
         self.dev = np.sqrt(self.var)
-        self.q25, self.median, self.q75 = np.nanquantile(col, [0.25, 0.5, 0.75])
+        self.q25, self.median, self.q75 = \
+            np.nanquantile(col, [0.25, 0.5, 0.75], interpolation="midpoint")
         self.data_range = ContDataRange(self.q25, self.q75, group_val)
         if self.q25 == self.median:
             self.q25 = None
