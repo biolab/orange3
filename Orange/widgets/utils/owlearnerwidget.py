@@ -98,6 +98,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
 
     OUTPUT_MODEL_NAME = Outputs.model.name  # Attr for backcompat w/ self.send() code
 
+    _SEND, _SOFT, _UPDATE = range(3)
+
     def __init__(self, preprocessors=None):
         super().__init__()
         self.__default_learner_name = ""
@@ -107,6 +109,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.model = None
         self.preprocessors = preprocessors
         self.outdated_settings = False
+        self.__apply_level = []
 
         self.setup_layout()
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
@@ -176,19 +179,26 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         # invalidate the model so that handleNewSignals will update it
         self.model = None
 
-    SEND, SOFT, UPDATE = range(3)
 
-    def apply(self, *, level=UPDATE):
+    def apply(self):
+        level, self.__apply_level = max(self.__apply_level, default=self._UPDATE), []
         """Applies learner and sends new model."""
-        if level == self.SEND:
+        if level == self._SEND:
             self._send_learner()
             self._send_model()
-        elif level == self.UPDATE:
-            self.update_learnel()
+        elif level == self._UPDATE:
+            self.update_learner()
             self.update_model()
         else:
             self.learner or self.update_learner()
             self.model or self.update_model()
+
+    def apply_as(self, level, unconditional=False):
+        self.__apply_level.append(level)
+        if unconditional:
+            self.unconditional_apply()
+        else:
+            self.apply()
 
     def update_learner(self):
         self.learner = self.create_learner()
@@ -204,7 +214,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.Warning.outdated_learner.clear()
 
     def handleNewSignals(self):
-        self.unconditional_apply(level=self.SOFT)
+        self.apply_as(self._SOFT, True)
         self.Information.ignored_preprocessors(
             shown=not getattr(self.learner, "use_default_preprocessors", False)
                   and getattr(self.LEARNER, "preprocessors", False)
@@ -260,7 +270,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             self.model.name = self.effective_learner_name()
         if self.learner is not None:
             self.learner.name = self.effective_learner_name()
-        self.apply(level=self.SEND)
+        self.apply_as(self._SEND)
 
     def effective_learner_name(self):
         """Return the effective learner name."""
