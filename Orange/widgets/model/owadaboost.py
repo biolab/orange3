@@ -102,8 +102,7 @@ class OWAdaBoost(OWBaseLearner):
             self.base_estimator = learner or self.DEFAULT_BASE_ESTIMATOR
             self.base_label.setText(
                 "Base estimator: %s" % self.base_estimator.name.title())
-        if self.auto_apply:
-            self.apply()
+        self.learner = self.model = None
 
     def get_learner_parameters(self):
         return (("Base estimator", self.base_estimator),
