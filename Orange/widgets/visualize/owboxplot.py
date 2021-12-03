@@ -383,13 +383,9 @@ class OWBoxPlot(widget.OWWidget):
                 return 3
             if attr.is_continuous:
                 # One-way ANOVA
-                col, sparse = data.get_column_view(attr)
-                col = col.astype(float)
-                if sparse:
-                    col[np.isnan(col)] = 0
+                col = data.get_column_view(attr)[0].astype(float)
                 groups = (col[group_col == i] for i in range(n_groups))
-                if not sparse:
-                    groups = (col[~np.isnan(col)] for col in groups)
+                groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
@@ -423,7 +419,7 @@ class OWBoxPlot(widget.OWWidget):
             if group is None:
                 return -1
             if attr.is_continuous:
-                groups = self._group_cols(data, group, attr_col, sparse)
+                groups = self._group_cols(data, group, attr_col)
                 groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
@@ -438,10 +434,7 @@ class OWBoxPlot(widget.OWWidget):
         attr = self.attribute
         if self.order_grouping_by_importance:
             if attr.is_continuous:
-                attr_col, sparse = data.get_column_view(attr)
-                attr_col = attr_col.astype(float)
-                if sparse:
-                    attr_col[np.isnan(attr_col)] = 0
+                attr_col = data.get_column_view(attr)[0].astype(float)
             self._sort_list(self.group_vars, self.group_list, compute_stat)
         else:
             self._sort_list(self.group_vars, self.group_list, None)
@@ -527,29 +520,17 @@ class OWBoxPlot(widget.OWWidget):
             if isinstance(box, FilterGraphicsRectItem):
                 box.setSelected(box.data_range in selection)
 
-    def _group_cols(self, data, group, attr, sparse=False):
+    def _group_cols(self, data, group, attr):
         if isinstance(attr, np.ndarray):
             attr_col = attr
         else:
-            attr_col, sparse = data.get_column_view(group)[0].astype(float)
-            if np.any(np.isnan(attr_col)):
-                attr_col = attr_col.copy()
-                attr_col[np.isnan(attr_col)] = 0
+            attr_col = data.get_column_view(group)[0].astype(float)
         group_col = data.get_column_view(group)[0].astype(float)
         groups = [attr_col[group_col == i] for i in range(len(group.values))]
-        if not sparse:
-            groups = [col[~np.isnan(col)] for col in groups]
+        groups = [col[~np.isnan(col)] for col in groups]
         return groups
 
     def compute_box_data(self):
-        def attr_col_data():
-            attr_col, sparse = dataset.get_column_view(attr)
-            attr_col = attr_col.astype(float)
-            if sparse:
-                attr_col = attr_col.copy()
-                attr_col[np.isnan(attr_col)] = 0
-            return attr_col, sparse
-
         attr = self.attribute
         if not attr:
             return
@@ -566,10 +547,9 @@ class OWBoxPlot(widget.OWWidget):
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
                 stats, label_texts = [], []
-                attr_col, sparse = attr_col_data()
+                attr_col = dataset.get_column_view(attr)[0].astype(float)
                 for group, value in \
-                        zip(self._group_cols(dataset, self.group_var,
-                                             attr_col, sparse),
+                        zip(self._group_cols(dataset, self.group_var, attr_col),
                             group_var_labels):
                     if group.size:
                         stats.append(BoxData(group, value))
@@ -586,7 +566,7 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.conts = None
             if self.attribute.is_continuous:
-                attr_col, _ = attr_col_data()
+                attr_col = dataset.get_column_view(attr)[0].astype(float)
                 self.stats = [BoxData(attr_col)]
             else:
                 self.dist = distribution.get_distribution(dataset, attr)
