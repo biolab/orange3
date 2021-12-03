@@ -176,12 +176,19 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         # invalidate the model so that handleNewSignals will update it
         self.model = None
 
-    def apply(self, *, hard=True):
+    SEND, SOFT, UPDATE = range(3)
+
+    def apply(self, *, level=UPDATE):
         """Applies learner and sends new model."""
-        if hard or self.learner is None:
-            self.update_learner()
-        if hard or self.model is None:
+        if level == self.SEND:
+            self._send_learner()
+            self._send_model()
+        elif level == self.UPDATE:
+            self.update_learnel()
             self.update_model()
+        else:
+            self.learner or self.update_learner()
+            self.model or self.update_model()
 
     def update_learner(self):
         self.learner = self.create_learner()
@@ -189,12 +196,15 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
             self.learner.name = self.effective_learner_name()
+        self._send_learner()
+
+    def _send_learner(self):
         self.Outputs.learner.send(self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
 
     def handleNewSignals(self):
-        self.unconditional_apply(hard=False)
+        self.unconditional_apply(level=self.SOFT)
         self.Information.ignored_preprocessors(
             shown=not getattr(self.learner, "use_default_preprocessors", False)
                   and getattr(self.LEARNER, "preprocessors", False)
@@ -216,6 +226,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             else:
                 self.model.name = self.learner_name or self.captionTitle
                 self.model.instances = self.data
+        self._send_model()
+
+    def _send_model(self):
         self.Outputs.model.send(self.model)
 
     def check_data(self):
@@ -242,14 +255,12 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.Warning.outdated_learner(shown=not self.auto_apply)
         self.apply()
 
-    def _change_name(self, instance, output):
-        if instance:
-            instance.name = self.effective_learner_name()
-            self.apply()
-
     def learner_name_changed(self):
-        self._change_name(self.learner, self.Outputs.learner)
-        self._change_name(self.model, self.Outputs.model)
+        if self.model is not None:
+            self.model.name = self.effective_learner_name()
+        if self.learner is not None:
+            self.learner.name = self.effective_learner_name()
+        self.apply(level=self.SEND)
 
     def effective_learner_name(self):
         """Return the effective learner name."""
