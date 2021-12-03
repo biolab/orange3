@@ -213,6 +213,30 @@ class Updater:
 
             item.setPen(pen)
 
+    @staticmethod
+    def update_inf_lines(items, **settings):
+        for item in items:
+            pen = item.pen
+
+            alpha = settings.get(Updater.ALPHA_LABEL)
+            if alpha is not None:
+                color = pen.color()
+                color.setAlpha(alpha)
+                pen.setColor(color)
+
+                if hasattr(item, "label"):
+                    item.label.setColor(color)
+
+            style = settings.get(Updater.STYLE_LABEL)
+            if style is not None:
+                pen.setStyle(Updater.LINE_STYLES[style])
+
+            width = settings.get(Updater.WIDTH_LABEL)
+            if width is not None:
+                pen.setWidth(width)
+
+            item.setPen(pen)
+
 
 class CommonParameterSetter:
     """ Subclass to add 'setter' functionality to a plot. """
@@ -225,9 +249,11 @@ class CommonParameterSetter:
     AXIS_TICKS_LABEL = "Axis ticks"
     LEGEND_LABEL = "Legend"
     LABEL_LABEL = "Label"
+    LINE_LAB_LABEL = "Line label"
     X_AXIS_LABEL = "x-axis title"
     Y_AXIS_LABEL = "y-axis title"
     TITLE_LABEL = "Title"
+    LINE_LABEL = "Lines"
 
     FONT_FAMILY_SETTING = None  # set in __init__ because it requires a running QApplication
     FONT_SETTING = None  # set in __init__ because it requires a running QApplication
