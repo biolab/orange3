@@ -1214,7 +1214,10 @@ class OWPaintData(OWWidget):
             data = create_data(cmd.pos.x(), cmd.pos.y(),
                                self.brushRadius / 1000,
                                int(1 + self.density / 20), cmd.rstate)
-            self._add_command(Append([QPointF(*p) for p in zip(*data.T)]))
+            data = data[(np.min(data, axis=1) >= 0)
+                        & (np.max(data, axis=1) <= 1), :]
+            if data.size:
+                self._add_command(Append([QPointF(*p) for p in zip(*data.T)]))
         elif isinstance(cmd, Jitter):
             point = np.array([cmd.pos.x(), cmd.pos.y()])
             delta = - apply_jitter(self.__buffer[:, :2], point,
