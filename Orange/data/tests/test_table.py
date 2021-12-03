@@ -302,7 +302,6 @@ class TestTableLocking(unittest.TestCase):
             tab.X[0, 0] = 0
             tab.Y[0] = 0
             tab.metas[0, 0] = 0
-            tab.W[0] = 0
 
             tab.X = np.random.random((5, 3))
             tab.Y = np.random.random(5)
@@ -348,6 +347,17 @@ class TestTableLocking(unittest.TestCase):
         finally:
             Table.LOCKING = default
 
+    def test_unpickled_empty_weights(self):
+        # ensure that unpickled empty arrays could be unlocked
+        self.assertEqual(0, self.table.W.size)
+        # flags.owndata asserts touch numpy internals
+        # feel free to remove when they do not pass
+        self.assertTrue(self.table.W.flags.owndata)
+        unpickled = pickle.loads(pickle.dumps(self.table))
+        self.assertFalse(unpickled.W.flags.owndata)
+        with unpickled.unlocked():
+            pass
+
     def test_unpickling_resets_locks(self):
         default = Table.LOCKING
         try:
@@ -363,15 +373,21 @@ class TestTableLocking(unittest.TestCase):
         finally:
             Table.LOCKING = default
 
-    def test_numpy_pickle_flags_copy(self):
-        # test should warn if numpy starts behaving differently
-        a = np.arange(10).view()
-        a.flags.writeable = False
-        self.assertFalse(a.flags.writeable)
-        self.assertIsNotNone(a.base)
-        b = pickle.loads(pickle.dumps(a))
-        self.assertTrue(b.flags.writeable)
-        self.assertIsNone(b.base)
+    def test_unpickled_owns_data(self):
+        try:
+            default = Table.LOCKING
+            Table.LOCKING = False
+            self.setUp()
+            table = self.table
+            table.X = table.X.view()
+        finally:
+            Table.LOCKING = default
+
+        unpickled = pickle.loads(pickle.dumps(table))
+        self.assertFalse(unpickled.is_view())
+        self.assertTrue(unpickled.is_copy())
+        with unpickled.unlocked():
+            unpickled.X[0, 0] = 42
 
 
 class TestTableFilters(unittest.TestCase):
