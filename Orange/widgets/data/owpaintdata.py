@@ -563,8 +563,7 @@ class ClearTool(DataTool):
 
     def activate(self):
         self.editingStarted.emit()
-        self.issueCommand.emit(SelectRegion(self._plot.rect()))
-        self.issueCommand.emit(DeleteSelection())
+        self.issueCommand.emit(DeleteIndices(slice(None, None, None)))
         self.editingFinished.emit()
 
 
