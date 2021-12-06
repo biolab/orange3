@@ -229,7 +229,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(box, 'No data loaded.')
-        self.warnings = gui.widgetLabel(box, '')
 
         box = gui.widgetBox(self.controlArea, "Columns (Double click to edit)")
         self.domain_editor = DomainEditor(self)
