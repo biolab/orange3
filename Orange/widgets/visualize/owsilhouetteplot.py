@@ -38,9 +38,6 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
 
-ROW_NAMES_WIDTH = 200
-
-
 class InputValidationError(ValueError):
     message: str
 
@@ -630,10 +627,7 @@ class SilhouettePlot(QGraphicsWidget):
             item = layout.itemAt(i + 1, 3)
             assert isinstance(item, TextListWidget)
             if grp.rownames is not None:
-                metrics = QFontMetrics(self.font())
-                rownames = [metrics.elidedText(rowname, Qt.ElideRight, ROW_NAMES_WIDTH)
-                            for rowname in grp.rownames]
-                item.setItems(rownames)
+                item.setItems(grp.rownames)
                 item.setVisible(self.__rowNamesVisible)
             else:
                 item.setItems([])
@@ -1122,7 +1116,8 @@ class BarPlotItem(QGraphicsWidget):
         return super().event(event)
 
     def sizeHint(self, which, constraint=QSizeF()):
-        return QSizeF(300, (self.__barsize + self.__spacing) * self.count())
+        spacing = max(self.__spacing * (self.count() - 1), 0)
+        return QSizeF(300, self.__barsize * self.count() + spacing)
 
     def setPreferredBarSize(self, size):
         if self.__barsize != size:
@@ -1131,6 +1126,11 @@ class BarPlotItem(QGraphicsWidget):
 
     def spacing(self):
         return self.__spacing
+
+    def setSpacing(self, spacing):
+        if self.__spacing != spacing:
+            self.__spacing = spacing
+            self.updateGeometry()
 
     def setPen(self, pen):
         pen = QPen(pen)
