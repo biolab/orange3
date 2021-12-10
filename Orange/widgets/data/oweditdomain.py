@@ -24,9 +24,12 @@ from AnyQt.QtWidgets import (
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
     QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
-    QAbstractItemView, QMenu
+    QAbstractItemView, QMenu, QToolTip
 )
-from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
+from AnyQt.QtGui import (
+    QStandardItemModel, QStandardItem, QKeySequence, QIcon, QBrush, QPalette,
+    QHelpEvent
+)
 from AnyQt.QtCore import (
     Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect,
     QPoint,
@@ -1588,11 +1591,30 @@ class VariableEditDelegate(QStyledItemDelegate):
             # mark as changed (maybe also change color, add text, ...)
             option.font.setItalic(True)
 
+        multiplicity = index.data(MultiplicityRole)
+        if isinstance(multiplicity, int) and multiplicity > 1:
+            option.palette.setBrush(QPalette.Text, QBrush(Qt.red))
+            option.palette.setBrush(QPalette.HighlightedText, QBrush(Qt.red))
+
+    def helpEvent(self, event: QHelpEvent, view: QAbstractItemView,
+                  option: QStyleOptionViewItem, index: QModelIndex) -> bool:
+        multiplicity = index.data(MultiplicityRole)
+        name = VariableListModel.effective_name(index)
+        if isinstance(multiplicity, int) and multiplicity > 1 \
+                and name is not None:
+            QToolTip.showText(
+                event.globalPos(), f"Name `{name}` is duplicated",
+                view.viewport()
+            )
+            return True
+        else:  # pragma: no cover
+            return super().helpEvent(event, view, option, index)
+
 
 # Item model for edited variables (Variable). Define a display role to be the
 # source variable name. This is used only in keyboard search. The display is
 # otherwise completely handled by a delegate.
-class VariableListModel(itemmodels.PyListModel):
+class VariableListModel(CountedListModel):
     def data(self, index, role=Qt.DisplayRole):
         # type: (QModelIndex, Qt.ItemDataRole) -> Any
         row = index.row()
@@ -1605,6 +1627,32 @@ class VariableListModel(itemmodels.PyListModel):
             if isinstance(item, DataVectorTypes):
                 return item.vtype.name
         return super().data(index, role)
+
+    def key(self, index):
+        return VariableListModel.effective_name(index)
+
+    def keyRoles(self):  # type: () -> FrozenSet[int]
+        return frozenset((Qt.DisplayRole, Qt.EditRole, TransformRole))
+
+    @staticmethod
+    def effective_name(index) -> Optional[str]:
+        item = index.data(Qt.EditRole)
+        if isinstance(item, DataVectorTypes):
+            var = item.vtype
+        elif isinstance(item, VariableTypes):
+            var = item
+        else:
+            return None
+        tr = index.data(TransformRole)
+        return effective_name(var, tr or [])
+
+
+def effective_name(var: Variable, tr: Sequence[Transform]) -> str:
+    name = var.name
+    for t in tr:
+        if isinstance(t, Rename):
+            name = t.name
+    return name
 
 
 class ReinterpretVariableEditor(VariableEditor):
