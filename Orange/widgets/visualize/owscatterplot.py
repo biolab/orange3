@@ -2,13 +2,13 @@ from itertools import chain
 from xml.sax.saxutils import escape
 
 import numpy as np
-from AnyQt.QtWidgets import QGroupBox, QPushButton
 from scipy.stats import linregress
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
 from AnyQt.QtCore import Qt, QTimer, QPointF, Signal
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QColor, QFont
+from AnyQt.QtWidgets import QGroupBox, QPushButton
 
 import pyqtgraph as pg
 
@@ -28,6 +28,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
     ScatterBaseParameterSetter
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
+from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import AttributeList, Msg, Input, Output
 
@@ -100,21 +101,61 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 
 class ParameterSetter(ScatterBaseParameterSetter):
+    DEFAULT_LINE_WIDTH = 3
+    DEFAULT_LINE_ALPHA = 255
 
     def __init__(self, master):
         super().__init__(master)
+        self.reg_line_label_font = QFont()
+        self.reg_line_settings = {
+            Updater.WIDTH_LABEL: self.DEFAULT_LINE_WIDTH,
+            Updater.ALPHA_LABEL: self.DEFAULT_LINE_ALPHA,
+            Updater.STYLE_LABEL: Updater.DEFAULT_LINE_STYLE,
+        }
 
     def update_setters(self):
         super().update_setters()
         self.initial_settings[self.LABELS_BOX].update({
             self.AXIS_TITLE_LABEL: self.FONT_SETTING,
-            self.AXIS_TICKS_LABEL: self.FONT_SETTING
+            self.AXIS_TICKS_LABEL: self.FONT_SETTING,
+            self.LINE_LAB_LABEL: self.FONT_SETTING
         })
+        self.initial_settings[self.PLOT_BOX] = {}
+        self.initial_settings[self.PLOT_BOX][self.LINE_LABEL] = {
+            Updater.WIDTH_LABEL: (range(1, 10), self.DEFAULT_LINE_WIDTH),
+            Updater.ALPHA_LABEL: (range(0, 255, 5), self.DEFAULT_LINE_ALPHA),
+            Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                  Updater.DEFAULT_LINE_STYLE),
+        }
+
+        def update_lines(**settings):
+            self.reg_line_settings.update(**settings)
+            Updater.update_inf_lines(self.reg_line_items,
+                                     **self.reg_line_settings)
+            self.master.update_reg_line_label_colors()
+
+        def update_line_label(**settings):
+            self.reg_line_label_font = \
+                Updater.change_font(self.reg_line_label_font, settings)
+            Updater.update_label_font(self.reg_line_label_items,
+                                      self.reg_line_label_font)
+
+        self._setters[self.LABELS_BOX][self.LINE_LAB_LABEL] = update_line_label
+        self._setters[self.PLOT_BOX] = {self.LINE_LABEL: update_lines}
 
     @property
     def axis_items(self):
         return [value["item"] for value in
                 self.master.plot_widget.plotItem.axes.values()]
+
+    @property
+    def reg_line_items(self):
+        return self.master.reg_line_items
+
+    @property
+    def reg_line_label_items(self):
+        return [line.label for line in self.master.reg_line_items
+                if hasattr(line, "label")]
 
 
 class OWScatterPlotGraph(OWScatterPlotBase):
@@ -172,9 +213,9 @@ class OWScatterPlotGraph(OWScatterPlotBase):
                 self.plot_widget.hideAxis(axis)
 
     @staticmethod
-    def _orthonormal_line(x, y, color, width):
+    def _orthonormal_line(x, y, color, width, style=Qt.SolidLine):
         # https://en.wikipedia.org/wiki/Deming_regression, with δ=0.
-        pen = pg.mkPen(color=color, width=width)
+        pen = pg.mkPen(color=color, width=width, style=style)
         xm = np.mean(x)
         ym = np.mean(y)
         sxx, sxy, _, syy = np.cov(x, y, ddof=1).flatten()
@@ -196,7 +237,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
             return pg.InfiniteLine(QPointF(xm, y.min()), 90, pen)
 
     @staticmethod
-    def _regression_line(x, y, color, width):
+    def _regression_line(x, y, color, width, style=Qt.SolidLine):
         min_x, max_x = np.min(x), np.max(x)
         if min_x == max_x:
             return None
@@ -208,24 +249,34 @@ class OWScatterPlotGraph(OWScatterPlotBase):
                       rotateAxis=(1, 0), movable=True)
         reg_line_item = pg.InfiniteLine(
             pos=QPointF(min_x, start_y), angle=angle,
-            pen=pg.mkPen(color=color, width=width),
+            pen=pg.mkPen(color=color, width=width, style=style),
             label=f"r = {rvalue:.2f}", labelOpts=l_opts)
         if rotate:
             reg_line_item.label.angle = 180
             reg_line_item.label.updateTransform()
         return reg_line_item
 
-    def _add_line(self, x, y, color, width):
+    def _add_line(self, x, y, color):
+        width = self.parameter_setter.reg_line_settings[Updater.WIDTH_LABEL]
+        alpha = self.parameter_setter.reg_line_settings[Updater.ALPHA_LABEL]
+        style = self.parameter_setter.reg_line_settings[Updater.STYLE_LABEL]
+        style = Updater.LINE_STYLES[style]
+        color.setAlpha(alpha)
         if self.orthonormal_regression:
-            line = self._orthonormal_line(x, y, color, width)
+            line = self._orthonormal_line(x, y, color, width, style)
         else:
-            line = self._regression_line(x, y, color, width)
+            line = self._regression_line(x, y, color, width, style)
         if line is None:
             return
         self.plot_widget.addItem(line)
         self.reg_line_items.append(line)
 
-    def _update_reg_line_label_colors(self):
+        if hasattr(line, "label"):
+            Updater.update_label_font(
+                [line.label], self.parameter_setter.reg_line_label_font
+            )
+
+    def update_reg_line_label_colors(self):
         for line in self.reg_line_items:
             if hasattr(line, "label"):
                 color = 0.0 if self.class_density \
@@ -234,7 +285,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
 
     def update_density(self):
         super().update_density()
-        self._update_reg_line_label_colors()
+        self.update_reg_line_label_colors()
 
     def update_regression_line(self):
         for line in self.reg_line_items:
@@ -246,7 +297,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         x, y = self.master.get_coordinates_data()
         if x is None:
             return
-        self._add_line(x, y, QColor("#505050"), width=3)
+        self._add_line(x, y, QColor("#505050"))
         if self.master.is_continuous_color() or self.palette is None:
             return
         c_data = self.master.get_color_data()
@@ -256,10 +307,8 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         for val in range(c_data.max() + 1):
             mask = c_data == val
             if mask.sum() > 1:
-                self._add_line(x[mask], y[mask],
-                               self.palette[val].darker(135),
-                               width=3)
-        self._update_reg_line_label_colors()
+                self._add_line(x[mask], y[mask], self.palette[val].darker(135))
+        self.update_reg_line_label_colors()
 
 
 class OWScatterPlot(OWDataProjectionWidget):

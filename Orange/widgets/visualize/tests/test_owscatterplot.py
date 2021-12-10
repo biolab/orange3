@@ -964,17 +964,17 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         graph = self.widget.graph
         graph._orthonormal_line = Mock(return_value=None)
         graph._regression_line = Mock(return_value=None)
-        x, y, c, w = Mock(), Mock(), Mock(), Mock()
+        x, y, c = Mock(), Mock(), Mock()
 
         graph.orthonormal_regression = True
-        graph._add_line(x, y, c, w)
-        graph._orthonormal_line.assert_called_once_with(x, y, c, w)
+        graph._add_line(x, y, c)
+        graph._orthonormal_line.assert_called_once_with(x, y, c, 3, 1)
         graph._regression_line.assert_not_called()
         graph._orthonormal_line.reset_mock()
 
         graph.orthonormal_regression = False
-        graph._add_line(x, y, c, w)
-        graph._regression_line.assert_called_with(x, y, c, w)
+        graph._add_line(x, y, c)
+        graph._regression_line.assert_called_with(x, y, c, 3, 1)
         graph._orthonormal_line.assert_not_called()
 
     def test_no_regression_line(self):
@@ -984,8 +984,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         graph.plot_widget.addItem = Mock()
 
-        x, y, c, w = Mock(), Mock(), Mock(), Mock()
-        graph._add_line(x, y, c, w)
+        x, y, c = Mock(), Mock(), Mock()
+        graph._add_line(x, y, c)
         graph.plot_widget.addItem.assert_not_called()
         self.assertEqual(graph.reg_line_items, [])
 
@@ -1146,6 +1146,22 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         font.setPointSize(15)
         for item in graph.parameter_setter.axis_items:
             self.assertFontEqual(item.style["tickFont"], font)
+
+        self.widget.graph.controls.show_reg_line.setChecked(True)
+        self.assertGreater(len(graph.parameter_setter.reg_line_label_items), 0)
+
+        key, value = ('Fonts', 'Line label', 'Font size'), 16
+        self.widget.set_visual_settings(key, value)
+        key, value = ('Fonts', 'Line label', 'Italic'), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(16)
+        for label in graph.parameter_setter.reg_line_label_items:
+            self.assertFontEqual(label.textItem.font(), font)
+
+        key, value = ('Figure', 'Lines', 'Width'), 10
+        self.widget.set_visual_settings(key, value)
+        for item in graph.reg_line_items:
+            self.assertEqual(item.pen.width(), 10)
 
 
 if __name__ == "__main__":
