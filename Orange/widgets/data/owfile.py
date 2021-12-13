@@ -121,6 +121,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     domain_editor = SettingProvider(DomainEditor)
 
+    class Information(widget.OWWidget.Information):
+        no_file_selected = Msg("No file selected.")
+
     class Warning(widget.OWWidget.Warning):
         file_too_big = Msg("The file is too large to load automatically."
                            " Press Reload to load.")
@@ -136,9 +139,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         missing_reader = Msg("Missing reader.")
         sheet_error = Msg("Error listing available sheets.")
         unknown = Msg("Read error:\n{}")
-
-    class NoFileSelected:
-        pass
 
     UserAdviceMessages = [
         widget.Message(
@@ -343,18 +343,21 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     def _try_load(self):
         # pylint: disable=broad-except
-        if self.last_path() and not os.path.exists(self.last_path()):
-            return self.Error.file_not_found
+        if self.source == self.LOCAL_FILE:
+            if self.last_path() is None:
+                return self.Information.no_file_selected
+            elif not os.path.exists(self.last_path()):
+                return self.Error.file_not_found
+        else:
+            url = self.url_combo.currentText().strip()
+            if not url:
+                return self.Information.no_file_selected
 
         try:
             self.reader = self._get_reader()
             assert self.reader is not None
         except Exception:
             return self.Error.missing_reader
-
-        if self.reader is self.NoFileSelected:
-            self.Outputs.data.send(None)
-            return None
 
         try:
             self._update_sheet_combo()
@@ -382,8 +385,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     def _get_reader(self) -> FileFormat:
         if self.source == self.LOCAL_FILE:
             path = self.last_path()
-            if path is None:
-                return self.NoFileSelected
             if self.recent_paths and self.recent_paths[0].file_format:
                 qname = self.recent_paths[0].file_format
                 reader_class = class_from_qualified_name(qname)
@@ -395,10 +396,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return reader
         else:
             url = self.url_combo.currentText().strip()
-            if url:
-                return UrlReader(url)
-            else:
-                return self.NoFileSelected
+            return UrlReader(url)
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:

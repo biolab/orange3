@@ -253,12 +253,14 @@ class TestOWFile(WidgetTest):
             self.create_widget(OWFile, stored_settings={"recent_paths": []})
 
         widget.Outputs.data.send = Mock()
-        widget._try_load()
+        widget.load_data()
+        self.assertTrue(widget.Information.no_file_selected.is_shown())
         widget.Outputs.data.send.assert_called_with(None)
 
         widget.Outputs.data.send.reset_mock()
         widget.source = widget.URL
-        widget._try_load()
+        widget.load_data()
+        self.assertTrue(widget.Information.no_file_selected.is_shown())
         widget.Outputs.data.send.assert_called_with(None)
 
     def test_check_column_noname(self):
