@@ -9,6 +9,7 @@ from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy, QCompleter
 from AnyQt.QtCore import Qt, QTimer, QSize, QUrl
+from AnyQt.QtGui import QBrush
 
 from orangewidget.utils.filedialogs import format_filter
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
@@ -389,10 +390,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if not url:
                 return self.Information.no_file_selected
 
+        def mark_problematic_reader():
+            self.reader_combo.setItemData(self.reader_combo.currentIndex(),
+                                          QBrush(Qt.red), Qt.ForegroundRole)
+
         try:
-            self.reader = self._get_reader()
+            self.reader = self._get_reader()  # also sets current reader index
             assert self.reader is not None
         except Exception:
+            mark_problematic_reader()
             return self.Error.missing_reader
 
         try:
@@ -404,6 +410,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             try:
                 data = self.reader.read()
             except Exception as ex:
+                mark_problematic_reader()
                 log.exception(ex)
                 return lambda x=ex: self.Error.unknown(str(x))
             if warnings:
