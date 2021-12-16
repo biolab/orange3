@@ -32,6 +32,8 @@ from Orange.widgets.widget import Output, Msg
 # module's namespace so that old saved settings still work
 from Orange.widgets.utils.filedialogs import RecentPath
 
+DEFAULT_READER_TEXT = "Automatically detect type"
+
 log = logging.getLogger(__name__)
 
 
@@ -474,7 +476,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     def _initialize_reader_combo(self):
         self.reader_combo.clear()
         filters = [format_filter(f) for f in self.available_readers]
-        self.reader_combo.addItems(["Automatically detect type"] + filters)
+        self.reader_combo.addItems([DEFAULT_READER_TEXT] + filters)
         self.reader_combo.setCurrentIndex(0)
         self.reader_combo.setDisabled(True)
         # additional readers may be added in self._get_reader()

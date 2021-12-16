@@ -24,7 +24,7 @@ from Orange.util import OrangeDeprecationWarning
 
 from Orange.data.io import TabReader
 from Orange.tests import named_file
-from Orange.widgets.data.owfile import OWFile, OWFileDropHandler
+from Orange.widgets.data.owfile import OWFile, OWFileDropHandler, DEFAULT_READER_TEXT
 from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
@@ -382,6 +382,7 @@ a
             self.widget.browse_file()
 
         self.assertIsNone(self.widget.recent_paths[0].file_format)
+        self.assertEqual(self.widget.reader_combo.currentText(), DEFAULT_READER_TEXT)
 
         def open_iris_with_tab(*_):
             return iris.__file__, format_filter(TabReader)
@@ -391,6 +392,7 @@ a
             self.widget.browse_file()
 
         self.assertEqual(self.widget.recent_paths[0].file_format, "Orange.data.io.TabReader")
+        self.assertTrue(self.widget.reader_combo.currentText().startswith("Tab-separated"))
 
     def test_no_specified_reader(self):
         with named_file("", suffix=".tab") as fn:
@@ -399,6 +401,37 @@ a
                                              stored_settings={"recent_paths": [no_class]})
             self.widget.load_data()
         self.assertTrue(self.widget.Error.missing_reader.is_shown())
+        self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
+
+    def test_select_reader(self):
+        filename = FileFormat.locate("iris.tab", dataset_dirs)
+
+        # a setting which adds a new qualified name to the reader combo
+        no_class = RecentPath(filename, None, None, file_format="not.a.file.reader.class")
+        self.widget = self.create_widget(OWFile,
+                                         stored_settings={"recent_paths": [no_class]})
+        self.widget.load_data()
+        len_with_qname = len(self.widget.reader_combo)
+        self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
+        self.assertEqual(self.widget.reader, None)
+
+        # select the last option, the same reader
+        self.widget.reader_combo.activated.emit(len_with_qname - 1)
+        self.assertEqual(len(self.widget.reader_combo), len_with_qname)
+        self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
+        self.assertEqual(self.widget.reader, None)
+
+        # select the tab reader
+        self.widget.reader_combo.activated.emit(1)
+        self.assertEqual(len(self.widget.reader_combo), len_with_qname - 1)
+        self.assertTrue(self.widget.reader_combo.currentText().startswith("Tab-separated"))
+        self.assertIsInstance(self.widget.reader, TabReader)
+
+        # select the default reader
+        self.widget.reader_combo.activated.emit(0)
+        self.assertEqual(len(self.widget.reader_combo), len_with_qname - 1)
+        self.assertEqual(self.widget.reader_combo.currentText(), DEFAULT_READER_TEXT)
+        self.assertIsInstance(self.widget.reader, TabReader)
 
     def test_domain_edit_no_changes(self):
         self.open_dataset("iris")
