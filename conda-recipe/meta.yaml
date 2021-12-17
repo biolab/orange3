@@ -61,7 +61,7 @@ requirements:
     - pandas >=1.1.0
     - pyyaml
     - orange-canvas-core >=0.1.24,<0.2a
-    - orange-widget-base >=4.16.0
+    - orange-widget-base >=4.16.1
     - openpyxl
     - httpx >=0.14
     - baycomp >=1.0.2
