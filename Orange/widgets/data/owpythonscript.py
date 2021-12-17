@@ -521,6 +521,7 @@ if TYPE_CHECKING:
 class OWPythonScript(OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
+    category = "Transform"
     icon = "icons/PythonScript.svg"
     priority = 3150
     keywords = ["program", "function"]

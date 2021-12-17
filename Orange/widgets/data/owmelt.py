@@ -60,6 +60,7 @@ class MeltContextHandler(ContextHandler):
 class OWMelt(widget.OWWidget):
     name = "Melt"
     description = "Convert wide data to narrow data, a list of item-value pairs"
+    category = "Transform"
     icon = "icons/Melt.svg"
     keywords = ["shopping list", "wide", "narrow"]
 

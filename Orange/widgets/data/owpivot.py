@@ -725,6 +725,7 @@ class PivotTableView(QTableView):
 class OWPivot(OWWidget):
     name = "Pivot Table"
     description = "Reshape data table based on column values."
+    category = "Transform"
     icon = "icons/Pivot.svg"
     priority = 1000
     keywords = ["pivot", "group", "aggregate"]

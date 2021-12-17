@@ -174,7 +174,7 @@ class OWOutliers(OWWidget, ConcurrentWidgetMixin):
     description = "Detect outliers."
     icon = "icons/Outliers.svg"
     priority = 3000
-    category = "Data"
+    category = "Unsupervised"
     keywords = ["inlier"]
 
     class Inputs:

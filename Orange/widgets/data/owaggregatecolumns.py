@@ -18,6 +18,7 @@ from Orange.widgets.utils.itemmodels import DomainModel
 class OWAggregateColumns(widget.OWWidget):
     name = "Aggregate Columns"
     description = "Compute a sum, max, min ... of selected columns."
+    category = "Transform"
     icon = "icons/AggregateColumns.svg"
     priority = 100
     keywords = ["aggregate", "sum", "product", "max", "min", "mean",
