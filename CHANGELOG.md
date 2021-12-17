@@ -4,6 +4,26 @@ Change Log
 [next] - TBA
 ------------
 
+[3.31.0] - 2021-12-17
+--------------------
+##### Enhancements
+* oweditdomain: Indicate variables in error state ([#5732](../../pull/5732))
+* Scatterplot: Use opacity for contrast ([#5684](../../pull/5684))
+* Feature Constructor: Evaluate categorical variables to strings ([#5637](../../pull/5637))
+* New widget: Group By  ([#5541](../../pull/5541))
+* Table lock: tests run with tables that are read-only by default ([#5381](../../pull/5381))
+* config: sort example workflows ([#5600](../../pull/5600))
+
+##### Bugfixes
+* Paint Data: Fix ClearTool's issued commands ([#5718](../../pull/5718))
+* pandas_compat: fix table_from_frames for "normal" dataframe ([#5652](../../pull/5652))
+* pandas_compat: do not parse column of numbers (object dtype) to datetime ([#5681](../../pull/5681))
+* HeatMap: Color gradient center value edit ([#5647](../../pull/5647))
+* Distance Matrix: Fix crash on numeric meta vars as labels ([#5664](../../pull/5664))
+* Fix running OWS with widgets with WebView in Orange.canvas.run ([#5657](../../pull/5657))
+* main: Fix `--clear-widget-settings` parameter declaration ([#5619](../../pull/5619))
+
+
 [3.30.2] - 2021-10-27
 --------------------
 ##### Bugfixes
@@ -14,10 +34,12 @@ Change Log
 * Variable: fix timezone when parsing time variable ([#5617](../../pull/5617))
 * Require widget-base 4.15.1 and canvas-core 0.1.23 to fix some bugs/crashes
 
+
 [3.30.1] - 2021-09-24
 --------------------
 ##### Bugfixes
 * OWTable: fix select whole rows regression ([#5605](../../pull/5605))
+
 
 [3.30.0] - 2021-09-22
 --------------------
@@ -46,6 +68,7 @@ Change Log
 ##### Bugfixes
 * Create Class: fix incorrect value assignment
 
+
 [3.29.2] - 2021-06-08
 --------------------
 ##### Bugfixes
@@ -53,8 +76,10 @@ Change Log
 * owpca: fix component selection when dragging selection line ([#5469](../../pull/5469))
 * Save File when workflow basedir is an empty string ([#5459](../../pull/5459))
 
+
 [3.29.1] - 2021-05-31
 --------------------
+
 
 [3.29.0] - 2021-05-28
 --------------------
@@ -79,6 +104,7 @@ Change Log
 * Errors when converting negative timestamps on Windows ([#5388](../../pull/5388))
 * Nomogram: Retain original compute_value ([#5382](../../pull/5382))
 * Radviz VizRank: Implement on_selection_changed ([#5338](../../pull/5338))
+
 
 [3.28.0] - 2021-03-05
 --------------------
@@ -1604,7 +1630,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.30.2...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.31.0...HEAD
+[3.31.0]: https://github.com/biolab/orange3/compare/3.30.2...3.31.0
 [3.30.2]: https://github.com/biolab/orange3/compare/3.30.1...3.30.2
 [3.30.1]: https://github.com/biolab/orange3/compare/3.30.0...3.30.1
 [3.30.0]: https://github.com/biolab/orange3/compare/3.29.3...3.30.0
