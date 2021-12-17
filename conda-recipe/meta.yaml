@@ -32,7 +32,8 @@ requirements:
     - cython
     - pip
     - wheel
-    - sphinx
+    - sphinx >=4.2.0
+    - docutils <0.17  # docutils changed html template in 0.17
     - recommonmark
   run:
     - python
