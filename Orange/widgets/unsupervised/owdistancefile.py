@@ -19,7 +19,6 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
     description = "Read distances from a file."
     icon = "icons/DistanceFile.svg"
     priority = 10
-    category = "Data"
     keywords = ["load", "read", "open"]
 
     class Outputs:
