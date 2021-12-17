@@ -343,7 +343,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.task is not None:
             self.cancel()
             self.run_button.setText("Resume")
-            self.commit()
+            self.commit.deferred()
         else:
             self._run()
 
@@ -381,7 +381,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.embedding = result.embedding
         self.graph.resume_drawing_pairs()
         self.run_button.setText("Start")
-        self.commit()
+        self.commit.deferred()
 
     def on_exception(self, ex: Exception):
         if isinstance(ex, MemoryError):
@@ -404,7 +404,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.run_button.setText("Start")
         self.__invalidate_embedding(init_type)
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
 
     def __invalidate_embedding(self, initialization=PCA):
         def jitter_coord(part):

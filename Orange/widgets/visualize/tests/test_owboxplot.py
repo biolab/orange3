@@ -66,21 +66,24 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_input_data_missings_cont_group_var(self):
         """Check widget with continuous data with missing values and group variable"""
         data = self.iris.copy()
-        data.X[:, 0] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         # used to crash, see #1568
 
     def test_input_data_missings_cont_no_group_var(self):
         """Check widget with continuous data with missing values and no group variable"""
         data = self.housing
-        data.X[:, 0] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         # used to crash, see #1568
 
     def test_input_data_missings_disc_group_var(self):
         """Check widget with discrete data with missing values and group variable"""
         data = self.zoo
-        data.X[:, 1] = np.nan
+        with data.unlocked():
+            data.X[:, 1] = np.nan
         # This is a test and does it at its own risk:
         # pylint: disable=protected-access
         data.domain.attributes[1]._values = []
@@ -93,7 +96,8 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         """Check widget discrete data with missing values and no group variable"""
         data = self.zoo
         data.domain.class_var = ContinuousVariable("cls")
-        data.X[:, 1] = np.nan
+        with data.unlocked():
+            data.X[:, 1] = np.nan
         # This is a test and does it at its own risk:
         # pylint: disable=protected-access
         data.domain.attributes[1]._values = []
@@ -253,7 +257,8 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
         # select rows with US State equal to TX or MO
         use_indexes = np.array([0, 1, 25, 26, 27])
-        table.X = table.X[use_indexes]
+        with table.unlocked():
+            table.X = table.X[use_indexes]
         self.send_signal(self.widget.Inputs.data, table)
         self.assertEqual(2, len(self.widget.boxes))
 

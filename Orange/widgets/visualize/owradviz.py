@@ -376,7 +376,7 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.Warning.max_vars_selected.clear()
         self.init_projection()
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
 
     def colors_changed(self):
         super().colors_changed()

@@ -667,7 +667,7 @@ class OWHeatMap(widget.OWWidget):
             self.selected_rows = self.__pending_selection
             self.__pending_selection = None
 
-        self.unconditional_commit()
+        self.commit.now()
 
     def __on_split_rows_activated(self):
         self.set_split_variable(self.row_split_cb.currentData(Qt.EditRole))
@@ -710,7 +710,7 @@ class OWHeatMap(widget.OWWidget):
         self.merge_indices = None
         if self.data is not None and self.merge_kmeans:
             self.update_heatmaps()
-            self.commit()
+            self.commit.deferred()
 
     def _make_parts(self, data, group_var=None, column_split_key=None):
         """
@@ -1055,11 +1055,11 @@ class OWHeatMap(widget.OWWidget):
 
     def __update_column_clustering(self):
         self.update_heatmaps()
-        self.commit()
+        self.commit.deferred()
 
     def __update_row_clustering(self):
         self.update_heatmaps()
-        self.commit()
+        self.commit.deferred()
 
     def update_legend(self):
         widget = self.scene.widget
@@ -1207,8 +1207,9 @@ class OWHeatMap(widget.OWWidget):
             self.selected_rows = list(self.scene.widget.selectedRows())
         else:
             self.selected_rows = []
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         data = None
         indices = None

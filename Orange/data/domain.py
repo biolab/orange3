@@ -1,3 +1,4 @@
+import itertools
 import warnings
 
 from math import log
@@ -245,14 +246,13 @@ class Domain:
     def metas(self):
         return self._metas
 
-    @deprecated("len(Domain.variables)")
     def __len__(self):
         """The number of variables (features and class attributes).
 
         The current behavior returns the length of only features and
         class attributes. In the near future, it will include the
         length of metas, too, and __iter__ will act accordingly."""
-        return len(self._variables)
+        return len(self._variables) + len(self._metas)
 
     def __bool__(self):
         warnings.warn(
@@ -308,18 +308,11 @@ class Domain:
         """
         return item in self._indices or self._get_equivalent(item) is not None
 
-    @deprecated("Domain.variables")
     def __iter__(self):
         """
         Return an iterator through variables (features and class attributes).
-
-        The current behaviour is confusing, as `x in domain` returns True
-        for meta variables, but iter(domain) does not yield them.
-        This will be consolidated eventually (in 3.12?), the code that
-        currently iterates over domain should iterate over domain.variables
-        instead.
         """
-        return iter(self._variables)
+        return itertools.chain(self._variables, self._metas)
 
     def __str__(self):
         """

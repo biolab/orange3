@@ -78,8 +78,9 @@ class TestOWPaintData(WidgetTest):
         GH-2298
         GH-2163
         """
-        data = Table("iris")[::25]
-        data.X = sp.csr_matrix(data.X)
+        data = Table("iris")[::25].copy()
+        with data.unlocked():
+            data.X = sp.csr_matrix(data.X)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.sparse_not_supported.is_shown())
         self.send_signal(self.widget.Inputs.data, None)

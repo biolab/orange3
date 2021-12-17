@@ -38,17 +38,17 @@ class TestOWAggregateColumn(WidgetTest):
 
         self.send_signal(widget.Inputs.data, self.data1)
         self.assertEqual(widget.variables, [])
-        widget.commit()
+        widget.commit.now()
         output = self.get_output(self.widget.Outputs.data)
         self.assertIs(output, self.data1)
 
         widget.variables = [domain[n] for n in "c1 c2 t2".split()]
-        widget.commit()
+        widget.commit.now()
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsNotNone(output)
 
         self.send_signal(widget.Inputs.data, None)
-        widget.commit()
+        widget.commit.now()
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
     def test_compute_data(self):
@@ -117,7 +117,8 @@ class TestOWAggregateColumn(WidgetTest):
     def test_operations_with_nan(self):
         domain = self.data1.domain
         self.send_signal(self.widget.Inputs.data, self.data1)
-        self.data1.X[1, 0] = np.nan
+        with self.data1.unlocked():
+            self.data1.X[1, 0] = np.nan
         self.widget.variables = [domain[n] for n in "c1 c2 t2".split()]
 
         m1, m2 = 4 / 3, 5 / 2

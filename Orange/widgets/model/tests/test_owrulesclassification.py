@@ -110,7 +110,8 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
 
     def test_sparse_data(self):
         data = Table("iris")
-        data.X = sparse.csr_matrix(data.X)
+        with data.unlocked():
+            data.X = sparse.csr_matrix(data.X)
         self.assertTrue(sparse.issparse(data.X))
         self.send_signal("Data", data)
         self.widget.apply_button.button.click()

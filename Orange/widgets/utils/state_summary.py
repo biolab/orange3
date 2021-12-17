@@ -214,6 +214,6 @@ def summarize_by_name(type_, symbol):
         return PartialSummary(symbol, _name_of(model))
 
 
-summarize_by_name(Model, "&#9924;" if date.month == 12 else "🄼")
+summarize_by_name(Model, "&#9924;" if date.today().month == 12 else "🄼")
 summarize_by_name(Learner, "🄻")
 summarize_by_name(Scorer, "🅂")

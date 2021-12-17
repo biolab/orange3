@@ -639,7 +639,7 @@ class TestOWColor(WidgetTest):
             self.send_signal(self.widget.Inputs.data, t)
 
     def test_unconditional_commit_on_new_signal(self):
-        with patch.object(self.widget, 'unconditional_commit') as commit:
+        with patch.object(self.widget.commit, 'now') as commit:
             self.widget.auto_apply = False
             commit.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.iris)
@@ -649,7 +649,7 @@ class TestOWColor(WidgetTest):
         widget = self.widget
         model = widget.cont_model
         self.send_signal(widget.Inputs.data, self.iris)
-        with patch.object(widget, 'commit') as commit:
+        with patch.object(widget.commit, 'deferred') as commit:
             commit.reset_mock()
             model.setData(model.index(0, 0), "y", Qt.EditRole)
             commit.assert_called()

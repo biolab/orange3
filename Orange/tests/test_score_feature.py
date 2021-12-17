@@ -114,7 +114,8 @@ class FeatureScoringTest(unittest.TestCase):
         # some leeway for randomness in relieff random instance selection
         self.assertIn('tear_rate', found)
         # Ensure it doesn't crash on missing target class values
-        old_breast.Y[0] = np.nan
+        with old_breast.unlocked():
+            old_breast.Y[0] = np.nan
         weights = ReliefF()(old_breast, None)
 
         np.testing.assert_array_equal(

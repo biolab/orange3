@@ -246,7 +246,7 @@ class OWSilhouettePlot(widget.OWWidget):
         # Disable/enable the Distances GUI controls if applicable
         self._distances_gui_box.setEnabled(self.distances is None)
 
-        self.unconditional_commit()
+        self.commit.now()
 
     def _setup_control_models(self, domain: Domain):
         groupvars = [
@@ -305,7 +305,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._update()
         self._replot()
         if self.data is not None:
-            self.commit()
+            self.commit.deferred()
 
     def _ensure_matrix(self):
         # ensure self._matrix is computed if necessary
@@ -415,7 +415,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
             self.scene.addItem(silplot)
             self._update_annotations()
-            silplot.selectionChanged.connect(self.commit)
+            silplot.selectionChanged.connect(self.commit.deferred)
             silplot.layout().activate()
             self._update_scene_rect()
             silplot.geometryChanged.connect(self._update_scene_rect)
@@ -467,6 +467,7 @@ class OWSilhouettePlot(widget.OWWidget):
             self.view.setFooterSceneRect(
                 extend_horizontal(footer.geometry().adjusted(0, -margin, 0, 0)))
 
+    @gui.deferred
     def commit(self):
         """
         Commit/send the current selection to the output.
@@ -503,15 +504,18 @@ class OWSilhouettePlot(widget.OWWidget):
                 domain.attributes,
                 domain.class_vars,
                 domain.metas + (silhouette_var, ))
-            data = self.data.transform(domain)
 
             if np.count_nonzero(selectedmask):
                 selected = self.data.from_table(
                     domain, self.data, np.flatnonzero(selectedmask))
 
             if selected is not None:
-                selected[:, silhouette_var] = np.c_[scores[selectedmask]]
-            data[:, silhouette_var] = np.c_[scores]
+                with selected.unlocked(selected.metas):
+                    selected[:, silhouette_var] = np.c_[scores[selectedmask]]
+
+            data = self.data.transform(domain)
+            with data.unlocked(data.metas):
+                data[:, silhouette_var] = np.c_[scores]
 
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(create_annotated_table(data, indices))

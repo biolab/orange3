@@ -12,7 +12,7 @@ from Orange.preprocess import Impute
 from Orange.preprocess.impute import Random
 from Orange.regression import CurveFitLearner
 from Orange.regression.curvefit import _create_lambda
-
+import Orange.tests
 
 class TestCreateLambda(unittest.TestCase):
     def test_create_lambda_simple(self):
@@ -170,7 +170,8 @@ class TestCurveFitLearner(unittest.TestCase):
 
     def test_missing_values(self):
         data = self.data.copy()
-        data.X[0, 12] = np.nan
+        with data.unlocked():
+            data.X[0, 12] = np.nan
         learner = CurveFitLearner(func, [], ["CRIM"])
         model = learner(data)
         pred = model(data)

@@ -557,6 +557,7 @@ class SqlTable(Table):
 
     @classmethod
     def from_table(cls, domain, source, row_indices=...):
+        # pylint: disable=unused-argument
         assert row_indices is ...
 
         table = source.copy()

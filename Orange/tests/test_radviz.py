@@ -11,7 +11,8 @@ class TestRadViz(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table("iris")
-        cls.iris[3, 3] = np.nan
+        with cls.iris.unlocked():
+            cls.iris[3, 3] = np.nan
         cls.titanic = Table("titanic")
 
     def test_radviz(self):

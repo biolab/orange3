@@ -65,14 +65,15 @@ class OWCalibratedLearner(OWBaseLearner):
         self.unconditional_apply()
 
     def _set_default_name(self):
+
         if self.base_learner is None:
-            self.name = "Calibrated learner"
+            self.set_default_learner_name("")
         else:
-            self.name = " + ".join(part for part in (
+            name = " + ".join(part for part in (
                 self.base_learner.name.title(),
                 self.CalibrationShort[self.calibration],
                 self.ThresholdShort[self.threshold]) if part)
-        self.controls.learner_name.setPlaceholderText(self.name)
+            self.set_default_learner_name(name)
 
     def calibration_options_changed(self):
         self._set_default_name()

@@ -155,4 +155,4 @@ class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
 
         self.send_signal(widget.Inputs.base_learner, None)
         self.assertEqual(widget.controls.learner_name.placeholderText(),
-                         "Calibrated learner")
+                         "Calibrated Learner")

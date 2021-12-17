@@ -84,7 +84,7 @@ class TestOWCorrespondence(WidgetTest):
         self.assertTupleEqual(self.get_output(w.Outputs.coordinates).X.shape,
                               (6, 2))
         select_rows(w.varview, [0, 1, 2])
-        w.commit()
+        w.commit.now()
         self.assertTupleEqual(self.get_output(w.Outputs.coordinates).X.shape,
                               (8, 8))
         self.send_signal(self.widget.Inputs.data, None)

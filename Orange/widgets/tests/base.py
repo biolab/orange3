@@ -653,19 +653,19 @@ class ProjectionWidgetTestMixin:
         """Test if data is plotted only once but committed on every input change"""
         table = Table("heart_disease")
         self.widget.setup_plot = Mock()
-        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.widget.commit.now = self.widget.commit.deferred = Mock()
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
         self.wait_until_finished(timeout=timeout)
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
-        self.widget.commit.reset_mock()
+        self.widget.commit.now.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, table[::10])
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.now.assert_called_once()
 
     def test_subset_data_color(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -831,7 +831,8 @@ class ProjectionWidgetTestMixin:
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
     def test_embedding_missing_values(self):
         table = Table("heart_disease")
-        table.X[0] = np.nan
+        with table.unlocked():
+            table.X[0] = np.nan
         self.send_signal(self.widget.Inputs.data, table)
         self.assertFalse(np.all(self.widget.valid_data))
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
@@ -842,7 +843,8 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
+        with table.unlocked():
+            table.X = sp.csr_matrix(table.X)
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
         self.assertTrue(self.widget.Error.sparse_data.is_shown())
@@ -853,7 +855,8 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
 
     def test_manual_move(self):
         data = self.data.copy()
-        data[1, 0] = np.nan
+        with data.unlocked():
+            data[1, 0] = np.nan
         nvalid, nsample = len(self.data) - 1, self.widget.SAMPLE_SIZE
         self.send_signal(self.widget.Inputs.data, data)
         self.widget.graph.select_by_indices(list(range(0, len(data), 10)))
@@ -962,7 +965,8 @@ class datasets:
                 ["", "", "", ""],
                 "ynyn"
             )))
-        table[:, 1] = value
+        with table.unlocked():
+            table[:, 1] = value
         return table
 
     @classmethod

@@ -242,7 +242,7 @@ class TestCA(unittest.TestCase):
     def test_bayes(self):
         x = np.random.randint(2, size=(100, 5))
         col = np.random.randint(5)
-        y = x[:, col].copy().reshape(100, 1)
+        y = x[:, col].reshape(100, 1).copy()
         t = Table.from_numpy(None, x, y)
         t = Discretize(
             method=discretize.EqualWidth(n=3))(t)
@@ -250,7 +250,9 @@ class TestCA(unittest.TestCase):
         res = TestOnTrainingData()(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])
 
-        t.Y[-20:] = 1 - t.Y[-20:]
+        t = Table.from_numpy(None, t.X, t.Y.copy())
+        with t.unlocked():
+            t.Y[-20:] = 1 - t.Y[-20:]
         res = TestOnTrainingData()(t, [nb])
         self.assertGreaterEqual(CA(res)[0], 0.75)
         self.assertLess(CA(res)[0], 1)

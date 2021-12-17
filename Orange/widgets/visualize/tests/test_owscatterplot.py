@@ -96,7 +96,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         """Check if error message appears and then disappears when
         data is removed from input"""
         data = self.data.copy()
-        data.X[:, 0] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.missing_coords.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
@@ -287,8 +288,9 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             OWScatterPlot, stored_settings={
                 "selection_group": [(i, 1) for i in range(50)]}
         )
-        data = self.data.copy()[:11]
-        data[0, 0] = np.nan
+        data = self.data[:11].copy()
+        with data.unlocked():
+            data[0, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
@@ -393,13 +395,15 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             self.assertEqual(is_enabled, self.widget.vizrank_button.isEnabled())
 
         data1 = Table("iris")[::30]
-        data2 = Table("iris")[::30]
-        data2.Y[:] = np.nan
+        data2 = Table("iris")[::30].copy()
+        with data2.unlocked():
+            data2.Y[:] = np.nan
         domain = Domain(
             attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=()))
         data2 = Table(domain, data2.X, Y=data2.Y)
-        data3 = Table("iris")[::30]
-        data3.Y[:] = np.nan
+        data3 = Table("iris")[::30].copy()
+        with data3.unlocked():
+            data3.Y[:] = np.nan
 
         for data, is_enabled in zip([data1, data2, data1, data3, data1],
                                     [True, False, True, False, True]):
@@ -549,9 +553,10 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             class_vars=data.domain.class_vars,
             metas=data.domain.attributes[2:]
         )
-        data = data.transform(domain)
+        data = data.transform(domain).copy()
         # Sometimes floats in metas are saved as objects
-        data.metas = data.metas.astype(object)
+        with data.unlocked():
+            data.metas = data.metas.astype(object)
         self.send_signal(w.Inputs.data, data)
         simulate.combobox_activate_item(w.cb_attr_x, data.domain.metas[1].name)
         simulate.combobox_activate_item(w.controls.attr_color, data.domain.metas[0].name)
@@ -596,8 +601,9 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = Table("iris")
         domain = data.domain
         domain = Domain(domain.attributes[:3], domain.class_vars, domain.attributes[3:])
-        data = data.transform(domain)
-        data.metas[:, 0] = 0
+        data = data.transform(domain).copy()
+        with data.unlocked():
+            data.metas[:, 0] = 0
         w = self.widget
         self.send_signal(w.Inputs.data, data)
         simulate.combobox_activate_item(w.controls.attr_x, domain.metas[0].name)
@@ -667,8 +673,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             data = Table("iris")
             values = list(range(15))
             class_var = DiscreteVariable("iris5", values=[str(v) for v in values])
-            data = data.transform(Domain(attributes=data.domain.attributes, class_vars=[class_var]))
-            data.Y = np.array(values * 10, dtype=float)
+            data = data.transform(
+                Domain(attributes=data.domain.attributes,
+                       class_vars=[class_var])).copy()
+            with data.unlocked():
+                data.Y = np.array(values * 10, dtype=float)
             return data
 
         def assert_equal(data, max):
@@ -679,7 +688,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         assert_equal(prepare_data(), MAX_COLORS)
         # data with nan value
         data = prepare_data()
-        data.Y[42] = np.nan
+        with data.unlocked():
+            data.Y[42] = np.nan
         assert_equal(data, MAX_COLORS + 1)
 
     def test_invalidated_same_features(self):
@@ -824,7 +834,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         simulate.combobox_activate_index(self.widget.controls.attr_color, 0)
         self.assertEqual(len(self.widget.graph.reg_line_items), 1)
         data = self.data.copy()
-        data[:, 0] = np.nan
+        with data.unlocked():
+            data[:, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertEqual(len(self.widget.graph.reg_line_items), 0)
 
@@ -847,13 +858,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertEqual(line1.pos().y(), 0)
         self.assertEqual(line1.angle, 45)
-        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
+        self.assertEqual(line1.pen.color().hue(), graph.palette[0].hue())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
+        self.assertEqual(line2.pen.color().hue(), graph.palette[1].hue())
 
         graph.orthonormal_regression = True
         graph.update_regression_line()
@@ -862,13 +873,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line1.pos().x(), 0)
         self.assertAlmostEqual(line1.pos().y(), -0.6180339887498949)
         self.assertAlmostEqual(line1.angle, 58.28252558853899)
-        self.assertEqual(line1.pen.color().getRgb(), graph.palette[0].getRgb())
+        self.assertEqual(line1.pen.color().hue(), graph.palette[0].hue())
 
         line2 = graph.reg_line_items[2]
         self.assertEqual(line2.pos().x(), 0)
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
-        self.assertEqual(line2.pen.color().getRgb(), graph.palette[1].getRgb())
+        self.assertEqual(line2.pen.color().hue(), graph.palette[1].hue())
 
     def test_orthonormal_line(self):
         color = QColor(1, 2, 3)
@@ -953,17 +964,17 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         graph = self.widget.graph
         graph._orthonormal_line = Mock(return_value=None)
         graph._regression_line = Mock(return_value=None)
-        x, y, c, w = Mock(), Mock(), Mock(), Mock()
+        x, y, c = Mock(), Mock(), Mock()
 
         graph.orthonormal_regression = True
-        graph._add_line(x, y, c, w)
-        graph._orthonormal_line.assert_called_once_with(x, y, c, w)
+        graph._add_line(x, y, c)
+        graph._orthonormal_line.assert_called_once_with(x, y, c, 3, 1)
         graph._regression_line.assert_not_called()
         graph._orthonormal_line.reset_mock()
 
         graph.orthonormal_regression = False
-        graph._add_line(x, y, c, w)
-        graph._regression_line.assert_called_with(x, y, c, w)
+        graph._add_line(x, y, c)
+        graph._regression_line.assert_called_with(x, y, c, 3, 1)
         graph._orthonormal_line.assert_not_called()
 
     def test_no_regression_line(self):
@@ -973,8 +984,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         graph.plot_widget.addItem = Mock()
 
-        x, y, c, w = Mock(), Mock(), Mock(), Mock()
-        graph._add_line(x, y, c, w)
+        x, y, c = Mock(), Mock(), Mock()
+        graph._add_line(x, y, c)
         graph.plot_widget.addItem.assert_not_called()
         self.assertEqual(graph.reg_line_items, [])
 
@@ -1001,11 +1012,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         np.testing.assert_equal(args2[0], x[:4])
         np.testing.assert_equal(args2[1], y[:4])
-        self.assertEqual(args2[2], graph.palette[0])
+        self.assertEqual(args2[2].hue(), graph.palette[0].hue())
 
         np.testing.assert_equal(args3[0], x[4:])
         np.testing.assert_equal(args3[1], y[4:])
-        self.assertEqual(args3[2], graph.palette[1])
+        self.assertEqual(args3[2].hue(), graph.palette[1].hue())
         graph._add_line.reset_mock()
 
         # Continuous color - just a single line
@@ -1015,7 +1026,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         args1, _ = graph._add_line.call_args_list[0]
         np.testing.assert_equal(args1[0], x)
         np.testing.assert_equal(args1[1], y)
-        self.assertEqual(args1[2], QColor("#505050"))
+        self.assertEqual(args1[2].hue(), QColor("#505050").hue())
         graph._add_line.reset_mock()
         widget.is_continuous_color = lambda: False
 
@@ -1052,11 +1063,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         (args1, _), (args2, _) = graph._add_line.call_args_list
         np.testing.assert_equal(args1[0], x)
         np.testing.assert_equal(args1[1], y)
-        self.assertEqual(args1[2], QColor("#505050"))
+        self.assertEqual(args1[2].hue(), QColor("#505050").hue())
 
         np.testing.assert_equal(args2[0], x[1:])
         np.testing.assert_equal(args2[1], y[1:])
-        self.assertEqual(args2[2], graph.palette[1])
+        self.assertEqual(args2[2].hue(), graph.palette[1].hue())
 
     def test_update_regression_line_is_called(self):
         widget = self.widget
@@ -1135,6 +1146,22 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         font.setPointSize(15)
         for item in graph.parameter_setter.axis_items:
             self.assertFontEqual(item.style["tickFont"], font)
+
+        self.widget.graph.controls.show_reg_line.setChecked(True)
+        self.assertGreater(len(graph.parameter_setter.reg_line_label_items), 0)
+
+        key, value = ('Fonts', 'Line label', 'Font size'), 16
+        self.widget.set_visual_settings(key, value)
+        key, value = ('Fonts', 'Line label', 'Italic'), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(16)
+        for label in graph.parameter_setter.reg_line_label_items:
+            self.assertFontEqual(label.textItem.font(), font)
+
+        key, value = ('Figure', 'Lines', 'Width'), 10
+        self.widget.set_visual_settings(key, value)
+        for item in graph.reg_line_items:
+            self.assertEqual(item.pen.width(), 10)
 
 
 if __name__ == "__main__":

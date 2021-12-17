@@ -41,7 +41,8 @@ class TestOWPreprocess(WidgetTest):
     def test_remove_sparse(self):
         data = Table("iris")
         idx = int(data.X.shape[0]/10)
-        data.X[:idx+1, 0] = np.zeros((idx+1,))
+        with data.unlocked():
+            data.X[:idx+1, 0] = np.zeros((idx+1,))
         saved = {"preprocessors": [("orange.preprocess.remove_sparse",
                                     {'filter0': True, 'useFixedThreshold': False,
                                      'percThresh':10, 'fixedThresh': 50})]}

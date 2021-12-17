@@ -18,7 +18,8 @@ class TestFreeviz(unittest.TestCase):
 
     def test_basic(self):
         table = self.iris.copy()
-        table[3, 3] = np.nan
+        with table.unlocked():
+            table[3, 3] = np.nan
         freeviz = FreeViz()
         model = freeviz(table)
         proj = model(table)

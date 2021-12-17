@@ -33,13 +33,15 @@ class InterfaceTest(tabletests.InterfaceTest):
 
     def test_str(self):
         iris = Table('iris')
-        iris.X, iris.Y = csr_matrix(iris.X), csr_matrix(iris.Y)
+        with iris.unlocked():
+            iris.X, iris.Y = csr_matrix(iris.X), csr_matrix(iris.Y)
         str(iris)
 
     def test_Y_setter_1d(self):
         iris = Table('iris')
         assert iris.Y.shape == (150,)
-        iris.Y = csr_matrix(iris.Y)
+        with iris.unlocked():
+            iris.Y = csr_matrix(iris.Y)
         # We expect the Y shape to match the X shape, which is (150, 4) in iris
         self.assertEqual(iris.Y.shape, (150,))
 
@@ -48,8 +50,9 @@ class InterfaceTest(tabletests.InterfaceTest):
         assert iris.Y.shape == (150,)
         # Convert iris.Y to (150, 1) shape
         new_y = iris.Y[:, np.newaxis]
-        iris.Y = np.hstack((new_y, new_y))
-        iris.Y = csr_matrix(iris.Y)
+        with iris.unlocked():
+            iris.Y = np.hstack((new_y, new_y))
+            iris.Y = csr_matrix(iris.Y)
         # We expect the Y shape to match the X shape, which is (150, 4) in iris
         self.assertEqual(iris.Y.shape, (150, 2))
 
@@ -57,7 +60,8 @@ class InterfaceTest(tabletests.InterfaceTest):
         iris = Table('iris')[:1]
         # Convert iris.Y to (1, 1) shape
         new_y = iris.Y[:, np.newaxis]
-        iris.Y = np.hstack((new_y, new_y))
-        iris.Y = csr_matrix(iris.Y)
+        with iris.unlocked_reference():
+            iris.Y = np.hstack((new_y, new_y))
+            iris.Y = csr_matrix(iris.Y)
         # We expect the Y shape to match the X shape, which is (1, 4) in iris
         self.assertEqual(iris.Y.shape, (1, 2))

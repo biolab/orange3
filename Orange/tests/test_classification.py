@@ -324,7 +324,8 @@ class SklTest(unittest.TestCase):
 
     def test_nan_columns(self):
         data = Orange.data.Table("iris")
-        data.X[:, (1, 3)] = np.NaN
+        with data.unlocked():
+            data.X[:, (1, 3)] = np.NaN
         lr = LogisticRegressionLearner()
         cv = CrossValidation(k=2, store_models=True)
         res = cv(data, [lr])
@@ -364,7 +365,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
     def test_unknown(self):
         table = Table("iris")
         tree = LogisticRegressionLearner()(table)
-        tree([1, 2, None])
+        tree([1, 2, None, 4])
 
     def test_missing_class(self):
         table = Table(test_filename("datasets/adult_sample_missing"))
@@ -405,6 +406,8 @@ class LearnerAccessibility(unittest.TestCase):
             if isinstance(learner, _RuleLearner):
                 continue
             with self.subTest(learner.__name__):
+                if "RandomForest" not in learner.__name__:
+                    continue
                 learner = learner()
                 for ds in datasets:
                     model = learner(ds)

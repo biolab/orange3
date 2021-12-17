@@ -153,7 +153,7 @@ class TestOWManifoldLearning(WidgetTest):
             self.assertTrue(self.widget.Error.out_of_memory.is_shown())
 
     def test_unconditional_commit_on_new_signal(self):
-        with patch.object(self.widget, 'unconditional_apply') as apply:
+        with patch.object(self.widget.commit, 'now') as apply:
             self.widget.auto_apply = False
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.iris)

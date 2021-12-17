@@ -44,16 +44,16 @@ class TestOWConcurrentWidget(WidgetTest, ProjectionWidgetTestMixin,
     def test_plot_once(self):
         table = Table("heart_disease")
         self.widget.setup_plot = Mock()
-        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.widget.commit.now = self.widget.commit.deferred = Mock()
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
         self.wait_until_stop_blocking()
         self.widget.setup_plot.reset_mock()
-        self.widget.commit.reset_mock()
+        self.widget.commit.deferred.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, table[::10])
         self.widget.setup_plot.assert_not_called()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.ssert_called_once()
 
 
 if __name__ == "__main__":

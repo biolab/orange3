@@ -30,7 +30,7 @@
 
 ### Easy installation
 
-For easy installation, [![Download](https://img.shields.io/github/v/release/biolab/orange3?label=download)](https://orange.biolab.si/download) the latest released Orange version from our website. To install an add-on, head to `Options -> Add-ons...` in the menu bar.
+For easy installation, [Download](https://orange.biolab.si/download) the latest released Orange version from our website. To install an add-on, head to `Options -> Add-ons...` in the menu bar.
 
 ### Installing with Conda
 
@@ -41,6 +41,9 @@ Then, create a new conda environment, and install orange3:
 ```Shell
 # Add conda-forge to your channels for access to the latest release
 conda config --add channels conda-forge
+
+# Perhaps enforce strict conda-forge priority
+conda config --set channel_priority strict
 
 # Create and activate an environment for Orange
 conda create python=3 --yes --name orange3
@@ -89,11 +92,11 @@ Starting up for the first time may take a while.
 
 Want to write a widget? [Use the Orange3 example add-on template.](https://github.com/biolab/orange3-example-addon)
 
-Want to get involved? Join us on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV), introduce yourself in #general! 
+Want to get involved? Join us on [Discord](https://discord.gg/FWrfeXV), introduce yourself in #general! 
 
 Take a look at our [contributing guide](https://github.com/irgolic/orange3/blob/README-shields/CONTRIBUTING.md) and [style guidelines](https://github.com/biolab/orange-widget-base/wiki/Widget-UI).
 
-Check out our widget development [![docs](https://readthedocs.org/projects/orange-widget-base/badge/?version=latest)](https://orange-widget-base.readthedocs.io/en/latest/?badge=latest) for a comprehensive guide on writing Orange widgets.
+Check out our widget development [docs](https://orange-widget-base.readthedocs.io/en/latest/?badge=latest) for a comprehensive guide on writing Orange widgets.
 
 ### The Orange ecosystem
 
@@ -137,7 +140,7 @@ git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange3
 pip install -e orange3
 ```
 
-Now you're ready to work with git. See GitHub's guides on [pull requests](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/proposing-changes-to-your-work-with-pull-requests), [forks](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/working-with-forks) if you're unfamiliar. If you're having trouble, get in touch on [![Discord](https://img.shields.io/discord/633376992607076354?logo=discord&color=7389D8&logoColor=white&label=Discord)](https://discord.gg/FWrfeXV).
+Now you're ready to work with git. See GitHub's guides on [pull requests](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/proposing-changes-to-your-work-with-pull-requests), [forks](https://docs.github.com/en/free-pro-team@latest/github/collaborating-with-issues-and-pull-requests/working-with-forks) if you're unfamiliar. If you're having trouble, get in touch on [Discord](https://discord.gg/FWrfeXV).
 
 #### Running
 

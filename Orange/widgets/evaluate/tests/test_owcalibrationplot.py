@@ -614,6 +614,7 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
         results = self.lenses_results
         results.folds = [slice(0, 5), slice(5, 19)]
         results.models = results.models.repeat(2, axis=0)
+        results.actual = results.actual.copy()
         results.actual[:3] = 0
         results.probabilities[1, 3:5] = np.nan
         # after this, model 1 has just negative instances in fold 0

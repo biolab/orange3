@@ -10,14 +10,13 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pandas as pd
 
-from AnyQt.QtCore import QItemSelectionModel, Qt, QItemSelection
+from AnyQt.QtCore import QItemSelectionModel, Qt, QItemSelection, QPoint
+from AnyQt.QtGui import QPalette, QColor, QHelpEvent
 from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
-    QStyleOptionViewItem, QDialog, QMenu
+    QStyleOptionViewItem, QDialog, QMenu, QToolTip, QListView
 from AnyQt.QtTest import QTest, QSignalSpy
 
-from Orange.widgets.utils import colorpalettes
 from orangewidget.tests.utils import simulate
-from orangewidget.utils.itemmodels import PyListModel
 
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
@@ -35,10 +34,12 @@ from Orange.widgets.data.oweditdomain import (
     VariableEditDelegate, TransformRole,
     RealVector, TimeVector, StringVector, make_dict_mapper, DictMissingConst,
     LookupMappingTransform, as_float_or_nan, column_str_repr, time_parse,
-    GroupItemsDialog)
+    GroupItemsDialog, VariableListModel
+)
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.tests.utils import contextMenu
+from Orange.widgets.utils import colorpalettes
 from Orange.tests import test_filename, assert_array_nanequal
 
 MArray = np.ma.MaskedArray
@@ -665,32 +666,72 @@ class TestEditors(GuiTest):
         self.assertFalse(cbox.isChecked())
 
 
+class TestModels(GuiTest):
+    def test_variable_model(self):
+        model = VariableListModel()
+        self.assertEqual(model.effective_name(model.index(-1, -1)), None)
+
+        def data(row, role):
+            return model.data(model.index(row,), role)
+
+        def set_data(row, data, role):
+            model.setData(model.index(row), data, role)
+
+        model[:] = [
+            RealVector(Real("A", (3, "g"), (), False), lambda: MArray([])),
+            RealVector(Real("B", (3, "g"), (), False), lambda: MArray([])),
+        ]
+        self.assertEqual(data(0, Qt.DisplayRole), "A")
+        self.assertEqual(data(1, Qt.DisplayRole), "B")
+        self.assertEqual(model.effective_name(model.index(1)), "B")
+        set_data(1, [Rename("A")], TransformRole)
+        self.assertEqual(model.effective_name(model.index(1)), "A")
+        self.assertEqual(data(0, MultiplicityRole), 2)
+        self.assertEqual(data(1, MultiplicityRole), 2)
+        set_data(1, [], TransformRole)
+        self.assertEqual(data(0, MultiplicityRole), 1)
+        self.assertEqual(data(1, MultiplicityRole), 1)
+
+
 class TestDelegates(GuiTest):
     def test_delegate(self):
-        model = PyListModel([None])
+        model = VariableListModel([None, None])
 
-        def set_item(v: dict):
-            model.setItemData(model.index(0),  v)
+        def set_item(row: int, v: dict):
+            model.setItemData(model.index(row),  v)
 
-        def get_style_option() -> QStyleOptionViewItem:
+        def get_style_option(row: int) -> QStyleOptionViewItem:
             opt = QStyleOptionViewItem()
-            delegate.initStyleOption(opt, model.index(0))
+            delegate.initStyleOption(opt, model.index(row))
             return opt
 
-        set_item({Qt.EditRole: Categorical("a", (), (), False)})
+        set_item(0, {Qt.EditRole: Categorical("a", (), (), False)})
         delegate = VariableEditDelegate()
-        opt = get_style_option()
+        opt = get_style_option(0)
         self.assertEqual(opt.text, "a")
         self.assertFalse(opt.font.italic())
-        set_item({TransformRole: [Rename("b")]})
-        opt = get_style_option()
+        set_item(0, {TransformRole: [Rename("b")]})
+        opt = get_style_option(0)
         self.assertEqual(opt.text, "a \N{RIGHTWARDS ARROW} b")
         self.assertTrue(opt.font.italic())
 
-        set_item({TransformRole: [AsString()]})
-        opt = get_style_option()
+        set_item(0, {TransformRole: [AsString()]})
+        opt = get_style_option(0)
         self.assertIn("reinterpreted", opt.text)
         self.assertTrue(opt.font.italic())
+        set_item(1, {
+            Qt.EditRole: String("b", (), False),
+            TransformRole: [Rename("a")]
+        })
+        opt = get_style_option(1)
+        self.assertEqual(opt.palette.color(QPalette.Text), QColor(Qt.red))
+        view = QListView()
+        with patch.object(QToolTip, "showText") as p:
+            delegate.helpEvent(
+                QHelpEvent(QHelpEvent.ToolTip, QPoint(0, 0), QPoint(0, 0)),
+                view, opt, model.index(1),
+            )
+            p.assert_called_once()
 
 
 class TestTransforms(TestCase):

@@ -255,24 +255,24 @@ class OWKMeans(widget.OWWidget):
 
     def update_method(self):
         self.table_model.clear_scores()
-        self.commit()
+        self.commit.deferred()
 
     def update_k(self):
         self.optimize_k = False
         self.table_model.clear_scores()
-        self.commit()
+        self.commit.deferred()
 
     def update_from(self):
         self.k_to = max(self.k_from + 1, self.k_to)
         self.optimize_k = True
         self.table_model.clear_scores()
-        self.commit()
+        self.commit.deferred()
 
     def update_to(self):
         self.k_from = min(self.k_from, self.k_to - 1)
         self.optimize_k = True
         self.table_model.clear_scores()
-        self.commit()
+        self.commit.deferred()
 
     def enough_data_instances(self, k):
         """k cannot be larger than the number of data instances."""
@@ -421,6 +421,7 @@ class OWKMeans(widget.OWWidget):
 
         self.__launch_tasks([self.k])
 
+    @gui.deferred
     def commit(self):
         self.cancel()
         self.clear_messages()
@@ -461,9 +462,9 @@ class OWKMeans(widget.OWWidget):
         self.table_model.clear_scores()
 
         if unconditional:
-            self.unconditional_commit()
+            self.commit.now()
         else:
-            self.commit()
+            self.commit.deferred()
 
     def update_results(self):
         scores = [mk if isinstance(mk, str) else mk.silhouette for mk in
@@ -543,8 +544,9 @@ class OWKMeans(widget.OWWidget):
 
         new_domain = add_columns(domain, metas=[cluster_var, silhouette_var])
         new_table = self.data.transform(new_domain)
-        new_table.get_column_view(cluster_var)[0][:] = clust_ids
-        new_table.get_column_view(silhouette_var)[0][:] = scores
+        with new_table.unlocked(new_table.metas):
+            new_table.get_column_view(cluster_var)[0][:] = clust_ids
+            new_table.get_column_view(silhouette_var)[0][:] = scores
 
         domain_attributes = set(domain.attributes)
         centroid_attributes = [
@@ -556,8 +558,12 @@ class OWKMeans(widget.OWWidget):
         centroid_domain = add_columns(
             Domain(centroid_attributes, [], domain.metas),
             metas=[cluster_var, silhouette_var])
+        # Table is constructed from a copy of centroids: if data is stored in
+        # the widget, it can be modified, so the widget should preferrably
+        # output a copy. The number of centroids is small, hence copying it is
+        # cheap.
         centroids = Table(
-            centroid_domain, km.centroids, None,
+            centroid_domain, km.centroids.copy(), None,
             np.hstack((np.full((km.k, len(domain.metas)), np.nan),
                        np.arange(km.k).reshape(km.k, 1),
                        clust_scores))

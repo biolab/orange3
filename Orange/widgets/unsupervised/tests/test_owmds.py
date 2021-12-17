@@ -53,18 +53,18 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         """Test if data is plotted only once but committed on every input change"""
         table = Table("heart_disease")
         self.widget.setup_plot = Mock()
-        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.widget.commit.deferred = self.widget.commit.now = Mock()
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.commit.reset_mock()
+        self.widget.commit.deferred.reset_mock()
         self.wait_until_finished()
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
 
-        self.widget.commit.reset_mock()
+        self.widget.commit.deferred.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, table[::10])
         self.wait_until_stop_blocking()
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
 
     def test_pca_init(self):
         self.send_signal(self.signal_name, self.signal_data)
@@ -92,9 +92,10 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, None)
         combobox_run_through_all()
 
-        data.X[:, 0] = np.nan
-        data.Y[:] = np.nan
-        data.metas[:, 1] = np.nan
+        with data.unlocked():
+            data.X[:, 0] = np.nan
+            data.Y[:] = np.nan
+            data.metas[:, 1] = np.nan
 
         self.send_signal(self.widget.Inputs.data, data, wait=1000)
         combobox_run_through_all()

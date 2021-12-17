@@ -15,7 +15,9 @@ from typing import Dict, Any, Optional, Iterable, List
 import pkg_resources
 import requests
 
-from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
+from AnyQt.QtGui import (
+    QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon, QGuiApplication
+)
 from AnyQt.QtCore import Qt, QPoint, QRect, QSettings
 
 from orangecanvas import config as occonfig
@@ -67,9 +69,11 @@ class Config(config.Config):
     OrganizationDomain = "biolab.si"
     ApplicationName = "Orange"
     ApplicationVersion = Orange.__version__
+    AppUserModelID = "Biolab.Orange"  # AppUserModelID for windows task bar
 
     def init(self):
         super().init()
+        QGuiApplication.setApplicationDisplayName(self.ApplicationName)
         widget_settings_dir_cfg = environ.get_path("widget_settings_dir", "")
         if widget_settings_dir_cfg:
             # widget_settings_dir is configured via config file
@@ -176,16 +180,17 @@ class Config(config.Config):
         """
         Return an iterator over the entry points yielding 'Example Workflows'
         """
-        # `iter_entry_points` yields them in unspecified order, so we insert
-        # our first
+        # `iter_entry_points` yields them in unspecified order, so we order
+        # them by name. The default is at the beginning, unless another
+        # entrypoint precedes it alphabetically (e.g. starting with '!').
         default_ep = pkg_resources.EntryPoint(
-            "Orange3", "Orange.canvas.workflows",
+            "000-Orange3", "Orange.canvas.workflows",
             dist=pkg_resources.get_distribution("Orange3"))
 
-        return itertools.chain(
-            (default_ep,),
-            pkg_resources.iter_entry_points("orange.widgets.tutorials")
-        )
+        all_ep = list(pkg_resources.iter_entry_points("orange.widgets.tutorials"))
+        all_ep.append(default_ep)
+        all_ep.sort(key=lambda x: x.name)
+        return iter(all_ep)
 
     APPLICATION_URLS = {
         #: Submit a bug report action in the Help menu

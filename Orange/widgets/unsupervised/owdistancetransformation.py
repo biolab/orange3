@@ -61,8 +61,9 @@ class OWDistanceTransformation(widget.OWWidget):
     @Inputs.distances
     def set_data(self, data):
         self.data = data
-        self.unconditional_commit()
+        self.commit.now()
 
+    @gui.deferred
     def commit(self):
         distances = self.data
         if distances is not None:
@@ -88,7 +89,7 @@ class OWDistanceTransformation(widget.OWWidget):
             {'Transformation': ', '.join(parts).capitalize() or 'None'})
 
     def _invalidate(self):
-        self.commit()
+        self.commit.deferred()
 
 
 if __name__ == "__main__":  # pragma: no cover

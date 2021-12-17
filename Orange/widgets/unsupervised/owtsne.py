@@ -417,7 +417,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.task is not None:
             self.cancel()
             self.run_button.setText("Resume")
-            self.commit()
+            self.commit.deferred()
         # Resume task
         else:
             self.run()
@@ -582,7 +582,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self.__ensure_task_same_for_embedding(task)
             assert task.tsne_embedding is self.tsne_embedding
 
-        self.commit()
+        self.commit.deferred()
 
     def _get_projection_data(self):
         if self.data is None:
@@ -595,7 +595,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 self.data.domain.metas + self._get_projection_variables()
             )
         )
-        data.metas[:, -2:] = self.get_embedding()
+        with data.unlocked(data.metas):
+            data.metas[:, -2:] = self.get_embedding()
         if self.tsne_embedding is not None:
             data.domain = Domain(
                 self.data.domain.attributes,

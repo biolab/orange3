@@ -20,6 +20,8 @@ from AnyQt.QtCore import (
 
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from orangewidget.gui import Slider
+
 import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
@@ -35,6 +37,7 @@ from Orange.widgets.data.utils.preprocess import (
     BaseEditor, blocked, StandardItemModel, DescriptionRole,
     ParametersRole, Controller, SequenceFlow
 )
+
 
 class _NoneDisc(preprocess.discretize.Discretization):
     """Discretize all variables into None.
@@ -95,7 +98,7 @@ class DiscretizeEditor(BaseEditor):
             flat=True
         )
         slbox.setLayout(QHBoxLayout())
-        self.__slider = slider = QSlider(
+        self.__slider = slider = Slider(
             orientation=Qt.Horizontal,
             minimum=2, maximum=10, value=self.__nintervals,
             enabled=self.__method in [self.EqualFreq, self.EqualWidth],
@@ -1279,7 +1282,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
 
     def __on_modelchanged(self):
         self.__update_overlay()
-        self.commit()
+        self.commit.deferred()
 
     @Inputs.data
     @check_sql_input
@@ -1335,6 +1338,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
         self.Outputs.preprocessor.send(preprocessor)
         self.Outputs.preprocessed_data.send(data)
 
+    @gui.deferred
     def commit(self):
         if not self._invalidated:
             self._invalidated = True

@@ -11,6 +11,9 @@ from orangecanvas.registry import WidgetRegistry, cache
 from orangecanvas.scheme.node import UserMessage
 from orangecanvas.scheme import signalmanager
 
+# Imported to make webwidget addons work
+from Orange.widgets.utils.webview import WebviewWidget  # pylint: disable=unused-import
+
 
 def main(argv=None):
     app = QApplication(list(argv) if argv else [])

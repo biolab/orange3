@@ -36,7 +36,7 @@ class Transformation(Reprable):
             col = data.X
         else:
             col = data.metas
-        if not sp.issparse(col):
+        if not sp.issparse(col) and col.ndim > 1:
             col = col.squeeze(axis=1)
         transformed = self.transform(col)
         if inst:

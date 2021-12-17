@@ -1,2 +1,5 @@
+# docutils changed html template in version 0.17; fixing to 0.16 until parser is not fixed
+# todo: remove docutils requirement when parser fixed in widget-base and released
+docutils<0.17
 Sphinx>=4.2.0
 recommonmark

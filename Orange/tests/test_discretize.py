@@ -229,7 +229,8 @@ class TestDiscretizer(TestCase):
 
     def test_remove_constant(self):
         table = data.Table('iris')
-        table[:, 0] = 1
+        with table.unlocked():
+            table[:, 0] = 1
         discretize = Discretize(remove_const=True)
         new_table = discretize(table)
         self.assertNotEqual(len(table.domain.attributes),
@@ -237,7 +238,8 @@ class TestDiscretizer(TestCase):
 
     def test_keep_constant(self):
         table = data.Table('iris')
-        table[:, 0] = 1
+        with table.unlocked():
+            table[:, 0] = 1
         discretize = Discretize(remove_const=False)
         new_table = discretize(table)
         self.assertEqual(len(table.domain.attributes),

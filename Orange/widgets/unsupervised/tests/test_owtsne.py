@@ -220,7 +220,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
     def test_plot_once(self):
         """Test if data is plotted only once but committed on every input change"""
         self.widget.setup_plot = Mock()
-        self.widget.commit = self.widget.unconditional_commit = Mock()
+        self.widget.commit.deferred = self.widget.commit.now = Mock()
 
         self.send_signal(self.widget.Inputs.data, self.data)
         # TODO: The base widget immediately calls `setup_plot` and `commit`
@@ -229,18 +229,18 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # so as a temporary fix, we reset the mocks, so they reflect the calls
         # when the result was available.
         self.widget.setup_plot.reset_mock()
-        self.widget.commit.reset_mock()
+        self.widget.commit.deferred.reset_mock()
         self.wait_until_finished()
 
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
 
-        self.widget.commit.reset_mock()
+        self.widget.commit.deferred.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
         self.wait_until_stop_blocking()
 
         self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
+        self.widget.commit.deferred.assert_called_once()
 
     def test_modified_info_message_behaviour(self):
         """Information messages should be cleared if the data changes or if

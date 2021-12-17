@@ -12,6 +12,8 @@ from AnyQt.QtWidgets import QLineEdit, QTableView, QSlider, \
     QComboBox, QStyledItemDelegate, QWidget, QDateTimeEdit, QHBoxLayout, \
     QDoubleSpinBox, QSizePolicy, QStyleOptionViewItem, QLabel, QMenu, QAction
 
+from orangewidget.gui import Slider
+
 from Orange.data import DiscreteVariable, ContinuousVariable, \
     TimeVariable, Table, StringVariable, Variable, Domain
 from Orange.widgets import gui
@@ -114,7 +116,7 @@ class ContinuousVariableEditor(VariableEditor):
             minimumWidth=70,
             sizePolicy=sp_spin,
         )
-        self._slider = QSlider(
+        self._slider = Slider(
             parent,
             minimum=self.__map_to_slider(self._min_value),
             maximum=self.__map_to_slider(self._max_value),
@@ -518,12 +520,11 @@ class OWCreateInstance(OWWidget):
             )
         gui.rubber(box)
 
-        # pylint: disable=unnecessary-lambda
-        append = gui.checkBox(self.buttonsArea, self, "append_to_data",
-                              "Append this instance to input data",
-                              callback=lambda: self.commit())
+        gui.checkBox(self.buttonsArea, self, "append_to_data",
+                     "Append this instance to input data",
+                     callback=self.commit.deferred)
         gui.rubber(self.buttonsArea)
-        box = gui.auto_apply(self.buttonsArea, self, "auto_commit")
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.settingsAboutToBePacked.connect(self.pack_settings)
 
@@ -531,7 +532,7 @@ class OWCreateInstance(OWWidget):
         self.proxy_model.setFilterFixedString(self.filter_edit.text().strip())
 
     def __table_data_changed(self):
-        self.commit()
+        self.commit.deferred()
 
     def __menu_requested(self, point: QPoint):
         index = self.view.indexAt(point)
@@ -595,13 +596,13 @@ class OWCreateInstance(OWWidget):
 
             self.model.setData(index, value, ValueRole)
         self.model.dataChanged.connect(self.__table_data_changed)
-        self.commit()
+        self.commit.deferred()
 
     @Inputs.data
     def set_data(self, data: Table):
         self.data = data
         self._set_model_data()
-        self.unconditional_commit()
+        self.commit.now()
 
     def _set_model_data(self):
         self.Information.nans_removed.clear()
@@ -620,6 +621,7 @@ class OWCreateInstance(OWWidget):
     def set_reference(self, data: Table):
         self.reference = data
 
+    @gui.deferred
     def commit(self):
         output_data = None
         if self.data:
@@ -630,15 +632,18 @@ class OWCreateInstance(OWWidget):
 
     def _create_data_from_values(self) -> Table:
         data = Table.from_domain(self.data.domain, 1)
-        data.name = "created"
-        data.X[:] = np.nan
-        data.Y[:] = np.nan
-        for i, m in enumerate(self.data.domain.metas):
-            data.metas[:, i] = "" if m.is_string else np.nan
+        with data.unlocked():
+            data.name = "created"
+            if data.X.size:
+                data.X[:] = np.nan
+            if data.Y.size:
+                data.Y[:] = np.nan
+            for i, m in enumerate(self.data.domain.metas):
+                data.metas[:, i] = "" if m.is_string else np.nan
 
-        values = self._get_values()
-        for var_name, value in values.items():
-            data[:, var_name] = value
+            values = self._get_values()
+            for var_name, value in values.items():
+                data[:, var_name] = value
         return data
 
     def _append_to_data(self, data: Table) -> Table:
@@ -650,8 +655,9 @@ class OWCreateInstance(OWWidget):
         domain = Domain(data.domain.attributes, data.domain.class_vars,
                         data.domain.metas + (var,))
         data = data.transform(domain)
-        data.metas[: len(self.data), -1] = 0
-        data.metas[len(self.data):, -1] = 1
+        with data.unlocked(data.metas):
+            data.metas[: len(self.data), -1] = 0
+            data.metas[len(self.data):, -1] = 1
         return data
 
     def _get_values(self) -> Dict[str, Union[str, float]]:

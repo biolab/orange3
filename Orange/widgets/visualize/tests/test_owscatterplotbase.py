@@ -635,12 +635,12 @@ class TestOWScatterPlotBase(WidgetTest):
             self.master.get_subset_mask = lambda: np.arange(10) >= 5
             graph.update_colors()
             brushes = graph.scatterplot_item.data["brush"]
-            self.assertEqual(brushes[0].color().alpha(), 0)
-            self.assertEqual(brushes[1].color().alpha(), 0)
-            self.assertEqual(brushes[4].color().alpha(), 0)
-            self.assertEqual(brushes[5].color().alpha(), 123)
-            self.assertEqual(brushes[6].color().alpha(), 123)
-            self.assertEqual(brushes[7].color().alpha(), 123)
+            a0 = brushes[0].color().alpha()
+            self.assertEqual(brushes[1].color().alpha(), a0)
+            self.assertEqual(brushes[4].color().alpha(), a0)
+            self.assertGreater(brushes[5].color().alpha(), a0)
+            self.assertGreater(brushes[6].color().alpha(), a0)
+            self.assertGreater(brushes[7].color().alpha(), a0)
 
         graph = self.graph
 

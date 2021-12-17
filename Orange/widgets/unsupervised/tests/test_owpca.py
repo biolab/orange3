@@ -27,8 +27,9 @@ class TestOWPCA(WidgetTest):
         self.widget._update_selection_variance_spin()
 
     def test_constant_data(self):
-        data = self.iris[::5]
-        data.X[:, :] = 1.0
+        data = self.iris[::5].copy()
+        with data.unlocked():
+            data.X[:, :] = 1.0
         # Ignore the warning: the test checks whether the widget shows
         # Warning.trivial_components when this happens
         with np.errstate(invalid="ignore"):
@@ -100,7 +101,7 @@ class TestOWPCA(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.wait_until_stop_blocking()
         self.widget._variance_ratio = np.array([0.5, 0.25, 0.2, 0.05])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         result = self.get_output(self.widget.Outputs.transformed_data)
         pc1, pc2 = result.domain.attributes
@@ -204,7 +205,8 @@ class TestOWPCA(WidgetTest):
         # Randomly set some values to zero
         random_state = check_random_state(42)
         mask = random_state.beta(1, 2, size=self.iris.X.shape) > 0.5
-        self.iris.X[mask] = 0
+        with self.iris.unlocked():
+            self.iris.X[mask] = 0
 
         data = prepare_table(self.iris)
 

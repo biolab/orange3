@@ -96,6 +96,8 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
         data = Table("iris")
         self.send_signal("Data", data)
         self.assertFalse(self.widget.Warning.sparse_data.is_shown())
-        data.X = csr_matrix(data.X)
+
+        with data.unlocked():
+            data.X = csr_matrix(data.X)
         self.send_signal("Data", data)
         self.assertTrue(self.widget.Warning.sparse_data.is_shown())

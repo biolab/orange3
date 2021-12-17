@@ -30,8 +30,9 @@ class StackedModel(Model):
             X = np.column_stack(pred)
         Y = np.repeat(np.nan, X.shape[0])
         stacked_data = data.transform(self.aggregate.domain)
-        stacked_data.X = X
-        stacked_data.Y = Y
+        with stacked_data.unlocked():
+            stacked_data.X = X
+            stacked_data.Y = Y
         return self.aggregate(
             stacked_data, Model.ValueProbs if self.use_prob else Model.Value)
 
@@ -80,9 +81,10 @@ class StackedLearner(Learner):
         dom = Domain([ContinuousVariable('f{}'.format(i + 1))
                       for i in range(X.shape[1])],
                      data.domain.class_var)
-        stacked_data = data.transform(dom)
-        stacked_data.X = X
-        stacked_data.Y = res.actual
+        stacked_data = data.transform(dom).copy()
+        with stacked_data.unlocked_reference():
+            stacked_data.X = X
+            stacked_data.Y = res.actual
         models = [l(data) for l in self.learners]
         aggregate_model = self.aggregate(stacked_data)
         return StackedModel(models, aggregate_model, use_prob=use_prob,

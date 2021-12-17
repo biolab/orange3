@@ -383,6 +383,25 @@ class TestPandasCompat(unittest.TestCase):
             ],
         )
 
+    def test_table_from_frame_no_datetim(self):
+        """
+        In case when dtype of column is object and column contains numbers only,
+        column could be recognized as a TimeVarialbe since pd.to_datetime can parse
+        numbers as datetime. That column must be result either in StringVariable
+        or DiscreteVariable since it's dtype is object.
+        """
+        from Orange.data.pandas_compat import table_from_frame
+
+        df = pd.DataFrame([[1], [2], [3]], dtype="object")
+        table = table_from_frame(df)
+        # check if exactly ContinuousVariable and not subtype TimeVariable
+        self.assertIsInstance(table.domain.metas[0], StringVariable)
+
+        df = pd.DataFrame([[1], [2], [2]], dtype="object")
+        table = table_from_frame(df)
+        # check if exactly ContinuousVariable and not subtype TimeVariable
+        self.assertIsInstance(table.domain.attributes[0], DiscreteVariable)
+
     def test_time_variable_compatible(self):
         from Orange.data.pandas_compat import table_from_frame
 
@@ -442,6 +461,53 @@ class TestPandasCompat(unittest.TestCase):
         self.assertTupleEqual(table.domain.attributes, new_table.domain.attributes)
         self.assertTupleEqual(table.domain.metas, new_table.domain.metas)
         self.assertEqual(table.domain.class_var, new_table.domain.class_var)
+
+    def test_table_from_frames_not_orange_dataframe(self):
+        x = pd.DataFrame([[1, 2, 3], [4, 5, 6]], columns=["x1", "x2", "x3"])
+        y = pd.DataFrame([[5], [6]], columns=["y"])
+        m = pd.DataFrame([[1, 2], [4, 5]], columns=["m1", "m2"])
+        new_table = Table.from_pandas_dfs(x, y, m)
+
+        np.testing.assert_array_equal(x, new_table.X)
+        np.testing.assert_array_equal(y.values.flatten(), new_table.Y)
+        np.testing.assert_array_equal(m, new_table.metas)
+        d = new_table.domain
+        self.assertListEqual(x.columns.tolist(), [a.name for a in d.attributes])
+        self.assertEqual(y.columns[0], d.class_var.name)
+        self.assertListEqual(m.columns.tolist(), [a.name for a in d.metas])
+
+    def test_table_from_frames_same_index(self):
+        """
+        Test that index column is placed in metas. Function should fail
+        with ValueError when indexes are different
+        """
+        index = np.array(["a", "b"])
+        x = pd.DataFrame(
+            [[1, 2, 3], [4, 5, 6]], columns=["x1", "x2", "x3"], index=index
+        )
+        y = pd.DataFrame([[5], [6]], columns=["y"], index=index)
+        m = pd.DataFrame([[1, 2], [4, 5]], columns=["m1", "m2"], index=index)
+        new_table = Table.from_pandas_dfs(x, y, m)
+
+        # index should be placed in metas
+        np.testing.assert_array_equal(x, new_table.X)
+        np.testing.assert_array_equal(y.values.flatten(), new_table.Y)
+        np.testing.assert_array_equal(
+            np.hstack((index[:, None], m.values.astype("object"))), new_table.metas
+        )
+        d = new_table.domain
+        self.assertListEqual(x.columns.tolist(), [a.name for a in d.attributes])
+        self.assertEqual(y.columns[0], d.class_var.name)
+        self.assertListEqual(["index"] + m.columns.tolist(), [a.name for a in d.metas])
+
+        index2 = np.array(["a", "c"])
+        x = pd.DataFrame(
+            [[1, 2, 3], [4, 5, 6]], columns=["x1", "x2", "x3"], index=index
+        )
+        y = pd.DataFrame([[5], [6]], columns=["y"], index=index2)
+        m = pd.DataFrame([[1, 2], [4, 5]], columns=["m1", "m2"], index=index)
+        with self.assertRaises(ValueError):
+            Table.from_pandas_dfs(x, y, m)
 
 
 class TestTablePandas(unittest.TestCase):
@@ -579,7 +645,7 @@ class TestTablePandas(unittest.TestCase):
         table3 = df3.to_orange_table()
 
         self.assertEqual(len(table2), len(table3))
-        self.assertFalse(any(table3.W))
+        self.assertEqual(0, table3.W.size)
         self.assertEqual(self.table.attributes, table3.attributes)
 
         d1 = table2.domain
@@ -650,7 +716,7 @@ class TestDenseTablePandas(TestTablePandas):
             [0, 1, 0, 1, 1, 2, 1] +
             [0, 0, 0, 0, 4, 1, 1] +
             "a  b  c  d  e     f    g".split() +
-            list("ABCDEF") + [""], dtype=object).reshape(-1, 7).T
+            list("ABCDEF") + [""], dtype=object).reshape(-1, 7).T.copy()
         self.table = Table.from_numpy(
             self.domain,
             np.array(
@@ -706,10 +772,12 @@ class TestDenseTablePandas(TestTablePandas):
             ), 1)
 
     def test_amend(self):
-        df = self.table.X_df
-        df.iloc[0][0] = 0
+        with self.table.unlocked():
+            df = self.table.X_df
+            df.iloc[0][0] = 0
         X = self.table.X
-        self.table.X_df = df
+        with self.table.unlocked():
+            self.table.X_df = df
         self.assertTrue(np.shares_memory(df.values, X))
 
     def test_amend_dimension_mismatch(self):

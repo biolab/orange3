@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use
+import time
 import unittest
 import warnings
 from itertools import chain
@@ -145,6 +146,28 @@ class TestUtil(unittest.TestCase):
                                            [np.inf, -np.inf, 0, 0, 2, 1],
                                            [np.inf, -np.inf, 0, 0, 0, 3]])
 
+    def test_stats_long_string_mem_use(self):
+        X = np.full((1000, 1000), "a", dtype=object)
+        t = time.time()
+        stats(X)
+        t_a = time.time() - t  # time for an array with constant-len strings
+
+        # Add one very long string
+        X[0, 0] = "a"*2000
+
+        # The implementation of stats() in Orange 3.30.2 used .astype("str")
+        # internally. X.astype("str") would take ~1000x the memory as X,
+        # because its type would be "<U1000" (the length of the longest string).
+        # That is about 7.5 GiB of memory on a 64-bit Linux system
+
+        # Because it is hard to measure CPU, we here measure time as
+        # memory allocation of such big tables takes time. On Marko's
+        # Linux system .astype("str") took ~3 seconds.
+        t = time.time()
+        stats(X)
+        t_b = time.time() - t
+        self.assertLess(t_b, 2*t_a + 0.1)  # some grace period
+
     def test_nanmin_nanmax(self):
         warnings.filterwarnings("ignore", r".*All-NaN slice encountered.*")
         for X in self.data:
@@ -236,9 +259,9 @@ class TestUtil(unittest.TestCase):
     def test_nanvar(self, array):
         for X in self.data:
             X_sparse = array(X)
-            np.testing.assert_array_equal(
+            np.testing.assert_almost_equal(
                 nanvar(X_sparse),
-                np.nanvar(X))
+                np.nanvar(X), decimal=14)  # np.nanvar and bn.nanvar differ slightly
 
     def test_nanvar_with_ddof(self):
         x = np.random.uniform(0, 10, (20, 100))

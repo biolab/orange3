@@ -69,7 +69,8 @@ class TestRemoveConstant(unittest.TestCase):
 class TestRemoveNaNRows(unittest.TestCase):
     def test_remove_row(self):
         data = Table("iris")
-        data.X[0, 0] = np.nan
+        with data.unlocked():
+            data.X[0, 0] = np.nan
         pp_data = RemoveNaNRows()(data)
         self.assertEqual(len(pp_data), len(data) - 1)
         self.assertFalse(np.isnan(pp_data.X).any())
@@ -78,21 +79,24 @@ class TestRemoveNaNRows(unittest.TestCase):
 class TestRemoveNaNColumns(unittest.TestCase):
     def test_column_filtering(self):
         data = Table("iris")
-        data.X[:, (1, 3)] = np.NaN
+        with data.unlocked():
+            data.X[:, (1, 3)] = np.NaN
 
         new_data = RemoveNaNColumns()(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes) - 2)
 
         data = Table("iris")
-        data.X[0, 0] = np.NaN
+        with data.unlocked():
+            data.X[0, 0] = np.NaN
         new_data = RemoveNaNColumns()(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))
 
     def test_column_filtering_sparse(self):
         data = Table("iris")
-        data.X = csr_matrix(data.X)
+        with data.unlocked():
+            data.X = csr_matrix(data.X)
 
         new_data = RemoveNaNColumns()(data)
         self.assertEqual(data, new_data)
@@ -169,7 +173,8 @@ class TestAdaptiveNormalize(unittest.TestCase):
         np.testing.assert_array_equal(out, true_out)
 
     def test_sparse_pps(self):
-        self.data.X = csr_matrix(self.data.X)
+        with self.data.unlocked():
+            self.data.X = csr_matrix(self.data.X)
         out = AdaptiveNormalize()(self.data)
         true_out = Scale(center=Scale.NoCentering, scale=Scale.Span)(self.data)
         np.testing.assert_array_equal(out, true_out)
@@ -183,9 +188,11 @@ class TestRemoveSparse(unittest.TestCase):
         self.data = Table.from_numpy(domain, np.zeros((3, 2)))
 
     def test_0_dense(self):
-        self.data[1:, 1] = 7
-        true_out = self.data[:, 1]
-        true_out.X = true_out.X.reshape(-1, 1)
+        with self.data.unlocked():
+            self.data[1:, 1] = 7
+            true_out = self.data[:, 1].copy()
+        with true_out.unlocked(true_out.X):
+            true_out.X = true_out.X.reshape(-1, 1)
         out = RemoveSparse(0.5, True)(self.data)
         np.testing.assert_array_equal(out, true_out)
 
@@ -193,10 +200,12 @@ class TestRemoveSparse(unittest.TestCase):
         np.testing.assert_array_equal(out, true_out)
 
     def test_0_sparse(self):
-        self.data[1:, 1] = 7
-        true_out = self.data[:, 1]
-        self.data.X = csr_matrix(self.data.X)
-        true_out.X = csr_matrix(true_out.X)
+        with self.data.unlocked():
+            self.data[1:, 1] = 7
+            true_out = self.data[:, 1].copy()
+            self.data.X = csr_matrix(self.data.X)
+        with true_out.unlocked(true_out.X):
+            true_out.X = csr_matrix(true_out.X)
         out = RemoveSparse(0.5, True)(self.data).X
         np.testing.assert_array_equal(out, true_out)
 
@@ -204,10 +213,12 @@ class TestRemoveSparse(unittest.TestCase):
         np.testing.assert_array_equal(out, true_out)
 
     def test_nan_dense(self):
-        self.data[1:, 1] = np.nan
-        self.data.X[:, 0] = 7
-        true_out = self.data[:, 0]
-        true_out.X = true_out.X.reshape(-1, 1)
+        with self.data.unlocked():
+            self.data[1:, 1] = np.nan
+            self.data.X[:, 0] = 7
+            true_out = self.data[:, 0].copy()
+        with true_out.unlocked(true_out.X):
+            true_out.X = true_out.X.reshape(-1, 1)
         out = RemoveSparse(0.5, False)(self.data)
         np.testing.assert_array_equal(out, true_out)
 
@@ -215,12 +226,14 @@ class TestRemoveSparse(unittest.TestCase):
         np.testing.assert_array_equal(out, true_out)
 
     def test_nan_sparse(self):
-        self.data[1:, 1] = np.nan
-        self.data.X[:, 0] = 7
-        true_out = self.data[:, 0]
-        true_out.X = true_out.X.reshape(-1, 1)
-        self.data.X = csr_matrix(self.data.X)
-        true_out.X = csr_matrix(true_out.X)
+        with self.data.unlocked():
+            self.data[1:, 1] = np.nan
+            self.data.X[:, 0] = 7
+            true_out = self.data[:, 0].copy()
+            with true_out.unlocked(true_out.X):
+                true_out.X = true_out.X.reshape(-1, 1)
+                true_out.X = csr_matrix(true_out.X)
+            self.data.X = csr_matrix(self.data.X)
         out = RemoveSparse(0.5, False)(self.data)
         np.testing.assert_array_equal(out, true_out)
 

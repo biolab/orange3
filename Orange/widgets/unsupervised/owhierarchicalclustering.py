@@ -360,7 +360,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             self._restore_selection(selection_state)
             self.__pending_selection_restore = None
 
-        self.unconditional_commit()
+        self.commit.now()
 
     def _set_items(self, items, axis=1):
         self.closeContext()
@@ -533,7 +533,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._invalidate_output()
 
     def _invalidate_output(self):
-        self.commit()
+        self.commit.deferred()
 
     def _invalidate_pruning(self):
         if self.root:
@@ -551,6 +551,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self._apply_selection()
 
+    @gui.deferred
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
         if not items:
@@ -601,7 +602,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 var_name, values=values + ["Other"])
             domain = Orange.data.Domain(attrs, classes, metas + (clust_var,))
             data = items.transform(domain)
-            data.get_column_view(clust_var)[0][:] = c
+            with data.unlocked(data.metas):
+                data.get_column_view(clust_var)[0][:] = c
 
             if selected_indices:
                 selected_data = data[mask]

@@ -167,9 +167,8 @@ class OWVennDiagram(widget.OWWidget):
             callback=lambda: self.commit(),  # pylint: disable=unnecessary-lambda
             stateWhenDisabled=False,
             attribute=Qt.WA_LayoutUsesWidgetRect)
-        auto = gui.auto_send(box, self, "autocommit",
-                             box=False,
-                             contentsMargins=(0, 0, 0, 0))
+        gui.auto_send(
+            box, self, "autocommit", box=False, contentsMargins=(0, 0, 0, 0))
         gui.rubber(box)
         self._update_duplicates_cb()
         self._queue = []
@@ -262,9 +261,9 @@ class OWVennDiagram(widget.OWWidget):
         self._createItemsets()
         self._createDiagram()
         # If autocommit is enabled, _createDiagram already outputs data
-        # If not, call unconditional_commit from here
+        # If not, call commit from here
         if not self.autocommit:
-            self.unconditional_commit()
+            self.commit.now()
 
         super().handleNewSignals()
 
@@ -419,7 +418,7 @@ class OWVennDiagram(widget.OWWidget):
         self.itemsets[key] = self.itemsets[key]._replace(title=text)
 
     def invalidateOutput(self):
-        self.commit()
+        self.commit.deferred()
 
     def merge_data(self, domain, values, ids=None):
         X, metas, class_vars = None, None, None
@@ -710,6 +709,7 @@ class OWVennDiagram(widget.OWWidget):
                   'class_vars': [np.vstack(all_y)]}
         return self.merge_data(domain, values, np.vstack(new_table_ids))
 
+    @gui.deferred
     def commit(self):
         if not self.vennwidget.vennareas() or not self.data:
             self.Outputs.selected_data.send(None)

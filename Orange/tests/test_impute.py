@@ -208,7 +208,8 @@ class TestAsValue(unittest.TestCase):
         """
         table = self._create_table()
         domain = table.domain
-        table.X = sp.csr_matrix(table.X)
+        with table.unlocked():
+            table.X = sp.csr_matrix(table.X)
 
         v1, v2 = impute.AsValue()(table, domain[1])
         self.assertTrue(np.all(np.isfinite(v2.compute_value(table))))

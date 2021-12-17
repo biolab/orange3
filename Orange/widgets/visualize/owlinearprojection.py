@@ -155,8 +155,9 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
                         if v.is_continuous and v is not attr_color],
             class_vars=attr_color
         )
-        data = self.master.data.transform(domain)
-        data.X = normalized(data.X)
+        data = self.master.data.transform(domain).copy()
+        with data.unlocked():
+            data.X = normalized(data.X)
         relief = ReliefF if attr_color.is_discrete else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
         results = sorted(zip(weights, domain.attributes), key=lambda x: (-x[0], x[1].name))
@@ -342,7 +343,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self._check_options()
         self.init_projection()
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
 
     def __placement_radio_changed(self):
         self.controls.graph.hide_radius.setEnabled(
@@ -351,7 +352,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self._init_vizrank()
         self.init_projection()
         self.setup_plot()
-        self.commit()
+        self.commit.deferred()
 
     def __radius_slider_changed(self):
         self.graph.update_radius()
