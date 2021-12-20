@@ -1,4 +1,5 @@
 cython
+setuptools !=60.0.*
 -r requirements-core.txt
 -r requirements-doc.txt
 -r requirements-gui.txt
