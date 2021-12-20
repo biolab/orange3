@@ -36,4 +36,4 @@ In the **Data Table** widget, we can see that both females and males have lower 
 You can also observe differences between median **cholesterol** level and mean value of **major vessel colored** between groups.
 
 
-![](images/Group-by-Example.png)
+![](images/Group-by-example.png)
