@@ -764,19 +764,25 @@ class SilhouettePlot(QGraphicsWidget):
         # type: () -> Optional[QGraphicsWidget]
         return self.__bottomScale
 
-    def __updateTextSizeConstraint(self):
+    def __updateSizeConstraints(self):
         # set/update fixed height constraint on the text annotation items so
         # it matches the silhouette's height
         for silitem, textitem in zip(self.__plotItems(), self.__textItems()):
             height = silitem.effectiveSizeHint(Qt.PreferredSize).height()
             textitem.setMaximumHeight(height)
             textitem.setMinimumHeight(height)
+        mwidth = max((silitem.effectiveSizeHint(Qt.PreferredSize).width()
+                     for silitem in self.__plotItems()), default=300)
+        # match the AxisItem's width to the bars
+        for axis in self.__axisItems():
+            axis.setMaximumWidth(mwidth)
+            axis.setMinimumWidth(mwidth)
 
     def event(self, event):
         # Reimplemented
         if event.type() == QEvent.LayoutRequest and \
                 self.parentLayoutItem() is None:
-            self.__updateTextSizeConstraint()
+            self.__updateSizeConstraints()
             self.resize(self.effectiveSizeHint(Qt.PreferredSize))
         return super().event(event)
 
@@ -1004,6 +1010,9 @@ class SilhouettePlot(QGraphicsWidget):
             if item is not None:
                 assert isinstance(item, TextListWidget)
                 yield item
+
+    def __axisItems(self):
+        return self.__topScale, self.__bottomScale
 
     def setSelection(self, indices):
         indices = np.unique(np.asarray(indices, dtype=int))
