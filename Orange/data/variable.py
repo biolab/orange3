@@ -934,31 +934,12 @@ class TimeVariable(ContinuousVariable):
     # UTC offset and associated timezone. If parsed datetime values provide an
     # offset, it is used for display. If not all values have the same offset,
     # +0000 (=UTC) timezone is used and utc_offset is set to False.
-    _utc_offset = None  # deprecated - remove in 3.32
     _timezone = None
 
     def __init__(self, *args, have_date=0, have_time=0, **kwargs):
         super().__init__(*args, **kwargs)
         self.have_date = have_date
         self.have_time = have_time
-
-    # deprecated - remove in 3.32 - from here
-    @property
-    def utc_offset(self):
-        warnings.warn(
-            "utc_offset is deprecated and will be removed in Orange 3.32",
-            OrangeDeprecationWarning
-        )
-        return self._utc_offset
-
-    @utc_offset.setter
-    def utc_offset(self, val):
-        warnings.warn(
-            "utc_offset is deprecated and will be removed in Orange 3.32ß",
-            OrangeDeprecationWarning
-        )
-        self._utc_offset = val
-    # remove to here
 
     @property
     def timezone(self):
@@ -1069,13 +1050,6 @@ class TimeVariable(ContinuousVariable):
 
         offset = dt.utcoffset()
         self.timezone = timezone(offset) if offset is not None else None
-        # deprecated - remove in 3.32 - from here
-        if self._utc_offset is not False:
-            if offset and self._utc_offset is None:
-                self._utc_offset = offset
-            elif self._utc_offset != offset:
-                self._utc_offset = False
-        # remove to here
 
         # Convert time to UTC timezone. In dates without timezone,
         # localtime is assumed. See also:
