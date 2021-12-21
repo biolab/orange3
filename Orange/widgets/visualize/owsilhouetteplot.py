@@ -737,6 +737,7 @@ class SilhouettePlot(QGraphicsWidget):
                 layout.addItem(item, i + 1, 0, Qt.AlignCenter)
 
             textlist = TextListWidget(self, font=font)
+            textlist.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
             textlist.setFlag(TextListWidget.ItemClipsChildrenToShape, False)
             sp = textlist.sizePolicy()
             sp.setVerticalPolicy(QSizePolicy.Ignored)
