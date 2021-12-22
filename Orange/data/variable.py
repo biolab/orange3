@@ -931,9 +931,8 @@ class TimeVariable(ContinuousVariable):
 
     _matches_iso_format = re.compile(REGEX).match
 
-    # UTC offset and associated timezone. If parsed datetime values provide an
-    # offset, it is used for display. If not all values have the same offset,
-    # +0000 (=UTC) timezone is used and utc_offset is set to False.
+    # If parsed datetime values provide an offset or timzone, it is used for display. 
+    # If not all values have the same offset, +0000 (=UTC) timezone is used
     _timezone = None
 
     def __init__(self, *args, have_date=0, have_time=0, **kwargs):
@@ -952,7 +951,7 @@ class TimeVariable(ContinuousVariable):
     def timezone(self, tz):
         """
         Set timezone value:
-        - if self._timezone is None set it to  new timezone
+        - if self._timezone is None set it to new timezone
         - if current timezone is different that new indicate that TimeVariable
           have two date-times with different timezones
         - if timezones are same keep it
