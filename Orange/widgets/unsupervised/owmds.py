@@ -43,7 +43,7 @@ def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
     iterations_done = 0
     init = embedding
     state.set_status("Running...")
-    oldstress = np.finfo(np.float).max
+    oldstress = np.finfo(float).max
 
     while True:
         step_iter = min(max_iter - iterations_done, step_size)

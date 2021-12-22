@@ -95,8 +95,8 @@ class Pivot:
         if self._col_var and not self._col_var.is_discrete:
             raise TypeError("Column variable should be DiscreteVariable")
 
-        self._row_var_col = table.get_column_view(row_var)[0].astype(np.float)
-        self._col_var_col = table.get_column_view(self._col_var)[0].astype(np.float)
+        self._row_var_col = table.get_column_view(row_var)[0].astype(float)
+        self._col_var_col = table.get_column_view(self._col_var)[0].astype(float)
         self._row_var_groups = nanunique(self._row_var_col)
         self._col_var_groups = nanunique(self._col_var_col)
 
@@ -439,7 +439,7 @@ class Pivot:
 
     @staticmethod
     def stat(x, f):
-        return f(x.astype(np.float), axis=0) if x.shape[0] > 0 else np.nan
+        return f(x.astype(float), axis=0) if x.shape[0] > 0 else np.nan
 
     @staticmethod
     def mode(x):
@@ -962,7 +962,7 @@ class OWPivot(OWWidget):
 
             if self.data:
                 col_var = self.col_feature or self.row_feature
-                col = self.data.get_column_view(col_var)[0].astype(np.float)
+                col = self.data.get_column_view(col_var)[0].astype(float)
                 if len(nanunique(col)) >= self.MAX_VALUES:
                     self.table_view.clear()
                     self.Warning.too_many_values()
