@@ -35,7 +35,7 @@ class OWSGD(OWBaseLearner):
         coefficients = Output("Coefficients", Table, explicit=True)
 
     reg_losses = (
-        ('Squared Loss', 'squared_loss'),
+        ('Squared Loss', 'squared_error'),
         ('Huber', 'huber'),
         ('ε insensitive', 'epsilon_insensitive'),
         ('Squared ε insensitive', 'squared_epsilon_insensitive'))
