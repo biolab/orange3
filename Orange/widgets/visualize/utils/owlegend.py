@@ -99,8 +99,8 @@ class Anchorable(QGraphicsWidget):
         actual offset from the top left corner of the item so positioning can
         be done correctly."""
         off_x, off_y = offset.x(), offset.y()
-        width = self.boundingRect().width()
-        height = self.boundingRect().height()
+        width = int(self.boundingRect().width())
+        height = int(self.boundingRect().height())
 
         if self.__corner_str == self.TOP_LEFT:
             return QPoint(-off_x, -off_y)

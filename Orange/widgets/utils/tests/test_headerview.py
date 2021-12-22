@@ -92,7 +92,7 @@ class TestHeaderView(GuiTest):
         pos = header.sectionViewportPosition(0)
         size = header.sectionSize(0)
         # center of first section
-        point = QPoint(pos + size // 2, header.viewport().height() / 2)
+        point = QPoint(pos + size // 2, header.viewport().height() // 2)
         QTest.mousePress(header.viewport(), Qt.LeftButton, Qt.NoModifier, point)
 
         opt = QStyleOptionHeader()

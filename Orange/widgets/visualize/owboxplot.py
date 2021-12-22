@@ -1274,10 +1274,10 @@ class OWBoxPlot(widget.OWWidget):
                 return
 
             fm = painter.fontMetrics()
-            text = fm.elidedText(self.text(), Qt.ElideRight, width)
+            text = fm.elidedText(self.text(), Qt.ElideRight, int(width))
             painter.drawText(
-                option.rect.x(),
-                option.rect.y() + self.boundingRect().height() - self.PADDING,
+                int(option.rect.x()),
+                int(option.rect.y() + self.boundingRect().height() - self.PADDING),
                 text)
 
 

@@ -51,7 +51,7 @@ class TestDendrogramWidget(GuiTest):
 
         h = w.height_at(QPoint())
         self.assertEqual(h, height)
-        h = w.height_at(QPoint(w.size().width(), 0))
+        h = w.height_at(QPoint(int(w.size().width()), 0))
         self.assertEqual(h, 0)
 
         self.assertEqual(w.pos_at_height(0).x(), w.rect().right())

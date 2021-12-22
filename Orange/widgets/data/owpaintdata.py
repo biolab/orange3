@@ -887,7 +887,7 @@ class OWPaintData(OWWidget):
             button.setDefaultAction(action)
             self.toolButtons.append((button, tool))
 
-            toolsBox.layout().addWidget(button, i / 3, i % 3)
+            toolsBox.layout().addWidget(button, i // 3, i % 3)
             self.toolActions.addAction(action)
 
         for column in range(3):

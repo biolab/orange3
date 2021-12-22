@@ -629,12 +629,12 @@ class DiscreteTreeNode(TreeNode):
         if self.target_class_index:
             p = distribution[self.target_class_index - 1] / total
             color = self.color_palette[self.target_class_index - 1]
-            color = color.lighter(200 - 100 * p)
+            color = color.lighter(int(200 - 100 * p))
         else:
             modus = np.argmax(distribution)
             p = distribution[modus] / (total or 1)
             color = self.color_palette[int(modus)]
-            color = color.lighter(400 - 300 * p)
+            color = color.lighter(int(400 - 300 * p))
         return color
 
     @property

@@ -1007,7 +1007,7 @@ class OWNomogram(OWWidget):
 
         # Clip top and bottom (60 and 150) parts from the main view
         self.view.setSceneRect(rect.x(), rect.y() + 80, rect.width() - 10, rect.height() - 160)
-        self.view.viewport().setMaximumHeight(rect.height() - 160)
+        self.view.viewport().setMaximumHeight(int(rect.height() - 160))
         # Clip main part from top/bottom views
         # below point values are imprecise (less/more than required) but this
         # is not a problem due to clipped scene content still being drawn

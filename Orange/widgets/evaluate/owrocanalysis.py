@@ -388,6 +388,7 @@ class OWROCAnalysis(widget.OWWidget):
         grid.addWidget(sp, 1, 1)
         self.target_prior_sp = gui.spin(box, self, "target_prior", 1, 99,
                                         alignment=Qt.AlignRight,
+                                        spinType=float,
                                         callback=self._on_target_prior_changed)
         self.target_prior_sp.setSuffix(" %")
         self.target_prior_sp.addAction(QAction("Auto", sp))
