@@ -33,6 +33,7 @@ class TextListWidget(QGraphicsWidget):
             alignment: Union[Qt.AlignmentFlag, Qt.Alignment] = Qt.AlignLeading,
             orientation: Qt.Orientation = Qt.Vertical,
             autoScale=False,
+            elideMode=Qt.ElideNone,
             **kwargs: Any
     ) -> None:
         self.__items: List[str] = []
@@ -45,6 +46,7 @@ class TextListWidget(QGraphicsWidget):
         # The effective font when autoScale is in effect
         self.__effectiveFont = QFont()
         self.__widthCache = {}
+        self.__elideMode = elideMode
         sizePolicy = kwargs.pop(
             "sizePolicy", None)  # type: Optional[QSizePolicy]
         super().__init__(None, **kwargs)
@@ -147,7 +149,7 @@ class TextListWidget(QGraphicsWidget):
         if key in self.__widthCache:
             return self.__widthCache[key]
         fm = QFontMetrics(font)
-        width = max((fm.horizontalAdvance(text) for text in self.__items),
+        width = max((fm.boundingRect(text).width() for text in self.__items),
                     default=0)
         self.__widthCache[key] = width
         return width
@@ -251,6 +253,17 @@ class TextListWidget(QGraphicsWidget):
         if self.__autoScale and self.__effectiveFont != font:
             self.__effectiveFont = font
             apply_all(self.__textitems, lambda it: it.setFont(font))
+
+        if self.__elideMode != Qt.ElideNone:
+            if self.__orientation == Qt.Vertical:
+                textwidth = math.ceil(crect.width())
+            else:
+                textwidth = math.ceil(crect.height())
+            for text, item in zip(self.__items, self.__textitems):
+                textelide = fm.elidedText(
+                    text, self.__elideMode, textwidth, Qt.TextSingleLine
+                )
+                item.setText(textelide)
 
         advance = cell_height + spacing
         if align_vertical == Qt.AlignTop:
