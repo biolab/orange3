@@ -1,8 +1,11 @@
 import unittest
 
-from AnyQt.QtCore import Qt, QSizeF
+from AnyQt.QtCore import Qt, QSizeF, QPoint
+from AnyQt.QtGui import QHelpEvent
+from AnyQt.QtWidgets import QGraphicsView, QApplication, QToolTip
 
 from orangewidget.tests.base import GuiTest
+from Orange.widgets.utils.graphicsscene import GraphicsScene
 from Orange.widgets.utils.graphicstextlist import TextListWidget, scaled
 
 
@@ -56,6 +59,25 @@ class TestTextListWidget(GuiTest):
 
         w.setAlignment(Qt.AlignVCenter)
         self.assertTrue(45 <= brect(item).center().y() < 55)
+
+    def test_tool_tips(self):
+        scene = GraphicsScene()
+        view = QGraphicsView(scene)
+        w = TextListWidget()
+        text = "A" * 10
+        w.setItems([text, text])
+        scene.addItem(w)
+        view.grab()  # ensure w is laid out
+        wrect = view.mapFromScene(w.mapToScene(w.contentsRect())).boundingRect()
+        p = QPoint(wrect.topLeft() + QPoint(5, 5))
+        ev = QHelpEvent(
+            QHelpEvent.ToolTip, p, view.viewport().mapToGlobal(p)
+        )
+        try:
+            QApplication.sendEvent(view.viewport(), ev)
+            self.assertEqual(QToolTip.text(), text)
+        finally:
+            QToolTip.hideText()
 
 
 class TestUtils(unittest.TestCase):

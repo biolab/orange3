@@ -1,16 +1,32 @@
+import bisect
 import math
-from typing import Optional, Union, Any, Iterable, List, Callable
+from typing import Optional, Union, Any, Iterable, List, Callable, cast
 
-from AnyQt.QtCore import Qt, QSizeF, QEvent, QMarginsF
+from AnyQt.QtCore import Qt, QSizeF, QEvent, QMarginsF, QPointF
 from AnyQt.QtGui import QFont, QFontMetrics, QFontInfo
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
-    QGraphicsItem, QGraphicsScene, QGraphicsSceneResizeEvent
+    QGraphicsItem, QGraphicsScene, QGraphicsSceneResizeEvent, QToolTip,
+    QGraphicsSceneHelpEvent
 )
 from . import apply_all
 from .graphicslayoutitem import scaled
 
 __all__ = ["TextListWidget"]
+
+
+class _FuncArray:
+    __slots__ = ("func", "length")
+
+    def __init__(self, func, length):
+        self.func = func
+        self.length = length
+
+    def __getitem__(self, item):
+        return self.func(item)
+
+    def __len__(self):
+        return self.length
 
 
 class TextListWidget(QGraphicsWidget):
@@ -128,6 +144,30 @@ class TextListWidget(QGraphicsWidget):
         """
         return len(self.__items)
 
+    def indexAt(self, pos: QPointF) -> Optional[int]:
+        """
+        Return the index of item at `pos`.
+        """
+        def brect(item):
+            return item.mapRectToParent(item.boundingRect())
+
+        if self.__orientation == Qt.Vertical:
+            y = lambda pos: pos.y()
+        else:
+            y = lambda pos: pos.x()
+        top = lambda idx: brect(items[idx]).top()
+        bottom = lambda idx: brect(items[idx]).bottom()
+        items = self.__textitems
+        if not items:
+            return None
+        idx = bisect.bisect_right(_FuncArray(top, len(items)), y(pos)) - 1
+        if idx == -1:
+            idx = 0
+        if top(idx) <= y(pos) <= bottom(idx):
+            return idx
+        else:
+            return None
+
     def sizeHint(self, which: Qt.SizeHint, constraint=QSizeF()) -> QSizeF:
         """Reimplemented."""
         if which == Qt.PreferredSize:
@@ -172,7 +212,22 @@ class TextListWidget(QGraphicsWidget):
             self.__layout()
         elif event.type() == QEvent.ContentsRectChange:
             self.__layout()
+        elif event.type() == QEvent.GraphicsSceneHelp:
+            self.helpEvent(cast(QGraphicsSceneHelpEvent, event))
+            if event.isAccepted():
+                return True
         return super().event(event)
+
+    def helpEvent(self, event: QGraphicsSceneHelpEvent):
+        idx = self.indexAt(self.mapFromScene(event.scenePos()))
+        if idx is not None:
+            rect = self.__textitems[idx].sceneBoundingRect()
+            viewport = event.widget()
+            view = viewport.parentWidget()
+            rect = view.mapFromScene(rect).boundingRect()
+            QToolTip.showText(event.screenPos(), self.__items[idx],
+                              view, rect)
+            event.setAccepted(True)
 
     def changeEvent(self, event):
         if event.type() == QEvent.FontChange:
@@ -199,7 +254,6 @@ class TextListWidget(QGraphicsWidget):
             t = QGraphicsSimpleTextItem(group)
             t.setFont(font)
             t.setText(text)
-            t.setToolTip(text)
             t.setData(0, text)
             self.__textitems.append(t)
         group.setParentItem(self)
