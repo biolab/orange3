@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from AnyQt.QtCore import Qt
-from AnyQt.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QWidget
+from AnyQt.QtWidgets import QHBoxLayout, QGridLayout, QLabel, QWidget
 
 from Orange.widgets.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
