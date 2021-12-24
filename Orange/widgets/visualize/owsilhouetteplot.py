@@ -262,7 +262,8 @@ class OWSilhouettePlot(widget.OWWidget):
             self.cluster_var_idx = groupvars.index(domain.class_var)
         else:
             self.cluster_var_idx = 0
-        annotvars = [var for var in domain.metas if var.is_string]
+        annotvars = [var for var in domain.variables + domain.metas
+                     if var.is_string or var.is_discrete]
         self.annotation_var_model[:] = ["None"] + annotvars
         self.annotation_var_idx = 1 if annotvars else 0
         self.openContext(Orange.data.Domain(groupvars))
