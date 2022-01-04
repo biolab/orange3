@@ -350,11 +350,7 @@ class TestTableLocking(unittest.TestCase):
     def test_unpickled_empty_weights(self):
         # ensure that unpickled empty arrays could be unlocked
         self.assertEqual(0, self.table.W.size)
-        # flags.owndata asserts touch numpy internals
-        # feel free to remove when they do not pass
-        self.assertTrue(self.table.W.flags.owndata)
         unpickled = pickle.loads(pickle.dumps(self.table))
-        self.assertFalse(unpickled.W.flags.owndata)
         with unpickled.unlocked():
             pass
 
