@@ -2645,7 +2645,7 @@ def make_dict_mapper(
         arr = np.asanyarray(arr)
         if out is None and dtype is not None and arr.shape != ():
             out = np.empty_like(arr, dtype)
-        return _vmapper(arr, out, dtype=dtype, **kwargs)
+        return _vmapper(arr, out, dtype=dtype, casting="unsafe", **kwargs)
     return mapper
 
 
@@ -2684,7 +2684,7 @@ def as_float_or_nan(
             np.issubdtype(arr.dtype, np.integer):
         np.copyto(out, arr, casting="unsafe", where=where)
         return out
-    return _parse_float(arr, out, where=where, **kwargs)
+    return _parse_float(arr, out, where=where, casting="unsafe", **kwargs)
 
 
 def copy_attributes(dst: V, src: Orange.data.Variable) -> V:
