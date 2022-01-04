@@ -1,3 +1,4 @@
+import pickle
 import unittest
 
 import numpy as np
@@ -42,6 +43,17 @@ class TestTransformation(unittest.TestCase):
     def test_transform_fails(self):
         trans = Transformation(self.data.domain[2])
         self.assertRaises(NotImplementedError, trans, self.data)
+
+    def test_pickling_target_domain(self):
+        data = self.data
+        trans = self.TransformationMock(data.domain[2])
+        self.assertIn("_target_domain", trans.__dict__)
+        # _target_domain should not be pickled
+        state = trans.__getstate__()
+        self.assertNotIn("_target_domain", state)
+        # _target_domain should be recreated when unpickled
+        unpickled = pickle.loads(pickle.dumps(trans))
+        self.assertIn("_target_domain", unpickled.__dict__)
 
 
 class IdentityTest(unittest.TestCase):
