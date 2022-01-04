@@ -109,7 +109,7 @@ def isnastr(arr, out=None):
     arr = np.asarray(arr)
     if out is None and arr.shape != ():
         out = np.empty_like(arr, dtype=bool)
-    return __isnastr(arr, out=out)
+    return __isnastr(arr, out=out, casting="unsafe")
 
 
 def guess_data_type(orig_values, namask=None):
@@ -182,7 +182,7 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
 
         def mapvalues(arr):
             arr = np.asarray(arr, dtype=object)
-            return mapvalues_(arr, out=np.empty_like(arr, dtype=float))
+            return mapvalues_(arr, out=np.empty_like(arr, dtype=float), casting="unsafe")
 
         values = mapvalues(orig_values)
 
