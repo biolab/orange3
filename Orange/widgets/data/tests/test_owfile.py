@@ -458,12 +458,12 @@ a
     def test_domain_edit_on_sparse_data(self):
         iris = Table("iris").to_sparse()
 
-        f = tempfile.NamedTemporaryFile(suffix='.pickle', delete=False)
-        pickle.dump(iris, f)
-        f.close()
+        with named_file("", suffix='.pickle') as fn:
+            with open(fn, "wb") as f:
+                pickle.dump(iris, f)
 
-        self.widget.add_path(f.name)
-        self.widget.load_data()
+            self.widget.add_path(fn)
+            self.widget.load_data()
 
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(output, Table)
@@ -602,9 +602,8 @@ a
         (i.e. sent by email), considering data file is stored in the same
         directory as the workflow.
         """
-        temp_file = tempfile.NamedTemporaryFile(dir=getcwd(), delete=False)
-        file_name = temp_file.name
-        temp_file.close()
+        with tempfile.NamedTemporaryFile(dir=getcwd(), delete=False) as temp_file:
+            file_name = temp_file.name
         base_name = path.basename(file_name)
         try:
             recent_path = RecentPath(
@@ -625,9 +624,8 @@ a
         """
         This test testes if paths are relocated correctly
         """
-        temp_file = tempfile.NamedTemporaryFile(dir=getcwd(), delete=False)
-        file_name = temp_file.name
-        temp_file.close()
+        with tempfile.NamedTemporaryFile(dir=getcwd(), delete=False) as temp_file:
+            file_name = temp_file.name
         base_name = path.basename(file_name)
         try:
             recent_path = RecentPath(
