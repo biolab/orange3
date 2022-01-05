@@ -16,6 +16,7 @@ from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
+from Orange.data.io_base import MissingReaderException
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, \
@@ -399,9 +400,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         try:
             self.reader = self._get_reader()  # also sets current reader index
             assert self.reader is not None
-        except Exception:
+        except MissingReaderException:
             mark_problematic_reader()
             return self.Error.missing_reader
+        except Exception as ex:
+            mark_problematic_reader()
+            log.exception(ex)
+            return lambda x=ex: self.Error.unknown(str(x))
 
         try:
             self._update_sheet_combo()
@@ -441,7 +446,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                     # (perhaps its code was moved)
                     self.reader_combo.addItem(qname)
                     self.reader_combo.setCurrentIndex(len(self.reader_combo) - 1)
-                reader_class = class_from_qualified_name(qname)
+                try:
+                    reader_class = class_from_qualified_name(qname)
+                except Exception as ex:
+                    raise MissingReaderException(f'Can not find reader "{qname}"') from ex
                 reader = reader_class(path)
             else:
                 self.reader_combo.setCurrentIndex(0)
@@ -612,7 +620,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             try:
                 FileFormat.get_reader(urls[0].toLocalFile())
                 event.acceptProposedAction()
-            except IOError:
+            except MissingReaderException:
                 pass
 
     def dropEvent(self, event):

@@ -31,6 +31,11 @@ __all__ = ["FileFormatBase", "Flags", "DataTableMixin", "PICKLE_PROTOCOL"]
 PICKLE_PROTOCOL = 4
 
 
+class MissingReaderException(IOError):
+    # subclasses IOError for backward compatibility
+    pass
+
+
 class Flags:
     """Parser for column flags (i.e. third header row)"""
     DELIMITER = ' '
@@ -551,7 +556,7 @@ class _FileReader:
             if fnmatch(path.basename(filename), '*' + ext):
                 return reader(filename)
 
-        raise IOError('No readers for file "{}"'.format(filename))
+        raise MissingReaderException('No readers for file "{}"'.format(filename))
 
     @classmethod
     def set_table_metadata(cls, filename, table):

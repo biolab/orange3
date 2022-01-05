@@ -433,6 +433,17 @@ a
         self.assertEqual(self.widget.reader_combo.currentText(), DEFAULT_READER_TEXT)
         self.assertIsInstance(self.widget.reader, TabReader)
 
+    def test_select_reader_errors(self):
+        filename = FileFormat.locate("iris.tab", dataset_dirs)
+
+        no_class = RecentPath(filename, None, None, file_format="Orange.data.io.ExcelReader")
+        self.widget = self.create_widget(OWFile,
+                                         stored_settings={"recent_paths": [no_class]})
+        self.widget.load_data()
+        self.assertIn("Excel", self.widget.reader_combo.currentText())
+        self.assertTrue(self.widget.Error.unknown.is_shown())
+        self.assertFalse(self.widget.Error.missing_reader.is_shown())
+
     def test_domain_edit_no_changes(self):
         self.open_dataset("iris")
         data = self.get_output(self.widget.Outputs.data)
