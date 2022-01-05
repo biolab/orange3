@@ -406,7 +406,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
         self.gb_attrs = [values[row.row()] for row in sorted(rows)]
         # everything cached in result should be recomputed on gb change
         self.result = Result()
-        self.commit()
+        self.commit.deferred()
 
     def __aggregation_changed(self, agg: str) -> None:
         """
@@ -422,7 +422,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
             else:
                 self.aggregations[attr].discard(agg)
             self.agg_table_model.update_aggregation(attr)
-        self.commit()
+        self.commit.deferred()
 
     @Inputs.data
     def set_data(self, data: Table) -> None:
@@ -450,11 +450,12 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
         self.agg_table_model.set_domain(data.domain if data else None)
         self._set_gb_selection()
 
-        self.commit()
+        self.commit.now()
 
     #########################
     # Task connected methods
 
+    @gui.deferred
     def commit(self) -> None:
         self.Error.clear()
         self.Warning.clear()
