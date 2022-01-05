@@ -5,6 +5,7 @@ from functools import partial
 from typing import Any, Dict, List, Optional, Set
 
 import pandas as pd
+from numpy import nan
 from AnyQt.QtCore import (
     QAbstractTableModel,
     QEvent,
@@ -58,7 +59,7 @@ AGGREGATIONS = {
     "Mean": Aggregation("mean", {ContinuousVariable, TimeVariable}),
     "Median": Aggregation("median", {ContinuousVariable, TimeVariable}),
     "Mode": Aggregation(
-        lambda x: pd.Series.mode(x)[0], {ContinuousVariable, TimeVariable}
+        lambda x: pd.Series.mode(x).get(0, nan), {ContinuousVariable, TimeVariable}
     ),
     "Standard deviation": Aggregation("std", {ContinuousVariable, TimeVariable}),
     "Variance": Aggregation("var", {ContinuousVariable, TimeVariable}),
