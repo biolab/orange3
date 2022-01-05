@@ -168,8 +168,19 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         readers = [f for f in FileFormat.formats
                    if getattr(f, 'read', None)
                    and getattr(f, "EXTENSIONS", None)]
+
+        def group_readers_per_addon_key(w):
+            # readers from Orange.data.io should go first
+            def package(w):
+                package = w.qualified_name().split(".")[:-1]
+                package = package[:2]
+                if ".".join(package) == "Orange.data":
+                    return ["0"]  # force "Orange" to come first
+                return package
+            return package(w), w.DESCRIPTION
+
         self.available_readers = sorted(set(readers),
-                                        key=lambda w: (w.PRIORITY, w.DESCRIPTION))
+                                        key=group_readers_per_addon_key)
 
         layout = QGridLayout()
         layout.setSpacing(4)

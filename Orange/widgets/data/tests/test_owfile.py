@@ -422,7 +422,11 @@ a
         self.assertEqual(self.widget.reader, None)
 
         # select the tab reader
-        self.widget.reader_combo.activated.emit(1)
+        for i in range(len_with_qname):
+            text = self.widget.reader_combo.itemText(i)
+            if text.startswith("Tab-separated"):
+                break
+        self.widget.reader_combo.activated.emit(i)
         self.assertEqual(len(self.widget.reader_combo), len_with_qname - 1)
         self.assertTrue(self.widget.reader_combo.currentText().startswith("Tab-separated"))
         self.assertIsInstance(self.widget.reader, TabReader)
