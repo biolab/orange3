@@ -647,16 +647,15 @@ class OWColor(widget.OWWidget):
             return
 
         try:
-            f = open(fname)
+            with open(fname) as f:
+                js = json.load(f)  #: dict
+                self._parse_var_defs(js)
         except IOError:
             QMessageBox.critical(self, "File error", "File cannot be opened.")
             return
-
-        try:
-            js = json.load(f)  #: dict
-            self._parse_var_defs(js)
         except (json.JSONDecodeError, InvalidFileFormat):
             QMessageBox.critical(self, "File error", "Invalid file format.")
+            return
 
     def _parse_var_defs(self, js):
         if not isinstance(js, dict) or set(js) != {"categorical", "numeric"}:
