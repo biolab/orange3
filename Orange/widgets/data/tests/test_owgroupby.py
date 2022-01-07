@@ -12,6 +12,8 @@ from AnyQt.QtWidgets import QListView
 from Orange.data import (
     Table,
     table_to_frame,
+    Domain,
+    ContinuousVariable,
 )
 from Orange.data.tests.test_aggregate import create_sample_data
 from Orange.widgets.data.owgroupby import OWGroupBy
@@ -688,6 +690,65 @@ class TestOWGropBy(WidgetTest):
         self._set_selection(self.widget.gb_attrs_view, [5])
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(2, len(output))
+
+    def test_only_nan_in_group(self):
+        data = Table(
+            Domain([ContinuousVariable("A"), ContinuousVariable("B")]),
+            np.array([[1, np.nan], [2, 1], [1, np.nan], [2, 1]]),
+        )
+        self.send_signal(self.widget.Inputs.data, data)
+
+        # select feature A as group-by
+        self._set_selection(self.widget.gb_attrs_view, [0])
+        # select all aggregations for feature B
+        self.select_table_rows(self.widget.agg_table_view, [1])
+        for cb in self.widget.agg_checkboxes.values():
+            while not cb.isChecked():
+                cb.click()
+
+        # unselect all aggregations for attr A
+        self.select_table_rows(self.widget.agg_table_view, [0])
+        for cb in self.widget.agg_checkboxes.values():
+            while cb.isChecked():
+                cb.click()
+
+        expected_columns = [
+            "B - Mean",
+            "B - Median",
+            "B - Mode",
+            "B - Standard deviation",
+            "B - Variance",
+            "B - Sum",
+            "B - Min. value",
+            "B - Max. value",
+            "B - Span",
+            "B - First value",
+            "B - Last value",
+            "B - Random value",
+            "B - Count defined",
+            "B - Count",
+            "B - Proportion defined",
+            "B - Concatenate",
+            "A",
+        ]
+        n = np.nan
+        expected_df = pd.DataFrame(
+            [
+                [n, n, n, n, n, 0, n, n, n, n, n, n, 0, 2, 0, "", 1],
+                [1, 1, 1, 0, 0, 2, 1, 1, 0, 1, 1, 1, 2, 2, 1, "1.0 1.0", 2],
+            ],
+            columns=expected_columns,
+        )
+        output_df = table_to_frame(
+            self.get_output(self.widget.Outputs.data), include_metas=True
+        )
+        pd.testing.assert_frame_equal(
+            output_df,
+            expected_df,
+            check_dtype=False,
+            check_column_type=False,
+            check_categorical=False,
+        )
 
 
 if __name__ == "__main__":
