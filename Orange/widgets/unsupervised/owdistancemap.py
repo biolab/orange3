@@ -22,8 +22,10 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.graphicsscene import graphicsscene_help_event
 from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import HelpEventDelegate
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils.dendrogram import DendrogramWidget
 from Orange.widgets.visualize.utils.heatmap import (
@@ -245,6 +247,18 @@ class DistanceMapItem(pg.ImageItem):
             self.setToolTip("")
 
 
+class GraphicsView(pg.GraphicsView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        scene = self.scene()
+        delegate = HelpEventDelegate(self.__helpEvent, parent=self)
+        scene.installEventFilter(delegate)
+
+    def __helpEvent(self, event):
+        graphicsscene_help_event(self.scene(), event)
+        return event.isAccepted()
+
+
 class OWDistanceMap(widget.OWWidget):
     name = "Distance Map"
     description = "Visualize a distance matrix."
@@ -330,7 +344,7 @@ class OWDistanceMap(widget.OWWidget):
 
         gui.auto_send(self.buttonsArea, self, "autocommit")
 
-        self.view = pg.GraphicsView(background="w")
+        self.view = GraphicsView(background="w")
         self.mainArea.layout().addWidget(self.view)
 
         self.grid_widget = pg.GraphicsWidget()

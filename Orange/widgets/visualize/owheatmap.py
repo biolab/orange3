@@ -10,8 +10,8 @@ import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtWidgets import (
-    QGraphicsScene, QGraphicsView, QFormLayout, QComboBox, QGroupBox,
-    QMenu, QAction, QSizePolicy
+    QGraphicsView, QFormLayout, QComboBox, QGroupBox, QMenu, QAction,
+    QSizePolicy
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QFont, QKeySequence
 from AnyQt.QtCore import Qt, QSize, QRectF, QObject
@@ -27,6 +27,7 @@ from Orange.widgets.utils import colorpalettes, apply_all, enum_get, itemmodels
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils.graphicsview import GraphicsWidgetView
+from Orange.widgets.utils.graphicsscene import GraphicsScene
 from Orange.widgets.utils.colorpalettes import Palette
 
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -444,7 +445,7 @@ class OWHeatMap(widget.OWWidget):
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         # Scene with heatmap
-        class HeatmapScene(QGraphicsScene):
+        class HeatmapScene(GraphicsScene):
             widget: Optional[HeatmapGridWidget] = None
 
         self.scene = self.scene = HeatmapScene(parent=self)
