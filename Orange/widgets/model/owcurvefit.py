@@ -396,12 +396,6 @@ class OWCurveFit(OWBaseLearner):
     def set_data(self, data: Optional[Table]):
         self.Warning.data_missing(shown=not bool(data))
         super().set_data(data)
-        self.__clear()
-
-    def __clear(self):
-        self.expression = ""
-        self.__param_widget.clear_all()
-        self.__on_parameters_changed([])
 
     def set_preprocessor(self, preprocessor: Preprocess):
         self.preprocessors = preprocessor

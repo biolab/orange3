@@ -314,7 +314,7 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(self.widget._OWCurveFit__expression_edit.text(), "p1")
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.rowCount(), 2)
         self.assertEqual(combo.currentText(), "Select Parameter")
 
     def test_function_combo(self):
@@ -435,7 +435,7 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         param_controls[1][1].setText("p1")
         self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Warning.duplicate_parameter.is_shown())
+        self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
 
     def test_parameter_name_in_features(self):
         domain = Domain([ContinuousVariable("p1")],
