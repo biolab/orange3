@@ -690,6 +690,7 @@ class OWColor(widget.OWWidget):
 
         # First, construct all descriptions; assign later, after we know
         # there won't be exceptions due to invalid file format
+        unused_vars = []
         both_descs = []
         warnings = []
         for old_desc, repo, desc_type in (
@@ -700,11 +701,26 @@ class OWColor(widget.OWWidget):
             for var_name, var_data in js[repo].items():
                 var = var_by_name.get(var_name)
                 if var is None:
+                    unused_vars.append(var_name)
                     continue
                 # This can throw InvalidFileFormat
                 new_descs[var_name], warn = desc_type.from_dict(var, var_data)
                 warnings += warn
             both_descs.append(new_descs)
+        if unused_vars:
+            names = [f"'{name}'" for name in unused_vars]
+            if len(unused_vars) == 1:
+                warn = f'Definition for variable {names[0]}, which does not ' \
+                       f'appear in the data, was ignored.\n'
+            else:
+                if len(unused_vars) <= 5:
+                    warn = 'Definitions for variables ' \
+                           f'{", ".join(names[:-1])} and {names[-1]}'
+                else:
+                    warn = f'Definitions for {", ".join(names[:4])} ' \
+                           f'and {len(names) - 4} other variables'
+                warn += ", which do not appear in the data, were ignored.\n"
+            warnings.insert(0, warn)
 
         self.disc_descs = [both_descs[0].get(desc.var.name, desc)
                            for desc in self.disc_descs]

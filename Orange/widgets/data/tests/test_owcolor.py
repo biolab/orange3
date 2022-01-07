@@ -793,6 +793,32 @@ class TestOWColor(WidgetTest):
                 msg_box.reset_mock()
                 self.widget._parse_var_defs.assert_called_with(json.load.return_value)
 
+    @patch("Orange.widgets.data.owcolor.QMessageBox.warning")
+    def test_load_ignore_warning(self, msg_box):
+        self.widget._parse_var_defs(dict(categorical={}, numeric={}))
+        msg_box.assert_not_called()
+
+        no_change = dict(renamed_values={}, colors={})
+        for names, message in (
+                (("foo",),
+                 "'foo'"),
+                (("foo", "bar"),
+                 "'foo' and 'bar'"),
+                (("foo", "bar", "baz"),
+                 "'foo', 'bar' and 'baz'"),
+                (("foo", "bar", "baz", "qux"),
+                 "'foo', 'bar', 'baz' and 'qux'"),
+                (("foo", "bar", "baz", "qux", "quux"),
+                 "'foo', 'bar', 'baz', 'qux' and 'quux'"),
+                (("foo", "bar", "baz", "qux", "quux", "corge"),
+                 "'foo', 'bar', 'baz', 'qux' and 2 other"),
+                (("foo", "bar", "baz", "qux", "quux", "corge", "grault"),
+                 "'foo', 'bar', 'baz', 'qux' and 3 other")):
+            self.widget._parse_var_defs(dict(
+                categorical=dict.fromkeys(names, no_change),
+                numeric={}))
+            self.assertIn(message, msg_box.call_args[0][2])
+
     def _create_descs(self):
         disc_vars = [DiscreteVariable(f"var{c}", values=("a", "b", "c"))
                      for c in "AB"]
@@ -880,11 +906,6 @@ class TestOWColor(WidgetTest):
         self.widget._parse_var_defs(
             {"categorical": {"varA": {"rename": "varD"}},
              "numeric": {"varD": {"rename": "varA"}}})
-        msg_box.assert_not_called()
-
-        self.widget._parse_var_defs(
-            {"categorical": {"varA": {"rename": "X"}},
-             "numeric": {"var not": {"rename": "X"}}})
         msg_box.assert_not_called()
 
 
