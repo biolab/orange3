@@ -63,6 +63,7 @@ Data
    widgets/data/melt
    widgets/data/neighbors
    widgets/data/unique
+   widgets/data/groupby
 
 
 Visualize

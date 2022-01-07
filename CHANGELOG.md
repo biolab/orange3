@@ -4,6 +4,15 @@ Change Log
 [next] - TBA
 ------------
 
+
+[3.31.1] - 2022-01-07
+--------------------
+##### Bugfixes
+* Group by: compute mode when all values in group nan ([#5763](../../pull/5763))
+* Support numpy 1.22 ([#5760](../../pull/5760))
+* Unpickling pre-3.28.0 Transformation ([#5759](../../pull/5759))
+
+
 [3.31.0] - 2021-12-17
 --------------------
 ##### Enhancements
@@ -1630,7 +1639,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.31.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.31.1...HEAD
+[3.31.1]: https://github.com/biolab/orange3/compare/3.31.0...3.31.1
 [3.31.0]: https://github.com/biolab/orange3/compare/3.30.2...3.31.0
 [3.30.2]: https://github.com/biolab/orange3/compare/3.30.1...3.30.2
 [3.30.1]: https://github.com/biolab/orange3/compare/3.30.0...3.30.1
