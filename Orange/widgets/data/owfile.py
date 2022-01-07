@@ -9,11 +9,14 @@ from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy, QCompleter
 from AnyQt.QtCore import Qt, QTimer, QSize, QUrl
+from AnyQt.QtGui import QBrush
 
+from orangewidget.utils.filedialogs import format_filter
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
+from Orange.data.io_base import MissingReaderException
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, \
@@ -29,6 +32,8 @@ from Orange.widgets.widget import Output, Msg
 # and it is used in saved (pickled) settings. It must be imported into the
 # module's namespace so that old saved settings still work
 from Orange.widgets.utils.filedialogs import RecentPath
+
+DEFAULT_READER_TEXT = "Automatically detect type"
 
 log = logging.getLogger(__name__)
 
@@ -121,6 +126,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     domain_editor = SettingProvider(DomainEditor)
 
+    class Information(widget.OWWidget.Information):
+        no_file_selected = Msg("No file selected.")
+
     class Warning(widget.OWWidget.Warning):
         file_too_big = Msg("The file is too large to load automatically."
                            " Press Reload to load.")
@@ -136,9 +144,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         missing_reader = Msg("Missing reader.")
         sheet_error = Msg("Error listing available sheets.")
         unknown = Msg("Read error:\n{}")
-
-    class NoFileSelected:
-        pass
 
     UserAdviceMessages = [
         widget.Message(
@@ -159,6 +164,23 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.data = None
         self.loaded_file = ""
         self.reader = None
+
+        readers = [f for f in FileFormat.formats
+                   if getattr(f, 'read', None)
+                   and getattr(f, "EXTENSIONS", None)]
+
+        def group_readers_per_addon_key(w):
+            # readers from Orange.data.io should go first
+            def package(w):
+                package = w.qualified_name().split(".")[:-1]
+                package = package[:2]
+                if ".".join(package) == "Orange.data":
+                    return ["0"]  # force "Orange" to come first
+                return package
+            return package(w), w.DESCRIPTION
+
+        self.available_readers = sorted(set(readers),
+                                        key=group_readers_per_addon_key)
 
         layout = QGridLayout()
         layout.setSpacing(4)
@@ -227,6 +249,19 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         completer.setCaseSensitivity(Qt.CaseSensitive)
         url_combo.setCompleter(completer)
 
+        layout = QGridLayout()
+        layout.setSpacing(4)
+        gui.widgetBox(self.controlArea, orientation=layout, box='File Type')
+
+        box = gui.hBox(None, addToLayout=False, margin=0)
+        box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.reader_combo = QComboBox(self)
+        self.reader_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.reader_combo.activated[int].connect(self.select_reader)
+
+        box.layout().addWidget(self.reader_combo)
+        layout.addWidget(box, 0, 1)
+
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(box, 'No data loaded.')
 
@@ -286,6 +321,23 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.recent_paths[0].sheet = self.sheet_combo.currentText()
         self.load_data()
 
+    def select_reader(self, n):
+        if self.source != self.LOCAL_FILE:
+            return  # ignore for URL's
+
+        if self.recent_paths:
+            path = self.recent_paths[0]
+            if n == 0:  # default
+                path.file_format = None
+                self.load_data()
+            elif n <= len(self.available_readers):
+                reader = self.available_readers[n - 1]
+                path.file_format = reader.qualified_name()
+                self.load_data()
+            else:  # the rest include just qualified names
+                path.file_format = self.reader_combo.itemText(n)
+                self.load_data()
+
     def _url_set(self):
         url = self.url_combo.currentText()
         pos = self.recent_urls.index(url)
@@ -310,10 +362,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        readers = [f for f in FileFormat.formats
-                   if getattr(f, 'read', None)
-                   and getattr(f, "EXTENSIONS", None)]
-        filename, reader, _ = open_filename_dialog(start_file, None, readers)
+        filename, reader, _ = open_filename_dialog(start_file, None, self.available_readers)
         if not filename:
             return
         self.add_path(filename)
@@ -342,19 +391,33 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.infolabel.setText("No data.")
 
     def _try_load(self):
+        self._initialize_reader_combo()
+
         # pylint: disable=broad-except
-        if self.last_path() and not os.path.exists(self.last_path()):
-            return self.Error.file_not_found
+        if self.source == self.LOCAL_FILE:
+            if self.last_path() is None:
+                return self.Information.no_file_selected
+            elif not os.path.exists(self.last_path()):
+                return self.Error.file_not_found
+        else:
+            url = self.url_combo.currentText().strip()
+            if not url:
+                return self.Information.no_file_selected
+
+        def mark_problematic_reader():
+            self.reader_combo.setItemData(self.reader_combo.currentIndex(),
+                                          QBrush(Qt.red), Qt.ForegroundRole)
 
         try:
-            self.reader = self._get_reader()
+            self.reader = self._get_reader()  # also sets current reader index
             assert self.reader is not None
-        except Exception:
+        except MissingReaderException:
+            mark_problematic_reader()
             return self.Error.missing_reader
-
-        if self.reader is self.NoFileSelected:
-            self.Outputs.data.send(None)
-            return None
+        except Exception as ex:
+            mark_problematic_reader()
+            log.exception(ex)
+            return lambda x=ex: self.Error.unknown(str(x))
 
         try:
             self._update_sheet_combo()
@@ -365,6 +428,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             try:
                 data = self.reader.read()
             except Exception as ex:
+                mark_problematic_reader()
                 log.exception(ex)
                 return lambda x=ex: self.Error.unknown(str(x))
             if warnings:
@@ -382,23 +446,31 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     def _get_reader(self) -> FileFormat:
         if self.source == self.LOCAL_FILE:
             path = self.last_path()
-            if path is None:
-                return self.NoFileSelected
+            self.reader_combo.setEnabled(True)
             if self.recent_paths and self.recent_paths[0].file_format:
                 qname = self.recent_paths[0].file_format
-                reader_class = class_from_qualified_name(qname)
+                qname_index = {r.qualified_name(): i for i, r in enumerate(self.available_readers)}
+                if qname in qname_index:
+                    self.reader_combo.setCurrentIndex(qname_index[qname] + 1)
+                else:
+                    # reader may be accessible, but not in self.available_readers
+                    # (perhaps its code was moved)
+                    self.reader_combo.addItem(qname)
+                    self.reader_combo.setCurrentIndex(len(self.reader_combo) - 1)
+                try:
+                    reader_class = class_from_qualified_name(qname)
+                except Exception as ex:
+                    raise MissingReaderException(f'Can not find reader "{qname}"') from ex
                 reader = reader_class(path)
             else:
+                self.reader_combo.setCurrentIndex(0)
                 reader = FileFormat.get_reader(path)
             if self.recent_paths and self.recent_paths[0].sheet:
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
         else:
             url = self.url_combo.currentText().strip()
-            if url:
-                return UrlReader(url)
-            else:
-                return self.NoFileSelected
+            return UrlReader(url)
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
@@ -419,6 +491,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             # Requested sheet does not exist in this file
             self.reader.select_sheet(None)
             self.sheet_combo.setCurrentIndex(0)
+
+    def _initialize_reader_combo(self):
+        self.reader_combo.clear()
+        filters = [format_filter(f) for f in self.available_readers]
+        self.reader_combo.addItems([DEFAULT_READER_TEXT] + filters)
+        self.reader_combo.setCurrentIndex(0)
+        self.reader_combo.setDisabled(True)
+        # additional readers may be added in self._get_reader()
 
     @staticmethod
     def _describe(table):
@@ -551,7 +631,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             try:
                 FileFormat.get_reader(urls[0].toLocalFile())
                 event.acceptProposedAction()
-            except IOError:
+            except MissingReaderException:
                 pass
 
     def dropEvent(self, event):
