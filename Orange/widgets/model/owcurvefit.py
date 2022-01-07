@@ -395,6 +395,7 @@ class OWCurveFit(OWBaseLearner):
 
     def set_data(self, data: Optional[Table]):
         self.Warning.data_missing(shown=not bool(data))
+        self.learner = None
         super().set_data(data)
         self.__clear()
 
@@ -419,7 +420,7 @@ class OWCurveFit(OWBaseLearner):
         self.__init_models()
         self.__enable_controls()
         self.__set_pending()
-        self.unconditional_apply()
+        super().handleNewSignals()
 
     def __preprocess_data(self):
         self.__pp_data = preprocess(self.data, self.preprocessors)
