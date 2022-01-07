@@ -94,9 +94,6 @@ class OWLinearRegression(OWBaseLearner):
         self.controls.alpha_index.setEnabled(self.reg_type != self.OLS)
         self.l2_ratio_slider.setEnabled(self.reg_type == self.Elastic)
 
-    def handleNewSignals(self):
-        self.apply()
-
     def _intercept_changed(self):
         self.apply()
 

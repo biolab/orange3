@@ -33,22 +33,26 @@ class OWStackedLearner(OWBaseLearner):
     @Inputs.learners
     def set_learner(self, index: int, learner: Learner):
         self.learners[index] = learner
+        self._invalidate()
 
     @Inputs.learners.insert
     def insert_learner(self, index, learner):
         self.learners.insert(index, learner)
+        self._invalidate()
 
     @Inputs.learners.remove
     def remove_learner(self, index):
         self.learners.pop(index)
+        self._invalidate()
 
     @Inputs.aggregate
     def set_aggregate(self, aggregate):
         self.aggregate = aggregate
+        self._invalidate()
 
-    def handleNewSignals(self):
-        super().handleNewSignals()
-        self.apply()
+    def _invalidate(self):
+        self.learner = self.model = None
+        # ... and handleNewSignals will do the rest
 
     def create_learner(self):
         if not self.learners:
