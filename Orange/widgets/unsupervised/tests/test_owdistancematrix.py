@@ -48,7 +48,18 @@ class TestOWDistanceMatrix(WidgetTest):
             commit.assert_called()
 
     def test_labels(self):
-        grades = Table.from_url("https://datasets.biolab.si/core/grades-two.tab")
+        x, y = (ContinuousVariable(c) for c in "xy")
+        s = StringVariable("s")
+        grades = Table.from_list(
+            Domain([x, y], [], [s]),
+            [[91.0, 89.0, "Bill"],
+             [51.0, 100.0, "Cynthia"],
+             [9.0, 61.0, "Demi"],
+             [49.0, 92.0, "Fred"],
+             [91.0, 49.0, "George"]
+             ]
+        )
+
         distances = Euclidean(grades)
         self.widget.set_distances(distances)
         ac = self.widget.annot_combo
