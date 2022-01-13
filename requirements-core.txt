@@ -1,5 +1,5 @@
 pip>=18.0
-numpy>=1.16.0
+numpy>=1.16.6
 scipy>=0.19.1
 # scikit-learn version 1.0.0 includes problematic libomp 12 which breaks xgboost
 # https://github.com/scikit-learn/scikit-learn/pull/21227
