@@ -45,6 +45,10 @@ jobs:
             python-version: 3.8
             tox_env: orange-latest
             name: Latest
+          - os: ubuntu-18.04
+            python-version: 3.7
+            tox_env: orange-oldest
+            name: Oldest dependencies
 
     services:
       postgres:
