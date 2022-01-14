@@ -470,6 +470,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return reader
         else:
             url = self.url_combo.currentText().strip()
+            # tolerant parse, also prevent parsing as local file
+            parsed = QUrl.fromUserInput(url, os.devnull)
+            if parsed.isValid():
+                url = bytes(parsed.toEncoded()).decode("ascii")
             return UrlReader(url)
 
     def _update_sheet_combo(self):

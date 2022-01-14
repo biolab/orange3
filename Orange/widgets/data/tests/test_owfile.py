@@ -577,6 +577,21 @@ a
 
         mock_urlreader.assert_called_once_with('http://' + url)
 
+    def test_url_encode(self):
+        def test(text, expected):
+            mock_urlreader = Mock()
+            with patch('Orange.widgets.data.owfile.UrlReader', mock_urlreader):
+                self.widget.url_combo.insertItem(0, text)
+                self.widget.url_combo.setCurrentIndex(0)
+                self.widget.url_combo.activated.emit(0)
+            mock_urlreader.assert_called_once_with(expected)
+
+        test("https://example.com/space space#f=f", "https://example.com/space%20space#f=f")
+        test("https://example.com/space%20space#f=f", "https://example.com/space%20space#f=f")
+        test("https://š.si/š#f=1", "https://xn--pga.si/%C5%A1#f=1")
+        test("https://xn--pga.si/%C5%A1#f=1", "https://xn--pga.si/%C5%A1#f=1")
+        test("https://example.com/a?q=1#f=1", "https://example.com/a?q=1#f=1")
+
     def test_adds_origin(self):
         self.open_dataset("origin1/images")
         data1 = self.get_output(self.widget.Outputs.data)
