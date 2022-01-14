@@ -4,8 +4,6 @@
 import unittest
 from unittest.mock import patch
 
-import numpy as np
-
 from AnyQt.QtCore import Qt, QModelIndex
 from AnyQt.QtTest import QSignalSpy
 
@@ -14,8 +12,8 @@ from Orange.data import \
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.itemmodels import \
-    AbstractSortTableModel, PyTableModel,\
-    PyListModel, VariableListModel, DomainModel, ContinuousPalettesModel, \
+    PyTableModel, PyListModel, PyListModelTooltip,\
+    VariableListModel, DomainModel, ContinuousPalettesModel, \
     _as_contiguous_range
 from Orange.widgets.gui import TableVariable
 from orangewidget.tests.base import GuiTest
@@ -479,6 +477,55 @@ class TestContinuousPalettesModel(GuiTest):
         self.assertEqual(model.indexOf(self.palette2.name), 2)
         self.assertEqual(model.indexOf(self.palette2.friendly_name), 2)
         self.assertIsNone(model.indexOf(42))
+
+
+class TestPyListModelTooltip(GuiTest):
+    def test_tooltips_size(self):
+        def data(i):
+            return model.data(model.index(i, 0))
+
+        def tip(i):
+            return model.data(model.index(i, 0), Qt.ToolTipRole)
+
+        # Not enough tooptips - return None
+        model = PyListModelTooltip(["foo", "bar", "baz"], ["footip", "bartip"])
+        self.assertEqual(data(1), "bar")
+        self.assertEqual(data(2), "baz")
+        self.assertIsNone(data(3))
+        self.assertEqual(tip(1), "bartip")
+        self.assertIsNone(tip(2))
+
+        # No tooltips
+        model = PyListModelTooltip(["foo", "bar", "baz"])
+        self.assertIsNone(tip(1))
+        self.assertIsNone(tip(2))
+
+        # Too many tooltips
+        model = PyListModelTooltip(["foo", "bar"], ["footip", "bartip", "btip"])
+        self.assertEqual(data(0), "foo")
+        self.assertEqual(data(1), "bar")
+        self.assertIsNone(data(2))
+        self.assertEqual(tip(1), "bartip")
+        self.assertEqual(tip(2), "btip")
+
+    def test_tooltip_arg(self):
+        def tip(i):
+            return model.data(model.index(i, 0), Qt.ToolTipRole)
+
+        # Allow generators
+        s = dict(a="ta", b="tb")
+        model = PyListModelTooltip(s, s.values())
+        self.assertEqual(tip(0), "ta")
+        self.assertEqual(tip(1), "tb")
+
+        # Basically backward compatibility; this behaviour diverges from
+        # behaviour of data role
+        s = []
+        model = PyListModelTooltip(["foo"], s)
+        self.assertIsNone(tip(0))
+
+        s += ["footip"]
+        self.assertEqual(tip(1), "footip")
 
 
 if __name__ == "__main__":
