@@ -178,8 +178,8 @@ class ColorGradientSelection(QWidget):
         if self.__threshold_low != low or self.__threshold_high != high:
             self.__threshold_high = high
             self.__threshold_low = low
-            self.slider_low.setSliderPosition(low * 100)
-            self.slider_high.setSliderPosition(high * 100)
+            self.slider_low.setSliderPosition(int(low * 100))
+            self.slider_high.setSliderPosition(int(high * 100))
             self.thresholdsChanged.emit(high, low)
 
     def __update_center_visibility(self):

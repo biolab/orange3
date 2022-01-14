@@ -386,12 +386,12 @@ class OWTreeGraph(OWTreeViewer2D):
             if self.target_class_index:
                 p = distr[self.target_class_index - 1] / total
                 color = colors[self.target_class_index - 1].lighter(
-                    200 - 100 * p)
+                    int(200 - 100 * p))
             else:
                 modus = np.argmax(distr)
                 p = distr[modus] / (total or 1)
                 color = colors.value_to_qcolor(int(modus))
-                color = color.lighter(300 - 200 * p)
+                color = color.lighter(int(300 - 200 * p))
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 
@@ -409,7 +409,7 @@ class OWTreeGraph(OWTreeViewer2D):
                 node_insts = len(self.tree_adapter.get_instances_in_nodes(
                     [node.node_inst]))
                 node.backgroundBrush = QBrush(def_color.lighter(
-                    120 - 20 * node_insts / max_insts))
+                    int(120 - 20 * node_insts / max_insts)))
         elif self.regression_colors == self.COL_MEAN:
             minv = np.nanmin(self.dataset.Y)
             maxv = np.nanmax(self.dataset.Y)
@@ -425,7 +425,7 @@ class OWTreeGraph(OWTreeViewer2D):
             max_var = max(variances)
             for node, var in zip(nodes, variances):
                 node.backgroundBrush = QBrush(def_color.lighter(
-                    120 - 20 * var / max_var))
+                    int(120 - 20 * var / max_var)))
         self.scene.update()
 
     def _get_tree_adapter(self, model):

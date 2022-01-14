@@ -97,7 +97,7 @@ class BaseEditor(QWidget, gui.OWComponent):
         return {
             "n_estimators": self.n_estimators,
             "learning_rate": self.learning_rate,
-            "random_state": 0 if self.random_state else randint(1, 1e6),
+            "random_state": 0 if self.random_state else randint(1, 1000000),
             "max_depth": self.max_depth,
         }
 

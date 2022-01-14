@@ -830,7 +830,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             Qt.PreferredSize, constraint=QSizeF(width, -1))
         self._main_graphics.resize(QSizeF(width, preferred.height()))
         mw = self._main_graphics.minimumWidth() + 4
-        self.view.setMinimumWidth(mw + self.view.verticalScrollBar().width())
+        self.view.setMinimumWidth(int(mw + self.view.verticalScrollBar().width()))
 
     def __update_font_scale(self):
         font = self.scene.font()

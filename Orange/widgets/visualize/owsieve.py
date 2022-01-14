@@ -371,9 +371,9 @@ class OWSieveDiagram(OWWidget):
 
             r = b = 255
             if pearson > 0:
-                r = g = max(255 - 20 * pearson, 55)
+                r = g = max(int(255 - 20 * pearson), 55)
             elif pearson < 0:
-                b = g = max(255 + 20 * pearson, 55)
+                b = g = max(int(255 + 20 * pearson), 55)
             else:
                 r = g = b = 224
             rect.setBrush(QBrush(QColor(r, g, b)))

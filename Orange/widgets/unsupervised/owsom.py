@@ -163,7 +163,7 @@ class ColoredCircle(QGraphicsItem):
         pen = QPen(QBrush(self.color), 2)
         pen.setCosmetic(True)
         painter.setPen(pen)
-        painter.setBrush(QBrush(self.color.lighter(200 - 80 * self.proportion)))
+        painter.setBrush(QBrush(self.color.lighter(int(200 - 80 * self.proportion))))
         painter.drawEllipse(self.boundingRect())
         painter.restore()
 
