@@ -46,60 +46,27 @@ def compute_scale(min_, max_):
     return first_val, step
 
 
-def _quantiles(a, freq, q, interpolation="midpoint"):
-    """
-    Somewhat like np.quantiles, but with explicit sample frequencies.
-
-    * Only 'higher', 'lower' and 'midpoint' interpolation.
-    * `a` MUST be sorted.
-    """
-    a = np.asarray(a)
-    freq = np.asarray(freq)
-    assert a.size > 0 and a.size == freq.size
-    cumdist = np.cumsum(freq)
-    cumdist /= cumdist[-1]
-
-    if interpolation == "midpoint":  # R quantile(..., type=2)
-        left = np.searchsorted(cumdist, q, side="left")
-        right = np.searchsorted(cumdist, q, side="right")
-        # no mid point for the right most position
-        np.clip(right, 0, a.size - 1, out=right)
-        # right and left will be different only on the `q` boundaries
-        # (excluding the right most sample)
-        return (a[left] + a[right]) / 2
-    elif interpolation == "higher":  # R quantile(... type=1)
-        right = np.searchsorted(cumdist, q, side="right")
-        np.clip(right, 0, a.size - 1, out=right)
-        return a[right]
-    elif interpolation == "lower":
-        left = np.searchsorted(cumdist, q, side="left")
-        return a[left]
-    else:  # pragma: no cover
-        raise ValueError("invalid interpolation: '{}'".format(interpolation))
-
-
 ContDataRange = namedtuple("ContDataRange", ["low", "high", "group_value"])
 DiscDataRange = namedtuple("DiscDataRange", ["value", "group_value"])
 
 
 class BoxData:
-    def __init__(self, dist, group_val=None):
-        self.dist = dist
-        self.n = n = np.sum(dist[1])
-        if n == 0:
+    def __init__(self, col, group_val=None):
+        self.n = len(col) - np.sum(np.isnan(col))
+        if self.n == 0:
             return
-        self.a_min = float(dist[0, 0])
-        self.a_max = float(dist[0, -1])
-        self.mean = float(np.sum(dist[0] * dist[1]) / n)
-        self.var = float(np.sum(dist[1] * (dist[0] - self.mean) ** 2) / n)
-        self.dev = math.sqrt(self.var)
-        a, freq = np.asarray(dist)
-        q25, median, q75 = _quantiles(a, freq, [0.25, 0.5, 0.75])
-        self.median = median
-        # The code below omits the q25 or q75 in the plot when they are None
-        self.q25 = None if q25 == median else q25
-        self.q75 = None if q75 == median else q75
-        self.data_range = ContDataRange(q25, q75, group_val)
+        self.a_min = np.nanmin(col)
+        self.a_max = np.nanmax(col)
+        self.mean = np.nanmean(col)
+        self.var = np.nanvar(col)
+        self.dev = np.sqrt(self.var)
+        self.q25, self.median, self.q75 = \
+            np.nanquantile(col, [0.25, 0.5, 0.75], interpolation="midpoint")
+        self.data_range = ContDataRange(self.q25, self.q75, group_val)
+        if self.q25 == self.median:
+            self.q25 = None
+        if self.q75 == self.median:
+            self.q75 = None
 
 
 class FilterGraphicsRectItem(QGraphicsRectItem):
@@ -388,7 +355,7 @@ class OWBoxPlot(widget.OWWidget):
                 col = data.get_column_view(attr)[0].astype(float)
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
-                groups = [group for group in groups if len(group)]
+                groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
                 p = self._chi_square(group_var, attr)[1]
@@ -421,11 +388,8 @@ class OWBoxPlot(widget.OWWidget):
             if group is None:
                 return -1
             if attr.is_continuous:
-                group_col = data.get_column_view(group)[0].astype(float)
-                groups = (attr_col[group_col == i]
-                          for i in range(len(group.values)))
-                groups = (col[~np.isnan(col)] for col in groups)
-                groups = [group for group in groups if len(group)]
+                groups = self._group_cols(data, group, attr_col)
+                groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
                 p = self._chi_square(group, attr)[1]
@@ -525,6 +489,16 @@ class OWBoxPlot(widget.OWWidget):
             if isinstance(box, FilterGraphicsRectItem):
                 box.setSelected(box.data_range in selection)
 
+    def _group_cols(self, data, group, attr):
+        if isinstance(attr, np.ndarray):
+            attr_col = attr
+        else:
+            attr_col = data.get_column_view(group)[0].astype(float)
+        group_col = data.get_column_view(group)[0].astype(float)
+        groups = [attr_col[group_col == i] for i in range(len(group.values))]
+        groups = [col[~np.isnan(col)] for col in groups]
+        return groups
+
     def compute_box_data(self):
         attr = self.attribute
         if not attr:
@@ -538,29 +512,33 @@ class OWBoxPlot(widget.OWWidget):
             return
         if self.group_var:
             self.dist = None
-            self.conts = contingency.get_contingency(
-                dataset, attr, self.group_var)
             missing_val_str = f"missing '{self.group_var.name}'"
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
                 stats, label_texts = [], []
-                for cont, value in zip(self.conts.array_with_unknowns,
-                                       group_var_labels):
-                    if np.sum(cont[1]):
-                        stats.append(BoxData(cont, value))
+                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                for group, value in \
+                        zip(self._group_cols(dataset, self.group_var, attr_col),
+                            group_var_labels):
+                    if group.size:
+                        stats.append(BoxData(group, value))
                         label_texts.append(value or missing_val_str)
                 self.stats = stats
                 self.label_txts_all = label_texts
             else:
+                self.conts = contingency.get_contingency(
+                    dataset, attr, self.group_var)
                 self.label_txts_all = [
                     v or missing_val_str for v, c in zip(
                         group_var_labels, self.conts.array_with_unknowns)
                     if np.sum(c) > 0]
         else:
-            self.dist = distribution.get_distribution(dataset, attr)
             self.conts = None
             if self.attribute.is_continuous:
-                self.stats = [BoxData(self.dist, None)]
+                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                self.stats = [BoxData(attr_col)]
+            else:
+                self.dist = distribution.get_distribution(dataset, attr)
             self.label_txts_all = [""]
         self.label_txts = [txts for stat, txts in zip(self.stats,
                                                       self.label_txts_all)
@@ -876,7 +854,7 @@ class OWBoxPlot(widget.OWWidget):
     def draw_axis(self):
         """Draw the horizontal axis and sets self.scale_x"""
         misssing_stats = not self.stats
-        stats = self.stats or [BoxData(np.array([[0.], [1.]]), self.attribute)]
+        stats = self.stats or [BoxData(np.array([0.]), self.attribute)]
         mean_labels = self.mean_labels or [self.mean_label(stats[0], self.attribute, "")]
         bottom = min(stat.a_min for stat in stats)
         top = max(stat.a_max for stat in stats)

@@ -8,9 +8,8 @@ from AnyQt.QtCore import QItemSelectionModel
 
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain, \
     DiscreteVariable
-from Orange.widgets.visualize.owboxplot import (
-    OWBoxPlot, FilterGraphicsRectItem, _quantiles
-)
+from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
+
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.tests import test_filename
 
@@ -281,8 +280,8 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                  if isinstance(item, FilterGraphicsRectItem)]
         items[0].setSelected(True)
         return [100, 103, 104, 108, 110, 111, 112, 115, 116,
-                120, 123, 124, 126, 128, 132, 133, 136, 137,
-                139, 140, 141, 143, 144, 145, 146, 147, 148]
+                120, 123, 124, 128, 132, 133, 136, 137, 139,
+                140, 141, 143, 144, 145, 146, 147]
 
     def _select_list_items(self, _list):
         for name in _list.model().sourceModel():
@@ -358,43 +357,6 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         for box in self.widget.box_scene.items():
             if isinstance(box, FilterGraphicsRectItem):
                 box.setSelected(True)
-
-
-class TestUtils(unittest.TestCase):
-    def test(self):
-        np.testing.assert_array_equal(
-            _quantiles(range(1, 8 + 1), [1.] * 8, [0.0, 0.25, 0.5, 0.75, 1.0]),
-            [1., 2.5, 4.5, 6.5, 8.]
-        )
-        np.testing.assert_array_equal(
-            _quantiles(range(1, 8 + 1), [1.] * 8, [0.0, 0.25, 0.5, 0.75, 1.0]),
-            [1., 2.5, 4.5, 6.5, 8.]
-        )
-        np.testing.assert_array_equal(
-            _quantiles(range(1, 4 + 1), [1., 2., 1., 2],
-                       [0.0, 0.25, 0.5, 0.75, 1.0]),
-            [1.0, 2.0, 2.5, 4.0, 4.0]
-        )
-        np.testing.assert_array_equal(
-            _quantiles(range(1, 4 + 1), [2., 1., 1., 2.],
-                       [0.0, 0.25, 0.5, 0.75, 1.0]),
-            [1.0, 1.0, 2.5, 4.0, 4.0]
-        )
-        np.testing.assert_array_equal(
-            _quantiles(range(1, 4 + 1), [1., 1., 1., 1.],
-                       [0.0, 0.25, 0.5, 0.75, 1.0]),
-            [1.0, 1.5, 2.5, 3.5, 4.0]
-        )
-        np.testing.assert_array_equal(
-            _quantiles(range(1, 4 + 1), [1., 1., 1., 1.],
-                       [0.0, 0.25, 0.5, 0.75, 1.0], interpolation="higher"),
-            [1, 2, 3, 4, 4]
-        )
-        np.testing.assert_array_equal(
-            _quantiles(range(1, 4 + 1), [1., 1., 1., 1.],
-                       [0.0, 0.25, 0.5, 0.75, 1.0], interpolation="lower"),
-            [1, 1, 2, 3, 4]
-        )
 
 
 if __name__ == '__main__':
