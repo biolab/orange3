@@ -1,7 +1,5 @@
 import itertools
 
-import numpy as np
-
 from AnyQt.QtWidgets import QTableView, QHeaderView
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtCore import Qt, QAbstractTableModel, QSize
@@ -39,7 +37,7 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.span = span = float(distances.max())
 
         self.colors = \
-            (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
+            (distances * (170 / span if span > 1e-10 else 0)).astype(int)
         self.zero_diag = all(distances.diagonal() < 1e-6)
         self.endResetModel()
 

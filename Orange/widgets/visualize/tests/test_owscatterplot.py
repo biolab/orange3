@@ -843,8 +843,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         widget = self.widget
         graph = widget.graph
         xy = np.array([[0, 0], [1, 0], [1, 2], [2, 2],
-                       [0, 1], [1, 3], [2, 5]], dtype=np.float)
-        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=np.float)
+                       [0, 1], [1, 3], [2, 5]], dtype=float)
+        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=float)
         widget.get_coordinates_data = lambda: xy.T
         widget.can_draw_regresssion_line = lambda: True
         widget.get_color_data = lambda: colors
@@ -993,8 +993,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         widget = self.widget
         graph = widget.graph
         x, y = np.array([[0, 0], [1, 0], [1, 2], [2, 2],
-                         [0, 1], [1, 3], [2, 5]], dtype=np.float).T
-        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=np.float)
+                         [0, 1], [1, 3], [2, 5]], dtype=float).T
+        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=float)
         widget.get_coordinates_data = lambda: (x, y)
         widget.can_draw_regresssion_line = lambda: True
         widget.get_color_data = lambda: colors

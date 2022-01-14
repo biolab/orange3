@@ -70,7 +70,7 @@ class TestTreeAdapter(unittest.TestCase):
                       [16, 17, 18],
                       [20, 21, 22],
                       [32, 33, 34],
-                      [36, 37, 38]], dtype=np.float))
+                      [36, 37, 38]], dtype=float))
         self.assertEqual(adapt.max_depth, 2)
         self.assertEqual(adapt.num_nodes, 7)
         self.assertIs(adapt.root, self.root)

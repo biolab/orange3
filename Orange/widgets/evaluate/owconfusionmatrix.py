@@ -454,7 +454,7 @@ class OWConfusionMatrix(widget.OWWidget):
             colors = cmatrix.astype(np.double)
             colors[diag] = 0
             if self.selected_quantity == 0:
-                normalized = cmatrix.astype(np.int)
+                normalized = cmatrix.astype(int)
                 formatstr = "{}"
                 div = np.array([colors.max()])
             else:

@@ -1796,7 +1796,7 @@ def pandas_to_table(df):
             )
             codes = coldata.codes
             assert np.issubdtype(codes.dtype, np.integer)
-            orangecol = np.array(codes, dtype=np.float)
+            orangecol = np.array(codes, dtype=float)
             orangecol[codes < 0] = np.nan
         elif pdtypes.is_datetime64_any_dtype(series):
             # Check that this converts tz local to UTC

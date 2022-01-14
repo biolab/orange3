@@ -559,7 +559,7 @@ def gaussian_smoother(x, y, sigma=1.0):
         W = a * np.exp(-gamma * ((xs - x) ** 2))
         return np.average(y, weights=W)
 
-    return np.vectorize(smoother, otypes=[np.float])
+    return np.vectorize(smoother, otypes=[float])
 
 
 if __name__ == "__main__":  # pragma: no cover
