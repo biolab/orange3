@@ -6,7 +6,7 @@ import numpy as np
 
 from AnyQt.QtCore import Signal
 from AnyQt.QtWidgets import QSizePolicy, QWidget, QGridLayout, QLabel, \
-    QLineEdit, QVBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox, QGroupBox
+    QLineEdit, QVBoxLayout, QPushButton, QDoubleSpinBox, QCheckBox
 
 from orangewidget.utils.combobox import ComboBoxSearch
 from Orange.data import Table, ContinuousVariable
@@ -61,7 +61,6 @@ class ParametersWidget(QWidget):
         self.__data: List[Parameter] = []
         self.__labels: List[QLabel] = None
         self.__layout: QGridLayout = None
-        self.__button: QPushButton = None
         self.__controls: List[
             Tuple[QPushButton, QLineEdit, QDoubleSpinBox, QCheckBox,
                   QDoubleSpinBox, QCheckBox, QDoubleSpinBox]] = []
@@ -115,7 +114,7 @@ class ParametersWidget(QWidget):
 
         button_box = gui.hBox(box)
         gui.rubber(button_box)
-        self.__button = gui.button(
+        gui.button(
             button_box, self, "+", callback=self.__on_add_button_clicked,
             width=34, autoDefault=False, enabled=True,
             sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Maximum)
@@ -242,9 +241,6 @@ class ParametersWidget(QWidget):
         for param in parameters:
             self._add_row(param)
 
-    def set_add_enabled(self, enable: bool):
-        self.__button.setEnabled(enable)
-
 
 class OWCurveFit(OWBaseLearner):
     name = "Curve Fit"
@@ -288,7 +284,6 @@ class OWCurveFit(OWBaseLearner):
     def __init__(self, *args, **kwargs):
         self.__pp_data: Optional[Table] = None
         self.__param_widget: ParametersWidget = None
-        self.__function_box: QGroupBox = None
         self.__expression_edit: QLineEdit = None
         self.__feature_combo: ComboBoxSearch = None
         self.__parameter_combo: ComboBoxSearch = None
@@ -311,18 +306,16 @@ class OWCurveFit(OWBaseLearner):
     def add_main_layout(self):
         box = gui.vBox(self.controlArea, "Parameters")
         self.__param_widget = ParametersWidget(self)
-        self.__param_widget.set_add_enabled(False)
         self.__param_widget.sigDataChanged.connect(
             self.__on_parameters_changed)
         box.layout().addWidget(self.__param_widget)
 
-        self.__function_box = gui.vBox(self.controlArea, box="Expression")
-        self.__function_box.setEnabled(False)
+        function_box = gui.vBox(self.controlArea, box="Expression")
         self.__expression_edit = gui.lineEdit(
-            self.__function_box, self, "expression",
+            function_box, self, "expression",
             placeholderText="Expression...", callback=self.settings_changed
         )
-        hbox = gui.hBox(self.__function_box)
+        hbox = gui.hBox(function_box)
         combo_options = dict(sendSelectedValue=True, searchable=True,
                              contentsLength=13)
         self.__feature_combo = gui.comboBox(
@@ -397,12 +390,6 @@ class OWCurveFit(OWBaseLearner):
         self.Warning.data_missing(shown=not bool(data))
         self.learner = None
         super().set_data(data)
-        self.__clear()
-
-    def __clear(self):
-        self.expression = ""
-        self.__param_widget.clear_all()
-        self.__on_parameters_changed([])
 
     def set_preprocessor(self, preprocessor: Preprocess):
         self.preprocessors = preprocessor
@@ -418,7 +405,6 @@ class OWCurveFit(OWBaseLearner):
     def handleNewSignals(self):
         self.__preprocess_data()
         self.__init_models()
-        self.__enable_controls()
         self.__set_pending()
         super().handleNewSignals()
 
@@ -429,12 +415,6 @@ class OWCurveFit(OWBaseLearner):
         domain = self.__pp_data.domain if self.__pp_data else None
         self.__feature_model.set_domain(domain)
         self._feature = self.__feature_model[0]
-
-    def __enable_controls(self):
-        enable = bool(self.__pp_data) and \
-                 self.__pp_data.domain.has_continuous_attributes()
-        self.__param_widget.set_add_enabled(enable)
-        self.__function_box.setEnabled(enable)
 
     def __set_pending(self):
         if self.__pending_parameters:

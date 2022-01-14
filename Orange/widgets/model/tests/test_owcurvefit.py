@@ -173,7 +173,7 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.housing = Table("housing")
         self.init()
         self.__add_button = \
-            self.widget._OWCurveFit__param_widget._ParametersWidget__button
+            self.widget._OWCurveFit__param_widget.findChildren(QPushButton)[0]
 
     def __init_widget(self, data=None, widget=None):
         if data is None:
@@ -181,7 +181,9 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         if widget is None:
             widget = self.widget
         self.send_signal(widget.Inputs.data, data, widget=widget)
-        widget._OWCurveFit__param_widget._ParametersWidget__button.click()
+        add_button = \
+            widget._OWCurveFit__param_widget.findChildren(QPushButton)[0]
+        add_button.click()
         widget._OWCurveFit__expression_edit.setText("p1 + ")
         simulate.combobox_activate_index(widget.controls._feature, 1)
         widget.apply_button.button.click()
@@ -314,7 +316,7 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(self.widget._OWCurveFit__expression_edit.text(), "p1")
 
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.rowCount(), 2)
         self.assertEqual(combo.currentText(), "Select Parameter")
 
     def test_function_combo(self):
@@ -411,17 +413,6 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.invalid_exp.is_shown())
 
-    def test_enable_controls(self):
-        function_box = self.widget._OWCurveFit__function_box
-        self.assertFalse(self.__add_button.isEnabled())
-        self.assertFalse(function_box.isEnabled())
-        self.send_signal(self.widget.Inputs.data, self.housing)
-        self.assertTrue(self.__add_button.isEnabled())
-        self.assertTrue(function_box.isEnabled())
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.__add_button.isEnabled())
-        self.assertFalse(function_box.isEnabled())
-
     def test_duplicated_parameter_name(self):
         self.send_signal(self.widget.Inputs.data, self.housing)
         self.__add_button.click()
@@ -435,7 +426,7 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
         param_controls[1][1].setText("p1")
         self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Warning.duplicate_parameter.is_shown())
+        self.assertTrue(self.widget.Warning.duplicate_parameter.is_shown())
 
     def test_parameter_name_in_features(self):
         domain = Domain([ContinuousVariable("p1")],
