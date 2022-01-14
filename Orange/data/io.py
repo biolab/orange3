@@ -406,7 +406,14 @@ class UrlReader(FileFormat):
         filename = filename.strip()
         if not urlparse(filename).scheme:
             filename = 'http://' + filename
-        filename = quote(filename, safe="/:")
+
+        # check ? avoid quote redundantly on URL like http://filename.txt?a=1&b=2.
+        mark = filename.find('?')
+        if mark >= 0:
+            filename = quote(filename[:mark], safe="/:") + filename[mark:]
+        else:
+            filename = quote(filename, safe="/:")
+
         super().__init__(filename)
 
     @staticmethod

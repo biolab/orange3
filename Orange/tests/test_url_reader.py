@@ -25,6 +25,15 @@ class TestUrlReader(unittest.TestCase):
                "vestnik-clanki/detektiranje-utrdb-v-šahu-.txt"
         self.assertRaises(OSError, UrlReader(path).read)
 
+    def test_base_url_with_parameters(self):
+        data = UrlReader("https://datasets.biolab.si/core/grades.xlsx?a=1&b=2").read()
+        self.assertEqual(16, len(data))
+
+    def test_special_characters_with_parameters(self):
+        path = "http://file.biolab.si/text-semantics/data/elektrotehniski-" \
+               "vestnik-clanki/detektiranje-utrdb-v-šahu-.txt?a=1&b=2"
+        self.assertRaises(OSError, UrlReader(path).read)
+
 
 if __name__ == "__main__":
     unittest.main()
