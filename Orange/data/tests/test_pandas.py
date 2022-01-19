@@ -34,10 +34,9 @@ class TestPandasCompat(unittest.TestCase):
                                  [0, pd.Timestamp('1724-12-20').timestamp()],
                                  [0, pd.Timestamp('1724-12-20').timestamp()],
                                  [nan, nan]])
-        np.testing.assert_equal(table.metas.tolist(), [['a'],
-                                                       ['b'],
-                                                       ['c'],
-                                                       [nan]])
+        np.testing.assert_equal(
+            table.metas.tolist(), [["a"], ["b"], ["c"], [StringVariable.Unknown]]
+        )
         names = [var.name for var in table.domain.attributes]
         types = [type(var) for var in table.domain.attributes]
         self.assertEqual(names, ['1', '2'])
@@ -63,10 +62,9 @@ class TestPandasCompat(unittest.TestCase):
                                  [1, 0, pd.Timestamp('1724-12-20').timestamp()],
                                  [0, 0, pd.Timestamp('1724-12-20').timestamp()],
                                  [0, nan, nan]])
-        np.testing.assert_equal(table.metas.tolist(), [['a'],
-                                                       ['b'],
-                                                       ['c'],
-                                                       [nan]])
+        np.testing.assert_equal(
+            table.metas.tolist(), [["a"], ["b"], ["c"], [StringVariable.Unknown]]
+        )
         names = [var.name for var in table.domain.attributes]
         types = [type(var) for var in table.domain.attributes]
         self.assertEqual(names, ['index', '1', '2'])
@@ -383,7 +381,7 @@ class TestPandasCompat(unittest.TestCase):
             ],
         )
 
-    def test_table_from_frame_no_datetim(self):
+    def test_table_from_frame_no_datetime(self):
         """
         In case when dtype of column is object and column contains numbers only,
         column could be recognized as a TimeVarialbe since pd.to_datetime can parse
@@ -401,6 +399,34 @@ class TestPandasCompat(unittest.TestCase):
         table = table_from_frame(df)
         # check if exactly ContinuousVariable and not subtype TimeVariable
         self.assertIsInstance(table.domain.attributes[0], DiscreteVariable)
+
+    def testa_table_from_frame_string(self):
+        """
+        Test if string-like variables are handled correctly and nans are replaced
+        with String.Unknown
+        """
+        from Orange.data.pandas_compat import table_from_frame
+
+        # s1 contains nan and s2 contains pd.Na
+        df = pd.DataFrame(
+            [["a", "b"], ["c", "d"], ["e", "f"], [5, "c"], [np.nan, np.nan]],
+            columns=["s1", "s2"],
+        ).astype({"s1": "object", "s2": "string"})
+        table = table_from_frame(df)
+        np.testing.assert_array_equal(np.empty((5, 0)), table.X)
+        np.testing.assert_array_equal(
+            np.array(
+                [
+                    ["a", "b"],
+                    ["c", "d"],
+                    ["e", "f"],
+                    ["5", "c"],
+                    [StringVariable.Unknown, StringVariable.Unknown],
+                ]
+            ),
+            table.metas,
+        )
+        self.assertTrue(all(isinstance(v, StringVariable) for v in table.domain.metas))
 
     def test_time_variable_compatible(self):
         from Orange.data.pandas_compat import table_from_frame
