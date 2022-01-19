@@ -1,1 +1,25 @@
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><style>.cls-1{fill:#666;}.cls-2{fill:#333;}</style></defs><path class="cls-1" d="M8.82,3.17A5.24,5.24,0,1,0,14,8.48,5.25,5.25,0,0,0,8.82,3.17Z"/><path class="cls-1" d="M24.08,3.17a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,24.08,3.17Z"/><path class="cls-1" d="M39.34,3.17A5.24,5.24,0,1,0,44.5,8.48,5.25,5.25,0,0,0,39.34,3.17Z"/><rect class="cls-1" x="3.5" y="16.91" width="41" height="2"/><rect class="cls-1" x="23" y="17.91" width="2" height="6.24"/><polygon class="cls-1" points="28.44 20.78 24 22.67 19.56 20.78 24 31.31 28.44 20.78"/><path class="cls-2" d="M8.82,34.36A5.24,5.24,0,1,0,14,39.67,5.25,5.25,0,0,0,8.82,34.36Z"/><path class="cls-2" d="M24.08,34.36a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,24.08,34.36Z"/><path class="cls-1" d="M39.34,34.36a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,39.34,34.36Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Background { color: #fff; }
+</style>
+<style>.cls-1{fill:#666;}.cls-2{fill:#333;}</style></defs>
+<path class="ColorScheme-Text" fill="currentColor" d="M8.82,3.17A5.24,5.24,0,1,0,14,8.48,5.25,5.25,0,0,0,8.82,3.17Z"/>
+<path class="ColorScheme-Background" fill="currentColor" opacity="0.5" d="M8.82,3.17A5.24,5.24,0,1,0,14,8.48,5.25,5.25,0,0,0,8.82,3.17Z"/>
+<path class="ColorScheme-Text" fill="currentColor" d="M24.08,3.17a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,24.08,3.17Z"/>
+<path class="ColorScheme-Background" fill="currentColor" opacity="0.5" d="M24.08,3.17a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,24.08,3.17Z"/>
+<path class="ColorScheme-Text" fill="currentColor" d="M39.34,3.17A5.24,5.24,0,1,0,44.5,8.48,5.25,5.25,0,0,0,39.34,3.17Z"/>
+<path class="ColorScheme-Background" fill="currentColor" opacity="0.5" d="M39.34,3.17A5.24,5.24,0,1,0,44.5,8.48,5.25,5.25,0,0,0,39.34,3.17Z"/>
+<rect class="ColorScheme-Text" fill="currentColor" x="3.5" y="16.91" width="41" height="2"/>
+<rect class="ColorScheme-Background" fill="currentColor" opacity="0.5" x="3.5" y="16.91" width="41" height="2"/>
+<rect class="ColorScheme-Text" fill="currentColor" x="23" y="17.91" width="2" height="6.24"/>
+<rect class="ColorScheme-Background" fill="currentColor" opacity="0.5" x="23" y="17.91" width="2" height="6.24"/>
+<polygon class="ColorScheme-Text" fill="currentColor" points="28.44 20.78 24 22.67 19.56 20.78 24 31.31 28.44 20.78"/>
+<polygon class="ColorScheme-Background" fill="currentColor" opacity="0.5" points="28.44 20.78 24 22.67 19.56 20.78 24 31.31 28.44 20.78"/>
+<path class="ColorScheme-Text" fill="currentColor" d="M8.82,34.36A5.24,5.24,0,1,0,14,39.67,5.25,5.25,0,0,0,8.82,34.36Z"/>
+<path class="ColorScheme-Text" fill="currentColor" d="M24.08,34.36a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,24.08,34.36Z"/>
+<path class="ColorScheme-Text" fill="currentColor" d="M39.34,34.36a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,39.34,34.36Z"/>
+<path class="ColorScheme-Background" fill="currentColor" opacity="0.5" d="M39.34,34.36a5.24,5.24,0,1,0,5.16,5.31A5.25,5.25,0,0,0,39.34,34.36Z"/>
+</svg>

@@ -3,24 +3,25 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<g id="zXDtGm_1_">
-</g>
-<g>
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Background { color: #fff; }
+</style>
+</defs>
+<g class="ColorScheme-Text" fill="currentColor">
 	<g>
-		<polygon fill="#333333" points="28.445,37.864 32.558,37.602 35.091,34.349 36.172,44.448 		"/>
+		<polygon points="28.445,37.864 32.558,37.602 35.091,34.349 36.172,44.448 		"/>
+		<line stroke="currentColor" stroke-width="2" stroke-miterlimit="10" x1="33.97" y1="40.298" x2="15.357" y2="5.328"/>
 	</g>
-	<line fill="#333333" stroke="#333333" stroke-width="2" stroke-miterlimit="10" x1="33.97" y1="40.298" x2="15.357" y2="5.328"/>
-</g>
-<g>
 	<g>
-		<polygon fill="#333333" points="33.136,13.426 31.037,9.88 26.989,9.098 35.496,3.551 		"/>
+		<polygon points="33.136,13.426 31.037,9.88 26.989,9.098 35.496,3.551 		"/>
+		<line stroke="currentColor" stroke-width="2" stroke-miterlimit="10" x1="32.798" y1="7.398" x2="10.076" y2="39.848"/>
 	</g>
-	<line fill="#333333" stroke="#333333" stroke-width="2" stroke-miterlimit="10" x1="32.798" y1="7.398" x2="10.076" y2="39.848"/>
-</g>
-<g>
 	<g>
-		<polygon fill="#333333" points="11.4,23.59 9.591,27.295 11.162,31.107 1.853,27.046 		"/>
+		<polygon points="11.4,23.59 9.591,27.295 11.162,31.107 1.853,27.046 		"/>
+		<line stroke="currentColor" stroke-width="2" stroke-miterlimit="10" x1="6.55" y1="27.186" x2="46.146" y2="28.335"/>
 	</g>
-	<line fill="#333333" stroke="#333333" stroke-width="2" stroke-miterlimit="10" x1="6.55" y1="27.186" x2="46.146" y2="28.335"/>
 </g>
 </svg>

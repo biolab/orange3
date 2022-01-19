@@ -3,28 +3,39 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<rect x="30" y="32" fill="#FFFFFF" width="10" height="8"/>
+	<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Background { color: #fff; }
+</style>
+</defs>
+
 <g>
-	<path fill="#333333" d="M6,6v36h36V6H6z M40,14v8v1v8v9H29H19h-1H8v-8v-1v-8v-1v-8l0,0h10l0,0h1l0,0h10l0,0h1l0,0H40L40,14z"/>
-	<polygon fill="#666666" points="19,31 19,23 19,22 19,14 18,14 18,22 8,22 8,23 18,23 18,31 8,31 8,32 18,32 18,40 19,40 19,32 	
-		"/>
-	<polygon fill="#666666" points="30,14 29,14 29,22 29,23 29,31 29,32 29,40 40,40 40,31 30,31 30,23 40,23 40,22 30,22 	"/>
-	<rect x="8" y="32" fill="#FFFFFF" width="10" height="8"/>
-	<rect x="8" y="23" fill="#FFFFFF" width="10" height="8"/>
-	<polygon fill="#FFFFFF" points="8,14 18,14 18,14 	"/>
-	<rect x="8" y="14" fill="#FFFFFF" width="10" height="8"/>
-	<rect x="19" y="32" fill="#B2B2B2" width="10" height="8"/>
-	<rect x="19" y="23" fill="#B2B2B2" width="10" height="8"/>
-	<polygon fill="#B2B2B2" points="19,14 29,14 29,14 	"/>
-	<rect x="19" y="14" fill="#B2B2B2" width="10" height="8"/>
-	<rect x="30" y="23" fill="#FFFFFF" width="10" height="8"/>
-	<polygon fill="#FFFFFF" points="30,14 40,14 40,14 	"/>
-	<rect x="30" y="14" fill="#FFFFFF" width="10" height="8"/>
-	<rect x="19" y="22" fill="#989898" width="10" height="1"/>
-	<rect x="19" y="31" fill="#989898" width="10" height="1"/>
+	<path class="ColorScheme-Text" fill="currentColor" d="M6,6v36h36V6H6z M40,14v8v1v8v9H29H19h-1H8v-8v-1v-8v-1v-8l0,0h10l0,0h1l0,0h10l0,0h1l0,0H40L40,14z"/>
+	<polygon class="ColorScheme-Text" fill="currentColor" points="19,31 19,23 19,22 19,14 18,14 18,22 8,22 8,23 18,23 18,31 8,31 8,32 18,32 18,40 19,40 19,32"/>
+	<polygon class="ColorScheme-Text" fill="currentColor" points="30,14 29,14 29,22 29,23 29,31 29,32 29,40 40,40 40,31 30,31 30,23 40,23 40,22 30,22 	"/>
+	<g class="ColorScheme-Background" fill="currentColor">
+		<rect x="30" y="32" width="10" height="8"/>
+		<rect x="8" y="32" width="10" height="8"/>
+		<rect x="8" y="23" width="10" height="8"/>
+		<rect x="8" y="14" width="10" height="8"/>
+		<rect x="19" y="32" width="10" height="8"/>
+		<rect x="19" y="23" width="10" height="8"/>
+		<rect x="19" y="14" width="10" height="8"/>
+		<rect x="30" y="23" width="10" height="8"/>
+		<rect x="30" y="14" width="10" height="8"/>
+	</g>
+	<g class="ColorScheme-Text" fill="currentColor">
+		<rect x="19" y="22" opacity="0.5" width="10" height="1"/>
+		<rect x="19" y="31" opacity="0.5" width="10" height="1"/>
+	</g>
+	<g class="ColorScheme-Text" fill="currentColor">
+		<rect opacity="0.5" x="19" y="14" width="10" height="26"/>
+	</g>
 </g>
 <g>
-	<path fill="#333333" d="M32.179,41.76c0.44-1.36,0.817-2.74,1.178-4.123c0.148-0.57,0.288-1.144,0.43-1.718
+	<path class="ColorScheme-Text" fill="currentColor" d="M32.179,41.76c0.44-1.36,0.817-2.74,1.178-4.123c0.148-0.57,0.288-1.144,0.43-1.718
 		c0.1-0.396,0.244-0.795,0.206-1.2c-0.007-0.089-0.022-0.179-0.051-0.266c-0.142-0.46-0.461-0.872-0.879-1.113
 		c-0.057-0.034-0.114-0.062-0.173-0.085c-0.193-0.073-0.394-0.085-0.604-0.021c-0.328,0.101-0.564,0.431-0.871,0.526
 		c-0.094,0.029-0.175,0.025-0.246-0.002c-0.321-0.123-0.449-0.724-0.637-0.957c-0.172-0.216-0.397-0.376-0.65-0.473
@@ -40,7 +51,7 @@
 		c0.021,0.008,0.042,0.015,0.063,0.021c0.322,0.087,0.841-0.049,1.183-0.053c0.471-0.006,0.939-0.013,1.41-0.019
 		c1.189-0.016,2.379-0.039,3.568-0.049c0.589-0.003,1.435,0.211,1.868-0.312c0.447-0.54,0.475-1.46,0.751-2.097
 		C31.939,42.685,32.036,42.207,32.179,41.76z"/>
-	<path fill="#FFFFFF" d="M32.479,44.173c0.062-0.253,0.118-0.49,0.191-0.656c0.148-0.346,0.247-0.697,0.333-1.009
+	<path class="ColorScheme-Background" fill="currentColor" d="M32.479,44.173c0.062-0.253,0.118-0.49,0.191-0.656c0.148-0.346,0.247-0.697,0.333-1.009
 		c0.042-0.148,0.083-0.298,0.129-0.442c0.47-1.452,0.867-2.926,1.193-4.176c0.11-0.427,0.216-0.854,0.321-1.281l0.11-0.449
 		l0.058-0.215c0.099-0.363,0.222-0.814,0.176-1.318c-0.011-0.147-0.043-0.311-0.091-0.47c-0.219-0.707-0.706-1.32-1.337-1.685
 		c-0.1-0.06-0.206-0.109-0.314-0.151c-0.407-0.155-0.842-0.17-1.254-0.043c-0.184,0.055-0.341,0.138-0.476,0.223

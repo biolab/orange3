@@ -3,9 +3,18 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<rect x="7" y="19" fill="#333333" width="25" height="22"/>
-<rect x="34" y="27" fill="#333333" width="7" height="9"/>
-<rect x="34" y="7" fill="#333333" width="7" height="18"/>
-<rect x="34" y="38" fill="#333333" width="7" height="3"/>
-<rect x="7" y="7" fill="#333333" width="25" height="10"/>
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Background { color: #fff; }
+</style>
+</defs>
+<g class="ColorScheme-Text" fill="currentColor">
+<rect x="7" y="19" width="25" height="22"/>
+<rect x="34" y="27" width="7" height="9"/>
+<rect x="34" y="7" width="7" height="18"/>
+<rect x="34" y="38" width="7" height="3"/>
+<rect x="7" y="7" width="25" height="10"/>
+</g>
 </svg>
