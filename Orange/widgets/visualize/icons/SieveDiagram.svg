@@ -3,56 +3,72 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Disabled-Text { color: #666; }
+.ColorScheme-Background { color: #fff; }
+</style>
+</defs>
 <g>
-	<rect x="17" y="38" fill="#666666" width="4" height="3"/>
-	<rect x="17" y="33" fill="#666666" width="4" height="4"/>
-	<rect x="7" y="38" fill="#666666" width="4" height="3"/>
-	<rect x="17" y="28" fill="#666666" width="4" height="4"/>
-	<rect x="12" y="38" fill="#666666" width="4" height="3"/>
-	<rect x="12" y="28" fill="#666666" width="4" height="4"/>
-	<rect x="7" y="28" fill="#666666" width="4" height="4"/>
-	<rect x="12" y="33" fill="#666666" width="4" height="4"/>
-	<rect x="7" y="33" fill="#666666" width="4" height="4"/>
-	<rect x="27" y="12" fill="#333333" width="4" height="4"/>
-	<rect x="22" y="12" fill="#333333" width="4" height="4"/>
-	<rect x="32" y="12" fill="#333333" width="4" height="4"/>
-	<rect x="27" y="17" fill="#333333" width="4" height="4"/>
-	<rect x="22" y="17" fill="#333333" width="4" height="4"/>
-	<rect x="37" y="17" fill="#333333" width="4" height="4"/>
-	<rect x="37" y="12" fill="#333333" width="4" height="4"/>
-	<rect x="32" y="17" fill="#333333" width="4" height="4"/>
-	<rect x="22" y="28" fill="#666666" width="4" height="4"/>
-	<rect x="27" y="38" fill="#666666" width="4" height="3"/>
-	<rect x="22" y="33" fill="#666666" width="4" height="4"/>
-	<rect x="37" y="33" fill="#666666" width="4" height="4"/>
-	<rect x="22" y="38" fill="#666666" width="4" height="3"/>
-	<rect x="37" y="38" fill="#666666" width="4" height="3"/>
-	<rect x="32" y="38" fill="#666666" width="4" height="3"/>
-	<rect x="27" y="33" fill="#666666" width="4" height="4"/>
-	<rect x="27" y="28" fill="#666666" width="4" height="4"/>
-	<rect x="32" y="33" fill="#666666" width="4" height="4"/>
-	<rect x="32" y="28" fill="#666666" width="4" height="4"/>
-	<rect x="27" y="23" fill="#666666" width="4" height="4"/>
-	<rect x="22" y="23" fill="#666666" width="4" height="4"/>
-	<rect x="32" y="23" fill="#666666" width="4" height="4"/>
-	<rect x="37" y="28" fill="#666666" width="4" height="4"/>
-	<rect x="37" y="23" fill="#666666" width="4" height="4"/>
-	<rect x="27" y="7" fill="#333333" width="4" height="3"/>
-	<rect x="22" y="7" fill="#333333" width="4" height="3"/>
-	<rect x="37" y="7" fill="#333333" width="4" height="3"/>
-	<rect x="32" y="7" fill="#333333" width="4" height="3"/>
-	<rect x="7" y="22" fill="#333333" width="4" height="4"/>
-	<rect x="17" y="22" fill="#333333" width="4" height="4"/>
-	<rect x="12" y="22" fill="#333333" width="4" height="4"/>
-	<rect x="17" y="17" fill="#333333" width="4" height="4"/>
-	<rect x="17" y="12" fill="#333333" width="4" height="4"/>
-	<rect x="7" y="17" fill="#333333" width="4" height="4"/>
-	<rect x="12" y="17" fill="#333333" width="4" height="4"/>
-	<rect x="17" y="7" fill="#333333" width="4" height="4"/>
-	<rect x="12" y="7" fill="#333333" width="4" height="4"/>
-	<rect x="7" y="7" fill="#333333" width="4" height="4"/>
-	<rect x="7" y="12" fill="#333333" width="4" height="4"/>
-	<rect x="12" y="12" fill="#333333" width="4" height="4"/>
+	<g class="ColorScheme-Disabled-Text" style="fill:currentColor">
+	<rect x="17" y="38" width="4" height="3"/>
+	<rect x="17" y="33" width="4" height="4"/>
+	<rect x="7" y="38" width="4" height="3"/>
+	<rect x="17" y="28" width="4" height="4"/>
+	<rect x="12" y="38" width="4" height="3"/>
+	<rect x="12" y="28" width="4" height="4"/>
+	<rect x="7" y="28" width="4" height="4"/>
+	<rect x="12" y="33" width="4" height="4"/>
+	<rect x="7" y="33" width="4" height="4"/>
+	</g>
+	<g class="ColorScheme-Text" style="fill:currentColor">
+	<rect x="27" y="12" width="4" height="4"/>
+	<rect x="22" y="12" width="4" height="4"/>
+	<rect x="32" y="12" width="4" height="4"/>
+	<rect x="27" y="17" width="4" height="4"/>
+	<rect x="22" y="17" width="4" height="4"/>
+	<rect x="37" y="17" width="4" height="4"/>
+	<rect x="37" y="12" width="4" height="4"/>
+	<rect x="32" y="17" width="4" height="4"/>
+	</g>
+	<g class="ColorScheme-Disabled-Text" style="fill:currentColor">
+	<rect x="22" y="28" width="4" height="4"/>
+	<rect x="27" y="38" width="4" height="3"/>
+	<rect x="22" y="33" width="4" height="4"/>
+	<rect x="37" y="33" width="4" height="4"/>
+	<rect x="22" y="38" width="4" height="3"/>
+	<rect x="37" y="38" width="4" height="3"/>
+	<rect x="32" y="38" width="4" height="3"/>
+	<rect x="27" y="33" width="4" height="4"/>
+	<rect x="27" y="28" width="4" height="4"/>
+	<rect x="32" y="33" width="4" height="4"/>
+	<rect x="32" y="28" width="4" height="4"/>
+	<rect x="27" y="23" width="4" height="4"/>
+	<rect x="22" y="23" width="4" height="4"/>
+	<rect x="32" y="23" width="4" height="4"/>
+	<rect x="37" y="28" width="4" height="4"/>
+	<rect x="37" y="23" width="4" height="4"/>
+	</g>
+	<g class="ColorScheme-Text" style="fill:currentColor">
+	<rect x="27" y="7" width="4" height="3"/>
+	<rect x="22" y="7" width="4" height="3"/>
+	<rect x="37" y="7" width="4" height="3"/>
+	<rect x="32" y="7" width="4" height="3"/>
+	<rect x="7" y="22" width="4" height="4"/>
+	<rect x="17" y="22" width="4" height="4"/>
+	<rect x="12" y="22" width="4" height="4"/>
+	<rect x="17" y="17" width="4" height="4"/>
+	<rect x="17" y="12" width="4" height="4"/>
+	<rect x="7" y="17" width="4" height="4"/>
+	<rect x="12" y="17" width="4" height="4"/>
+	<rect x="17" y="7" width="4" height="4"/>
+	<rect x="12" y="7" width="4" height="4"/>
+	<rect x="7" y="7" width="4" height="4"/>
+	<rect x="7" y="12" width="4" height="4"/>
+	<rect x="12" y="12" width="4" height="4"/>
+	</g>
 	<rect x="11" y="28" fill="#989898" width="1" height="4"/>
 	<rect x="11" y="33" fill="#989898" width="1" height="4"/>
 	<rect x="11" y="38" fill="#989898" width="1" height="3"/>

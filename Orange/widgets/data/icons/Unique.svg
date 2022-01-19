@@ -1,1 +1,16 @@
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><defs><style>.cls-1{fill:#b3b3b3;}.cls-2{fill:gray;}.cls-3{fill:#666;}.cls-4{fill:#333;stroke:#333;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px;}</style></defs><circle id="path4169" class="cls-1" cx="29.08" cy="26.09" r="4.26"/><circle id="path4171" class="cls-2" cx="18.46" cy="30.36" r="3.34"/><circle id="path4173" class="cls-3" cx="24.82" cy="40.11" r="5.29"/><polygon class="cls-4" points="12.81 2.6 35.19 2.6 26.39 12.01 26.46 18.63 21.61 21.43 21.61 12.01 12.81 2.6"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Background { color: #fff; }
+</style>
+</defs>
+<circle class="ColorScheme-Background" fill="currentColor" cx="29.08" cy="26.09" r="4.26"/>
+<circle class="ColorScheme-Text" fill="currentColor" opacity="0.4" cx="29.08" cy="26.09" r="4.26"/>
+<circle class="ColorScheme-Background" fill="currentColor" cx="18.46" cy="30.36" r="3.34"/>
+<circle class="ColorScheme-Text" fill="currentColor" opacity="0.6" cx="18.46" cy="30.36" r="3.34"/>
+<circle class="ColorScheme-Background" fill="currentColor" cx="24.82" cy="40.11" r="5.29"/>
+<circle class="ColorScheme-Text" fill="currentColor" opacity="0.7" cx="24.82" cy="40.11" r="5.29"/>
+<polygon class="ColorScheme-Text" fill="currentColor" points="12.81 2.6 35.19 2.6 26.39 12.01 26.46 18.63 21.61 21.43 21.61 12.01 12.81 2.6"/>
+</svg>

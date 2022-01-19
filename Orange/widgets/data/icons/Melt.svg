@@ -1,84 +1,91 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 48 48" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-ViewBackground { color: #fff; }
+</style>
+</defs>
     <g>
         <g transform="matrix(0.769231,0,0,1,-0.030769,1)">
             <g transform="matrix(0,1,-1.375183,0,64.820469,2.55)">
-                <rect x="0.9" y="4.5" width="9.7" height="39"/>
+                <rect class="ColorScheme-Text" fill="currentColor" x="0.9" y="4.5" width="9.7" height="39"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,40.451351,2.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1" />
             </g>
             <g transform="matrix(0,1,-0.808108,0,61.453496,2.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,50.851351,2.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,71.853496,2.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,82.253496,2.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
         </g>
         <g transform="matrix(0.769231,0,0,1,5.969231,16)">
             <g transform="matrix(0,2.618557,-0.57,0,29.795,1.093299)">
-                <rect x="0.9" y="4.5" width="9.7" height="39"/>
+                <rect class="ColorScheme-Text" fill="currentColor" x="0.9" y="4.5" width="9.7" height="39"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,40.451351,2.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,40.451351,10.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,40.451351,18.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,50.851351,2.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,50.851351,10.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
             <g transform="matrix(0,1,-0.808108,0,50.851351,18.55)">
-                <rect x="2.3" y="31" width="6.9" height="11.1" style="fill:white;"/>
+                <rect class="ColorScheme-ViewBackground" fill="currentColor" x="2.3" y="31" width="6.9" height="11.1"/>
             </g>
         </g>
         <g transform="matrix(1,0,0,1,-1,1)">
-            <g transform="matrix(1,-0,-0,1,1,-1)">
-                <path d="M6.042,30.5L9.042,32L6.042,33.5L6.042,30.5Z"/>
-                <path d="M6,15L6,32L6.642,32" style="fill:none;stroke:black;stroke-width:1px;"/>
+            <g class="ColorScheme-Text" transform="matrix(1,-0,-0,1,1,-1)">
+                <path style="stroke:currentColor" d="M6.042,30.5L9.042,32L6.042,33.5L6.042,30.5Z"/>
+                <path d="M6,15L6,32L6.642,32" style="fill:none;stroke:currentColor;stroke-width:1px;"/>
             </g>
         </g>
         <g transform="matrix(1,0,0,1,-1,1)">
-            <g transform="matrix(1,-0,-0,1,1,-1)">
-                <path d="M6.042,39.2L9.042,40.7L6.042,42.2L6.042,39.2Z"/>
-                <path d="M6,15L6,40.7L6.642,40.7" style="fill:none;stroke:black;stroke-width:1px;"/>
+            <g class="ColorScheme-Text" transform="matrix(1,-0,-0,1,1,-1)">
+                <path style="stroke:currentColor" d="M6.042,39.2L9.042,40.7L6.042,42.2L6.042,39.2Z"/>
+                <path d="M6,15L6,40.7L6.642,40.7" style="fill:none;stroke:currentColor;stroke-width:1px;"/>
             </g>
         </g>
         <g transform="matrix(1,0,0,1,-1,1)">
-            <g transform="matrix(1,-0,-0,1,1,-1)">
-                <path d="M6.042,22.5L9.042,24L6.042,25.5L6.042,22.5Z"/>
-                <path d="M6,15L6,24L6.642,24" style="fill:none;stroke:black;stroke-width:1px;"/>
+            <g class="ColorScheme-Text" transform="matrix(1,-0,-0,1,1,-1)">
+                <path style="stroke:currentColor" d="M6.042,22.5L9.042,24L6.042,25.5L6.042,22.5Z"/>
+                <path d="M6,15L6,24L6.642,24" style="fill:none;stroke:currentColor;stroke-width:1px;"/>
             </g>
         </g>
         <g transform="matrix(-1.657514,0,0,1,44.123478,1)">
-            <g transform="matrix(-0.603313,0,0,1,26.620276,-1)">
-                <path d="M30.479,25.5L27.479,24L30.479,22.5L30.479,25.5Z"/>
-                <path d="M32.521,15L32.521,24L29.879,24" style="fill:none;stroke:black;stroke-width:1px;"/>
+            <g class="ColorScheme-Text" transform="matrix(-0.603313,0,0,1,26.620276,-1)">
+                <path style="stroke:currentColor" d="M30.479,25.5L27.479,24L30.479,22.5L30.479,25.5Z"/>
+                <path d="M32.521,15L32.521,24L29.879,24" style="fill:none;stroke:currentColor;stroke-width:1px;"/>
             </g>
         </g>
         <g transform="matrix(-3.086615,0,0,1,58.942573,1)">
-            <g transform="matrix(-0.323979,0,0,1,19.096183,-1)">
-                <path d="M30.479,33.5L27.479,32L30.479,30.5L30.479,33.5Z"/>
-                <path d="M37.336,15L37.336,32L29.879,32" style="fill:none;stroke:black;stroke-width:1px;"/>
+            <g class="ColorScheme-Text" transform="matrix(-0.323979,0,0,1,19.096183,-1)">
+                <path style="stroke:currentColor" d="M30.479,33.5L27.479,32L30.479,30.5L30.479,33.5Z"/>
+                <path d="M37.336,15L37.336,32L29.879,32" style="fill:none;stroke:currentColor;stroke-width:1px;"/>
             </g>
         </g>
         <g transform="matrix(-4.611269,0,0,1,74.32064,1)">
-            <g transform="matrix(-0.21686,0,0,1,16.117179,-1)">
-                <path d="M30.479,42.2L27.479,40.7L30.479,39.2L30.479,42.2Z"/>
-                <path d="M42.042,15L42.042,40.7L29.879,40.7" style="fill:none;stroke:black;stroke-width:1px;"/>
+            <g class="ColorScheme-Text" transform="matrix(-0.21686,0,0,1,16.117179,-1)">
+                <path style="stroke:currentColor" d="M30.479,42.2L27.479,40.7L30.479,39.2L30.479,42.2Z"/>
+                <path d="M42.042,15L42.042,40.7L29.879,40.7" style="fill:none;stroke:currentColor;stroke-width:1px;"/>
             </g>
         </g>
     </g>
