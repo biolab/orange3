@@ -406,7 +406,13 @@ class UrlReader(FileFormat):
         filename = filename.strip()
         if not urlparse(filename).scheme:
             filename = 'http://' + filename
-        filename = quote(filename, safe="/:")
+
+        # Fully support URL with query or fragment like http://filename.txt?a=1&b=2#c=3
+        def quote_byte(b):
+            return chr(b) if b < 0x80 else '%{:02X}'.format(b)
+
+        filename = ''.join(map(quote_byte, filename.encode("utf-8")))
+
         super().__init__(filename)
 
     @staticmethod
