@@ -680,7 +680,7 @@ class FeatureStatisticsTableView(QTableView):
         if logical_index is not self.model().Columns.DISTRIBUTION.index:
             return
         ratio_width, ratio_height = self.HISTOGRAM_ASPECT_RATIO
-        unit_width = new_size / ratio_width
+        unit_width = new_size // ratio_width
         new_height = unit_width * ratio_height
         effective_height = max(new_height, self.MINIMUM_HISTOGRAM_HEIGHT)
         effective_height = min(effective_height, self.MAXIMUM_HISTOGRAM_HEIGHT)
