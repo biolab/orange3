@@ -288,6 +288,15 @@ class TestVariousDataSets(WidgetTest):
             except Exception as e:
                 raise AssertionError(f"Failed on `{data.name}`") from e
 
+    def test_header_resize_aspect_ratio(self):
+        self.widget.show()  # must be visible for header resize to work
+        size = self.widget.size()
+        self.widget.resize(size.width() + 2000, size.height())
+        self.assertEqual(
+            self.widget.table_view.verticalHeader().defaultSectionSize(),
+            self.widget.table_view.MAXIMUM_HISTOGRAM_HEIGHT
+        )
+
 
 def select_rows(rows: List[int], widget: OWFeatureStatistics):
     """Since the widget sorts the rows, selecting rows isn't trivial."""
