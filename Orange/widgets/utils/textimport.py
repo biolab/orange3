@@ -37,7 +37,7 @@ from typing import (
 )
 
 from AnyQt.QtCore import (
-    Qt, QSize, QPoint, QRect, QRectF, QRegularExpression, QAbstractTableModel,
+    Qt, QSize, QRect, QRectF, QRegularExpression, QAbstractTableModel,
     QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
@@ -705,8 +705,7 @@ class CSVImportWidget(QWidget):
              Qt.UserRole: ColumnType.Categorical},
             {Qt.DisplayRole: "Text", Qt.UserRole: ColumnType.Text},
             {Qt.DisplayRole: "Datetime", Qt.UserRole: ColumnType.Time},
-            {Qt.AccessibleDescriptionRole: "separator"},
-            {Qt.DisplayRole: "Ignore",
+            {Qt.DisplayRole: "Skip Column",
              Qt.UserRole: ColumnType.Skip,
              Qt.ToolTipRole: "The column will not be loaded"}
         ]
@@ -1049,38 +1048,52 @@ class CSVImportWidget(QWidget):
         self.__setColumnType(columns, coltype)
 
     def __dataview_context_menu(self, pos):
-        pos = self.dataview.viewport().mapToGlobal(pos)
         cols = self.dataview.selectionModel().selectedColumns(0)
         cols = [idx.column() for idx in cols]
-        self.__run_type_columns_menu(pos, cols)
+        menu = self.__generate_type_columns_menu(cols)
+        menu.addSection("")
+        menu = self.__generate_vheader_context_menu(pos, menu)
+        pos = self.dataview.viewport().mapToGlobal(pos)
+        menu.popup(pos)
 
     def __hheader_context_menu(self, pos):
-        pos = self.dataview.horizontalHeader().mapToGlobal(pos)
+        col = self.dataview.horizontalHeader().logicalIndexAt(pos)
+        self.dataview.selectColumn(col)
         cols = self.dataview.selectionModel().selectedColumns(0)
         cols = [idx.column() for idx in cols]
-        self.__run_type_columns_menu(pos, cols)
+        menu = self.__generate_type_columns_menu(cols)
+        pos = self.dataview.horizontalHeader().mapToGlobal(pos)
+        menu.popup(pos)
 
     def __vheader_context_menu(self, pos):
+        menu = self.__generate_vheader_context_menu(pos)
+        pos = self.dataview.verticalHeader().mapToGlobal(pos)
+        menu.popup(pos)
+
+    def __generate_vheader_context_menu(self, pos, m=None):
         header = self.dataview.verticalHeader()  # type: QHeaderView
-        index = header.logicalIndexAt(pos)
-        pos = header.mapToGlobal(pos)
         model = header.model()  # type: QAbstractTableModel
+        index = self.dataview.indexAt(pos).row()
 
         RowStateRole = TablePreviewModel.RowStateRole
         state = model.headerData(index, Qt.Vertical, RowStateRole)
-        m = QMenu(header)
-        skip_action = m.addAction("Skip")
-        skip_action.setCheckable(True)
-        skip_action.setChecked(state == TablePreview.Skipped)
-        m.addSection("")
+
+        if m is None:
+            m = QMenu(self)
+
         mark_header = m.addAction("Header")
         mark_header.setCheckable(True)
         mark_header.setChecked(state == TablePreview.Header)
+        skip_action = m.addAction("Skip Row")
+        skip_action.setCheckable(True)
+        skip_action.setChecked(state == TablePreview.Skipped)
 
         def update_row_state(action):
             # type: (QAction) -> None
+            if action not in (mark_header, skip_action):
+                return
             state = None
-            if action is mark_header:
+            if action is mark_header and action.isChecked():
                 state = TablePreview.Header if action.isChecked() else None
             elif action is skip_action:
                 state = TablePreview.Skipped if action.isChecked() else None
@@ -1088,16 +1101,17 @@ class CSVImportWidget(QWidget):
             self.dataview.setRowHints({index: state})
 
         m.triggered.connect(update_row_state)
-        m.popup(pos)
+        return m
 
-    def __run_type_columns_menu(self, pos, columns):
-        # type: (QPoint, List[int]) -> None
+    def __generate_type_columns_menu(self, columns, menu=None):
+        # type: (List[int], Optional[QMenu]) -> None
         # Open a QMenu at pos for setting column types for column indices list
         # `columns`
         model = self.__previewmodel
+        if menu is None:
+            menu = QMenu(self)
         if model is None:
-            return
-        menu = QMenu(self)
+            return menu
         menu.setAttribute(Qt.WA_DeleteOnClose)
         coltypes = {model.headerData(
                         i, Qt.Horizontal, TablePreviewModel.ColumnTypeRole)
@@ -1109,7 +1123,6 @@ class CSVImportWidget(QWidget):
             current = None
         cb = self.column_type_edit_cb
         g = QActionGroup(menu)
-        current_action = None
         # 'Copy' the column types model into a menu
         for i in range(cb.count()):
             if cb.itemData(i, Qt.AccessibleDescriptionRole) == "separator":
@@ -1121,16 +1134,16 @@ class CSVImportWidget(QWidget):
             ac.setCheckable(True)
             if ac.data() == current:
                 ac.setChecked(True)
-                current_action = ac
             g.addAction(ac)
 
         def update_types(action):
             newtype = action.data()
-            self.__setColumnType(columns, newtype)
+            if isinstance(newtype, ColumnType):
+                self.__setColumnType(columns, newtype)
 
         menu.triggered.connect(update_types)
         menu.triggered.connect(self.__update_column_type_edit)
-        menu.popup(pos, current_action)
+        return menu
 
     def __setColumnType(self, columns, coltype):
         # type: (List[int], ColumnType) -> None
@@ -1721,7 +1734,7 @@ _to_datetime = None
 def parse_datetime(text):
     global _to_datetime
     if _to_datetime is None:
-        from pandas import to_datetime as _to_datetime
+        from pandas import to_datetime as _to_datetime  # pylint: disable=redefined-outer-name
     return _to_datetime(text)
 
 

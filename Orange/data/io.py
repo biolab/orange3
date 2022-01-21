@@ -13,6 +13,7 @@ from itertools import chain
 
 from os import path, remove
 from tempfile import NamedTemporaryFile
+from urllib.error import HTTPError
 from urllib.parse import urlparse, urlsplit, urlunsplit, \
     unquote as urlunquote, quote
 from urllib.request import urlopen, Request
@@ -405,7 +406,7 @@ class UrlReader(FileFormat):
     def __init__(self, filename):
         filename = filename.strip()
         if not urlparse(filename).scheme:
-            filename = 'http://' + filename
+            filename = 'https://' + filename
         filename = quote(filename, safe="/:")
         super().__init__(filename)
 
@@ -437,8 +438,11 @@ class UrlReader(FileFormat):
 
     def _resolve_redirects(self, url):
         # Resolve (potential) redirects to a final URL
-        with contextlib.closing(self.urlopen(url)) as response:
-            return response.url
+        try:
+            with contextlib.closing(self.urlopen(url)) as response:
+                return response.url
+        except HTTPError:
+            return url
 
     @classmethod
     def _trim(cls, url):
@@ -460,7 +464,7 @@ class UrlReader(FileFormat):
         match = re.match(r'(?:https?://)?(?:www\.)?'
                          r'docs\.google\.com/spreadsheets/d/'
                          r'(?P<workbook_id>[-\w_]+)'
-                         r'(?:/.*?gid=(?P<sheet_id>\d+).*|.*)?',
+                         r'(?:/.*?gid(=|%3D)(?P<sheet_id>\d+).*|.*)?',
                          url, re.IGNORECASE)
         try:
             workbook, sheet = match.group('workbook_id'), match.group('sheet_id')

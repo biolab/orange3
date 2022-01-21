@@ -17,11 +17,12 @@ from AnyQt.QtGui import QIcon
 from AnyQt.QtWidgets import QFileDialog
 from AnyQt.QtTest import QSignalSpy
 
+from Orange.data.io import CSVReader
 from orangewidget.tests.utils import simulate
 from orangewidget.widget import OWBaseWidget
 
 from Orange.data import DiscreteVariable, TimeVariable, ContinuousVariable, \
-    StringVariable
+    StringVariable, Table
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.data import owcsvimport
@@ -76,7 +77,7 @@ class TestOWCSVFileImport(WidgetTest):
     data_regions_options = owcsvimport.Options(
         encoding="ascii", dialect=csv.excel_tab(),
         columntypes=[
-            (range(0, 1), ColumnType.Categorical),
+            (range(0, 1), ColumnType.Numeric),
             (range(1, 2), ColumnType.Text),
             (range(2, 3), ColumnType.Categorical),
         ], rowspec=[
@@ -90,10 +91,10 @@ class TestOWCSVFileImport(WidgetTest):
     def _check_data_regions(self, table):
         self.assertEqual(len(table), 3)
         self.assertEqual(len(table), 3)
-        self.assertTrue(table.domain["id"].is_discrete)
+        self.assertTrue(table.domain["id"].is_continuous)
         self.assertTrue(table.domain["continent"].is_discrete)
         self.assertTrue(table.domain["state"].is_string)
-        assert_array_equal(table.X, [[0, 1], [1, 1], [2, 0]])
+        assert_array_equal(table.X, [[1, 1], [2, 1], [3, 0]])
         assert_array_equal(table.metas,
                            np.array([["UK"], ["Russia"], ["Mexico"]], object))
 
@@ -233,7 +234,7 @@ class TestOWCSVFileImport(WidgetTest):
 
     @staticmethod
     @contextmanager
-    def _browse_setup(widget: OWCSVFileImport, path: str):
+    def _browse_setup(widget: OWCSVFileImport, path: str, reader=None):
         browse_dialog = widget._browse_dialog
         with mock.patch.object(widget, "_browse_dialog") as r:
             dlg = browse_dialog()
@@ -242,7 +243,9 @@ class TestOWCSVFileImport(WidgetTest):
             dlg.exec = lambda: QFileDialog.Accepted
             r.return_value = dlg
             with mock.patch.object(owcsvimport.CSVImportDialog, "exec",
-                                   lambda _: QFileDialog.Accepted):
+                                   lambda _: QFileDialog.Accepted), \
+                    mock.patch.object(owcsvimport.FileDialog, "selectedFileFormat",
+                                      lambda _: reader):
                 yield
 
     def test_browse(self):
@@ -253,33 +256,21 @@ class TestOWCSVFileImport(WidgetTest):
         cur = widget.current_item()
         self.assertIsNotNone(cur)
         self.assertTrue(samepath(cur.path(), path))
+        self.assertIsInstance(cur.varPath(), PathItem.AbsPath)
 
-    def test_browse_prefix(self):
+    def test_browse_relative(self):
         widget = self.widget
         path = self.data_regions_path
         with self._browse_setup(widget, path):
             basedir = os.path.dirname(__file__)
             widget.workflowEnv = lambda: {"basedir": basedir}
             widget.workflowEnvChanged("basedir", basedir, "")
-            widget.browse_relative(prefixname="basedir")
+            widget.browse()
 
         cur = widget.current_item()
         self.assertIsNotNone(cur)
         self.assertTrue(samepath(cur.path(), path))
         self.assertIsInstance(cur.varPath(), PathItem.VarPath)
-
-    def test_browse_prefix_parent(self):
-        widget = self.widget
-        path = self.data_regions_path
-
-        with self._browse_setup(widget, path):
-            basedir = os.path.join(os.path.dirname(__file__), "bs")
-            widget.workflowEnv = lambda: {"basedir": basedir}
-            widget.workflowEnvChanged("basedir", basedir, "")
-            mb = widget._path_must_be_relative_mb = mock.Mock()
-            widget.browse_relative(prefixname="basedir")
-            mb.assert_called()
-        self.assertIsNone(widget.current_item())
 
     def test_browse_for_missing(self):
         missing = os.path.dirname(__file__) + "/this file does not exist.csv"
@@ -358,6 +349,38 @@ class TestOWCSVFileImport(WidgetTest):
         cur = widget.current_item()
         self.assertEqual(item[0], cur.varPath())
         self.assertEqual(item[1].as_dict(), cur.options().as_dict())
+
+    def test_unsafe_cast_warning(self):
+        dirname = os.path.dirname(__file__)
+        path = os.path.join(dirname, "data-regions.tab")
+
+        w = self.create_widget(
+            owcsvimport.OWCSVFileImport,
+            stored_settings={
+                "_session_items": [
+                    (path, self.data_regions_options.as_dict())
+                ]
+            }
+        )
+        w.activate_recent(0)
+        self.process_events(until=lambda: w.data is not None)
+        index = w.domain_editor.model().index(0, 1)
+        w.domain_editor.model().setData(index, 'text')
+        w.apply_domain_edit()
+        self.assertTrue(w.Warning.numeric_cast.is_shown())
+
+    def load_dataset(self, path, reader=None):
+        with self._browse_setup(self.widget, path, reader):
+            self.widget.browse()
+
+    def test_load_iris(self):
+        self.load_dataset(os.path.join(
+            os.path.dirname(__file__), '../../../datasets/iris.tab'
+        ), CSVReader)
+        self.process_events(until=lambda: self.widget.data is not None)
+        data = Table('iris')
+        self.assertEqual(self.widget.table_view.model().rowCount(),
+                         len(data))
 
 
 class TestImportDialog(GuiTest):

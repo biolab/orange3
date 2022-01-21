@@ -20,6 +20,8 @@ import gzip
 import lzma
 import bz2
 import zipfile
+from itertools import chain
+from urllib.parse import urlparse
 
 from xml.sax.saxutils import escape
 from functools import singledispatch
@@ -28,19 +30,20 @@ from contextlib import ExitStack
 import typing
 from typing import (
     List, Tuple, Dict, Optional, Any, Callable, Iterable,
-    Union, AnyStr, BinaryIO, Set, Type, Mapping, Sequence, NamedTuple
+    Union, AnyStr, BinaryIO, Set, Type, Mapping, Sequence
 )
 
 from AnyQt.QtCore import (
     Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType
 )
 from AnyQt.QtGui import (
-    QStandardItem, QStandardItemModel, QPalette, QColor, QIcon
+    QStandardItem, QStandardItemModel, QPalette, QColor, QIcon,
 )
 from AnyQt.QtWidgets import (
-    QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox, QGridLayout,
-    QVBoxLayout, QSizePolicy, QStyle, QFileIconProvider, QFileDialog,
-    QApplication, QMessageBox, QTextBrowser, QMenu
+    QLabel, QComboBox, QPushButton, QDialog, QDialogButtonBox,
+    QVBoxLayout, QSizePolicy, QFileIconProvider, QFileDialog,
+    QApplication, QMessageBox, QTextBrowser,
+    QStyle, QMenu, QHBoxLayout, QTableView, QHeaderView, QGridLayout, QCompleter
 )
 from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
@@ -50,22 +53,37 @@ import pandas as pd
 
 from pandas.api import types as pdtypes
 
+from orangewidget.utils.filedialogs import format_filter
+from orangewidget.settings import Setting, SettingProvider, widget_settings_dir
+
+from Orange.util import log_warnings
+
 import Orange.data
+from Orange.data import Table, ContinuousVariable, StringVariable, FileFormat
+from Orange.data.io import class_from_qualified_name, CSVReader, UrlReader
+from Orange.data.io_base import DataTableMixin, _TableHeader
+
 from Orange.misc.collections import natural_sorted
 
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
+from Orange.widgets.data.owfile import NamedURLModel, LineEditSelectOnFocus
+from Orange.widgets.data.owtable import DataTableView, RichTableModel, is_sortable, TableSliceProxy
+from Orange.widgets.settings import PerfectDomainContextHandler
+from Orange.widgets.utils.textimport import CSVOptionsWidget
+from Orange.widgets.utils.settings import (
+    QSettings_readArray, QSettings_writeArray
+)
 from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get, qname
 )
 from Orange.widgets.utils.combobox import ItemStyledComboBox
+from Orange.widgets.utils.domaineditor import DomainEditor, Column
 from Orange.widgets.utils.pathutils import (
     PathItem, VarPath, AbsPath, samepath, prettyfypath, isprefixed,
 )
 from Orange.widgets.utils.overlay import OverlayWidget
-from Orange.widgets.utils.settings import (
-    QSettings_readArray, QSettings_writeArray
-)
+from Orange.widgets.utils.itemdelegates import TableDataDelegate
 
 if typing.TYPE_CHECKING:
     # pylint: disable=invalid-name
@@ -120,13 +138,16 @@ class Options:
     def __init__(self, encoding='utf-8', dialect=csv.excel(),
                  columntypes: Iterable[Tuple[range, 'ColumnType']] = (),
                  rowspec=((range(0, 1), RowSpec.Header),),
-                 decimal_separator=".", group_separator="") -> None:
+                 decimal_separator=".", group_separator="",
+                 reader=None, sheet=None) -> None:
         self.encoding = encoding
         self.dialect = dialect
         self.columntypes = list(columntypes)  # type: List[Tuple[range, ColumnType]]
         self.rowspec = list(rowspec)  # type: List[Tuple[range, RowSpec]]
         self.decimal_separator = decimal_separator
         self.group_separator = group_separator
+        self.reader = reader
+        self.sheet = sheet
 
     def __eq__(self, other):
         """
@@ -168,6 +189,8 @@ class Options:
             "rowspec": Options.spec_as_encodable(self.rowspec),
             "decimal_separator": self.decimal_separator,
             "group_separator": self.group_separator,
+            "reader": self.reader,
+            "sheet": self.sheet,
         }
 
     @staticmethod
@@ -193,10 +216,13 @@ class Options:
         rowspec = Options.spec_from_encodable(rowspec, RowSpec)
         decimal = mapping.get("decimal_separator", ".")
         group = mapping.get("group_separator", "")
+        reader = mapping.get("reader", None)
+        sheet = mapping.get("sheet", None)
 
         return Options(encoding, dialect, colspec, rowspec,
                        decimal_separator=decimal,
-                       group_separator=group)
+                       group_separator=group, reader=reader,
+                       sheet=sheet)
 
     @staticmethod
     def spec_as_encodable(spec):
@@ -541,29 +567,23 @@ def move_item_to_index(model: QStandardItemModel, item: QStandardItem, index: in
     model.insertRow(index, [item])
 
 
-class FileFormat(NamedTuple):
-    mime_type: str
-    name: str
-    globs: Sequence[str]
-
-
-FileFormats = [
-    FileFormat("text/csv", "Text - comma separated", ("*.csv", "*")),
-    FileFormat("text/tab-separated-values", "Text - tab separated", ("*.tsv", "*")),
-    FileFormat("text/plain", "Text - all files", ("*.txt", "*")),
-]
-
-
 class FileDialog(QFileDialog):
-    __formats: Sequence[FileFormat] = ()
-
-    @staticmethod
-    def filterStr(f: FileFormat) -> str:
-        return f"{f.name} ({', '.join(f.globs)})"
+    __filters: Sequence[FileFormat] = ()
+    __file_formats: Sequence[str] = ()
 
     def setFileFormats(self, formats: Sequence[FileFormat]):
-        filters = [FileDialog.filterStr(f) for f in formats]
-        self.__formats = tuple(formats)
+        file_formats = sorted(set(formats), key=lambda w: (w.PRIORITY, w.DESCRIPTION))
+        self.__file_formats = file_formats
+        filters = [format_filter(f) for f in file_formats]
+        self.__filters = filters
+
+        all_extensions = set()
+        for f in file_formats:
+            all_extensions.update(f.EXTENSIONS)
+        file_formats.insert(0, None)
+        filters.insert(0, "All readable files (*{})".format(
+            ' *'.join(sorted(all_extensions))))
+
         self.setNameFilters(filters)
 
     def fileFormats(self) -> Sequence[FileFormat]:
@@ -571,25 +591,14 @@ class FileDialog(QFileDialog):
 
     def selectedFileFormat(self) -> FileFormat:
         filter_ = self.selectedNameFilter()
-        index = index_where(
-            self.__formats, lambda f: FileDialog.filterStr(f) == filter_
-        )
-        return self.__formats[index]
+        index = self.__filters.index(filter_)
+        return self.__file_formats[index]
 
 
-def default_options_for_mime_type(
-        path: str, mime_type: str
-) -> Options:
-    defaults = {
-        "text/csv": (csv.excel(), True),
-        "text/tab-separated-values": (csv.excel_tab(), True)
-    }
+def default_options_for_path(path: str) -> Options:
     dialect, header, encoding = csv.excel(), True, "utf-8"
-    delimiters = None
     try_encodings = ["utf-8", "utf-16", "iso8859-1"]
-    if mime_type in defaults:
-        dialect, header = defaults[mime_type]
-        delimiters = [dialect.delimiter]
+    delimiters = [d[1] for d in CSVOptionsWidget.PresetDelimiters]
 
     for encoding_ in try_encodings:
         try:
@@ -628,6 +637,8 @@ class OWCSVFileImport(widget.OWWidget):
         )
 
     class Error(widget.OWWidget.Error):
+        sheet_error = widget.Msg("Error listing available sheets.")
+        unknown = widget.Msg("Read error:\n{}")
         error = widget.Msg(
             "Unexpected error"
         )
@@ -637,29 +648,56 @@ class OWCSVFileImport(widget.OWWidget):
             "might be binary"
         )
 
+    class Warning(widget.OWWidget.Warning):
+        load_warning = widget.Msg("Read warning:\n{}")
+        performance_warning = widget.Msg(
+            "Categorical variables with >100 values may decrease performance.")
+        renamed_vars = widget.Msg("Some variables have been renamed "
+                                  "to avoid duplicates.\n{}")
+        numeric_cast = widget.Msg('Loading data as numeric and changing it to text '
+                                  'may result in altered values.\n'
+                                  'For example, 001 turns into 1.\n'
+                                  'Change the variable type to String in '
+                                  'the Import Options to avoid this.')
+
+    class NoFileSelected:
+        pass
+
+    LOCAL_FILE, URL = range(2)
+    source = Setting(LOCAL_FILE)
+    sheet_names = Setting({})
+    recent_urls = Setting([])
+
     #: Paths and options of files accessed in a 'session'
-    _session_items = settings.Setting(
+    _session_items = Setting(
         [], schema_only=True)  # type: List[Tuple[str, dict]]
 
-    _session_items_v2 = settings.Setting(
+    _session_items_v2 = Setting(
         [], schema_only=True)  # type: List[Tuple[Dict[str, str], dict]]
     #: Saved dialog state (last directory and selected filter)
-    dialog_state = settings.Setting({
+    dialog_state = Setting({
         "directory": "",
         "filter": ""
     })  # type: Dict[str, str]
+
+    settingsHandler = PerfectDomainContextHandler(
+        match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
+    )
+    domain_editor = SettingProvider(DomainEditor)
 
     # we added column type guessing to this widget, which breaks compatibility
     # with older saved workflows, where types not guessed differently, when
     # compatibility_mode=True widget have older guessing behaviour
     settings_version = 3
-    compatibility_mode = settings.Setting(False, schema_only=True)
+    compatibility_mode = Setting(False, schema_only=True)
 
     MaxHistorySize = 50
 
-    want_main_area = False
+    auto_apply = Setting(True)
+
+    want_main_area = True
     buttons_area_orientation = None
-    resizing_enabled = False
+    resizing_enabled = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
@@ -671,21 +709,43 @@ class OWCSVFileImport(widget.OWWidget):
         self.__executor = qconcurrent.ThreadExecutor()
         self.__watcher = None  # type: Optional[qconcurrent.FutureWatcher]
 
-        self.controlArea.layout().setSpacing(-1)  # reset spacing
-        grid = QGridLayout()
-        grid.addWidget(QLabel("File:", self), 0, 0, 1, 1)
+        self.reader = None
+        self.data = None
 
+        self.controlArea.layout().setSpacing(-1)  # reset spacing
+
+        ########
+        # Source
+        ########
+        layout = QGridLayout()
+        layout.setSpacing(4)
+        gui.widgetBox(self.controlArea, orientation=layout, box='Source')
+        vbox = gui.radioButtons(None, self, "source", box=True,
+                                callback=self._invalidate, addToLayout=False)
+
+        #############
+        # File select
+        #############
         self.import_items_model = VarPathItemModel(self)
         self.import_items_model.setReplacementEnv(self._replacements())
+
+        rb_button = gui.appendRadioButton(vbox, "File:", addToLayout=False)
+        layout.addWidget(rb_button, 0, 0, Qt.AlignVCenter)
+
+        # box = gui.hBox(None, addToLayout=False, margin=0)
+        # box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         self.recent_combo = ItemStyledComboBox(
-            self, objectName="recent-combo", toolTip="Recent files.",
+            self, objectName="recent-combo",
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
-            minimumContentsLength=16, placeholderText="Recent files…"
+            minimumContentsLength=16
         )
         self.recent_combo.setModel(self.import_items_model)
         self.recent_combo.activated.connect(self.activate_recent)
         self.recent_combo.setSizePolicy(
             QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        # box.layout().addWidget(self.recent_combo)
+        layout.addWidget(self.recent_combo, 0, 1)
+
         self.browse_button = QPushButton(
             "…", icon=self.style().standardIcon(QStyle.SP_DirOpenIcon),
             toolTip="Browse filesystem", autoDefault=False,
@@ -700,22 +760,84 @@ class OWCSVFileImport(widget.OWWidget):
         ac = menu.addAction("Import relative to workflow file…")
         ac.setToolTip("Import a file within the workflow file directory")
         ac.triggered.connect(lambda: self.browse_relative("basedir"))
-
         if "basedir" in self._replacements():
             self.browse_button.setMenu(menu)
 
         self.browse_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.browse_button.clicked.connect(self.browse)
-        grid.addWidget(self.recent_combo, 0, 1, 1, 1)
-        grid.addWidget(self.browse_button, 0, 2, 1, 1)
-        self.controlArea.layout().addLayout(grid)
+        layout.addWidget(self.browse_button, 0, 2)
+
+        ###############################
+        # Sheet combo (on opening xlsx)
+
+        self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
+        self.sheet_combo = QComboBox()
+        self.sheet_combo.activated[str].connect(self.select_sheet)
+        self.sheet_combo.setSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        self.sheet_label = QLabel()
+        self.sheet_label.setText('Sheet')
+        self.sheet_label.setSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        self.sheet_box.layout().addWidget(
+            self.sheet_label, Qt.AlignLeft)
+        self.sheet_box.layout().addWidget(
+            self.sheet_combo, Qt.AlignVCenter)
+        layout.addWidget(self.sheet_box, 1, 1)
+        self.sheet_box.hide()
+
+        #####
+        # URL
+        #####
+
+        rb_button = gui.appendRadioButton(vbox, "URL:", addToLayout=False)
+        layout.addWidget(rb_button, 2, 0, Qt.AlignVCenter)
+
+        self.url_combo = url_combo = QComboBox()
+        url_model = NamedURLModel(self.sheet_names)
+        url_model.wrap(self.recent_urls)
+        url_combo.setLineEdit(LineEditSelectOnFocus())
+        url_combo.setModel(url_model)
+        url_combo.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
+        url_combo.setEditable(True)
+        url_combo.setInsertPolicy(url_combo.InsertAtTop)
+        url_edit = url_combo.lineEdit()
+        l, t, r, b = url_edit.getTextMargins()
+        url_edit.setTextMargins(l + 5, t, r, b)
+        layout.addWidget(url_combo, 2, 1, 1, 3)
+        url_combo.activated.connect(self._url_set)
+        # whit completer we set that combo box is case sensitive when
+        # matching the history
+        completer = QCompleter()
+        completer.setCaseSensitivity(Qt.CaseSensitive)
+        url_combo.setCompleter(completer)
+
+        #########
+        # Buttons
+        #########
+
+        self.import_options_button = QPushButton(
+            "Import Options", enabled=False, autoDefault=False,
+            clicked=self._activate_import_dialog
+        )
+
+        self.load_button = QPushButton(
+            "Load", enabled=False, default=True,
+            clicked=self.__committimer.start
+        )
+
+        box = QHBoxLayout()
+        box.addWidget(self.import_options_button)
+        box.addWidget(self.load_button)
+        self.controlArea.layout().addLayout(box)
 
         ###########
         # Info text
         ###########
         box = gui.widgetBox(self.controlArea, "Info")
+        box.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
         self.summary_text = QTextBrowser(
-            verticalScrollBarPolicy=Qt.ScrollBarAsNeeded,
+            verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             readOnly=True,
         )
         self.summary_text.viewport().setBackgroundRole(QPalette.NoRole)
@@ -723,39 +845,63 @@ class OWCSVFileImport(widget.OWWidget):
         self.summary_text.setMinimumHeight(self.fontMetrics().ascent() * 2 + 4)
         self.summary_text.viewport().setAutoFillBackground(False)
         box.layout().addWidget(self.summary_text)
+        self._set_summary_text(None)
 
-        button_box = QDialogButtonBox(
-            orientation=Qt.Horizontal,
-            standardButtons=QDialogButtonBox.Cancel | QDialogButtonBox.Retry
-        )
-        self.load_button = b = button_box.button(QDialogButtonBox.Retry)
-        b.setText("Load")
-        b.clicked.connect(self.__committimer.start)
-        b.setEnabled(False)
-        b.setDefault(True)
+        self.info.set_output_summary(self.info.NoOutput)
 
-        self.cancel_button = b = button_box.button(QDialogButtonBox.Cancel)
-        b.clicked.connect(self.cancel)
-        b.setEnabled(False)
-        b.setAutoDefault(False)
-
-        self.import_options_button = QPushButton(
-            "Import Options…", enabled=False, autoDefault=False,
-            clicked=self._activate_import_dialog
+        ###############
+        # Domain editor
+        ###############
+        box = gui.widgetBox(self.controlArea, "Columns (click to edit)")
+        self.domain_editor = DomainEditor(self)
+        self.domain_editor.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
         )
 
-        def update_buttons(cbindex):
-            self.import_options_button.setEnabled(cbindex != -1)
-            self.load_button.setEnabled(cbindex != -1)
-        self.recent_combo.currentIndexChanged.connect(update_buttons)
+        # TODO when File is removed, put these changes into domain editor
+        self.domain_editor.verticalHeader().hide()
+        self.domain_editor.setColumnHidden(3, True)
 
-        button_box.addButton(
-            self.import_options_button, QDialogButtonBox.ActionRole
+        self.editor_model = self.domain_editor.model()
+        box.layout().addWidget(self.domain_editor)
+
+        self.editor_model.dataChanged.connect(self.__handle_domain_edit)
+
+        box = gui.hBox(box)
+        gui.button(
+            box, self, "Reset", callback=self.reset_domain_edit,
+            autoDefault=False
         )
-        button_box.setStyleSheet(
-            "button-layout: {:d};".format(QDialogButtonBox.MacLayout)
-        )
-        self.controlArea.layout().addWidget(button_box)
+        gui.rubber(box)
+        gui.auto_apply(box, self, commit=self.apply_domain_edit)
+
+        ############
+        # Table view
+        ############
+
+        # TODO consolidate the following 20 lines, they're copied from OWTable
+        self.table_view = view = DataTableView()
+        self.mainArea.layout().addWidget(view)
+
+        view.setSortingEnabled(True)
+        view.setItemDelegate(TableDataDelegate(view))
+        view.setSelectionBehavior(QTableView.SelectRows)
+
+        header = view.horizontalHeader()
+        header.setSectionsMovable(True)
+        header.setSectionsClickable(True)
+        header.setSortIndicatorShown(True)
+        header.setSortIndicator(-1, Qt.AscendingOrder)
+
+        # QHeaderView does not 'reset' the model sort column,
+        # because there is no guaranty (requirement) that the
+        # models understand the -1 sort column.
+        def sort_reset(index, order):
+            if view.model() is not None and index == -1:
+                view.model().sort(index, order)
+
+        header.sortIndicatorChanged.connect(sort_reset)
+
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
 
         self._restoreState()
@@ -766,7 +912,6 @@ class OWCSVFileImport(widget.OWWidget):
     def workflowEnvChanged(self, key, value, oldvalue):
         super().workflowEnvChanged(key, value, oldvalue)
         if key == "basedir":
-            self.browse_button.setMenu(self.browse_menu)
             self.import_items_model.setReplacementEnv(self._replacements())
 
     @Slot(int)
@@ -846,8 +991,10 @@ class OWCSVFileImport(widget.OWWidget):
             acceptMode=QFileDialog.AcceptOpen,
             fileMode=QFileDialog.ExistingFile
         )
-
-        dlg.setFileFormats(FileFormats)
+        readers = [f for f in FileFormat.formats
+                   if getattr(f, 'read', None)
+                   and getattr(f, "EXTENSIONS", None)]
+        dlg.setFileFormats(readers)
         state = self.dialog_state
         lastdir = state.get("directory", "")
         lastfilter = state.get("filter", "")
@@ -886,63 +1033,84 @@ class OWCSVFileImport(widget.OWWidget):
         mb.setAttribute(Qt.WA_DeleteOnClose)
         return mb
 
-    @Slot(str)
-    def browse_relative(self, prefixname):
-        path = self._replacements().get(prefixname)
-        self.browse(prefixname=prefixname, directory=path)
-
     @Slot()
-    def browse(self, prefixname=None, directory=None):
+    def browse(self):
         """
         Open a file dialog and select a user specified file.
         """
         dlg = self._browse_dialog()
-        if directory is not None:
+
+        if "basedir" in self._replacements():
+            directory = self._replacements().get("basedir")
             dlg.setDirectory(directory)
+        else:
+            directory = ""
 
         status = dlg.exec()
         dlg.deleteLater()
-        if status == QFileDialog.Accepted:
-            selected_filter = dlg.selectedFileFormat()
-            path = dlg.selectedFiles()[0]
-            if prefixname:
-                _prefixpath = self._replacements().get(prefixname, "")
-                if not isprefixed(_prefixpath, path):
-                    mb = self._path_must_be_relative_mb(_prefixpath)
-                    mb.show()
-                    return
-                varpath = VarPath(prefixname, os.path.relpath(path, _prefixpath))
-            else:
-                varpath = PathItem.AbsPath(path)
+        if status != QFileDialog.Accepted:
+            return
 
-            # pre-flight check; try to determine the nature of the file
-            mtype = _mime_type_for_path(path)
-            if not mtype.inherits("text/plain"):
-                mb = self._might_be_binary_mb(path)
-                if mb.exec() == QMessageBox.Cancel:
-                    return
-            # initialize options based on selected format
-            options = default_options_for_mime_type(
-                path, selected_filter.mime_type,
-            )
-            # Search for path in history.
-            # If found use the stored params to initialize the import dialog
-            items = self.itemsFromSettings()
-            idx = index_where(items, lambda t: samepath(t[0], path))
-            if idx is not None:
-                _, options_ = items[idx]
-                if options_ is not None:
-                    options = options_
-            dlg = CSVImportDialog(
-                self, windowTitle="Import Options", sizeGripEnabled=True)
-            dlg.setWindowModality(Qt.WindowModal)
-            dlg.setPath(path)
-            dlg.setOptions(options)
-            status = dlg.exec()
-            dlg.deleteLater()
-            if status == QDialog.Accepted:
-                self.set_selected_file(path, dlg.options())
-                self.current_item().setVarPath(varpath)
+        reader = dlg.selectedFileFormat()
+        path = dlg.selectedFiles()[0]
+        assert os.path.isfile(path)
+
+        if directory and os.path.commonprefix([directory, path]) == directory:
+            varpath = VarPath("basedir", os.path.relpath(path, directory))
+        else:
+            varpath = PathItem.AbsPath(path)
+
+        options = default_options_for_path(path)
+        if not reader:
+            reader = self._choose_reader(path, options)
+
+        if reader is not None:
+            self._prepare_reader(reader, path, varpath)
+        else:
+            self._prepare_csv_import(options, path, varpath)
+
+    def _choose_reader(self, path, options):
+        try:
+            proposed_reader = FileFormat.get_reader(path)
+            if not isinstance(proposed_reader, CSVReader):
+                return proposed_reader
+
+            sample = _open(path, 'rb')
+            wrapper = io.TextIOWrapper(sample, newline='')
+            rows = csv.reader(wrapper, dialect=options.dialect)
+            headers, data = DataTableMixin.parse_headers(rows)
+            header = _TableHeader(headers)
+
+            if any(header.types) or any(header.flags):
+                return proposed_reader
+        except IOError:
+            pass
+        return None
+
+    def _prepare_reader(self, reader, path, varpath):
+        options = Options(reader=reader.qualified_name())
+        self.set_selected_file(path, options)
+        self.current_item().setVarPath(varpath)
+
+    def _prepare_csv_import(self, options, path, varpath):
+        # Search for path in history.
+        # If found use the stored params to initialize the import dialog
+        items = self.itemsFromSettings()
+        idx = index_where(items, lambda t: samepath(t[0], path))
+        if idx is not None:
+            _, options_ = items[idx]
+            if options_ is not None and options_.reader is None:
+                options = options_
+        dlg = CSVImportDialog(
+            self, windowTitle="Import Options", sizeGripEnabled=True)
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.setPath(path)
+        dlg.setOptions(options)
+        status = dlg.exec()
+        dlg.deleteLater()
+        if status == QDialog.Accepted:
+            self.set_selected_file(path, dlg.options())
+            self.current_item().setVarPath(varpath)
 
     def current_item(self):
         # type: () -> Optional[ImportItem]
@@ -1013,7 +1181,7 @@ class OWCSVFileImport(widget.OWWidget):
         # type: () -> QSettings
         """Return a QSettings instance with local persistent settings."""
         filename = "{}.ini".format(qname(cls))
-        fname = os.path.join(settings.widget_settings_dir(), filename)
+        fname = os.path.join(widget_settings_dir(), filename)
         return QSettings(fname, QSettings.IniFormat)
 
     def _add_recent(self, filename, options=None):
@@ -1062,7 +1230,18 @@ class OWCSVFileImport(widget.OWWidget):
         self.__committimer.start()
         if self.__watcher is not None:
             self.__cancel_task()
-        self.setBlocking(True)
+        # self.setBlocking(True)
+
+    def _update_buttons(self):
+        cbindex = self.recent_combo.currentIndex()
+        self.load_button.setEnabled(cbindex != -1)
+
+        import_enabled = (cbindex != -1 and
+                          self.source == self.LOCAL_FILE and
+                          self.reader is None)
+        self.import_options_button.setEnabled(import_enabled)
+
+        self._update_sheet_combo()
 
     def commit(self):
         """
@@ -1073,9 +1252,21 @@ class OWCSVFileImport(widget.OWWidget):
         Any existing pending task is canceled.
         """
         self.__committimer.stop()
+        self.closeContext()
+        self._set_summary_text(None)
+        self._update_table(None)
         if self.__watcher is not None:
             self.__cancel_task()
         self.error()
+
+        if self.source == self.URL:
+            url = self.url_combo.currentText().strip()
+            if url:
+                self.reader = UrlReader(url)
+            else:
+                self.reader = self.NoFileSelected
+            self._use_reader()
+            return
 
         item = self.current_item()
         if item is None:
@@ -1084,6 +1275,15 @@ class OWCSVFileImport(widget.OWWidget):
         opts = item.options()
         if not isinstance(opts, Options):
             return
+
+        if opts.reader:
+            reader = class_from_qualified_name(opts.reader)
+            self.reader = reader(path)
+            self._use_reader()
+            return
+
+        self.reader = None
+        self._update_buttons()
 
         task = state = TaskState()
         state.future = ...
@@ -1104,6 +1304,74 @@ class OWCSVFileImport(widget.OWWidget):
         w.progress = state
         self.__watcher = w
         self.__set_running_state()
+
+    def _use_reader(self):
+        if self.reader is self.NoFileSelected:
+            self.Outputs.data.send(None)
+            return
+
+        options = self.current_item().options()
+        if options.sheet:
+            self.reader.select_sheet(options.sheet)
+
+        with log_warnings() as warnings:
+            try:
+                data = self.reader.read()
+            except Exception as ex:
+                _log.exception(ex)
+                self.Error.unknown(str(ex))
+                return
+            if warnings:
+                self.Warning.load_warning(warnings[-1].message.args[0])
+
+        self._update_buttons()
+        self.__clear_running_state()
+        self.data = data
+        self.openContext(data.domain)
+        self.apply_domain_edit()
+
+    def _update_sheet_combo(self):
+        if not hasattr(self.reader, 'sheets'):
+            self.sheet_box.hide()
+            return
+
+        if len(self.reader.sheets) < 2:
+            self.sheet_box.hide()
+            self.reader.select_sheet(None)
+            return
+
+        self.sheet_combo.clear()
+        self.sheet_combo.addItems(self.reader.sheets)
+        self._select_active_sheet()
+        self.sheet_box.show()
+
+    def _select_active_sheet(self):
+        try:
+            idx = self.reader.sheets.index(self.reader.sheet)
+            self.sheet_combo.setCurrentIndex(idx)
+        except ValueError:
+            # Requested sheet does not exist in this file
+            self.reader.select_sheet(None)
+            self.sheet_combo.setCurrentIndex(0)
+
+    def select_sheet(self):
+        opts = self.current_item().options()
+        opts.sheet = self.sheet_combo.currentText()
+        self.current_item().setOptions(opts)
+        self._invalidate()
+
+    def _url_set(self):
+        url = self.url_combo.currentText()
+        pos = self.recent_urls.index(url)
+        url = url.strip()
+
+        if not urlparse(url).scheme:
+            url = 'https://' + url
+            self.url_combo.setItemText(pos, url)
+            self.recent_urls[pos] = url
+
+        self.source = self.URL
+        self._invalidate()
 
     @Slot('qint64', 'qint64')
     def __set_read_progress(self, read, count):
@@ -1128,7 +1396,7 @@ class OWCSVFileImport(widget.OWWidget):
             self.__cancel_task()
             self.__clear_running_state()
             self.setStatusMessage("Cancelled")
-            self.summary_text.setText(
+            self._set_summary_text(
                 "<div>Cancelled<br/><small>Press 'Reload' to try again</small></div>"
             )
 
@@ -1136,20 +1404,20 @@ class OWCSVFileImport(widget.OWWidget):
         self.progressBarInit()
         self.setBlocking(True)
         self.setStatusMessage("Running")
-        self.cancel_button.setEnabled(True)
         self.load_button.setText("Restart")
         path = self.current_item().path()
         self.Error.clear()
-        self.summary_text.setText(
+        self._set_summary_text(
             "<div>Loading: <i>{}</i><br/>".format(prettyfypath(path))
         )
+        self.domain_editor.setEnabled(False)
 
     def __clear_running_state(self, ):
         self.progressBarFinished()
         self.setStatusMessage("")
         self.setBlocking(False)
-        self.cancel_button.setEnabled(False)
         self.load_button.setText("Reload")
+        self.domain_editor.setEnabled(True)
 
     def __set_error_state(self, err):
         self.Error.clear()
@@ -1176,11 +1444,11 @@ class OWCSVFileImport(widget.OWWidget):
                 basename=escape(basename),
                 err="".join(traceback.format_exception_only(type(err), err))
             )
-        self.summary_text.setText(text)
+        self._set_summary_text(text)
 
     def __clear_error_state(self):
         self.Error.error.clear()
-        self.summary_text.setText("")
+        self._set_summary_text("")
 
     def onDeleteWidget(self):
         """Reimplemented."""
@@ -1210,18 +1478,121 @@ class OWCSVFileImport(widget.OWWidget):
 
         if df is not None:
             table = pandas_to_table(df)
+            domain = table.domain
+            self._inspect_discrete_variables(domain)
             filename = self.current_item().path()
             table.name = os.path.splitext(os.path.split(filename)[-1])[0]
         else:
             table = None
-        self.Outputs.data_frame.send(df)
-        self.Outputs.data.send(table)
-        self._update_status_messages(table)
+            domain = None
 
-    def _update_status_messages(self, data):
+        self.data = table
+        self.Warning.clear()
+        self.openContext(domain)
+        self.apply_domain_edit()
+
+        self.Outputs.data_frame.send(df)
+
+    def reset_domain_edit(self):
+        self.Warning.clear()
+        self.domain_editor.reset_domain()
+        self.apply_domain_edit()
+
+    def __handle_domain_edit(self):
+        self.Warning.clear()
+        self.apply_domain_edit()
+
+    def apply_domain_edit(self):
+        # commit data to output
+        if self.data is None:
+            table = None
+        else:
+            domain, cols, renamed = \
+                self.domain_editor.get_domain(self.data.domain, self.data,
+                                              deduplicate=True)
+            if not (domain.variables or domain.metas):
+                table = None
+            elif domain is self.data.domain:
+                table = self.data
+            else:
+                X, y, m = cols
+                table = Table.from_numpy(domain, X, y, m, self.data.W)
+                table.name = self.data.name
+                table.ids = np.array(self.data.ids)
+                table.attributes = getattr(self.data, 'attributes', {})
+                self._inspect_discrete_variables(domain)
+                self._inspect_unsafe_cast()
+            if renamed:
+                self.Warning.renamed_vars(f"Renamed: {', '.join(renamed)}")
+        self.Outputs.data.send(table)
+        self._update_table(table)
+
+    def _inspect_discrete_variables(self, domain):
+        for var in chain(domain.variables, domain.metas):
+            if var.is_discrete and len(var.values) > 100:
+                self.Warning.performance_warning()
+
+    def _inspect_unsafe_cast(self):
+        for orig_var, var in zip(
+            self.domain_editor.model().orig_variables,
+            self.domain_editor.model().variables
+        ):
+            if orig_var[Column.tpe] is ContinuousVariable and \
+                    var[Column.tpe] is StringVariable:
+                self.Warning.numeric_cast()
+
+    def _update_table(self, data):
+        # TODO consolidate, most of this is copied from OWTable
+        view = self.table_view
         if data is None:
+            view.setModel(None)
             return
 
+        datamodel = RichTableModel(data)
+        rowcount = data.approx_len()
+        view.setItemDelegate(TableDataDelegate(view))
+
+        # Enable/disable view sorting based on data's type
+        view.setSortingEnabled(is_sortable(data))
+        header = view.horizontalHeader()
+        header.setSectionsClickable(is_sortable(data))
+        header.setSortIndicatorShown(is_sortable(data))
+
+        view.setModel(datamodel)
+
+        vheader = view.verticalHeader()
+        option = view.viewOptions()
+        size = view.style().sizeFromContents(
+            QStyle.CT_ItemViewItem, option,
+            QSize(20, 20), view)
+
+        vheader.setDefaultSectionSize(size.height() + 2)
+        vheader.setMinimumSectionSize(5)
+        vheader.setSectionResizeMode(QHeaderView.Fixed)
+
+        # Limit the number of rows displayed in the QTableView
+        # (workaround for QTBUG-18490 / QTBUG-28631)
+        maxrows = (2 ** 31 - 1) // (vheader.defaultSectionSize() + 2)
+        if rowcount > maxrows:
+            sliceproxy = TableSliceProxy(
+                parent=view, rowSlice=slice(0, maxrows))
+            sliceproxy.setSourceModel(datamodel)
+            # First reset the view (without this the header view retains
+            # it's state - at this point invalid/broken)
+            view.setModel(None)
+            view.setModel(sliceproxy)
+
+        assert view.model().rowCount() <= maxrows
+        assert vheader.sectionSize(0) > 1 or datamodel.rowCount() == 0
+
+        model = view.model()
+        if isinstance(model, TableSliceProxy):
+            model = model.sourceModel()
+
+        model.setRichHeaderFlags(RichTableModel.Name)
+        # self.set_corner_text(view, "")
+
+        # update status messages
         def pluralize(seq):
             return "s" if len(seq) != 1 else ""
 
@@ -1233,7 +1604,17 @@ class OWCSVFileImport(widget.OWWidget):
                        plural_2=pluralize(data.domain.attributes),
                        n_meta=len(data.domain.metas),
                        plural_3=pluralize(data.domain.metas))
-        self.summary_text.setText(summary)
+        self._set_summary_text(summary)
+
+    def _set_summary_text(self, text):
+        if not text:
+            text = '<div>Choose a file or input a URL above to get started.</div>'
+        self.summary_text.setText(text)
+        if self.summary_text.isVisible():
+            height = self.summary_text.document().size().height()
+        else:
+            height = self.fontMetrics().height()
+        self.summary_text.setFixedHeight(height)
 
     def itemsFromSettings(self):
         # type: () -> List[Tuple[str, Options]]
