@@ -35,12 +35,6 @@ except ImportError:
     have_cython = False
 
 try:
-    from babel.messages import frontend as babel
-    have_babel = True
-except ImportError:
-    have_babel = False
-
-try:
     import PyQt5.QtCore  # pylint: disable=unused-import
     have_pyqt5 = True
 except ImportError:
@@ -502,10 +496,6 @@ def setup_package():
         extra_args = {}
         cmdclass["build_ext"] = build_ext_error
 
-    message_extractors = {
-        '': [("**.py", "scripts.extract_msgs:extract", None)]
-    }
-
     setup(
         name=NAME,
         version=FULLVERSION,
@@ -528,7 +518,6 @@ def setup_package():
         zip_safe=False,
         test_suite='Orange.tests.suite',
         cmdclass=cmdclass,
-        message_extractors=message_extractors,
         **extra_args
     )
 
