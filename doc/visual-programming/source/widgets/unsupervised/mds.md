@@ -35,36 +35,31 @@ The algorithm iteratively moves the points around in a kind of a simulation of a
    - **Symbol opacity**: Adjust the transparency level of the dots.
    - **Show similar pairs**: Adjust the strength of network lines.
    - **Jitter**: Set [jittering](https://en.wikipedia.org/wiki/Jitter) to prevent the dots from overlapping.
-3.  Adjust the graph with *Zoom/Select*. The arrow enables you to select
-    data instances. The magnifying glass enables zooming, which can be
-    also done by scrolling in and out. The hand allows you to move the
-    graph around. The rectangle readjusts the graph proportionally.
-4.  Select the desired output:
+3. Adjust the graph with *Zoom/Select*. The arrow enables you to select data instances. The magnifying glass enables zooming, which can be also done by scrolling in and out. The hand allows you to move the graph around. The rectangle readjusts the graph proportionally.
+4. Select the desired output:
       - **Original features only** (input dataset)
       - **Coordinates only** (MDS coordinates)
-      - **Coordinates as features** (input dataset + MDS coordinates as
-        regular attributes)
-      - **Coordinates as meta attributes** (input dataset + MDS
-        coordinates as meta attributes)
-5.  Sending the instances can be automatic if *Send selected
-    automatically* is ticked. Alternatively, click *Send selected*.
-6.  **Save Image** allows you to save the created image either as .svg
-    or .png file to your device.
-7.  Produce a report.
+      - **Coordinates as features** (input dataset + MDS coordinates as regular attributes)
+      - **Coordinates as meta attributes** (input dataset + MDS coordinates as meta attributes)
+5. Sending the instances can be automatic if *Send selected automatically* is ticked. Alternatively, click *Send selected*.
+6. **Save Image** allows you to save the created image either as .svg or .png file to your device.
+7. Produce a report.
 
-The MDS graph performs many of the functions of the Visualizations
-widget. It is in many respects similar to the `Scatter Plot
-<../visualize/scatterplot>` widget, so we recommend reading that
-widget's description as well.
+The MDS graph performs many of the functions of the Visualizations widget. It is in many respects similar to the [Scatter Plot](../visualize/scatterplot.md) widget, so we recommend reading that widget's description as well.
+
+Preprocessing
+-------------
+
+When given *Distances* on the input, preprocessing is not applied. When given *Data*, MDS uses default preprocessing if necessary. Preprocessing is executed in the following order:
+
+- continuizes categorical variables (with one feature per value)
+- imputes missing values with mean values
+
+To override default preprocessing, preprocess the data beforehand with [Preprocess](../data/preprocess.md) widget.
 
 # Example
 
-The above graphs were drawn using the following simple schema. We used
-the *iris.tab* dataset. Using the `Distances
-<../unsupervised/distances>` widget we input the distance matrix into
-the **MDS** widget, where we see the *Iris* data displayed in a
-2-dimensional plane. We can see the appended coordinates in the `Data
-Table <../data/datatable>` widget.
+The above graphs were drawn using the following simple schema. We used the *iris.tab* dataset. Using the [Distances](../unsupervised/distances.md) widget we input the distance matrix into the **MDS** widget, where we see the *Iris* data displayed in a 2-dimensional plane. We can see the appended coordinates in the [Data Table](../data/datatable.md) widget.
 
 ![](images/MDS-Example.png)
 

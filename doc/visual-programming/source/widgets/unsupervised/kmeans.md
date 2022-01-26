@@ -26,6 +26,16 @@ The widget applies the [k-Means clustering](https://en.wikipedia.org/wiki/K-mean
 
     **Re-runs** (how many times the algorithm is run from random initial positions; the result with the lowest within-cluster sum of squares will be used) and **Maximum iterations** (the maximum number of iterations within each algorithm run) can be set manually.
 
+Preprocessing
+-------------
+
+k-Means uses default preprocessing if necessary. It executes it in the following order:
+
+- continuizes categorical variables (with one feature per value)
+- imputes missing values with mean values
+
+To override default preprocessing, preprocess the data beforehand with [Preprocess](../data/preprocess.md) widget.
+
 Examples
 --------
 

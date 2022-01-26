@@ -56,6 +56,16 @@ Nonlinear dimensionality reduction.
 
 From left to right, top to bottom: t-SNE, MDS, Isomap, Locally Linear Embedding and Spectral Embedding.
 
+Preprocessing
+-------------
+
+All projections use default preprocessing if necessary. It is executed in the following order:
+
+- continuization of categorical variables (with one feature per value)
+- imputation of missing values with mean values
+
+To override default preprocessing, preprocess the data beforehand with [Preprocess](../data/preprocess.md) widget.
+
 Example
 -------
 

@@ -27,6 +27,16 @@ The widget first converts the input data into a k-nearest neighbor graph. To pre
    - *Resolution* is a parameter for the Louvain community detection algorithm that affects the size of the recovered clusters. Smaller resolutions recover smaller clusters and therefore a larger number of them, while, conversely, larger values recover clusters containing more data points.
 4. When *Apply Automatically* is ticked, the widget will automatically communicate all changes. Alternatively, click *Apply*.
 
+Preprocessing
+-------------
+
+Louvain Clustering uses default preprocessing if necessary. It executes it in the following order:
+
+- continuizes categorical variables (with one feature per value)
+- imputes missing values with mean values
+
+To override default preprocessing, preprocess the data beforehand with [Preprocess](../data/preprocess.md) widget.
+
 Example
 -------
 
