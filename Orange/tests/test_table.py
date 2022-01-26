@@ -495,9 +495,13 @@ class TableTestCase(unittest.TestCase):
         self.assertNotEqual(id(t.metas), id(copy.metas))
 
         # ensure that copied sparse arrays do not share data
+        # and that both are unlockable
         with t.unlocked():
             t.X[0, 0] = 42
         self.assertEqual(copy.X[0, 0], 5.1)
+        with copy.unlocked():
+            copy.X[0, 0] = 43
+        self.assertEqual(t.X[0, 0], 42)
 
     def test_concatenate(self):
         d1 = data.Domain(

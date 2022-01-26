@@ -1465,9 +1465,10 @@ class Table(Sequence, Storage):
         """
 
         def is_view(x):
-            # Sparse matrices don't have views like numpy arrays. Since indexing on
-            # them creates copies in constructor we can skip this check here.
-            return not sp.issparse(x) and x.base is not None
+            if not sp.issparse(x):
+                return x.base is not None
+            else:
+                return x.data.base is not None
 
         if is_view(self._X):
             self._X = self._X.copy()
