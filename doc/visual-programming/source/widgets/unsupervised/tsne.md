@@ -30,6 +30,16 @@ The **t-SNE** widget plots the data with a t-distributed stochastic neighbor emb
 5. *Select, zoom, pan and zoom to fit* are the options for exploring the graph. The manual selection of data instances works as an angular/square selection tool. Double click to move the projection. Scroll in or out for zoom.
 6. If *Send selected automatically* is ticked, changes are communicated automatically. Alternatively, press *Send Selected*.
 
+Preprocessing
+-------------
+
+t-SNE uses default preprocessing if necessary. It executes it in the following order:
+
+- continuizes categorical variables (with one feature per value)
+- imputes missing values with mean values
+
+To override default preprocessing, preprocess the data beforehand with [Preprocess](../data/preprocess.md) widget.
+
 Examples
 --------
 
