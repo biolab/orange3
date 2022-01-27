@@ -374,6 +374,31 @@ class TestOWSave(OWSaveTestBase):
         OWSave.migrate_settings(settings)
         self.assertTrue(settings["filter"] in OWSave.get_filters())
 
+    def test_migration_to_version_3(self):
+        settings = {"add_type_annotations": True,
+                    "stored_name": "zoo.xlsx",
+                    "__version__": 2}
+        widget = self.create_widget(OWSave, stored_settings=settings)
+        self.assertFalse(widget.add_type_annotations)
+
+        settings = {"add_type_annotations": True,
+                    "stored_name": "zoo.tab",
+                    "__version__": 2}
+        widget = self.create_widget(OWSave, stored_settings=settings)
+        self.assertTrue(widget.add_type_annotations)
+
+        settings = {"add_type_annotations": False,
+                    "stored_name": "zoo.xlsx",
+                    "__version__": 2}
+        widget = self.create_widget(OWSave, stored_settings=settings)
+        self.assertFalse(widget.add_type_annotations)
+
+        settings = {"add_type_annotations": False,
+                    "stored_name": "zoo.tab",
+                    "__version__": 2}
+        widget = self.create_widget(OWSave, stored_settings=settings)
+        self.assertFalse(widget.add_type_annotations)
+
 
 class TestFunctionalOWSave(WidgetTest):
     def setUp(self):

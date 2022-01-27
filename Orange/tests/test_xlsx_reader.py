@@ -4,6 +4,7 @@
 import unittest
 import os
 from functools import wraps
+from tempfile import mkstemp
 from typing import Callable
 
 import numpy as np
@@ -45,6 +46,35 @@ class TestExcelReader(unittest.TestCase):
         self.assertIsInstance(domain[0], ContinuousVariable)
         self.assertIsInstance(domain[1], ContinuousVariable)
         self.assertEqual(domain[2].values, ("1", "2"))
+
+    def test_write_file(self):
+        fd, filename = mkstemp(suffix=".xlsx")
+        os.close(fd)
+
+        data = Table("zoo")
+        io.ExcelReader.write_file(filename, data, with_annotations=True)
+
+        reader = io.ExcelReader(filename)
+        read_data = reader.read()
+
+        domain1 = data.domain
+        domain2 = read_data.domain
+        self.assertEqual(len(domain1.attributes), len(domain2.attributes))
+        self.assertEqual(len(domain1.class_vars), len(domain2.class_vars))
+        self.assertEqual(len(domain1.metas), len(domain2.metas))
+        for var1, var2 in zip(domain1.variables + domain1.metas,
+                              domain2.variables + domain2.metas):
+            self.assertEqual(type(var1), type(var2))
+            self.assertEqual(var1.name, var2.name)
+            if var1.is_discrete:
+                self.assertEqual(var1.values, var2.values)
+
+        np.testing.assert_array_equal(data.X, read_data.X)
+        np.testing.assert_array_equal(data.Y, read_data.Y)
+        np.testing.assert_array_equal(data.metas, read_data.metas)
+        np.testing.assert_array_equal(data.W, read_data.W)
+
+        os.unlink(filename)
 
 
 class TestExcelHeader0(unittest.TestCase):
