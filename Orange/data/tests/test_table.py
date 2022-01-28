@@ -385,6 +385,16 @@ class TestTableLocking(unittest.TestCase):
         with unpickled.unlocked():
             unpickled.X[0, 0] = 42
 
+    @staticmethod
+    def test_unlock_table_derived():
+        # pylint: disable=abstract-method
+        class ExtendedTable(Table):
+            pass
+
+        t = ExtendedTable.from_file("iris")
+        with t.unlocked():
+            pass
+
 
 class TestTableFilters(unittest.TestCase):
     def setUp(self):
