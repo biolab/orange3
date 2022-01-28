@@ -294,35 +294,37 @@ class OWPredictions(OWWidget):
             row = [QStandardItem(learner_name(pred.predictor)),
                    QStandardItem("N/A"), QStandardItem("N/A")]
 
-            actual = results.actual
-            predicted = results.predicted
-            probabilities = results.probabilities
+            try:
+                actual = results.actual
+                predicted = results.predicted
+                probabilities = results.probabilities
 
-            mask = numpy.isnan(results.actual)
-            no_targets = mask.sum() == len(results.actual)
-            results.actual = results.actual[~mask]
-            results.predicted = results.predicted[:, ~mask]
-            results.probabilities = results.probabilities[:, ~mask]
+                mask = numpy.isnan(results.actual)
+                no_targets = mask.sum() == len(results.actual)
+                results.actual = results.actual[~mask]
+                results.predicted = results.predicted[:, ~mask]
+                results.probabilities = results.probabilities[:, ~mask]
 
-            for scorer in scorers:
-                item = QStandardItem()
-                if no_targets:
-                    item.setText("NA")
-                else:
-                    try:
-                        score = scorer_caller(scorer, results)()[0]
-                        item.setText(f"{score:.3f}")
-                    except Exception as exc:  # pylint: disable=broad-except
-                        item.setToolTip(str(exc))
-                        # false pos.; pylint: disable=unsupported-membership-test
-                        if scorer.name in self.score_table.shown_scores:
-                            errors.append(str(exc))
-                row.append(item)
-            self.score_table.model.appendRow(row)
+                for scorer in scorers:
+                    item = QStandardItem()
+                    if no_targets:
+                        item.setText("NA")
+                    else:
+                        try:
+                            score = scorer_caller(scorer, results)()[0]
+                            item.setText(f"{score:.3f}")
+                        except Exception as exc:  # pylint: disable=broad-except
+                            item.setToolTip(str(exc))
+                            # false pos.; pylint: disable=unsupported-membership-test
+                            if scorer.name in self.score_table.shown_scores:
+                                errors.append(str(exc))
+                    row.append(item)
+                self.score_table.model.appendRow(row)
 
-            results.actual = actual
-            results.predicted = predicted
-            results.probabilities = probabilities
+            finally:
+                results.actual = actual
+                results.predicted = predicted
+                results.probabilities = probabilities
 
         view = self.score_table.view
         if model.rowCount():
