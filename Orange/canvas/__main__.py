@@ -410,7 +410,7 @@ class OMain(Main):
         app.paletteChanged.connect(onPaletteChange)
         onPaletteChange()
 
-    def show_splash_message(self, message: str, color=QColor("#FFD39F")):
+    def show_splash_message(self, message: str, color=QColor("#FFFFFF")):
         super().show_splash_message(message, color)
 
     def create_main_window(self):

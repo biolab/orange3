@@ -2,6 +2,7 @@
 Orange Canvas Configuration
 
 """
+import random
 import uuid
 import warnings
 
@@ -104,8 +105,9 @@ class Config(config.Config):
 
     @staticmethod
     def splash_screen():
+        splash_n = random.randint(1, 3)
         path = pkg_resources.resource_filename(
-            __name__, "icons/orange-splash-screen.png")
+            __name__, f"icons/orange-splash-screen-{splash_n:02}.png")
         pm = QPixmap(path)
 
         version = Config.ApplicationVersion
@@ -113,24 +115,21 @@ class Config(config.Config):
             version_parsed = LooseVersion(version)
             version_comp = version_parsed.version
             version = ".".join(map(str, version_comp[:2]))
-        size = 21 if len(version) < 5 else 16
+        size = 13
         font = QFont("Helvetica")
         font.setPixelSize(size)
-        font.setBold(True)
-        font.setItalic(True)
-        font.setLetterSpacing(QFont.AbsoluteSpacing, 2)
         metrics = QFontMetrics(font)
-        br = metrics.boundingRect(version).adjusted(-5, 0, 5, 0)
-        br.moveCenter(QPoint(436, 224))
+        br = metrics.boundingRect(version)
+        br.moveTopLeft(QPoint(171, 438))
 
         p = QPainter(pm)
         p.setRenderHint(QPainter.Antialiasing)
         p.setRenderHint(QPainter.TextAntialiasing)
         p.setFont(font)
-        p.setPen(QColor("#231F20"))
-        p.drawText(br, Qt.AlignCenter, version)
+        p.setPen(QColor("#000000"))
+        p.drawText(br, Qt.AlignLeft, version)
         p.end()
-        return pm, QRect(88, 193, 200, 20)
+        return pm, QRect(23, 24, 200, 20)
 
     @staticmethod
     def widgets_entry_points():
