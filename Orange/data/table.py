@@ -1077,11 +1077,6 @@ class Table(Sequence, Storage):
         reader.select_sheet(sheet)
         data = reader.read()
 
-        # Readers return plain table. Make sure to cast it to appropriate
-        # (subclass) type
-        if cls != data.__class__:
-            data = cls(data)
-
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids
 
@@ -1093,8 +1088,6 @@ class Table(Sequence, Storage):
         from Orange.data.io import UrlReader
         reader = UrlReader(url)
         data = reader.read()
-        if cls != data.__class__:
-            data = cls(data)
         return data
 
     # Helper function for __setitem__:

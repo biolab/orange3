@@ -2163,19 +2163,6 @@ class InterfaceTest(unittest.TestCase):
                     self.table[i, j] = new_value
                     self.assertEqual(self.table[i, j], new_value)
 
-    def test_subclasses(self):
-        from pathlib import Path
-
-        class _ExtendedTable(data.Table):
-            pass
-
-        data_file = _ExtendedTable('iris')
-        data_url = _ExtendedTable.from_url(
-            Path(os.path.dirname(__file__), 'datasets/test1.tab').as_uri())
-
-        self.assertIsInstance(data_file, _ExtendedTable)
-        self.assertIsInstance(data_url, _ExtendedTable)
-
 
 class TestTableStats(TableTests):
     def test_get_nan_frequency(self):
