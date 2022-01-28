@@ -98,7 +98,7 @@ class Config(config.Config):
         Return the main application icon.
         """
         path = pkg_resources.resource_filename(
-            __name__, "icons/orange-canvas.svg"
+            __name__, "icons/orange-256.png"
         )
         return QIcon(path)
 
