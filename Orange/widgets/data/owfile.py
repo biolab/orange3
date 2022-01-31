@@ -192,8 +192,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         layout.addWidget(rb_button, 0, 0, Qt.AlignVCenter)
 
         box = gui.hBox(None, addToLayout=False, margin=0)
-        box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
-        self.file_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        box.setSizePolicy(Policy.Expanding, Policy.Fixed)
+        self.file_combo.setSizePolicy(Policy.Expanding, Policy.Fixed)
+        self.file_combo.setMinimumSize(QSize(100, 1))
         self.file_combo.activated[int].connect(self.select_file)
         box.layout().addWidget(self.file_combo)
         layout.addWidget(box, 0, 1)
@@ -214,8 +215,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = QComboBox()
         self.sheet_combo.activated[str].connect(self.select_sheet)
-        self.sheet_combo.setSizePolicy(
-            Policy.MinimumExpanding, Policy.Fixed)
+        self.sheet_combo.setSizePolicy(Policy.Expanding, Policy.Fixed)
+        self.sheet_combo.setMinimumSize(QSize(50, 1))
         self.sheet_label = QLabel()
         self.sheet_label.setText('Sheet')
         self.sheet_label.setSizePolicy(
@@ -254,9 +255,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         gui.widgetBox(self.controlArea, orientation=layout, box='File Type')
 
         box = gui.hBox(None, addToLayout=False, margin=0)
-        box.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        box.setSizePolicy(Policy.Expanding, Policy.Fixed)
         self.reader_combo = QComboBox(self)
-        self.reader_combo.setSizePolicy(Policy.MinimumExpanding, Policy.Fixed)
+        self.reader_combo.setSizePolicy(Policy.Expanding, Policy.Fixed)
+        self.reader_combo.setMinimumSize(QSize(100, 1))
         self.reader_combo.activated[int].connect(self.select_reader)
 
         box.layout().addWidget(self.reader_combo)
