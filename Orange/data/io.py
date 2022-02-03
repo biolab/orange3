@@ -277,6 +277,7 @@ class ExcelReader(_BaseExcelReader):
     EXTENSIONS = ('.xlsx',)
     DESCRIPTION = 'Microsoft Excel spreadsheet'
     ERRORS = ("#VALUE!", "#DIV/0!", "#REF!", "#NUM!", "#NULL!", "#NAME?")
+    OPTIONAL_TYPE_ANNOTATIONS = True
 
     def __init__(self, filename):
         super().__init__(filename)
@@ -319,7 +320,7 @@ class ExcelReader(_BaseExcelReader):
             return self.workbook.active
 
     @classmethod
-    def write_file(cls, filename, data):
+    def write_file(cls, filename, data, with_annotations=False):
         vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
                           data.domain.attributes,
                           data.domain.class_vars,
@@ -329,12 +330,20 @@ class ExcelReader(_BaseExcelReader):
                                data.X,
                                data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
                                data.metas)
-        headers = cls.header_names(data)
+        names = cls.header_names(data)
+        headers = (names,)
+        if with_annotations:
+            types = cls.header_types(data)
+            flags = cls.header_flags(data)
+            headers = (names, types, flags)
+
         workbook = xlsxwriter.Workbook(filename)
         sheet = workbook.add_worksheet()
-        for c, header in enumerate(headers):
-            sheet.write(0, c, header)
-        for i, row in enumerate(zipped_list_data, 1):
+
+        for r, parts in enumerate(headers):
+            for c, part in enumerate(parts):
+                sheet.write(r, c, part)
+        for i, row in enumerate(zipped_list_data, len(headers)):
             for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
                 sheet.write(i, j, fmt(v))
         workbook.close()
