@@ -681,27 +681,20 @@ class OWFeatureConstructor(OWWidget):
         self.data = data
         self.expressions_with_values = False
 
+        self.descriptors = []
+        self.currentIndex = -1
         if self.data is not None:
-            descriptors = list(self.descriptors)
-            currindex = self.currentIndex
-            self.descriptors = []
-            self.currentIndex = -1
             self.openContext(data)
-            self.fix_button.setHidden(not self.expressions_with_values)
 
-            if descriptors != self.descriptors or \
-                    self.currentIndex != currindex:
-                # disconnect from the selection model while reseting the model
-                selmodel = self.featureview.selectionModel()
-                selmodel.selectionChanged.disconnect(
-                    self._on_selectedVariableChanged)
+        # disconnect from the selection model while reseting the model
+        selmodel = self.featureview.selectionModel()
+        selmodel.selectionChanged.disconnect(self._on_selectedVariableChanged)
 
-                self.featuremodel[:] = list(self.descriptors)
-                self.setCurrentIndex(self.currentIndex)
+        self.featuremodel[:] = list(self.descriptors)
+        self.setCurrentIndex(self.currentIndex)
 
-                selmodel.selectionChanged.connect(
-                    self._on_selectedVariableChanged)
-
+        selmodel.selectionChanged.connect(self._on_selectedVariableChanged)
+        self.fix_button.setHidden(not self.expressions_with_values)
         self.editorstack.setEnabled(self.currentIndex >= 0)
 
     def handleNewSignals(self):
