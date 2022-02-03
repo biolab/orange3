@@ -11,6 +11,7 @@ from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner
 from Orange.data.io import TabReader
+from Orange.regression import LinearRegressionLearner
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import (
     OWPredictions, SharedSelectionModel, SharedSelectionStore, DataModel,
@@ -33,6 +34,7 @@ class TestOWPredictions(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWPredictions)  # type: OWPredictions
         self.iris = Table("iris")
+        self.housing = Table("housing")
 
     def test_rowCount_from_model(self):
         """Don't crash if the bottom row is visible"""
@@ -518,6 +520,62 @@ class TestOWPredictions(WidgetTest):
 
         self.send_signal(w.Inputs.predictors, p2, 2)
         check_evres(["P1", "P3", "P2"])
+
+    def test_missing_target_cls(self):
+        mask = np.zeros(len(self.iris), dtype=bool)
+        mask[::2] = True
+        train_data = self.iris[~mask]
+        predict_data = self.iris[mask]
+        model = LogisticRegressionLearner()(train_data)
+
+        self.send_signal(self.widget.Inputs.predictors, model)
+        self.send_signal(self.widget.Inputs.data, predict_data)
+        self.assertFalse(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
+
+        with predict_data.unlocked():
+            predict_data.Y[0] = np.nan
+        self.send_signal(self.widget.Inputs.data, predict_data)
+        self.assertTrue(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
+
+        with predict_data.unlocked():
+            predict_data.Y[:] = np.nan
+        self.send_signal(self.widget.Inputs.data, predict_data)
+        self.assertTrue(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
+
+        self.send_signal(self.widget.Inputs.predictors, None)
+        self.assertFalse(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
+
+    def test_missing_target_reg(self):
+        mask = np.zeros(len(self.housing), dtype=bool)
+        mask[::2] = True
+        train_data = self.housing[~mask]
+        predict_data = self.housing[mask]
+        model = LinearRegressionLearner()(train_data)
+
+        self.send_signal(self.widget.Inputs.predictors, model)
+        self.send_signal(self.widget.Inputs.data, predict_data)
+        self.assertFalse(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
+
+        with predict_data.unlocked():
+            predict_data.Y[0] = np.nan
+        self.send_signal(self.widget.Inputs.data, predict_data)
+        self.assertTrue(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
+
+        with predict_data.unlocked():
+            predict_data.Y[:] = np.nan
+        self.send_signal(self.widget.Inputs.data, predict_data)
+        self.assertTrue(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
+
+        self.send_signal(self.widget.Inputs.predictors, None)
+        self.assertFalse(self.widget.Warning.missing_targets.is_shown())
+        self.assertFalse(self.widget.Error.scorer_failed.is_shown())
 
 
 class SelectionModelTest(unittest.TestCase):
