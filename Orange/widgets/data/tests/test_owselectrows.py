@@ -310,37 +310,6 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(condition[1], 2)
         self.assertEqual(condition[2], (2, ))  # index of value + 1
 
-    def test_backward_compat_match_values(self):
-        iris = Table("iris")
-        domain = iris.domain
-        class_var = domain.class_var
-        self.widget = self.widget_with_context(
-            domain, [[class_var.name, 1, 2, (1, 2)]])
-
-        new_class_var = DiscreteVariable(class_var.name, class_var.values[1:])
-        new_domain = Domain(domain.attributes, new_class_var)
-        non0 = iris.Y != 0
-        iris2 = Table.from_numpy(new_domain, iris.X[non0], iris.Y[non0] - 1)
-        self.send_signal(self.widget.Inputs.data, iris2)
-        condition = self.widget.conditions[0]
-        self.assertIs(condition[0], new_class_var)
-        self.assertEqual(condition[1], 2)
-        self.assertEqual(condition[2], (1, 2))  # index of value + 1
-
-        # reset to [0] if out of range
-        self.widget = self.widget_with_context(
-            domain, [[class_var.name, 1, 2, (1, 3)]])
-
-        new_class_var = DiscreteVariable(class_var.name, class_var.values[1:])
-        new_domain = Domain(domain.attributes, new_class_var)
-        non0 = iris.Y != 0
-        iris2 = Table.from_numpy(new_domain, iris.X[non0], iris.Y[non0] - 1)
-        self.send_signal(self.widget.Inputs.data, iris2)
-        condition = self.widget.conditions[0]
-        self.assertIs(condition[0], new_class_var)
-        self.assertEqual(condition[1], 2)
-        self.assertEqual(condition[2], (0, ))  # index of value + 1
-
     @override_locale(QLocale.C)
     def test_partial_matches_with_missing_vars(self):
         iris = Table("iris")
@@ -532,43 +501,15 @@ class TestOWSelectRows(WidgetTest):
         self.enterFilter(zoo.domain[1], "is one of")
         self.widget.send_report()  # don't crash
 
-    # Uncomment this on 2022/2/2
-    #
-    # def test_migration_to_version_1(self):
-    #     iris = Table("iris")
-    #
-    #     ch = SelectRowsContextHandler()
-    #     context = ch.new_context(iris.domain, *ch.encode_domain(iris.domain))
-    #     context.values = dict(conditions=[["petal length", 2, (5.2,)]])
-    #     settings = dict(context_settings=[context])
-    #     widget = self.create_widget(OWSelectRows, settings)
-    #     self.assertEqual(widget.conditions, [])
-
-    @override_locale(QLocale.C)
-    def test_support_old_settings(self):
+    def test_migration_to_version_1(self):
         iris = Table("iris")
-        self.widget = self.widget_with_context(
-            iris.domain, [["sepal length", 2, ("5.2",)]])
-        self.send_signal(self.widget.Inputs.data, iris)
-        condition = self.widget.conditions[0]
-        self.assertEqual(condition[0], iris.domain["sepal length"])
-        self.assertEqual(condition[1], 2)
-        self.assertTrue(condition[2][0].startswith("5.2"))
 
-    def test_end_support_for_version_1(self):
-        if time.gmtime() >= (2022, 2, 2):
-            self.fail("""
-Happy 22/2/2!
-
-Now remove support for version==None settings in
-SelectRowsContextHandler.decode_setting and SelectRowsContextHandler.match,
-and uncomment OWSelectRows.migrate.
-
-In tests, uncomment test_migration_to_version_1,
-and remove test_support_old_settings and this test.
-
-Basically, revert this commit.
-""")
+        ch = SelectRowsContextHandler()
+        context = ch.new_context(iris.domain, *ch.encode_domain(iris.domain))
+        context.values = dict(conditions=[["petal length", 2, (5.2,)]])
+        settings = dict(context_settings=[context])
+        widget = self.create_widget(OWSelectRows, settings)
+        self.assertEqual(widget.conditions, [])
 
     def test_purge_discretized(self):
         housing = Table("housing")
@@ -577,7 +518,9 @@ Basically, revert this commit.
             discretize_class=True, method=method)
         domain = discretizer(housing)
         data = housing.transform(domain)
-        widget = self.widget_with_context(domain, [["MEDV", 101, 2, (2, 3)]])
+        widget = self.widget_with_context(
+            domain, [["MEDV", 101, 2, domain.class_var.values[1:]]]
+        )
         widget.purge_classes = True
         self.send_signal(widget.Inputs.data, data)
         out = self.get_output(widget.Outputs.matching_data)
