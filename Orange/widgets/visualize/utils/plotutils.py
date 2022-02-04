@@ -619,6 +619,8 @@ class PlotWidget(pg.PlotWidget):
             # Revert the pg.PlotWidget's modifications, use default
             # for QGraphicsView background role
             self.setBackgroundRole(QPalette.Base)
+        # Reset changes to the palette (undo changes from pg.GraphicsView)
+        self.setPalette(QPalette())
         self.__updateScenePalette()
 
     def setScene(self, scene):
@@ -649,6 +651,8 @@ class GraphicsView(pg.GraphicsView):
             # Revert the pg.PlotWidget's modifications, use default
             # for QGraphicsView
             self.setBackgroundRole(QPalette.Base)
+        # Reset changes to the palette (undo changes from pg.GraphicsView)
+        self.setPalette(QPalette())
         self.__updateScenePalette()
 
     def setScene(self, scene):
