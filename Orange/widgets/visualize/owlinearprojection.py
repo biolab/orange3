@@ -329,7 +329,10 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     @property
     def effective_data(self):
-        return self.data.transform(Domain(self.effective_variables))
+        cvs = None
+        if self.placement == Placement.LDA:
+            cvs = self.data.domain.class_vars
+        return self.data.transform(Domain(self.effective_variables, cvs))
 
     def __vizrank_set_attrs(self, attrs):
         if not attrs:
