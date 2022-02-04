@@ -7,8 +7,8 @@ import numpy as np
 
 from AnyQt.QtCore import QPointF, QRectF, Qt, QSizeF, QEvent, Signal
 from AnyQt.QtGui import (
-    QPainterPath, QPen, QBrush, QPainterPathStroker, QColor, QTransform,
-    QFontMetrics, QPolygonF
+    QPainterPath, QPen, QBrush, QPalette, QPainterPathStroker, QColor,
+    QTransform, QFontMetrics, QPolygonF
 )
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsPathItem, QGraphicsItemGroup,
@@ -218,7 +218,6 @@ class DendrogramWidget(QGraphicsWidget):
 
         def set_label(self, label):
             self.label.setText(label)
-            self.label.setBrush(Qt.blue)
             self._update_label_pos()
 
         def set_color(self, color):
@@ -348,7 +347,8 @@ class DendrogramWidget(QGraphicsWidget):
         self.clear()
         self._root = root
         if root is not None:
-            pen = make_pen(Qt.blue, width=1, cosmetic=True,
+            foreground = self.palette().color(QPalette.Foreground)
+            pen = make_pen(foreground, width=1, cosmetic=True,
                            join_style=Qt.MiterJoin)
             for node in postorder(root):
                 item = DendrogramWidget.ClusterGraphicsItem(self._itemgroup)
@@ -437,19 +437,23 @@ class DendrogramWidget(QGraphicsWidget):
         if self._highlighted_item is item:
             return
 
-        def branches(item):
-            return [self._items[ch] for ch in item.node.branches]
+        def set_pen(item, pen):
+            def branches(item):
+                return [self._items[ch] for ch in item.node.branches]
+            for it in postorder(item, branches):
+                it.setPen(pen)
 
         if self._highlighted_item:
-            pen = make_pen(Qt.blue, width=1, cosmetic=True)
-            for it in postorder(self._highlighted_item, branches):
-                it.setPen(pen)
+            # Restore the previous item
+            highlight = self.palette().color(QPalette.Foreground)
+            set_pen(self._highlighted_item,
+                    make_pen(highlight, width=1, cosmetic=True))
 
         self._highlighted_item = item
         if item:
-            hpen = make_pen(Qt.blue, width=2, cosmetic=True)
-            for it in postorder(item, branches):
-                it.setPen(hpen)
+            hpen = make_pen(self.palette().color(QPalette.Highlight),
+                            width=2, cosmetic=True)
+            set_pen(item, hpen)
 
     def leafItems(self):
         """Iterate over the dendrogram leaf items (:class:`QGraphicsItem`).
@@ -564,6 +568,7 @@ class DendrogramWidget(QGraphicsWidget):
         ppath = self._create_path(item, path)
         label = self._create_label(len(self._selection))
         selection_item = self._SelectionItem(self, ppath, outline, label)
+        selection_item.label.setBrush(self.palette().color(QPalette.Link))
         selection_item.setPos(self.contentsRect().topLeft())
         self._selection[item] = selection_item
 
@@ -755,7 +760,7 @@ class DendrogramWidget(QGraphicsWidget):
         self._selection_items = None
         self._update_selection_items()
 
-    def sizeHint(self, which: Qt.SizeHint, constraint=QSizeF()) -> QRectF:
+    def sizeHint(self, which: Qt.SizeHint, constraint=QSizeF()) -> QSizeF:
         # reimplemented
         fm = QFontMetrics(self.font())
         spacing = fm.lineSpacing()
@@ -825,12 +830,11 @@ class DendrogramWidget(QGraphicsWidget):
     def changeEvent(self, event):
         # reimplemented
         super().changeEvent(event)
-
         if event.type() == QEvent.FontChange:
             self.updateGeometry()
-
-        # QEvent.ContentsRectChange is missing in PyQt4 <= 4.11.3
-        if event.type() == 178:  # QEvent.ContentsRectChange:
+        elif event.type() == QEvent.PaletteChange:
+            self._update_colors()
+        elif event.type() == QEvent.ContentsRectChange:
             self._rescale()
 
     def resizeEvent(self, event):
@@ -844,3 +848,20 @@ class DendrogramWidget(QGraphicsWidget):
         # A mouse press on an empty widget part
         if event.modifiers() == Qt.NoModifier and self._selection:
             self.set_selected_clusters([])
+
+    def _update_colors(self):
+        def set_color(item: DendrogramWidget.ClusterGraphicsItem, color: QColor):
+            def branches(item):
+                return [self._items[ch] for ch in item.node.branches]
+            for it in postorder(item, branches):
+                it.setPen(update_pen(it.pen(), brush=color))
+        if self._root is not None:
+            foreground = self.palette().color(QPalette.Foreground)
+            item = self.item(self._root)
+            set_color(item, foreground)
+        highlight = self.palette().color(QPalette.Highlight)
+        if self._highlighted_item is not None:
+            set_color(self._highlighted_item, highlight)
+        accent = self.palette().color(QPalette.Link)
+        for item in self._selection.values():
+            item.label.setBrush(accent)

@@ -4,7 +4,7 @@ from typing import NamedTuple, Dict, Tuple
 import numpy as np
 
 from AnyQt.QtWidgets import QListView, QFrame
-from AnyQt.QtGui import QColor, QPen, QPalette, QFont
+from AnyQt.QtGui import QColor, QPen, QFont
 from AnyQt.QtCore import Qt
 
 import pyqtgraph as pg
@@ -22,7 +22,7 @@ from Orange.widgets.evaluate.owrocanalysis import convex_hull
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
-from Orange.widgets.visualize.utils.plotutils import AxisItem
+from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem
 from Orange.widgets.widget import Input
 from Orange.widgets import report
 
@@ -214,12 +214,9 @@ class OWLiftCurve(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
-        self.plotview = pg.GraphicsView(background="w")
+        self.plotview = GraphicsView()
         self.plotview.setFrameStyle(QFrame.StyledPanel)
-
-        axes = {"bottom": AxisItem(orientation="bottom"),
-                "left": AxisItem(orientation="left")}
-        self.plot = pg.PlotItem(enableMenu=False, axisItems=axes)
+        self.plot = PlotItem(enableMenu=False)
         self.plot.parameter_setter = ParameterSetter(self.plot)
         self.plot.curve_items = []
         self.plot.hull_items = []
@@ -228,15 +225,12 @@ class OWLiftCurve(widget.OWWidget):
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
 
-        pen = QPen(self.palette().color(QPalette.Text))
-
         tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         for pos, label in (("bottom", "P Rate"), ("left", "")):
             axis = self.plot.getAxis(pos)
             axis.setTickFont(tickfont)
-            axis.setPen(pen)
             axis.setLabel(label)
         self._set_left_label()
 

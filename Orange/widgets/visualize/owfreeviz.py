@@ -5,7 +5,7 @@ from types import SimpleNamespace as namespace
 import numpy as np
 
 from AnyQt.QtCore import Qt, QRectF, QLineF, QPoint
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QPalette
 
 import pyqtgraph as pg
 
@@ -105,7 +105,8 @@ class OWFreeVizGraph(OWGraphWithAnchors):
         if self.circle_item is not None:
             r = self.scaled_radius
             self.circle_item.setRect(QRectF(-r, -r, 2 * r, 2 * r))
-            pen = pg.mkPen(QColor(Qt.lightGray), width=1, cosmetic=True)
+            color = self.plot_widget.palette().color(QPalette.Disabled, QPalette.Text)
+            pen = pg.mkPen(color, width=1, cosmetic=True)
             self.circle_item.setPen(pen)
 
     def _add_indicator_item(self, anchor_idx):

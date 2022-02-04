@@ -31,7 +31,7 @@ from AnyQt.QtWidgets import (
     QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu,
     QAction, QSizePolicy, QLabel, QStyledItemDelegate, QStyle, QListView
 )
-from AnyQt.QtGui import QIcon, QColor, QFont
+from AnyQt.QtGui import QIcon, QFont, QPalette
 from AnyQt.QtCore import Qt, pyqtSignal, QSize, QRect, QPoint, QMimeData
 
 from Orange.data import ContinuousVariable, DiscreteVariable
@@ -145,12 +145,13 @@ class VariablesDelegate(QStyledItemDelegate):
                 txtw = painter.fontMetrics().horizontalAdvance(txt)
                 painter.save()
                 painter.setPen(Qt.NoPen)
-                painter.setBrush(QColor("#ccc"))
+                painter.setBrush(option.palette.brush(QPalette.Button))
                 brect = QRect(rect.x() + rect.width() - 8 - txtw, rect.y(),
                               txtw, rect.height())
                 painter.drawRoundedRect(brect, 4, 4)
-                painter.restore()
+                painter.setPen(option.palette.color(QPalette.ButtonText))
                 painter.drawText(brect, Qt.AlignCenter, txt)
+                painter.restore()
 
         painter.save()
         double_pen = painter.pen()

@@ -19,6 +19,7 @@ from Orange.widgets.evaluate.contexthandlers import \
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem
 from Orange.widgets.widget import Input
 from Orange.widgets import report
 
@@ -395,32 +396,28 @@ class OWROCAnalysis(widget.OWWidget):
         grid.addWidget(QLabel("Prior probability:"))
         grid.addWidget(self.target_prior_sp, 2, 1)
 
-        self.plotview = pg.GraphicsView(background="w")
+        self.plotview = GraphicsView(background=None)
         self.plotview.setFrameStyle(QFrame.StyledPanel)
         self.plotview.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
-        self.plot = pg.PlotItem(enableMenu=False)
+        self.plot = PlotItem(enableMenu=False)
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
-
-        pen = QPen(self.palette().color(QPalette.Text))
 
         tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
 
         axis = self.plot.getAxis("bottom")
         axis.setTickFont(tickfont)
-        axis.setPen(pen)
         axis.setLabel("FP Rate (1-Specificity)")
         axis.setGrid(16)
 
         axis = self.plot.getAxis("left")
         axis.setTickFont(tickfont)
-        axis.setPen(pen)
         axis.setLabel("TP Rate (Sensitivity)")
         axis.setGrid(16)
 
-        self.plot.showGrid(True, True, alpha=0.1)
+        self.plot.showGrid(True, True, alpha=0.2)
         self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0), padding=0.05)
 
         self.plotview.setCentralItem(self.plot)
@@ -553,6 +550,7 @@ class OWROCAnalysis(widget.OWWidget):
                     ind = np.argmin(np.abs(points.thresholds - 0.5))
                     item = pg.TextItem(
                         text="{:.3f}".format(points.thresholds[ind]),
+                        color=foreground
                     )
                     item.setPos(points.fpr[ind], points.tpr[ind])
                     self.plot.addItem(item)
@@ -560,7 +558,7 @@ class OWROCAnalysis(widget.OWWidget):
             hull_curves = [curve.merged.hull for curve in selected]
             if hull_curves:
                 self._rocch = convex_hull(hull_curves)
-                iso_pen = QPen(QColor(Qt.black), 1)
+                iso_pen = QPen(foreground, 1.0)
                 iso_pen.setCosmetic(True)
                 self._perf_line = InfiniteLine(pen=iso_pen, antialias=True)
                 self.plot.addItem(self._perf_line)
@@ -596,7 +594,7 @@ class OWROCAnalysis(widget.OWWidget):
             OWROCAnalysis.Threshold: threshold_averaging,
             OWROCAnalysis.NoAveraging: no_averaging
         }
-
+        foreground = self.plotview.scene().palette().color(QPalette.Text)
         target = self.target_index
         selected = self.selected_classifiers
 
@@ -606,16 +604,19 @@ class OWROCAnalysis(widget.OWWidget):
 
         if self.display_convex_hull and hull_curves:
             hull = convex_hull(hull_curves)
-            hull_pen = QPen(QColor(200, 200, 200, 100), 2)
+            hull_color = QColor(foreground)
+            hull_color.setAlpha(100)
+            hull_pen = QPen(hull_color, 2)
             hull_pen.setCosmetic(True)
+            hull_color.setAlpha(50)
             item = self.plot.plot(
                 hull.fpr, hull.tpr,
                 pen=hull_pen,
-                brush=QBrush(QColor(200, 200, 200, 50)),
+                brush=QBrush(hull_color),
                 fillLevel=0)
             item.setZValue(-10000)
-
-        pen = QPen(QColor(100, 100, 100, 100), 1, Qt.DashLine)
+        line_color = self.palette().color(QPalette.Disabled, QPalette.Text)
+        pen = QPen(QColor(*line_color.getRgb()[:3], 200), 1.0, Qt.DashLine)
         pen.setCosmetic(True)
         self.plot.plot([0, 1], [0, 1], pen=pen, antialias=True)
 

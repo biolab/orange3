@@ -6,10 +6,11 @@ from AnyQt.QtCore import (
     QRectF, QLineF, QObject, QEvent, Qt, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QTransform, QFontMetrics, QStaticText, QBrush, QPen, \
-    QFont
+    QFont, QPalette
 from AnyQt.QtWidgets import (
     QGraphicsLineItem, QGraphicsSceneMouseEvent, QPinchGesture,
-    QGraphicsItemGroup, QWidget)
+    QGraphicsItemGroup, QWidget
+)
 
 import pyqtgraph as pg
 import pyqtgraph.functions as fn
@@ -32,7 +33,7 @@ class TextItem(pg.TextItem):
         return point.x(), point.y()
 
 
-class AnchorItem(pg.GraphicsObject):
+class AnchorItem(pg.GraphicsWidget):
     def __init__(self, parent=None, line=QLineF(), text="", **kwargs):
         super().__init__(parent, **kwargs)
         self._text = text
@@ -49,6 +50,7 @@ class AnchorItem(pg.GraphicsObject):
         self._label = TextItem(text=text, color=(10, 10, 10))
         self._label.setParentItem(self)
         self._label.setPos(*self.get_xy())
+        self._label.setColor(self.palette().color(QPalette.Text))
 
         if parent is not None:
             self.setParentItem(parent)
@@ -121,6 +123,11 @@ class AnchorItem(pg.GraphicsObject):
 
         self._arrow.setPos(self._spine.line().p2())
         self._arrow.setRotation(180 - angle)
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self._label.setColor(self.palette().color(QPalette.Text))
+        super().changeEvent(event)
 
 
 class HelpEventDelegate(QObject):
@@ -474,12 +481,13 @@ class PaletteItemSample(ItemSample):
         p.translate(5, 5)
         p.setFont(self.font)
         colors = self.palette.qcolors
+        foreground = super().palette().color(QPalette.Text)
         h = self.bin_height
         for i, color, label in zip(itertools.count(), colors, self.labels):
             p.setPen(Qt.NoPen)
             p.setBrush(QBrush(color))
             p.drawRect(0, i * h, h, h)
-            p.setPen(QPen(Qt.black))
+            p.setPen(QPen(foreground))
             p.drawStaticText(h + 5, i * h + 1, label)
 
 
@@ -497,7 +505,57 @@ class SymbolItemSample(ItemSample):
         drawSymbol(p, self.__symbol, self.__size, self.__pen, self.__brush)
 
 
-class AxisItem(pg.AxisItem):
+class StyledAxisItem(pg.AxisItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.label.setDefaultTextColor(self.palette().color(QPalette.Text))
+
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.FontChange:
+            self.picture = None
+            self.update()
+        elif event.type() == QEvent.PaletteChange:
+            self.picture = None
+            self.label.setDefaultTextColor(self.palette().color(QPalette.Text))
+            self.update()
+        super().changeEvent(event)
+
+    __hasTextPen = False
+
+    def setTextPen(self, *args, **kwargs):
+        self.__hasTextPen = args or kwargs
+        super().setTextPen(*args, **kwargs)
+        if not self.__hasTextPen:
+            self.__clear_labelStyle_color()
+
+    def textPen(self):
+        if self.__hasTextPen:
+            return super().textPen()
+        else:  # bypass pg.AxisItem
+            return QPen(self.palette().brush(QPalette.Text), 1)
+
+    __hasPen = False
+
+    def setPen(self, *args, **kwargs):
+        self.__hasPen = bool(args or kwargs)
+        super().setPen(*args, **kwargs)
+        if not self.__hasPen:
+            self.__clear_labelStyle_color()
+
+    def pen(self):
+        if self.__hasPen:
+            return super().pen()
+        else:  # bypass pg.AxisItem
+            return QPen(self.palette().brush(QPalette.Text), 1)
+
+    def __clear_labelStyle_color(self):
+        try:
+            self.labelStyle.pop("color")
+        except AttributeError:
+            pass
+
+
+class AxisItem(StyledAxisItem):
     def __init__(self, orientation, rotate_ticks=False, **kwargs):
         super().__init__(orientation, **kwargs)
         self.style["rotateTicks"] = rotate_ticks
@@ -543,3 +601,85 @@ class AxisItem(pg.AxisItem):
             self._updateMaxTextSize(max_text_size + offset)
         else:
             super().drawPicture(p, axisSpec, tickSpecs, textSpecs)
+
+
+class PlotWidget(pg.PlotWidget):
+    """
+    A pyqtgraph.PlotWidget with better QPalette integration.
+
+    A default constructed plot will respect and adapt to the current palette
+    """
+    def __init__(self, *args, background=None, **kwargs):
+        axisItems = kwargs.pop("axisItems", None)
+        if axisItems is None:  # Use palette aware AxisItems
+            axisItems = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
+        super().__init__(*args, background=background, axisItems=axisItems,
+                         **kwargs)
+        if background is None:
+            # Revert the pg.PlotWidget's modifications, use default
+            # for QGraphicsView background role
+            self.setBackgroundRole(QPalette.Base)
+        # Reset changes to the palette (undo changes from pg.GraphicsView)
+        self.setPalette(QPalette())
+        self.__updateScenePalette()
+
+    def setScene(self, scene):
+        super().setScene(scene)
+        self.__updateScenePalette()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self.__updateScenePalette()
+            self.resetCachedContent()
+        super().changeEvent(event)
+
+    def __updateScenePalette(self):
+        scene = self.scene()
+        if scene is not None:
+            scene.setPalette(self.palette())
+
+
+class GraphicsView(pg.GraphicsView):
+    """
+    A pyqtgraph.GraphicsView with better QPalette integration.
+
+    A default constructed plot will respect and adapt to the current palette
+    """
+    def __init__(self, *args, background=None, **kwargs):
+        super().__init__(*args, background=background, **kwargs)
+        if background is None:
+            # Revert the pg.PlotWidget's modifications, use default
+            # for QGraphicsView
+            self.setBackgroundRole(QPalette.Base)
+        # Reset changes to the palette (undo changes from pg.GraphicsView)
+        self.setPalette(QPalette())
+        self.__updateScenePalette()
+
+    def setScene(self, scene):
+        super().setScene(scene)
+        self.__updateScenePalette()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self.__updateScenePalette()
+            self.resetCachedContent()
+
+        super().changeEvent(event)
+
+    def __updateScenePalette(self):
+        scene = self.scene()
+        if scene is not None:
+            scene.setPalette(self.palette())
+
+
+class PlotItem(pg.PlotItem):
+    """
+    A pyqtgraph.PlotItem with better QPalette integration.
+
+    A default constructed plot will respect and adapt to the current palette
+    """
+    def __init__(self, *args, **kwargs):
+        axisItems = kwargs.pop("axisItems", None)
+        if axisItems is None:
+            axisItems = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
+        super().__init__(*args, axisItems=axisItems, **kwargs)

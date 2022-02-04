@@ -28,6 +28,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.plotutils import HelpEventDelegate
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils.dendrogram import DendrogramWidget
+from Orange.widgets.visualize.utils.plotutils import GraphicsView
 from Orange.widgets.visualize.utils.heatmap import (
     GradientColorMap, GradientLegendWidget,
 )
@@ -344,7 +345,7 @@ class OWDistanceMap(widget.OWWidget):
 
         gui.auto_send(self.buttonsArea, self, "autocommit")
 
-        self.view = GraphicsView(background="w")
+        self.view = GraphicsView(background=None)
         self.mainArea.layout().addWidget(self.view)
 
         self.grid_widget = pg.GraphicsWidget()

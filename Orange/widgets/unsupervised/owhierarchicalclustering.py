@@ -7,14 +7,12 @@ from typing import Any, List, Tuple, Dict, Optional, Set, Union
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGraphicsWidget, QGraphicsObject, QGraphicsScene, QGridLayout, QSizePolicy,
+    QGraphicsWidget, QGraphicsScene, QGridLayout, QSizePolicy,
     QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent
 )
-from AnyQt.QtGui import QColor, QPen, QFont, QKeySequence
-from AnyQt.QtCore import Qt, QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath
+from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-
-import pyqtgraph as pg
 
 import Orange.data
 from Orange.data.domain import filter_visible
@@ -30,6 +28,7 @@ from Orange.widgets.utils import itemmodels, combobox
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
@@ -867,7 +866,7 @@ def qfont_scaled(font, factor):
     return scaled
 
 
-class AxisItem(pg.AxisItem):
+class AxisItem(AxisItem):
     mousePressed = Signal(QPointF, Qt.MouseButton)
     mouseMoved = Signal(QPointF, Qt.MouseButtons)
     mouseReleased = Signal(QPointF, Qt.MouseButton)
@@ -892,7 +891,7 @@ class AxisItem(pg.AxisItem):
         event.accept()
 
 
-class SliderLine(QGraphicsObject):
+class SliderLine(QGraphicsWidget):
     """A movable slider line."""
     valueChanged = Signal(float)
 
@@ -908,14 +907,10 @@ class SliderLine(QGraphicsObject):
         self._length = length
         self._min = 0.0
         self._max = 1.0
-        self._line = QLineF()  # type: Optional[QLineF]
-        self._pen = QPen()
+        self._line: Optional[QLineF] = QLineF()
+        self._pen: Optional[QPen] = None
         super().__init__(parent, **kwargs)
-
         self.setAcceptedMouseButtons(Qt.LeftButton)
-        self.setPen(make_pen(brush=QColor(50, 50, 50), width=1, cosmetic=False,
-                             style=Qt.DashLine))
-
         if self._orientation == Qt.Vertical:
             self.setCursor(Qt.SizeVerCursor)
         else:
@@ -930,7 +925,10 @@ class SliderLine(QGraphicsObject):
             self.update()
 
     def pen(self) -> QPen:
-        return QPen(self._pen)
+        if self._pen is None:
+            return QPen(self.palette().text(), 1.0, Qt.DashLine)
+        else:
+            return QPen(self._pen)
 
     def setValue(self, value: float):
         value = min(max(value, self._min), self._max)
@@ -991,6 +989,11 @@ class SliderLine(QGraphicsObject):
             self.setValue(event.pos().x())
         self.lineReleased.emit()
         event.accept()
+
+    def shape(self) -> QPainterPath:
+        path = QPainterPath()
+        path.addRect(self.boundingRect())
+        return path
 
     def boundingRect(self) -> QRectF:
         if self._line is None:
