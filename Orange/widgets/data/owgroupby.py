@@ -443,8 +443,13 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
             if data
             else {}
         )
+        default_aggregations = self.aggregations.copy()
 
         self.openContext(self.data)
+
+        # restore aggregations
+        self.aggregations.update({k: v for k, v in default_aggregations.items()
+                                  if k not in self.aggregations})
 
         # update selections in widgets and re-plot
         self.agg_table_model.set_domain(data.domain if data else None)
