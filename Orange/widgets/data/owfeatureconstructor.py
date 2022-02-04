@@ -144,13 +144,11 @@ Categorical features are passed as strings
         self.attributescb.setModel(self.attrs_model)
 
         sorted_funcs = sorted(self.FUNCTIONS)
-        self.funcs_model = itemmodels.PyListModelTooltip()
+        self.funcs_model = itemmodels.PyListModelTooltip(
+            chain(["Select Function"], sorted_funcs),
+            chain([''], [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
+        )
         self.funcs_model.setParent(self)
-
-        self.funcs_model[:] = chain(["Select Function"], sorted_funcs)
-        self.funcs_model.tooltips[:] = chain(
-            [''],
-            [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
 
         self.functionscb = ComboBoxSearch(
             minimumContentsLength=16,
