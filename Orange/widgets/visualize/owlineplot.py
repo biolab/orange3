@@ -17,7 +17,7 @@ from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 
 from Orange.data import Table, DiscreteVariable
 from Orange.data.sql.table import SqlTable
-from Orange.statistics.util import countnans, nanmean, nanmin, nanmax, nanstd
+from Orange.statistics.util import nanmean, nanmin, nanmax, nanstd
 from Orange.widgets import gui, report
 from Orange.widgets.settings import (
     Setting, ContextSetting, DomainContextHandler
@@ -195,7 +195,9 @@ class LinePlotViewBox(ViewBox):
 class ParameterSetter(CommonParameterSetter):
     MEAN_LABEL = "Mean"
     LINE_LABEL = "Lines"
+    MISSING_LINE_LABEL = "Lines (missing value)"
     SEL_LINE_LABEL = "Selected lines"
+    SEL_MISSING_LINE_LABEL = "Selected lines (missing value)"
     RANGE_LABEL = "Range"
     SEL_RANGE_LABEL = "Selected range"
 
@@ -214,10 +216,22 @@ class ParameterSetter(CommonParameterSetter):
             Updater.STYLE_LABEL: Updater.DEFAULT_LINE_STYLE,
             Updater.ANTIALIAS_LABEL: True,
         }
+        self.missing_line_settings = {
+            Updater.WIDTH_LABEL: LinePlotStyle.UNSELECTED_LINE_WIDTH,
+            Updater.ALPHA_LABEL: LinePlotStyle.UNSELECTED_LINE_ALPHA,
+            Updater.STYLE_LABEL: "Dash line",
+            Updater.ANTIALIAS_LABEL: True,
+        }
         self.sel_line_settings = {
             Updater.WIDTH_LABEL: LinePlotStyle.SELECTED_LINE_WIDTH,
             Updater.ALPHA_LABEL: LinePlotStyle.SELECTED_LINE_ALPHA,
             Updater.STYLE_LABEL: Updater.DEFAULT_LINE_STYLE,
+            Updater.ANTIALIAS_LABEL: False,
+        }
+        self.sel_missing_line_settings = {
+            Updater.WIDTH_LABEL: LinePlotStyle.SELECTED_LINE_WIDTH,
+            Updater.ALPHA_LABEL: LinePlotStyle.SELECTED_LINE_ALPHA,
+            Updater.STYLE_LABEL: "Dash line",
             Updater.ANTIALIAS_LABEL: False,
         }
         self.range_settings = {
@@ -255,6 +269,15 @@ class ParameterSetter(CommonParameterSetter):
                                           LinePlotStyle.UNSELECTED_LINE_ALPHA),
                     Updater.ANTIALIAS_LABEL: (None, True),
                 },
+                self.MISSING_LINE_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15),
+                                          LinePlotStyle.UNSELECTED_LINE_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          "Dash line"),
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.UNSELECTED_LINE_ALPHA),
+                    Updater.ANTIALIAS_LABEL: (None, True),
+                },
                 self.SEL_LINE_LABEL: {
                     Updater.WIDTH_LABEL: (range(1, 15),
                                           LinePlotStyle.SELECTED_LINE_WIDTH),
@@ -263,6 +286,15 @@ class ParameterSetter(CommonParameterSetter):
                     Updater.ALPHA_LABEL: (range(0, 255, 5),
                                           LinePlotStyle.SELECTED_LINE_ALPHA),
                     Updater.ANTIALIAS_LABEL: (None, False),
+                },
+                self.SEL_MISSING_LINE_LABEL: {
+                    Updater.WIDTH_LABEL: (range(1, 15),
+                                          LinePlotStyle.SELECTED_LINE_WIDTH),
+                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
+                                          "Dash line"),
+                    Updater.ALPHA_LABEL: (range(0, 255, 5),
+                                          LinePlotStyle.SELECTED_LINE_ALPHA),
+                    Updater.ANTIALIAS_LABEL: (None, True),
                 },
                 self.RANGE_LABEL: {
                     Updater.ALPHA_LABEL: (range(0, 255, 5),
@@ -283,9 +315,19 @@ class ParameterSetter(CommonParameterSetter):
             self.line_settings.update(**settings)
             Updater.update_lines(self.lines_items, **self.line_settings)
 
+        def update_missing_lines(**settings):
+            self.missing_line_settings.update(**settings)
+            Updater.update_lines(self.missing_lines_items,
+                                 **self.missing_line_settings)
+
         def update_sel_lines(**settings):
             self.sel_line_settings.update(**settings)
             Updater.update_lines(self.sel_lines_items, **self.sel_line_settings)
+
+        def update_sel_missing_lines(**settings):
+            self.sel_missing_line_settings.update(**settings)
+            Updater.update_lines(self.sel_missing_lines_items,
+                                 **self.sel_missing_line_settings)
 
         def _update_brush(items, **settings):
             for item in items:
@@ -306,7 +348,9 @@ class ParameterSetter(CommonParameterSetter):
         self._setters[self.PLOT_BOX] = {
             self.MEAN_LABEL: update_mean,
             self.LINE_LABEL: update_lines,
+            self.MISSING_LINE_LABEL: update_missing_lines,
             self.SEL_LINE_LABEL: update_sel_lines,
+            self.SEL_MISSING_LINE_LABEL: update_sel_missing_lines,
             self.RANGE_LABEL: update_range,
             self.SEL_RANGE_LABEL: update_sel_range,
         }
@@ -332,9 +376,18 @@ class ParameterSetter(CommonParameterSetter):
         return [group.profiles for group in self.master.groups]
 
     @property
+    def missing_lines_items(self):
+        return [group.missing_profiles for group in self.master.groups]
+
+    @property
     def sel_lines_items(self):
         return [group.sel_profiles for group in self.master.groups] + \
                [group.sub_profiles for group in self.master.groups]
+
+    @property
+    def sel_missing_lines_items(self):
+        return [group.sel_missing_profiles for group in self.master.groups] + \
+               [group.sub_missing_profiles for group in self.master.groups]
 
     @property
     def range_items(self):
@@ -347,6 +400,7 @@ class ParameterSetter(CommonParameterSetter):
     @property
     def getAxis(self):
         return self.master.getAxis
+
 
 # Customizable plot widget
 class LinePlotGraph(PlotWidget):
@@ -433,11 +487,11 @@ class ProfileGroup:
         self.color = color
         self.graph = graph
 
-        self.profiles_added = False
-        self.sub_profiles_added = False
-        self.range_added = False
-        self.mean_added = False
-        self.error_bar_added = False
+        self._profiles_added = False
+        self._sub_profiles_added = False
+        self._range_added = False
+        self._mean_added = False
+        self._error_bar_added = False
 
         self.graph_items = []
         self.__mean = nanmean(self.y_data, axis=0)
@@ -445,15 +499,20 @@ class ProfileGroup:
 
     def __create_curves(self):
         self.profiles = self._get_profiles_curve()
+        self.missing_profiles = self._get_missing_profiles_curve()
         self.sub_profiles = self._get_sel_profiles_curve()
+        self.sub_missing_profiles = self._get_sel_missing_profiles_curve()
         self.sel_profiles = self._get_sel_profiles_curve()
+        self.sel_missing_profiles = self._get_sel_missing_profiles_curve()
         self.range = self._get_range_curve()
         self.sel_range = self._get_sel_range_curve()
         self.mean = self._get_mean_curve()
         self.error_bar = self._get_error_bar()
         self.graph_items = [
             self.mean, self.range, self.sel_range, self.profiles,
-            self.sub_profiles, self.sel_profiles, self.error_bar
+            self.sub_profiles, self.sel_profiles, self.error_bar,
+            self.missing_profiles, self.sel_missing_profiles,
+            self.sub_missing_profiles,
         ]
 
     def _get_profiles_curve(self):
@@ -463,9 +522,23 @@ class ProfileGroup:
         Updater.update_lines([curve], **self.graph.parameter_setter.line_settings)
         return curve
 
+    def _get_missing_profiles_curve(self):
+        x, y, con = self.__get_disconnected_curve_missing_data(self.y_data)
+        pen = self.make_pen(self.color)
+        curve = pg.PlotCurveItem(x=x, y=y, connect=con, pen=pen)
+        settings = self.graph.parameter_setter.missing_line_settings
+        Updater.update_lines([curve], **settings)
+        return curve
+
     def _get_sel_profiles_curve(self):
         curve = pg.PlotCurveItem(x=None, y=None, pen=self.make_pen(self.color))
         Updater.update_lines([curve], **self.graph.parameter_setter.sel_line_settings)
+        return curve
+
+    def _get_sel_missing_profiles_curve(self):
+        curve = pg.PlotCurveItem(x=None, y=None, pen=self.make_pen(self.color))
+        settings = self.graph.parameter_setter.sel_missing_line_settings
+        Updater.update_lines([curve], **settings)
         return curve
 
     def _get_range_curve(self):
@@ -500,38 +573,44 @@ class ProfileGroup:
         self.graph_items = []
 
     def set_visible_profiles(self, show_profiles=True, show_range=True, **_):
-        if not self.profiles_added and show_profiles:
-            self.profiles_added = True
+        if not self._profiles_added and show_profiles:
+            self._profiles_added = True
             self.graph.addItem(self.profiles)
+            self.graph.addItem(self.missing_profiles)
             self.graph.addItem(self.sel_profiles)
-        if not self.sub_profiles_added and (show_profiles or show_range):
-            self.sub_profiles_added = True
+            self.graph.addItem(self.sel_missing_profiles)
+        if not self._sub_profiles_added and (show_profiles or show_range):
+            self._sub_profiles_added = True
             self.graph.addItem(self.sub_profiles)
+            self.graph.addItem(self.sub_missing_profiles)
         self.profiles.setVisible(show_profiles)
+        self.missing_profiles.setVisible(show_profiles)
         self.sel_profiles.setVisible(show_profiles)
+        self.sel_missing_profiles.setVisible(show_profiles)
         self.sub_profiles.setVisible(show_profiles or show_range)
+        self.sub_missing_profiles.setVisible(show_profiles or show_range)
 
     def set_visible_range(self, show_profiles=True, show_range=True, **_):
-        if not self.range_added and show_range:
-            self.range_added = True
+        if not self._range_added and show_range:
+            self._range_added = True
             self.graph.addItem(self.range)
             self.graph.addItem(self.sel_range)
-        if not self.sub_profiles_added and (show_profiles or show_range):
-            self.sub_profiles_added = True
+        if not self._sub_profiles_added and (show_profiles or show_range):
+            self._sub_profiles_added = True
             self.graph.addItem(self.sub_profiles)
         self.range.setVisible(show_range)
         self.sel_range.setVisible(show_range)
         self.sub_profiles.setVisible(show_profiles or show_range)
 
     def set_visible_mean(self, show_mean=True, **_):
-        if not self.mean_added and show_mean:
-            self.mean_added = True
+        if not self._mean_added and show_mean:
+            self._mean_added = True
             self.graph.addItem(self.mean)
         self.mean.setVisible(show_mean)
 
     def set_visible_error(self, show_error=True, **_):
-        if not self.error_bar_added and show_error:
-            self.error_bar_added = True
+        if not self._error_bar_added and show_error:
+            self._error_bar_added = True
             self.graph.addItem(self.error_bar)
         self.error_bar.setVisible(show_error)
 
@@ -544,10 +623,23 @@ class ProfileGroup:
         pen.setColor(color)
         self.profiles.setPen(pen)
 
+        color = QColor(self.color)
+        alpha = self.graph.parameter_setter.missing_line_settings[
+            Updater.ALPHA_LABEL] if not selection else \
+            LinePlotStyle.UNSELECTED_LINE_ALPHA_SEL
+        color.setAlpha(alpha)
+        pen = self.missing_profiles.opts["pen"]
+        pen.setColor(color)
+        self.missing_profiles.setPen(pen)
+
     def update_sel_profiles(self, y_data):
         x, y, connect = self.__get_disconnected_curve_data(y_data) \
             if y_data is not None else (None, None, None)
         self.sel_profiles.setData(x=x, y=y, connect=connect)
+
+        x, y, connect = self.__get_disconnected_curve_missing_data(y_data) \
+            if y_data is not None else (None, None, None)
+        self.sel_missing_profiles.setData(x=x, y=y, connect=connect)
 
     def update_sel_profiles_color(self, subset):
         color = QColor(Qt.black) if subset else QColor(self.color)
@@ -556,10 +648,22 @@ class ProfileGroup:
         pen.setColor(color)
         self.sel_profiles.setPen(pen)
 
+        color = QColor(Qt.black) if subset else QColor(self.color)
+        alpha = self.graph.parameter_setter.sel_missing_line_settings[
+            Updater.ALPHA_LABEL]
+        color.setAlpha(alpha)
+        pen = self.sel_missing_profiles.opts["pen"]
+        pen.setColor(color)
+        self.sel_missing_profiles.setPen(pen)
+
     def update_sub_profiles(self, y_data):
         x, y, connect = self.__get_disconnected_curve_data(y_data) \
             if y_data is not None else (None, None, None)
         self.sub_profiles.setData(x=x, y=y, connect=connect)
+
+        x, y, connect = self.__get_disconnected_curve_missing_data(y_data) \
+            if y_data is not None else (None, None, None)
+        self.sub_missing_profiles.setData(x=x, y=y, connect=connect)
 
     def update_sel_range(self, y_data):
         if y_data is None:
@@ -574,8 +678,23 @@ class ProfileGroup:
         m, n = y_data.shape
         x = np.arange(m * n) % n + 1
         y = y_data.A.flatten() if sp.issparse(y_data) else y_data.flatten()
-        connect = np.ones_like(y, bool)
-        connect[n - 1:: n] = False
+        connect = ~np.isnan(y_data.A if sp.issparse(y_data) else y_data)
+        connect[:, -1] = False
+        connect = connect.flatten()
+        return x, y, connect
+
+    @staticmethod
+    def __get_disconnected_curve_missing_data(y_data):
+        m, n = y_data.shape
+        x = np.arange(m * n) % n + 1
+        y = y_data.A.flatten() if sp.issparse(y_data) else y_data.flatten()
+        connect = np.isnan(y_data.A if sp.issparse(y_data) else y_data)
+        # disconnect until the first non nan
+        first_non_nan = np.argmin(connect, axis=1)
+        for row in np.flatnonzero(first_non_nan):
+            connect[row, :first_non_nan[row]] = False
+        connect[:, -1] = False
+        connect = connect.flatten()
         return x, y, connect
 
     @staticmethod
@@ -620,13 +739,11 @@ class OWLinePlot(OWWidget):
 
     class Error(OWWidget.Error):
         not_enough_attrs = Msg("Need at least one numeric feature.")
-        no_valid_data = Msg("No plot due to no valid data.")
 
     class Warning(OWWidget.Warning):
         no_display_option = Msg("No display option is selected.")
 
     class Information(OWWidget.Information):
-        hidden_instances = Msg("Instances with unknown values are not shown.")
         too_many_features = Msg("Data has too many features. Only first {}"
                                 " are shown.".format(MAX_FEATURES))
 
@@ -634,7 +751,6 @@ class OWLinePlot(OWWidget):
         super().__init__(parent)
         self.__groups = []
         self.data = None
-        self.valid_data = None
         self.subset_data = None
         self.subset_indices = None
         self.__pending_selection = self.selection
@@ -738,14 +854,9 @@ class OWLinePlot(OWWidget):
         if self.data is not None:
             self.graph_variables = [var for var in self.data.domain.attributes
                                     if var.is_continuous]
-            self.valid_data = ~countnans(self.data.X, axis=1).astype(bool)
             if len(self.graph_variables) < 1:
                 error(self.Error.not_enough_attrs)
-            elif not np.sum(self.valid_data):
-                error(self.Error.no_valid_data)
             else:
-                if not np.all(self.valid_data):
-                    self.Information.hidden_instances()
                 if len(self.graph_variables) > MAX_FEATURES:
                     self.Information.too_many_features()
                     self.graph_variables = self.graph_variables[:MAX_FEATURES]
@@ -756,7 +867,7 @@ class OWLinePlot(OWWidget):
             if not (self.show_profiles or self.show_range or self.show_mean):
                 self.Warning.no_display_option()
             enable = (self.show_profiles or self.show_range) and \
-                len(self.data[self.valid_data]) < SEL_MAX_INSTANCES
+                len(self.data) < SEL_MAX_INSTANCES
             self.enable_selection.emit(enable)
 
     @Inputs.data_subset
@@ -776,8 +887,7 @@ class OWLinePlot(OWWidget):
             if self.subset_data is not None else {}
         self.subset_indices = None
         if self.data is not None and sub_ids:
-            self.subset_indices = [x.id for x in self.data[self.valid_data]
-                                   if x.id in sub_ids]
+            self.subset_indices = [x.id for x in self.data if x.id in sub_ids]
 
     def setup_plot(self):
         if self.data is None:
@@ -792,15 +902,14 @@ class OWLinePlot(OWWidget):
 
     def plot_groups(self):
         self._remove_groups()
-        data = self.data[self.valid_data][:, self.graph_variables]
+        data = self.data[:, self.graph_variables]
         if self.group_var is None:
-            self._plot_group(data, np.where(self.valid_data)[0])
+            self._plot_group(data, np.arange(len(data)))
         else:
             class_col_data, _ = self.data.get_column_view(self.group_var)
             for index in range(len(self.group_var.values)):
-                mask = np.logical_and(class_col_data == index, self.valid_data)
-                indices = np.flatnonzero(mask)
-                if not len(indices):
+                indices = np.flatnonzero(class_col_data == index)
+                if len(indices) == 0:
                     continue
                 group_data = self.data[indices, self.graph_variables]
                 self._plot_group(group_data, indices, index)
@@ -876,7 +985,7 @@ class OWLinePlot(OWWidget):
             group.update_sub_profiles(table)
 
     def _update_visibility(self, obj_name):
-        if not len(self.__groups):
+        if len(self.__groups) == 0:
             return
         self._update_profiles_color()
         self._update_sel_profiles_and_range()
@@ -891,15 +1000,13 @@ class OWLinePlot(OWWidget):
             sel = [i for i in self.__pending_selection if i < len(self.data)]
             mask = np.zeros(len(self.data), dtype=bool)
             mask[sel] = True
-            mask = mask[self.valid_data]
             self.selection_changed(mask)
             self.__pending_selection = None
 
     def selection_changed(self, mask):
         if self.data is None:
             return
-        # need indices for self.data: mask refers to self.data[self.valid_data]
-        indices = np.arange(len(self.data))[self.valid_data][mask]
+        indices = np.arange(len(self.data))[mask]
         self.graph.select(indices)
         old = self.selection
         self.selection = None if self.data and isinstance(self.data, SqlTable)\
@@ -931,7 +1038,6 @@ class OWLinePlot(OWWidget):
         return QSize(1132, 708)
 
     def clear(self):
-        self.valid_data = None
         self.selection = None
         self.__groups = []
         self.graph_variables = []
