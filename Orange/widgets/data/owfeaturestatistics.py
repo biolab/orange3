@@ -562,6 +562,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                             variable=attribute,
                             color_attribute=self.target_var,
                             border=(0, 0, 2, 0),
+                            bottom_padding=4,
                             border_color='#ccc',
                         )
                         scene.addItem(histogram)
