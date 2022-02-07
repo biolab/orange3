@@ -18,7 +18,10 @@ from Orange.tests import test_filename
 
 
 class NotATable(Table):  # pylint: disable=too-many-ancestors,abstract-method
-    pass
+    @classmethod
+    def from_file(cls, *args, **kwargs):
+        table = super().from_file(*args, **kwargs)
+        return cls(table)
 
 
 class TestNaiveBayesLearner(unittest.TestCase):
