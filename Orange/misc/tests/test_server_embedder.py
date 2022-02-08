@@ -167,3 +167,12 @@ class TestServerEmbedder(unittest.TestCase):
         mocked_fun.assert_has_calls(
             [call(item) for item in self.test_data], any_order=True
         )
+
+    @patch(_HTTPX_POST_METHOD, return_value=DummyResponse(b''), new_callable=AsyncMock)
+    def test_retries(self, mock):
+        self.embedder.embedd_data(self.test_data)
+        self.assertEqual(len(self.test_data) * 3, mock.call_count)
+
+
+if __name__ == "__main__":
+    unittest.main()
