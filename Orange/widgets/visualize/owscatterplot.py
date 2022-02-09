@@ -447,6 +447,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.vizrank_button.setEnabled(not err_msg)
         self.vizrank_button.setToolTip(err_msg)
 
+    @OWDataProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
         self._vizrank_color_change()
@@ -558,6 +559,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.add_data()
             self.__timer.start()
 
+    @OWDataProjectionWidget.Inputs.data_subset
     def set_subset_data(self, subset_data):
         self.warning()
         if isinstance(subset_data, SqlTable):

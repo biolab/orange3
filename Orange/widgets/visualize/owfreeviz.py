@@ -232,6 +232,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         self.run_button.setText("Start")
 
     # OWAnchorProjectionWidget
+    @OWAnchorProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
         self.graph.set_sample_size(None)

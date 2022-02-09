@@ -206,6 +206,7 @@ class OWSVM(OWBaseLearner):
         self._show_right_kernel()
         self.settings_changed()
 
+    @OWBaseLearner.Inputs.data
     def set_data(self, data):
         self.Warning.sparse_data.clear()
         super().set_data(data)

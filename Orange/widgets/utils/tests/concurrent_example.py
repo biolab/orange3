@@ -103,6 +103,7 @@ class OWConcurrentWidget(OWDataProjectionWidget, ConcurrentWidgetMixin):
         raise ex
 
     # OWDataProjectionWidget
+    @OWDataProjectionWidget.Inputs.data
     def set_data(self, data: Table):
         super().set_data(data)
         if self._invalidated:
