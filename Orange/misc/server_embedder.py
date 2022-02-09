@@ -3,13 +3,16 @@ import json
 import logging
 import random
 import uuid
+import warnings
 from collections import namedtuple
+from functools import partial
 from json import JSONDecodeError
 from os import getenv
 from typing import Any, Callable, List, Optional
 
 from AnyQt.QtCore import QSettings
 from httpx import AsyncClient, NetworkError, ReadTimeout, Response
+from numpy import linspace
 
 from Orange.misc.utils.embedder_utils import (
     EmbedderCache,
@@ -17,6 +20,7 @@ from Orange.misc.utils.embedder_utils import (
     EmbeddingConnectionError,
     get_proxies,
 )
+from Orange.util import dummy_callback
 
 log = logging.getLogger(__name__)
 TaskItem = namedtuple("TaskItem", ("id", "item", "no_repeats"))
@@ -59,8 +63,7 @@ class ServerEmbedderCommunicator:
         self._model = model_name
         self.embedder_type = embedder_type
 
-        # attribute that offers support for cancelling the embedding
-        # if ran in another thread
+        # remove in 3.33
         self._cancelled = False
 
         self.machine_id = None
@@ -81,9 +84,11 @@ class ServerEmbedderCommunicator:
         self.content_type = None  # need to be set in a class inheriting
 
     def embedd_data(
-            self,
-            data: List[Any],
-            processed_callback: Callable[[bool], None] = None,
+        self,
+        data: List[Any],
+        processed_callback: Optional[Callable] = None,
+        *,
+        callback: Callable = dummy_callback,
     ) -> List[Optional[List[float]]]:
         """
         This function repeats calling embedding function until all items
@@ -95,9 +100,12 @@ class ServerEmbedderCommunicator:
         data
             List with data that needs to be embedded.
         processed_callback
+            Deprecated: remove in 3.33
             A function that is called after each item is embedded
             by either getting a successful response from the server,
             getting the result from cache or skipping the item.
+        callback
+            Callback for reporting the progress in share of embedded items
 
         Returns
         -------
@@ -119,7 +127,7 @@ class ServerEmbedderCommunicator:
         asyncio.set_event_loop(loop)
         try:
             embeddings = asyncio.get_event_loop().run_until_complete(
-                self.embedd_batch(data, processed_callback)
+                self.embedd_batch(data, processed_callback, callback=callback)
             )
         finally:
             loop.close()
@@ -127,7 +135,11 @@ class ServerEmbedderCommunicator:
         return embeddings
 
     async def embedd_batch(
-            self, data: List[Any], proc_callback: Callable[[bool], None] = None
+        self,
+        data: List[Any],
+        proc_callback: Optional[Callable] = None,
+        *,
+        callback: Callable = dummy_callback,
     ) -> List[Optional[List[float]]]:
         """
         Function perform embedding of a batch of data items.
@@ -136,10 +148,8 @@ class ServerEmbedderCommunicator:
         ----------
         data
             A list of data that must be embedded.
-        proc_callback
-            A function that is called after each item is fully processed
-            by either getting a successful response from the server,
-            getting the result from cache or skipping the item.
+        callback
+            Callback for reporting the progress in share of embedded items
 
         Returns
         -------
@@ -151,6 +161,21 @@ class ServerEmbedderCommunicator:
         EmbeddingCancelledException:
             If cancelled attribute is set to True (default=False).
         """
+        # in Orange 3.33 keep content of the if - remove if clause and complete else
+        if proc_callback is None:
+            progress_items = iter(linspace(0, 1, len(data)))
+
+            def success_callback():
+                """Callback called on every successful embedding"""
+                callback(next(progress_items))
+        else:
+            warnings.warn(
+                "proc_callback is deprecated and will be removed in version 3.33, "
+                "use callback instead",
+                FutureWarning,
+            )
+            success_callback = partial(proc_callback, True)
+
         results = [None] * len(data)
         queue = asyncio.Queue()
 
@@ -161,7 +186,7 @@ class ServerEmbedderCommunicator:
         async with AsyncClient(
             timeout=self.timeout, base_url=self.server_url, proxies=get_proxies()
         ) as client:
-            tasks = self._init_workers(client, queue, results, proc_callback)
+            tasks = self._init_workers(client, queue, results, success_callback)
 
             # wait for the queue to complete or one of workers to exit
             queue_complete = asyncio.create_task(queue.join())
@@ -203,6 +228,7 @@ class ServerEmbedderCommunicator:
             await asyncio.gather(*tasks, return_exceptions=True)
             log.debug("All workers canceled")
 
+    # remove in 3.33
     def __check_cancelled(self):
         if self._cancelled:
             raise EmbeddingCancelledException()
@@ -230,11 +256,11 @@ class ServerEmbedderCommunicator:
         client: AsyncClient,
         queue: asyncio.Queue,
         results: List,
-        proc_callback: Callable[[bool], None] = None,
+        proc_callback: Callable,
     ):
         """
-        Worker that embedds data. It is pulling items from the until the queue
-        is empty. It is canceled by embedd_batch all tasks are finished
+        Worker that embedds data. It is pulling items from the queue until
+        it is empty. It is runs until anything is in the queue, or it is canceled
 
         Parameters
         ----------
@@ -252,11 +278,11 @@ class ServerEmbedderCommunicator:
             getting the result from cache or skipping the item.
         """
         while not queue.empty():
+            # remove in 3.33
             self.__check_cancelled()
 
             # get item from the queue
             i, data_instance, num_repeats = await queue.get()
-            num_repeats += 1
 
             # load bytes
             data_bytes = await self._encode_data_instance(data_instance)
@@ -273,7 +299,7 @@ class ServerEmbedderCommunicator:
                 log.debug("Sending to the server: %s", cache_key)
                 url = (
                     f"/{self.embedder_type}/{self._model}?machine={self.machine_id}"
-                    f"&session={self.session_id}&retry={num_repeats}"
+                    f"&session={self.session_id}&retry={num_repeats+1}"
                 )
                 emb = await self._send_request(client, data_bytes, url)
                 if emb is not None:
@@ -283,16 +309,15 @@ class ServerEmbedderCommunicator:
                 # store result if embedding is successful
                 log.debug("Successfully embedded:  %s", cache_key)
                 results[i] = emb
-                if proc_callback:
-                    proc_callback(emb is not None)
-            elif num_repeats < self.MAX_REPEATS:
+                proc_callback()
+            elif num_repeats+1 < self.MAX_REPEATS:
                 log.debug("Embedding unsuccessful - reading to queue:  %s", cache_key)
                 # if embedding not successful put the item to queue to be handled at
                 # the end - the item is put to the end since it is possible that  server
                 # still process the request and the result will be in the cache later
                 # repeating the request immediately may result in another fail when
                 # processing takes longer
-                queue.put_nowait(TaskItem(i, data_instance, no_repeats=num_repeats))
+                queue.put_nowait(TaskItem(i, data_instance, no_repeats=num_repeats+1))
             queue.task_done()
 
     async def _send_request(
@@ -379,5 +404,11 @@ class ServerEmbedderCommunicator:
     def clear_cache(self):
         self._cache.clear_cache()
 
+    # remove in 3.33
     def set_cancelled(self):
+        warnings.warn(
+            "set_cancelled is deprecated and will be removed in version 3.33, "
+            "the process can be canceled by raising Error in callback",
+            FutureWarning,
+        )
         self._cancelled = True
