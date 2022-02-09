@@ -386,6 +386,7 @@ class OWCurveFit(OWBaseLearner):
         self.__expression_edit.setCursorPosition(pos + len(what) - offset)
         self.__expression_edit.setFocus()
 
+    @OWBaseLearner.Inputs.data
     def set_data(self, data: Optional[Table]):
         self.Warning.data_missing(shown=not bool(data))
         self.learner = None

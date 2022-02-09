@@ -382,6 +382,7 @@ class OWRadviz(OWAnchorProjectionWidget):
         super().colors_changed()
         self._init_vizrank()
 
+    @OWAnchorProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
         self._init_vizrank()
