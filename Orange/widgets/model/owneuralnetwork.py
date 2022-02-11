@@ -14,6 +14,7 @@ from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 from Orange.data import Table
 from Orange.modelling import NNLearner
 from Orange.widgets import gui
+from Orange.widgets.widget import Msg
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
@@ -81,11 +82,11 @@ class OWNNLearner(OWBaseLearner):
     activation_index = Setting(3)
     solver_index = Setting(2)
     max_iterations = Setting(200)
-    alpha_index = Setting(0)
+    alpha_index = Setting(1)
     replicable = Setting(True)
-    settings_version = 1
+    settings_version = 2
 
-    alphas = list(chain([x / 10000 for x in range(1, 10)],
+    alphas = list(chain([0], [x / 10000 for x in range(1, 10)],
                         [x / 1000 for x in range(1, 10)],
                         [x / 100 for x in range(1, 10)],
                         [x / 10 for x in range(1, 10)],
@@ -93,6 +94,11 @@ class OWNNLearner(OWBaseLearner):
                         range(10, 100, 5),
                         range(100, 200, 10),
                         range(100, 1001, 50)))
+
+    class Warning(OWBaseLearner.Warning):
+        no_layers = Msg("ANN without hidden layers is equivalent to logistic "
+                        "regression with worse fitting.\nWe recommend using "
+                        "logistic regression.")
 
     def add_main_layout(self):
         # this is part of init, pylint: disable=attribute-defined-outside-init
@@ -184,10 +190,10 @@ class OWNNLearner(OWBaseLearner):
                 ("Replicable training", self.replicable))
 
     def get_hidden_layers(self):
+        self.Warning.no_layers.clear()
         layers = tuple(map(int, re.findall(r'\d+', self.hidden_layers_input)))
         if not layers:
-            layers = (10,)
-            self.hidden_layers_input = "10,"
+            self.Warning.no_layers()
         return layers
 
     def update_model(self):
@@ -306,6 +312,8 @@ class OWNNLearner(OWBaseLearner):
             if alpha is not None:
                 settings["alpha_index"] = \
                     np.argmin(np.abs(np.array(cls.alphas) - alpha))
+        elif version < 2:
+            settings["alpha_index"] = settings.get("alpha_index", 0) + 1
 
 
 if __name__ == "__main__":  # pragma: no cover
