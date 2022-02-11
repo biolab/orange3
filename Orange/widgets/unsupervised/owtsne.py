@@ -291,6 +291,10 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.tsne_embedding = None  # type: Optional[manifold.TSNEModel]
         self.iterations_done = 0    # type: int
 
+    @property
+    def effective_data(self):
+        return self.data.transform(Domain(self.effective_variables))
+
     def _add_controls(self):
         self._add_controls_start_box()
         super()._add_controls()
