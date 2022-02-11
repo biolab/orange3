@@ -455,7 +455,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.openContext(self.data)
         self._invalidated = not (
             data_existed and self.data is not None and
-            array_equal(effective_data.X, self.effective_data.X))
+            array_equal(effective_data.X, self.effective_data.X) and
+            array_equal(effective_data.Y, self.effective_data.Y) and
+            array_equal(effective_data.metas, self.effective_data.metas)
+        )
         self._domain_invalidated = not (
             data_existed and self.data is not None and
             effective_data.domain.checksum()
