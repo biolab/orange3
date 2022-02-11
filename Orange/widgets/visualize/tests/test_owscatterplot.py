@@ -743,6 +743,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.setup_plot.assert_called_once()
         self.assertListEqual(self.widget.effective_variables, list(features))
 
+        self.widget.setup_plot.reset_mock()
+        features = self.data.domain.attributes[2:]
+        signals = [(self.widget.Inputs.features, AttributeList(features)),
+                   (self.widget.Inputs.data, self.data)]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+
     def test_invalidated_diff_features(self):
         self.widget.setup_plot = Mock()
         # send data and set default features
