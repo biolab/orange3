@@ -244,17 +244,12 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         slope, intercept, rvalue, _, _ = linregress(x, y)
         angle = np.degrees(np.arctan(slope))
         start_y = min_x * slope + intercept
-        rotate = 135 < angle % 360 < 315
-        l_opts = dict(color=color, position=abs(rotate - 0.85),
+        l_opts = dict(color=color, position=0.85,
                       rotateAxis=(1, 0), movable=True)
-        reg_line_item = pg.InfiniteLine(
+        return pg.InfiniteLine(
             pos=QPointF(min_x, start_y), angle=angle,
             pen=pg.mkPen(color=color, width=width, style=style),
             label=f"r = {rvalue:.2f}", labelOpts=l_opts)
-        if rotate:
-            reg_line_item.label.angle = 180
-            reg_line_item.label.updateTransform()
-        return reg_line_item
 
     def _add_line(self, x, y, color):
         width = self.parameter_setter.reg_line_settings[Updater.WIDTH_LABEL]
