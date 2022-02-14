@@ -361,11 +361,40 @@ class OMain(Main):
             "--clear-widget-settings", action="store_true",
             help="Clear stored widget setting/defaults",
         )
+        parser.add_argument(
+            "--clear-all", action="store_true",
+            help="Clear all settings and caches"
+        )
         return parser
 
     def setup_logging(self):
         super().setup_logging()
         make_sql_logger(self.options.log_level)
+
+    @staticmethod
+    def _rm_tree(path):
+        log.debug("rmtree '%s'", path)
+        shutil.rmtree(path, ignore_errors=True)
+
+    def clear_widget_settings(self):
+        log.info("Clearing widget settings")
+        self._rm_tree(widget_settings_dir(versioned=True))
+        self._rm_tree(widget_settings_dir(versioned=False))
+
+    def clear_caches(self):  # pylint: disable=import-outside-toplevel
+        from Orange.misc import environ
+        log.info("Clearing caches")
+        self._rm_tree(environ.cache_dir())
+        log.info("Clearing data")
+        self._rm_tree(environ.data_dir(versioned=True))
+        self._rm_tree(environ.data_dir(versioned=False))
+
+    def clear_application_settings(self):  # pylint: disable=no-self-use
+        s = QSettings()
+        log.info("Clearing application settings")
+        log.debug("clear '%s'", s.fileName())
+        s.clear()
+        s.sync()
 
     def setup_application(self):
         super().setup_application()
@@ -375,8 +404,12 @@ class OMain(Main):
         options = self.options
         if options.clear_widget_settings or \
                 os.path.isfile(clear_settings_flag):
-            log.info("Clearing widget settings")
-            shutil.rmtree(widget_settings_dir(), ignore_errors=True)
+            self.clear_widget_settings()
+
+        if options.clear_all:
+            self.clear_widget_settings()
+            self.clear_caches()
+            self.clear_application_settings()
 
         notif_server = NotificationServer()
         canvas.notification_server_instance = notif_server
