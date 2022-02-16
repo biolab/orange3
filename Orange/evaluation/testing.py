@@ -9,7 +9,7 @@ import numpy as np
 
 import sklearn.model_selection as skl
 
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import Domain, ContinuousVariable, DiscreteVariable
 from Orange.data.util import get_unique_names
 
 __all__ = ["Results", "CrossValidation", "LeaveOneOut", "TestOnTrainingData",
@@ -37,9 +37,10 @@ def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
         train_time = time() - t0
         t0 = time()
         # testing
-        if train_data.domain.has_discrete_class:
+        class_var = train_data.domain.class_var
+        if class_var and class_var.is_discrete:
             predicted, probs = model(test_data, model.ValueProbs)
-        elif train_data.domain.has_continuous_class:
+        else:
             predicted = model(test_data, model.Value)
         test_time = time() - t0
     # Different models can fail at any time raising any exception
@@ -269,7 +270,7 @@ class Results:
         new_meta_vals = np.empty((len(data), 0))
         names = [var.name for var in chain(domain.attributes,
                                            domain.metas,
-                                           [class_var])]
+                                           domain.class_vars)]
 
         if classification:
             # predictions
@@ -501,8 +502,7 @@ class Validation:
             ptr += len(test)
 
         row_indices = np.concatenate(row_indices, axis=0)
-        actual = data[row_indices].Y.ravel()
-        return folds, row_indices, actual
+        return folds, row_indices, data[row_indices].Y
 
     @staticmethod
     def get_indices(data):
@@ -751,7 +751,7 @@ class TestOnTestData(Validation):
             nrows=len(test_data), learners=learners,
             row_indices=np.arange(len(test_data)),
             folds=(Ellipsis, ),
-            actual=test_data.Y.ravel(),
+            actual=test_data.Y,
             score_by_folds=self.score_by_folds,
             train_time=np.zeros((len(learners),)),
             test_time=np.zeros((len(learners),)))

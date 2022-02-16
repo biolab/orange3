@@ -5,10 +5,16 @@ __all__ = ["LearnerClassification", "ModelClassification",
 
 
 class LearnerClassification(Learner):
-    learner_adequacy_err_msg = "Categorical class variable expected."
 
     def check_learner_adequacy(self, domain):
-        return domain.has_discrete_class
+        is_adequate = True
+        if len(domain.class_vars) > 1:
+            is_adequate = False
+            self.learner_adequacy_err_msg = "Too many target variables."
+        elif not domain.has_discrete_class:
+            is_adequate = False
+            self.learner_adequacy_err_msg = "Categorical class variable expected."
+        return is_adequate
 
 
 class ModelClassification(Model):

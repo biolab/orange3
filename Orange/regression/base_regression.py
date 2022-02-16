@@ -5,10 +5,16 @@ __all__ = ["LearnerRegression", "ModelRegression",
 
 
 class LearnerRegression(Learner):
-    learner_adequacy_err_msg = "Numeric class variable expected."
 
     def check_learner_adequacy(self, domain):
-        return domain.has_continuous_class
+        is_adequate = True
+        if len(domain.class_vars) > 1:
+            is_adequate = False
+            self.learner_adequacy_err_msg = "Too many target variables."
+        elif not domain.has_continuous_class:
+            is_adequate = False
+            self.learner_adequacy_err_msg = "Numeric class variable expected."
+        return is_adequate
 
 
 class ModelRegression(Model):
