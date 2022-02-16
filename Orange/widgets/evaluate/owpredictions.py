@@ -358,7 +358,7 @@ class OWPredictions(OWWidget):
         else:
             target = None
         model.clear()
-        scorers = usable_scorers(self.class_var) if self.class_var else []
+        scorers = usable_scorers(self.data.domain) if self.data else []
         self.score_table.update_header(scorers)
         self.scorer_errors = errors = []
         for pred in self.predictors:

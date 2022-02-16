@@ -225,6 +225,10 @@ class TestOWTestAndScore(WidgetTest):
             class NewScore(Score):
                 class_types = (DiscreteVariable, ContinuousVariable)
 
+                @staticmethod
+                def is_compatible(domain: Domain) -> bool:
+                    return True
+
             class NewClassificationScore(ClassificationScore):
                 pass
 

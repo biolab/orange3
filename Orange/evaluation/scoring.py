@@ -16,7 +16,7 @@ import numpy as np
 import sklearn.metrics as skl_metrics
 from sklearn.metrics import confusion_matrix
 
-from Orange.data import DiscreteVariable, ContinuousVariable
+from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
@@ -112,13 +112,25 @@ class Score(metaclass=ScoreMetaType):
              for predicted in results.predicted),
             dtype=np.float64, count=len(results.predicted))
 
+    @staticmethod
+    def is_compatible(domain: Domain) -> bool:
+        raise NotImplementedError
+
 
 class ClassificationScore(Score, abstract=True):
     class_types = (DiscreteVariable, )
 
+    @staticmethod
+    def is_compatible(domain: Domain) -> bool:
+        return domain.has_discrete_class
+
 
 class RegressionScore(Score, abstract=True):
     class_types = (ContinuousVariable, )
+
+    @staticmethod
+    def is_compatible(domain: Domain) -> bool:
+        return domain.has_continuous_class
 
 
 # pylint: disable=invalid-name

@@ -517,10 +517,10 @@ class OWTestAndScore(OWWidget):
     # - we don't gain much with it
     # - it complicates the unit tests
     def _update_scorers(self):
-        if self.data and self.data.domain.class_var:
-            new_scorers = usable_scorers(self.data.domain.class_var)
-        else:
-            new_scorers = []
+        new_scorers = []
+        if self.data:
+            new_scorers = usable_scorers(self.data.domain)
+
         # Don't unnecessarily reset the combo because this would always reset
         # comparison_criterion; we also set it explicitly, though, for clarity
         if new_scorers != self.scorers:
