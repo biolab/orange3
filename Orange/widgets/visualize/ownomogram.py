@@ -910,8 +910,7 @@ class OWNomogram(OWWidget):
         if not isinstance(self.classifier, LogisticRegressionClassifier):
             return
 
-        self.domain = self.reconstruct_domain(self.classifier.original_domain,
-                                              self.domain)
+        self.domain = self.reconstruct_domain(self.classifier, self.domain)
         self.data = self.classifier.original_data.transform(self.domain)
         attrs, ranges, start = self.domain.attributes, [], 0
         for attr in attrs:
@@ -1273,8 +1272,9 @@ class OWNomogram(OWWidget):
         self.report_plot()
 
     @staticmethod
-    def reconstruct_domain(original, preprocessed):
+    def reconstruct_domain(classifier: Model, preprocessed: Domain) -> Domain:
         # abuse dict to make "in" comparisons faster
+        original = classifier.original_domain
         attrs = OrderedDict()
         for attr in preprocessed.attributes:
             cv = attr._compute_value.variable._compute_value
@@ -1284,7 +1284,13 @@ class OWNomogram(OWWidget):
                 continue
             attrs[var] = None   # we only need keys
         attrs = list(attrs.keys())
-        return Domain(attrs, original.class_var, original.metas)
+
+        orig_clv = original.class_var
+        orig_data = classifier.original_data
+        values = (orig_clv.values[int(i)] for i in
+                  np.unique(orig_data.get_column_view(orig_clv)[0]))
+        class_var = DiscreteVariable(original.class_var.name, values)
+        return Domain(attrs, class_var, original.metas)
 
     @staticmethod
     def get_ruler_values(start, stop, max_width, round_to_nearest=True):
