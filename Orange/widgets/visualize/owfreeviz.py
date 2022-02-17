@@ -9,7 +9,7 @@ from AnyQt.QtGui import QPalette
 
 import pyqtgraph as pg
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.projection import FreeViz
 from Orange.projection.freeviz import FreeVizModel
 from Orange.widgets import widget, gui, settings
@@ -180,6 +180,11 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
     def effective_variables(self):
         return [a for a in self.data.domain.attributes
                 if a.is_continuous or a.is_discrete and len(a.values) == 2]
+
+    @property
+    def effective_data(self):
+        return self.data.transform(Domain(self.effective_variables,
+                                          self.data.domain.class_vars))
 
     def __radius_slider_changed(self):
         self.graph.update_radius()
