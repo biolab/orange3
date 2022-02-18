@@ -14,6 +14,7 @@ from Orange.classification import (
 from Orange.preprocess import Scale, Continuize
 from Orange.tests import test_filename
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.ownomogram import (
     OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem,
     MovableToolTip
@@ -293,24 +294,51 @@ class TestOWNomogram(WidgetTest):
     def test_reconstruct_domain(self):
         data = Table("heart_disease")
         cls = LogisticRegressionLearner()(data)
-        domain = OWNomogram.reconstruct_domain(cls.original_domain, cls.domain)
+        domain = OWNomogram.reconstruct_domain(cls, cls.domain)
         transformed_data = cls.original_data.transform(domain)
         self.assertEqual(transformed_data.X.shape, data.X.shape)
         self.assertFalse(np.isnan(transformed_data.X[0]).any())
 
         scaled_data = Scale()(data)
         cls = LogisticRegressionLearner()(scaled_data)
-        domain = OWNomogram.reconstruct_domain(cls.original_domain, cls.domain)
+        domain = OWNomogram.reconstruct_domain(cls, cls.domain)
         transformed_data = cls.original_data.transform(domain)
         self.assertEqual(transformed_data.X.shape, scaled_data.X.shape)
         self.assertFalse(np.isnan(transformed_data.X[0]).any())
 
         disc_data = Continuize()(data)
         cls = LogisticRegressionLearner()(disc_data)
-        domain = OWNomogram.reconstruct_domain(cls.original_domain, cls.domain)
+        domain = OWNomogram.reconstruct_domain(cls, cls.domain)
         transformed_data = cls.original_data.transform(domain)
         self.assertEqual(transformed_data.X.shape, disc_data.X.shape)
         self.assertFalse(np.isnan(transformed_data.X[0]).any())
+
+    def test_missing_class_value(self):
+        iris = Table("iris")
+        iris_set_ver = iris[:100]
+        target_cb = self.widget.controls.target_class_index
+
+        lr = LogisticRegressionLearner()(iris)
+        self.send_signal(self.widget.Inputs.classifier, lr)
+        simulate.combobox_activate_index(target_cb, 2)
+        self.assertEqual(target_cb.currentIndex(), 2)
+        self.assertEqual(target_cb.count(), 3)
+
+        lr = LogisticRegressionLearner()(iris_set_ver)
+        self.send_signal(self.widget.Inputs.classifier, lr)
+        self.assertEqual(target_cb.currentIndex(), 0)
+        self.assertEqual(target_cb.count(), 2)
+
+        nb = NaiveBayesLearner()(iris)
+        self.send_signal(self.widget.Inputs.classifier, nb)
+        simulate.combobox_activate_index(target_cb, 2)
+        self.assertEqual(target_cb.currentIndex(), 2)
+        self.assertEqual(target_cb.count(), 3)
+
+        nb = NaiveBayesLearner()(iris_set_ver)
+        self.send_signal(self.widget.Inputs.classifier, nb)
+        self.assertEqual(target_cb.currentIndex(), 2)
+        self.assertEqual(target_cb.count(), 3)
 
 
 if __name__ == "__main__":
