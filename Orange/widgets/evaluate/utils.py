@@ -194,10 +194,10 @@ class ScoreTable(OWComponent, QObject):
     def _update_shown_columns(self):
         # pylint doesn't know that self.shown_scores is a set, not a Setting
         # pylint: disable=unsupported-membership-test
+        self.view.resizeColumnsToContents()
         header = self.view.horizontalHeader()
         for section, col_name in enumerate(self._column_names(), start=1):
             header.setSectionHidden(section, col_name not in self.shown_scores)
-        self.view.resizeColumnsToContents()
         self.shownScoresChanged.emit()
 
     def update_header(self, scorers):
