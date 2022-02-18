@@ -9,10 +9,11 @@ import numpy as np
 from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt
 
 from Orange.base import Model
-from Orange.classification import LogisticRegressionLearner
+from Orange.classification import LogisticRegressionLearner, NaiveBayesLearner
 from Orange.data.io import TabReader
 from Orange.evaluation.scoring import TargetScore
-from Orange.regression import LinearRegressionLearner
+from Orange.preprocess import Remove
+from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import (
     OWPredictions, SharedSelectionModel, SharedSelectionStore, DataModel,
@@ -731,6 +732,124 @@ class TestOWPredictions(WidgetTest):
         # pylint: disable=arguments-differ
         def compute_score(self, _, target, **__):
             return [42 if target is None else target]
+
+    def test_output_wrt_shown_probs_1(self):
+        """Data has one class less, models have same, different or one more"""
+        widget = self.widget
+        iris012 = self.iris
+        purge = Remove(class_flags=Remove.RemoveUnusedValues)
+        iris01 = purge(iris012[:100])
+        iris12 = purge(iris012[50:])
+
+        bayes01 = NaiveBayesLearner()(iris01)
+        bayes12 = NaiveBayesLearner()(iris12)
+        bayes012 = NaiveBayesLearner()(iris012)
+
+        self.send_signal(widget.Inputs.data, iris01)
+        self.send_signal(widget.Inputs.predictors, bayes01, 0)
+        self.send_signal(widget.Inputs.predictors, bayes12, 1)
+        self.send_signal(widget.Inputs.predictors, bayes012, 2)
+
+        for i, pred in enumerate(widget.predictors):
+            p = pred.results.unmapped_probabilities
+            p[0] = 10 + 100 * i + np.arange(p.shape[1])
+            pred.results.unmapped_predicted[:] = i
+
+        widget.shown_probs = widget.NO_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 1, 2])
+
+        widget.shown_probs = widget.DATA_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 0, 110, 2, 210, 211])
+
+        widget.shown_probs = widget.MODEL_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 2, 210, 211, 212])
+
+        widget.shown_probs = widget.BOTH_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 2, 210, 211])
+
+        widget.shown_probs = widget.BOTH_PROBS + 1
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 1, 0, 2, 210])
+
+        widget.shown_probs = widget.BOTH_PROBS + 2
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 11, 1, 110, 2, 211])
+
+    def test_output_wrt_shown_probs_2(self):
+        """One model misses one class"""
+        widget = self.widget
+        iris012 = self.iris
+        purge = Remove(class_flags=Remove.RemoveUnusedValues)
+        iris01 = purge(iris012[:100])
+
+        bayes01 = NaiveBayesLearner()(iris01)
+        bayes012 = NaiveBayesLearner()(iris012)
+
+        self.send_signal(widget.Inputs.data, iris012)
+        self.send_signal(widget.Inputs.predictors, bayes01, 0)
+        self.send_signal(widget.Inputs.predictors, bayes012, 1)
+
+        for i, pred in enumerate(widget.predictors):
+            p = pred.results.unmapped_probabilities
+            p[0] = 10 + 100 * i + np.arange(p.shape[1])
+            pred.results.unmapped_predicted[:] = i
+
+        widget.shown_probs = widget.NO_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 1])
+
+        widget.shown_probs = widget.DATA_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 11, 0, 1, 110, 111, 112])
+
+        widget.shown_probs = widget.MODEL_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 112])
+
+        widget.shown_probs = widget.BOTH_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 112])
+
+        widget.shown_probs = widget.BOTH_PROBS + 1
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 1, 110])
+
+        widget.shown_probs = widget.BOTH_PROBS + 2
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 11, 1, 111])
+
+        widget.shown_probs = widget.BOTH_PROBS + 3
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 0, 1, 112])
+
+    def test_output_regression(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.housing)
+        self.send_signal(widget.Inputs.predictors,
+                         LinearRegressionLearner()(self.housing), 0)
+        self.send_signal(widget.Inputs.predictors,
+                         MeanLearner()(self.housing), 1)
+        out = self.get_output(widget.Outputs.predictions)
+        np.testing.assert_equal(
+            out.metas,
+            np.hstack([pred.results.predicted.T for pred in widget.predictors]))
 
     @patch("Orange.widgets.evaluate.owpredictions.usable_scorers",
            Mock(return_value=[_Scorer]))
