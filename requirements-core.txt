@@ -15,7 +15,7 @@ chardet>=3.0.2
 joblib>=0.11
 keyring
 keyrings.alt    # for alternative keyring implementations
-setuptools>=36.3
+setuptools>=41.0.0
 serverfiles		# for Data Sets synchronization
 networkx
 python-louvain>=0.13
