@@ -24,7 +24,7 @@ class _OverlayWidget(OverlayWidget):
         ds = QGraphicsDropShadowEffect(
             parent=self,
             objectName="sticky-view-shadow",
-            color=palette.color(QPalette.Foreground),
+            color=palette.color(QPalette.WindowText),
             blurRadius=15,
             offset=QPointF(0, 0),
             enabled=True
@@ -38,7 +38,7 @@ class _OverlayWidget(OverlayWidget):
                 QGraphicsDropShadowEffect, "sticky-view-shadow")
             if effect is not None:
                 palette = self.palette()
-                effect.setColor(palette.color(QPalette.Foreground))
+                effect.setColor(palette.color(QPalette.WindowText))
 
     def eventFilter(self, recv: QObject, event: QEvent) -> bool:
         if event.type() in (QEvent.Show, QEvent.Hide) and recv is self.widget():

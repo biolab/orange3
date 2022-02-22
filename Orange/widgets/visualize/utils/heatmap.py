@@ -956,7 +956,7 @@ class HeatmapGridWidget(QGraphicsWidget):
         self.__selection_manager.update_selection_rects()
         rects = self.__selection_manager.selection_rects
         palette = self.palette()
-        pen = QPen(palette.color(QPalette.Foreground), 2)
+        pen = QPen(palette.color(QPalette.WindowText), 2)
         pen.setCosmetic(True)
         brushcolor = QColor(palette.color(QPalette.Highlight))
         brushcolor.setAlpha(50)

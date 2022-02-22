@@ -1436,7 +1436,7 @@ class HeaderItemDelegate(PreviewItemDelegate):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
         super().initStyleOption(option, index)
         palette = option.palette
-        shadow = palette.color(QPalette.Foreground)  # type: QColor
+        shadow = palette.color(QPalette.WindowText)  # type: QColor
         if shadow.isValid():
             shadow.setAlphaF(0.1)
             option.backgroundBrush = QBrush(shadow, Qt.SolidPattern)

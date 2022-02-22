@@ -742,7 +742,7 @@ class SilhouettePlot(QGraphicsWidget):
 
         font = self.font()
         font.setPixelSize(self.__barHeight)
-        foreground = self.palette().brush(QPalette.Foreground)
+        foreground = self.palette().brush(QPalette.WindowText)
         ax = AxisItem(parent=self, orientation="top", maxTickLength=7)
         ax.setRange(smin, smax)
         self.__topScale = ax
@@ -1151,7 +1151,7 @@ class Line(QGraphicsWidget):
     def paint(self, painter, option, widget=None):
         # type: (QPainter, QStyleOptionGraphicsItem, Optional[QWidget]) -> None
         palette = self.palette()  # type: QPalette
-        color = palette.color(QPalette.Foreground)
+        color = palette.color(QPalette.WindowText)
         painter.setPen(QPen(color, 1))
         rect = self.contentsRect()
         center = rect.center()
