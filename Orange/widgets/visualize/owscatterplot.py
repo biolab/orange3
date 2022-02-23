@@ -353,6 +353,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.vizrank: ScatterPlotVizRank = None
         self.vizrank_button: QPushButton = None
         self.sampling: QGroupBox = None
+        self._xy_invalidated: bool = True
 
         self.sql_data = None  # Orange.data.sql.table.SqlTable
         self.attribute_selection_list = None  # list of Orange.data.Variable
@@ -576,6 +577,8 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attr_x, self.attr_y = self.attribute_selection_list[:2]
             self.attr_box.setEnabled(False)
             self.vizrank.setEnabled(False)
+        self._invalidated = self._invalidated or self._xy_invalidated
+        self._xy_invalidated = False
         super().handleNewSignals()
         if self._domain_invalidated:
             self.graph.update_axes()
@@ -586,7 +589,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
             self.attribute_selection_list = attributes[:2]
-            self._invalidated = self._invalidated \
+            self._xy_invalidated = self._xy_invalidated \
                 or self.attr_x != attributes[0] \
                 or self.attr_y != attributes[1]
         else:
