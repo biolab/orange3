@@ -257,10 +257,11 @@ class OWImpute(OWWidget):
         self.selection = self.varview.selectionModel()
 
         box.layout().addWidget(self.varview)
-        vertical_layout = QVBoxLayout(margin=0)
+        vertical_layout = QVBoxLayout()
 
         self.methods_container = QWidget(enabled=False)
-        method_layout = QVBoxLayout(margin=0)
+        method_layout = QVBoxLayout()
+        method_layout.setContentsMargins(0, 0, 0, 0)
         self.methods_container.setLayout(method_layout)
 
         button_group = QButtonGroup()

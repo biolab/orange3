@@ -731,7 +731,7 @@ class CSVImportWidget(QWidget):
             objectName="-error-overlay",
             visible=False,
         )
-        overlay.setLayout(QVBoxLayout(margin=0))
+        overlay.setLayout(QVBoxLayout())
         self.__error_label = label = QLabel(objectName="-error-text-label")
         overlay.layout().addWidget(label)
         overlay.setWidget(self.dataview.viewport())

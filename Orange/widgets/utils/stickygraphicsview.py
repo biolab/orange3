@@ -151,8 +151,10 @@ class StickyGraphicsView(QGraphicsView):
             sizePolicy=sp,
             visible=False,
         )
-        over.setLayout(QVBoxLayout(margin=0))
-        over.layout().addWidget(header)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(header)
+        over.setLayout(layout)
         over.setWidget(widget)
 
         over = _OverlayWidget(
@@ -161,8 +163,10 @@ class StickyGraphicsView(QGraphicsView):
             sizePolicy=sp,
             visible=False
         )
-        over.setLayout(QVBoxLayout(margin=0))
-        over.layout().addWidget(footer)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(footer)
+        over.setLayout(layout)
         over.setWidget(widget)
 
         def bind(source: QScrollBar, target: QScrollBar) -> None:

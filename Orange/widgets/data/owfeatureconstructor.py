@@ -594,7 +594,7 @@ class OWFeatureConstructor(OWWidget):
         toplayout.addWidget(self.editorstack, 10)
 
         # Layout for the list view
-        layout = QVBoxLayout(spacing=1, margin=0)
+        layout = QVBoxLayout(spacing=1)
         self.featuremodel = DescriptorModel(parent=self)
 
         self.featureview = QListView(
