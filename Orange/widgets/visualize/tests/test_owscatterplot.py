@@ -975,13 +975,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         graph.orthonormal_regression = True
         graph._add_line(x, y, c)
-        graph._orthonormal_line.assert_called_once_with(x, y, c, 3, 1)
+        graph._orthonormal_line.assert_called_once_with(x, y, c, 3, Qt.SolidLine)
         graph._regression_line.assert_not_called()
         graph._orthonormal_line.reset_mock()
 
         graph.orthonormal_regression = False
         graph._add_line(x, y, c)
-        graph._regression_line.assert_called_with(x, y, c, 3, 1)
+        graph._regression_line.assert_called_with(x, y, c, 3, Qt.SolidLine)
         graph._orthonormal_line.assert_not_called()
 
     def test_no_regression_line(self):
