@@ -62,8 +62,8 @@ class TestPyTableModel(unittest.TestCase):
 
     def test_editable(self):
         editable_model = PyTableModel([[0]], editable=True)
-        self.assertFalse(int(self.model.flags(self.model.index(0, 0)) & Qt.ItemIsEditable))
-        self.assertTrue(int(editable_model.flags(editable_model.index(0, 0)) & Qt.ItemIsEditable))
+        self.assertFalse(bool(self.model.flags(self.model.index(0, 0)) & Qt.ItemIsEditable))
+        self.assertTrue(bool(editable_model.flags(editable_model.index(0, 0)) & Qt.ItemIsEditable))
 
     def test_sort(self):
         self.model.sort(1)

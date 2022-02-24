@@ -372,7 +372,7 @@ class MosaicVizRankTests(WidgetTest):
         vizrank.max_attrs = 0
         simulate.combobox_activate_index(self.widget.controls.variable_color, 0)
         self.assertEqual(vizrank.max_attrs, 1)
-        self.assertEqual(int(model.item(0).flags() & enabled), 0)
+        self.assertEqual(model.item(0).flags() & enabled, Qt.NoItemFlags)
 
         simulate.combobox_activate_index(self.widget.controls.variable_color, 1)
         self.assertEqual(vizrank.max_attrs, 1)
