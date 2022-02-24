@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from AnyQt.QtCore import Qt
 from Orange.data import Table
 from Orange.widgets.model.owrandomforest import OWRandomForest
 from Orange.widgets.tests.base import (
@@ -26,8 +27,8 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
         """Check learner and model for various values of all parameters
         when all properties are checked
         """
-        self.widget.max_features_spin[0].setCheckState(True)
-        self.widget.max_depth_spin[0].setCheckState(True)
+        self.widget.max_features_spin[0].setCheckState(Qt.Checked)
+        self.widget.max_depth_spin[0].setCheckState(Qt.Checked)
         self.parameters.extend([
             ParameterMapping("max_features", self.widget.max_features_spin[1]),
             ParameterMapping("max_depth", self.widget.max_depth_spin[1])])
@@ -37,7 +38,7 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
         """Check learner and model for various values of all parameters
         when properties are not checked
         """
-        self.widget.min_samples_split_spin[0].setCheckState(False)
+        self.widget.min_samples_split_spin[0].setCheckState(Qt.Unchecked)
         self.parameters = self.parameters[:1]
         self.parameters.extend([
             DefaultParameterMapping("max_features", "auto"),

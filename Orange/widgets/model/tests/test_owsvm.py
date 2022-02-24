@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 from scipy.sparse import csr_matrix
 
+from AnyQt.QtCore import Qt
 from Orange.widgets.model.owsvm import OWSVM
 from Orange.widgets.tests.base import (
     WidgetTest,
@@ -47,7 +48,7 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
         """Check learner and model for various values of all parameters
         when Iteration limit is not checked
         """
-        self.widget.max_iter_spin[0].setCheckState(False)
+        self.widget.max_iter_spin[0].setCheckState(Qt.Unchecked)
         self.parameters[-1] = DefaultParameterMapping("max_iter", -1)
         self.test_parameters()
 

@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, Qt
+from AnyQt.QtWidgets import QCheckBox
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
@@ -43,8 +44,9 @@ class TestOWDistributions(WidgetTest):
         selectionmodel.selectionChanged.emit(newselection, oldselection)
 
     @staticmethod
-    def _set_check(checkbox, value):
-        checkbox.setCheckState(value)
+    def _set_check(checkbox: QCheckBox, value: bool):
+        state = Qt.Checked if value else Qt.Unchecked
+        checkbox.setCheckState(state)
         checkbox.toggled[bool].emit(value)
 
     def _set_slider(self, i):
