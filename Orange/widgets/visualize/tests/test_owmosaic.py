@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from AnyQt.QtCore import QEvent, QPoint, Qt
+from AnyQt.QtCore import QEvent, QPointF, Qt
 from AnyQt.QtGui import QMouseEvent
 
 from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, \
@@ -36,7 +36,7 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
 
     def _select_data(self):
         self.widget.select_area(1, QMouseEvent(
-            QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
+            QEvent.MouseButtonPress, QPointF(), Qt.LeftButton,
             Qt.LeftButton, Qt.NoModifier))
         return [2, 3, 9, 23, 29, 30, 34, 35, 37, 42, 47, 49]
 
@@ -150,8 +150,8 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
 
         widget.select_area(
             1,
-            QMouseEvent(QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
-                        Qt.LeftButton, Qt.KeyboardModifiers()))
+            QMouseEvent(QEvent.MouseButtonPress, QPointF(), Qt.LeftButton,
+                        Qt.LeftButton, Qt.NoModifier))
 
         # Changing the data must reset the selection
         self.send_signal(widget.Inputs.data, Table("titanic"))
@@ -164,8 +164,8 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
 
         widget.select_area(
             1,
-            QMouseEvent(QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
-                        Qt.LeftButton, Qt.KeyboardModifiers()))
+            QMouseEvent(QEvent.MouseButtonPress, QPointF(), Qt.LeftButton,
+                        Qt.LeftButton, Qt.NoModifier))
         settings = self.widget.settingsHandler.pack_data(self.widget)
 
         # Setting data to None must reset the selection
