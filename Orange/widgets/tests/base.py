@@ -7,8 +7,8 @@ from unittest.mock import Mock, patch
 import numpy as np
 import scipy.sparse as sp
 
+from AnyQt.QtCore import Qt, QRectF, QPointF
 from AnyQt.QtGui import QFont, QTextDocumentFragment
-from AnyQt.QtCore import QRectF, QPointF
 from AnyQt.QtTest import QSignalSpy
 from AnyQt.QtWidgets import (
     QComboBox, QSpinBox, QDoubleSpinBox, QSlider
@@ -691,7 +691,8 @@ class ProjectionWidgetTestMixin:
 
     def test_dragging_tooltip(self):
         """Dragging tooltip depends on data being jittered"""
-        text = QTextDocumentFragment.fromHtml(self.widget.graph.tiptexts[0]).toPlainText()
+        text = QTextDocumentFragment.fromHtml(
+            self.widget.graph.tiptexts[Qt.NoModifier]).toPlainText()
         self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
         self.assertEqual(self.widget.graph.tip_textitem.toPlainText(), text)
 

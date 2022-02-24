@@ -1434,7 +1434,7 @@ class TestOWScatterPlotBase(WidgetTest):
                     graph.update_labels.assert_not_called()
                 self.master.selection_changed.assert_called_with()
 
-        select(0, [7, 8, 9])
+        select(Qt.NoModifier, [7, 8, 9])
         np.testing.assert_almost_equal(
             graph.selection, [0, 0, 0, 0, 0, 0, 0, 1, 1, 1])
 
@@ -1450,12 +1450,12 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_almost_equal(
             graph.selection, [0, 0, 0, 0, 2, 2, 1, 0, 1, 1])
 
-        select(0, [1, 8])
+        select(Qt.NoModifier, [1, 8])
         np.testing.assert_almost_equal(
             graph.selection, [0, 1, 0, 0, 0, 0, 0, 0, 1, 0])
 
         graph.label_only_selected = False
-        select(0, [3, 4])
+        select(Qt.NoModifier, [3, 4])
 
     def test_unselect_all(self):
         graph = self.graph

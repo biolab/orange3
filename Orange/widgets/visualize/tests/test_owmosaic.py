@@ -37,7 +37,7 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
     def _select_data(self):
         self.widget.select_area(1, QMouseEvent(
             QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
-            Qt.LeftButton, Qt.KeyboardModifiers()))
+            Qt.LeftButton, Qt.NoModifier))
         return [2, 3, 9, 23, 29, 30, 34, 35, 37, 42, 47, 49]
 
     def test_continuous_metas(self):
