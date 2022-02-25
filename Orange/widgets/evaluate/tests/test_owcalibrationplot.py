@@ -1,5 +1,6 @@
 import copy
 import warnings
+import unittest
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -637,3 +638,19 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
         self.assertTrue(widget.Warning.omitted_nan_prob_points.is_shown())
         self._set_list_selection(widget.controls.selected_classifiers, [0, 2])
         self.assertFalse(widget.Warning.omitted_folds.is_shown())
+
+    @patch("Orange.widgets.evaluate.owcalibrationplot.ThresholdClassifier")
+    @patch("Orange.widgets.evaluate.owcalibrationplot.CalibratedLearner")
+    def test_no_folds(self, *_):
+        """Don't crash on malformed Results with folds=None"""
+        widget = self.widget
+
+        self.results.folds = None
+        self.send_signal(widget.Inputs.evaluation_results, self.results)
+        widget.selected_classifiers = [0]
+        widget.commit.now()
+        self.assertIsNotNone(self.get_output(widget.Outputs.calibrated_model))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -687,7 +687,8 @@ class OWPredictions(OWWidget):
         nanmask = numpy.isnan(self.data.get_column_view(self.class_var)[0])
         data = self.data[~nanmask]
         results = Results(data, store_data=True)
-        results.folds = None
+        results.folds = [...]
+        results.models = numpy.array([[p.predictor for p in self.predictors]])
         results.row_indices = numpy.arange(len(data))
         results.actual = data.Y.ravel()
         results.predicted = numpy.vstack(

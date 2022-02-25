@@ -487,7 +487,7 @@ class OWCalibrationPlot(widget.OWWidget):
         if results is not None:
             problems = [
                 msg for condition, msg in (
-                    (len(results.folds) > 1,
+                    (results.folds is not None and len(results.folds) > 1,
                      "each training data sample produces a different model"),
                     (results.models is None,
                      "test results do not contain stored models - try testing "
