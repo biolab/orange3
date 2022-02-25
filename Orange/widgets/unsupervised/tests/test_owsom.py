@@ -8,6 +8,7 @@ import scipy.sparse as sp
 
 from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.unsupervised.owsom import OWSOM, SomView, SOM
 
@@ -219,6 +220,14 @@ class TestOWSOM(WidgetTest):
         self.assertTrue(widget.controls.pie_charts.isEnabled())
         self.assertIsNotNone(widget.thresholds)
         widget._redraw.assert_called()
+
+    def test_colored_circles_with_constant(self):
+        with self.iris.unlocked():
+            self.iris.X[:, 0] = 1
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        combo = self.widget.controls.attr_color
+        simulate.combobox_activate_index(
+            combo, combo.model().indexOf(self.iris.domain.attributes[0]))
 
     @_patch_recompute_som
     def test_cell_sizes(self):

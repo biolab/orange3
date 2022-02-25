@@ -833,6 +833,17 @@ class OWSOM(OWWidget):
                 binning = decimal_binnings(col, min_bins=4)[-1]
             self.thresholds = binning.thresholds[1:-1]
             self.bin_labels = (binning.labels[1:-1], binning.short_labels[1:-1])
+            if not self.bin_labels[0] and binning.labels:
+                # Nan's are already filtered out, but it doesn't hurt much
+                # to use nanmax/nanmin
+                if np.nanmin(col) == np.nanmax(col):
+                    # Handle a degenerate case with a single value
+                    # Use the second threshold (because value must be smaller),
+                    # but the first threshold as label (because that's the
+                    # actual value in the data.
+                    self.thresholds = binning.thresholds[1:]
+                    self.bin_labels = (binning.labels[:1],
+                                       binning.short_labels[:1])
             palette = BinnedContinuousPalette.from_palette(
                 self.attr_color.palette, binning.thresholds)
             self.colors = palette
@@ -871,6 +882,8 @@ class OWSOM(OWWidget):
 
     def _bin_names(self):
         labels, short_labels = self.bin_labels
+        if len(labels) <= 1:
+            return labels
         return \
             [f"< {labels[0]}"] \
             + [f"{x} - {y}" for x, y in zip(labels, short_labels[1:])] \
