@@ -642,7 +642,7 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
     @patch("Orange.widgets.evaluate.owcalibrationplot.ThresholdClassifier")
     @patch("Orange.widgets.evaluate.owcalibrationplot.CalibratedLearner")
     def test_no_folds(self, *_):
-        """Warn about omitted points with nan probabiities"""
+        """Don't crash on malformed Results with folds=None"""
         widget = self.widget
 
         self.results.folds = None

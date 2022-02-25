@@ -10,6 +10,7 @@ from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt
 
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner, NaiveBayesLearner
+from Orange.classification.majority import ConstantModel
 from Orange.data.io import TabReader
 from Orange.evaluation.scoring import TargetScore
 from Orange.preprocess import Remove
@@ -507,6 +508,9 @@ class TestOWPredictions(WidgetTest):
         def check_evres(expected):
             out = self.get_output(w.Outputs.evaluation_results)
             self.assertSequenceEqual(out.learner_names, expected)
+            self.assertEqual(out.folds, [...])
+            self.assertEqual(out.models.shape, (1, len(out.learner_names)))
+            self.assertIsInstance(out.models[0, 0], ConstantModel)
 
         check_evres(["P1", "P2", "P3"])
 
