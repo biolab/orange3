@@ -1,5 +1,6 @@
 import asyncio
 import unittest
+from random import random
 from unittest.mock import MagicMock, call, patch
 
 import numpy as np
@@ -23,11 +24,14 @@ class DummyResponse:
         self.content = content
 
 
-def make_dummy_post(response, sleep=0):
+def make_dummy_post(response):
     @staticmethod
     # pylint: disable=unused-argument
     async def dummy_post(url, headers, data):
-        await asyncio.sleep(sleep)
+        # when sleeping some workers to still compute while other are done
+        # it causes that not all embeddings are computed if we do not wait all
+        # workers to finish
+        await asyncio.sleep(random() / 10)
         return DummyResponse(content=response)
 
     return dummy_post
@@ -157,6 +161,11 @@ class TestServerEmbedder(unittest.TestCase):
             with self.assertRaises(ConnectionError):
                 self.embedder.embedd_data(test_data)
             self.setUp()  # to init new embedder
+
+    @patch(_HTTPX_POST_METHOD, side_effect=ValueError)
+    def test_other_errors(self, _):
+        with self.assertRaises(ValueError):
+            self.embedder.embedd_data(self.test_data)
 
     @patch(_HTTPX_POST_METHOD, regular_dummy_sr)
     def test_encode_data_instance(self):
