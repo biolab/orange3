@@ -8,6 +8,8 @@ import numpy as np
 
 from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt
 
+from orangewidget.tests.utils import simulate
+
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner, NaiveBayesLearner
 from Orange.classification.majority import ConstantModel
@@ -873,8 +875,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(float(table.model.data(table.model.index(0, 3))), 42)
 
         for idx, value in enumerate(widget.class_var.values):
-            combo.setCurrentText(value)
-            combo.activated[str].emit(value)
+            simulate.combobox_activate_item(combo, value, Qt.DisplayRole)
             self.assertEqual(table.model.rowCount(), 1)
             self.assertEqual(table.model.columnCount(), 4)
             self.assertEqual(float(table.model.data(table.model.index(0, 3))),
