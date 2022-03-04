@@ -156,7 +156,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         for attr in attrs:
             item = QStandardItem(attr.name)
             item.setData(attrs, self._AttrRole)
-            item.setData(Qt.AlignLeft + Qt.AlignTop, Qt.TextAlignmentRole)
+            item.setData(Qt.AlignLeft + Qt.AlignCenter, Qt.TextAlignmentRole)
             item.setToolTip(attr.name)
             attr_items.append(item)
         correlation_item = QStandardItem("{:+.3f}".format(score[1]))
