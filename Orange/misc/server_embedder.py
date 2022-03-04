@@ -188,24 +188,23 @@ class ServerEmbedderCommunicator:
         ) as client:
             tasks = self._init_workers(client, queue, results, success_callback)
 
-            # wait for the queue to complete or one of workers to exit
-            queue_complete = asyncio.create_task(queue.join())
-            await asyncio.wait(
-                [queue_complete, *tasks], return_when=asyncio.FIRST_COMPLETED
-            )
+            try:
+                # wait for workers to stop - they stop when queue is empty
+                # if one worker raises exception wait will raise it further
+                await asyncio.gather(*tasks)
+            finally:
+                await self._cancel_workers(tasks)
+                self._cache.persist_cache()
 
-        # Cancel worker tasks when done
-        queue_complete.cancel()
-        await self._cancel_workers(tasks)
-
-        self._cache.persist_cache()
         return results
 
     def _init_workers(self, client, queue, results, callback):
         """Init required number of workers"""
         t = [
             asyncio.create_task(self._send_to_server(client, queue, results, callback))
-            for _ in range(self.max_parallel_requests)
+            # when number of instances less than max_parallel_requests create
+            # only required number of workers
+            for _ in range(min(self.max_parallel_requests, len(results)))
         ]
         log.debug("Created %d workers", self.max_parallel_requests)
         return t
@@ -214,19 +213,12 @@ class ServerEmbedderCommunicator:
     async def _cancel_workers(tasks):
         """Cancel worker at the end"""
         log.debug("Canceling workers")
-        try:
-            # try to catch any potential exceptions
-            await asyncio.gather(*tasks)
-        except Exception as ex:
-            # raise exceptions gathered from an failed worker
-            raise ex
-        finally:
-            # cancel all tasks in both cases
-            for task in tasks:
-                task.cancel()
-            # Wait until all worker tasks are cancelled.
-            await asyncio.gather(*tasks, return_exceptions=True)
-            log.debug("All workers canceled")
+        # cancel all tasks in both cases
+        for task in tasks:
+            task.cancel()
+        # Wait until all worker tasks are cancelled.
+        await asyncio.gather(*tasks, return_exceptions=True)
+        log.debug("All workers canceled")
 
     # remove in 3.33
     def __check_cancelled(self):
