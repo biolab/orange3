@@ -63,7 +63,7 @@ requirements:
     - orange-canvas-core >=0.1.24,<0.2a
     - orange-widget-base >=4.16.1
     - openpyxl
-    - httpx >=0.14,<0.20
+    - httpx >=0.21
     - baycomp >=1.0.2
     # cachecontrol (required by canvas core) <0.12.5 is incompatible with msgpack 1.0
     - cachecontrol >=0.12.6
