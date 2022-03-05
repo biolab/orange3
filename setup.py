@@ -57,6 +57,10 @@ LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown'
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'http://orange.biolab.si/'
+PROJECT_URLS = {
+    'Documentation': 'https://orange3.readthedocs.io',
+    'Source': 'https://github.com/biolab/orange3',
+}
 LICENSE = 'GPLv3+'
 
 KEYWORDS = [
