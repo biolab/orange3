@@ -6,15 +6,13 @@ __all__ = ["LearnerClassification", "ModelClassification",
 
 class LearnerClassification(Learner):
 
-    def check_learner_adequacy(self, domain):
-        is_adequate = True
-        if len(domain.class_vars) > 1:
-            is_adequate = False
-            self.learner_adequacy_err_msg = "Too many target variables."
+    def incompatibility_reason(self, domain):
+        reason = None
+        if len(domain.class_vars) > 1 and not self.supports_multiclass:
+            reason = "Too many target variables."
         elif not domain.has_discrete_class:
-            is_adequate = False
-            self.learner_adequacy_err_msg = "Categorical class variable expected."
-        return is_adequate
+            reason = "Categorical class variable expected."
+        return reason
 
 
 class ModelClassification(Model):
