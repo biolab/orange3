@@ -9,9 +9,11 @@ This is compatible with Orange3's GPL-3.0 license.
 """
 import sys
 
-from PyQt5.QtCore import Qt, pyqtSignal, QObject
-from PyQt5.QtWidgets import QTextEdit
-from PyQt5.QtGui import QColor, QTextCursor
+from AnyQt.QtCore import Qt, pyqtSignal, QObject
+from AnyQt.QtWidgets import QTextEdit
+from AnyQt.QtGui import QColor, QTextCursor
+
+from orangewidget.utils import enum_as_int
 
 # pylint: disable=protected-access
 # pylint: disable=unused-argument
@@ -24,38 +26,46 @@ thismodule = sys.modules[__name__]
 for charCode in range(ord('a'), ord('z') + 1):
     shortName = chr(charCode)
     longName = 'Key_' + shortName.upper()
-    qtCode = getattr(Qt, longName)
+    qtCode = enum_as_int(getattr(Qt, longName))
     setattr(thismodule, '_' + shortName, qtCode)
-    setattr(thismodule, '_' + shortName.upper(), Qt.ShiftModifier + qtCode)
+    setattr(thismodule, '_' + shortName.upper(), enum_as_int(Qt.ShiftModifier) | qtCode)
 
-_0 = Qt.Key_0
-_Dollar = Qt.ShiftModifier + Qt.Key_Dollar
-_Percent = Qt.ShiftModifier + Qt.Key_Percent
-_Caret = Qt.ShiftModifier + Qt.Key_AsciiCircum
-_Esc = Qt.Key_Escape
-_Insert = Qt.Key_Insert
-_Down = Qt.Key_Down
-_Up = Qt.Key_Up
-_Left = Qt.Key_Left
-_Right = Qt.Key_Right
-_Space = Qt.Key_Space
-_BackSpace = Qt.Key_Backspace
-_Equal = Qt.Key_Equal
-_Less = Qt.ShiftModifier + Qt.Key_Less
-_Greater = Qt.ShiftModifier + Qt.Key_Greater
-_Home = Qt.Key_Home
-_End = Qt.Key_End
-_PageDown = Qt.Key_PageDown
-_PageUp = Qt.Key_PageUp
-_Period = Qt.Key_Period
-_Enter = Qt.Key_Enter
-_Return = Qt.Key_Return
+
+def key_code(comb):
+    try:
+        return comb.toCombined()
+    except AttributeError:
+        return enum_as_int(comb)
+
+
+_0 = key_code(Qt.Key_0)
+_Dollar = key_code(Qt.ShiftModifier | Qt.Key_Dollar)
+_Percent = key_code(Qt.ShiftModifier | Qt.Key_Percent)
+_Caret = key_code(Qt.ShiftModifier | Qt.Key_AsciiCircum)
+_Esc = key_code(Qt.Key_Escape)
+_Insert = key_code(Qt.Key_Insert)
+_Down = key_code(Qt.Key_Down)
+_Up = key_code(Qt.Key_Up)
+_Left = key_code(Qt.Key_Left)
+_Right = key_code(Qt.Key_Right)
+_Space = key_code(Qt.Key_Space)
+_BackSpace = key_code(Qt.Key_Backspace)
+_Equal = key_code(Qt.Key_Equal)
+_Less = key_code(Qt.ShiftModifier | Qt.Key_Less)
+_Greater = key_code(Qt.ShiftModifier | Qt.Key_Greater)
+_Home = key_code(Qt.Key_Home)
+_End = key_code(Qt.Key_End)
+_PageDown = key_code(Qt.Key_PageDown)
+_PageUp = key_code(Qt.Key_PageUp)
+_Period = key_code(Qt.Key_Period)
+_Enter = key_code(Qt.Key_Enter)
+_Return = key_code(Qt.Key_Return)
 
 
 def code(ev):
     modifiers = ev.modifiers()
     modifiers &= ~Qt.KeypadModifier  # ignore keypad modifier to handle both main and numpad numbers
-    return int(modifiers) + ev.key()
+    return enum_as_int(modifiers) | ev.key()
 
 
 def isChar(ev):

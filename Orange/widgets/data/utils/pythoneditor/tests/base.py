@@ -14,8 +14,11 @@ from AnyQt.QtGui import QKeySequence
 from AnyQt.QtTest import QTest
 from AnyQt.QtCore import Qt, QCoreApplication
 
+from orangewidget.utils import enum_as_int
+
 from Orange.widgets import widget
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
+from Orange.widgets.data.utils.pythoneditor.vim import key_code
 
 
 def _processPendingEvents(app):
@@ -23,7 +26,7 @@ def _processPendingEvents(app):
     Timeout is used, because on Windows hasPendingEvents() always returns True
     """
     t = time.time()
-    while app.hasPendingEvents() and (time.time() - t < 0.1):
+    while time.time() - t < 0.1:
         app.processEvents()
 
 
@@ -68,12 +71,12 @@ def keySequenceClicks(widget_, keySequence, extraModifiers=Qt.NoModifier):
     # pylint: disable=line-too-long
     # This is based on a simplified version of http://stackoverflow.com/questions/14034209/convert-string-representation-of-keycode-to-qtkey-or-any-int-and-back. I added code to handle the case in which the resulting key contains a modifier (for example, Shift+Home). When I execute QTest.keyClick(widget, keyWithModifier), I get the error "ASSERT: "false" in file .\qasciikey.cpp, line 495". To fix this, the following code splits the key into a key and its modifier.
     # Bitmask for all modifier keys.
-    modifierMask = int(Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier |
-                       Qt.MetaModifier |  Qt.KeypadModifier)
+    modifierMask = enum_as_int(Qt.KeyboardModifierMask)
     ks = QKeySequence(keySequence)
     # For now, we don't handle a QKeySequence("Ctrl") or any other modified by itself.
     assert ks.count() > 0
     for _, key in enumerate(ks):
-        modifiers = Qt.KeyboardModifiers((key & modifierMask) | extraModifiers)
+        key = key_code(key)
+        modifiers = Qt.KeyboardModifiers((key & modifierMask) | enum_as_int(extraModifiers))
         key = key & ~modifierMask
-        QTest.keyClick(widget_, key, modifiers, 10)
+        QTest.keyClick(widget_, Qt.Key(key), modifiers, 10)
