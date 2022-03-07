@@ -8,6 +8,8 @@ import numpy as np
 from AnyQt.QtCore import QItemSelection, Qt
 from AnyQt.QtWidgets import QCheckBox
 
+from orangewidget.utils.combobox import qcombobox_emit_activated
+
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
@@ -23,14 +25,12 @@ class TestOWDistributions(WidgetTest):
     def _set_cvar(self, cvar):
         combo = self.widget.controls.cvar
         self.widget.cvar = cvar
-        combo.activated[int].emit(combo.currentIndex())
-        combo.activated[str].emit(combo.currentText())
+        qcombobox_emit_activated(combo, combo.currentIndex())
 
     def _set_fitter(self, i):
         combo = self.widget.controls.fitted_distribution
         combo.setCurrentIndex(i)
-        combo.activated[int].emit(combo.currentIndex())
-        combo.activated[str].emit(combo.currentText())
+        qcombobox_emit_activated(combo, i)
 
     def _set_var(self, var):
         listview = self.widget.controls.var
