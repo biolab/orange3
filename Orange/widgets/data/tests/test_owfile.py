@@ -12,7 +12,7 @@ import time
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl, QThread, QObject
+from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl, QThread, QObject, QPointF
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from AnyQt.QtWidgets import QComboBox
 
@@ -116,7 +116,7 @@ class TestOWFile(WidgetTest):
         data.setUrls([QUrl(url)])
 
         return QDropEvent(
-            QPoint(0, 0), Qt.MoveAction, data,
+            QPointF(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
 
     def test_check_file_size(self):
