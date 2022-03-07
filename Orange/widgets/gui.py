@@ -650,7 +650,8 @@ class HScrollStepMixin:
         self.horizontalScrollBar().setSingleStep(20)
 
     def wheelEvent(self, event: QWheelEvent):
-        if event.source() == Qt.MouseEventNotSynthesized and \
+        if hasattr(event, "source") and \
+                event.source() == Qt.MouseEventNotSynthesized and \
                 (event.modifiers() & Qt.ShiftModifier and sys.platform == 'darwin' or
                  event.modifiers() & Qt.AltModifier and sys.platform != 'darwin'):
             new_event = QWheelEvent(
