@@ -417,8 +417,6 @@ class TestOWDistributions(WidgetTest):
         # changing them simultaneously doesn't significantly degrade the tests
         def test_plot_types_combinations(self):
             """Check that the widget doesn't crash at any plot combination"""
-            from AnyQt.QtWidgets import qApp
-
             widget = self.widget
             c = widget.controls
             self.send_signal(widget.Inputs.data, self.iris)
@@ -433,13 +431,11 @@ class TestOWDistributions(WidgetTest):
                         self._set_check(c.stacked_columns, b)
                         self._set_check(c.show_probs, b)
                         self._set_check(c.sort_by_freq, b)
-                        qApp.processEvents()
+                        widget.grab()  # run layout and paint
     else:
         def test_plot_types_combinations(self):
             """Check that the widget doesn't crash at any plot combination"""
             # pylint: disable=too-many-nested-blocks
-            from AnyQt.QtWidgets import qApp
-
             widget = self.widget
             c = widget.controls
             set_chk = self._set_check
@@ -460,7 +456,7 @@ class TestOWDistributions(WidgetTest):
                                         set_chk(c.stacked_columns, stack)
                                         set_chk(c.show_probs, show_probs)
                                         set_chk(c.sort_by_freq, sort_by_freq)
-                                        qApp.processEvents()
+                                        widget.grab()  # run layout and paint
 
     def test_selection_grouping(self):
         """Widget groups consecutive selected bars"""
