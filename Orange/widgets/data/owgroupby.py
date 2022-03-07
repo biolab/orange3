@@ -24,6 +24,7 @@ from AnyQt.QtWidgets import (
 from orangewidget.settings import ContextSetting, Setting
 from orangewidget.utils.listview import ListViewSearch
 from orangewidget.utils.signals import Input, Output
+from orangewidget.utils import enum_as_int
 from orangewidget.widget import Msg
 
 from Orange.data import (
@@ -279,7 +280,7 @@ class CheckBox(QCheckBox):
                     self.setCheckState(Qt.PartiallyChecked)
                     # since checkbox state stay same signal is not emitted
                     # automatically but we need a callback call so we emit it
-                    self.stateChanged.emit(Qt.PartiallyChecked)
+                    self.stateChanged.emit(enum_as_int(Qt.PartiallyChecked))
             else:  # self.checkState() == Qt.Unchecked
                 # if unchecked: check if all can be checked else partially check
                 self.setCheckState(
