@@ -47,8 +47,9 @@ from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 import numpy as np
 import pandas.errors
 import pandas as pd
-
 from pandas.api import types as pdtypes
+
+from orangewidget.utils import enum_as_int
 
 import Orange.data
 from Orange.misc.collections import natural_sorted
@@ -753,7 +754,7 @@ class OWCSVFileImport(widget.OWWidget):
             self.import_options_button, QDialogButtonBox.ActionRole
         )
         button_box.setStyleSheet(
-            "button-layout: {:d};".format(QDialogButtonBox.MacLayout)
+            "button-layout: {:d};".format(enum_as_int(QDialogButtonBox.MacLayout))
         )
         self.controlArea.layout().addWidget(button_box)
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
