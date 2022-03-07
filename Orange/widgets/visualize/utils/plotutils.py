@@ -427,7 +427,7 @@ class ElidedLabelsAxis(pg.AxisItem):
     def generateDrawSpecs(self, p):
         axis_spec, tick_specs, text_specs = super().generateDrawSpecs(p)
         bounds = self.mapRectFromParent(self.geometry())
-        max_width = 0.9 * bounds.width() / (len(text_specs) or 1)
+        max_width = int(0.9 * bounds.width() / (len(text_specs) or 1))
         elide = QFontMetrics(QWidget().font()).elidedText
         text_specs = [(rect, flags, elide(text, Qt.ElideRight, max_width))
                       for rect, flags, text in text_specs]
