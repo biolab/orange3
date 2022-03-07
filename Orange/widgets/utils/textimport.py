@@ -1338,14 +1338,14 @@ class TablePreview(QTableView):
         # type: (QModelIndex, int, int) -> None
         super().rowsInserted(parent, start, end)
         behavior = self.selectionBehavior()
-        if behavior & (QTableView.SelectColumns | QTableView.SelectRows):
+        if behavior in (QTableView.SelectColumns, QTableView.SelectRows):
             # extend the selection to the new rows
             smodel = self.selectionModel()
             selection = smodel.selection()
             command = QItemSelectionModel.Select
-            if behavior & QTableView.SelectRows:
+            if behavior == QTableView.SelectRows:
                 command |= QItemSelectionModel.Rows
-            if behavior & QTableView.SelectColumns:
+            if behavior == QTableView.SelectColumns:
                 command |= QItemSelectionModel.Columns
             smodel.select(selection, command)
 
