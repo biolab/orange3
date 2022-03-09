@@ -37,9 +37,8 @@ def getdeepattr(obj, attr, *arg, **kwarg):
 
 
 def to_html(s):
-    return s.replace("<=", "&#8804;").replace(">=", "&#8805;"). \
-        replace("<", "&#60;").replace(">", "&#62;").replace("=\\=", "&#8800;")
-
+    return s.replace("<=", "≤").replace(">=", "≥"). \
+        replace("<", "&lt;").replace(">", "&gt;").replace("=\\=", "≠")
 
 getHtmlCompatibleString = to_html
 
