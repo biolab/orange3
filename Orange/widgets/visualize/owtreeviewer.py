@@ -313,8 +313,9 @@ class OWTreeGraph(OWTreeViewer2D):
         return node_obj
 
     def node_tooltip(self, node):
-        return "<br>".join(to_html(str(rule))
-                           for rule in self.tree_adapter.rules(node.node_inst))
+        return "<p>" + "<br>".join(
+            to_html(str(rule))
+            for rule in self.tree_adapter.rules(node.node_inst)) + "</p>"
 
     def update_selection(self):
         if self.model is None:
