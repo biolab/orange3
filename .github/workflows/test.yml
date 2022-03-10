@@ -10,7 +10,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
         with:
@@ -36,12 +36,12 @@ jobs:
     strategy:
       fail-fast: False
       matrix:
-        os: [ubuntu-18.04]
-        python-version: [3.7, 3.8, 3.9]
+        os: [ubuntu-20.04]
+        python-version: [3.7, 3.8, 3.9, '3.10']
         tox_env: [orange-released]
         name: [Released]
         include:
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             python-version: 3.8
             tox_env: orange-latest
             name: Latest
@@ -77,7 +77,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install linux system dependencies
-        run: sudo apt-get install -y libxkbcommon-x11-0 
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa
 
       - name: Install Tox
         run: |
@@ -85,9 +87,9 @@ jobs:
           python -m pip install --upgrade tox tox-pip-version
 
       - name: Run Tox
-        run: xvfb-run -a -s "-screen 0 1280x1024x24" tox -e ${{ matrix.tox_env }}
+        run: catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
         env:
-          # QT_QPA_PLATFORM: offscreen
+          XVFBARGS: "-screen 0 1280x1024x24"
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
 
       - name: Upload code coverage
@@ -106,7 +108,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-10.15, windows-2019]
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9, '3.10']
         tox_env: [orange-released]
         name: [Released]
         include:
@@ -128,7 +130,7 @@ jobs:
 
       - name: Install system dependencies on MacOS
         run: brew install libomp
-        if: matrix.os == 'macos-10.15' || matrix.os == 'macos-11.0'
+        if: matrix.os == 'macos-10.15' || matrix.os == 'macos-11'
 
       - name: Install dependencies
         run: |
