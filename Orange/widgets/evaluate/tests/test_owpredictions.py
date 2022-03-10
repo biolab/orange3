@@ -188,6 +188,7 @@ class TestOWPredictions(WidgetTest):
                 (self.widget.Inputs.data, data),
                 (self.widget.Inputs.predictors, model)
             ])
+
         iris = self.iris
         learner = ConstantLearner()
         heart_disease = Table("heart_disease")
@@ -253,6 +254,7 @@ class TestOWPredictions(WidgetTest):
         """
         Test whether sorting of probabilities by FilterSortProxy is correct.
         """
+
         def get_items_order(model):
             return model.mapToSourceRows(np.arange(model.rowCount()))
 
@@ -878,6 +880,27 @@ class TestOWPredictions(WidgetTest):
             self.assertEqual(float(table.model.data(table.model.index(0, 3))),
                              idx)
 
+    def test_multi_target_input(self):
+        widget = self.widget
+
+        domain = Domain([ContinuousVariable('var1')],
+                        class_vars=[
+                            ContinuousVariable('c1'),
+                            DiscreteVariable('c2', values=('no', 'yes'))
+                        ])
+        data = Table.from_list(domain, [[1, 5, 0], [2, 10, 1]])
+
+        mock_model = Mock(spec=Model, return_value=np.asarray([0.2, 0.1]))
+        mock_model.name = 'Mockery'
+        mock_model.domain = domain
+        mock_learner = Mock(return_value=mock_model)
+        model = mock_learner(data)
+
+        self.send_signal(widget.Inputs.data, data)
+        self.send_signal(widget.Inputs.predictors, model, 1)
+        pred = self.get_output(widget.Outputs.predictions)
+        self.assertIsInstance(pred, Table)
+
     def test_report(self):
         widget = self.widget
 
@@ -1022,7 +1045,6 @@ class SharedSelectionStoreTest(SelectionModelTest):
             self.assertEqual(list(selected), exp_selected)
             self.assertEqual(list(deselected), exp_deselected)
 
-
         store.model.setSortIndices([4, 0, 1, 2, 3])
         store.select_rows({3, 4}, QItemSelectionModel.Select)
         assert_called([4, 0], [])
@@ -1132,7 +1154,7 @@ class PredictionsModelTest(unittest.TestCase):
         cls.probs = [np.array([[80, 10, 10],
                                [30, 70, 0],
                                [15, 80, 5],
-                               [0,  10, 90],
+                               [0, 10, 90],
                                [55, 40, 5]]) / 100,
                      np.array([[80, 0, 20],
                                [90, 5, 5],
