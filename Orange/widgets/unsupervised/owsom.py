@@ -14,6 +14,7 @@ from AnyQt.QtWidgets import \
     QGraphicsPathItem
 
 from Orange.data import Table, Domain
+from Orange.data.util import array_equal
 from Orange.preprocess import decimal_binnings, time_binnings
 from Orange.projection.som import SOM
 
@@ -330,12 +331,10 @@ class OWSOM(OWWidget):
             elif missing > 1:
                 self.Warning.missing_values(missing, "s", "are")
 
-        self.stop_optimization_and_wait()
-
+        cont_x = self.cont_x.copy() if self.cont_x is not None else None
+        self.data = self.cont_x = None
         self.closeContext()
-        self.clear()
-        self.Error.clear()
-        self.Warning.clear()
+        self.clear_messages()
 
         if data is not None:
             attrs = data.domain.attributes
@@ -345,6 +344,12 @@ class OWSOM(OWWidget):
             else:
                 prepare_data()
 
+        invalidated = cont_x is None or self.cont_x is None \
+            or not array_equal(cont_x, self.cont_x)
+        if invalidated:
+            self.stop_optimization_and_wait()
+            self.clear()
+
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
             self.attr_color = data.domain.class_var
@@ -353,11 +358,13 @@ class OWSOM(OWWidget):
         self.openContext(self.data)
         self.set_color_bins()
         self.create_legend()
-        self.recompute_dimensions()
-        self.start_som()
+        if invalidated:
+            self.recompute_dimensions()
+            self.start_som()
+        else:
+            self._redraw()
 
     def clear(self):
-        self.data = self.cont_x = None
         self.cells = self.member_data = None
         self.attr_color = None
         self.colors = self.thresholds = self.bin_labels = None
@@ -366,8 +373,6 @@ class OWSOM(OWWidget):
             self.elements = None
         self.clear_selection()
         self.controls.attr_color.model().set_domain(None)
-        self.Warning.clear()
-        self.Error.clear()
 
     def recompute_dimensions(self):
         if not self.auto_dimension or self.cont_x is None:

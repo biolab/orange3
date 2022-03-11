@@ -549,6 +549,42 @@ class TestOWSOM(WidgetTest):
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
         self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
 
+    def test_invalidated(self):
+        heart = Table("heart_disease")
+        self.widget._recompute_som = Mock()
+
+        # New data - replot
+        self.send_signal(self.widget.Inputs.data, heart)
+        self.widget._recompute_som.assert_called_once()
+
+        # Same data - no replot
+        self.widget._recompute_som.reset_mock()
+        self.send_signal(self.widget.Inputs.data, heart)
+        self.widget._recompute_som.assert_not_called()
+
+        # Same data.X - no replot
+        domain = heart.domain
+        domain = Domain(domain.attributes, metas=domain.class_vars)
+        heart_with_metas = self.iris.transform(domain)
+        self.widget._recompute_som.reset_mock()
+        self.send_signal(self.widget.Inputs.data, heart_with_metas)
+        self.widget._recompute_som.assert_not_called()
+
+        # Different data, same set of cont. vars - no replot
+        attrs = [a for a in heart.domain.attributes if a.is_continuous]
+        domain = Domain(attrs)
+        heart_with_cont_features = self.iris.transform(domain)
+        self.widget._recompute_som.reset_mock()
+        self.send_signal(self.widget.Inputs.data, heart_with_cont_features)
+        self.widget._recompute_som.assert_not_called()
+
+        # Different data.X - replot
+        domain = Domain(heart.domain.attributes[:5])
+        heart_with_less_features = heart.transform(domain)
+        self.widget._recompute_som.reset_mock()
+        self.send_signal(self.widget.Inputs.data, heart_with_less_features)
+        self.widget._recompute_som.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()
