@@ -190,8 +190,12 @@ class Unlink(_DataType, namedtuple("Unlink", [])):
     """Unlink variable from its source, that is, remove compute_value"""
 
 
-Transform = Union[Rename, CategoriesMapping, Annotate, Unlink]
-TransformTypes = (Rename, CategoriesMapping, Annotate, Unlink)
+class StrpTime(_DataType, namedtuple("StrpTime", ["label", "formats", "have_date", "have_time"])):
+    """Use format on variable interpreted as time"""
+
+
+Transform = Union[Rename, CategoriesMapping, Annotate, Unlink, StrpTime]
+TransformTypes = (Rename, CategoriesMapping, Annotate, Unlink, StrpTime)
 
 CategoricalTransformTypes = (CategoriesMapping, Unlink)
 
@@ -1519,8 +1523,37 @@ class ContinuousVariableEditor(VariableEditor):
 
 
 class TimeVariableEditor(VariableEditor):
-    # TODO: enable editing of display format...
-    pass
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        form = self.layout().itemAt(0)
+
+        self.format_cb = QComboBox()
+        for item, data in [("Detect automatically", (None, 1, 1))] + list(
+            Orange.data.TimeVariable.ADDITIONAL_FORMATS.items()
+        ):
+            self.format_cb.addItem(item, StrpTime(item, *data))
+        self.format_cb.currentIndexChanged.connect(self.variable_changed)
+        form.insertRow(2, "Format:", self.format_cb)
+
+    def set_data(self, var, transform=()):
+        super().set_data(var, transform)
+        if self.parent() is not None and isinstance(self.parent().var, Time):
+            # when transforming from time to time disable format selection combo
+            self.format_cb.setEnabled(False)
+        else:
+            # select the format from StrpTime transform
+            for tr in transform:
+                if isinstance(tr, StrpTime):
+                    index = self.format_cb.findText(tr.label)
+                    self.format_cb.setCurrentIndex(index)
+            self.format_cb.setEnabled(True)
+
+    def get_data(self):
+        var, tr = super().get_data()
+        if var is not None and (self.parent() is None or not isinstance(self.parent().var, Time)):
+            # do not add StrpTime when transforming from time to time
+            tr.insert(0, self.format_cb.currentData())
+        return var, tr
 
 
 def variable_icon(var):
@@ -2581,14 +2614,19 @@ def apply_transform_time(var, trs):
 def apply_transform_string(var, trs):
     # type: (Orange.data.StringVariable, List[Transform]) -> Orange.data.Variable
     name, annotations = var.name, var.attributes
+    out_type = Orange.data.StringVariable
+    compute_value = Identity
     for tr in trs:
         if isinstance(tr, Rename):
             name = tr.name
         elif isinstance(tr, Annotate):
             annotations = _parse_attributes(tr.annotations)
-    variable = Orange.data.StringVariable(
-        name=name, compute_value=Identity(var)
-    )
+        elif isinstance(tr, StrpTime):
+            out_type = partial(
+                Orange.data.TimeVariable, have_date=tr.have_date, have_time=tr.have_time
+            )
+            compute_value = partial(ReparseTimeTransform, tr=tr)
+    variable = out_type(name=name, compute_value=compute_value(var))
     variable.attributes.update(annotations)
     return variable
 
@@ -2649,21 +2687,6 @@ def make_dict_mapper(
     return mapper
 
 
-def time_parse(values: Sequence[str], name="__"):
-    tvar = Orange.data.TimeVariable(name)
-    parse_time = ftry(tvar.parse, ValueError, np.nan)
-    _values = [parse_time(v) for v in values]
-    if np.all(np.isnan(_values)):
-        # try parsing it with pandas (like in transform)
-        dti = pd.to_datetime(values, errors="coerce")
-        _values = datetime_to_epoch(dti)
-        date_only = getattr(dti, "_is_dates_only", False)
-        if np.all(dti != pd.NaT):
-            tvar.have_date = True
-            tvar.have_time = not date_only
-    return tvar, _values
-
-
 as_string = np.frompyfunc(str, 1, 1)
 parse_float = ftry(float, ValueError, float("nan"))
 
@@ -2710,23 +2733,15 @@ def apply_reinterpret_d(var, tr, data):
     # type: (Orange.data.DiscreteVariable, ReinterpretTransform, ndarray) -> Orange.data.Variable
     if isinstance(tr, AsCategorical):
         return var
-    elif isinstance(tr, AsString):
+    elif isinstance(tr, (AsString, AsTime)):
+        # TimeVar will be interpreted by StrpTime later
         f = Lookup(var, np.array(var.values, dtype=object), unknown="")
-        rvar = Orange.data.StringVariable(
-            name=var.name, compute_value=f
-        )
+        rvar = Orange.data.StringVariable(name=var.name, compute_value=f)
     elif isinstance(tr, AsContinuous):
         f = Lookup(var, np.array(list(map(parse_float, var.values))),
                    unknown=np.nan)
         rvar = Orange.data.ContinuousVariable(
             name=var.name, compute_value=f, sparse=var.sparse
-        )
-    elif isinstance(tr, AsTime):
-        _tvar, values = time_parse(var.values)
-        f = Lookup(var, np.array(values), unknown=np.nan)
-        rvar = Orange.data.TimeVariable(
-            name=var.name, have_date=_tvar.have_date,
-            have_time=_tvar.have_time, compute_value=f,
         )
     else:
         assert False
@@ -2753,14 +2768,11 @@ def apply_reinterpret_c(var, tr, data: MArray):
     elif isinstance(tr, AsContinuous):
         return var
     elif isinstance(tr, AsString):
+        # TimeVar will be interpreted by StrpTime later
         tstr = ToStringTransform(var)
-        rvar = Orange.data.StringVariable(
-            name=var.name, compute_value=tstr
-        )
+        rvar = Orange.data.StringVariable(name=var.name, compute_value=tstr)
     elif isinstance(tr, AsTime):
-        rvar = Orange.data.TimeVariable(
-            name=var.name, compute_value=Identity(var)
-        )
+        rvar = Orange.data.TimeVariable(name=var.name, compute_value=Identity(var))
     else:
         assert False
     return copy_attributes(rvar, var)
@@ -2783,14 +2795,9 @@ def apply_reinterpret_s(var: Orange.data.StringVariable, tr, data: MArray):
         rvar = Orange.data.ContinuousVariable(
             var.name, compute_value=ToContinuousTransform(var)
         )
-    elif isinstance(tr, AsString):
+    elif isinstance(tr, (AsString, AsTime)):
+        # TimeVar will be interpreted by StrpTime later
         return var
-    elif isinstance(tr, AsTime):
-        tvar, _ = time_parse(np.unique(data.data[~data.mask]))
-        rvar = Orange.data.TimeVariable(
-            name=var.name, have_date=tvar.have_date, have_time=tvar.have_time,
-            compute_value=ReparseTimeTransform(var)
-        )
     else:
         assert False
     return copy_attributes(rvar, var)
@@ -2867,23 +2874,28 @@ class ToContinuousTransform(Transformation):
             raise TypeError
 
 
-def datetime_to_epoch(dti: pd.DatetimeIndex) -> np.ndarray:
+def datetime_to_epoch(dti: pd.DatetimeIndex, only_time) -> np.ndarray:
     """Convert datetime to epoch"""
-    data = dti.values.astype("M8[us]")
-    mask = np.isnat(data)
-    data = data.astype(float) / 1e6
-    data[mask] = np.nan
-    return data
+    delta = dti - (dti.normalize() if only_time else pd.Timestamp("1970-01-01"))
+    return (delta / pd.Timedelta("1s")).values
 
 
 class ReparseTimeTransform(Transformation):
     """
     Re-parse the column's string repr as datetime.
     """
+    def __init__(self, variable, tr):
+        super().__init__(variable)
+        self.tr = tr
+
     def transform(self, c):
-        c = column_str_repr(self.variable, c)
-        c = pd.to_datetime(c, errors="coerce")
-        return datetime_to_epoch(c)
+        # if self.formats is none guess format option is selected
+        formats = self.tr.formats if self.tr.formats is not None else [None]
+        for f in formats:
+            d = pd.to_datetime(c, errors="coerce", format=f)
+            if pd.notnull(d).any():
+                return datetime_to_epoch(d, only_time=not self.tr.have_date)
+        return np.nan
 
 
 class LookupMappingTransform(Transformation):

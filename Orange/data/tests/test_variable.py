@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from io import StringIO
 
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
 
 from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
@@ -697,6 +698,117 @@ time,continuous
         var.have_date = 1
         var.have_time = 1
         return var
+
+    def test_additional_formats(self):
+        expected_date = datetime(2022, 2, 7)
+        dates = {
+            "2021-11-25": ("2022-02-07",),
+            "25.11.2021": ("07.02.2022", "07. 02. 2022", "7.2.2022", "7. 2. 2022"),
+            "25.11.21": ("07.02.22", "07. 02. 22", "7.2.22", "7. 2. 22"),
+            "11/25/2021": ("02/07/2022", "2/7/2022"),
+            "11/25/21": ("02/07/22", "2/7/22"),
+            "20211125": ("20220207",),
+        }
+        expected_date_time = datetime(2022, 2, 7, 10, 11, 12)
+        date_times = {
+            "2021-11-25 00:00:00": (
+                "2022-02-07 10:11:12",
+                "2022-02-07 10:11:12.00",
+            ),
+            "25.11.2021 00:00:00": (
+                "07.02.2022 10:11:12",
+                "07. 02. 2022 10:11:12",
+                "7.2.2022 10:11:12",
+                "7. 2. 2022 10:11:12",
+                "07.02.2022 10:11:12.00",
+                "07. 02. 2022 10:11:12.00",
+                "7.2.2022 10:11:12.00",
+                "7. 2. 2022 10:11:12.00",
+            ),
+            "25.11.21 00:00:00": (
+                "07.02.22 10:11:12",
+                "07. 02. 22 10:11:12",
+                "7.2.22 10:11:12",
+                "7. 2. 22 10:11:12",
+                "07.02.22 10:11:12.00",
+                "07. 02. 22 10:11:12.00",
+                "7.2.22 10:11:12.00",
+                "7. 2. 22 10:11:12.00",
+            ),
+            "11/25/2021 00:00:00": (
+                "02/07/2022 10:11:12",
+                "2/7/2022 10:11:12",
+                "02/07/2022 10:11:12.00",
+                "2/7/2022 10:11:12.00",
+            ),
+            "11/25/21 00:00:00": (
+                "02/07/22 10:11:12",
+                "2/7/22 10:11:12",
+                "02/07/22 10:11:12.00",
+                "2/7/22 10:11:12.00",
+            ),
+            "20211125000000": ("20220207101112", "20220207101112.00"),
+        }
+        # times without seconds
+        expected_date_time2 = datetime(2022, 2, 7, 10, 11, 0)
+        date_times2 = {
+            "2021-11-25 00:00:00": ("2022-02-07 10:11",),
+            "25.11.2021 00:00:00": (
+                "07.02.2022 10:11",
+                "07. 02. 2022 10:11",
+                "7.2.2022 10:11",
+                "7. 2. 2022 10:11",
+            ),
+            "25.11.21 00:00:00": (
+                "07.02.22 10:11",
+                "07. 02. 22 10:11",
+                "7.2.22 10:11",
+                "7. 2. 22 10:11",
+            ),
+            "11/25/2021 00:00:00": ("02/07/2022 10:11", "2/7/2022 10:11"),
+            "11/25/21 00:00:00": ("02/07/22 10:11", "2/7/22 10:11"),
+            "20211125000000": ("202202071011",),
+        }
+        # datetime defaults to 1900, 01, 01
+        expected_time = datetime(1900, 1, 1, 10, 11, 12)
+        times = {
+            "00:00:00": ("10:11:12", "10:11:12.00"),
+            "000000": ("101112", "101112.00"),
+        }
+        expected_time2 = datetime(1900, 1, 1, 10, 11, 0)
+        times2 = {
+            "00:00:00": ("10:11",),
+        }
+        expected_year = datetime(2022, 1, 1)
+        years = {
+            "2021": (2022,),
+        }
+        expected_day = datetime(1900, 2, 7)
+        days = {
+            "11-25": ("02-07",),
+            "25.11.": ("07.02.", "07. 02.", "7.2.", "7. 2."),
+            "11/25": ("02/07", "2/7"),
+        }
+        data = (
+            (expected_date, dates),
+            (expected_date_time, date_times),
+            (expected_date_time2, date_times2),
+            (expected_time, times),
+            (expected_time2, times2),
+            (expected_year, years),
+            (expected_day, days),
+        )
+        for expected, dts in data:
+            for k, dt in dts.items():
+                for t in dt:
+                    parsed = [
+                        pd.to_datetime(t, format=f, errors="coerce")
+                        for f in TimeVariable.ADDITIONAL_FORMATS[k][0]
+                    ]
+                    # test any equal to expected
+                    self.assertTrue(any(d == expected for d in parsed))
+                    # test that no other equal to any other date - only nan or expected
+                    self.assertTrue(any(d == expected or pd.isnull(d) for d in parsed))
 
 
 PickleContinuousVariable = create_pickling_tests(

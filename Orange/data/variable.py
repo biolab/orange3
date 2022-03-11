@@ -870,7 +870,7 @@ class TimeVariable(ContinuousVariable):
 
     If time is specified without a date, Unix epoch is assumed.
 
-    If time is specified wihout an UTC offset, localtime is assumed.
+    If time is specified without an UTC offset, localtime is assumed.
     """
     _all_vars = {}
     TYPE_HEADERS = ('time', 't')
@@ -923,15 +923,86 @@ class TimeVariable(ContinuousVariable):
              r'\d{1,4}(-?\d{2,3})?'
              r')$')
 
+    ADDITIONAL_FORMATS = {
+        "2021-11-25": (("%Y-%m-%d",), 1, 0),
+        "25.11.2021": (("%d.%m.%Y", "%d. %m. %Y"), 1, 0),
+        "25.11.21": (("%d.%m.%y", "%d. %m. %y"), 1, 0),
+        "11/25/2021": (("%m/%d/%Y",), 1, 0),
+        "11/25/21": (("%m/%d/%y",), 1, 0),
+        "20211125": (("%Y%m%d",), 1, 0),
+        # it would be too many options if we also include all time formats with
+        # with lengths up to minutes, up to seconds and up to milliseconds,
+        # joining all tree options under 00:00:00
+        "2021-11-25 00:00:00": (
+            (
+                "%Y-%m-%d %H:%M",
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%d %H:%M:%S.%f",
+            ),
+            1,
+            1,
+        ),
+        "25.11.2021 00:00:00": (
+            (
+                "%d.%m.%Y %H:%M",
+                "%d. %m. %Y %H:%M",
+                "%d.%m.%Y %H:%M:%S",
+                "%d. %m. %Y %H:%M:%S",
+                "%d.%m.%Y %H:%M:%S.%f",
+                "%d. %m. %Y %H:%M:%S.%f",
+            ),
+            1,
+            1,
+        ),
+        "25.11.21 00:00:00": (
+            (
+                "%d.%m.%y %H:%M",
+                "%d. %m. %y %H:%M",
+                "%d.%m.%y %H:%M:%S",
+                "%d. %m. %y %H:%M:%S",
+                "%d.%m.%y %H:%M:%S.%f",
+                "%d. %m. %y %H:%M:%S.%f",
+            ),
+            1,
+            1,
+        ),
+        "11/25/2021 00:00:00": (
+            (
+                "%m/%d/%Y %H:%M",
+                "%m/%d/%Y %H:%M:%S",
+                "%m/%d/%Y %H:%M:%S.%f",
+            ),
+            1,
+            1,
+        ),
+        "11/25/21 00:00:00": (
+            (
+                "%m/%d/%y %H:%M",
+                "%m/%d/%y %H:%M:%S",
+                "%m/%d/%y %H:%M:%S.%f",
+            ),
+            1,
+            1,
+        ),
+        "20211125000000": (("%Y%m%d%H%M", "%Y%m%d%H%M%S", "%Y%m%d%H%M%S.%f"), 1, 1),
+        "00:00:00": (("%H:%M", "%H:%M:%S", "%H:%M:%S.%f"), 0, 1),
+        "000000": (("%H%M", "%H%M%S", "%H%M%S.%f"), 0, 1),
+        "2021": (("%Y",), 1, 0),
+        "11-25": (("%m-%d",), 1, 0),
+        "25.11.": (("%d.%m.", "%d. %m."), 1, 0),
+        "11/25": (("%m/%d",), 1, 0),
+        "1125": (("%m%d",), 1, 0),
+    }
+
     class InvalidDateTimeFormatError(ValueError):
         def __init__(self, date_string):
             super().__init__(
-                "Invalid datetime format '{}'. "
-                "Only ISO 8601 supported.".format(date_string))
+                f"Invalid datetime format '{date_string}'. Only ISO 8601 supported."
+            )
 
     _matches_iso_format = re.compile(REGEX).match
 
-    # If parsed datetime values provide an offset or timzone, it is used for display. 
+    # If parsed datetime values provide an offset or timzone, it is used for display.
     # If not all values have the same offset, +0000 (=UTC) timezone is used
     _timezone = None
 
@@ -1011,6 +1082,7 @@ class TimeVariable(ContinuousVariable):
         """
         if datestr in MISSING_VALUES:
             return Unknown
+
         datestr = datestr.strip().rstrip('Z')
         datestr = self._tzre_sub(datestr)
 
