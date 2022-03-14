@@ -386,7 +386,7 @@ def _time_binnings(mn, mx, min_pts, max_pts):
         if not times:
             continue
         times = [time.struct_time(t + (0, 0, 0)) for t in times]
-        thresholds = [calendar.timegm(t) for t in times]
+        thresholds = np.array([calendar.timegm(t) for t in times])
         labels = [time.strftime(fmt, t) for t in times]
         short_labels = _simplified_labels(labels)
         if place == 2 and step >= 7:

@@ -8,6 +8,7 @@ import scipy.sparse as sp
 
 from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.unsupervised.owsom import OWSOM, SomView, SOM
 
@@ -219,6 +220,42 @@ class TestOWSOM(WidgetTest):
         self.assertTrue(widget.controls.pie_charts.isEnabled())
         self.assertIsNotNone(widget.thresholds)
         widget._redraw.assert_called()
+
+    def test_colored_circles_with_constant(self):
+        domain = self.iris.domain
+        self.widget.pie_charts = False
+
+        with self.iris.unlocked():
+            self.iris.X[:, 0] = 1
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        attr0 = domain.attributes[0]
+
+        combo = self.widget.controls.attr_color
+        simulate.combobox_activate_index(combo, combo.model().indexOf(attr0))
+        self.assertIsNotNone(self.widget.colors)
+        self.assertFalse(self.widget.Warning.no_defined_colors.is_shown())
+
+        dom1 = Domain(domain.attributes[1:], domain.class_var,
+                      domain.attributes[:1])
+        iris = self.iris.transform(dom1).copy()
+        with iris.unlocked(iris.metas):
+            iris.metas[::2, 0] = np.nan
+        self.send_signal(self.widget.Inputs.data, iris)
+        simulate.combobox_activate_index(combo, combo.model().indexOf(attr0))
+        self.assertIsNotNone(self.widget.colors)
+        self.assertFalse(self.widget.Warning.no_defined_colors.is_shown())
+
+        iris = self.iris.transform(dom1).copy()
+        with iris.unlocked(iris.metas):
+            iris.metas[:, 0] = np.nan
+        self.send_signal(self.widget.Inputs.data, iris)
+        simulate.combobox_activate_index(combo, combo.model().indexOf(attr0))
+        self.assertIsNone(self.widget.colors)
+        self.assertTrue(self.widget.Warning.no_defined_colors.is_shown())
+
+        simulate.combobox_activate_index(combo, 0)
+        self.assertIsNone(self.widget.colors)
+        self.assertFalse(self.widget.Warning.no_defined_colors.is_shown())
 
     @_patch_recompute_som
     def test_cell_sizes(self):

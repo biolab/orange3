@@ -39,7 +39,8 @@ class TestTimeBinning(unittest.TestCase):
 
         def testbin(start, end):
             bins = _time_binnings(create(*start), create(*end), 3, 51)
-            return [(bin.width_label, tr(bin.short_labels), bin.thresholds)
+            return [(bin.width_label, tr(bin.short_labels),
+                     list(bin.thresholds))
                     for bin in reversed(bins)]
 
         self.assertEqual(
