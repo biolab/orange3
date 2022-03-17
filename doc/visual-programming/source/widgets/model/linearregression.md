@@ -18,16 +18,15 @@ The **Linear Regression** widget constructs a learner/predictor that learns a [l
 
 Linear regression works only on regression tasks.
 
-![](images/LinearRegression-stamped.png)
+![](images/Linear-Regression.png)
 
 1. The learner/predictor name
-2. Choose a model to train:
+2. Parameters: Fit intercept. Unchecking the option forces the intercept to zero.
+3. Choose a model to train:
    - no regularization
    - a [Ridge](https://en.wikipedia.org/wiki/Least_squares#Lasso_method) regularization (L2-norm penalty)
    - a [Lasso](https://en.wikipedia.org/wiki/Least_squares#Lasso_method) bound (L1-norm penalty)
    - an [Elastic net](https://en.wikipedia.org/wiki/Elastic_net_regularization) regularization
-3. Produce a report.
-4. Press *Apply* to commit changes. If *Apply Automatically* is ticked, changes are committed automatically.
 
 Preprocessing
 -------------
@@ -45,6 +44,15 @@ Feature Scoring
 ---------------
 
 Linear Regression can be used with Rank for feature scoring. See [Learners as Scorers](../../learners-as-scorers/index.md) for an example.
+
+Observing Coefficients
+----------------------
+
+To observe coefficients of linear regression, first build a model, then pass the model to the [Data Table](../data/datatable.md). This will automatically connect the *Coefficients* output to the Data Table, where you can sort the table by coefficients and observe which variables positively and negatively correlate with the prediction.
+
+![](images/Linear-Regression-workflow.png)
+![](images/Linear-Regression-coefficients.png)
+
 
 Example
 -------
