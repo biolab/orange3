@@ -99,3 +99,13 @@ class LookupTest(unittest.TestCase):
             np.testing.assert_array_equal(
                 lookup.transform(col),
                 np.array([2, 0, 2, 1, np.nan, 1], dtype=np.float64))
+
+    def test_hash_nan(self):
+        """
+        Hash should be always the same for same lookup
+        Test introduced because of bug in numpy (PY3.10) and was present when nan
+        in lookup table: https://github.com/numpy/numpy/issues/21210
+        """
+        lookup = Lookup(None, np.array([1, 2, np.nan, 2]))
+        hashes = [hash(lookup) for _ in range(10)]
+        self.assertTrue(all(x == hashes[0] for x in hashes))
