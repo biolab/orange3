@@ -61,8 +61,8 @@ void compute_density(int r, double *gx, double *gy, int n, double *dx, double *d
 			color_decode(ind2color[main_color], rgba+offset);
 		}
 	}
-	delete color;
-	delete f;
+	delete[] color;
+	delete[] f;
 }
 
 
