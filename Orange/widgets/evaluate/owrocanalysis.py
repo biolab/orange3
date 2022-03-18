@@ -640,14 +640,18 @@ class OWROCAnalysis(widget.OWWidget):
                 return None
             return [[(x, f"{x:.2f}") for x in a[::-1]]]
 
-        data = self.curve_data(self.target_index, self.selected_classifiers[0])
-        points = data.merged.points
+        axis_bottom = self.plot.getAxis("bottom")
+        axis_left = self.plot.getAxis("left")
 
-        axis = self.plot.getAxis("bottom")
-        axis.setTicks(enumticks(points.fpr))
-
-        axis = self.plot.getAxis("left")
-        axis.setTicks(enumticks(points.tpr))
+        if not self.selected_classifiers or len(self.selected_classifiers) > 1 \
+                or self.roc_averaging != OWROCAnalysis.Merge:
+            axis_bottom.setTicks(None)
+            axis_left.setTicks(None)
+        else:
+            data = self.curve_data(self.target_index, self.selected_classifiers[0])
+            points = data.merged.points
+            axis_bottom.setTicks(enumticks(points.fpr))
+            axis_left.setTicks(enumticks(points.tpr))
 
     def _on_mouse_moved(self, pos):
         target = self.target_index
