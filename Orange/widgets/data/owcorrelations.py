@@ -274,7 +274,7 @@ class OWCorrelations(OWWidget, openclass=True):
         box = gui.vBox(self.controlArea)
         self.correlation_combo = gui.comboBox(
             box, self, "correlation_type", items=CorrelationType.items(),
-            orientation=Qt.Horizontal, callback=self._correlation_combo_changed,
+            orientation=Qt.Horizontal, callback=self._correlation_combo_changed
         )
 
         self.feature_model = DomainModel(
