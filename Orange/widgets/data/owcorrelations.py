@@ -232,7 +232,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         self.master.setStatusMessage("")
 
 
-class OWCorrelations(OWWidget):
+class OWCorrelations(OWWidget, openclass=True):
     name = "Correlations"
     description = "Compute all pairwise attribute correlations."
     icon = "icons/Correlations.svg"
@@ -274,7 +274,7 @@ class OWCorrelations(OWWidget):
         box = gui.vBox(self.controlArea)
         self.correlation_combo = gui.comboBox(
             box, self, "correlation_type", items=CorrelationType.items(),
-            orientation=Qt.Horizontal, callback=self._correlation_combo_changed
+            orientation=Qt.Horizontal, callback=self._correlation_combo_changed,
         )
 
         self.feature_model = DomainModel(
@@ -282,7 +282,7 @@ class OWCorrelations(OWWidget):
             placeholder="(All combinations)", valid_types=ContinuousVariable)
         gui.comboBox(
             box, self, "feature", callback=self._feature_combo_changed,
-            model=self.feature_model
+            model=self.feature_model, searchable=True
         )
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
