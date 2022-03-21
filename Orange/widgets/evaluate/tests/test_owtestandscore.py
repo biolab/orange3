@@ -16,7 +16,7 @@ from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import Results, TestOnTestData, scoring
 from Orange.evaluation.scoring import ClassificationScore, RegressionScore, \
     Score
-from Orange.base import Learner
+from Orange.base import Learner, Model
 from Orange.modelling import ConstantLearner
 from Orange.regression import MeanLearner
 from Orange.widgets.evaluate.owtestandscore import (
@@ -178,7 +178,7 @@ class TestOWTestAndScore(WidgetTest):
         table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b")],
-                [DiscreteVariable("c", values=("y", ))]),
+                [DiscreteVariable("c", values=("y",))]),
             list(zip(
                 [42.48, 16.84, 15.23, 23.8],
                 [1., 2., 3., 4.],
@@ -192,6 +192,7 @@ class TestOWTestAndScore(WidgetTest):
 
     def test_data_errors(self):
         """ Test all data_errors """
+
         def assertErrorShown(data, is_shown, message):
             self.send_signal("Data", data)
             self.assertEqual(is_shown, self.widget.Error.train_data_error.is_shown())
@@ -224,6 +225,10 @@ class TestOWTestAndScore(WidgetTest):
             # These classes are registered, pylint: disable=unused-variable
             class NewScore(Score):
                 class_types = (DiscreteVariable, ContinuousVariable)
+
+                @staticmethod
+                def is_compatible(domain: Domain) -> bool:
+                    return True
 
             class NewClassificationScore(ClassificationScore):
                 pass
@@ -374,7 +379,7 @@ class TestOWTestAndScore(WidgetTest):
         self.assertTupleEqual(self._test_scores(
             table, table, LogisticRegressionLearner(),
             OWTestAndScore.TestOnTest, None),
-                              (1, 1, 1, 1, 1))
+            (1, 1, 1, 1, 1))
 
     def test_scores_log_reg_bad(self):
         table_train = Table.from_list(
@@ -389,7 +394,7 @@ class TestOWTestAndScore(WidgetTest):
         self.assertTupleEqual(self._test_scores(
             table_train, table_test, LogisticRegressionLearner(),
             OWTestAndScore.TestOnTest, None),
-                              (0, 0, 0, 0, 0))
+            (0, 0, 0, 0, 0))
 
     def test_scores_log_reg_bad2(self):
         table_train = Table.from_list(
@@ -719,6 +724,42 @@ class TestOWTestAndScore(WidgetTest):
         view_text = "\t".join([str(model.data(model.index(0, i)))
                                for i in (0, 3, 4, 5, 6, 7)]) + "\r\n"
         self.assertEqual(clipboard_text, view_text)
+
+    def test_multi_target_input(self):
+        class NewScorer(Score):
+            class_types = (
+                ContinuousVariable,
+                DiscreteVariable,
+            )
+
+            @staticmethod
+            def is_compatible(domain: Domain) -> bool:
+                return True
+
+            def compute_score(self, results):
+                return [0.75]
+
+        domain = Domain([ContinuousVariable('var1')],
+                        class_vars=[
+                            ContinuousVariable('c1'),
+                            DiscreteVariable('c2', values=('no', 'yes'))
+                        ])
+        data = Table.from_list(domain, [[1, 5, 0], [2, 10, 1], [2, 10, 1]])
+
+        mock_model = Mock(spec=Model, return_value=np.asarray([[0.2, 0.1, 0.2]]))
+        mock_model.name = 'Mockery'
+        mock_model.domain = domain
+        mock_learner = Mock(spec=Learner, return_value=mock_model)
+        mock_learner.name = 'Mockery'
+
+        self.widget.resampling = OWTestAndScore.TestOnTrain
+        self.send_signal(self.widget.Inputs.train_data, data)
+        self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0)
+        self.send_signal(self.widget.Inputs.learner, mock_learner, 1)
+        _ = self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
+        self.assertTrue(len(self.widget.scorers) == 1)
+        self.assertTrue(NewScorer in self.widget.scorers)
+        self.assertTrue(len(self.widget._successful_slots()) == 1)
 
 
 class TestHelpers(unittest.TestCase):

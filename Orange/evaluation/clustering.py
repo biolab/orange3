@@ -32,6 +32,10 @@ class ClusteringResults(Results):
 class ClusteringScore(Score):
     considers_actual = False
 
+    @staticmethod
+    def is_compatible(domain) -> bool:
+        return True
+
     # pylint: disable=arguments-differ
     def from_predicted(self, results, score_function):
         # Clustering scores from labels

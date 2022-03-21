@@ -3,12 +3,12 @@ import itertools
 from collections.abc import Iterable
 import re
 import warnings
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 import numpy as np
 import scipy
 
-from Orange.data import Table, Storage, Instance, Value
+from Orange.data import Table, Storage, Instance, Value, Domain
 from Orange.data.filter import HasClass
 from Orange.data.table import DomainTransformationError
 from Orange.data.util import one_hot
@@ -86,6 +86,9 @@ class Learner(ReprableWithPreprocessors):
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
+
+    # Note: Do not use this class attribute.
+    #       It remains here for compatibility reasons.
     learner_adequacy_err_msg = ''
 
     def __init__(self, preprocessors=None):
@@ -95,6 +98,7 @@ class Learner(ReprableWithPreprocessors):
         elif preprocessors:
             self.preprocessors = (preprocessors,)
 
+    # pylint: disable=R0201
     def fit(self, X, Y, W=None):
         raise RuntimeError(
             "Descendants of Learner must overload method fit or fit_storage")
@@ -106,8 +110,23 @@ class Learner(ReprableWithPreprocessors):
         return self.fit(X, Y, W)
 
     def __call__(self, data, progress_callback=None):
-        if not self.check_learner_adequacy(data.domain):
-            raise ValueError(self.learner_adequacy_err_msg)
+
+        for cls in type(self).mro():
+            if 'incompatibility_reason' in cls.__dict__:
+                incompatibility_reason = \
+                    self.incompatibility_reason(data.domain)  # pylint: disable=assignment-from-none
+                if incompatibility_reason is not None:
+                    raise ValueError(incompatibility_reason)
+                break
+            if 'check_learner_adequacy' in cls.__dict__:
+                warnings.warn(
+                    "check_learner_adequacy is deprecated and will be removed "
+                    "in upcoming releases. Learners should instead implement "
+                    "the incompatibility_reason method.",
+                    OrangeDeprecationWarning)
+                if not self.check_learner_adequacy(data.domain):
+                    raise ValueError(self.learner_adequacy_err_msg)
+                break
 
         origdomain = data.domain
 
@@ -175,6 +194,11 @@ class Learner(ReprableWithPreprocessors):
 
     def check_learner_adequacy(self, _):
         return True
+
+    # pylint: disable=no-self-use
+    def incompatibility_reason(self, _: Domain) -> Optional[str]:
+        """Return None if a learner can fit domain or string explaining why it can not."""
+        return None
 
     @property
     def name(self):

@@ -282,7 +282,7 @@ class OWPredictions(OWWidget):
             self.class_values += self.data.domain.class_var.values
         for slot in self.predictors:
             class_var = slot.predictor.domain.class_var
-            if class_var.is_discrete:
+            if class_var and class_var.is_discrete:
                 for value in class_var.values:
                     if value not in self.class_values:
                         self.class_values.append(value)
@@ -318,7 +318,8 @@ class OWPredictions(OWWidget):
 
             predictor = slot.predictor
             try:
-                if predictor.domain.class_var.is_discrete:
+                class_var = predictor.domain.class_var
+                if class_var and predictor.domain.class_var.is_discrete:
                     pred, prob = predictor(classless_data, Model.ValueProbs)
                 else:
                     pred = predictor(classless_data, Model.Value)
@@ -357,7 +358,7 @@ class OWPredictions(OWWidget):
         else:
             target = None
         model.clear()
-        scorers = usable_scorers(self.class_var) if self.class_var else []
+        scorers = usable_scorers(self.data.domain) if self.data else []
         self.score_table.update_header(scorers)
         self.scorer_errors = errors = []
         for pred in self.predictors:
@@ -371,7 +372,10 @@ class OWPredictions(OWWidget):
                 predicted = results.predicted
                 probabilities = results.probabilities
 
-                mask = numpy.isnan(results.actual)
+                if self.class_var:
+                    mask = numpy.isnan(results.actual)
+                else:
+                    mask = numpy.any(numpy.isnan(results.actual), axis=1)
                 no_targets = mask.sum() == len(results.actual)
                 results.actual = results.actual[~mask]
                 results.predicted = results.predicted[:, ~mask]
@@ -486,7 +490,7 @@ class OWPredictions(OWWidget):
         for p in self._non_errored_predictors():
             values = p.results.unmapped_predicted
             target = p.predictor.domain.class_var
-            if target.is_discrete:
+            if target and target.is_discrete:
                 # order probabilities in order from Show prob. for
                 prob = self._reordered_probabilities(p)
                 values = numpy.array(target.values)[values.astype(int)]
@@ -558,7 +562,9 @@ class OWPredictions(OWWidget):
                 p.predictor.domain.class_var.colors,
                 p.predictor.domain.class_var.values
             ), key=itemgetter(1))))
-            for p in predictors if p.predictor.domain.class_var.is_discrete
+            for p in predictors
+            if p.predictor.domain.class_var and
+            p.predictor.domain.class_var.is_discrete
         ]
         return color_values if color_values else [([], [])]
 
@@ -613,12 +619,7 @@ class OWPredictions(OWWidget):
         sort_col_indices = []
         for col, slot in enumerate(self.predictors):
             target = slot.predictor.domain.class_var
-            if target.is_continuous:
-                delegate = PredictionsItemDelegate(
-                    None, colors, (), (), target.format_str,
-                    parent=self.predictionsview)
-                sort_col_indices.append(None)
-            else:
+            if target is not None and target.is_discrete:
                 shown_probs = self._shown_prob_indices(target, in_target=True)
                 if self.shown_probs in (self.MODEL_PROBS, self.BOTH_PROBS):
                     tooltip_probs = [self.class_values[i]
@@ -628,6 +629,13 @@ class OWPredictions(OWWidget):
                     parent=self.predictionsview)
                 sort_col_indices.append([col for col in shown_probs
                                          if col is not None])
+
+            else:
+                delegate = PredictionsItemDelegate(
+                    None, colors, (), (), target.format_str if target is not None else None,
+                    parent=self.predictionsview)
+                sort_col_indices.append(None)
+
             # QAbstractItemView does not take ownership of delegates, so we must
             self._delegates.append(delegate)
             self.predictionsview.setItemDelegateForColumn(col, delegate)
@@ -680,7 +688,7 @@ class OWPredictions(OWWidget):
     def _commit_evaluation_results(self):
         slots = [p for p in self._non_errored_predictors()
                  if p.results.predicted is not None]
-        if not slots:
+        if not slots or not self.class_var:
             self.Outputs.evaluation_results.send(None)
             return
 
@@ -707,7 +715,8 @@ class OWPredictions(OWWidget):
         newmetas = []
         newcolumns = []
         for slot in self._non_errored_predictors():
-            if slot.predictor.domain.class_var.is_discrete:
+            target = slot.predictor.domain.class_var
+            if target and target.is_discrete:
                 self._add_classification_out_columns(slot, newmetas, newcolumns)
             else:
                 self._add_regression_out_columns(slot, newmetas, newcolumns)
@@ -724,7 +733,7 @@ class OWPredictions(OWWidget):
             names.append(uniq)
 
         metas += uniq_newmetas
-        domain = Orange.data.Domain(attrs, self.class_var, metas=metas)
+        domain = Orange.data.Domain(attrs, self.data.domain.class_vars, metas=metas)
         predictions = self.data.transform(domain)
         if newcolumns:
             newcolumns = numpy.hstack(
@@ -865,7 +874,8 @@ class PredictionsItemDelegate(ItemDelegate):
         super().__init__(parent)
         self.class_values = class_values  # will be None for continuous
         self.colors = [QColor(*c) for c in colors]
-        self.target_format = target_format  # target format for cont. vars
+        # target format for cont. vars
+        self.target_format = target_format if target_format else '%.2f'
         self.shown_probabilities = self.fmt = self.tooltip = None  # set below
         self.setFormat(shown_probabilities, tooltip_probabilities)
 

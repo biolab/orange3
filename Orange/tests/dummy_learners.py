@@ -33,8 +33,9 @@ class DummyPredictor(SklModelClassification):
 class DummyMulticlassLearner(SklLearner):
     supports_multiclass = True
 
-    def check_learner_adequacy(self, domain):
-        return all(c.is_discrete for c in domain.class_vars)
+    def incompatibility_reason(self, domain):
+        reason = 'Not all class variables are discrete'
+        return None if all(c.is_discrete for c in domain.class_vars) else reason
 
     def fit(self, X, Y, W):
         rows, class_vars = Y.shape

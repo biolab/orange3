@@ -11,7 +11,7 @@ from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
     QSortFilterProxyModel
 from sklearn.exceptions import UndefinedMetricWarning
 
-from Orange.data import Variable, DiscreteVariable, ContinuousVariable
+from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.evaluation import scoring
 from Orange.widgets import gui
 from Orange.widgets.utils.tableview import table_selection_to_mime_data
@@ -78,14 +78,21 @@ def learner_name(learner):
     return getattr(learner, "name", type(learner).__name__)
 
 
-def usable_scorers(target: Variable):
+def usable_scorers(domain: Domain):
+    if domain is None:
+        return []
+
     order = {name: i
-             for i, name in enumerate(BUILTIN_SCORERS_ORDER[type(target)])}
+             for i, name in enumerate(chain.from_iterable(BUILTIN_SCORERS_ORDER.values()))}
+
     # 'abstract' is retrieved from __dict__ to avoid inheriting
-    usable = (cls for cls in scoring.Score.registry.values()
-              if cls.is_scalar and not cls.__dict__.get("abstract")
-              and isinstance(target, cls.class_types))
+    scorer_candidates = [cls for cls in scoring.Score.registry.values()
+                         if cls.is_scalar and not cls.__dict__.get("abstract")]
+
+    usable = [scorer for scorer in scorer_candidates if
+              scorer.is_compatible(domain) and scorer.class_types]
     return sorted(usable, key=lambda cls: order.get(cls.name, 99))
+
 
 
 def scorer_caller(scorer, ovr_results, target=None):
@@ -131,9 +138,7 @@ class ScoreModel(QSortFilterProxyModel):
 
 
 class ScoreTable(OWComponent, QObject):
-    shown_scores = \
-        Setting(set(chain(*BUILTIN_SCORERS_ORDER.values())))
-
+    shown_scores = Setting(set(chain(*BUILTIN_SCORERS_ORDER.values())))
     shownScoresChanged = Signal()
 
     class ItemDelegate(QStyledItemDelegate):
