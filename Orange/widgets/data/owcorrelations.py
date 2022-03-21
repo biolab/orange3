@@ -232,7 +232,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         self.master.setStatusMessage("")
 
 
-class OWCorrelations(OWWidget, openclass=True):
+class OWCorrelations(OWWidget):
     name = "Correlations"
     description = "Compute all pairwise attribute correlations."
     icon = "icons/Correlations.svg"
