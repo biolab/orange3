@@ -282,7 +282,7 @@ class OWCorrelations(OWWidget):
             placeholder="(All combinations)", valid_types=ContinuousVariable)
         gui.comboBox(
             box, self, "feature", callback=self._feature_combo_changed,
-            model=self.feature_model
+            model=self.feature_model, searchable=True
         )
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
