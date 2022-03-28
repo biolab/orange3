@@ -123,16 +123,9 @@ class ServerEmbedderCommunicator:
         # if there is less items than 10 connection error should be raised earlier
         self.max_errors = min(len(data) * self.MAX_REPEATS, 10)
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            embeddings = asyncio.get_event_loop().run_until_complete(
-                self.embedd_batch(data, processed_callback, callback=callback)
-            )
-        finally:
-            loop.close()
-
-        return embeddings
+        return asyncio.run(
+            self.embedd_batch(data, processed_callback, callback=callback)
+        )
 
     async def embedd_batch(
         self,
