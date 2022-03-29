@@ -45,7 +45,7 @@ requirements:
     - chardet >=3.0.2
     - xlrd >=0.9.2
     - xlsxwriter
-    - anyqt >=0.0.13
+    - anyqt >=0.1.0
     - pyqt >=5.12,!=5.15.1,<6.0
     - pyqtgraph >=0.11.1
     - joblib >=0.11
