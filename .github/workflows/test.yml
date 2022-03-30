@@ -105,12 +105,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-10.15, windows-2016]
+        os: [macos-10.15, windows-2019]
         python-version: [3.7, 3.8, 3.9]
         tox_env: [orange-released]
         name: [Released]
         include:
-          - os: windows-2016
+          - os: windows-latest
             python-version: 3.8
             tox_env: orange-latest
             name: Latest

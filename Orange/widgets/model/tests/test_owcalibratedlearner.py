@@ -9,6 +9,7 @@ from Orange.data import Table
 from Orange.widgets.model.owcalibratedlearner import OWCalibratedLearner
 from Orange.widgets.tests.base import WidgetTest, WidgetLearnerTestMixin, \
     datasets
+from Orange.widgets.tests.utils import qbuttongroup_emit_clicked
 
 
 class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
@@ -140,16 +141,16 @@ class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
 
         widget.calibration = widget.IsotonicCalibration
         widget.threshold = widget.OptimizeCA
-        widget.controls.calibration.group.buttonClicked[int].emit(
-            widget.IsotonicCalibration)
+        qbuttongroup_emit_clicked(widget.controls.calibration.group,
+                                  widget.IsotonicCalibration)
 
         learner = self.get_output(widget.Outputs.learner)
         self.assertEqual(learner.name, "Foo + Isotonic + CA")
 
         widget.calibration = widget.NoCalibration
         widget.threshold = widget.OptimizeCA
-        widget.controls.calibration.group.buttonClicked[int].emit(
-            widget.NoCalibration)
+        qbuttongroup_emit_clicked(widget.controls.calibration.group,
+                                  widget.NoCalibration)
         learner = self.get_output(widget.Outputs.learner)
         self.assertEqual(learner.name, "Foo + CA")
 
