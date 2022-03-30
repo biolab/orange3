@@ -166,6 +166,18 @@ class ScoreTable(OWComponent, QObject):
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_column_chooser)
 
+        # Currently, this component will never show scoring methods
+        # defined in add-ons by default. To support them properly, the
+        # "shown_scores" settings will need to be reworked.
+        # The following is a temporary solution to show the scoring method
+        # for survival data (it does not influence other problem types).
+        # It is added here so that the "C-Index" method
+        # will show up even if the users already have the setting defined.
+        # This temporary fix is here due to a paper deadline needing the feature.
+        # When removing, also remove TestScoreTable.test_column_settings_reminder
+        if isinstance(self.shown_scores, set):  # TestScoreTable does not initialize settings
+            self.shown_scores.add("C-Index")
+
         self.model = QStandardItemModel(master)
         self.model.setHorizontalHeaderLabels(["Method"])
         self.sorted_model = ScoreModel()
