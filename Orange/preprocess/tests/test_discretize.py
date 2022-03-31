@@ -1,8 +1,8 @@
 # File contains some long lines; breaking them would decrease readability
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long,too-many-lines,protected-access
 import calendar
 import unittest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 from time import struct_time, mktime
 
 import numpy as np
@@ -251,7 +251,7 @@ class TestFixedTimeWidth(unittest.TestCase):
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-06-29 23:48:10",
                                         "1914-06-29 23:48:20",
-                                        "1914-06-29 23:48:30")]),
+                                        "1914-06-29 23:48:30")])
         self.assertEqual(dvar.values, ('< 23:48:10', "23:48:10 - 23:48:20",
                                        "23:48:20 - 23:48:30", '≥ 23:48:30'))
 
@@ -264,7 +264,7 @@ class TestFixedTimeWidth(unittest.TestCase):
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-12-31 23:59:59",
                                         "1915-01-01 00:00:00",
-                                        "1915-01-01 00:00:01")]),
+                                        "1915-01-01 00:00:01")])
         self.assertEqual(dvar.values, ('< 23:59:59', "23:59:59 - 00:00:00",
                                        "00:00:00 - 00:00:01", '≥ 00:00:01'))
 
@@ -294,6 +294,7 @@ class TestBinningDiscretizer(unittest.TestCase):
     def test_binning_selection(self):
         var = ContinuousVariable("y")
         discretize = Binning(2)
+        # pylint: disable=redefined-outer-name
         create = discretize._create_binned_var
 
         binnings = []

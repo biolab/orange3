@@ -1,31 +1,26 @@
 import re
-from collections import namedtuple
-from enum import IntEnum
-from typing import Optional, Tuple, Union, Callable, NamedTuple, Dict
 import html
+from enum import IntEnum
+from typing import Optional, Tuple, Union, Callable, NamedTuple, Dict, List
 
 from AnyQt.QtCore import (
-    Qt, QTimer, QPoint, QItemSelectionModel, QSize, QAbstractListModel
-)
-from AnyQt.QtGui import (QValidator, QPalette, QDoubleValidator, QIntValidator,
-    QColor)
+    Qt, QTimer, QPoint, QItemSelectionModel, QSize, QAbstractListModel)
+from AnyQt.QtGui import (
+    QValidator, QPalette, QDoubleValidator, QIntValidator,  QColor)
 from AnyQt.QtWidgets import (
     QListView, QHBoxLayout, QStyledItemDelegate, QButtonGroup, QWidget,
     QLineEdit, QToolTip, QLabel, QApplication,
-    QSpinBox, QSizePolicy, QRadioButton, QComboBox
-)
+    QSpinBox, QSizePolicy, QRadioButton, QComboBox)
 
-from Orange.widgets.gui import createAttributePixmap
-from Orange.widgets.utils.itemmodels import DomainModel
 from orangewidget.settings import ContextHandler, Setting, ContextSetting
-from orangewidget.utils.listview import ListViewSearch
+from orangewidget.utils import listview
 
-import Orange.data
+from Orange.data import (
+    ContinuousVariable, DiscreteVariable, TimeVariable, Domain, Table, Variable)
 import Orange.preprocess.discretize as disc
-from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, \
-    Domain, Table
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import unique_everseen
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.data.oweditdomain import FixedSizeButton
@@ -33,39 +28,92 @@ from Orange.widgets.data.oweditdomain import FixedSizeButton
 
 re_custom_sep = re.compile(r"\s*,\s*")
 time_units = ["year", "month", "day", "week", "hour", "minute", "second"]
+INVALID_WIDTH = "invalid width"
+TOO_MANY_INTERVALS = "too many intervals"
 
 
-def fixed_width_discretization(data, var, width):
+def _fixed_width_discretization(
+        data: Table,
+        var: Union[ContinuousVariable, str, int],
+        width: str) -> Union[DiscreteVariable, str]:
+    """
+    Discretize numeric variable with fixed bin width. Used in method definition.
+
+    Width is given as string (coming from line edit). The labels for the new
+    variable will have the same number of digits; this is more appropriate
+    than the number of digits in the original variable, which may be too large.
+
+    Args:
+        data: data used to deduce the interval of values
+        var: variable to discretize
+        width: interval width
+
+    Returns:
+        Discrete variable, if successful; a string with error otherwise
+    """
     digits = len(width) - width.index(".") - 1 if "." in width else 0
     try:
         width = float(width)
     except ValueError:
-        return "invalid width"
+        return INVALID_WIDTH
     if width <= 0:
-        return "invalid width"
+        return INVALID_WIDTH
     try:
         return disc.FixedWidth(width, digits)(data, var)
     except disc.TooManyIntervals:
-        return "too many intervals"
+        return TOO_MANY_INTERVALS
 
 
-def fixed_time_width_discretization(data, var, width, unit):
+def _fixed_time_width_discretization(
+        data: Table,
+        var: Union[TimeVariable, str, int],
+        width: str, unit: int) -> Union[DiscreteVariable]:
+    """
+    Discretize time variable with fixed bin width. Used in method definition.
+
+    Width is given as string (coming from line edit).
+
+    Args:
+        data: data used to deduce the interval of values
+        var: variable to discretize
+        width: interval width
+        unit: 0 = year, 1 = month, 2 = week, 3 = day, 4 = hour, 5 = min, 6 = sec
+
+    Returns:
+        Discrete variable, if successful; a string with error otherwise
+    """
     try:
         width = int(width)
     except ValueError:
-        return "invalid width"
+        return INVALID_WIDTH
     if width <= 0:
-        return "invalid width"
+        return INVALID_WIDTH
     if unit == 3:  # week
         width *= 7
     unit -= unit >= 3
     try:
         return disc.FixedTimeWidth(width, unit)(data, var)
     except disc.TooManyIntervals:
-        return "too many intervals"
+        return TOO_MANY_INTERVALS
 
 
-def custom_discretization(data, var, points):
+def _custom_discretization(
+        _,
+        var: Union[ContinuousVariable, str, int],
+        points: str) -> Union[DiscreteVariable, str]:
+    """
+    Discretize variable using custom thresholds. Used in method definition.
+
+    Thresholds are given as string (coming from line edit).
+
+    Args:
+        data: data used to deduce the interval of values
+        var: variable to discretize
+        points: thresholds
+
+    Returns:
+        Discrete variable, if successful; a string with error otherwise
+    """
     try:
         cuts = [float(x) for x in re_custom_sep.split(points.strip())]
     except ValueError:
@@ -78,17 +126,22 @@ def custom_discretization(data, var, points):
 
 
 class Methods(IntEnum):
+    # pylint: disable=invalid-name
     Default, Keep, MDL, EqualFreq, EqualWidth, Remove, Custom, Binning, \
         FixedWidth, FixedWidthTime = range(10)
 
 
 class MethodDesc(NamedTuple):
-    id_: Methods
-    label: str
-    short_desc: str
-    tooltip: str
-    function: Optional[Callable]
-    controls: Tuple[str, ...] = ()
+    """
+    Definitions of all methods; used for creation of interface and calling
+    """
+    id_: Methods  # Method id
+    label: str  # Label used for radio button
+    short_desc: str  # Short descriptions for list views
+    tooltip: str  # Tooltip for radio button
+    # Discretization function, see, e.g. fixed_width_discretization
+    function: Optional[Callable[..., Union[DiscreteVariable, str]]]
+    controls: Tuple[str, ...] = ()  # Widget attributes with related ux controls
 
 
 Options: Dict[Methods, MethodDesc] = {
@@ -134,17 +187,17 @@ Options: Dict[Methods, MethodDesc] = {
         MethodDesc(Methods.FixedWidth,
                    "Fixed width: ", "fixed width {}",
                    "Create bins with the given width (not for time variables)",
-                   fixed_width_discretization,
+                   _fixed_width_discretization,
                    ("width_line", )),
         MethodDesc(Methods.FixedWidthTime,
                    "Time interval: ", "time interval, {} {}",
                    "Create bins with the give width (for time variables)",
-                   fixed_time_width_discretization,
+                   _fixed_time_width_discretization,
                    ("width_time_line", "width_time_unit")),
         MethodDesc(Methods.Custom,
                    "Custom: ", "custom: {}",
                    "Use manually specified thresholds",
-                   custom_discretization,
+                   _custom_discretization,
                    ("threshold_line", ))
     )
 }
@@ -169,34 +222,53 @@ DefaultKey = None
 
 
 def variable_key(var: ContinuousVariable) -> KeyType:
+    """Key for that variable in var_hints and discretized_vars"""
     return var.name, isinstance(var, TimeVariable)
 
 
-class ListViewSearch(ListViewSearch):
+class ListViewSearch(listview.ListViewSearch):
+    """
+    A list view with two components shown above it:
+    - a listview containing a single item representing default settings
+    - a filter for search
+
+    The class is based on listview.ListViewSearch and needs to have the same
+    name in order to override its private method __layout.
+
+    Inherited __init__ calls __layout, so `default_view` must be constructed
+    there. Construction before calling super().__init__ doesn't work because
+    PyQt does not allow it.
+    """
     class DiscDelegate(QStyledItemDelegate):
+        """
+        A delegate that shows items (variables) with specific settings in bold
+        """
         def initStyleOption(self, option, index):
             super().initStyleOption(option, index)
             option.font.setBold(index.data(Qt.UserRole).hint is not None)
 
-    # Same name so that we can override a private method __layout
     def __init__(self, *args, **kwargs):
         self.default_view = None
         super().__init__(preferred_size=QSize(350, -1), *args, **kwargs)
         self.setItemDelegate(self.DiscDelegate(self))
 
     def select_default(self):
+        """Select the item representing default settings"""
         index = self.default_view.model().index(0)
-        self.default_view.selectionModel().select(index,
-                                                  QItemSelectionModel.Select)
+        self.default_view.selectionModel().select(
+            index, QItemSelectionModel.Select)
 
+    # pylint: disable=unused-private-member
     def __layout(self):
         if self.default_view is None:  # __layout was called from __init__
             view = self.default_view = QListView(self)
             view.setModel(DefaultDiscModel())
             view.verticalScrollBar().setDisabled(True)
             view.horizontalScrollBar().setDisabled(True)
-            view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            view.setHorizontalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            view.setVerticalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             font = view.font()
             font.setBold(True)
             view.setFont(font)
@@ -220,7 +292,8 @@ class ListViewSearch(ListViewSearch):
         self.setViewportMargins(margins)
 
 
-def format_desc(hint):
+def format_desc(hint: VarHint) -> str:
+    """Describe the method and its parameters; used in list views and report"""
     if hint is None:
         return Options[Methods.Default].short_desc
     desc = Options[hint.method_id].short_desc
@@ -236,6 +309,12 @@ def format_desc(hint):
 
 
 class DiscDomainModel(DomainModel):
+    """
+    Domain model that adds description of discretization methods and thresholds
+
+    Also provides a tooltip that shows bins, that is, labels of the discretized
+    variable.
+    """
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.ToolTipRole:
             var = self[index.row()]
@@ -258,27 +337,34 @@ class DiscDomainModel(DomainModel):
 
 
 class DefaultDiscModel(QAbstractListModel):
+    """
+    A model used for showing "Default settings" above the list view with var
+    """
     icon = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if DefaultDiscModel.icon is None:
-            DefaultDiscModel.icon = createAttributePixmap("★", QColor(0, 0, 0, 0), Qt.black)
+            DefaultDiscModel.icon = gui.createAttributePixmap(
+                "★", QColor(0, 0, 0, 0), Qt.black)
         self.hint: VarHint = DefaultHint
 
-    def rowCount(self, parent):
+    @staticmethod
+    def rowCount(parent):
         return 0 if parent.isValid() else 1
 
-    def columnCount(self, parent):
+    @staticmethod
+    def columnCount(parent):
         return 0 if parent.isValid() else 1
 
-    def data(self, index, role=Qt.DisplayRole):
+    def data(self, _, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             return "Default setting: " + format_desc(self.hint)
         elif role == Qt.DecorationRole:
             return DefaultDiscModel.icon
         elif role == Qt.ToolTipRole:
             return "Default setting for variables without specific setings"
+        return None
 
     def setData(self, index, value, role):
         if role == Qt.UserRole:
@@ -289,7 +375,14 @@ class DefaultDiscModel(QAbstractListModel):
 
 
 class IncreasingNumbersListValidator(QValidator):
-    def validate(self, string: str, pos: int) -> Tuple[QValidator.State, str, int]:
+    """
+    A validator for custom thresholds
+
+    Requires a string with increasing comma-separated values. If the string
+    ends with number followed by space, it inserts a comma.
+    """
+    @staticmethod
+    def validate(string: str, pos: int) -> Tuple[QValidator.State, str, int]:
         for i, c in enumerate(string, start=1):
             if c not in "+-., 0123456789":
                 return QValidator.Invalid, string, i
@@ -308,54 +401,55 @@ class IncreasingNumbersListValidator(QValidator):
             prev = value
         return QValidator.Acceptable, string, pos
 
+    @staticmethod
+    def show_tip(
+            widget: QWidget, pos: QPoint, text: str, timeout=-1,
+            textFormat=Qt.AutoText, wordWrap=None):
+        """Show a tooltip; used for invalid custom thresholds"""
+        propname = __name__ + "::show_tip_qlabel"
+        if timeout < 0:
+            timeout = widget.toolTipDuration()
+        if timeout < 0:
+            timeout = 5000 + 40 * max(0, len(text) - 100)
+        tip = widget.property(propname)
+        if not text and tip is None:
+            return
 
-def show_tip(
-        widget: QWidget, pos: QPoint, text: str, timeout=-1,
-        textFormat=Qt.AutoText, wordWrap=None):
-    propname = __name__ + "::show_tip_qlabel"
-    if timeout < 0:
-        timeout = widget.toolTipDuration()
-    if timeout < 0:
-        timeout = 5000 + 40 * max(0, len(text) - 100)
-    tip = widget.property(propname)
-    if not text and tip is None:
-        return
+        def hide():
+            w = tip.parent()
+            w.setProperty(propname, None)
+            tip.timer.stop()
+            tip.close()
+            tip.deleteLater()
 
-    def hide():
-        w = tip.parent()
-        w.setProperty(propname, None)
-        tip.timer.stop()
-        tip.close()
-        tip.deleteLater()
+        if not isinstance(tip, QLabel):
+            tip = QLabel(objectName="tip-label", focusPolicy=Qt.NoFocus)
+            tip.setBackgroundRole(QPalette.ToolTipBase)
+            tip.setForegroundRole(QPalette.ToolTipText)
+            tip.setPalette(QToolTip.palette())
+            tip.setFont(QApplication.font("QTipLabel"))
+            tip.setContentsMargins(2, 2, 2, 2)
+            tip.timer = QTimer(tip, singleShot=True, objectName="hide-timer")
+            tip.timer.timeout.connect(hide)
+            widget.setProperty(propname, tip)
+            tip.setParent(widget, Qt.ToolTip)
 
-    if not isinstance(tip, QLabel):
-        tip = QLabel(objectName="tip-label", focusPolicy=Qt.NoFocus)
-        tip.setBackgroundRole(QPalette.ToolTipBase)
-        tip.setForegroundRole(QPalette.ToolTipText)
-        tip.setPalette(QToolTip.palette())
-        tip.setFont(QApplication.font("QTipLabel"))
-        tip.setContentsMargins(2, 2, 2, 2)
-        tip.timer = QTimer(tip, singleShot=True, objectName="hide-timer")
-        tip.timer.timeout.connect(hide)
-        widget.setProperty(propname, tip)
-        tip.setParent(widget, Qt.ToolTip)
+        tip.setText(text)
+        tip.setTextFormat(textFormat)
+        if wordWrap is None:
+            wordWrap = textFormat != Qt.PlainText
+        tip.setWordWrap(wordWrap)
 
-    tip.setText(text)
-    tip.setTextFormat(textFormat)
-    if wordWrap is None:
-        wordWrap = textFormat != Qt.PlainText
-    tip.setWordWrap(wordWrap)
-
-    if not text:
-        hide()
-    else:
-        tip.timer.start(timeout)
-        tip.show()
-        tip.move(pos)
+        if not text:
+            hide()
+        else:
+            tip.timer.start(timeout)
+            tip.show()
+            tip.move(pos)
 
 
 class DiscretizeContextHandler(ContextHandler):
-    def match(self, context, data: Table):
+    def match(self, context, data: Table):  # pylint: disable=arguments-differ
         if data is None:
             return self.NO_MATCH
         domain: Domain = data.domain
@@ -377,12 +471,15 @@ class DiscretizeContextHandler(ContextHandler):
 # These are no longer used, but needed for loading and migrating old pickles.
 # We insert them into namespace instead of normally defining them, in order
 # to hide it from IDE's and avoid mistakenly using them.
+# pylint: disable=wrong-import-position,wrong-import-order
+from collections import namedtuple
 globals().update(dict(
     DState=namedtuple(
         "DState",
-        ["method",    # discretization method
-         "points",    # induced cut points
-         "disc_var"]  # induced discretized variable
+        ["method",  # discretization method
+         "points",  # induced cut points
+         "disc_var"],
+        defaults=(None, None)  # induced discretized variable
     ),
     Default=namedtuple("Default", ["method"]),
     Leave=namedtuple("Leave", []),
@@ -436,7 +533,8 @@ class OWDiscretize(widget.OWWidget):
         self.varview.select_default()
 
     def _create_var_list(self, box):
-        # If we don't elide, remove the `uniformItemSize` argument
+        """Create list view with variables"""
+        # If we decide to not elide, remove the `uniformItemSize` argument
         self.varview = ListViewSearch(
             selectionMode=QListView.ExtendedSelection, uniformItemSizes=True)
         self.varview.setModel(
@@ -448,10 +546,11 @@ class OWDiscretize(widget.OWWidget):
             self._var_selection_changed)
         self.varview.default_view.selectionModel().selectionChanged.connect(
             self._default_selected)
-        self._set_default_data()
+        self._update_default_model()
         box.layout().addWidget(self.varview)
 
     def _create_buttons(self, box):
+        """Create radio buttons"""
         def intspin():
             s = QSpinBox(self)
             s.setMinimum(2)
@@ -503,9 +602,10 @@ class OWDiscretize(widget.OWWidget):
                 p = edit.mapToGlobal(cr.bottomRight())
                 edit.setPalette(palette)
                 if state != QValidator.Acceptable and edit.isVisible():
-                    show_tip(edit, p, edit.toolTip(), textFormat=Qt.RichText)
+                    validator.show_tip(edit, p, edit.toolTip(),
+                                       textFormat=Qt.RichText)
                 else:
-                    show_tip(edit, p, "")
+                    validator.show_tip(edit, p, "")
             return edit, edit.textChanged
 
         children = []
@@ -571,26 +671,43 @@ class OWDiscretize(widget.OWWidget):
             w.itemAt(0).widget().setFixedHeight(maxheight)
         button_box.layout().addStretch(1)
 
-    @Inputs.data
-    def set_data(self, data):
-        self.closeContext()
-        self.data = data
+    def _update_default_model(self):
+        """Update data in the model showing default settings"""
+        model = self.varview.default_view.model()
+        model.setData(model.index(0), self.var_hints[DefaultKey], Qt.UserRole)
 
-        self.var_hints = {DefaultKey: DefaultHint}
-        self.discretized_vars = {}
-
-        if self.data is not None:
-            self.varview.model().set_domain(data.domain)
-            self.openContext(data)
-            self._update_points()
+    def _set_mdl_button(self):
+        """Disable MDL discretization for data with non-discrete class"""
+        mdl_button = self.button_group.button(Methods.MDL)
+        if self.data is None or self.data.domain.has_discrete_class:
+            mdl_button.setEnabled(True)
         else:
-            self.varview.model().set_domain(None)
+            if mdl_button.isChecked():
+                self._check_button(Methods.Keep, True)
+            mdl_button.setEnabled(False)
 
-        self._set_default_data()
-        self._set_mdl_button()
-        self.commit.now()
+    def _check_button(self, method_id: Methods, checked: bool):
+        """Checks the given button"""
+        self.button_group.button(method_id).setChecked(checked)
 
-    def _get_values(self, controls: Tuple[str]):
+    def _uncheck_all_buttons(self):
+        """Uncheck all radio buttons"""
+        group = self.button_group
+        button = group.checkedButton()
+        if button is not None:
+            group.setExclusive(False)
+            button.setChecked(False)
+            group.setExclusive(True)
+
+    def _set_radio_enabled(self, method_id: Methods, value: bool):
+        """Enable/disable radio button and related controls"""
+        self.button_group.button(method_id).setEnabled(value)
+        for control_name in Options[method_id].controls:
+            getattr(self, control_name).setEnabled(value)
+
+    def _get_values(self, method_id: Methods) -> Tuple[Union[int, float, str]]:
+        """Return parameters from controls pertaining to the given method"""
+        controls = Options[method_id].controls
         values = []
         for control_name in controls:
             control = getattr(self, control_name)
@@ -602,8 +719,12 @@ class OWDiscretize(widget.OWWidget):
                 values.append(control.text())
         return tuple(values)
 
-    def _set_values(self, controls: Tuple[str],
-                   values: Tuple[Union[str, int, float]]):
+    def _set_values(self, method_id: Methods,
+                    values: Tuple[Union[str, int, float]]):
+        """
+        Set controls pertaining to the given method to parameters from hint
+        """
+        controls = Options[method_id].controls
         for control_name, value in zip(controls, values):
             control = getattr(self, control_name)
             if isinstance(control, QSpinBox):
@@ -613,22 +734,30 @@ class OWDiscretize(widget.OWWidget):
             else:
                 control.setText(value)
 
-    def _set_mdl_button(self):
-        mdl_button = self.button_group.button(Methods.MDL)
-        if self.data is None or self.data.domain.has_discrete_class:
-            mdl_button.setEnabled(True)
-        else:
-            if mdl_button.isChecked():
-                self._set_button(Methods.Keep, True)
-            mdl_button.setEnabled(False)
+    def varkeys_for_selection(self) -> List[KeyType]:
+        """
+        Return list of KeyType's for selected variables (for indexing var_hints)
 
-    def varkeys_for_selection(self):
+        If 'Default settings' are selected, this returns DefaultKey
+        """
         model = self.varview.model()
-        varkeys = [variable_key(model[i]) for i in self.selected_indices()]
+        varkeys = [variable_key(model[index.row()])
+                   for index in self.varview.selectionModel().selectedRows()]
         return varkeys or [DefaultKey]  # default settings are selected
 
-    def update_hints(self, method_id):
-        args = self._get_values(Options[method_id].controls)
+    def update_hints(self, method_id: Methods):
+        """
+        Callback for radio buttons and for controls regulating parameters
+
+        This function:
+        - updates `var_hints` for all selected methods
+        - invalidates (removes) `discretized_vars` for affected variables
+        - calls _update_discretizations to compute and commit new discretization
+        - calls deferred commit
+
+        Data for list view models is updated in _update_discretizations
+        """
+        args = self._get_values(method_id)
         keys = self.varkeys_for_selection()
         if method_id == Methods.Default:
             for key in keys:
@@ -644,18 +773,29 @@ class OWDiscretize(widget.OWWidget):
             del self.discretized_vars[key]
 
         if keys == [DefaultKey]:
-            self._set_default_data()
-        self._update_points()
+            self._update_default_model()
+        self._update_discretizations()
+        self.commit.deferred()
 
-    def _set_default_data(self):
-        model = self.varview.default_view.model()
-        model.setData(model.index(0), self.var_hints[DefaultKey], Qt.UserRole)
+    def _update_discretizations(self):
+        """
+        Compute invalidated (missing) discretizations
 
-    def _update_points(self):
+        Also set data for list view models for all invalidated variables
+        """
         if self.data is None:
             return
 
-        def induce_cuts(data, var, hint: VarHint):
+        def discretize(data: Table, var: ContinuousVariable, hint: VarHint) \
+                -> Tuple[str, Optional[Variable]]:
+            """
+            Discretize using method and data in the hint.
+
+            Returns a description (list of points or error/warning) and a
+            - discrete variable
+            - same variable (if kept numeric)
+            - None (if removed or errored)
+            """
             if isinstance(var, TimeVariable):
                 if hint.method_id in (Methods.FixedWidth, Methods.Custom):
                     return ": <keep, time var>", var
@@ -671,29 +811,40 @@ class OWDiscretize(widget.OWWidget):
                 return "", None  # removed
             elif dvar is var:
                 return "", var  # no transformation
-            elif isinstance(dvar.compute_value, disc.Discretizer):
-                points = dvar.compute_value.points
-                if len(points) == 0:
-                    return " <removed>", None
-                return ": " + ", ".join(map(var.repr_val, points)), dvar
-            raise ValueError
+            thresholds = dvar.compute_value.points
+            if len(thresholds) == 0:
+                return " <removed>", None
+            return ": " + ", ".join(map(var.repr_val, thresholds)), dvar
 
         default_hint = self.var_hints[DefaultKey]
         model = self.varview.model()
         for index, var in enumerate(model):
             key = variable_key(var)
-            if key not in self.discretized_vars:
-                var_hint = self.var_hints.get(key)
-                points, dvar = induce_cuts(self.data, var, var_hint or default_hint)
-                self.discretized_vars[key] = dvar
-                values = getattr(dvar, "values", ())
-                model.setData(model.index(index),
-                              DiscDesc(var_hint, points, values),
-                              Qt.UserRole)
-
-        self.commit.deferred()
+            if key in self.discretized_vars:
+                continue  # still valid
+            var_hint = self.var_hints.get(key)
+            points, dvar = discretize(self.data, var, var_hint or default_hint)
+            self.discretized_vars[key] = dvar
+            values = getattr(dvar, "values", ())
+            model.setData(model.index(index),
+                          DiscDesc(var_hint, points, values),
+                          Qt.UserRole)
 
     def _copy_to_manual(self):
+        """
+        Callback for 'CC' button
+
+        Sets selected variables' method to "Custom" and copies thresholds
+        to their VarHints. Variables that are not discretized (for any reason)
+        are skipped.
+
+        Discretizations are invalidated and then updated
+        (`_update_discretizations`).
+
+        If all selected variables have the same thresholds, it copies it to
+        the line edit. Otherwise it unchecks all radio buttons to keep the
+        interface consistent.
+        """
         varkeys = self.varkeys_for_selection()
         texts = set()
         for key in varkeys:
@@ -707,83 +858,90 @@ class OWDiscretize(widget.OWWidget):
         if len(texts) == 1:
             self.threshold_line.setText(texts.pop())
         else:
-            self._uncheck_all_radios()
-        self._update_points()
-
-    def _set_button(self, method_id, checked):
-        self.button_group.button(method_id).setChecked(checked)
+            self._uncheck_all_buttons()
+        self._update_discretizations()
+        self.commit.deferred()
 
     def _default_selected(self, selected):
+        """Callback for selecting 'Default setting'"""
         if not selected:
+            # Prevent infinite recursion (with _var_selection_changed)
             return
         self.varview.selectionModel().clearSelection()
-        self.set_method_state([DefaultKey])
-        self.enable_radios([DefaultKey])
+        self._update_interface()
+
+        set_enabled = self._set_radio_enabled
+        set_enabled(Methods.Default, False)
+        set_enabled(Methods.FixedWidth, True)
+        set_enabled(Methods.FixedWidthTime, True)
+        set_enabled(Methods.Custom, True)
 
     def _var_selection_changed(self, selected):
+        """Callback for changed selection in listview with variables"""
         if not selected:
+            # Prevent infinite recursion (with _default_selected)
             return
         self.varview.default_view.selectionModel().clearSelection()
-        indices = self.selected_indices()
-        # set of all methods for the current selection
-        model = self.varview.model()
-        keys = [variable_key(model[i]) for i in indices]
-        self.set_method_state(keys)
-        self.enable_radios(keys)
+        self._update_interface()
 
-    def enable_radios(self, keys):
-        def set_enabled(method_id, value):
-            self.button_group.button(method_id).setEnabled(value)
-            for control_name in Options[method_id].controls:
-                getattr(self, control_name).setEnabled(value)
+        set_enabled = self._set_radio_enabled
+        vars_ = [self.data.domain[name]
+                 for name, _ in self.varkeys_for_selection()]
+        no_time = not any(isinstance(var, TimeVariable) for var in vars_)
+        all_time = all(isinstance(var, TimeVariable) for var in vars_)
+        set_enabled(Methods.Default, True)
+        set_enabled(Methods.FixedWidth, no_time)
+        set_enabled(Methods.Custom, no_time)
+        set_enabled(Methods.FixedWidthTime, all_time)
 
-        if keys == [DefaultKey]:
-            set_enabled(Methods.Default, False)
-            set_enabled(Methods.FixedWidth, True)
-            set_enabled(Methods.FixedWidthTime, True)
-            set_enabled(Methods.Custom, True)
-        else:
-            set_enabled(Methods.Default, True)
-            vars_ = [self.data.domain[name] for name, _ in keys]
-            no_time = not any(isinstance(var, TimeVariable) for var in vars_)
-            set_enabled(Methods.FixedWidth, no_time)
-            set_enabled(Methods.Custom, no_time)
-            set_enabled(Methods.FixedWidthTime,
-                        all(isinstance(var, TimeVariable) for var in vars_))
+    def _update_interface(self):
+        """
+        Update the user interface according to selection
 
-    def set_method_state(self, keys):
+        - If VarHints for all selected variables are the same, check the
+          corresponding radio button and fill the corresponding controls;
+        - otherwise, uncheck all radios.
+        """
+        keys = self.varkeys_for_selection()
         mset = list(unique_everseen(map(self.var_hints.get, keys)))
         if len(mset) == 1:
             if mset == [None]:
                 method_id, args = Methods.Default, ()
             else:
                 method_id, args = mset.pop()
-            method = Options[method_id]
-            self._set_button(method_id, True)
-            self._set_values(method.controls, args)
-            if method_id != Methods.Custom:
-                self.threshold_line.setText("")
+            self._check_button(method_id, True)
+            self._set_values(method_id, args)
         else:
-            self._uncheck_all_radios()
+            self._uncheck_all_buttons()
 
-    def _uncheck_all_radios(self):
-        group = self.button_group
-        button = group.checkedButton()
-        if button is not None:
-            group.setExclusive(False)
-            button.setChecked(False)
-            group.setExclusive(True)
+    @Inputs.data
+    def set_data(self, data: Optional[Table]):
+        self.closeContext()
+        self.data = data
 
-    def selected_indices(self):
-        rows = self.varview.selectionModel().selectedRows()
-        return [index.row() for index in rows]
+        self.var_hints = {DefaultKey: DefaultHint}
+        self.discretized_vars = {}
 
-    def discretized_domain(self):
-        def disc_var(var: ContinuousVariable) -> Optional[DiscreteVariable]:
-            return self.discretized_vars.get(variable_key(var), var)
+        if self.data is not None:
+            self.varview.model().set_domain(data.domain)
+            self.openContext(data)
+            self._update_discretizations()
+        else:
+            self.varview.model().set_domain(None)
 
+        self._update_default_model()
+        self._set_mdl_button()
+        self.commit.now()
+
+    @gui.deferred
+    def commit(self):
         if self.data is None:
-            return None
+            self.Outputs.data.send(None)
+            return
+
+        def disc_var(var: ContinuousVariable) \
+                -> Union[DiscreteVariable, ContinuousVariable]:
+            return self.discretized_vars.get(variable_key(var), var)
 
         attributes = (disc_var(v) for v in self.data.domain.attributes)
         attributes = [v for v in attributes if v is not None]
@@ -791,14 +949,8 @@ class OWDiscretize(widget.OWWidget):
         class_vars = (disc_var(v) for v in self.data.domain.class_vars)
         class_vars = [v for v in class_vars if v is not None]
 
-        return Domain(attributes, class_vars, metas=self.data.domain.metas)
-
-    @gui.deferred
-    def commit(self):
-        output = None
-        if self.data is not None:
-            domain = self.discretized_domain()
-            output = self.data.transform(domain)
+        domain = Domain(attributes, class_vars, metas=self.data.domain.metas)
+        output = self.data.transform(domain)
         self.Outputs.data.send(output)
 
     def send_report(self):

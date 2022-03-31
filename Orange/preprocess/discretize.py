@@ -100,8 +100,8 @@ class BinSql:
         self.points = points
 
     def __call__(self):
-        return 'width_bucket(%s, ARRAY%s::double precision[])' % (
-            self.var.to_sql(), str(self.points))
+        return f'width_bucket({self.var.to_sql()}, ' \
+               f'ARRAY{str(self.points)}::double precision[])'
 
 
 class SingleValueSql:
@@ -208,10 +208,10 @@ class FixedWidth(Discretization):
         values = values.X if values.X.size else values.Y
         points = []
         if values.size:
-            min, max = ut.nanmin(values), ut.nanmax(values)
-            if not np.isnan(min):
-                minf = int(1 + np.floor(min / self.width))
-                maxf = int(1 + np.floor(max / self.width))
+            mn, mx = ut.nanmin(values), ut.nanmax(values)
+            if not np.isnan(mn):
+                minf = int(1 + np.floor(mn / self.width))
+                maxf = int(1 + np.floor(mx / self.width))
                 if maxf - minf - 1 >= 100:
                     raise TooManyIntervals
                 points = [i * self.width for i in range(minf, maxf)]
@@ -258,6 +258,7 @@ def _simplified_time_intervals(labels):
                 if common + i == 2:
                     i -= 1
                 return b[i:]
+        return b  # can't come here (unless a == b?!)
 
 
     if not labels:
