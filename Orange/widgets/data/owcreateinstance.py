@@ -453,7 +453,7 @@ class OWCreateInstance(OWWidget):
     icon = "icons/CreateInstance.svg"
     category = "Transform"
     keywords = ["simulator"]
-    priority = 4000
+    priority = 2310
 
     class Inputs:
         data = Input("Data", Table)

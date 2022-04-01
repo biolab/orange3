@@ -63,6 +63,7 @@ class OWMelt(widget.OWWidget):
     category = "Transform"
     icon = "icons/Melt.svg"
     keywords = ["shopping list", "wide", "narrow"]
+    priority = 2230
 
     class Inputs:
         data = widget.Input("Data", Table)

@@ -16,6 +16,7 @@ class OWPurgeDomain(widget.OWWidget):
     icon = "icons/PurgeDomain.svg"
     category = "Transform"
     keywords = ["remove", "delete", "unused"]
+    priority = 2210
 
     class Inputs:
         data = Input("Data", Table)

@@ -301,6 +301,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
     category = "Transform"
     icon = "icons/GroupBy.svg"
     keywords = ["aggregate", "group by"]
+    priority = 1210
 
     class Inputs:
         data = Input("Data", Table, doc="Input data table")

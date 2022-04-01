@@ -24,6 +24,7 @@ class OWContinuize(widget.OWWidget):
     category = "Transform"
     keywords = ["encode", "dummy", "numeric", "one-hot", "binary",
                 "treatment", "contrast"]
+    priority = 2120
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
