@@ -58,8 +58,11 @@ AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'http://orange.biolab.si/'
 PROJECT_URLS = {
-    'Documentation': 'https://orange3.readthedocs.io',
-    'Source': 'https://github.com/biolab/orange3',
+    'Homepage': 'https://orangedatamining.com/',
+    'Documentation': 'https://orangedatamining.com/docs',
+    'Source Code': 'https://github.com/biolab/orange3',
+    'Issue Tracker': 'https://github.com/biolab/orange3/issues',
+    'Donate': 'https://github.com/sponsors/biolab'
 }
 LICENSE = 'GPLv3+'
 
