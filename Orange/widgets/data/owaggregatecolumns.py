@@ -20,7 +20,7 @@ class OWAggregateColumns(widget.OWWidget):
     description = "Compute a sum, max, min ... of selected columns."
     category = "Transform"
     icon = "icons/AggregateColumns.svg"
-    priority = 100
+    priority = 1200
     keywords = ["aggregate", "sum", "product", "max", "min", "mean",
                 "median", "variance"]
 

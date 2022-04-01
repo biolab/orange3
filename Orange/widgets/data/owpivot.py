@@ -727,7 +727,7 @@ class OWPivot(OWWidget):
     description = "Reshape data table based on column values."
     category = "Transform"
     icon = "icons/Pivot.svg"
-    priority = 1000
+    priority = 1220
     keywords = ["pivot", "group", "aggregate"]
 
     class Inputs:

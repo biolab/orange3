@@ -480,6 +480,7 @@ class OWFeatureConstructor(OWWidget):
     category = "Transform"
     icon = "icons/FeatureConstructor.svg"
     keywords = ['function', 'lambda']
+    priority = 2240
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

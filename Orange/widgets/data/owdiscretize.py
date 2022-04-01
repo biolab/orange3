@@ -258,6 +258,7 @@ class OWDiscretize(widget.OWWidget):
     category = "Transform"
     icon = "icons/Discretize.svg"
     keywords = ["bin", "categorical", "nominal", "ordinal"]
+    priority = 2130
 
     class Inputs:
         data = Input("Data", Orange.data.Table, doc="Input data table")
