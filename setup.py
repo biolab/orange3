@@ -45,7 +45,7 @@ is_conda = os.path.exists(os.path.join(sys.prefix, 'conda-meta'))
 NAME = 'Orange3'
 
 VERSION = '3.32.0'
-ISRELEASED = False
+ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
 FULLVERSION = VERSION
