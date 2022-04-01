@@ -121,22 +121,6 @@
   "Transform",
   [
    {
-    "text": "Aggregate Columns",
-    "doc": "visual-programming/source/widgets/data/aggregatecolumns.md",
-    "icon": "../Orange/widgets/data/icons/AggregateColumns.svg",
-    "background": "#FF9D5E",
-    "keywords": [
-     "aggregate",
-     "sum",
-     "product",
-     "max",
-     "min",
-     "mean",
-     "median",
-     "variance"
-    ]
-   },
-   {
     "text": "Data Sampler",
     "doc": "visual-programming/source/widgets/data/datasampler.md",
     "icon": "../Orange/widgets/data/icons/DataSampler.svg",
@@ -167,15 +151,11 @@
     ]
    },
    {
-    "text": "Pivot Table",
-    "doc": "visual-programming/source/widgets/data/pivot.md",
-    "icon": "../Orange/widgets/data/icons/Pivot.svg",
+    "text": "Transpose",
+    "doc": "visual-programming/source/widgets/data/transpose.md",
+    "icon": "../Orange/widgets/data/icons/Transpose.svg",
     "background": "#FF9D5E",
-    "keywords": [
-     "pivot",
-     "group",
-     "aggregate"
-    ]
+    "keywords": []
    },
    {
     "text": "Merge Data",
@@ -205,26 +185,47 @@
     "keywords": []
    },
    {
-    "text": "Transpose",
-    "doc": "visual-programming/source/widgets/data/transpose.md",
-    "icon": "../Orange/widgets/data/icons/Transpose.svg",
+    "text": "Unique",
+    "doc": "visual-programming/source/widgets/data/unique.md",
+    "icon": "../Orange/widgets/data/icons/Unique.svg",
     "background": "#FF9D5E",
     "keywords": []
    },
    {
-    "text": "Randomize",
-    "doc": "visual-programming/source/widgets/data/randomize.md",
-    "icon": "../Orange/widgets/data/icons/Random.svg",
-    "background": "#FF9D5E",
-    "keywords": []
-   },
-   {
-    "text": "Preprocess",
-    "doc": "visual-programming/source/widgets/data/preprocess.md",
-    "icon": "../Orange/widgets/data/icons/Preprocess.svg",
+    "text": "Aggregate Columns",
+    "doc": "visual-programming/source/widgets/data/aggregatecolumns.md",
+    "icon": "../Orange/widgets/data/icons/AggregateColumns.svg",
     "background": "#FF9D5E",
     "keywords": [
-     "process"
+     "aggregate",
+     "sum",
+     "product",
+     "max",
+     "min",
+     "mean",
+     "median",
+     "variance"
+    ]
+   },
+   {
+    "text": "Group by",
+    "doc": "visual-programming/source/widgets/data/groupby.md",
+    "icon": "../Orange/widgets/data/icons/GroupBy.svg",
+    "background": "#FF9D5E",
+    "keywords": [
+     "aggregate",
+     "group by"
+    ]
+   },
+   {
+    "text": "Pivot Table",
+    "doc": "visual-programming/source/widgets/data/pivot.md",
+    "icon": "../Orange/widgets/data/icons/Pivot.svg",
+    "background": "#FF9D5E",
+    "keywords": [
+     "pivot",
+     "group",
+     "aggregate"
     ]
    },
    {
@@ -237,6 +238,15 @@
     ]
    },
    {
+    "text": "Preprocess",
+    "doc": "visual-programming/source/widgets/data/preprocess.md",
+    "icon": "../Orange/widgets/data/icons/Preprocess.svg",
+    "background": "#FF9D5E",
+    "keywords": [
+     "process"
+    ]
+   },
+   {
     "text": "Impute",
     "doc": "visual-programming/source/widgets/data/impute.md",
     "icon": "../Orange/widgets/data/icons/Impute.svg",
@@ -244,25 +254,6 @@
     "keywords": [
      "substitute",
      "missing"
-    ]
-   },
-   {
-    "text": "Python Script",
-    "doc": "visual-programming/source/widgets/data/pythonscript.md",
-    "icon": "../Orange/widgets/data/icons/PythonScript.svg",
-    "background": "#FF9D5E",
-    "keywords": [
-     "program",
-     "function"
-    ]
-   },
-   {
-    "text": "Create Instance",
-    "doc": "visual-programming/source/widgets/data/createinstance.md",
-    "icon": "../Orange/widgets/data/icons/CreateInstance.svg",
-    "background": "#FF9D5E",
-    "keywords": [
-     "simulator"
     ]
    },
    {
@@ -281,13 +272,6 @@
     ]
    },
    {
-    "text": "Create Class",
-    "doc": "visual-programming/source/widgets/data/createclass.md",
-    "icon": "../Orange/widgets/data/icons/CreateClass.svg",
-    "background": "#FF9D5E",
-    "keywords": []
-   },
-   {
     "text": "Discretize",
     "doc": "visual-programming/source/widgets/data/discretize.md",
     "icon": "../Orange/widgets/data/icons/Discretize.svg",
@@ -300,23 +284,21 @@
     ]
    },
    {
-    "text": "Feature Constructor",
-    "doc": "visual-programming/source/widgets/data/featureconstructor.md",
-    "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
+    "text": "Randomize",
+    "doc": "visual-programming/source/widgets/data/randomize.md",
+    "icon": "../Orange/widgets/data/icons/Random.svg",
     "background": "#FF9D5E",
-    "keywords": [
-     "function",
-     "lambda"
-    ]
+    "keywords": []
    },
    {
-    "text": "Group by",
-    "doc": "visual-programming/source/widgets/data/groupby.md",
-    "icon": "../Orange/widgets/data/icons/GroupBy.svg",
+    "text": "Purge Domain",
+    "doc": "visual-programming/source/widgets/data/purgedomain.md",
+    "icon": "../Orange/widgets/data/icons/PurgeDomain.svg",
     "background": "#FF9D5E",
     "keywords": [
-     "aggregate",
-     "group by"
+     "remove",
+     "delete",
+     "unused"
     ]
    },
    {
@@ -331,22 +313,40 @@
     ]
    },
    {
-    "text": "Purge Domain",
-    "doc": "visual-programming/source/widgets/data/purgedomain.md",
-    "icon": "../Orange/widgets/data/icons/PurgeDomain.svg",
+    "text": "Feature Constructor",
+    "doc": "visual-programming/source/widgets/data/featureconstructor.md",
+    "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
     "background": "#FF9D5E",
     "keywords": [
-     "remove",
-     "delete",
-     "unused"
+     "function",
+     "lambda"
     ]
    },
    {
-    "text": "Unique",
-    "doc": "visual-programming/source/widgets/data/unique.md",
-    "icon": "../Orange/widgets/data/icons/Unique.svg",
+    "text": "Create Class",
+    "doc": "visual-programming/source/widgets/data/createclass.md",
+    "icon": "../Orange/widgets/data/icons/CreateClass.svg",
     "background": "#FF9D5E",
     "keywords": []
+   },
+   {
+    "text": "Create Instance",
+    "doc": "visual-programming/source/widgets/data/createinstance.md",
+    "icon": "../Orange/widgets/data/icons/CreateInstance.svg",
+    "background": "#FF9D5E",
+    "keywords": [
+     "simulator"
+    ]
+   },
+   {
+    "text": "Python Script",
+    "doc": "visual-programming/source/widgets/data/pythonscript.md",
+    "icon": "../Orange/widgets/data/icons/PythonScript.svg",
+    "background": "#FF9D5E",
+    "keywords": [
+     "program",
+     "function"
+    ]
    }
   ]
  ],
