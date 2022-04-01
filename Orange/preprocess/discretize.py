@@ -169,8 +169,8 @@ class EqualWidth(Discretization):
     # noinspection PyProtectedMember
     def __call__(self, data: Table, attribute, fixed=None):
         if fixed:
-            min, max = fixed[attribute.name]
-            points = self._split_eq_width(min, max)
+            mn, mx = fixed[attribute.name]
+            points = self._split_eq_width(mn, mx)
         else:
             if type(data) == SqlTable:
                 stats = BasicStats(data, attribute)
@@ -178,18 +178,18 @@ class EqualWidth(Discretization):
             else:
                 values, _ = data.get_column_view(attribute)
                 if values.size:
-                    min, max = ut.nanmin(values), ut.nanmax(values)
-                    points = self._split_eq_width(min, max)
+                    mn, mx = ut.nanmin(values), ut.nanmax(values)
+                    points = self._split_eq_width(mn, mx)
                 else:
                     points = []
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
 
-    def _split_eq_width(self, min, max):
-        if np.isnan(min) or np.isnan(max) or min == max:
+    def _split_eq_width(self, mn, mx):
+        if np.isnan(mn) or np.isnan(mx) or mn == mx:
             return []
-        dif = (max - min) / self.n
-        return [min + i * dif for i in range(1, self.n)]
+        dif = (mx - mn) / self.n
+        return [mn + i * dif for i in range(1, self.n)]
 
 
 class TooManyIntervals(ValueError):
@@ -255,7 +255,8 @@ def _simplified_time_intervals(labels):
                 if common + i == 2:
                     i -= 1
                 return b[i:]
-        return b  # can't come here (unless a == b?!)
+        # can't come here (unless a == b?!)
+        return b  # pragma: no cover
 
 
     if not labels:
@@ -294,6 +295,7 @@ class Binning(Discretization):
     def __call__(self, data: Table, attribute):
         attribute = data.domain[attribute]
         values, _ = data.get_column_view(attribute)
+        values = values.astype(float)
         if not values.size:
             return self._create_binned_var(None, attribute)
 
@@ -318,6 +320,9 @@ class Binning(Discretization):
             key=lambda binning: (abs(self.n - (len(binning.short_labels) - 1)),
                                  -len(binning.short_labels)),
             default=binnings[-1])
+
+        if len(binning.thresholds) == 2:
+            return Discretizer.create_discretized_var(variable, [])
 
         blabels = binning.labels[1:-1]
         labels = [f"< {blabels[0]}"] + [

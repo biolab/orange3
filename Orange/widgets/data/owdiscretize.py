@@ -16,7 +16,7 @@ from orangewidget.settings import Setting
 from orangewidget.utils import listview
 
 from Orange.data import (
-    ContinuousVariable, DiscreteVariable, TimeVariable, Domain, Table, Variable)
+    Variable, ContinuousVariable, DiscreteVariable, TimeVariable, Domain, Table)
 import Orange.preprocess.discretize as disc
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import unique_everseen
@@ -64,6 +64,7 @@ def _fixed_width_discretization(
         return TOO_MANY_INTERVALS
 
 
+# pylint: disable=invalid-name
 def _fixed_time_width_discretization(
         data: Table,
         var: Union[TimeVariable, str, int],
@@ -307,12 +308,15 @@ def format_desc(hint: VarHint) -> str:
     desc = Options[hint.method_id].short_desc
     if hint.method_id == Methods.FixedWidthTime:
         width, unit = hint.args
+        unit = time_units[unit]
         try:
             width = int(width)
         except ValueError:
-            pass
+            unit += "(s)"
         else:
-            return desc.format(width, time_units[unit] + "s" * (int(width) != 1))
+            if width != 1:
+                unit += "s"
+        return desc.format(width, unit)
     return desc.format(*hint.args)
 
 
@@ -374,12 +378,10 @@ class DefaultDiscModel(QAbstractListModel):
             return "Default setting for variables without specific setings"
         return None
 
-    def setData(self, index, value, role):
+    def setData(self, index, value, role=Qt.DisplayRole):
         if role == Qt.UserRole:
             self.hint = value
             self.dataChanged.emit(index, index)
-        else:
-            super().set_data(index, value, role)
 
 
 class IncreasingNumbersListValidator(QValidator):
@@ -512,6 +514,12 @@ class OWDiscretize(widget.OWWidget):
         #: Cached discretized variables
         self.discretized_vars: Dict[KeyType, DiscreteVariable] = {}
 
+        # Indicates that buttons, spins, edit and combos are being changed
+        # programmatically (when interface is changed due to selection change),
+        # so this should not trigger update of hints and invalidation of
+        # discretization in `self.discretized_vars`.
+        self.__interface_update = False
+
         box = gui.hBox(self.controlArea, True, spacing=8)
         self._create_var_list(box)
         self._create_buttons(box)
@@ -622,6 +630,7 @@ class OWDiscretize(widget.OWWidget):
 
         button_box = gui.vBox(box)
         button_box.layout().setSpacing(0)
+        button_box.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
         self.button_group = QButtonGroup(self)
         self.button_group.idClicked.connect(self.update_hints)
 
@@ -689,6 +698,8 @@ class OWDiscretize(widget.OWWidget):
 
     def _set_radio_enabled(self, method_id: Methods, value: bool):
         """Enable/disable radio button and related controls"""
+        if self.button_group.button(method_id).isChecked() and not value:
+            self._uncheck_all_buttons()
         self.button_group.button(method_id).setEnabled(value)
         for control_name in Options[method_id].controls:
             getattr(self, control_name).setEnabled(value)
@@ -745,6 +756,10 @@ class OWDiscretize(widget.OWWidget):
 
         Data for list view models is updated in _update_discretizations
         """
+        if self.__interface_update:
+            return
+
+        method_id = Methods(method_id)
         args = self._get_values(method_id)
         keys = self.varkeys_for_selection()
         if method_id == Methods.Default:
@@ -774,36 +789,6 @@ class OWDiscretize(widget.OWWidget):
         if self.data is None:
             return
 
-        def discretize(data: Table, var: ContinuousVariable, hint: VarHint) \
-                -> Tuple[str, Optional[Variable]]:
-            """
-            Discretize using method and data in the hint.
-
-            Returns a description (list of points or error/warning) and a
-            - discrete variable
-            - same variable (if kept numeric)
-            - None (if removed or errored)
-            """
-            if isinstance(var, TimeVariable):
-                if hint.method_id in (Methods.FixedWidth, Methods.Custom):
-                    return ": <keep, time var>", var
-            else:
-                if hint.method_id == Methods.FixedWidthTime:
-                    return ": <keep, not time>", var
-
-            function = Options[hint.method_id].function
-            dvar = function(data, var, *hint.args)
-            if isinstance(dvar, str):
-                return f" <{dvar}>", None  # error
-            if dvar is None:
-                return "", None  # removed
-            elif dvar is var:
-                return "", var  # no transformation
-            thresholds = dvar.compute_value.points
-            if len(thresholds) == 0:
-                return " <removed>", None
-            return ": " + ", ".join(map(var.repr_val, thresholds)), dvar
-
         default_hint = self.var_hints[DefaultKey]
         model = self.varview.model()
         for index, var in enumerate(model):
@@ -811,12 +796,42 @@ class OWDiscretize(widget.OWWidget):
             if key in self.discretized_vars:
                 continue  # still valid
             var_hint = self.var_hints.get(key)
-            points, dvar = discretize(self.data, var, var_hint or default_hint)
+            points, dvar = self._discretize_var(var, var_hint or default_hint)
             self.discretized_vars[key] = dvar
             values = getattr(dvar, "values", ())
             model.setData(model.index(index),
                           DiscDesc(var_hint, points, values),
                           Qt.UserRole)
+
+    def _discretize_var(self, var: ContinuousVariable, hint: VarHint) \
+        -> Tuple[str, Optional[Variable]]:
+        """
+        Discretize using method and data in the hint.
+
+        Returns a description (list of points or error/warning) and a
+        - discrete variable
+        - same variable (if kept numeric)
+        - None (if removed or errored)
+        """
+        if isinstance(var, TimeVariable):
+            if hint.method_id in (Methods.FixedWidth, Methods.Custom):
+                return ": <keep, time var>", var
+        else:
+            if hint.method_id == Methods.FixedWidthTime:
+                return ": <keep, not time>", var
+
+        function = Options[hint.method_id].function
+        dvar = function(self.data, var, *hint.args)
+        if isinstance(dvar, str):
+            return f" <{dvar}>", None  # error
+        if dvar is None:
+            return "", None  # removed
+        elif dvar is var:
+            return "", var  # no transformation
+        thresholds = dvar.compute_value.points
+        if len(thresholds) == 0:
+            return " <removed>", None
+        return ": " + ", ".join(map(var.repr_val, thresholds)), dvar
 
     def _copy_to_manual(self):
         """
@@ -843,10 +858,14 @@ class OWDiscretize(widget.OWWidget):
                 texts.add(text)
                 self.var_hints[key] = VarHint(Methods.Custom, (text, ))
                 del self.discretized_vars[key]
-        if len(texts) == 1:
-            self.threshold_line.setText(texts.pop())
-        else:
-            self._uncheck_all_buttons()
+        try:
+            self.__interface_update = True
+            if len(texts) == 1:
+                self.threshold_line.setText(texts.pop())
+            else:
+                self._uncheck_all_buttons()
+        finally:
+            self.__interface_update = False
         self._update_discretizations()
         self.commit.deferred()
 
@@ -864,8 +883,9 @@ class OWDiscretize(widget.OWWidget):
         set_enabled(Methods.FixedWidthTime, True)
         set_enabled(Methods.Custom, True)
 
-    def _var_selection_changed(self, selected):
+    def _var_selection_changed(self, _):
         """Callback for changed selection in listview with variables"""
+        selected = self.varview.selectionModel().selectedIndexes()
         if not selected:
             # Prevent infinite recursion (with _default_selected)
             return
@@ -890,18 +910,25 @@ class OWDiscretize(widget.OWWidget):
           corresponding radio button and fill the corresponding controls;
         - otherwise, uncheck all radios.
         """
-        keys = self.varkeys_for_selection()
-        mset = list(unique_everseen(map(self.var_hints.get, keys)))
-        if len(mset) != 1:
-            self._uncheck_all_buttons()
+        if self.__interface_update:
             return
 
-        if mset == [None]:
-            method_id, args = Methods.Default, ()
-        else:
-            method_id, args = mset.pop()
-        self._check_button(method_id, True)
-        self._set_values(method_id, args)
+        try:
+            self.__interface_update = True
+            keys = self.varkeys_for_selection()
+            mset = list(unique_everseen(map(self.var_hints.get, keys)))
+            if len(mset) != 1:
+                self._uncheck_all_buttons()
+                return
+
+            if mset == [None]:
+                method_id, args = Methods.Default, ()
+            else:
+                method_id, args = mset.pop()
+            self._check_button(method_id, True)
+            self._set_values(method_id, args)
+        finally:
+            self.__interface_update = False
 
     @Inputs.data
     def set_data(self, data: Optional[Table]):
@@ -919,17 +946,14 @@ class OWDiscretize(widget.OWWidget):
             self.Outputs.data.send(None)
             return
 
-        def disc_var(var: ContinuousVariable) \
-                -> Union[DiscreteVariable, ContinuousVariable]:
-            return self.discretized_vars.get(variable_key(var), var)
+        def part(variables: List[Variable]) -> List[Variable]:
+            return [dvar
+                    for dvar in (self.discretized_vars.get(variable_key(v), v)
+                                 for v in variables)
+                    if dvar]
 
-        attributes = (disc_var(v) for v in self.data.domain.attributes)
-        attributes = [v for v in attributes if v is not None]
-
-        class_vars = (disc_var(v) for v in self.data.domain.class_vars)
-        class_vars = [v for v in class_vars if v is not None]
-
-        domain = Domain(attributes, class_vars, metas=self.data.domain.metas)
+        d = self.data.domain
+        domain = Domain(part(d.attributes), part(d.class_vars), part(d.metas))
         output = self.data.transform(domain)
         self.Outputs.data.send(output)
 
@@ -970,7 +994,7 @@ class OWDiscretize(widget.OWWidget):
                 args = ()
             default_hint = VarHint(method_id, args)
             var_hints = {DefaultKey: default_hint}
-            for context in settings.get("context_settings", []):
+            for context in settings.pop("context_settings", []):
                 values = context.values
                 if "saved_var_states" not in values:
                     continue

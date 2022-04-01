@@ -268,6 +268,8 @@ class TestFixedTimeWidth(unittest.TestCase):
         self.assertEqual(dvar.values, ('< 23:59:59', "23:59:59 - 00:00:00",
                                        "00:00:00 - 00:00:01", '≥ 00:00:01'))
 
+        self.assertRaises(TooManyIntervals, FixedTimeWidth(0.0001, 5), data, 0)
+
 
 class TestBinningDiscretizer(unittest.TestCase):
     def test_no_data(self):
@@ -350,12 +352,12 @@ class TestTimeBinning(unittest.TestCase):
                 s = s.replace(localname, engname)
             return s
 
-        def tr(ss):
+        def tr2(ss):
             return list(map(tr1, ss))
 
         def testbin(start, end):
             bins = _time_binnings(create(*start), create(*end), 3, 51)
-            return [(bin.width_label, tr(bin.short_labels),
+            return [(bin.width_label, tr2(bin.short_labels),
                      list(bin.thresholds))
                     for bin in reversed(bins)]
 
