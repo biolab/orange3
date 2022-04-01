@@ -56,9 +56,8 @@ LONG_DESCRIPTION = open(README_FILE).read()
 LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown'
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
-URL = 'http://orange.biolab.si/'
+URL = 'https://orangedatamining.com/'
 PROJECT_URLS = {
-    'Homepage': 'https://orangedatamining.com/',
     'Documentation': 'https://orangedatamining.com/docs',
     'Source Code': 'https://github.com/biolab/orange3',
     'Issue Tracker': 'https://github.com/biolab/orange3/issues',
