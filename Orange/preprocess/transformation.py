@@ -81,6 +81,7 @@ class Identity(Transformation):
         return c
 
 
+# pylint: disable=abstract-method
 class _Indicator(Transformation):
     def __init__(self, variable, value):
         """
@@ -99,6 +100,18 @@ class _Indicator(Transformation):
     def __hash__(self):
         return hash((type(self), self.variable, self.value))
 
+    @staticmethod
+    def _nan_fixed(c, transformed):
+        if np.isscalar(c):
+            if c != c:  # pylint: disable=comparison-with-itself
+                transformed = np.nan
+            else:
+                transformed = float(transformed)
+        else:
+            transformed = transformed.astype(float)
+            transformed[np.isnan(c)] = np.nan
+        return transformed
+
 
 class Indicator(_Indicator):
     """
@@ -106,7 +119,19 @@ class Indicator(_Indicator):
     value and 0 otherwise.
     """
     def transform(self, c):
-        return c == self.value
+        if sp.issparse(c):
+            if self.value != 0:
+                # If value is nonzero, the matrix will become sparser:
+                # we transform the data and remove zeros
+                transformed = c.copy()
+                transformed.data = self.transform(c.data)
+                transformed.eliminate_zeros()
+                return transformed
+            else:
+                # Otherwise, it becomes dense anyway (or it wasn't really sparse
+                # before), so we just convert it to sparse before transforming
+                c = c.toarray().ravel()
+        return self._nan_fixed(c, c == self.value)
 
 
 class Indicator1(_Indicator):
@@ -114,8 +139,11 @@ class Indicator1(_Indicator):
     Return an indicator value that equals 1 if the variable has the specified
     value and -1 otherwise.
     """
-    def transform(self, c):
-        return (c == self.value) * 2 - 1
+    def transform(self, column):
+        # The result of this is always dense
+        if sp.issparse(column):
+            column = column.toarray().ravel()
+        return self._nan_fixed(column, (column == self.value) * 2 - 1)
 
 
 class Normalizer(Transformation):

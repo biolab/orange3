@@ -87,7 +87,7 @@ class TestOWNomogram(WidgetTest):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons"""
         self.widget.display_index = 0  # show ALL features
-        self._test_helper(self.lr_cls, [58, 42])
+        self._test_helper(self.lr_cls, [61, 39])
 
     def test_nomogram_nb_multiclass(self):
         """Check probabilities for naive bayes classifier for various values
