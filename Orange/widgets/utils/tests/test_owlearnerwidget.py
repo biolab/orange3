@@ -1,4 +1,4 @@
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import scipy.sparse as sp
 
@@ -218,3 +218,73 @@ class TestOWBaseLearner(WidgetTest):
         check_name("Bar")
         w.set_default_learner_name("")
         check_name("Blarg")
+
+    def test_preprocessor_warning(self):
+        class TestLearnerNoPreprocess(Learner):
+            name = "Test"
+            __returns__ = Mock()
+
+        class TestWidgetNoPreprocess(OWBaseLearner):
+            name = "Test"
+            LEARNER = TestLearnerNoPreprocess
+
+        class TestLearnerPreprocess(Learner):
+            name = "Test"
+            preprocessors = [Mock()]
+            __returns__ = Mock()
+
+        class TestWidgetPreprocess(OWBaseLearner):
+            name = "Test"
+            LEARNER = TestLearnerPreprocess
+
+        class TestFitterPreprocess(Fitter):
+            name = "Test"
+            preprocessors = [Mock()]
+            __returns__ = Mock()
+
+        class TestWidgetPreprocessFit(OWBaseLearner):
+            name = "Test"
+            LEARNER = TestFitterPreprocess
+
+        wno = self.create_widget(TestWidgetNoPreprocess)
+        wyes = self.create_widget(TestWidgetPreprocess)
+        wfit = self.create_widget(TestWidgetPreprocessFit)
+
+        self.assertFalse(wno.Information.ignored_preprocessors.is_shown())
+        self.assertFalse(wyes.Information.ignored_preprocessors.is_shown())
+        self.assertFalse(wfit.Information.ignored_preprocessors.is_shown())
+
+        pp = continuize.Continuize()
+        self.send_signal(wno.Inputs.preprocessor, pp)
+        self.send_signal(wyes.Inputs.preprocessor, pp)
+        self.send_signal(wfit.Inputs.preprocessor, pp)
+
+        self.assertFalse(wno.Information.ignored_preprocessors.is_shown())
+        self.assertTrue(wyes.Information.ignored_preprocessors.is_shown())
+        self.assertFalse(wfit.Information.ignored_preprocessors.is_shown())
+
+        self.send_signal(wno.Inputs.preprocessor, None)
+        self.send_signal(wyes.Inputs.preprocessor, None)
+        self.send_signal(wfit.Inputs.preprocessor, None)
+
+        self.assertFalse(wno.Information.ignored_preprocessors.is_shown())
+        self.assertFalse(wyes.Information.ignored_preprocessors.is_shown())
+        self.assertFalse(wfit.Information.ignored_preprocessors.is_shown())
+
+    def test_multiple_sends(self):
+        class TestLearner(Learner):
+            name = "Test"
+            __returns__ = Mock()
+
+        class TestWidget(OWBaseLearner):
+            name = "Test"
+            LEARNER = TestLearner
+
+        widget = self.create_widget(TestWidget)
+        pp = continuize.Continuize()
+        with patch.object(widget.Outputs.learner, "send") as model_send, \
+                patch.object(widget.Outputs.model, "send") as learner_send:
+            self.send_signals([(widget.Inputs.data, self.iris),
+                               (widget.Inputs.preprocessor, pp)])
+            learner_send.assert_called_once()
+            model_send.assert_called_once()

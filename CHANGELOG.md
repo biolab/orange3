@@ -5,6 +5,45 @@ Change Log
 ------------
 
 
+[3.32.0] - 2022-04-01
+--------------------
+##### Enhancements
+* Enable multitarget problem types for OWTestAndScore and OWPredictions ([#5848](../../pull/5848))
+* Datetime format selection ([#5819](../../pull/5819))
+* Predictions: Allow choosing a target ([#5790](../../pull/5790))
+* Server embedder: use queue, handle unsuccessful requests at the end ([#5835](../../pull/5835))
+* orange-canvas: Add cmd parameter to clear all settings/caches ([#5844](../../pull/5844))
+* New icons and splash screen ([#5814](../../pull/5814))
+* Use palette colors in more places ([#5680](../../pull/5680))
+* File: explicit file format choice ([#5736](../../pull/5736))
+* Learner widgets: Inform about potential problems when overriding preprocessors ([#5710](../../pull/5710))
+
+##### Bugfixes
+* Orange.data.Table: deprecated is_view and is_copy ([#5913](../../pull/5913))
+* owrocanalysis: Fix an index error in custom tick calculation ([#5904](../../pull/5904))
+* SOM: Fix crash when color is constant ([#5860](../../pull/5860))
+* plotutils: Fix implicit conversion to int warning error ([#5874](../../pull/5874))
+* Calibration: Fix crash on empty folds ([#5859](../../pull/5859))
+* Scatter Plot: Replot when input features change ([#5837](../../pull/5837))
+* Nomogram: Purge class_var values ([#5847](../../pull/5847))
+* Scatter plot: Fix rotation of regression line label ([#5840](../../pull/5840))
+* widgets.evaluate.utils: call resizeColumnsToContents before setting hidden header sections. ([#5851](../../pull/5851))
+* tSNE, Freeviz: Set effective_data ([#5839](../../pull/5839))
+* Linear Projection: Fix LDA ([#5828](../../pull/5828))
+* Decorate overridden input data handler ([#5836](../../pull/5836))
+* Table: from_file/from_url remove type conversion ([#5812](../../pull/5812))
+* Group by: Restore aggregations if removed due to open context ([#5823](../../pull/5823))
+* Ensure unlockable sparse arrays after Table.copy ([#5807](../../pull/5807))
+* ExcelReader: Write roles ([#5810](../../pull/5810))
+* owfeatureconstructor: Always update models on data change ([#5804](../../pull/5804))
+* File: remove some resizing limits ([#5815](../../pull/5815))
+* owfeaturestatistics: Fix implicit int conversion error on resize ([#5799](../../pull/5799))
+* table_from_frame: replace nan with String.Unknown for string variable ([#5795](../../pull/5795))
+* Update (and test) minimum dependencies ([#5781](../../pull/5781))
+* test_owdistancematrix: Do not download data for testing ([#5773](../../pull/5773))
+* Silhouette plot text width ([#5756](../../pull/5756))
+
+
 [3.31.1] - 2022-01-07
 --------------------
 ##### Bugfixes
@@ -1639,7 +1678,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.31.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.32.0...HEAD
+[3.32.0]: https://github.com/biolab/orange3/compare/3.31.1...3.32.0
 [3.31.1]: https://github.com/biolab/orange3/compare/3.31.0...3.31.1
 [3.31.0]: https://github.com/biolab/orange3/compare/3.30.2...3.31.0
 [3.30.2]: https://github.com/biolab/orange3/compare/3.30.1...3.30.2

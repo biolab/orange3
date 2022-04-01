@@ -79,7 +79,7 @@ class OWLinearRegression(OWBaseLearner):
         gui.widgetLabel(box5, "L1")
         self.l2_ratio_slider = gui.hSlider(
             box5, self, "l2_ratio", minValue=0.01, maxValue=0.99,
-            intOnly=False, ticks=0.1, createLabel=False, width=120,
+            intOnly=False, createLabel=False, width=120,
             step=0.01, callback=self._l2_ratio_changed)
         gui.widgetLabel(box5, "L2")
         self.l2_ratio_label = gui.widgetLabel(
@@ -93,9 +93,6 @@ class OWLinearRegression(OWBaseLearner):
         self.layout().setSizeConstraint(QLayout.SetFixedSize)
         self.controls.alpha_index.setEnabled(self.reg_type != self.OLS)
         self.l2_ratio_slider.setEnabled(self.reg_type == self.Elastic)
-
-    def handleNewSignals(self):
-        self.apply()
 
     def _intercept_changed(self):
         self.apply()

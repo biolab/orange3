@@ -167,8 +167,9 @@ class OWCreateClass(widget.OWWidget):
     name = "Create Class"
     description = "Create class attribute from a string attribute"
     icon = "icons/CreateClass.svg"
-    category = "Data"
+    category = "Transform"
     keywords = []
+    priority = 2300
 
     class Inputs:
         data = Input("Data", Table)

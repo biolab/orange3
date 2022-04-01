@@ -1,7 +1,7 @@
 """Common gui.OWComponent components."""
 
 from AnyQt.QtCore import Qt, QRectF
-from AnyQt.QtGui import QColor, QFont
+from AnyQt.QtGui import QFont, QPalette
 from AnyQt.QtWidgets import QGraphicsEllipseItem
 
 import pyqtgraph as pg
@@ -71,7 +71,8 @@ class OWGraphWithAnchors(OWScatterPlotBase):
         if self.scatterplot_item is not None and not self.circle_item:
             self.circle_item = QGraphicsEllipseItem()
             self.circle_item.setRect(QRectF(-1, -1, 2, 2))
-            self.circle_item.setPen(pg.mkPen(QColor(0, 0, 0), width=2))
+            color = self.plot_widget.palette().color(QPalette.Text)
+            self.circle_item.setPen(pg.mkPen(color, width=2))
             self.plot_widget.addItem(self.circle_item)
 
     def reset_button_clicked(self):

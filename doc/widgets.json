@@ -74,10 +74,57 @@
     ]
    },
    {
+    "text": "Rank",
+    "doc": "visual-programming/source/widgets/data/rank.md",
+    "icon": "../Orange/widgets/data/icons/Rank.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Edit Domain",
+    "doc": "visual-programming/source/widgets/data/editdomain.md",
+    "icon": "../Orange/widgets/data/icons/EditDomain.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "rename",
+     "drop",
+     "reorder",
+     "order"
+    ]
+   },
+   {
+    "text": "Color",
+    "doc": "visual-programming/source/widgets/data/color.md",
+    "icon": "../Orange/widgets/data/icons/Colors.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Feature Statistics",
+    "doc": "visual-programming/source/widgets/data/featurestatistics.md",
+    "icon": "../Orange/widgets/data/icons/FeatureStatistics.svg",
+    "background": "#FFD39F",
+    "keywords": []
+   },
+   {
+    "text": "Save Data",
+    "doc": "visual-programming/source/widgets/data/save.md",
+    "icon": "../Orange/widgets/data/icons/Save.svg",
+    "background": "#FFD39F",
+    "keywords": [
+     "export"
+    ]
+   }
+  ]
+ ],
+ [
+  "Transform",
+  [
+   {
     "text": "Aggregate Columns",
     "doc": "visual-programming/source/widgets/data/aggregatecolumns.md",
     "icon": "../Orange/widgets/data/icons/AggregateColumns.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "aggregate",
      "sum",
@@ -93,7 +140,7 @@
     "text": "Data Sampler",
     "doc": "visual-programming/source/widgets/data/datasampler.md",
     "icon": "../Orange/widgets/data/icons/DataSampler.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "random"
     ]
@@ -102,7 +149,7 @@
     "text": "Select Columns",
     "doc": "visual-programming/source/widgets/data/selectcolumns.md",
     "icon": "../Orange/widgets/data/icons/SelectColumns.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "filter",
      "attributes",
@@ -114,7 +161,7 @@
     "text": "Select Rows",
     "doc": "visual-programming/source/widgets/data/selectrows.md",
     "icon": "../Orange/widgets/data/icons/SelectRows.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "filter"
     ]
@@ -123,7 +170,7 @@
     "text": "Pivot Table",
     "doc": "visual-programming/source/widgets/data/pivot.md",
     "icon": "../Orange/widgets/data/icons/Pivot.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "pivot",
      "group",
@@ -131,24 +178,10 @@
     ]
    },
    {
-    "text": "Rank",
-    "doc": "visual-programming/source/widgets/data/rank.md",
-    "icon": "../Orange/widgets/data/icons/Rank.svg",
-    "background": "#FFD39F",
-    "keywords": []
-   },
-   {
-    "text": "Correlations",
-    "doc": "visual-programming/source/widgets/data/correlations.md",
-    "icon": "../Orange/widgets/data/icons/Correlations.svg",
-    "background": "#FFD39F",
-    "keywords": []
-   },
-   {
     "text": "Merge Data",
     "doc": "visual-programming/source/widgets/data/mergedata.md",
     "icon": "../Orange/widgets/data/icons/MergeData.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "join"
     ]
@@ -157,7 +190,7 @@
     "text": "Concatenate",
     "doc": "visual-programming/source/widgets/data/concatenate.md",
     "icon": "../Orange/widgets/data/icons/Concatenate.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "append",
      "join",
@@ -168,28 +201,28 @@
     "text": "Select by Data Index",
     "doc": "visual-programming/source/widgets/data/select-by-data-index.md",
     "icon": "../Orange/widgets/data/icons/SelectByDataIndex.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": []
    },
    {
     "text": "Transpose",
     "doc": "visual-programming/source/widgets/data/transpose.md",
     "icon": "../Orange/widgets/data/icons/Transpose.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": []
    },
    {
     "text": "Randomize",
     "doc": "visual-programming/source/widgets/data/randomize.md",
     "icon": "../Orange/widgets/data/icons/Random.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": []
    },
    {
     "text": "Preprocess",
     "doc": "visual-programming/source/widgets/data/preprocess.md",
     "icon": "../Orange/widgets/data/icons/Preprocess.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "process"
     ]
@@ -198,7 +231,7 @@
     "text": "Apply Domain",
     "doc": "visual-programming/source/widgets/data/applydomain.md",
     "icon": "../Orange/widgets/data/icons/Transform.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "transform"
     ]
@@ -207,38 +240,17 @@
     "text": "Impute",
     "doc": "visual-programming/source/widgets/data/impute.md",
     "icon": "../Orange/widgets/data/icons/Impute.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "substitute",
      "missing"
     ]
    },
    {
-    "text": "Outliers",
-    "doc": "visual-programming/source/widgets/data/outliers.md",
-    "icon": "../Orange/widgets/data/icons/Outliers.svg",
-    "background": "#FFD39F",
-    "keywords": [
-     "inlier"
-    ]
-   },
-   {
-    "text": "Edit Domain",
-    "doc": "visual-programming/source/widgets/data/editdomain.md",
-    "icon": "../Orange/widgets/data/icons/EditDomain.svg",
-    "background": "#FFD39F",
-    "keywords": [
-     "rename",
-     "drop",
-     "reorder",
-     "order"
-    ]
-   },
-   {
     "text": "Python Script",
     "doc": "visual-programming/source/widgets/data/pythonscript.md",
     "icon": "../Orange/widgets/data/icons/PythonScript.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "program",
      "function"
@@ -248,23 +260,16 @@
     "text": "Create Instance",
     "doc": "visual-programming/source/widgets/data/createinstance.md",
     "icon": "../Orange/widgets/data/icons/CreateInstance.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "simulator"
     ]
    },
    {
-    "text": "Color",
-    "doc": "visual-programming/source/widgets/data/color.md",
-    "icon": "../Orange/widgets/data/icons/Colors.svg",
-    "background": "#FFD39F",
-    "keywords": []
-   },
-   {
     "text": "Continuize",
     "doc": "visual-programming/source/widgets/data/continuize.md",
     "icon": "../Orange/widgets/data/icons/Continuize.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "encode",
      "dummy",
@@ -279,14 +284,14 @@
     "text": "Create Class",
     "doc": "visual-programming/source/widgets/data/createclass.md",
     "icon": "../Orange/widgets/data/icons/CreateClass.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": []
    },
    {
     "text": "Discretize",
     "doc": "visual-programming/source/widgets/data/discretize.md",
     "icon": "../Orange/widgets/data/icons/Discretize.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "bin",
      "categorical",
@@ -298,24 +303,17 @@
     "text": "Feature Constructor",
     "doc": "visual-programming/source/widgets/data/featureconstructor.md",
     "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "function",
      "lambda"
     ]
    },
    {
-    "text": "Feature Statistics",
-    "doc": "visual-programming/source/widgets/data/featurestatistics.md",
-    "icon": "../Orange/widgets/data/icons/FeatureStatistics.svg",
-    "background": "#FFD39F",
-    "keywords": []
-   },
-   {
     "text": "Group by",
-    "doc": null,
+    "doc": "visual-programming/source/widgets/data/groupby.md",
     "icon": "../Orange/widgets/data/icons/GroupBy.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "aggregate",
      "group by"
@@ -325,7 +323,7 @@
     "text": "Melt",
     "doc": "visual-programming/source/widgets/data/melt.md",
     "icon": "../Orange/widgets/data/icons/Melt.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "shopping list",
      "wide",
@@ -333,17 +331,10 @@
     ]
    },
    {
-    "text": "Neighbors",
-    "doc": "visual-programming/source/widgets/data/neighbors.md",
-    "icon": "../Orange/widgets/data/icons/Neighbors.svg",
-    "background": "#FFD39F",
-    "keywords": []
-   },
-   {
     "text": "Purge Domain",
     "doc": "visual-programming/source/widgets/data/purgedomain.md",
     "icon": "../Orange/widgets/data/icons/PurgeDomain.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": [
      "remove",
      "delete",
@@ -351,19 +342,10 @@
     ]
    },
    {
-    "text": "Save Data",
-    "doc": "visual-programming/source/widgets/data/save.md",
-    "icon": "../Orange/widgets/data/icons/Save.svg",
-    "background": "#FFD39F",
-    "keywords": [
-     "export"
-    ]
-   },
-   {
     "text": "Unique",
     "doc": "visual-programming/source/widgets/data/unique.md",
     "icon": "../Orange/widgets/data/icons/Unique.svg",
-    "background": "#FFD39F",
+    "background": "#FF9D5E",
     "keywords": []
    }
   ]
@@ -778,6 +760,13 @@
     ]
    },
    {
+    "text": "Correlations",
+    "doc": "visual-programming/source/widgets/data/correlations.md",
+    "icon": "../Orange/widgets/data/icons/Correlations.svg",
+    "background": "#CAE1EF",
+    "keywords": []
+   },
+   {
     "text": "Distance Map",
     "doc": "visual-programming/source/widgets/unsupervised/distancemap.md",
     "icon": "../Orange/widgets/unsupervised/icons/DistanceMap.svg",
@@ -823,6 +812,15 @@
     "keywords": []
    },
    {
+    "text": "Outliers",
+    "doc": "visual-programming/source/widgets/data/outliers.md",
+    "icon": "../Orange/widgets/data/icons/Outliers.svg",
+    "background": "#CAE1EF",
+    "keywords": [
+     "inlier"
+    ]
+   },
+   {
     "text": "PCA",
     "doc": "visual-programming/source/widgets/unsupervised/PCA.md",
     "icon": "../Orange/widgets/unsupervised/icons/PCA.svg",
@@ -831,6 +829,13 @@
      "principal component analysis",
      "linear transformation"
     ]
+   },
+   {
+    "text": "Neighbors",
+    "doc": "visual-programming/source/widgets/data/neighbors.md",
+    "icon": "../Orange/widgets/data/icons/Neighbors.svg",
+    "background": "#CAE1EF",
+    "keywords": []
    },
    {
     "text": "Correspondence Analysis",

@@ -224,7 +224,8 @@ class Model(BaseImputeMethod):
         variable = data.domain[variable]
         domain = domain_with_class_var(data.domain, variable)
 
-        if self.learner.check_learner_adequacy(domain):
+        incompatibility_reason = self.learner.incompatibility_reason(domain)
+        if incompatibility_reason is None:
             data = data.transform(domain)
             model = self.learner(data)
             assert model.domain.class_var == variable
@@ -239,7 +240,7 @@ class Model(BaseImputeMethod):
 
     def supports_variable(self, variable):
         domain = Orange.data.Domain([], class_vars=variable)
-        return self.learner.check_learner_adequacy(domain)
+        return self.learner.incompatibility_reason(domain) is None
 
 
 def domain_with_class_var(domain, class_var):

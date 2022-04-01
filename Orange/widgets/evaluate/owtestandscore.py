@@ -22,7 +22,8 @@ from AnyQt import QtGui
 from AnyQt.QtCore import Qt, QSize, QThread
 from AnyQt.QtCore import pyqtSlot as Slot
 from AnyQt.QtGui import QStandardItem, QDoubleValidator
-from AnyQt.QtWidgets import QHeaderView, QTableWidget, QLabel
+from AnyQt.QtWidgets import \
+    QHeaderView, QTableWidget, QLabel, QComboBox, QSizePolicy
 
 from Orange.base import Learner
 import Orange.classification
@@ -189,7 +190,7 @@ class OWTestAndScore(OWWidget):
     rope = settings.Setting(0.1)
     comparison_criterion = settings.Setting(0, schema_only=True)
 
-    TARGET_AVERAGE = "(Average over classes)"
+    TARGET_AVERAGE = "(None, show average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
     class Error(OWWidget.Error):
@@ -220,6 +221,8 @@ class OWTestAndScore(OWWidget):
         test_data_transformed = Msg(
             "Test data has been transformed to match the train data.")
         cant_stratify_numeric = Msg("Stratification is ignored for regression")
+        cant_stratify_multitarget = Msg("Stratification is ignored when there are"
+                                        " multiple target variables.")
 
     def __init__(self):
         super().__init__()
@@ -244,7 +247,7 @@ class OWTestAndScore(OWWidget):
         self.__task = None  # type: Optional[TaskState]
         self.__executor = ThreadExecutor()
 
-        sbox = gui.vBox(self.controlArea, "Sampling")
+        sbox = gui.vBox(self.controlArea, box=True)
         rbox = gui.radioButtons(
             sbox, self, "resampling", callback=self._param_changed)
 
@@ -287,37 +290,41 @@ class OWTestAndScore(OWWidget):
         gui.appendRadioButton(rbox, "Test on train data")
         gui.appendRadioButton(rbox, "Test on test data")
 
-        self.cbox = gui.vBox(self.controlArea, "Target Class")
-        self.class_selection_combo = gui.comboBox(
-            self.cbox, self, "class_selection", items=[],
-            sendSelectedValue=True, contentsLength=8, searchable=True,
-            callback=self._on_target_class_changed
-        )
-
-        self.modcompbox = box = gui.vBox(self.controlArea, "Model Comparison")
-        gui.comboBox(
-            box, self, "comparison_criterion",
-            callback=self.update_comparison_table)
-
-        hbox = gui.hBox(box)
-        gui.checkBox(hbox, self, "use_rope",
-                     "Negligible difference: ",
-                     callback=self._on_use_rope_changed)
-        gui.lineEdit(hbox, self, "rope", validator=QDoubleValidator(),
-                     controlWidth=70, callback=self.update_comparison_table,
-                     alignment=Qt.AlignRight)
-        self.controls.rope.setEnabled(self.use_rope)
-
         gui.rubber(self.controlArea)
+
         self.score_table = ScoreTable(self)
         self.score_table.shownScoresChanged.connect(self.update_stats_model)
         view = self.score_table.view
         view.setSizeAdjustPolicy(view.AdjustToContents)
 
-        box = gui.vBox(self.mainArea, "Evaluation Results")
-        box.layout().addWidget(self.score_table.view)
+        self.results_box = gui.vBox(self.mainArea, box=True)
+        self.cbox = gui.hBox(self.results_box)
+        self.class_selection_combo = gui.comboBox(
+            self.cbox, self, "class_selection", items=[],
+            label="Evaluation results for target", orientation=Qt.Horizontal,
+            sendSelectedValue=True, searchable=True, contentsLength=25,
+            callback=self._on_target_class_changed
+        )
+        self.cbox.layout().addStretch(100)
+        self.class_selection_combo.setMaximumContentsLength(30)
+        self.results_box.layout().addWidget(self.score_table.view)
 
-        self.compbox = box = gui.vBox(self.mainArea, box="Model comparison")
+        gui.separator(self.mainArea, 16)
+        self.compbox = box = gui.vBox(self.mainArea, box=True)
+        cbox = gui.comboBox(
+            box, self, "comparison_criterion", label="Compare models by:",
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed),
+            orientation=Qt.Horizontal, callback=self.update_comparison_table).box
+
+        gui.separator(cbox, 8)
+        gui.checkBox(cbox, self, "use_rope", "Negligible diff.: ",
+                     callback=self._on_use_rope_changed)
+        gui.lineEdit(cbox, self, "rope", validator=QDoubleValidator(),
+                     controlWidth=50, callback=self.update_comparison_table,
+                     alignment=Qt.AlignRight)
+        self.controls.rope.setEnabled(self.use_rope)
+
         table = self.comparison_table = QTableWidget(
             wordWrap=False, editTriggers=QTableWidget.NoEditTriggers,
             selectionMode=QTableWidget.NoSelection)
@@ -411,7 +418,6 @@ class OWTestAndScore(OWWidget):
                     "Train data input requires a target variable.",
                     not data.domain.class_vars
                 ),
-                ("Too many target variables.", len(data.domain.class_vars) > 1),
                 ("Target variable has no values.", np.isnan(data.Y).all()),
                 (
                     "Target variable has only one value.",
@@ -470,7 +476,8 @@ class OWTestAndScore(OWWidget):
         if data is not None and not data:
             self.Error.test_data_empty()
             data = None
-        if data and not data.domain.class_var:
+
+        if data and not data.domain.class_vars:
             self.Error.class_required_test()
             data = None
         else:
@@ -510,10 +517,10 @@ class OWTestAndScore(OWWidget):
     # - we don't gain much with it
     # - it complicates the unit tests
     def _update_scorers(self):
-        if self.data and self.data.domain.class_var:
-            new_scorers = usable_scorers(self.data.domain.class_var)
-        else:
-            new_scorers = []
+        new_scorers = []
+        if self.data:
+            new_scorers = usable_scorers(self.data.domain)
+
         # Don't unnecessarily reset the combo because this would always reset
         # comparison_criterion; we also set it explicitly, though, for clarity
         if new_scorers != self.scorers:
@@ -530,15 +537,6 @@ class OWTestAndScore(OWWidget):
             if self.__pending_comparison_criterion < len(self.scorers):
                 self.comparison_criterion = self.__pending_comparison_criterion
             self.__pending_comparison_criterion = None
-        self._update_compbox_title()
-
-    def _update_compbox_title(self):
-        criterion = self.comparison_criterion
-        if criterion < len(self.scorers):
-            scorer = self.scorers[criterion]()
-            self.compbox.setTitle(f"Model Comparison by {scorer.name}")
-        else:
-            self.compbox.setTitle(f"Model Comparison")
 
     @Inputs.preprocessor
     def set_preprocessor(self, preproc):
@@ -570,13 +568,12 @@ class OWTestAndScore(OWWidget):
         self._param_changed()
 
     def _param_changed(self):
-        self.modcompbox.setEnabled(self.resampling == OWTestAndScore.KFold)
         self._update_view_enabled()
         self._invalidate()
         self.__update()
 
     def _update_view_enabled(self):
-        self.comparison_table.setEnabled(
+        self.compbox.setEnabled(
             self.resampling == OWTestAndScore.KFold
             and len(self.learners) > 1
             and self.data is not None)
@@ -719,7 +716,6 @@ class OWTestAndScore(OWWidget):
 
     def _scores_by_folds(self, slots):
         scorer = self.scorers[self.comparison_criterion]()
-        self._update_compbox_title()
         if scorer.is_binary:
             if self.class_selection != self.TARGET_AVERAGE:
                 class_var = self.data.domain.class_var
@@ -920,6 +916,7 @@ class OWTestAndScore(OWWidget):
         self.Warning.test_data_missing.clear()
         self.Warning.cant_stratify.clear()
         self.Information.cant_stratify_numeric.clear()
+        self.Information.cant_stratify_multitarget.clear()
         self.Information.test_data_transformed(
             shown=self.resampling == self.TestOnTest
             and self.data is not None
@@ -948,7 +945,10 @@ class OWTestAndScore(OWWidget):
                 return
             do_stratify = self.cv_stratified
             if do_stratify:
-                if self.data.domain.class_var.is_discrete:
+                if len(self.data.domain.class_vars) > 1:
+                    self.Information.cant_stratify_multitarget()
+                    do_stratify = False
+                elif self.data.domain.class_var.is_discrete:
                     least = min(filter(None,
                                        np.bincount(self.data.Y.astype(int))))
                     if least < k:
@@ -1091,18 +1091,15 @@ class OWTestAndScore(OWWidget):
         assert all(learner in learner_key for learner in learners)
 
         # Update the results for individual learners
-        class_var = results.domain.class_var
         for learner, result in zip(learners, results.split_by_model()):
-            stats = None
-            if class_var.is_primitive():
-                ex = result.failed[0]
-                if ex:
-                    stats = [Try.Fail(ex)] * len(self.scorers)
-                    result = Try.Fail(ex)
-                else:
-                    stats = [Try(scorer_caller(scorer, result))
-                             for scorer in self.scorers]
-                    result = Try.Success(result)
+            ex = result.failed[0]
+            if ex:
+                stats = [Try.Fail(ex)] * len(self.scorers)
+                result = Try.Fail(ex)
+            else:
+                stats = [Try(scorer_caller(scorer, result))
+                         for scorer in self.scorers]
+                result = Try.Success(result)
             key = learner_key.get(learner)
             self.learners[key] = \
                 self.learners[key]._replace(results=result, stats=stats)

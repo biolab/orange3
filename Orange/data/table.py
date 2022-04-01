@@ -32,7 +32,7 @@ from Orange.misc.collections import frozendict
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
     sparse_implicit_zero_weights
-from Orange.util import OrangeDeprecationWarning, dummy_callback
+from Orange.util import deprecated, OrangeDeprecationWarning, dummy_callback
 if TYPE_CHECKING:
     # import just for type checking - avoid circular import
     from Orange.data.aggregate import OrangeTableGroupBy
@@ -1077,11 +1077,6 @@ class Table(Sequence, Storage):
         reader.select_sheet(sheet)
         data = reader.read()
 
-        # Readers return plain table. Make sure to cast it to appropriate
-        # (subclass) type
-        if cls != data.__class__:
-            data = cls(data)
-
         # no need to call _init_ids as fuctions from .io already
         # construct a table with .ids
 
@@ -1093,8 +1088,6 @@ class Table(Sequence, Storage):
         from Orange.data.io import UrlReader
         reader = UrlReader(url)
         data = reader.read()
-        if cls != data.__class__:
-            data = cls(data)
         return data
 
     # Helper function for __setitem__:
@@ -1435,6 +1428,7 @@ class Table(Sequence, Storage):
             new_table.get_column_view(variable)[0][:] = data
         return new_table
 
+    @deprecated("array.base is not None for each subarray of Orange.data.Table (i.e. X, Y, W, metas)")
     def is_view(self):
         """
         Return `True` if all arrays represent a view referring to another table
@@ -1444,6 +1438,7 @@ class Table(Sequence, Storage):
                 (not self._metas.shape[-1] or self._metas.base is not None) and
                 (not self._W.shape[-1] or self._W.base is not None))
 
+    @deprecated("array.base is None for each subarray of Orange.data.Table (i.e. X, Y, W, metas)")
     def is_copy(self):
         """
         Return `True` if the table owns its data
@@ -1465,9 +1460,10 @@ class Table(Sequence, Storage):
         """
 
         def is_view(x):
-            # Sparse matrices don't have views like numpy arrays. Since indexing on
-            # them creates copies in constructor we can skip this check here.
-            return not sp.issparse(x) and x.base is not None
+            if not sp.issparse(x):
+                return x.base is not None
+            else:
+                return x.data.base is not None
 
         if is_view(self._X):
             self._X = self._X.copy()

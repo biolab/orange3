@@ -11,7 +11,7 @@ from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
     QSortFilterProxyModel
 from sklearn.exceptions import UndefinedMetricWarning
 
-from Orange.data import Variable, DiscreteVariable, ContinuousVariable
+from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.evaluation import scoring
 from Orange.widgets import gui
 from Orange.widgets.utils.tableview import table_selection_to_mime_data
@@ -78,14 +78,21 @@ def learner_name(learner):
     return getattr(learner, "name", type(learner).__name__)
 
 
-def usable_scorers(target: Variable):
+def usable_scorers(domain: Domain):
+    if domain is None:
+        return []
+
     order = {name: i
-             for i, name in enumerate(BUILTIN_SCORERS_ORDER[type(target)])}
+             for i, name in enumerate(chain.from_iterable(BUILTIN_SCORERS_ORDER.values()))}
+
     # 'abstract' is retrieved from __dict__ to avoid inheriting
-    usable = (cls for cls in scoring.Score.registry.values()
-              if cls.is_scalar and not cls.__dict__.get("abstract")
-              and isinstance(target, cls.class_types))
+    scorer_candidates = [cls for cls in scoring.Score.registry.values()
+                         if cls.is_scalar and not cls.__dict__.get("abstract")]
+
+    usable = [scorer for scorer in scorer_candidates if
+              scorer.is_compatible(domain) and scorer.class_types]
     return sorted(usable, key=lambda cls: order.get(cls.name, 99))
+
 
 
 def scorer_caller(scorer, ovr_results, target=None):
@@ -131,9 +138,7 @@ class ScoreModel(QSortFilterProxyModel):
 
 
 class ScoreTable(OWComponent, QObject):
-    shown_scores = \
-        Setting(set(chain(*BUILTIN_SCORERS_ORDER.values())))
-
+    shown_scores = Setting(set(chain(*BUILTIN_SCORERS_ORDER.values())))
     shownScoresChanged = Signal()
 
     class ItemDelegate(QStyledItemDelegate):
@@ -160,6 +165,18 @@ class ScoreTable(OWComponent, QObject):
         header.setStretchLastSection(False)
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_column_chooser)
+
+        # Currently, this component will never show scoring methods
+        # defined in add-ons by default. To support them properly, the
+        # "shown_scores" settings will need to be reworked.
+        # The following is a temporary solution to show the scoring method
+        # for survival data (it does not influence other problem types).
+        # It is added here so that the "C-Index" method
+        # will show up even if the users already have the setting defined.
+        # This temporary fix is here due to a paper deadline needing the feature.
+        # When removing, also remove TestScoreTable.test_column_settings_reminder
+        if isinstance(self.shown_scores, set):  # TestScoreTable does not initialize settings
+            self.shown_scores.add("C-Index")
 
         self.model = QStandardItemModel(master)
         self.model.setHorizontalHeaderLabels(["Method"])
@@ -194,10 +211,10 @@ class ScoreTable(OWComponent, QObject):
     def _update_shown_columns(self):
         # pylint doesn't know that self.shown_scores is a set, not a Setting
         # pylint: disable=unsupported-membership-test
+        self.view.resizeColumnsToContents()
         header = self.view.horizontalHeader()
         for section, col_name in enumerate(self._column_names(), start=1):
             header.setSectionHidden(section, col_name not in self.shown_scores)
-        self.view.resizeColumnsToContents()
         self.shownScoresChanged.emit()
 
     def update_header(self, scorers):

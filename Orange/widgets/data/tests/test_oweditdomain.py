@@ -2,13 +2,13 @@
 # pylint: disable=all
 import pickle
 import unittest
-from itertools import product
+from functools import partial
+from itertools import product, chain
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
 import numpy as np
 from numpy.testing import assert_array_equal
-import pandas as pd
 
 from AnyQt.QtCore import QItemSelectionModel, Qt, QItemSelection, QPoint
 from AnyQt.QtGui import QPalette, QColor, QHelpEvent
@@ -33,8 +33,8 @@ from Orange.widgets.data.oweditdomain import (
     table_column_data, ReinterpretVariableEditor, CategoricalVector,
     VariableEditDelegate, TransformRole,
     RealVector, TimeVector, StringVector, make_dict_mapper, DictMissingConst,
-    LookupMappingTransform, as_float_or_nan, column_str_repr, time_parse,
-    GroupItemsDialog, VariableListModel
+    LookupMappingTransform, as_float_or_nan, column_str_repr,
+    GroupItemsDialog, VariableListModel, StrpTime
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -589,8 +589,9 @@ class TestEditors(GuiTest):
         ),
     ]
     ReinterpretTransforms = {
-        Categorical: AsCategorical, Real: AsContinuous, Time: AsTime,
-        String: AsString
+        Categorical: [AsCategorical], Real: [AsContinuous],
+        Time: [AsTime, partial(StrpTime, 'Detect automatically', None, 1, 1)],
+        String: [AsString]
     }
 
     def test_reinterpret_editor(self):
@@ -603,13 +604,13 @@ class TestEditors(GuiTest):
         self.assertEqual(w.get_data(), (data.vtype, [Rename("Z")]))
 
         for vec, tr in product(self.DataVectors, self.ReinterpretTransforms.values()):
-            w.set_data(vec, [tr()])
+            w.set_data(vec, [t() for t in tr])
             v, tr_ = w.get_data()
             self.assertEqual(v, vec.vtype)
             if not tr_:
                 self.assertEqual(tr, self.ReinterpretTransforms[type(v)])
             else:
-                self.assertEqual(tr_, [tr()])
+                self.assertListEqual(tr_, [t() for t in tr])
 
     def test_reinterpret_editor_simulate(self):
         w = ReinterpretVariableEditor()
@@ -619,7 +620,9 @@ class TestEditors(GuiTest):
             var, tr = w.get_data()
             type_ = tc.currentData()
             if type_ is not type(var):
-                self.assertEqual(tr, [self.ReinterpretTransforms[type_](), Rename("Z")])
+                self.assertEqual(
+                    tr, [t() for t in self.ReinterpretTransforms[type_]] + [Rename("Z")]
+                )
             else:
                 self.assertEqual(tr, [Rename("Z")])
 
@@ -912,24 +915,41 @@ class TestReinterpretTransforms(TestCase):
         )
 
     def test_as_time(self):
-        table = self.data
-        domain = table.domain
+        # this test only test type of format that can be string, continuous and discrete
+        # correctness of time formats is already tested in TimeVariable module
+        d = TimeVariable("_").parse_exact_iso
+        times = (
+            ["07.02.2022", "18.04.2021"],  # date only
+            ["07.02.2022 01:02:03", "18.04.2021 01:02:03"],  # datetime
+            ["010203", "010203"],  # time
+            ["02-07", "04-18"],
+        )
+        formats = ["25.11.2021", "25.11.2021 00:00:00", "000000", "11-25"]
+        expected = [
+            [d("2022-02-07"), d("2021-04-18")],
+            [d("2022-02-07 01:02:03"), d("2021-04-18 01:02:03")],
+            [d("01:02:03"), d("01:02:03")],
+            [d("1900-02-07"), d("1900-04-18")],
+        ]
+        variables = [StringVariable(f"s{i}") for i in range(len(times))]
+        variables += [DiscreteVariable(f"d{i}", values=t) for i, t in enumerate(times)]
+        domain = Domain([], metas=variables)
+        metas = [t for t in times] + [list(range(len(x))) for x in times]
+        table = Table(domain, np.empty((len(times[0]), 0)), metas=np.array(metas).transpose())
 
         tr = AsTime()
         dtr = []
-        for v in domain.variables:
-            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
+        for v, f in zip(domain.metas, chain(formats, formats)):
+            strp = StrpTime(f, *TimeVariable.ADDITIONAL_FORMATS[f])
+            vtr = apply_transform_var(
+                apply_reinterpret(v, tr, table_column_data(table, v)), [strp]
+            )
             dtr.append(vtr)
 
-        ttable = table.transform(Domain(dtr))
+        ttable = table.transform(Domain([], metas=dtr))
         assert_array_equal(
-            ttable.X,
-            np.array([
-                [np.nan, np.nan, 0.25, 180],
-                [np.nan, np.nan, 1.25, 360],
-                [np.nan, np.nan, 0.20, 720],
-                [np.nan, np.nan, 0.00, 000],
-            ], dtype=float)
+            ttable.metas,
+            np.array(list(chain(expected, expected)), dtype=float).transpose()
         )
 
     def test_reinterpret_string(self):
@@ -937,9 +957,16 @@ class TestReinterpretTransforms(TestCase):
         domain = table.domain
         tvars = []
         for v in domain.metas:
-            for i, tr in enumerate([AsContinuous(), AsCategorical(), AsTime(), AsString()]):
-                tr = apply_reinterpret(v, tr, table_column_data(table, v)).renamed(f'{v.name}_{i}')
-                tvars.append(tr)
+            for i, tr in enumerate(
+                [AsContinuous(), AsCategorical(), AsTime(), AsString()]
+            ):
+                vtr = apply_reinterpret(v, tr, table_column_data(table, v)).renamed(
+                    f"{v.name}_{i}"
+                )
+                if isinstance(tr, AsTime):
+                    strp = StrpTime("Detect automatically", None, 1, 1)
+                    vtr = apply_transform_var(vtr, [strp])
+                tvars.append(vtr)
         tdomain = Domain([], metas=tvars)
         ttable = table.transform(tdomain)
         assert_array_nanequal(
@@ -1038,19 +1065,6 @@ class TestUtils(TestCase):
         v = TimeVariable("T", have_date=False, have_time=True)
         d = column_str_repr(v, np.array([0., np.nan, 1.0]))
         assert_array_equal(d, ["00:00:00", "?", "00:00:01"])
-
-    def test_time_parse(self):
-        """parsing additional datetimes by pandas"""
-        date = ["1/22/20", "1/23/20", "1/24/20"]
-        # we use privet method, check if still exists
-        assert hasattr(pd.DatetimeIndex, '_is_dates_only')
-
-        tval, values = time_parse(date)
-
-        self.assertTrue(tval.have_date)
-        self.assertFalse(tval.have_time)
-        self.assertListEqual(list(values),
-                             [1579651200.0, 1579737600.0, 1579824000.0])
 
 
 class TestLookupMappingTransform(TestCase):
@@ -1220,4 +1234,3 @@ class TestGroupLessFrequentItemsDialog(GuiTest):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -35,8 +35,9 @@ def run(data: Table,
 class OWTranspose(OWWidget, ConcurrentWidgetMixin):
     name = "Transpose"
     description = "Transpose data table."
+    category = "Transform"
     icon = "icons/Transpose.svg"
-    priority = 2000
+    priority = 110
     keywords = []
 
     class Inputs:

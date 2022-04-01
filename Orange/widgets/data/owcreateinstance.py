@@ -451,9 +451,9 @@ class OWCreateInstance(OWWidget):
     name = "Create Instance"
     description = "Interactively create a data instance from sample dataset."
     icon = "icons/CreateInstance.svg"
-    category = "Data"
+    category = "Transform"
     keywords = ["simulator"]
-    priority = 4000
+    priority = 2310
 
     class Inputs:
         data = Input("Data", Table)

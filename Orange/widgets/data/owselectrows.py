@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
     QMessageBox, QMenu, QListView, QGridLayout, QPushButton, QSizePolicy,
-    QLabel, QHBoxLayout, QDateTimeEdit)
+    QLabel, QDateTimeEdit)
 from AnyQt.QtGui import (QDoubleValidator, QStandardItemModel, QStandardItem,
                          QFontMetrics, QPalette)
 from AnyQt.QtCore import Qt, QPoint, QPersistentModelIndex, QLocale, \
@@ -74,31 +74,19 @@ class SelectRowsContextHandler(DomainContextHandler):
         value = super().decode_setting(setting, value, domain)
         if setting.name == 'conditions':
             CONTINUOUS = vartype(ContinuousVariable("x"))
-            # Use this after 2022/2/2:
-            # for i, (attr, tpe, op, values) in enumerate(value):
-            #     if tpe is not None:
-            for i, (attr, *tpe, op, values) in enumerate(value):
-                if tpe != [None] \
-                        or not tpe and attr not in OWSelectRows.AllTypes:
+            for i, (attr, tpe, op, values) in enumerate(value):
+                if tpe is not None:
                     attr = domain[attr]
                 # check for exact match, pylint: disable=unidiomatic-typecheck
                 if type(attr) is ContinuousVariable \
                         or OWSelectRows.AllTypes.get(attr) == CONTINUOUS:
                     values = [QLocale().toString(float(i), 'f') for i in values]
                 elif isinstance(attr, DiscreteVariable):
-                    # After 2022/2/2, use just the expression in else clause
-                    if values and isinstance(values[0], int):
-                        # Backwards compatibility. Reset setting if we detect
-                        # that the number of values decreased. Still broken if
-                        # they're reordered or we don't detect the decrease.
-                        #
-                        # indices start with 1, thus >, not >=
-                        if max(values) > len(attr.values):
-                            values = (0, )
-                    else:
-                        values = tuple(attr.to_val(val) + 1 if val else 0
-                                       for val in values if val in attr.values) \
-                                 or (0, )
+                    values = tuple(
+                        attr.to_val(val) + 1 if val else 0
+                        for val in values
+                        if val in attr.values
+                    ) or (0,)
                 value[i] = (attr, op, values)
         return value
 
@@ -109,10 +97,10 @@ class SelectRowsContextHandler(DomainContextHandler):
         conditions = context.values["conditions"]
         all_vars = attrs.copy()
         all_vars.update(metas)
-        matched = [all_vars.get(name) == tpe  # also matches "all (...)" strings
-                   # After 2022/2/2 remove this line:
-                   if len(rest) == 2 else name in all_vars
-                   for name, tpe, *rest in conditions]
+        matched = [
+            all_vars.get(name) == tpe  # also matches "all (...)" strings
+            for name, tpe, *rest in conditions
+        ]
         if any(matched):
             return 0.5 * sum(matched) / len(matched)
         return self.NO_MATCH
@@ -125,15 +113,11 @@ class SelectRowsContextHandler(DomainContextHandler):
         all_vars = attrs.copy()
         all_vars.update(metas)
         conditions = data["conditions"]
-        # Use this after 2022/2/2: if any(all_vars.get(name) == tpe:
-        # conditions[:] = [(name, tpe, *rest) for name, tpe, *rest in conditions
-        #                  if all_vars.get(name) == tpe]
         conditions[:] = [
-            (name, tpe, *rest) for name, tpe, *rest in conditions
-            # all_vars.get(name) == tpe also matches "all (...)" which are
-            # encoded with type `None`
-            if (all_vars.get(name) == tpe if len(rest) == 2
-                else name in all_vars)]
+            (name, tpe, *rest)
+            for name, tpe, *rest in conditions
+            if all_vars.get(name) == tpe
+        ]
 
 
 class FilterDiscreteType(enum.Enum):
@@ -153,11 +137,10 @@ def _plural(s):
 
 class OWSelectRows(widget.OWWidget):
     name = "Select Rows"
-    id = "Orange.widgets.data.file"
     description = "Select rows from the data based on values of variables."
     icon = "icons/SelectRows.svg"
     priority = 100
-    category = "Data"
+    category = "Transform"
     keywords = ["filter"]
 
     class Inputs:
@@ -300,8 +283,8 @@ class OWSelectRows(widget.OWWidget):
 
         index = QPersistentModelIndex(model.index(row, 3))
         temp_button = QPushButton('×', self, flat=True,
-                                  styleSheet='* {font-size: 16pt; color: silver}'
-                                             '*:hover {color: black}')
+                                  styleSheet='* {font-size: 16pt; color: palette(button-text) }'
+                                             '*:hover {color: palette(bright-text)}')
         temp_button.clicked.connect(lambda: self.remove_one(index.row()))
         self.cond_list.setCellWidget(row, 3, temp_button)
 
@@ -780,13 +763,11 @@ class OWSelectRows(widget.OWWidget):
                  ("Non-matching data",
                   nonmatch_inst > 0 and "{} instances".format(nonmatch_inst))))
 
-    # Uncomment this on 2022/2/2
-    #
-    # @classmethod
-    # def migrate_context(cls, context, version):
-    #     if not version or version < 2:
-    #         # Just remove; can't migrate because variables types are unknown
-    #         context.values["conditions"] = []
+    @classmethod
+    def migrate_context(cls, context, version):
+        if not version or version < 2:
+            # Just remove; can't migrate because variables types are unknown
+            context.values["conditions"] = []
 
 
 class CheckBoxPopup(QWidget):

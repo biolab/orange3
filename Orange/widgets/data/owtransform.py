@@ -11,8 +11,9 @@ from Orange.widgets.widget import OWWidget, Input, Output, Msg
 class OWTransform(OWWidget):
     name = "Apply Domain"
     description = "Applies template domain on data table."
+    category = "Transform"
     icon = "icons/Transform.svg"
-    priority = 2110
+    priority = 1230
     keywords = ["transform"]
 
     class Inputs:

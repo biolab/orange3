@@ -495,9 +495,13 @@ class TableTestCase(unittest.TestCase):
         self.assertNotEqual(id(t.metas), id(copy.metas))
 
         # ensure that copied sparse arrays do not share data
+        # and that both are unlockable
         with t.unlocked():
             t.X[0, 0] = 42
         self.assertEqual(copy.X[0, 0], 5.1)
+        with copy.unlocked():
+            copy.X[0, 0] = 43
+        self.assertEqual(t.X[0, 0], 42)
 
     def test_concatenate(self):
         d1 = data.Domain(
@@ -2162,19 +2166,6 @@ class InterfaceTest(unittest.TestCase):
                 for j in range(len(self.table[i])):
                     self.table[i, j] = new_value
                     self.assertEqual(self.table[i, j], new_value)
-
-    def test_subclasses(self):
-        from pathlib import Path
-
-        class _ExtendedTable(data.Table):
-            pass
-
-        data_file = _ExtendedTable('iris')
-        data_url = _ExtendedTable.from_url(
-            Path(os.path.dirname(__file__), 'datasets/test1.tab').as_uri())
-
-        self.assertIsInstance(data_file, _ExtendedTable)
-        self.assertIsInstance(data_url, _ExtendedTable)
 
 
 class TestTableStats(TableTests):

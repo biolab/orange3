@@ -3,21 +3,24 @@ import enum
 from xml.sax.saxutils import escape
 from types import SimpleNamespace as namespace
 
-from typing import Optional, Union
+from typing import Optional, Union, Tuple, cast
 
 import numpy as np
 import sklearn.metrics
 
 from AnyQt.QtWidgets import (
-    QGraphicsScene, QGraphicsWidget, QGraphicsGridLayout,
+    QGraphicsWidget, QGraphicsGridLayout,
     QGraphicsRectItem, QStyleOptionGraphicsItem, QSizePolicy, QWidget,
     QVBoxLayout, QGraphicsSimpleTextItem, QWIDGETSIZE_MAX,
+    QGraphicsSceneHelpEvent, QToolTip, QApplication,
 )
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
-from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
+from AnyQt.QtGui import (
+    QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette,
+)
+from AnyQt.QtCore import (
+    Qt, QEvent, QRectF, QSizeF, QSize, QPointF, QPoint, QRect
+)
 from AnyQt.QtCore import pyqtSignal as Signal
-
-import pyqtgraph as pg
 
 import Orange.data
 from Orange.data.util import get_unique_names
@@ -27,18 +30,17 @@ from Orange.data import Table, Domain
 from Orange.misc import DistMatrix
 
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.graphicsscene import GraphicsScene
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, apply_all
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.graphicslayoutitem import SimpleLayoutItem
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Msg, Input, Output
-
-
-ROW_NAMES_WIDTH = 200
 
 
 class InputValidationError(ValueError):
@@ -176,8 +178,8 @@ class OWSilhouettePlot(widget.OWWidget):
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
-        self.scene = QGraphicsScene(self)
-        self.view = StickyGraphicsView(self.scene)
+        self.scene = GraphicsScene(self)
+        self.view = StyledGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.view.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.mainArea.layout().addWidget(self.view)
@@ -259,7 +261,8 @@ class OWSilhouettePlot(widget.OWWidget):
             self.cluster_var_idx = groupvars.index(domain.class_var)
         else:
             self.cluster_var_idx = 0
-        annotvars = [var for var in domain.metas if var.is_string]
+        annotvars = [var for var in domain.variables + domain.metas
+                     if var.is_string or var.is_discrete]
         self.annotation_var_model[:] = ["None"] + annotvars
         self.annotation_var_idx = 1 if annotvars else 0
         self.openContext(Orange.data.Domain(groupvars))
@@ -542,6 +545,52 @@ class SelectAction(enum.IntEnum):
     NoUpdate, Clear, Select, Deselect, Toogle, Current = 1, 2, 4, 8, 16, 32
 
 
+def show_tool_tip(pos: QPoint, text: str, widget: Optional[QWidget] = None,
+                  rect=QRect(), elide=Qt.ElideRight):
+    """
+    Show a plain text tool tip with limited length, eliding if necessary.
+    """
+    if widget is not None:
+        screen = widget.screen()
+    else:
+        screen = QApplication.screenAt(pos)
+    font = QApplication.font("QTipLabel")
+    fm = QFontMetrics(font)
+    geom = screen.availableSize()
+    etext = fm.elidedText(text, elide, geom.width())
+    if etext != text:
+        text = f"<span>{etext}</span>"
+    QToolTip.showText(pos, text, widget, rect)
+
+
+class _SilhouettePlotTextListWidget(TextListWidget):
+    # disable default tooltips, SilhouettePlot handles them
+    def helpEvent(self, event: QGraphicsSceneHelpEvent):
+        return
+
+
+class StyledGraphicsView(StickyGraphicsView):
+    """
+    Propagate style and palette changes to the visualized scene.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ensurePolished()
+        if self.scene() is not None:
+            self.scene().setPalette(self.palette())
+
+    def setScene(self, scene):
+        super().setScene(scene)
+        if self.scene() is not None:
+            self.scene().setPalette(self.palette())
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange and \
+                self.scene() is not None and self.scene().parent() is self:
+            self.scene().setPalette(self.palette())
+        super().changeEvent(event)
+
+
 class SilhouettePlot(QGraphicsWidget):
     """
     A silhouette plot widget.
@@ -561,8 +610,8 @@ class SilhouettePlot(QGraphicsWidget):
         self.__pen = QPen(Qt.NoPen)
         self.__layout = QGraphicsGridLayout()
         self.__hoveredItem = None
-        self.__topScale = None     # type: Optional[pg.AxisItem]
-        self.__bottomScale = None  # type: Optional[pg.AxisItem]
+        self.__topScale = None     # type: Optional[AxisItem]
+        self.__bottomScale = None  # type: Optional[AxisItem]
         self.__layout.setColumnSpacing(0, 1.)
         self.setLayout(self.__layout)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -630,26 +679,11 @@ class SilhouettePlot(QGraphicsWidget):
             item = layout.itemAt(i + 1, 3)
             assert isinstance(item, TextListWidget)
             if grp.rownames is not None:
-                metrics = QFontMetrics(self.font())
-                rownames = [metrics.elidedText(rowname, Qt.ElideRight, ROW_NAMES_WIDTH)
-                            for rowname in grp.rownames]
-                item.setItems(rownames)
+                item.setItems(grp.rownames)
                 item.setVisible(self.__rowNamesVisible)
             else:
                 item.setItems([])
                 item.setVisible(False)
-
-            barplot = list(self.__plotItems())[i]
-            baritems = barplot.items()
-
-            if grp.rownames is None:
-                tooltips = itertools.repeat("")
-            else:
-                tooltips = grp.rownames
-
-            for baritem, tooltip in zip(baritems, tooltips):
-                baritem.setToolTip(tooltip)
-
         layout.activate()
 
     def setRowNamesVisible(self, visible):
@@ -708,10 +742,8 @@ class SilhouettePlot(QGraphicsWidget):
 
         font = self.font()
         font.setPixelSize(self.__barHeight)
-        axispen = QPen(Qt.black)
-
-        ax = pg.AxisItem(parent=self, orientation="top", maxTickLength=7,
-                         pen=axispen)
+        foreground = self.palette().brush(QPalette.Foreground)
+        ax = AxisItem(parent=self, orientation="top", maxTickLength=7)
         ax.setRange(smin, smax)
         self.__topScale = ax
         layout = self.__layout
@@ -733,6 +765,8 @@ class SilhouettePlot(QGraphicsWidget):
                 label = QGraphicsSimpleTextItem(
                     "{} ({})".format(group.label, len(group.scores)), self
                 )
+                label.setBrush(foreground)
+                label.setPen(QPen(Qt.NoPen))
                 label.setRotation(-90)
                 item = SimpleLayoutItem(
                     label,
@@ -742,11 +776,15 @@ class SilhouettePlot(QGraphicsWidget):
                 item.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
                 layout.addItem(item, i + 1, 0, Qt.AlignCenter)
 
-            textlist = TextListWidget(self, font=font)
+            textlist = _SilhouettePlotTextListWidget(
+                self, font=font, elideMode=Qt.ElideRight,
+                alignment=Qt.AlignLeft | Qt.AlignVCenter
+            )
+            textlist.setMaximumWidth(750)
+            textlist.setFlag(TextListWidget.ItemClipsChildrenToShape, False)
             sp = textlist.sizePolicy()
             sp.setVerticalPolicy(QSizePolicy.Ignored)
             textlist.setSizePolicy(sp)
-            textlist.setParent(self)
             if group.rownames is not None:
                 textlist.setItems(group.items)
                 textlist.setVisible(self.__rowNamesVisible)
@@ -755,8 +793,7 @@ class SilhouettePlot(QGraphicsWidget):
 
             layout.addItem(textlist, i + 1, 3)
 
-        ax = pg.AxisItem(parent=self, orientation="bottom", maxTickLength=7,
-                         pen=axispen)
+        ax = AxisItem(parent=self, orientation="bottom", maxTickLength=7)
         ax.setRange(smin, smax)
         self.__bottomScale = ax
         layout.addItem(ax, len(self.__groups) + 1, 2)
@@ -769,21 +806,54 @@ class SilhouettePlot(QGraphicsWidget):
         # type: () -> Optional[QGraphicsWidget]
         return self.__bottomScale
 
-    def __updateTextSizeConstraint(self):
+    def __updateSizeConstraints(self):
         # set/update fixed height constraint on the text annotation items so
         # it matches the silhouette's height
         for silitem, textitem in zip(self.__plotItems(), self.__textItems()):
             height = silitem.effectiveSizeHint(Qt.PreferredSize).height()
             textitem.setMaximumHeight(height)
             textitem.setMinimumHeight(height)
+        mwidth = max((silitem.effectiveSizeHint(Qt.PreferredSize).width()
+                     for silitem in self.__plotItems()), default=300)
+        # match the AxisItem's width to the bars
+        for axis in self.__axisItems():
+            axis.setMaximumWidth(mwidth)
+            axis.setMinimumWidth(mwidth)
 
-    def event(self, event):
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.PaletteChange:
+            brush = self.palette().brush(QPalette.Text)
+            labels = [it for it in self.childItems()
+                      if isinstance(it, QGraphicsSimpleTextItem)]
+            apply_all(labels, lambda it: it.setBrush(brush))
+        super().changeEvent(event)
+
+    def event(self, event: QEvent) -> bool:
         # Reimplemented
         if event.type() == QEvent.LayoutRequest and \
                 self.parentLayoutItem() is None:
-            self.__updateTextSizeConstraint()
+            self.__updateSizeConstraints()
             self.resize(self.effectiveSizeHint(Qt.PreferredSize))
+        elif event.type() == QEvent.GraphicsSceneHelp:
+            self.helpEvent(cast(QGraphicsSceneHelpEvent, event))
+            if event.isAccepted():
+                return True
         return super().event(event)
+
+    def helpEvent(self, event: QGraphicsSceneHelpEvent):
+        pos = self.mapFromScene(event.scenePos())
+        item = self.__itemDataAtPos(pos)
+        if item is None:
+            return
+        data, index, rect = item
+        if data.rownames is None:
+            return
+        ttip = data.rownames[index]
+        if ttip:
+            view = event.widget().parentWidget()
+            rect = view.mapFromScene(self.mapToScene(rect)).boundingRect()
+            show_tool_tip(event.screenPos(), ttip, event.widget(), rect)
+            event.setAccepted(True)
 
     def __setHoveredItem(self, item):
         # Set the current hovered `item` (:class:`QGraphicsRectItem`)
@@ -955,30 +1025,31 @@ class SilhouettePlot(QGraphicsWidget):
         else:
             return None
 
-    def indexAtPos(self, pos):
-        items = [item for item in self.__plotItems()
-                 if item.geometry().contains(pos)]
+    def __itemDataAtPos(self, pos) -> Optional[Tuple[namespace, int, QRectF]]:
+        items = [(sitem, tlist, grp) for sitem, tlist, grp
+                 in zip(self.__plotItems(), self.__textItems(), self.__groups)
+                 if sitem.geometry().contains(pos) or tlist.isVisible()
+                 and tlist.geometry().contains(pos)]
         if not items:
-            return -1
+            return None
         else:
-            item = items[0]
-        indices = item.data(0)
+            sitem, _, grp = items[0]
+        indices = grp.indices
         assert (isinstance(indices, np.ndarray) and
-                indices.shape == (item.count(),))
-        crect = item.contentsRect()
-        pos = item.mapFromParent(pos)
-        if not crect.contains(pos):
-            return -1
-
-        assert pos.x() >= 0
-        rowh = crect.height() / item.count()
-        index = np.floor(pos.y() / rowh)
+                indices.shape == (sitem.count(),))
+        crect = sitem.contentsRect()
+        pos = sitem.mapFromParent(pos)
+        if not crect.top() <= pos.y() <= crect.bottom():
+            return None
+        rowh = crect.height() / sitem.count()
+        index = int(np.floor(pos.y() / rowh))
         index = min(index, indices.size - 1)
-
-        if index >= 0:
-            return indices[index]
-        else:
-            return -1
+        baritem = sitem.items()[index]
+        rect = self.mapRectFromItem(baritem, baritem.rect())
+        crect = self.contentsRect()
+        rect.setLeft(crect.left())
+        rect.setRight(crect.right())
+        return grp, index, rect
 
     def __selectionChanged(self, selected, deselected):
         for item, grp in zip(self.__plotItems(), self.__groups):
@@ -1009,6 +1080,9 @@ class SilhouettePlot(QGraphicsWidget):
             if item is not None:
                 assert isinstance(item, TextListWidget)
                 yield item
+
+    def __axisItems(self):
+        return self.__topScale, self.__bottomScale
 
     def setSelection(self, indices):
         indices = np.unique(np.asarray(indices, dtype=int))
@@ -1076,11 +1150,8 @@ class Line(QGraphicsWidget):
 
     def paint(self, painter, option, widget=None):
         # type: (QPainter, QStyleOptionGraphicsItem, Optional[QWidget]) -> None
-        palette = option.palette  # type: QPalette
-        role = QPalette.WindowText
-        if widget is not None:
-            role = widget.foregroundRole()
-        color = palette.color(role)
+        palette = self.palette()  # type: QPalette
+        color = palette.color(QPalette.Foreground)
         painter.setPen(QPen(color, 1))
         rect = self.contentsRect()
         center = rect.center()
@@ -1122,7 +1193,8 @@ class BarPlotItem(QGraphicsWidget):
         return super().event(event)
 
     def sizeHint(self, which, constraint=QSizeF()):
-        return QSizeF(300, (self.__barsize + self.__spacing) * self.count())
+        spacing = max(self.__spacing * (self.count() - 1), 0)
+        return QSizeF(300, self.__barsize * self.count() + spacing)
 
     def setPreferredBarSize(self, size):
         if self.__barsize != size:
@@ -1131,6 +1203,11 @@ class BarPlotItem(QGraphicsWidget):
 
     def spacing(self):
         return self.__spacing
+
+    def setSpacing(self, spacing):
+        if self.__spacing != spacing:
+            self.__spacing = spacing
+            self.updateGeometry()
 
     def setPen(self, pen):
         pen = QPen(pen)
@@ -1212,4 +1289,4 @@ class BarPlotItem(QGraphicsWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWSilhouettePlot).run(Orange.data.Table("iris"))
+    WidgetPreview(OWSilhouettePlot).run(Orange.data.Table("brown-selected"))

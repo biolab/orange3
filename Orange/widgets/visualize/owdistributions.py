@@ -21,7 +21,8 @@ from Orange.widgets.utils.annotated_data import \
     create_groups_table, create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.visualize.utils.plotutils import ElidedLabelsAxis
+from Orange.widgets.visualize.utils.plotutils import ElidedLabelsAxis, \
+    PlotWidget
 from Orange.widgets.widget import Input, Output, OWWidget, Msg
 
 from Orange.widgets.visualize.owscatterplotgraph import \
@@ -168,7 +169,7 @@ class DistributionBarItem(pg.GraphicsObject):
         return QRectF(self.x, 0, self.width, height)
 
 
-class DistributionWidget(pg.PlotWidget):
+class DistributionWidget(PlotWidget):
     item_clicked = Signal(DistributionBarItem, Qt.KeyboardModifiers, bool)
     blank_clicked = Signal()
     mouse_released = Signal()

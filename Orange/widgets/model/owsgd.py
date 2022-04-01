@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from AnyQt.QtCore import Qt
-from AnyQt.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QWidget
+from AnyQt.QtWidgets import QHBoxLayout, QGridLayout, QLabel, QWidget
 
 from Orange.widgets.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
@@ -35,7 +35,7 @@ class OWSGD(OWBaseLearner):
         coefficients = Output("Coefficients", Table, explicit=True)
 
     reg_losses = (
-        ('Squared Loss', 'squared_loss'),
+        ('Squared Loss', 'squared_error'),
         ('Huber', 'huber'),
         ('ε insensitive', 'epsilon_insensitive'),
         ('Squared ε insensitive', 'squared_epsilon_insensitive'))

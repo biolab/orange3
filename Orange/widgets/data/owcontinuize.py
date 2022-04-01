@@ -21,9 +21,10 @@ class OWContinuize(widget.OWWidget):
     description = ("Transform categorical attributes into numeric and, " +
                    "optionally, normalize numeric values.")
     icon = "icons/Continuize.svg"
-    category = "Data"
+    category = "Transform"
     keywords = ["encode", "dummy", "numeric", "one-hot", "binary",
                 "treatment", "contrast"]
+    priority = 2120
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

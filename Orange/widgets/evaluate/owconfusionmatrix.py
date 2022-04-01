@@ -454,7 +454,7 @@ class OWConfusionMatrix(widget.OWWidget):
             colors = cmatrix.astype(np.double)
             colors[diag] = 0
             if self.selected_quantity == 0:
-                normalized = cmatrix.astype(np.int)
+                normalized = cmatrix.astype(int)
                 formatstr = "{}"
                 div = np.array([colors.max()])
             else:
@@ -483,6 +483,8 @@ class OWConfusionMatrix(widget.OWWidget):
                         [0, 240][i == j], 160,
                         255 if _isinvalid(col_val) else int(255 - 30 * col_val))
                     item.setData(QBrush(bkcolor), Qt.BackgroundRole)
+                    # bkcolor is light-ish so use a black text
+                    item.setData(QBrush(Qt.black), Qt.ForegroundRole)
                     item.setData("trbl", BorderRole)
                     item.setToolTip("actual: {}\npredicted: {}".format(
                         self.headers[i], self.headers[j]))

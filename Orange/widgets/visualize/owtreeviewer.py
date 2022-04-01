@@ -123,7 +123,7 @@ class TreeNode(GraphicsNode):
                                QSizeF(self.attr_text_w, self.attr_text_h))
         else:
             attr_rect = QRectF(0, 0, 1, 1)
-        rect = self.rect().adjusted(-5, -5, 5, 5)
+        rect = self.rect().adjusted(-6, -6, 6, 6)
         return rect | attr_rect
 
     def paint(self, painter, option, widget=None):
@@ -142,7 +142,11 @@ class TreeNode(GraphicsNode):
             painter.drawText(QPointF(x, -self.line_descent - 1), draw_text)
         painter.save()
         painter.setBrush(self.backgroundBrush)
-        painter.setPen(QPen(Qt.black, 3 if self.isSelected() else 0))
+        if self.isSelected():
+            outline = QPen(option.palette.highlight(), 3)
+        else:
+            outline = QPen(option.palette.dark(), 1)
+        painter.setPen(outline)
         adjrect = rect.adjusted(-3, 0, 0, 0)
         if not self.tree_adapter.has_children(self.node_inst):
             painter.drawRoundedRect(adjrect, 4, 4)
@@ -309,8 +313,9 @@ class OWTreeGraph(OWTreeViewer2D):
         return node_obj
 
     def node_tooltip(self, node):
-        return "<br>".join(to_html(str(rule))
-                           for rule in self.tree_adapter.rules(node.node_inst))
+        return "<p>" + "<br>".join(
+            to_html(str(rule))
+            for rule in self.tree_adapter.rules(node.node_inst)) + "</p>"
 
     def update_selection(self):
         if self.model is None:
@@ -386,12 +391,12 @@ class OWTreeGraph(OWTreeViewer2D):
             if self.target_class_index:
                 p = distr[self.target_class_index - 1] / total
                 color = colors[self.target_class_index - 1].lighter(
-                    200 - 100 * p)
+                    int(200 - 100 * p))
             else:
                 modus = np.argmax(distr)
                 p = distr[modus] / (total or 1)
                 color = colors.value_to_qcolor(int(modus))
-                color = color.lighter(300 - 200 * p)
+                color = color.lighter(int(300 - 200 * p))
             node.backgroundBrush = QBrush(color)
         self.scene.update()
 
@@ -409,7 +414,7 @@ class OWTreeGraph(OWTreeViewer2D):
                 node_insts = len(self.tree_adapter.get_instances_in_nodes(
                     [node.node_inst]))
                 node.backgroundBrush = QBrush(def_color.lighter(
-                    120 - 20 * node_insts / max_insts))
+                    int(120 - 20 * node_insts / max_insts)))
         elif self.regression_colors == self.COL_MEAN:
             minv = np.nanmin(self.dataset.Y)
             maxv = np.nanmax(self.dataset.Y)
@@ -425,7 +430,7 @@ class OWTreeGraph(OWTreeViewer2D):
             max_var = max(variances)
             for node, var in zip(nodes, variances):
                 node.backgroundBrush = QBrush(def_color.lighter(
-                    120 - 20 * var / max_var))
+                    int(120 - 20 * var / max_var)))
         self.scene.update()
 
     def _get_tree_adapter(self, model):

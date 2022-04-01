@@ -2,28 +2,59 @@
 # pylint: disable=missing-docstring
 import pickle
 import unittest
+from distutils.version import LooseVersion
 
+import Orange
 from Orange.base import SklLearner, Learner, Model
 from Orange.data import Domain, Table
 from Orange.preprocess import Discretize, Randomize, Continuize
 from Orange.regression import LinearRegressionLearner
+from Orange.util import OrangeDeprecationWarning
+
+
+class DummyLearnerDeprecated(Learner):
+
+    def fit(self, *_, **__):
+        return unittest.mock.Mock()
+
+    def check_learner_adequacy(self, _):
+        return True
 
 
 class DummyLearner(Learner):
+
     def fit(self, *_, **__):
         return unittest.mock.Mock()
 
 
 class DummySklLearner(SklLearner):
+
     def fit(self, *_, **__):
         return unittest.mock.Mock()
 
 
 class DummyLearnerPP(Learner):
+
     preprocessors = (Randomize(),)
 
 
 class TestLearner(unittest.TestCase):
+
+    def test_if_deprecation_warning_is_raised(self):
+        with self.assertWarns(OrangeDeprecationWarning):
+            DummyLearnerDeprecated()(Table('iris'))
+
+    def test_check_learner_adequacy_deprecated(self):
+        """This test is to be included in the 3.32 release and will fail in
+        version 3.34. This serves as a reminder to remove the deprecated method
+        and this test."""
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.34"):
+            self.fail(
+                "`Orange.base.Learner.check_learner_adequacy` was deprecated in "
+                "version 3.32, and there have been two minor versions in "
+                "between. Please remove the deprecated method."
+            )
+
     def test_uses_default_preprocessors_unless_custom_pps_specified(self):
         """Learners should use their default preprocessors unless custom
         preprocessors were passed in to the constructor"""

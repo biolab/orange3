@@ -247,7 +247,7 @@ class TestDomainInit(unittest.TestCase):
 
     def test_index_error(self):
         d = Domain((age, gender, income), metas=(ssn, race))
-        for idx in (3, np.int(3), -3, np.int(-3), incomeA, "no_such_thing"):
+        for idx in (3, np.int64(3), -3, np.int32(-3), incomeA, "no_such_thing"):
             with self.assertRaises(ValueError):
                 d.index(idx)
 

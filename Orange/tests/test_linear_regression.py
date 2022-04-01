@@ -14,6 +14,7 @@ from Orange.regression import (LinearRegressionLearner,
                                ElasticNetCVLearner,
                                MeanLearner)
 from Orange.evaluation import CrossValidation, RMSE
+from Orange.util import OrangeDeprecationWarning
 
 
 class TestLinearRegressionLearner(unittest.TestCase):
@@ -118,3 +119,14 @@ class TestLinearRegressionLearner(unittest.TestCase):
         learner2 = eval(repr_text)
 
         self.assertIsInstance(learner2, LinearRegressionLearner)
+
+    def test_deprecated_normalize(self):
+        """ When this test starts to fail:
+        - remove normalize=False kwargs from Orange.regression.
+        - remove _remove_deprecated_normalize and its calls
+        - remove this test
+        """
+        import Orange  # pylint: disable=import-outside-toplevel
+        self.assertLess(Orange.__version__, "3.33")
+        with self.assertWarns(OrangeDeprecationWarning):
+            RidgeRegressionLearner(normalize=True)

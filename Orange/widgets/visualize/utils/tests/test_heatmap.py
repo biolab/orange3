@@ -1,7 +1,7 @@
 import numpy as np
 
 from AnyQt.QtCore import Qt, QPoint
-from AnyQt.QtGui import QFont
+from AnyQt.QtGui import QFont, QPalette
 from AnyQt.QtTest import QTest, QSignalSpy
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsView
 
@@ -92,6 +92,14 @@ class TestHeatmapGridWidget(_GraphicsGuiTest):
 
         w.headerGeometry()
         w.footerGeometry()
+
+        # Trigger the change events.
+        p = QPalette()
+        p.setColor(QPalette.All, QPalette.Text, Qt.red)
+        w.setPalette(p)
+        f = QFont()
+        f.setPointSizeF(19.5)
+        w.setFont(f)
 
     def test_widget_annotations(self):
         w = HeatmapGridWidget()

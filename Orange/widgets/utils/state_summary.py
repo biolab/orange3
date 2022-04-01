@@ -161,20 +161,20 @@ def _nobr(s):
     return f"<nobr>{s}</nobr>"
 
 
-@summarize.register(Table)
+@summarize.register
 def summarize_(data: Table):
     return PartialSummary(
         data.approx_len(),
         format_summary_details(data, format=Qt.RichText))
 
 
-@summarize.register(DistMatrix)
+@summarize.register
 def summarize_(matrix: DistMatrix):  # pylint: disable=function-redefined
     n, m = matrix.shape
     return PartialSummary(f"{n}×{m}", _nobr(f"{n}×{m} distance matrix"))
 
 
-@summarize.register(Results)
+@summarize.register
 def summarize_(results: Results):  # pylint: disable=function-redefined
     nmethods, ninstances = results.predicted.shape
     summary = f"{nmethods}×{ninstances}"
@@ -183,8 +183,8 @@ def summarize_(results: Results):  # pylint: disable=function-redefined
     return PartialSummary(summary, _nobr(details))
 
 
-@summarize.register(AttributeList)
-def summarize_(attributes):  # pylint: disable=function-redefined
+@summarize.register
+def summarize_(attributes: AttributeList):  # pylint: disable=function-redefined
     n = len(attributes)
     if n == 0:
         details = "empty list"
@@ -196,7 +196,7 @@ def summarize_(attributes):  # pylint: disable=function-redefined
     return PartialSummary(n, details)
 
 
-@summarize.register(Preprocess)
+@summarize.register
 def summarize_(preprocessor: Preprocess):
     if isinstance(preprocessor, PreprocessorList):
         if preprocessor.preprocessors:
@@ -209,7 +209,7 @@ def summarize_(preprocessor: Preprocess):
 
 
 def summarize_by_name(type_, symbol):
-    @summarize.register(type_)
+    @summarize.register
     def summarize_(model: type_):
         return PartialSummary(symbol, _name_of(model))
 

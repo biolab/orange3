@@ -185,7 +185,7 @@ class SklTreeRegressionLearner(SklLearner):
     __returns__ = SklTreeRegressor
     name = 'regression tree'
 
-    def __init__(self, criterion="mse", splitter="best", max_depth=None,
+    def __init__(self, criterion="squared_error", splitter="best", max_depth=None,
                  min_samples_split=2, min_samples_leaf=1,
                  max_features=None,
                  random_state=None, max_leaf_nodes=None,

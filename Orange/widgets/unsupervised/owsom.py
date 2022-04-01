@@ -1,4 +1,5 @@
 from collections import defaultdict, namedtuple
+from typing import Optional
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -14,6 +15,7 @@ from AnyQt.QtWidgets import \
     QGraphicsPathItem
 
 from Orange.data import Table, Domain
+from Orange.data.util import array_equal
 from Orange.preprocess import decimal_binnings, time_binnings
 from Orange.projection.som import SOM
 
@@ -26,7 +28,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.annotated_data import \
     create_annotated_table, create_groups_table, ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.colorpalettes import \
-    BinnedContinuousPalette, LimitedDiscretePalette
+    BinnedContinuousPalette, LimitedDiscretePalette, DiscretePalette
 from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
 from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 
@@ -163,7 +165,7 @@ class ColoredCircle(QGraphicsItem):
         pen = QPen(QBrush(self.color), 2)
         pen.setCosmetic(True)
         painter.setPen(pen)
-        painter.setBrush(QBrush(self.color.lighter(200 - 80 * self.proportion)))
+        painter.setBrush(QBrush(self.color.lighter(int(200 - 80 * self.proportion))))
         painter.drawEllipse(self.boundingRect())
         painter.restore()
 
@@ -210,6 +212,8 @@ class OWSOM(OWWidget):
         ignoring_disc_variables = Msg("SOM ignores categorical variables.")
         missing_colors = \
             Msg("Some data instances have undefined value of '{}'.")
+        no_defined_colors = \
+            Msg("'{}' has no defined values.")
         missing_values = \
             Msg("{} data instance{} with undefined value(s) {} not shown.")
         single_attribute = Msg("Data contains a single numeric column.")
@@ -228,7 +232,12 @@ class OWSOM(OWWidget):
         self.data = self.cont_x = None
         self.cells = self.member_data = None
         self.selection = None
-        self.colors = self.thresholds = self.bin_labels = None
+
+        # self.colors holds a palette or None when we need to draw same-colored
+        # circles. This happens by user's choice or when the color attribute
+        # is numeric and has no defined values, so we can't construct bins
+        self.colors: Optional[DiscretePalette] = None
+        self.thresholds = self.bin_labels = None
 
         box = gui.vBox(self.controlArea, box="SOM")
         shape = gui.comboBox(
@@ -330,12 +339,10 @@ class OWSOM(OWWidget):
             elif missing > 1:
                 self.Warning.missing_values(missing, "s", "are")
 
-        self.stop_optimization_and_wait()
-
+        cont_x = self.cont_x.copy() if self.cont_x is not None else None
+        self.data = self.cont_x = None
         self.closeContext()
-        self.clear()
-        self.Error.clear()
-        self.Warning.clear()
+        self.clear_messages()
 
         if data is not None:
             attrs = data.domain.attributes
@@ -345,6 +352,12 @@ class OWSOM(OWWidget):
             else:
                 prepare_data()
 
+        invalidated = cont_x is None or self.cont_x is None \
+            or not array_equal(cont_x, self.cont_x)
+        if invalidated:
+            self.stop_optimization_and_wait()
+            self.clear()
+
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
             self.attr_color = data.domain.class_var
@@ -353,11 +366,13 @@ class OWSOM(OWWidget):
         self.openContext(self.data)
         self.set_color_bins()
         self.create_legend()
-        self.recompute_dimensions()
-        self.start_som()
+        if invalidated:
+            self.recompute_dimensions()
+            self.start_som()
+        else:
+            self._redraw()
 
     def clear(self):
-        self.data = self.cont_x = None
         self.cells = self.member_data = None
         self.attr_color = None
         self.colors = self.thresholds = self.bin_labels = None
@@ -366,8 +381,6 @@ class OWSOM(OWWidget):
             self.elements = None
         self.clear_selection()
         self.controls.attr_color.model().set_domain(None)
-        self.Warning.clear()
-        self.Error.clear()
 
     def recompute_dimensions(self):
         if not self.auto_dimension or self.cont_x is None:
@@ -536,7 +549,7 @@ class OWSOM(OWWidget):
 
         self.elements = QGraphicsItemGroup()
         self.scene.addItem(self.elements)
-        if self.attr_color is None:
+        if self.colors is None:
             self._draw_same_color(sizes)
         elif self.pie_charts:
             self._draw_pie_charts(sizes)
@@ -562,6 +575,10 @@ class OWSOM(OWWidget):
                 self.elements.addToGroup(ellipse)
 
     def _get_color_column(self):
+        # if self.colors is None, we use _draw_same_color and don't call
+        # this function
+        assert self.colors is not None
+
         color_column = \
             self.data.get_column_view(self.attr_color)[0].astype(float,
                                                                  copy=False)
@@ -571,10 +588,7 @@ class OWSOM(OWWidget):
             int_col[np.isnan(color_column)] = len(self.colors)
         else:
             int_col = np.zeros(len(color_column), dtype=int)
-            # The following line is unnecessary because rows with missing
-            # numeric data are excluded. Uncomment it if you change SOM to
-            # tolerate missing values.
-            # int_col[np.isnan(color_column)] = len(self.colors)
+            int_col[np.isnan(color_column)] = len(self.colors)
             for i, thresh in enumerate(self.thresholds, start=1):
                 int_col[color_column >= thresh] = i
         return int_col
@@ -584,6 +598,7 @@ class OWSOM(OWWidget):
             values = self.attr_color.values
         else:
             values = self._bin_names()
+        values = list(values) + ["(N/A)"]
         tot = np.sum(distribution)
         nbhp = "\N{NON-BREAKING HYPHEN}"
         return '<table style="white-space: nowrap">' + "".join(f"""
@@ -600,6 +615,8 @@ class OWSOM(OWWidget):
             + "</table>"
 
     def _draw_pie_charts(self, sizes):
+        assert self.colors is not None  # if it were, we'd call _draw_same_color
+
         fx, fy = self._grid_factors
         color_column = self._get_color_column()
         colors = self.colors.qcolors_w_nan
@@ -619,6 +636,8 @@ class OWSOM(OWWidget):
                 pie.setPos(x + (y % 2) * fx, y * fy)
 
     def _draw_colored_circles(self, sizes):
+        assert self.colors is not None  # if it were, we'd call _draw_same_color
+
         fx, fy = self._grid_factors
         color_column = self._get_color_column()
         qcolors = self.colors.qcolors_w_nan
@@ -820,28 +839,50 @@ class OWSOM(OWWidget):
         self.Outputs.annotated_data.send(annotated)
 
     def set_color_bins(self):
+        self.Warning.no_defined_colors.clear()
+
         if self.attr_color is None:
             self.thresholds = self.bin_labels = self.colors = None
-        elif self.attr_color.is_discrete:
+            return
+
+        if self.attr_color.is_discrete:
             self.thresholds = self.bin_labels = None
             self.colors = self.attr_color.palette
+            return
+
+        col = self.data.get_column_view(self.attr_color)[0].astype(float)
+        col = col[np.isfinite(col)]
+        if not col.size:
+            self.Warning.no_defined_colors(self.attr_color)
+            self.thresholds = self.bin_labels = self.colors = None
+            return
+
+        if self.attr_color.is_time:
+            binning = time_binnings(col, min_bins=4)[-1]
         else:
-            col = self.data.get_column_view(self.attr_color)[0].astype(float)
-            if self.attr_color.is_time:
-                binning = time_binnings(col, min_bins=4)[-1]
-            else:
-                binning = decimal_binnings(col, min_bins=4)[-1]
-            self.thresholds = binning.thresholds[1:-1]
-            self.bin_labels = (binning.labels[1:-1], binning.short_labels[1:-1])
-            palette = BinnedContinuousPalette.from_palette(
-                self.attr_color.palette, binning.thresholds)
-            self.colors = palette
+            binning = decimal_binnings(col, min_bins=4)[-1]
+        self.thresholds = binning.thresholds[1:-1]
+        self.bin_labels = (binning.labels[1:-1], binning.short_labels[1:-1])
+        if not self.bin_labels[0] and binning.labels:
+            # Nan's are already filtered out, but it doesn't hurt much
+            # to use nanmax/nanmin
+            if np.nanmin(col) == np.nanmax(col):
+                # Handle a degenerate case with a single value
+                # Use the second threshold (because value must be smaller),
+                # but the first threshold as label (because that's the
+                # actual value in the data.
+                self.thresholds = binning.thresholds[1:]
+                self.bin_labels = (binning.labels[:1],
+                                   binning.short_labels[:1])
+        palette = BinnedContinuousPalette.from_palette(
+            self.attr_color.palette, binning.thresholds)
+        self.colors = palette
 
     def create_legend(self):
         if self.legend is not None:
             self.scene.removeItem(self.legend)
             self.legend = None
-        if self.attr_color is None:
+        if self.colors is None:
             return
 
         if self.attr_color.is_discrete:
@@ -870,7 +911,9 @@ class OWSOM(OWWidget):
         self.set_legend_pos()
 
     def _bin_names(self):
-        labels, short_labels = self.bin_labels
+        labels, short_labels = self.bin_labels or ([], [])
+        if len(labels) <= 1:
+            return labels
         return \
             [f"< {labels[0]}"] \
             + [f"{x} - {y}" for x, y in zip(labels, short_labels[1:])] \
@@ -885,7 +928,7 @@ class OWSOM(OWWidget):
 
     def send_report(self):
         self.report_plot()
-        if self.attr_color:
+        if self.colors:
             self.report_caption(
                 f"Self-organizing map colored by '{self.attr_color.name}'")
 

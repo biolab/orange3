@@ -358,12 +358,17 @@ class PyTableModel(AbstractSortTableModel):
 
 
 class PyListModelTooltip(PyListModel):
-    def __init__(self, iterable=None, tooltips=[], **kwargs):
+    def __init__(self, iterable=None, tooltips=(), **kwargs):
         super().__init__(iterable, **kwargs)
+        if not isinstance(tooltips, Sequence):
+            # may be a generator; if not, fail
+            tooltips = list(tooltips)
         self.tooltips = tooltips
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.ToolTipRole:
+            if index.row() >= len(self.tooltips):
+                return None
             return self.tooltips[index.row()]
         else:
             return super().data(index, role)

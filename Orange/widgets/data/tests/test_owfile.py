@@ -24,7 +24,7 @@ from Orange.util import OrangeDeprecationWarning
 
 from Orange.data.io import TabReader
 from Orange.tests import named_file
-from Orange.widgets.data.owfile import OWFile, OWFileDropHandler
+from Orange.widgets.data.owfile import OWFile, OWFileDropHandler, DEFAULT_READER_TEXT
 from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
@@ -253,12 +253,14 @@ class TestOWFile(WidgetTest):
             self.create_widget(OWFile, stored_settings={"recent_paths": []})
 
         widget.Outputs.data.send = Mock()
-        widget._try_load()
+        widget.load_data()
+        self.assertTrue(widget.Information.no_file_selected.is_shown())
         widget.Outputs.data.send.assert_called_with(None)
 
         widget.Outputs.data.send.reset_mock()
         widget.source = widget.URL
-        widget._try_load()
+        widget.load_data()
+        self.assertTrue(widget.Information.no_file_selected.is_shown())
         widget.Outputs.data.send.assert_called_with(None)
 
     def test_check_column_noname(self):
@@ -380,6 +382,7 @@ a
             self.widget.browse_file()
 
         self.assertIsNone(self.widget.recent_paths[0].file_format)
+        self.assertEqual(self.widget.reader_combo.currentText(), DEFAULT_READER_TEXT)
 
         def open_iris_with_tab(*_):
             return iris.__file__, format_filter(TabReader)
@@ -389,6 +392,7 @@ a
             self.widget.browse_file()
 
         self.assertEqual(self.widget.recent_paths[0].file_format, "Orange.data.io.TabReader")
+        self.assertTrue(self.widget.reader_combo.currentText().startswith("Tab-separated"))
 
     def test_no_specified_reader(self):
         with named_file("", suffix=".tab") as fn:
@@ -397,6 +401,52 @@ a
                                              stored_settings={"recent_paths": [no_class]})
             self.widget.load_data()
         self.assertTrue(self.widget.Error.missing_reader.is_shown())
+        self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
+
+    def test_select_reader(self):
+        filename = FileFormat.locate("iris.tab", dataset_dirs)
+
+        # a setting which adds a new qualified name to the reader combo
+        no_class = RecentPath(filename, None, None, file_format="not.a.file.reader.class")
+        self.widget = self.create_widget(OWFile,
+                                         stored_settings={"recent_paths": [no_class]})
+        self.widget.load_data()
+        len_with_qname = len(self.widget.reader_combo)
+        self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
+        self.assertEqual(self.widget.reader, None)
+
+        # select the last option, the same reader
+        self.widget.reader_combo.activated.emit(len_with_qname - 1)
+        self.assertEqual(len(self.widget.reader_combo), len_with_qname)
+        self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
+        self.assertEqual(self.widget.reader, None)
+
+        # select the tab reader
+        for i in range(len_with_qname):
+            text = self.widget.reader_combo.itemText(i)
+            if text.startswith("Tab-separated"):
+                break
+        self.widget.reader_combo.activated.emit(i)
+        self.assertEqual(len(self.widget.reader_combo), len_with_qname - 1)
+        self.assertTrue(self.widget.reader_combo.currentText().startswith("Tab-separated"))
+        self.assertIsInstance(self.widget.reader, TabReader)
+
+        # select the default reader
+        self.widget.reader_combo.activated.emit(0)
+        self.assertEqual(len(self.widget.reader_combo), len_with_qname - 1)
+        self.assertEqual(self.widget.reader_combo.currentText(), DEFAULT_READER_TEXT)
+        self.assertIsInstance(self.widget.reader, TabReader)
+
+    def test_select_reader_errors(self):
+        filename = FileFormat.locate("iris.tab", dataset_dirs)
+
+        no_class = RecentPath(filename, None, None, file_format="Orange.data.io.ExcelReader")
+        self.widget = self.create_widget(OWFile,
+                                         stored_settings={"recent_paths": [no_class]})
+        self.widget.load_data()
+        self.assertIn("Excel", self.widget.reader_combo.currentText())
+        self.assertTrue(self.widget.Error.unknown.is_shown())
+        self.assertFalse(self.widget.Error.missing_reader.is_shown())
 
     def test_domain_edit_no_changes(self):
         self.open_dataset("iris")
@@ -408,12 +458,12 @@ a
     def test_domain_edit_on_sparse_data(self):
         iris = Table("iris").to_sparse()
 
-        f = tempfile.NamedTemporaryFile(suffix='.pickle', delete=False)
-        pickle.dump(iris, f)
-        f.close()
+        with named_file("", suffix='.pickle') as fn:
+            with open(fn, "wb") as f:
+                pickle.dump(iris, f)
 
-        self.widget.add_path(f.name)
-        self.widget.load_data()
+            self.widget.add_path(fn)
+            self.widget.load_data()
 
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(output, Table)
@@ -552,9 +602,8 @@ a
         (i.e. sent by email), considering data file is stored in the same
         directory as the workflow.
         """
-        temp_file = tempfile.NamedTemporaryFile(dir=getcwd(), delete=False)
-        file_name = temp_file.name
-        temp_file.close()
+        with tempfile.NamedTemporaryFile(dir=getcwd(), delete=False) as temp_file:
+            file_name = temp_file.name
         base_name = path.basename(file_name)
         try:
             recent_path = RecentPath(
@@ -575,9 +624,8 @@ a
         """
         This test testes if paths are relocated correctly
         """
-        temp_file = tempfile.NamedTemporaryFile(dir=getcwd(), delete=False)
-        file_name = temp_file.name
-        temp_file.close()
+        with tempfile.NamedTemporaryFile(dir=getcwd(), delete=False) as temp_file:
+            file_name = temp_file.name
         base_name = path.basename(file_name)
         try:
             recent_path = RecentPath(

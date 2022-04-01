@@ -144,13 +144,11 @@ Categorical features are passed as strings
         self.attributescb.setModel(self.attrs_model)
 
         sorted_funcs = sorted(self.FUNCTIONS)
-        self.funcs_model = itemmodels.PyListModelTooltip()
+        self.funcs_model = itemmodels.PyListModelTooltip(
+            chain(["Select Function"], sorted_funcs),
+            chain([''], [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
+        )
         self.funcs_model.setParent(self)
-
-        self.funcs_model[:] = chain(["Select Function"], sorted_funcs)
-        self.funcs_model.tooltips[:] = chain(
-            [''],
-            [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
 
         self.functionscb = ComboBoxSearch(
             minimumContentsLength=16,
@@ -479,8 +477,10 @@ class OWFeatureConstructor(OWWidget):
     name = "Feature Constructor"
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input dataset."
+    category = "Transform"
     icon = "icons/FeatureConstructor.svg"
     keywords = ['function', 'lambda']
+    priority = 2240
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -680,27 +680,20 @@ class OWFeatureConstructor(OWWidget):
         self.data = data
         self.expressions_with_values = False
 
+        self.descriptors = []
+        self.currentIndex = -1
         if self.data is not None:
-            descriptors = list(self.descriptors)
-            currindex = self.currentIndex
-            self.descriptors = []
-            self.currentIndex = -1
             self.openContext(data)
-            self.fix_button.setHidden(not self.expressions_with_values)
 
-            if descriptors != self.descriptors or \
-                    self.currentIndex != currindex:
-                # disconnect from the selection model while reseting the model
-                selmodel = self.featureview.selectionModel()
-                selmodel.selectionChanged.disconnect(
-                    self._on_selectedVariableChanged)
+        # disconnect from the selection model while reseting the model
+        selmodel = self.featureview.selectionModel()
+        selmodel.selectionChanged.disconnect(self._on_selectedVariableChanged)
 
-                self.featuremodel[:] = list(self.descriptors)
-                self.setCurrentIndex(self.currentIndex)
+        self.featuremodel[:] = list(self.descriptors)
+        self.setCurrentIndex(self.currentIndex)
 
-                selmodel.selectionChanged.connect(
-                    self._on_selectedVariableChanged)
-
+        selmodel.selectionChanged.connect(self._on_selectedVariableChanged)
+        self.fix_button.setHidden(not self.expressions_with_values)
         self.editorstack.setEnabled(self.currentIndex >= 0)
 
     def handleNewSignals(self):

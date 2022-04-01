@@ -14,8 +14,9 @@ class OWPurgeDomain(widget.OWWidget):
     description = "Remove redundant values and features from the dataset. " \
                   "Sort values."
     icon = "icons/PurgeDomain.svg"
-    category = "Data"
+    category = "Transform"
     keywords = ["remove", "delete", "unused"]
+    priority = 2210
 
     class Inputs:
         data = Input("Data", Table)

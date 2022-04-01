@@ -983,11 +983,11 @@ class VennDiagram(QGraphicsWidget):
 
         font = self.font()
         font.setPixelSize(14)
-
+        palette = self.palette()
         for item in items:
             text = GraphicsTextEdit(self)
             text.setFont(font)
-            text.setDefaultTextColor(QColor("#333"))
+            text.setDefaultTextColor(palette.color(QPalette.Text))
             text.setHtml(fmt(escape(item.text), item.informativeText))
             text.adjustSize()
             text.editingStarted.connect(self._on_editingStarted)

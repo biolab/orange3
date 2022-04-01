@@ -10,7 +10,6 @@ import scipy.sparse as sp
 from AnyQt.QtCore import Qt, QPointF
 from AnyQt.QtGui import QFont
 
-import pyqtgraph
 from pyqtgraph import PlotCurveItem
 from pyqtgraph.Point import Point
 
@@ -21,8 +20,48 @@ from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets
 )
 from Orange.widgets.visualize.owlineplot import (
-    OWLinePlot, ccw, intersects, line_intersects_profiles
+    OWLinePlot, ccw, intersects, line_intersects_profiles, ProfileGroup
 )
+
+
+class TestProfileGroup(unittest.TestCase):
+    def test_get_disconnected_curve_missing_data_sizes(self):
+        y = np.array([[1.2, 1.5, 2., 1.4, 2.],
+                      [1.3, np.nan, 4., 1.5, 3.],
+                      [np.nan, np.nan, 5.6, np.nan, 3.4],
+                      [3.4, 5.7, 3.5, 3.3, 3.7]])
+        x, y, connect = \
+            ProfileGroup._ProfileGroup__get_disconnected_curve_missing_data(y)
+        self.assertEqual(x.shape, (20,))
+        self.assertEqual(y.shape, (20,))
+        self.assertEqual(connect.shape, (20,))
+
+    def test_get_disconnected_curve_missing_data_connect(self):
+        y = np.array([[1.2, 1.5, 2., 1.4, 2.],
+                      [1.3, np.nan, 4., 1.5, 3.],
+                      [np.nan, np.nan, 5.6, np.nan, 3.4],
+                      [3.4, 5.7, 3.5, 3.3, 3.7]])
+        _, _, connect = \
+            ProfileGroup._ProfileGroup__get_disconnected_curve_missing_data(y)
+        con = [False] * 6 + [True] + [False] * 6 + [True] + [False] * 6
+        np.testing.assert_array_equal(connect, con)
+
+        y = np.array([[1.2, 1.5, 2., 1.4, 2.],
+                      [np.nan, np.nan, np.nan, np.nan, 3.],
+                      [np.nan, np.nan, np.nan, np.nan, 3.4],
+                      [3.4, 5.7, 3.5, 3.3, 3.7]])
+        _, _, connect = \
+            ProfileGroup._ProfileGroup__get_disconnected_curve_missing_data(y)
+        np.testing.assert_array_equal(connect, [False] * 20)
+
+        y = np.array([[np.nan, np.nan, np.nan, np.nan, np.nan],
+                      [np.nan, np.nan, np.nan, np.nan, 3.4],
+                      [np.nan, np.nan, np.nan, np.nan, np.nan],
+                      [3.4, 5.7, 3.5, 3.3, 3.7]])
+        _, _, connect = \
+            ProfileGroup._ProfileGroup__get_disconnected_curve_missing_data(y)
+        con = [True] * 4 + [False] * 6 + [True] * 4 + [False] * 6
+        np.testing.assert_array_equal(connect, con)
 
 
 class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
@@ -123,7 +162,7 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         with data.unlocked():
             data[0, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
-        mask = np.zeros(len(data) - 1, dtype=bool)
+        mask = np.zeros(len(data), dtype=bool)
         mask[::10] = True
         self.widget.selection_changed(mask)
         settings = self.widget.settingsHandler.pack_data(self.widget)
@@ -189,9 +228,6 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         with data.unlocked():
             data[0, 0] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
-        self.assertTrue(self.widget.Information.hidden_instances.is_shown())
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Information.hidden_instances.is_shown())
 
     def test_display_options(self):
         self.send_signal(self.widget.Inputs.data, self.data[::10])
@@ -240,7 +276,6 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         for ds in datasets.datasets():
             self.send_signal(self.widget.Inputs.data, ds)
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Error.no_valid_data.is_shown())
 
     def test_none_data(self):
         self.send_signal(self.widget.Inputs.data, self.data[:0])
@@ -353,6 +388,16 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
         axis = graph.parameter_setter.getAxis("left")
         self.assertEqual(axis.label.toPlainText().strip(), "Foo3")
         self.assertEqual(axis.labelText, "Foo3")
+
+        key, value = ("Figure", "Lines (missing value)", "Width"), 10
+        self.widget.set_visual_settings(key, value)
+        for line in graph.parameter_setter.missing_lines_items:
+            self.assertEqual(line.opts["pen"].width(), 10)
+
+        key, value = ("Figure", "Selected lines (missing value)", "Width"), 11
+        self.widget.set_visual_settings(key, value)
+        for line in graph.parameter_setter.sel_missing_lines_items:
+            self.assertEqual(line.opts["pen"].width(), 11)
 
     def assertFontEqual(self, font1, font2):
         self.assertEqual(font1.family(), font2.family())

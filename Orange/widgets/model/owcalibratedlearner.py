@@ -62,7 +62,7 @@ class OWCalibratedLearner(OWBaseLearner):
     def set_learner(self, learner):
         self.base_learner = learner
         self._set_default_name()
-        self.unconditional_apply()
+        self.learner = self.model = None
 
     def _set_default_name(self):
 

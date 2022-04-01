@@ -29,7 +29,7 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.visualize.owboxplot import SortProxyModel
 from Orange.widgets.visualize.utils.customizableplot import \
     CommonParameterSetter, Updater
-from Orange.widgets.visualize.utils.plotutils import AxisItem
+from Orange.widgets.visualize.utils.plotutils import AxisItem, PlotWidget
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 # scaling types
@@ -369,7 +369,7 @@ class SelectionRect(pg.GraphicsObject):
         painter.restore()
 
 
-class ViolinPlot(pg.PlotWidget):
+class ViolinPlot(PlotWidget):
     VIOLIN_PADDING_FACTOR = 1.25
     SELECTION_PADDING_FACTOR = 1.20
     selection_changed = Signal(list, list)
@@ -405,7 +405,7 @@ class ViolinPlot(pg.PlotWidget):
 
         view_box = ViolinPlotViewBox(self)
         super().__init__(parent, viewBox=view_box,
-                         background="w", enableMenu=False,
+                         enableMenu=False,
                          axisItems={"bottom": AxisItem("bottom"),
                                     "left": AxisItem("left")})
         self.setAntialiasing(True)

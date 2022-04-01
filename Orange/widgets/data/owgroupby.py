@@ -298,8 +298,10 @@ def block_signals(widget):
 class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
     name = "Group by"
     description = ""
+    category = "Transform"
     icon = "icons/GroupBy.svg"
     keywords = ["aggregate", "group by"]
+    priority = 1210
 
     class Inputs:
         data = Input("Data", Table, doc="Input data table")
@@ -442,8 +444,13 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
             if data
             else {}
         )
+        default_aggregations = self.aggregations.copy()
 
         self.openContext(self.data)
+
+        # restore aggregations
+        self.aggregations.update({k: v for k, v in default_aggregations.items()
+                                  if k not in self.aggregations})
 
         # update selections in widgets and re-plot
         self.agg_table_model.set_domain(data.domain if data else None)

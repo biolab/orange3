@@ -30,7 +30,7 @@ make html --directory "$SCRIPT_DIR"/visual-programming
 # check if the widget catalog in the repository (for orange-hugo is up to date
 cd "$SCRIPT_DIR"
 wget_command="wget -N https://raw.githubusercontent.com/biolab/orange-hugo/master/scripts/create_widget_catalog.py"
-run_command="python create_widget_catalog.py --categories Data,Visualize,Model,Evaluate,Unsupervised --doc visual-programming/source/"
+run_command="python create_widget_catalog.py --categories Data,Transform,Visualize,Model,Evaluate,Unsupervised --doc visual-programming/source/"
 eval "$wget_command"
 eval "$run_command"
 diff=$(git diff -- widgets.json)

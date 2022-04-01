@@ -21,7 +21,7 @@ class OWDataSampler(OWWidget):
                   "from the input dataset."
     icon = "icons/DataSampler.svg"
     priority = 100
-    category = "Data"
+    category = "Transform"
     keywords = ["random"]
 
     _MAX_SAMPLE_SIZE = 2 ** 31 - 1

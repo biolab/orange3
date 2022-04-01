@@ -44,7 +44,7 @@ is_conda = os.path.exists(os.path.join(sys.prefix, 'conda-meta'))
 
 NAME = 'Orange3'
 
-VERSION = '3.31.1'
+VERSION = '3.32.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -56,7 +56,13 @@ LONG_DESCRIPTION = open(README_FILE).read()
 LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown'
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
-URL = 'http://orange.biolab.si/'
+URL = 'https://orangedatamining.com/'
+PROJECT_URLS = {
+    'Documentation': 'https://orangedatamining.com/docs',
+    'Source Code': 'https://github.com/biolab/orange3',
+    'Issue Tracker': 'https://github.com/biolab/orange3/issues',
+    'Donate': 'https://github.com/sponsors/biolab'
+}
 LICENSE = 'GPLv3+'
 
 KEYWORDS = [
@@ -505,6 +511,7 @@ def setup_package():
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
         url=URL,
+        project_urls=PROJECT_URLS,
         license=LICENSE,
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,

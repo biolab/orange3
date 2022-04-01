@@ -18,6 +18,11 @@ Given dataset and template transforms the dataset.
 
 The widget receives a dataset and a template dataset used to transform the dataset.
 
+Side note
+--------
+
+Domain transformation works by using information from the template data. For example, for PCA, Components are not enough. Transformation requires information on the center of each column, variance (if the data is normalized), and if and how the data was preprocessed (continuized, imputed, etc.).
+
 Example
 -------
 

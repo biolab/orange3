@@ -29,7 +29,7 @@ class OWNeighbors(OWWidget):
     name = "Neighbors"
     description = "Compute nearest neighbors in data according to reference."
     icon = "icons/Neighbors.svg"
-
+    category = "Unsupervised"
     replaces = ["orangecontrib.prototypes.widgets.owneighbours.OWNeighbours"]
 
     class Inputs:

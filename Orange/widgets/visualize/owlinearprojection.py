@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtGui import QStandardItem, QColor
+from AnyQt.QtGui import QStandardItem, QPalette
 from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
 
 import pyqtgraph as pg
@@ -253,7 +253,8 @@ class OWLinProjGraph(OWGraphWithAnchors):
 
             r = self.scaled_radius * np.max(np.linalg.norm(points, axis=1))
             self.circle_item.setRect(QRectF(-r, -r, 2 * r, 2 * r))
-            pen = pg.mkPen(QColor(Qt.lightGray), width=1, cosmetic=True)
+            color = self.plot_widget.palette().color(QPalette.Disabled, QPalette.Text)
+            pen = pg.mkPen(color, width=1, cosmetic=True)
             self.circle_item.setPen(pen)
 
 
@@ -328,7 +329,10 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     @property
     def effective_data(self):
-        return self.data.transform(Domain(self.effective_variables))
+        cvs = None
+        if self.placement == Placement.LDA:
+            cvs = self.data.domain.class_vars
+        return self.data.transform(Domain(self.effective_variables, cvs))
 
     def __vizrank_set_attrs(self, attrs):
         if not attrs:
@@ -361,6 +365,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         super().colors_changed()
         self._init_vizrank()
 
+    @OWAnchorProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
         self._check_options()

@@ -177,7 +177,7 @@ class OWSVM(OWBaseLearner):
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed)
         self.max_iter_spin = gui.spin(
-            self.optimization_box, self, "max_iter", 5, 1e6, 50,
+            self.optimization_box, self, "max_iter", 5, 1000000, 50,
             label="Iteration limit: ", checked="limit_iter",
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,
@@ -206,6 +206,7 @@ class OWSVM(OWBaseLearner):
         self._show_right_kernel()
         self.settings_changed()
 
+    @OWBaseLearner.Inputs.data
     def set_data(self, data):
         self.Warning.sparse_data.clear()
         super().set_data(data)

@@ -255,8 +255,10 @@ class OWDiscretize(widget.OWWidget):
     # pylint: disable=too-many-instance-attributes
     name = "Discretize"
     description = "Discretize the numeric data features."
+    category = "Transform"
     icon = "icons/Discretize.svg"
     keywords = ["bin", "categorical", "nominal", "ordinal"]
+    priority = 2130
 
     class Inputs:
         data = Input("Data", Orange.data.Table, doc="Input data table")

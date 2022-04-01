@@ -20,7 +20,7 @@ from Orange.widgets.data.owgroupby import OWGroupBy
 from Orange.widgets.tests.base import WidgetTest
 
 
-class TestOWGropBy(WidgetTest):
+class TestOWGroupBy(WidgetTest):
     def setUp(self) -> None:
         self.widget = self.create_widget(OWGroupBy)
         self.iris = Table("iris")
@@ -45,6 +45,14 @@ class TestOWGropBy(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+    def test_data_domain_changed(self):
+        self.send_signal(self.widget.Inputs.data, self.iris[:, -2:])
+        self.assert_aggregations_equal(["Mean", "Concatenate"])
+
+        self.send_signal(self.widget.Inputs.data, self.iris[:, -3:])
+        self.assert_aggregations_equal(["Mean", "Mean", "Concatenate"])
+        self.select_table_rows(self.widget.agg_table_view, [0])
 
     @staticmethod
     def _set_selection(view: QListView, indices: List[int]):

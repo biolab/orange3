@@ -4,10 +4,12 @@ from functools import wraps
 import warnings
 import contextlib
 
-from AnyQt.QtCore import Qt, QObject, QEventLoop, QTimer, QLocale, QPoint
+from AnyQt.QtCore import (
+    Qt, QObject, QEventLoop, QTimer, QLocale, QPoint, QT_VERSION_INFO
+)
 from AnyQt.QtTest import QTest
 from AnyQt.QtGui import QMouseEvent, QContextMenuEvent
-from AnyQt.QtWidgets import QApplication, QWidget
+from AnyQt.QtWidgets import QApplication, QWidget, QButtonGroup, QComboBox
 
 from Orange.data import Table, Domain, ContinuousVariable
 
@@ -229,12 +231,10 @@ class simulate:
         mindex = model.index(index, column, root)
         assert mindex.flags() & Qt.ItemIsEnabled
         cbox.setCurrentIndex(index)
-        text = cbox.currentText()
         # QComboBox does not have an interface which would allow selecting
         # the current item as if a user would. Only setCurrentIndex which
         # does not emit the activated signals.
-        cbox.activated[int].emit(index)
-        cbox.activated[str].emit(text)
+        qcombobox_emit_activated(cbox, index)
         if delay >= 0:
             QTest.qWait(delay)
 
@@ -291,6 +291,24 @@ class simulate:
         if index < 0:
             raise ValueError("{!r} not in {}".format(value, cbox))
         simulate.combobox_activate_index(cbox, index, delay)
+
+
+def qcombobox_emit_activated(cb: QComboBox, index: int):
+    cb.activated[int].emit(index)
+    text = cb.itemText(index)
+    if QT_VERSION_INFO >= (5, 15):
+        cb.textActivated.emit(text)
+    if QT_VERSION_INFO < (6, 0):
+        cb.activated[str].emit(text)
+
+
+def qbuttongroup_emit_clicked(bg: QButtonGroup, id_: int):
+    button = bg.button(id_)
+    bg.buttonClicked.emit(button)
+    if QT_VERSION_INFO >= (5, 15):
+        bg.idClicked.emit(id_)
+    if QT_VERSION_INFO < (6, 0):
+        bg.buttonClicked[int].emit(id_)
 
 
 def override_locale(language):

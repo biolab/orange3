@@ -280,7 +280,12 @@ def vars_from_df(df, role=None, force_nominal=False):
                 raise ValueError("String variable must be in metas.")
             _role = Role.Meta
             var = StringVariable(str(column))
-            expr = lambda s, _: np.asarray(s, dtype=object)
+            expr = lambda s, _: np.asarray(
+                # to object so that fillna can replace with nans if Unknown in nan
+                # replace nan with object Unknown assure that all values are string
+                s.astype(object).fillna(StringVariable.Unknown).astype(str),
+                dtype=object
+            )
 
         cols[_role].append(column)
         exprs[_role].append(expr)

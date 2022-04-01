@@ -1,4 +1,5 @@
 from copy import deepcopy
+import warnings
 
 from AnyQt.QtCore import QTimer, Qt
 
@@ -12,6 +13,7 @@ from Orange.widgets.utils import getmembers
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
+from Orange.util import OrangeDeprecationWarning
 
 
 class OWBaseLearnerMeta(WidgetMetaClass):
@@ -79,6 +81,14 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
     class Warning(OWWidget.Warning):
         outdated_learner = Msg("Press Apply to submit changes.")
 
+    class Information(OWWidget.Information):
+        ignored_preprocessors = Msg(
+            "Ignoring default preprocessing.\n"
+            "Default preprocessing, such as scaling, one-hot encoding and "
+            "treatment of missing data, has been replaced with user-specified "
+            "preprocessors. Problems may occur if these are inadequate "
+            "for the given data.")
+
     class Inputs:
         data = Input("Data", Table)
         preprocessor = Input("Preprocessor", Preprocess)
@@ -90,6 +100,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
 
     OUTPUT_MODEL_NAME = Outputs.model.name  # Attr for backcompat w/ self.send() code
 
+    _SEND, _SOFT, _UPDATE = range(3)
+
     def __init__(self, preprocessors=None):
         super().__init__()
         self.__default_learner_name = ""
@@ -99,6 +111,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.model = None
         self.preprocessors = preprocessors
         self.outdated_settings = False
+        self.__apply_level = []
 
         self.setup_layout()
         QTimer.singleShot(0, getattr(self, "unconditional_apply", self.apply))
@@ -144,7 +157,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
     @Inputs.preprocessor
     def set_preprocessor(self, preprocessor):
         self.preprocessors = preprocessor
-        self.apply()
+        # invalidate learner and model, so handleNewSignals will renew them
+        self.learner = self.model = None
 
     @Inputs.data
     @check_sql_input
@@ -164,12 +178,29 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
                     "Select one with the Select Columns widget.")
             self.data = None
 
-        self.update_model()
+        # invalidate the model so that handleNewSignals will update it
+        self.model = None
+
 
     def apply(self):
+        level, self.__apply_level = max(self.__apply_level, default=self._UPDATE), []
         """Applies learner and sends new model."""
-        self.update_learner()
-        self.update_model()
+        if level == self._SEND:
+            self._send_learner()
+            self._send_model()
+        elif level == self._UPDATE:
+            self.update_learner()
+            self.update_model()
+        else:
+            self.learner or self.update_learner()
+            self.model or self.update_model()
+
+    def apply_as(self, level, unconditional=False):
+        self.__apply_level.append(level)
+        if unconditional:
+            self.unconditional_apply()
+        else:
+            self.apply()
 
     def update_learner(self):
         self.learner = self.create_learner()
@@ -177,9 +208,19 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
             self.learner.name = self.effective_learner_name()
+        self._send_learner()
+
+    def _send_learner(self):
         self.Outputs.learner.send(self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
+
+    def handleNewSignals(self):
+        self.apply_as(self._SOFT, True)
+        self.Information.ignored_preprocessors(
+            shown=not getattr(self.learner, "use_default_preprocessors", False)
+                  and getattr(self.LEARNER, "preprocessors", False)
+                  and self.preprocessors is not None)
 
     def show_fitting_failed(self, exc):
         """Show error when fitting fails.
@@ -197,6 +238,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             else:
                 self.model.name = self.learner_name or self.captionTitle
                 self.model.instances = self.data
+        self._send_model()
+
+    def _send_model(self):
         self.Outputs.model.send(self.model)
 
     def check_data(self):
@@ -204,8 +248,26 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.Error.sparse_not_supported.clear()
         if self.data is not None and self.learner is not None:
             self.Error.data_error.clear()
-            if not self.learner.check_learner_adequacy(self.data.domain):
-                self.Error.data_error(self.learner.learner_adequacy_err_msg)
+
+            incompatibility_reason = None
+            for cls in type(self.learner).mro():
+                if 'incompatibility_reason' in cls.__dict__:
+                    # pylint: disable=assignment-from-none
+                    incompatibility_reason = \
+                        self.learner.incompatibility_reason(self.data.domain)
+                    break
+                if 'check_learner_adequacy' in cls.__dict__:
+                    warnings.warn(
+                        "check_learner_adequacy is deprecated and will be removed "
+                        "in upcoming releases. Learners should instead implement "
+                        "the incompatibility_reason method.",
+                        OrangeDeprecationWarning)
+                    if not self.learner.check_learner_adequacy(self.data.domain):
+                        incompatibility_reason = self.learner.learner_adequacy_err_msg
+                    break
+
+            if incompatibility_reason is not None:
+                self.Error.data_error(incompatibility_reason)
             elif not len(self.data):
                 self.Error.data_error("Dataset is empty.")
             elif len(ut.unique(self.data.Y)) < 2:
@@ -216,6 +278,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
                 self.Error.sparse_not_supported()
             else:
                 self.valid_data = True
+
         return self.valid_data
 
     def settings_changed(self, *args, **kwargs):
@@ -223,15 +286,12 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         self.Warning.outdated_learner(shown=not self.auto_apply)
         self.apply()
 
-    def _change_name(self, instance, output):
-        if instance:
-            instance.name = self.effective_learner_name()
-            if self.auto_apply:
-                output.send(instance)
-
     def learner_name_changed(self):
-        self._change_name(self.learner, self.Outputs.learner)
-        self._change_name(self.model, self.Outputs.model)
+        if self.model is not None:
+            self.model.name = self.effective_learner_name()
+        if self.learner is not None:
+            self.learner.name = self.effective_learner_name()
+        self.apply_as(self._SEND)
 
     def effective_learner_name(self):
         """Return the effective learner name."""
@@ -272,7 +332,6 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         Override this method for laying out any learner-specific parameter controls.
         See setup_layout() method for execution order.
         """
-        pass
 
     def add_classification_layout(self, box):
         """Creates layout for classification specific options.
@@ -281,7 +340,6 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         and regression learners require different options.
         See `setup_layout()` method for execution order.
         """
-        pass
 
     def add_regression_layout(self, box):
         """Creates layout for regression specific options.
@@ -290,7 +348,6 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         and regression learners require different options.
         See `setup_layout()` method for execution order.
         """
-        pass
 
     def add_learner_name_widget(self):
         self.name_line_edit = gui.lineEdit(

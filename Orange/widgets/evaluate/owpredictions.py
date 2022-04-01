@@ -6,9 +6,8 @@ from typing import Set, Sequence, Union, Optional, List, NamedTuple
 
 import numpy
 from AnyQt.QtWidgets import (
-    QTableView, QListWidget, QSplitter, QToolTip, QStyle, QApplication,
-    QSizePolicy
-)
+    QTableView, QSplitter, QToolTip, QStyle, QApplication, QSizePolicy,
+    QPushButton)
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QLocale,
@@ -51,7 +50,7 @@ class OWPredictions(OWWidget):
     description = "Display predictions of models for an input dataset."
     keywords = []
 
-    buttons_area_orientation = None
+    want_control_area = False
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -65,6 +64,8 @@ class OWPredictions(OWWidget):
         empty_data = Msg("Empty dataset")
         wrong_targets = Msg(
             "Some model(s) predict a different target (see more ...)\n{}")
+        missing_targets = Msg("Instances with missing targets "
+                              "are ignored while scoring.")
 
     class Error(OWWidget.Error):
         predictor_failed = Msg("Some predictor(s) failed (see more ...)\n{}")
@@ -74,8 +75,21 @@ class OWPredictions(OWWidget):
     score_table = settings.SettingProvider(ScoreTable)
 
     #: List of selected class value indices in the `class_values` list
-    selected_classes = settings.ContextSetting([])
+    PROB_OPTS = ["(None)",
+                 "Classes in data", "Classes known to the model", "Classes in data and model"]
+    PROB_TOOLTIPS = ["Don't show probabilities",
+                     "Show probabilities for classes in the data",
+                     "Show probabilities for classes known to the model,\n"
+                     "including those that don't appear in this data",
+                     "Show probabilities for classes in data that are also\n"
+                     "known to the model"
+                     ]
+    NO_PROBS, DATA_PROBS, MODEL_PROBS, BOTH_PROBS = range(4)
+    shown_probs = settings.ContextSetting(NO_PROBS)
     selection = settings.Setting([], schema_only=True)
+    show_scores = settings.Setting(True)
+    TARGET_AVERAGE = "(Average over classes)"
+    target_class = settings.ContextSetting(TARGET_AVERAGE)
 
     def __init__(self):
         super().__init__()
@@ -84,22 +98,42 @@ class OWPredictions(OWWidget):
         self.predictors = []  # type: List[PredictorSlot]
         self.class_values = []  # type: List[str]
         self._delegates = []
+        self.scorer_errors = []
         self.left_width = 10
         self.selection_store = None
         self.__pending_selection = self.selection
 
-        controlBox = gui.vBox(self.controlArea, "Show probabilities for")
+        self._prob_controls = []
 
-        gui.listBox(controlBox, self, "selected_classes", "class_values",
-                    callback=self._update_prediction_delegate,
-                    selectionMode=QListWidget.ExtendedSelection,
-                    sizePolicy=(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding),
-                    sizeHint=QSize(1, 350),
-                    minimumHeight=100)
-        self.reset_button = gui.button(
-            controlBox, self, "Restore Original Order",
-            callback=self._reset_order,
-            tooltip="Show rows in the original order")
+        predopts = gui.hBox(
+            None, sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        self._prob_controls = [
+            gui.widgetLabel(predopts, "Show probabilities for"),
+            gui.comboBox(
+                predopts, self, "shown_probs", contentsLength=30,
+                callback=self._update_prediction_delegate)
+        ]
+        gui.rubber(predopts)
+        self.reset_button = button = QPushButton("Restore Original Order")
+        button.clicked.connect(self._reset_order)
+        button.setToolTip("Show rows in the original order")
+        button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        predopts.layout().addWidget(self.reset_button)
+
+        self.score_opt_box = scoreopts = gui.hBox(
+            None, sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        gui.checkBox(
+            scoreopts, self, "show_scores", "Show perfomance scores",
+            callback=self._update_score_table_visibility
+        )
+        gui.separator(scoreopts, 32)
+        self._target_controls = [
+            gui.widgetLabel(scoreopts, "Target class:"),
+            gui.comboBox(
+            scoreopts, self, "target_class", items=[], contentsLength=30,
+            sendSelectedValue=True, callback=self._on_target_changed)
+        ]
+        gui.rubber(scoreopts)
 
         table_opts = dict(horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
                           horizontalScrollMode=QTableView.ScrollPerPixel,
@@ -134,9 +168,12 @@ class OWPredictions(OWWidget):
         self.splitter.addWidget(self.dataview)
 
         self.score_table = ScoreTable(self)
-        self.vsplitter = gui.vBox(self.mainArea)
-        self.vsplitter.layout().addWidget(self.splitter)
-        self.vsplitter.layout().addWidget(self.score_table.view)
+        self.mainArea.layout().setSpacing(0)
+        self.mainArea.layout().setContentsMargins(4, 0, 4, 4)
+        self.mainArea.layout().addWidget(predopts)
+        self.mainArea.layout().addWidget(self.splitter)
+        self.mainArea.layout().addWidget(scoreopts)
+        self.mainArea.layout().addWidget(self.score_table.view)
 
     def get_selection_store(self, model):
         # Both models map the same, so it doesn't matter which one is used
@@ -149,6 +186,7 @@ class OWPredictions(OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.Warning.empty_data(shown=data is not None and not data)
+        self.closeContext()
         self.data = data
         self.selection_store = None
         if not data:
@@ -175,6 +213,9 @@ class OWPredictions(OWWidget):
                     self._update_data_sort_order, self.dataview,
                     self.predictionsview))
 
+        self._set_target_combos()
+        if self.is_discrete_class:
+            self.openContext(self.class_var.values)
         self._invalidate_predictions()
 
     def _store_selection(self):
@@ -182,7 +223,11 @@ class OWPredictions(OWWidget):
 
     @property
     def class_var(self):
-        return self.data and self.data.domain.class_var
+        return self.data is not None and self.data.domain.class_var
+
+    @property
+    def is_discrete_class(self):
+        return bool(self.class_var) and self.class_var.is_discrete
 
     @Inputs.predictors
     def set_predictor(self, index, predictor: Model):
@@ -200,24 +245,47 @@ class OWPredictions(OWWidget):
     def remove_predictor(self, index):
         self.predictors.pop(index)
 
+    def _set_target_combos(self):
+        prob_combo = self.controls.shown_probs
+        target_combo = self.controls.target_class
+        prob_combo.clear()
+        target_combo.clear()
+
+        self._update_control_visibility()
+
+        # Set these to prevent warnings when setting self.shown_probs
+        target_combo.addItem(self.TARGET_AVERAGE)
+        prob_combo.addItems(self.PROB_OPTS)
+
+        if self.is_discrete_class:
+            target_combo.addItems(self.class_var.values)
+            prob_combo.addItems(self.class_var.values)
+            for i, tip in enumerate(self.PROB_TOOLTIPS):
+                prob_combo.setItemData(i, tip, Qt.ToolTipRole)
+            self.shown_probs = self.DATA_PROBS
+            self.target_class = self.TARGET_AVERAGE
+        else:
+            self.shown_probs = self.NO_PROBS
+
+    def _update_control_visibility(self):
+        for widget in self._prob_controls:
+            widget.setVisible(self.is_discrete_class)
+
+        for widget in self._target_controls:
+            widget.setVisible(self.is_discrete_class and self.show_scores)
+
+        self.score_opt_box.setVisible(bool(self.class_var))
+
     def _set_class_values(self):
-        class_values = []
+        self.class_values = []
+        if self.is_discrete_class:
+            self.class_values += self.data.domain.class_var.values
         for slot in self.predictors:
             class_var = slot.predictor.domain.class_var
             if class_var and class_var.is_discrete:
                 for value in class_var.values:
-                    if value not in class_values:
-                        class_values.append(value)
-
-        if self.class_var and self.class_var.is_discrete:
-            values = self.class_var.values
-            self.class_values = sorted(
-                class_values, key=lambda val: val not in values)
-            self.selected_classes = [
-                i for i, name in enumerate(class_values) if name in values]
-        else:
-            self.class_values = class_values  # This assignment updates listview
-            self.selected_classes = []
+                    if value not in self.class_values:
+                        self.class_values.append(value)
 
     def handleNewSignals(self):
         # Disconnect the model: the model and the delegate will be inconsistent
@@ -230,6 +298,9 @@ class OWPredictions(OWWidget):
         self._update_prediction_delegate()
         self._set_errors()
         self.commit()
+
+    def _on_target_changed(self):
+        self._update_scores()
 
     def _call_predictors(self):
         if not self.data:
@@ -247,7 +318,8 @@ class OWPredictions(OWWidget):
 
             predictor = slot.predictor
             try:
-                if predictor.domain.class_var.is_discrete:
+                class_var = predictor.domain.class_var
+                if class_var and predictor.domain.class_var.is_discrete:
                     pred, prob = predictor(classless_data, Model.ValueProbs)
                 else:
                     pred = predictor(classless_data, Model.Value)
@@ -281,40 +353,76 @@ class OWPredictions(OWWidget):
 
     def _update_scores(self):
         model = self.score_table.model
+        if self.is_discrete_class and self.target_class != self.TARGET_AVERAGE:
+            target = self.class_var.values.index(self.target_class)
+        else:
+            target = None
         model.clear()
-        scorers = usable_scorers(self.class_var) if self.class_var else []
+        scorers = usable_scorers(self.data.domain) if self.data else []
         self.score_table.update_header(scorers)
-        errors = []
+        self.scorer_errors = errors = []
         for pred in self.predictors:
             results = pred.results
             if not isinstance(results, Results) or results.predicted is None:
                 continue
             row = [QStandardItem(learner_name(pred.predictor)),
                    QStandardItem("N/A"), QStandardItem("N/A")]
-            for scorer in scorers:
-                item = QStandardItem()
-                try:
-                    score = scorer_caller(scorer, results)()[0]
-                    item.setText(f"{score:.3f}")
-                except Exception as exc:  # pylint: disable=broad-except
-                    item.setToolTip(str(exc))
-                    # false pos.; pylint: disable=unsupported-membership-test
-                    if scorer.name in self.score_table.shown_scores:
-                        errors.append(str(exc))
-                row.append(item)
-            self.score_table.model.appendRow(row)
+            try:
+                actual = results.actual
+                predicted = results.predicted
+                probabilities = results.probabilities
 
+                if self.class_var:
+                    mask = numpy.isnan(results.actual)
+                else:
+                    mask = numpy.any(numpy.isnan(results.actual), axis=1)
+                no_targets = mask.sum() == len(results.actual)
+                results.actual = results.actual[~mask]
+                results.predicted = results.predicted[:, ~mask]
+                results.probabilities = results.probabilities[:, ~mask]
+
+                for scorer in scorers:
+                    item = QStandardItem()
+                    if no_targets:
+                        item.setText("NA")
+                    else:
+                        try:
+                            score = scorer_caller(scorer, results,
+                                                  target=target)()[0]
+                            item.setText(f"{score:.3f}")
+                        except Exception as exc:  # pylint: disable=broad-except
+                            item.setToolTip(str(exc))
+                            # false pos.; pylint: disable=unsupported-membership-test
+                            if scorer.name in self.score_table.shown_scores:
+                                errors.append(str(exc))
+                    row.append(item)
+                self.score_table.model.appendRow(row)
+
+            finally:
+                results.actual = actual
+                results.predicted = predicted
+                results.probabilities = probabilities
+
+        self._update_score_table_visibility()
+
+    def _update_score_table_visibility(self):
+        self._update_control_visibility()
         view = self.score_table.view
-        if model.rowCount():
+        nmodels = self.score_table.model.rowCount()
+        if nmodels and self.show_scores:
             view.setVisible(True)
             view.ensurePolished()
+            view.resizeColumnsToContents()
+            view.resizeRowsToContents()
             view.setFixedHeight(
                 5 + view.horizontalHeader().height() +
-                view.verticalHeader().sectionSize(0) * model.rowCount())
+                view.verticalHeader().sectionSize(0) * nmodels)
+
+            errors = "\n".join(self.scorer_errors)
+            self.Error.scorer_failed(errors, shown=bool(errors))
         else:
             view.setVisible(False)
-
-        self.Error.scorer_failed("\n".join(errors), shown=bool(errors))
+            self.Error.scorer_failed.clear()
 
     def _set_errors(self):
         # Not all predictors are run every time, so errors can't be collected
@@ -332,8 +440,12 @@ class OWPredictions(OWWidget):
                              if isinstance(p.results, Results)
                              and p.results.probabilities is None))
             self.Warning.wrong_targets(inv_targets, shown=bool(inv_targets))
+
+            show_warning = numpy.isnan(self.data.Y).any() and self.predictors
+            self.Warning.missing_targets(shown=show_warning)
         else:
             self.Warning.wrong_targets.clear()
+            self.Warning.missing_targets.clear()
 
     def _get_details(self):
         details = "Data:<br>"
@@ -378,7 +490,7 @@ class OWPredictions(OWWidget):
         for p in self._non_errored_predictors():
             values = p.results.unmapped_predicted
             target = p.predictor.domain.class_var
-            if target.is_discrete:
+            if target and target.is_discrete:
                 # order probabilities in order from Show prob. for
                 prob = self._reordered_probabilities(p)
                 values = numpy.array(target.values)[values.astype(int)]
@@ -412,11 +524,13 @@ class OWPredictions(OWWidget):
         hheader.setSectionsClickable(True)
 
     def _update_data_sort_order(self, sort_source_view, sort_dest_view):
-        sort_source_view.horizontalHeader().setSortIndicatorShown(True)
+        sort_source = sort_source_view.model()
+        sort_dest = sort_dest_view.model()
+
+        sort_source_view.horizontalHeader().setSortIndicatorShown(
+            sort_source.sortColumn() != -1)
         sort_dest_view.horizontalHeader().setSortIndicatorShown(False)
 
-        sort_dest = sort_dest_view.model()
-        sort_source = sort_source_view.model()
         if sort_dest is not None:
             if sort_source is not None and sort_source.sortColumn() >= 0:
                 sort_dest.setSortIndices(sort_source.mapToSourceRows(...))
@@ -448,7 +562,9 @@ class OWPredictions(OWWidget):
                 p.predictor.domain.class_var.colors,
                 p.predictor.domain.class_var.values
             ), key=itemgetter(1))))
-            for p in predictors if p.predictor.domain.class_var.is_discrete
+            for p in predictors
+            if p.predictor.domain.class_var and
+            p.predictor.domain.class_var.is_discrete
         ]
         return color_values if color_values else [([], [])]
 
@@ -491,20 +607,35 @@ class OWPredictions(OWWidget):
     def _update_prediction_delegate(self):
         self._delegates.clear()
         colors = self._get_colors()
+        shown_class = ""  # just to silence warnings about undefined var
+        if self.shown_probs == self.NO_PROBS:
+            tooltip_probs = ()
+        elif self.shown_probs == self.DATA_PROBS:
+            tooltip_probs = self.class_var.values
+        elif self.shown_probs >= len(self.PROB_OPTS):
+            shown_class = self.class_var.values[self.shown_probs
+                                                - len(self.PROB_OPTS)]
+            tooltip_probs = (shown_class, )
+        sort_col_indices = []
         for col, slot in enumerate(self.predictors):
             target = slot.predictor.domain.class_var
-            shown_probs = (
-                () if target.is_continuous else
-                [val if self.class_values[val] in target.values else None
-                 for val in self.selected_classes]
-            )
-            delegate = PredictionsItemDelegate(
-                None if target.is_continuous else self.class_values,
-                colors,
-                shown_probs,
-                target.format_str if target.is_continuous else None,
-                parent=self.predictionsview
-            )
+            if target is not None and target.is_discrete:
+                shown_probs = self._shown_prob_indices(target, in_target=True)
+                if self.shown_probs in (self.MODEL_PROBS, self.BOTH_PROBS):
+                    tooltip_probs = [self.class_values[i]
+                                     for i in shown_probs if i is not None]
+                delegate = PredictionsItemDelegate(
+                    self.class_values, colors, shown_probs, tooltip_probs,
+                    parent=self.predictionsview)
+                sort_col_indices.append([col for col in shown_probs
+                                         if col is not None])
+
+            else:
+                delegate = PredictionsItemDelegate(
+                    None, colors, (), (), target.format_str if target is not None else None,
+                    parent=self.predictionsview)
+                sort_col_indices.append(None)
+
             # QAbstractItemView does not take ownership of delegates, so we must
             self._delegates.append(delegate)
             self.predictionsview.setItemDelegateForColumn(col, delegate)
@@ -513,7 +644,27 @@ class OWPredictions(OWWidget):
         self.predictionsview.resizeColumnsToContents()
         self._recompute_splitter_sizes()
         if self.predictionsview.model() is not None:
-            self.predictionsview.model().setProbInd(self.selected_classes)
+            self.predictionsview.model().setProbInd(sort_col_indices)
+
+    def _shown_prob_indices(self, target: DiscreteVariable, in_target):
+        if self.shown_probs == self.NO_PROBS:
+            values = []
+        elif self.shown_probs == self.DATA_PROBS:
+            values = self.class_var.values
+        elif self.shown_probs == self.MODEL_PROBS:
+            values = target.values
+        elif self.shown_probs == self.BOTH_PROBS:
+            # Don't use set intersection because it's unordered!
+            values = (value for value in self.class_var.values
+                      if value in target.values)
+        else:
+            shown_cls_idx = self.shown_probs - len(self.PROB_OPTS)
+            values = [self.class_var.values[shown_cls_idx]]
+
+        return [self.class_values.index(value)
+                if not in_target or value in target.values
+                else None
+                for value in values]
 
     def _recompute_splitter_sizes(self):
         if not self.data:
@@ -537,19 +688,20 @@ class OWPredictions(OWWidget):
     def _commit_evaluation_results(self):
         slots = [p for p in self._non_errored_predictors()
                  if p.results.predicted is not None]
-        if not slots:
+        if not slots or not self.class_var:
             self.Outputs.evaluation_results.send(None)
             return
 
         nanmask = numpy.isnan(self.data.get_column_view(self.class_var)[0])
         data = self.data[~nanmask]
         results = Results(data, store_data=True)
-        results.folds = None
+        results.folds = [...]
+        results.models = numpy.array([[p.predictor for p in self.predictors]])
         results.row_indices = numpy.arange(len(data))
         results.actual = data.Y.ravel()
         results.predicted = numpy.vstack(
             tuple(p.results.predicted[0][~nanmask] for p in slots))
-        if self.class_var and self.class_var.is_discrete:
+        if self.is_discrete_class:
             results.probabilities = numpy.array(
                 [p.results.probabilities[0][~nanmask] for p in slots])
         results.learner_names = [p.name for p in slots]
@@ -563,7 +715,8 @@ class OWPredictions(OWWidget):
         newmetas = []
         newcolumns = []
         for slot in self._non_errored_predictors():
-            if slot.predictor.domain.class_var.is_discrete:
+            target = slot.predictor.domain.class_var
+            if target and target.is_discrete:
                 self._add_classification_out_columns(slot, newmetas, newcolumns)
             else:
                 self._add_regression_out_columns(slot, newmetas, newcolumns)
@@ -580,11 +733,11 @@ class OWPredictions(OWWidget):
             names.append(uniq)
 
         metas += uniq_newmetas
-        domain = Orange.data.Domain(attrs, self.class_var, metas=metas)
+        domain = Orange.data.Domain(attrs, self.data.domain.class_vars, metas=metas)
         predictions = self.data.transform(domain)
         if newcolumns:
             newcolumns = numpy.hstack(
-                [numpy.atleast_2d(cols) for cols in newcolumns])
+                [col.reshape((-1, 1)) for col in newcolumns])
             with predictions.unlocked(predictions.metas):
                 predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
 
@@ -604,23 +757,30 @@ class OWPredictions(OWWidget):
             predictions = predictions[datamodel.mapToSourceRows(...)]
         self.Outputs.predictions.send(predictions)
 
-    @staticmethod
-    def _add_classification_out_columns(slot, newmetas, newcolumns):
-        # Mapped or unmapped predictions?!
-        # Or provide a checkbox so the user decides?
+    def _add_classification_out_columns(self, slot, newmetas, newcolumns):
         pred = slot.predictor
         name = pred.name
         values = pred.domain.class_var.values
+        probs = slot.results.unmapped_probabilities
+
+        # Column with class prediction
         newmetas.append(DiscreteVariable(name=name, values=values))
-        newcolumns.append(slot.results.unmapped_predicted.reshape(-1, 1))
-        newmetas += [ContinuousVariable(name=f"{name} ({value})")
-                     for value in values]
-        newcolumns.append(slot.results.unmapped_probabilities)
+        newcolumns.append(slot.results.unmapped_predicted)
+
+        # Columns with probability predictions (same as shown in the view)
+        for cls_idx in self._shown_prob_indices(pred.domain.class_var,
+                                                in_target=False):
+            value = self.class_values[cls_idx]
+            newmetas.append(ContinuousVariable(f"{name} ({value})"))
+            if value in values:
+                newcolumns.append(probs[:, values.index(value)])
+            else:
+                newcolumns.append(numpy.zeros(probs.shape[0]))
 
     @staticmethod
     def _add_regression_out_columns(slot, newmetas, newcolumns):
         newmetas.append(ContinuousVariable(name=slot.predictor.name))
-        newcolumns.append(slot.results.unmapped_predicted.reshape((-1, 1)))
+        newcolumns.append(slot.results.unmapped_predicted)
 
     def send_report(self):
         def merge_data_with_predictions():
@@ -656,15 +816,26 @@ class OWPredictions(OWWidget):
 
         if self.data:
             text = self._get_details().replace('\n', '<br>')
-            if self.selected_classes:
-                text += '<br>Showing probabilities for: '
-                text += ', '. join([self.class_values[i]
-                                    for i in self.selected_classes])
+            if self.is_discrete_class and self.shown_probs != self.NO_PROBS:
+                text += '<br>Showing probabilities for '
+                if self.shown_probs == self.MODEL_PROBS:
+                    text += "all classes known to the model"
+                elif self.shown_probs == self.DATA_PROBS:
+                    text += "all classes that appear in the data"
+                elif self.shown_probs == self.BOTH_PROBS:
+                    text += "all classes that appear in the data " \
+                            "and are known to the model"
+                else:
+                    class_idx = self.shown_probs - len(self.PROB_OPTS)
+                    text += f"'{self.class_var.values[class_idx]}'"
             self.report_paragraph('Info', text)
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
 
-            self.report_table("Scores", self.score_table.view)
+            self.report_name("Scores")
+            if self.is_discrete_class:
+                self.report_items([("Target class", self.target_class)])
+            self.report_table(self.score_table.view)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -697,16 +868,18 @@ class PredictionsItemDelegate(ItemDelegate):
 
     def __init__(
             self, class_values, colors, shown_probabilities=(),
+            tooltip_probabilities=(),
             target_format=None, parent=None,
     ):
         super().__init__(parent)
         self.class_values = class_values  # will be None for continuous
         self.colors = [QColor(*c) for c in colors]
-        self.target_format = target_format  # target format for cont. vars
+        # target format for cont. vars
+        self.target_format = target_format if target_format else '%.2f'
         self.shown_probabilities = self.fmt = self.tooltip = None  # set below
-        self.setFormat(shown_probabilities)
+        self.setFormat(shown_probabilities, tooltip_probabilities)
 
-    def setFormat(self, shown_probabilities=()):
+    def setFormat(self, shown_probabilities=(), tooltip_probabilities=()):
         self.shown_probabilities = shown_probabilities
         if self.class_values is None:
             # is continuous class
@@ -717,13 +890,10 @@ class PredictionsItemDelegate(ItemDelegate):
                             for i in shown_probabilities)]
                 * bool(shown_probabilities)
                 + ["{value!s}"])
-        self.tooltip = ""
-        if shown_probabilities:
-            val = ', '.join(
-                self.class_values[i] if i is not None else "-"
-                for i in shown_probabilities if i is not None
-            )
-            self.tooltip = f"p({val})"
+        if tooltip_probabilities:
+            self.tooltip = f"p({', '.join(tooltip_probabilities)})"
+        else:
+            self.tooltip = ""
 
     def displayText(self, value, _):
         try:
@@ -878,17 +1048,20 @@ class PredictionsModel(AbstractSortTableModel):
                 return self._header[section]
         return None
 
-    def setProbInd(self, indices):
-        self.__probInd = indices
-        self.sort(self.sortColumn())
+    def setProbInd(self, indicess):
+        self.__probInd = indicess
+        self.sort(self.sortColumn(), self.sortOrder())
 
     def sortColumnData(self, column):
         values = self._values[column]
         probs = self._probs[column]
         # Let us assume that probs can be None, numpy array or list of arrays
+        # self.__probInd[column] can be None (numeric) or empty (no probs
+        # shown for particular model)
         if probs is not None and len(probs) and len(probs[0]) \
-                and self.__probInd is not None and len(self.__probInd):
-            return probs[:, self.__probInd]
+                and self.__probInd is not None \
+                and self.__probInd[column]:
+            return probs[:, self.__probInd[column]]
         else:
             return values
 
@@ -898,8 +1071,8 @@ class PredictionsModel(AbstractSortTableModel):
 
 
 # PredictionsModel and DataModel have the same signal and sort method, but
-# extracting it into a common base class would require diamond inheritance
-# because they're derived from different classes. It's not worth it.
+# extracting them into a mixin (because they're derived from different classes)
+# would be more complicated and longer than some code repetition.
 class DataModel(TableModel):
     list_sorted = pyqtSignal()
 
@@ -1169,7 +1342,7 @@ class TableView(gui.HScrollStepMixin, QTableView):
 def tool_tip(value):
     value, dist = value
     if dist is not None:
-        return "{!s} {!s}".format(value, dist)
+        return f"{value:!s} {dist:!s}"
     else:
         return str(value)
 
@@ -1207,5 +1380,5 @@ if __name__ == "__main__":  # pragma: no cover
         predictors_ = [pred_error]
 
     WidgetPreview(OWPredictions).run(
-        set_data=iris2,
+        set_data=iris,
         insert_predictor=list(enumerate(predictors_)))

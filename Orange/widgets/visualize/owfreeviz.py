@@ -5,11 +5,11 @@ from types import SimpleNamespace as namespace
 import numpy as np
 
 from AnyQt.QtCore import Qt, QRectF, QLineF, QPoint
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QPalette
 
 import pyqtgraph as pg
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.projection import FreeViz
 from Orange.projection.freeviz import FreeVizModel
 from Orange.widgets import widget, gui, settings
@@ -105,7 +105,8 @@ class OWFreeVizGraph(OWGraphWithAnchors):
         if self.circle_item is not None:
             r = self.scaled_radius
             self.circle_item.setRect(QRectF(-r, -r, 2 * r, 2 * r))
-            pen = pg.mkPen(QColor(Qt.lightGray), width=1, cosmetic=True)
+            color = self.plot_widget.palette().color(QPalette.Disabled, QPalette.Text)
+            pen = pg.mkPen(color, width=1, cosmetic=True)
             self.circle_item.setPen(pen)
 
     def _add_indicator_item(self, anchor_idx):
@@ -180,6 +181,11 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         return [a for a in self.data.domain.attributes
                 if a.is_continuous or a.is_discrete and len(a.values) == 2]
 
+    @property
+    def effective_data(self):
+        return self.data.transform(Domain(self.effective_variables,
+                                          self.data.domain.class_vars))
+
     def __radius_slider_changed(self):
         self.graph.update_radius()
 
@@ -231,6 +237,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         self.run_button.setText("Start")
 
     # OWAnchorProjectionWidget
+    @OWAnchorProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
         self.graph.set_sample_size(None)

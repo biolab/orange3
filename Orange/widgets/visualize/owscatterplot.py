@@ -244,17 +244,12 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         slope, intercept, rvalue, _, _ = linregress(x, y)
         angle = np.degrees(np.arctan(slope))
         start_y = min_x * slope + intercept
-        rotate = 135 < angle % 360 < 315
-        l_opts = dict(color=color, position=abs(rotate - 0.85),
+        l_opts = dict(color=color, position=0.85,
                       rotateAxis=(1, 0), movable=True)
-        reg_line_item = pg.InfiniteLine(
+        return pg.InfiniteLine(
             pos=QPointF(min_x, start_y), angle=angle,
             pen=pg.mkPen(color=color, width=width, style=style),
             label=f"r = {rvalue:.2f}", labelOpts=l_opts)
-        if rotate:
-            reg_line_item.label.angle = 180
-            reg_line_item.label.updateTransform()
-        return reg_line_item
 
     def _add_line(self, x, y, color):
         width = self.parameter_setter.reg_line_settings[Updater.WIDTH_LABEL]
@@ -358,6 +353,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.vizrank: ScatterPlotVizRank = None
         self.vizrank_button: QPushButton = None
         self.sampling: QGroupBox = None
+        self._xy_invalidated: bool = True
 
         self.sql_data = None  # Orange.data.sql.table.SqlTable
         self.attribute_selection_list = None  # list of Orange.data.Variable
@@ -447,6 +443,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.vizrank_button.setEnabled(not err_msg)
         self.vizrank_button.setToolTip(err_msg)
 
+    @OWDataProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
         self._vizrank_color_change()
@@ -558,6 +555,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.add_data()
             self.__timer.start()
 
+    @OWDataProjectionWidget.Inputs.data_subset
     def set_subset_data(self, subset_data):
         self.warning()
         if isinstance(subset_data, SqlTable):
@@ -579,6 +577,8 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attr_x, self.attr_y = self.attribute_selection_list[:2]
             self.attr_box.setEnabled(False)
             self.vizrank.setEnabled(False)
+        self._invalidated = self._invalidated or self._xy_invalidated
+        self._xy_invalidated = False
         super().handleNewSignals()
         if self._domain_invalidated:
             self.graph.update_axes()
@@ -589,7 +589,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
             self.attribute_selection_list = attributes[:2]
-            self._invalidated = self._invalidated \
+            self._xy_invalidated = self._xy_invalidated \
                 or self.attr_x != attributes[0] \
                 or self.attr_y != attributes[1]
         else:

@@ -12,15 +12,16 @@ Groups items using a hierarchical clustering algorithm.
 - Selected Data: instances selected from the plot
 - Data: data with an additional column showing whether an instance is selected
 
-The widget computes [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) of arbitrary types of objects from a matrix of distances and shows a corresponding [dendrogram](https://en.wikipedia.org/wiki/Dendrogram).
+The widget computes [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) of arbitrary types of objects from a matrix of distances and shows a corresponding [dendrogram](https://en.wikipedia.org/wiki/Dendrogram). Distances can be computed with the [Distances](../unsupervised/distances.md) widget
 
-![](images/HierarchicalClustering-stamped.png)
+![](images/Hierarchical-Clustering.png)
 
-1. The widget supports four ways of measuring distances between clusters:
+1. The widget supports the following ways of measuring distances between clusters:
    - **Single linkage** computes the distance between the closest elements of the two clusters
    - **Average linkage** computes the average distance between elements of the two clusters
    - **Weighted linkage** uses the [WPGMA](http://research.amnh.org/~siddall/methods/day1.html) method
    - **Complete linkage** computes the distance between the clusters' most distant elements
+   - **Ward linkage** computes the increase of the error sum of squares. In other words, the [Ward's minimum variance criterion](https://en.wikipedia.org/wiki/Ward%27s_method) minimizes the total within-cluster variance.
 2. Labels of nodes in the dendrogram can be chosen in the **Annotation** box.
 3. Huge dendrograms can be pruned in the *Pruning* box by selecting the maximum depth of the dendrogram. This only affects the display, not the actual clustering.
 4. The widget offers three different selection methods:
@@ -28,18 +29,31 @@ The widget computes [hierarchical clustering](https://en.wikipedia.org/wiki/Hier
    - **Height ratio** (Clicking on the bottom or top ruler of the dendrogram places a cutoff line in the graph. Items to the right of the line are selected.)
    - **Top N** (Selects the number of top nodes.)
 5. Use *Zoom* and scroll to zoom in or out.
-6. If the items being clustered are instances, they can be added a cluster index (*Append cluster IDs*). The ID can appear as an ordinary **Attribute**, **Class attribute** or a **Meta attribute**. In the second case, if the data already has a class attribute, the original class is placed among meta attributes.
-7. The data can be automatically output on any change (*Auto send is on*) or, if the box isn't ticked, by pushing *Send Data*.
-8. Clicking this button produces an image that can be saved.
-9. Produce a report.
+6. The data can be automatically output on any change (*Send Automatically*) or, if the box isn't ticked, by pushing *Send Selection*.
+
+To output the cluster, click on the ruler at the top or the bottom of the visualization. This will create a cut-off for the clusters.
 
 Examples
 --------
 
-The workflow below shows the output of **Hierarchical Clustering** for the *Iris* dataset in [Data Table](../data/datatable.md) widget. We see that if we choose *Append cluster IDs* in hierarchical clustering, we can see an additional column in the **Data Table** named *Cluster*. This is a way to check how hierarchical clustering clustered individual instances.
+#### Cluster selection and projections
 
-![](images/HierarchicalClustering-Example.png)
+We start with the *Grades for English and Math* data set from the [Datasets](../data/datasets.md) widget. The data contains two numeric variables, grades for English and for Algebra.
 
-In the second example, we loaded the *Iris* dataset again, but this time we added the [Scatter Plot](../visualize/scatterplot.md), showing all the instances from the [File](../data/file.md) widget, while at the same time receiving the selected instances signal from **Hierarchical Clustering**. This way we can observe the position of the selected cluster(s) in the projection.
+**Hierarchical Clustering** requires distance matrix on the input. We compute it with [Distances](../unsupervised/distances.md), where we use the *Euclidean* distance metric.
 
-![](images/HierarchicalClustering-Example2.png)
+Once the data is passed to the hierarchical clustering, the widget displays a dendrogram, a tree-like clustering structure. Each node represents an instance in the data set, in our case a student. Tree nodes are labelled with student names.
+
+To create the clusters, we click on the ruler at the desired threshold. In this case, we chose three clusters. We pass those clusters to [MDS](../unsupervised/mds.md), which shows a 2D projection of data instances, colored by cluster label.
+
+![](images/Hierarchical-Example1.png)
+
+#### Cluster explanation
+
+In the second example, we continue the *Grades for English and Math* data. Say we wish to explain what characterizes the cluster with Maya, George, Lea, and Phill.
+
+We select the cluster in the dendrogram and pass the entire data set to [Box Plot](../visualize/boxplot.md). Note that the connection here is *Data*, not *Selected Data*. To rewire the connection, double-click on it.
+
+In **Box Plot**, we set *Selected* variable as the Subgroup. This will split the plot into selected data instances (our cluster) and the remaining data. Next, we use *Order by relevance to subgroup* option, which sorts the variables according to how well they distinguish between subgroups. It turns out, that our cluster contains students who are bad at math (they have low values of the Algebra variable).
+
+![](images/Hierarchical-Example2.png)

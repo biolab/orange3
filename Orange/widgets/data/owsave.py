@@ -20,7 +20,7 @@ class OWSave(OWSaveBase):
     category = "Data"
     keywords = ["export"]
 
-    settings_version = 2
+    settings_version = 3
 
     class Inputs:
         data = Input("Data", Table)
@@ -119,6 +119,12 @@ class OWSave(OWSaveBase):
 
         if version < 2:
             migrate_to_version_2()
+
+        if version < 3:
+            if settings.get("add_type_annotations") and \
+                    settings.get("stored_name") and \
+                    os.path.splitext(settings["stored_name"])[1] == ".xlsx":
+                settings["add_type_annotations"] = False
 
     def initial_start_dir(self):
         if self.filename and os.path.exists(os.path.split(self.filename)[0]):

@@ -107,7 +107,7 @@ class TSNEParametersEditor(ManifoldParametersEditor):
         self._create_spin_parameter("early_exaggeration", 1, 100,
                                     "Early exaggeration:")
         self._create_spin_parameter("learning_rate", 1, 1000, "Learning rate:")
-        self._create_spin_parameter("n_iter", 250, 1e5, "Max iterations:")
+        self._create_spin_parameter("n_iter", 250, 10000, "Max iterations:")
         self._create_radio_parameter("initialization", "Initialization:")
 
 

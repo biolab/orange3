@@ -1,7 +1,5 @@
 import itertools
 
-import numpy as np
-
 from AnyQt.QtWidgets import QTableView, QHeaderView
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtCore import Qt, QAbstractTableModel, QSize
@@ -39,7 +37,7 @@ class DistanceMatrixModel(QAbstractTableModel):
         self.span = span = float(distances.max())
 
         self.colors = \
-            (distances * (170 / span if span > 1e-10 else 0)).astype(np.int)
+            (distances * (170 / span if span > 1e-10 else 0)).astype(int)
         self.zero_diag = all(distances.diagonal() < 1e-6)
         self.endResetModel()
 
@@ -71,7 +69,7 @@ class DistanceMatrixModel(QAbstractTableModel):
 
     def color_for_label(self, ind, light=100):
         if self.label_colors is None:
-            return Qt.lightGray
+            return None
         return QBrush(self.label_colors[ind].lighter(light))
 
     def color_for_cell(self, row, col):
@@ -82,7 +80,7 @@ class DistanceMatrixModel(QAbstractTableModel):
             return Qt.AlignRight | Qt.AlignVCenter
         row, col = index.row(), index.column()
         if self.distances is None:
-            return
+            return None
         if role == TableBorderItem.BorderColorRole:
             return self.color_for_label(col), self.color_for_label(row)
         if role == FixedFormatNumericColumnDelegate.ColumnDataSpanRole:
@@ -95,15 +93,21 @@ class DistanceMatrixModel(QAbstractTableModel):
             return float(self.distances[row, col])
         if role == Qt.BackgroundColorRole:
             return self.color_for_cell(row, col)
+        if role == Qt.ForegroundRole:
+            return QColor(Qt.black)  # the background is light-ish
+        return None
 
     def headerData(self, ind, orientation, role):
         if not self.labels:
-            return
+            return None
         if role == Qt.DisplayRole and ind < len(self.labels):
             return self.labels[ind]
         # On some systems, Qt doesn't respect the following role in the header
         if role == Qt.BackgroundRole:
             return self.color_for_label(ind, 150)
+        if role == Qt.ForegroundRole and self.label_colors is not None:
+            return QColor(Qt.black)
+        return None
 
 
 class TableBorderItem(FixedFormatNumericColumnDelegate):
@@ -196,7 +200,9 @@ class OWDistanceMatrix(widget.OWWidget):
         view.setWordWrap(False)
         view.setTextElideMode(Qt.ElideNone)
         view.setEditTriggers(QTableView.NoEditTriggers)
-        view.setItemDelegate(TableBorderItem(roles=(Qt.DisplayRole, Qt.BackgroundRole)))
+        view.setItemDelegate(
+            TableBorderItem(
+                roles=(Qt.DisplayRole, Qt.BackgroundRole, Qt.ForegroundRole)))
         view.setModel(self.tablemodel)
         view.setShowGrid(False)
         for header in (view.horizontalHeader(), view.verticalHeader()):

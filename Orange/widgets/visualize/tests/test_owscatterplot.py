@@ -743,6 +743,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.setup_plot.assert_called_once()
         self.assertListEqual(self.widget.effective_variables, list(features))
 
+        self.widget.setup_plot.reset_mock()
+        features = self.data.domain.attributes[2:]
+        signals = [(self.widget.Inputs.features, AttributeList(features)),
+                   (self.widget.Inputs.data, self.data)]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+
     def test_invalidated_diff_features(self):
         self.widget.setup_plot = Mock()
         # send data and set default features
@@ -843,8 +850,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         widget = self.widget
         graph = widget.graph
         xy = np.array([[0, 0], [1, 0], [1, 2], [2, 2],
-                       [0, 1], [1, 3], [2, 5]], dtype=np.float)
-        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=np.float)
+                       [0, 1], [1, 3], [2, 5]], dtype=float)
+        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=float)
         widget.get_coordinates_data = lambda: xy.T
         widget.can_draw_regresssion_line = lambda: True
         widget.get_color_data = lambda: colors
@@ -993,8 +1000,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         widget = self.widget
         graph = widget.graph
         x, y = np.array([[0, 0], [1, 0], [1, 2], [2, 2],
-                         [0, 1], [1, 3], [2, 5]], dtype=np.float).T
-        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=np.float)
+                         [0, 1], [1, 3], [2, 5]], dtype=float).T
+        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=float)
         widget.get_coordinates_data = lambda: (x, y)
         widget.can_draw_regresssion_line = lambda: True
         widget.get_color_data = lambda: colors

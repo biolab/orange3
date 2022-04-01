@@ -59,6 +59,7 @@ def compute_density(x_grid, y_grid, x_data, y_data, rgb_data):
 
 # sample k data points from a uniformly spaced g*g grid of buckets
 def grid_sample(x_data, y_data, k=1000, g=10):
+    rgen = np.random.RandomState(0)
     n = len(x_data)
     min_x, max_x = min(x_data), max(x_data)
     min_y, max_y = min(y_data), max(y_data)
@@ -70,12 +71,12 @@ def grid_sample(x_data, y_data, k=1000, g=10):
         grid[y][x].append(i)
     for y in range(g):
         for x in range(g):
-            np.random.shuffle(grid[y][x])
+            rgen.shuffle(grid[y][x])
     sample = []
     while len(sample) < k:
         for y in range(g):
             for x in range(g):
                 if len(grid[y][x]) != 0:
                     sample.append(grid[y][x].pop())
-    np.random.shuffle(sample)
+    rgen.shuffle(sample)
     return sample[:k]

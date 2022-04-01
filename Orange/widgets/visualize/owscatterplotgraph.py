@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 
 import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
-    QObject
+    QObject, QEvent
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
-    QPainter
+    QPainter, QPalette
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
     QGraphicsRectItem, QGraphicsItemGroup
 
@@ -27,7 +27,7 @@ from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import (
     HelpEventDelegate as EventDelegate, InteractiveViewBox as ViewBox,
-    PaletteItemSample, SymbolItemSample, AxisItem
+    PaletteItemSample, SymbolItemSample, AxisItem, PlotWidget
 )
 
 SELECTION_WIDTH = 5
@@ -38,20 +38,19 @@ MAX_COLORS = 11
 
 
 class LegendItem(PgLegendItem):
-    def __init__(self, size=None, offset=None, pen=None, brush=None):
+    def __init__(
+            self, size=None, offset=None, pen=None, brush=None,
+    ):
         super().__init__(size, offset)
 
         self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setHorizontalSpacing(15)
         self.layout.setColumnAlignment(1, Qt.AlignLeft | Qt.AlignVCenter)
-
-        if pen is None:
-            pen = QPen(QColor(196, 197, 193, 200), 1)
-            pen.setCosmetic(True)
+        if pen is not None:
+            pen = QPen(pen)
+        if brush is not None:
+            brush = QBrush(brush)
         self.__pen = pen
-
-        if brush is None:
-            brush = QBrush(QColor(232, 232, 232, 100))
         self.__brush = brush
 
     def restoreAnchor(self, anchors):
@@ -65,16 +64,17 @@ class LegendItem(PgLegendItem):
 
     # pylint: disable=arguments-differ
     def paint(self, painter, _option, _widget=None):
-        painter.setPen(self.__pen)
-        painter.setBrush(self.__brush)
+        painter.setPen(self.pen())
+        painter.setBrush(self.brush())
         rect = self.contentsRect()
         painter.drawRoundedRect(rect, 2, 2)
 
     def addItem(self, item, name):
         super().addItem(item, name)
-        # Fix-up the label alignment
+        # Fix-up the label alignment, and color
+        color = self.palette().color(QPalette.Text)
         _, label = self.items[-1]
-        label.setText(name, justify="left")
+        label.setText(name, justify="left", color=color)
 
     def clear(self):
         """
@@ -89,6 +89,31 @@ class LegendItem(PgLegendItem):
             label.hide()
 
         self.updateSize()
+
+    def pen(self):
+        if self.__pen is not None:
+            return QPen(self.__pen)
+        else:
+            color = self.palette().color(QPalette.Disabled, QPalette.Text)
+            color.setAlpha(100)
+            pen = QPen(color, 1)
+            pen.setCosmetic(True)
+            return pen
+
+    def brush(self):
+        if self.__brush is not None:
+            return QBrush(self.__brush)
+        else:
+            color = self.palette().color(QPalette.Window)
+            color.setAlpha(150)
+            return QBrush(color)
+
+    def changeEvent(self, event: QEvent):
+        if event.type() == QEvent.PaletteChange:
+            color = self.palette().color(QPalette.Text)
+            for _, label in self.items:
+                label.setText(label.text, color=color)
+        super().changeEvent(event)
 
 
 def bound_anchor_pos(corner, parentpos):
@@ -546,8 +571,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
         self.view_box = view_box(self)
         _axis = {"left": AxisItem("left"), "bottom": AxisItem("bottom")}
-        self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
-                                         background="w", axisItems=_axis)
+        self.plot_widget = PlotWidget(
+            viewBox=self.view_box, parent=parent, background=None,
+            axisItems=_axis
+        )
         self.plot_widget.hideAxis("left")
         self.plot_widget.hideAxis("bottom")
         self.plot_widget.getPlotItem().buttonsHidden = True
@@ -624,7 +651,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         r = text.boundingRect()
         text.setTextWidth(r.width())
         rect = QGraphicsRectItem(0, 0, r.width() + 8, r.height() + 4)
-        rect.setBrush(QColor(224, 224, 224, 212))
+        color = self.plot_widget.palette().color(QPalette.Disabled, QPalette.Window)
+        color.setAlpha(212)
+        rect.setBrush(color)
         rect.setPen(QPen(Qt.NoPen))
         self.update_tooltip()
 
@@ -1290,12 +1319,12 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         if self._too_many_labels or mask is None or not np.any(mask):
             return
 
-        black = pg.mkColor(0, 0, 0)
+        foreground = self.plot_widget.palette().color(QPalette.Text)
         labels = labels[mask]
         x = x[mask]
         y = y[mask]
         for label, xp, yp in zip(labels, x, y):
-            ti = TextItem(label, black)
+            ti = TextItem(label, foreground)
             ti.setPos(xp, yp)
             self.plot_widget.addItem(ti)
             self.labels.append(ti)

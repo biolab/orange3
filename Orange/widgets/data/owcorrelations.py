@@ -156,7 +156,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         for attr in attrs:
             item = QStandardItem(attr.name)
             item.setData(attrs, self._AttrRole)
-            item.setData(Qt.AlignLeft + Qt.AlignTop, Qt.TextAlignmentRole)
+            item.setData(Qt.AlignLeft + Qt.AlignCenter, Qt.TextAlignmentRole)
             item.setToolTip(attr.name)
             attr_items.append(item)
         correlation_item = QStandardItem("{:+.3f}".format(score[1]))
@@ -237,6 +237,7 @@ class OWCorrelations(OWWidget):
     description = "Compute all pairwise attribute correlations."
     icon = "icons/Correlations.svg"
     priority = 1106
+    category = "Unsupervised"
 
     class Inputs:
         data = Input("Data", Table)
@@ -281,7 +282,7 @@ class OWCorrelations(OWWidget):
             placeholder="(All combinations)", valid_types=ContinuousVariable)
         gui.comboBox(
             box, self, "feature", callback=self._feature_combo_changed,
-            model=self.feature_model
+            model=self.feature_model, searchable=True
         )
 
         self.vizrank, _ = CorrelationRank.add_vizrank(

@@ -5,10 +5,14 @@ __all__ = ["LearnerClassification", "ModelClassification",
 
 
 class LearnerClassification(Learner):
-    learner_adequacy_err_msg = "Categorical class variable expected."
 
-    def check_learner_adequacy(self, domain):
-        return domain.has_discrete_class
+    def incompatibility_reason(self, domain):
+        reason = None
+        if len(domain.class_vars) > 1 and not self.supports_multiclass:
+            reason = "Too many target variables."
+        elif not domain.has_discrete_class:
+            reason = "Categorical class variable expected."
+        return reason
 
 
 class ModelClassification(Model):

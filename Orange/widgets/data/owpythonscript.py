@@ -521,6 +521,7 @@ if TYPE_CHECKING:
 class OWPythonScript(OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
+    category = "Transform"
     icon = "icons/PythonScript.svg"
     priority = 3150
     keywords = ["program", "function"]
@@ -536,14 +537,14 @@ class OWPythonScript(OWWidget):
             "Classifier", Model, replaces=["in_classifier"], default=True
         )
         object = MultiInput(
-            "Object", object, replaces=["in_object"], default=False
+            "Object", object, replaces=["in_object"], default=False, auto_summary=False
         )
 
     class Outputs:
         data = Output("Data", Table, replaces=["out_data"])
         learner = Output("Learner", Learner, replaces=["out_learner"])
         classifier = Output("Classifier", Model, replaces=["out_classifier"])
-        object = Output("Object", object, replaces=["out_object"])
+        object = Output("Object", object, replaces=["out_object"], auto_summary=False)
 
     signal_names = ("data", "learner", "classifier", "object")
 
