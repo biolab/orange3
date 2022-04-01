@@ -8,7 +8,7 @@ from itertools import count
 import numpy as np
 import scipy.sparse as sp
 
-from Orange.data import DiscreteVariable, Domain, TimeVariable
+from Orange.data import DiscreteVariable, Domain, TimeVariable, Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import distribution, contingency, util as ut
 from Orange.statistics.basic_stats import BasicStats
@@ -167,7 +167,7 @@ class EqualWidth(Discretization):
         self.n = n
 
     # noinspection PyProtectedMember
-    def __call__(self, data, attribute, fixed=None):
+    def __call__(self, data: Table, attribute, fixed=None):
         if fixed:
             min, max = fixed[attribute.name]
             points = self._split_eq_width(min, max)
@@ -176,8 +176,7 @@ class EqualWidth(Discretization):
                 stats = BasicStats(data, attribute)
                 points = self._split_eq_width(stats.min, stats.max)
             else:
-                values = data[:, attribute]
-                values = values.X if values.X.size else values.Y
+                values, _ = data.get_column_view(attribute)
                 if values.size:
                     min, max = ut.nanmin(values), ut.nanmax(values)
                     points = self._split_eq_width(min, max)
@@ -203,9 +202,8 @@ class FixedWidth(Discretization):
         self.width = width
         self.digits = digits
 
-    def __call__(self, data, attribute):
-        values = data[:, attribute]
-        values = values.X if values.X.size else values.Y
+    def __call__(self, data: Table, attribute):
+        values, _ = data.get_column_view(attribute)
         points = []
         if values.size:
             mn, mx = ut.nanmin(values), ut.nanmax(values)
@@ -227,11 +225,10 @@ class FixedTimeWidth(Discretization):
         self.width = width
         self.unit = unit
 
-    def __call__(self, data, attribute):
+    def __call__(self, data: Table, attribute):
         fmt = ["%Y", "%y %b", "%y %b %d", "%y %b %d %H:%M", "%y %b %d %H:%M",
                 "%H:%M:%S"][self.unit]
-        values = data[:, attribute]
-        values = values.X if values.X.size else values.Y
+        values, _ = data.get_column_view(attribute)
         times = []
         if values.size:
             mn, mx = ut.nanmin(values), ut.nanmax(values)
@@ -294,10 +291,9 @@ class Binning(Discretization):
     def __init__(self, n=4):
         self.n = n
 
-    def __call__(self, data, attribute):
+    def __call__(self, data: Table, attribute):
         attribute = data.domain[attribute]
-        values = data[:, attribute]
-        values = values.X if values.X.size else values.Y
+        values, _ = data.get_column_view(attribute)
         if not values.size:
             return self._create_binned_var(None, attribute)
 
