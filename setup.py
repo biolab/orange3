@@ -57,6 +57,13 @@ LONG_DESCRIPTION_CONTENT_TYPE = 'text/markdown'
 AUTHOR = 'Bioinformatics Laboratory, FRI UL'
 AUTHOR_EMAIL = 'info@biolab.si'
 URL = 'http://orange.biolab.si/'
+PROJECT_URLS = {
+    'Homepage': 'https://orangedatamining.com/',
+    'Documentation': 'https://orangedatamining.com/docs',
+    'Source Code': 'https://github.com/biolab/orange3',
+    'Issue Tracker': 'https://github.com/biolab/orange3/issues',
+    'Donate': 'https://github.com/sponsors/biolab'
+}
 LICENSE = 'GPLv3+'
 
 KEYWORDS = [
@@ -505,6 +512,7 @@ def setup_package():
         author=AUTHOR,
         author_email=AUTHOR_EMAIL,
         url=URL,
+        project_urls=PROJECT_URLS,
         license=LICENSE,
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
