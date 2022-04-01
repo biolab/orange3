@@ -111,7 +111,7 @@ class TestOWDiscretize(WidgetTest):
 
         w = self.create_widget(
             OWDiscretize,
-            dict(context_settings=[Context(values={"var_hints":
+            {"var_hints":
                 {None: VarHint(Methods.EqualFreq, (3,)),
                  ('alpha 0', False): VarHint(Methods.Keep, ()),
                  ('alpha 7', False): VarHint(Methods.Remove, ()),
@@ -120,7 +120,8 @@ class TestOWDiscretize(WidgetTest):
                  ('alpha 28', False): VarHint(Methods.EqualFreq, (4, )),
                  ('alpha 35', False): VarHint(Methods.MDL, ()),
                  ('alpha 42', False): VarHint(Methods.Custom, ("0, 0.125", )),
-                 ('alpha 49', False): VarHint(Methods.MDL, ())}})]))
+                 ('alpha 49', False): VarHint(Methods.MDL, ())},
+             "__version__": 3})
 
         self.send_signal(w.Inputs.data, data)
 
@@ -145,9 +146,7 @@ class TestOWDiscretize(WidgetTest):
         self.send_signal(w.Inputs.data, None)
         self.assertIsNone(self.get_output(w.Outputs.data))
         self.assertIsNone(w.data)
-        self.assertEqual(list(w.var_hints), [DefaultKey])
         self.assertEqual(w.discretized_vars, {})
-        self.assertEqual(w.varview.default_view.model().hint, DefaultHint)
         self.assertEqual(len(w.varview.model()), 0)
 
         self.send_signal(w.Inputs.data, data)
@@ -189,10 +188,9 @@ class TestOWDiscretize(WidgetTest):
         self.assertNotIn("default_method_name", settings)
         self.assertNotIn("default_k", settings)
         self.assertNotIn("default_cutpoints", settings)
-        values = settings["context_settings"][0].values
-        self.assertNotIn("saved_var_states", values)
+        self.assertNotIn("context_settings", settings)
         self.assertEqual(
-            values["var_hints"],
+            settings["var_hints"],
             {None: VarHint(Methods.EqualFreq, (3,)),
              ('ST by exercise', False): VarHint(Methods.MDL, ()),
              ('age', False): VarHint(Methods.Keep, ()),

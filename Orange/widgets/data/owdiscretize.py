@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import (
     QLineEdit, QToolTip, QLabel, QApplication,
     QSpinBox, QSizePolicy, QRadioButton, QComboBox)
 
-from orangewidget.settings import ContextHandler, Setting, ContextSetting
+from orangewidget.settings import Setting
 from orangewidget.utils import listview
 
 from Orange.data import (
@@ -97,6 +97,14 @@ def _fixed_time_width_discretization(
         return TOO_MANY_INTERVALS
 
 
+def _mdl_discretization(
+        data: Table,
+        var: Union[ContinuousVariable, str, int]) -> Union[DiscreteVariable, str]:
+    if not data.domain.has_discrete_class:
+        return "no discrete class"
+    return disc.EntropyMDL()(data, var)
+
+
 def _custom_discretization(
         _,
         var: Union[ContinuousVariable, str, int],
@@ -161,7 +169,7 @@ Options: Dict[Methods, MethodDesc] = {
                    "Entropy vs. MDL", "entropy",
                    "Split values until MDL exceeds the entropy (Fayyad-Irani)\n"
                    "(requires discrete class variable)",
-                   disc.EntropyMDL(),
+                   _mdl_discretization,
                    ()),
         MethodDesc(Methods.EqualFreq,
                    "Equal frequency, intervals: ", "equal freq, k={}",
@@ -448,26 +456,6 @@ class IncreasingNumbersListValidator(QValidator):
             tip.move(pos)
 
 
-class DiscretizeContextHandler(ContextHandler):
-    def match(self, context, data: Table):  # pylint: disable=arguments-differ
-        if data is None:
-            return self.NO_MATCH
-        domain: Domain = data.domain
-        types = (ContinuousVariable, TimeVariable)
-        var_hints = context.values.get("var_hints")
-        if var_hints is None:  # sanity check
-            return self.NO_MATCH
-        for key, hint in var_hints.items():
-            if hint.method_id == Methods.MDL and not domain.has_discrete_class:
-                return self.NO_MATCH
-            if key is DefaultKey:
-                continue
-            name, tpe = key
-            if name not in domain or not isinstance(domain[name], types[tpe]):
-                return self.NO_MATCH
-        return self.PERFECT_MATCH
-
-
 # These are no longer used, but needed for loading and migrating old pickles.
 # We insert them into namespace instead of normally defining them, in order
 # to hide it from IDE's and avoid mistakenly using them.
@@ -506,12 +494,12 @@ class OWDiscretize(widget.OWWidget):
     class Outputs:
         data = Output("Data", Table, doc="Table with categorical features")
 
-    settingsHandler = DiscretizeContextHandler()
     settings_version = 3
 
     #: Default setting (key DefaultKey) and specific settings for variables;
     # if variable is not in the dict, it uses default
-    var_hints: Dict[KeyType, VarHint] = ContextSetting({DefaultKey: DefaultHint})
+    var_hints: Dict[KeyType, VarHint] = Setting(
+        {DefaultKey: DefaultHint}, schema_only=True)
     autosend = Setting(True)
 
     want_main_area = False
@@ -904,31 +892,23 @@ class OWDiscretize(widget.OWWidget):
         """
         keys = self.varkeys_for_selection()
         mset = list(unique_everseen(map(self.var_hints.get, keys)))
-        if len(mset) == 1:
-            if mset == [None]:
-                method_id, args = Methods.Default, ()
-            else:
-                method_id, args = mset.pop()
-            self._check_button(method_id, True)
-            self._set_values(method_id, args)
-        else:
+        if len(mset) != 1:
             self._uncheck_all_buttons()
+            return
+
+        if mset == [None]:
+            method_id, args = Methods.Default, ()
+        else:
+            method_id, args = mset.pop()
+        self._check_button(method_id, True)
+        self._set_values(method_id, args)
 
     @Inputs.data
     def set_data(self, data: Optional[Table]):
-        self.closeContext()
-        self.data = data
-
-        self.var_hints = {DefaultKey: DefaultHint}
         self.discretized_vars = {}
-
-        if self.data is not None:
-            self.varview.model().set_domain(data.domain)
-            self.openContext(data)
-            self._update_discretizations()
-        else:
-            self.varview.model().set_domain(None)
-
+        self.data = data
+        self.varview.model().set_domain(None if data is None else data.domain)
+        self._update_discretizations()
         self._update_default_model()
         self._set_mdl_button()
         self.commit.now()
@@ -989,12 +969,12 @@ class OWDiscretize(widget.OWWidget):
             else:
                 args = ()
             default_hint = VarHint(method_id, args)
+            var_hints = {DefaultKey: default_hint}
             for context in settings.get("context_settings", []):
                 values = context.values
                 if "saved_var_states" not in values:
                     continue
                 var_states, _ = values.pop("saved_var_states")
-                var_hints = {DefaultKey: default_hint}
                 for (tpe, name), dstate in var_states.items():
                     key = (name, tpe == 4)  # time variable == 4
                     method = dstate.method
@@ -1006,7 +986,7 @@ class OWDiscretize(widget.OWWidget):
                     else:
                         args = tuple(method)
                     var_hints[key] = VarHint(getattr(Methods, method_name), args)
-                values["var_hints"] = var_hints
+            settings["var_hints"] = var_hints
 
 
 if __name__ == "__main__":  # pragma: no cover
