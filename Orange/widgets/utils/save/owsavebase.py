@@ -1,6 +1,7 @@
 import os.path
 import sys
 import re
+from pathlib import Path
 
 from AnyQt.QtWidgets import QFileDialog, QGridLayout, QMessageBox
 
@@ -114,10 +115,15 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         self._absolute_path = absolute_path
 
         workflow_dir = self.workflowEnv().get("basedir", None)
-        if workflow_dir and absolute_path.startswith(workflow_dir.rstrip("/")):
-            self.stored_path = os.path.relpath(absolute_path, workflow_dir)
-        else:
-            self.stored_path = absolute_path
+        if workflow_dir:
+            absolute_path_as_path = Path(absolute_path)
+            workflow_dir_as_path = Path(workflow_dir)
+            if workflow_dir_as_path in absolute_path_as_path.parents or \
+                    workflow_dir_as_path == absolute_path_as_path:
+                self.stored_path = os.path.relpath(absolute_path, workflow_dir)
+                return
+
+        self.stored_path = absolute_path
 
     def _abs_path_from_setting(self):
         """
