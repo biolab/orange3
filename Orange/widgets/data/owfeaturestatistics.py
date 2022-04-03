@@ -851,16 +851,17 @@ class OWFeatureStatistics(widget.OWWidget):
     def commit(self):
         if not self.selected_vars:
             self.Outputs.reduced_data.send(None)
+        else:
+            # Send a table with only selected columns to output
+            self.Outputs.reduced_data.send(self.data[:, self.selected_vars])
+
+        if not self.data:
             self.Outputs.statistics.send(None)
             return
 
-        # Send a table with only selected columns to output
-        variables = self.selected_vars
-        self.Outputs.reduced_data.send(self.data[:, variables])
-
         # Send the statistics of the selected variables to ouput
-        labels, data = self.model.get_statistics_matrix(variables, return_labels=True)
-        var_names = np.atleast_2d([var.name for var in variables]).T
+        labels, data = self.model.get_statistics_matrix(return_labels=True)
+        var_names = np.atleast_2d([var.name for var in self.model.variables]).T
         domain = Domain(
             attributes=[ContinuousVariable(name) for name in labels],
             metas=[StringVariable('Feature')]
