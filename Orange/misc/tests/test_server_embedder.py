@@ -199,7 +199,7 @@ class TestServerEmbedder(unittest.TestCase):
         - remove set_canceled and marked places connected to this method
         - this test
         """
-        self.assertGreaterEqual("3.33.0", Orange.__version__)
+        self.assertGreaterEqual("3.34.0", Orange.__version__)
 
         mock = MagicMock()
         self.embedder.embedd_data(self.test_data, processed_callback=mock)
