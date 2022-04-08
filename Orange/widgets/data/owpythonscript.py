@@ -286,8 +286,8 @@ class VimIndicator(QWidget):
         p.drawRoundedRect(rect, 5, 5)
         p.restore()
 
-        textstart = (width - fm.width(self.indicator_text)) / 2
-        p.drawText(textstart, height / 2 + 5, self.indicator_text)
+        textstart = (width - fm.width(self.indicator_text)) // 2
+        p.drawText(textstart, height // 2 + 5, self.indicator_text)
 
     def minimumSizeHint(self):
         fm = QFontMetrics(self.font())
