@@ -1369,11 +1369,11 @@ class PythonEditor(QPlainTextEdit):
             leftCursorRect = self.__cursorRect(block, column, 0)
             rightCursorRect = self.__cursorRect(block, column + 1, 0)
             if leftCursorRect.top() == rightCursorRect.top():  # if on the same visual line
-                middleHeight = (leftCursorRect.top() + leftCursorRect.bottom()) / 2
+                middleHeight = (leftCursorRect.top() + leftCursorRect.bottom()) // 2
                 if char == ' ':
                     painter.setPen(Qt.transparent)
                     painter.setBrush(QBrush(Qt.gray))
-                    xPos = (leftCursorRect.x() + rightCursorRect.x()) / 2
+                    xPos = (leftCursorRect.x() + rightCursorRect.x()) // 2
                     painter.drawRect(QRect(xPos, middleHeight, 2, 2))
                 else:
                     painter.setPen(QColor(Qt.gray).lighter(factor=120))
