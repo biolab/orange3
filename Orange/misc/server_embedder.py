@@ -63,7 +63,7 @@ class ServerEmbedderCommunicator:
         self._model = model_name
         self.embedder_type = embedder_type
 
-        # remove in 3.33
+        # remove in 3.34
         self._cancelled = False
 
         self.machine_id = None
@@ -100,7 +100,7 @@ class ServerEmbedderCommunicator:
         data
             List with data that needs to be embedded.
         processed_callback
-            Deprecated: remove in 3.33
+            Deprecated: remove in 3.34
             A function that is called after each item is embedded
             by either getting a successful response from the server,
             getting the result from cache or skipping the item.
@@ -161,7 +161,7 @@ class ServerEmbedderCommunicator:
         EmbeddingCancelledException:
             If cancelled attribute is set to True (default=False).
         """
-        # in Orange 3.33 keep content of the if - remove if clause and complete else
+        # in Orange 3.34 keep content of the if - remove if clause and complete else
         if proc_callback is None:
             progress_items = iter(linspace(0, 1, len(data)))
 
@@ -170,7 +170,7 @@ class ServerEmbedderCommunicator:
                 callback(next(progress_items))
         else:
             warnings.warn(
-                "proc_callback is deprecated and will be removed in version 3.33, "
+                "proc_callback is deprecated and will be removed in version 3.34, "
                 "use callback instead",
                 FutureWarning,
             )
@@ -220,7 +220,7 @@ class ServerEmbedderCommunicator:
         await asyncio.gather(*tasks, return_exceptions=True)
         log.debug("All workers canceled")
 
-    # remove in 3.33
+    # remove in 3.34
     def __check_cancelled(self):
         if self._cancelled:
             raise EmbeddingCancelledException()
@@ -270,7 +270,7 @@ class ServerEmbedderCommunicator:
             getting the result from cache or skipping the item.
         """
         while not queue.empty():
-            # remove in 3.33
+            # remove in 3.34
             self.__check_cancelled()
 
             # get item from the queue
@@ -396,10 +396,10 @@ class ServerEmbedderCommunicator:
     def clear_cache(self):
         self._cache.clear_cache()
 
-    # remove in 3.33
+    # remove in 3.34
     def set_cancelled(self):
         warnings.warn(
-            "set_cancelled is deprecated and will be removed in version 3.33, "
+            "set_cancelled is deprecated and will be removed in version 3.34, "
             "the process can be canceled by raising Error in callback",
             FutureWarning,
         )
