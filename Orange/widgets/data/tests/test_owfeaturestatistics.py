@@ -450,7 +450,6 @@ class TestFeatureStatisticsOutputs(WidgetTest):
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
 
     def test_output_combinations(self):
-        domain = self.data.domain
         # No selection -> reduced_data is not output, statistics is present
         self.widget.unconditional_commit()
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
