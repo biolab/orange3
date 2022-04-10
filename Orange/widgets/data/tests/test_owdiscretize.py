@@ -198,6 +198,7 @@ class TestOWDiscretize(WidgetTest, DataMixin):
         self.assertTrue(w.button_group.button(Methods.FixedWidth).isEnabled())
         self.assertFalse(w.button_group.button(Methods.FixedWidthTime).isEnabled())
         self.assertTrue(w.button_group.button(Methods.Custom).isEnabled())
+        self.assertTrue(w.copy_to_custom.isEnabled())
         self.assertEqual(w.width_line.text(), "10")
 
         select_rows(w.varview, (1, 2))
@@ -205,6 +206,7 @@ class TestOWDiscretize(WidgetTest, DataMixin):
         self.assertTrue(w.button_group.button(Methods.FixedWidth).isEnabled())
         self.assertFalse(w.button_group.button(Methods.FixedWidthTime).isEnabled())
         self.assertTrue(w.button_group.button(Methods.Custom).isEnabled())
+        self.assertTrue(w.copy_to_custom.isEnabled())
 
         select_rows(w.varview, (2, 4))
         self.assertFalse(w.button_group.button(Methods.FixedWidth).isChecked())
@@ -217,6 +219,7 @@ class TestOWDiscretize(WidgetTest, DataMixin):
         self.assertFalse(w.button_group.button(Methods.FixedWidth).isEnabled())
         self.assertTrue(w.button_group.button(Methods.FixedWidthTime).isEnabled())
         self.assertFalse(w.button_group.button(Methods.Custom).isEnabled())
+        self.assertFalse(w.copy_to_custom.isEnabled())
 
         select_rows(w.varview.default_view, (0, ))
         self.assertEqual(len(w.varview.selectionModel().selectedIndexes()), 0)
@@ -224,6 +227,7 @@ class TestOWDiscretize(WidgetTest, DataMixin):
         self.assertTrue(w.button_group.button(Methods.FixedWidth).isEnabled())
         self.assertTrue(w.button_group.button(Methods.FixedWidthTime).isEnabled())
         self.assertTrue(w.button_group.button(Methods.Custom).isEnabled())
+        self.assertFalse(w.copy_to_custom.isEnabled())
         self.assertFalse(w.button_group.button(Methods.Default).isEnabled())
         w._check_button(Methods.FixedWidth, True)
         self.assertTrue(w.button_group.button(Methods.FixedWidth).isChecked())

@@ -882,6 +882,7 @@ class OWDiscretize(widget.OWWidget):
         set_enabled(Methods.FixedWidth, True)
         set_enabled(Methods.FixedWidthTime, True)
         set_enabled(Methods.Custom, True)
+        self.copy_to_custom.setEnabled(False)
 
     def _var_selection_changed(self, _):
         """Callback for changed selection in listview with variables"""
@@ -900,6 +901,7 @@ class OWDiscretize(widget.OWWidget):
         set_enabled(Methods.Default, True)
         set_enabled(Methods.FixedWidth, no_time)
         set_enabled(Methods.Custom, no_time)
+        self.copy_to_custom.setEnabled(no_time)
         set_enabled(Methods.FixedWidthTime, all_time)
 
     def _update_interface(self):
@@ -937,6 +939,7 @@ class OWDiscretize(widget.OWWidget):
         self.varview.model().set_domain(None if data is None else data.domain)
         self._update_discretizations()
         self._update_default_model()
+        self.varview.select_default()
         self._set_mdl_button()
         self.commit.now()
 
