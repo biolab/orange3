@@ -15,6 +15,7 @@ import logging
 import ast
 import types
 import unicodedata
+import warnings
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
@@ -108,7 +109,10 @@ Categorical features are passed as strings
 
 """.lstrip()
 
-    FUNCTIONS = dict(chain([(key, val) for key, val in math.__dict__.items()
+    # import functions from math - but if the function with the same name
+    # exists in np, import it from there
+    FUNCTIONS = dict(chain([(key, np.__dict__.get(key, val))
+                            for key, val in math.__dict__.items()
                             if not key.startswith("_")],
                            [(key, val) for key, val in builtins.__dict__.items()
                             if key in {"str", "float", "int", "len",
@@ -999,7 +1003,9 @@ def bind_variable(descriptor, env, data, use_values):
             values = {name: i for i, name in enumerate(values)}
             descriptor = descriptor._replace(values=values)
 
-            def cast(x):  # pylint: disable=function-redefined
+            def cast(x): # pylint: disable=function-redefined
+                if isinstance(x, np.ndarray):
+                    return np.array([values.get(y, nan) for y in x])
                 return values.get(x, nan)
 
         else:
@@ -1095,9 +1101,11 @@ __ALLOWED = [
 __GLOBALS = {name: getattr(builtins, name) for name in __ALLOWED
              if hasattr(builtins, name)}
 
-__GLOBALS.update({name: getattr(math, name) for name in dir(math)
+__GLOBALS.update({name: getattr(np, name, getattr(math, name))
+                  for name in dir(math)
                   if not name.startswith("_")})
 
+# TODO: These functions are not shown in the widget's combo. Intentionally?
 __GLOBALS.update({
     "normalvariate": random.normalvariate,
     "gauss": random.gauss,
@@ -1164,7 +1172,29 @@ class FeatureFunc:
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
-            return [self(inst) for inst in instance]
+            y = None
+            # String values and (stringish) discrete values cannot be handled
+            # by numpy because expression `varname[i]` would return the i-th
+            # value (in the column) instead of the i-th char
+            if all(var.is_continuous for _, var in self.args):
+                try:
+                    args = [instance.get_column_view(var)[0]
+                            for _, var in self.args]
+                    # This is mainly to catch things like np.sqrt(-1), which
+                    # result in np.nan.
+                    # Alternative is to check that there are no infs
+                    # and that nans are only in rows where we already had them,
+                    # if np.any(np.isinf(y)) or \
+                    #     np.any(np.isnan(y)
+                    #            & np.all(np.isfinite(np.vstack(args).T), axis=1)):
+                    # But it's probably better to not ignore numpy warnings
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("error")
+                        y = self.func(*args)
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            if y is None:
+                return [self(inst) for inst in instance]
         else:
             try:
                 args = [str(instance[var]) if var.is_string
@@ -1178,9 +1208,9 @@ class FeatureFunc:
                 if not self.mask_exceptions:
                     raise
                 return np.nan
-            if self.cast:
-                y = self.cast(y)
-            return y
+        if self.cast:
+            y = self.cast(y)
+        return y
 
     def __reduce__(self):
         return type(self), (self.expression, self.args,

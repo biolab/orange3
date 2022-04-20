@@ -2,7 +2,6 @@
 import unittest
 import ast
 import sys
-import math
 import pickle
 import copy
 from unittest.mock import patch, Mock
@@ -286,6 +285,20 @@ class FeatureFuncTest(unittest.TestCase):
         np.testing.assert_array_equal(r, iris.X[:, 1] + 10)
         self.assertEqual(f(iris[0]), iris[0]["sepal width"] + 10)
 
+    def test_vectorized(self):
+        iris = Table("iris")
+        f = FeatureFunc("exp(sepal_width)",
+                        [("sepal_width", iris.domain["sepal width"])])
+        f.func = Mock()
+        f(iris)
+        f.func.assert_called_once()
+
+        f = FeatureFunc("iris[0]",
+                        [("iris", iris.domain["iris"])])
+        f.func = Mock()
+        f(iris)
+        self.assertEqual(f.func.call_count, 150)
+
     def test_string_casting(self):
         zoo = Table("zoo")
         f = FeatureFunc("name[0]",
@@ -500,7 +513,7 @@ class OWFeatureConstructorTests(WidgetTest):
 class TestFeatureEditor(unittest.TestCase):
     def test_has_functions(self):
         self.assertIs(FeatureEditor.FUNCTIONS["abs"], abs)
-        self.assertIs(FeatureEditor.FUNCTIONS["sqrt"], math.sqrt)
+        self.assertIs(FeatureEditor.FUNCTIONS["sqrt"], np.sqrt)
 
 
 class FeatureConstructorHandlerTests(unittest.TestCase):
