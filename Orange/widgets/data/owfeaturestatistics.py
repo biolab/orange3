@@ -84,19 +84,19 @@ def format_time_diff(start, end, round_up_after=2):
 
     # Check which resolution is most appropriate
     if years >= round_up_after:
-        return '~%d years' % years
+        return f'~{years} years'
     elif months >= round_up_after:
-        return '~%d months' % months
+        return f'~{months} months'
     elif weeks >= round_up_after:
-        return '~%d weeks' % weeks
+        return f'~{weeks} weeks'
     elif days >= round_up_after:
-        return '~%d days' % days
+        return f'~{days} days'
     elif hours >= round_up_after:
-        return '~%d hours' % hours
+        return f'~{hours} hours'
     elif minutes >= round_up_after:
-        return '~%d minutes' % minutes
+        return f'~{minutes} minutes'
     else:
-        return '%d seconds' % seconds
+        return f'{seconds} seconds'
 
 
 class FeatureStatisticsTableModel(AbstractSortTableModel):
@@ -227,7 +227,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
     def __filter_attributes(self, attributes, matrix):
         """Filter out variables which shouldn't be visualized."""
-        attributes, matrix = np.asarray(attributes), matrix
+        attributes = np.asarray(attributes)
         mask = [idx for idx, attr in enumerate(attributes)
                 if not isinstance(attr, self.HIDDEN_VAR_TYPES)]
         return attributes[mask], matrix[:, mask]
@@ -576,7 +576,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                 if isinstance(attribute, TimeVariable):
                     return format_time_diff(self._min[row], self._max[row])
                 elif isinstance(attribute, DiscreteVariable):
-                    return "%.3g" % self._dispersion[row]
+                    return f"{self._dispersion[row]:.3g}"
                 else:
                     return render_value(self._dispersion[row])
             elif column == self.Columns.MIN:
@@ -586,10 +586,9 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                 if not isinstance(attribute, DiscreteVariable):
                     return render_value(self._max[row])
             elif column == self.Columns.MISSING:
-                return '%d (%d%%)' % (
-                    self._missing[row],
-                    100 * self._missing[row] / self.n_instances
-                )
+                missing = self._missing[row]
+                perc = int(round(100 * missing / self.n_instances))
+                return f'{missing} ({perc} %)'
             return None
 
         roles = {Qt.BackgroundRole: background,
@@ -776,7 +775,7 @@ class OWFeatureStatistics(widget.OWWidget):
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
     @staticmethod
-    def sizeHint():
+    def sizeHint():  # pylint: disable=arguments-differ
         return QSize(1050, 500)
 
     @Inputs.data
@@ -851,22 +850,23 @@ class OWFeatureStatistics(widget.OWWidget):
     def commit(self):
         if not self.selected_vars:
             self.Outputs.reduced_data.send(None)
+        else:
+            # Send a table with only selected columns to output
+            self.Outputs.reduced_data.send(self.data[:, self.selected_vars])
+
+        if not self.data:
             self.Outputs.statistics.send(None)
             return
 
-        # Send a table with only selected columns to output
-        variables = self.selected_vars
-        self.Outputs.reduced_data.send(self.data[:, variables])
-
         # Send the statistics of the selected variables to ouput
-        labels, data = self.model.get_statistics_matrix(variables, return_labels=True)
-        var_names = np.atleast_2d([var.name for var in variables]).T
+        labels, data = self.model.get_statistics_matrix(return_labels=True)
+        var_names = np.atleast_2d([var.name for var in self.model.variables]).T
         domain = Domain(
             attributes=[ContinuousVariable(name) for name in labels],
             metas=[StringVariable('Feature')]
         )
         statistics = Table(domain, data, metas=var_names)
-        statistics.name = '%s (Feature Statistics)' % self.data.name
+        statistics.name = '{self.data.name} (Feature Statistics)'
         self.Outputs.statistics.send(statistics)
 
     def send_report(self):

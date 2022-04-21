@@ -42,6 +42,6 @@ Once we have found a subset of potentially interesting features, or we have foun
 
 ![](images/feature_statistics_example1.png)
 
-Alternatively, if we want to store feature statistics, we can use the *Statistics* output and manipulate those values as needed. In this example, we simply select all the features and display the statistics in a table.
+Alternatively, if we want to store feature statistics, we can use the *Statistics* output and manipulate those values as needed. In this example, we display the statistics in a table.
 
 ![](images/feature_statistics_example2.png)
