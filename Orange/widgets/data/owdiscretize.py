@@ -4,7 +4,8 @@ from enum import IntEnum
 from typing import Optional, Tuple, Union, Callable, NamedTuple, Dict, List
 
 from AnyQt.QtCore import (
-    Qt, QTimer, QPoint, QItemSelectionModel, QSize, QAbstractListModel)
+    Qt, QTimer, QPoint, QItemSelectionModel, QSize, QAbstractListModel,
+    pyqtSignal as Signal)
 from AnyQt.QtGui import (
     QValidator, QPalette, QDoubleValidator, QIntValidator,  QColor)
 from AnyQt.QtWidgets import (
@@ -24,6 +25,17 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.data.oweditdomain import FixedSizeButton
+
+
+# Remove this when we require PyQt 5.15
+if not hasattr(QButtonGroup, "idClicked"):
+    class QButtonGroup(QButtonGroup):  # pylint: disable=function-redefined
+        idClicked = Signal(int)
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.buttonClicked.connect(
+                lambda button: self.idClicked.emit(self.id(button)))
 
 
 re_custom_sep = re.compile(r"\s*,\s*")
