@@ -2,6 +2,7 @@
 import unittest
 import ast
 import sys
+import math
 import pickle
 import copy
 from unittest.mock import patch, Mock
@@ -293,6 +294,13 @@ class FeatureFuncTest(unittest.TestCase):
         f(iris)
         f.func.assert_called_once()
 
+        iris = Table("iris")
+        f = FeatureFunc("min(sepal_width, 2*sepal_length)",
+                        [("sepal_width", iris.domain["sepal width"])])
+        f.func = Mock()
+        f(iris)
+        f.func.assert_called_once()
+
         f = FeatureFunc("iris[0]",
                         [("iris", iris.domain["iris"])])
         f.func = Mock()
@@ -512,8 +520,9 @@ class OWFeatureConstructorTests(WidgetTest):
 
 class TestFeatureEditor(unittest.TestCase):
     def test_has_functions(self):
-        self.assertIs(FeatureEditor.FUNCTIONS["abs"], abs)
-        self.assertIs(FeatureEditor.FUNCTIONS["sqrt"], np.sqrt)
+        self.assertEqual(FeatureEditor.FUNCTIONS["abs"], abs.__doc__)
+        self.assertEqual(FeatureEditor.FUNCTIONS["sqrt"], math.sqrt.__doc__)
+        self.assertEqual(FeatureEditor.FUNCTIONS["nansum"], "")
 
 
 class FeatureConstructorHandlerTests(unittest.TestCase):

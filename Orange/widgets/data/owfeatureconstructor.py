@@ -101,6 +101,46 @@ def selected_row(view):
         return None
 
 
+__ALLOWED = [
+    "Ellipsis", "False", "None", "True", "abs", "all", "any", "acsii",
+    "bin", "bool", "bytearray", "bytes", "chr", "complex", "dict",
+    "divmod", "enumerate", "filter", "float", "format", "frozenset",
+    "getattr", "hasattr", "hash", "hex", "id", "int", "iter", "len",
+    "list", "map", "memoryview", "next", "object",
+    "oct", "ord", "pow", "range", "repr", "reversed", "round",
+    "set", "slice", "sorted", "str", "tuple", "type",
+    "zip"
+]
+
+GLOBALS = {name: getattr(builtins, name) for name in __ALLOWED
+           if hasattr(builtins, name)}
+
+GLOBALS.update({name: getattr(np, name, getattr(math, name))
+                  for name in dir(math)
+                  if not name.startswith("_")})
+
+GLOBALS.update({
+    nan + func:
+        lambda *args, f=getattr(np, nan + func): f(np.vstack(args).T, axis=-1)
+    for func in ("min", "max", "argmax", "argmin", "sum",
+                 "mean", "std", "var", "median")
+    for nan in ("", "nan")})
+
+GLOBALS.update({
+    "normalvariate": random.normalvariate,
+    "gauss": random.gauss,
+    "expovariate": random.expovariate,
+    "gammavariate": random.gammavariate,
+    "betavariate": random.betavariate,
+    "lognormvariate": random.lognormvariate,
+    "paretovariate": random.paretovariate,
+    "vonmisesvariate": random.vonmisesvariate,
+    "weibullvariate": random.weibullvariate,
+    "triangular": random.triangular,
+    "uniform": random.uniform
+})
+
+
 class FeatureEditor(QFrame):
     ExpressionTooltip = """
 Use variable names as values in expression.
@@ -111,12 +151,10 @@ Categorical features are passed as strings
 
     # import functions from math - but if the function with the same name
     # exists in np, import it from there
-    FUNCTIONS = dict(chain([(key, np.__dict__.get(key, val))
-                            for key, val in math.__dict__.items()
-                            if not key.startswith("_")],
-                           [(key, val) for key, val in builtins.__dict__.items()
-                            if key in {"str", "float", "int", "len",
-                                       "abs", "max", "min"}]))
+    FUNCTIONS = {
+        name: getattr(math, name, func).__doc__ or ""
+        for name, func in GLOBALS.items() if callable(func)
+    }
     featureChanged = Signal()
     featureEdited = Signal()
 
@@ -150,7 +188,7 @@ Categorical features are passed as strings
         sorted_funcs = sorted(self.FUNCTIONS)
         self.funcs_model = itemmodels.PyListModelTooltip(
             chain(["Select Function"], sorted_funcs),
-            chain([''], [self.FUNCTIONS[func].__doc__ for func in sorted_funcs])
+            chain([''], (self.FUNCTIONS[name] for name in sorted_funcs))
         )
         self.funcs_model.setParent(self)
 
@@ -466,7 +504,7 @@ class FeatureConstructorHandler(DomainContextHandler):
         except Exception:
             return False
 
-        available = dict(globals()["__GLOBALS"])
+        available = dict(globals()["GLOBALS"])
         for var in attrs:
             available[sanitized_name(var)] = None
         for var in metas:
@@ -1077,69 +1115,14 @@ def make_lambda(expression, args, env=None):
     )
     exp = ast.Expression(body=outer, lineno=1, col_offset=0)
     ast.fix_missing_locations(exp)
-    GLOBALS = __GLOBALS.copy()
-    GLOBALS["__builtins__"] = {}
+    GLOBALS_ = GLOBALS.copy()
+    GLOBALS_["__builtins__"] = {}
     # pylint: disable=eval-used
-    fouter = eval(compile(exp, "<lambda>", "eval"), GLOBALS)
+    fouter = eval(compile(exp, "<lambda>", "eval"), GLOBALS_)
     assert isinstance(fouter, types.FunctionType)
     finner = fouter(**env)
     assert isinstance(finner, types.FunctionType)
     return finner
-
-
-__ALLOWED = [
-    "Ellipsis", "False", "None", "True", "abs", "all", "any", "acsii",
-    "bin", "bool", "bytearray", "bytes", "chr", "complex", "dict",
-    "divmod", "enumerate", "filter", "float", "format", "frozenset",
-    "getattr", "hasattr", "hash", "hex", "id", "int", "iter", "len",
-    "list", "map", "memoryview", "next", "object",
-    "oct", "ord", "pow", "range", "repr", "reversed", "round",
-    "set", "slice", "sorted", "str", "tuple", "type",
-    "zip"
-]
-
-__GLOBALS = {name: getattr(builtins, name) for name in __ALLOWED
-             if hasattr(builtins, name)}
-
-__GLOBALS.update({name: getattr(np, name, getattr(math, name))
-                  for name in dir(math)
-                  if not name.startswith("_")})
-
-# TODO: These functions are not shown in the widget's combo. Intentionally?
-__GLOBALS.update({
-    "normalvariate": random.normalvariate,
-    "gauss": random.gauss,
-    "expovariate": random.expovariate,
-    "gammavariate": random.gammavariate,
-    "betavariate": random.betavariate,
-    "lognormvariate": random.lognormvariate,
-    "paretovariate": random.paretovariate,
-    "vonmisesvariate": random.vonmisesvariate,
-    "weibullvariate": random.weibullvariate,
-    "triangular": random.triangular,
-    "uniform": random.uniform,
-    "nanmean": lambda *args: np.nanmean(args),
-    "nanmin": lambda *args: np.nanmin(args),
-    "nanmax": lambda *args: np.nanmax(args),
-    "nansum": lambda *args: np.nansum(args),
-    "nanstd": lambda *args: np.nanstd(args),
-    "nanmedian": lambda *args: np.nanmedian(args),
-    "nancumsum": lambda *args: np.nancumsum(args),
-    "nancumprod": lambda *args: np.nancumprod(args),
-    "nanargmax": lambda *args: np.nanargmax(args),
-    "nanargmin": lambda *args: np.nanargmin(args),
-    "nanvar": lambda *args: np.nanvar(args),
-    "mean": lambda *args: np.mean(args),
-    "min": lambda *args: np.min(args),
-    "max": lambda *args: np.max(args),
-    "sum": lambda *args: np.sum(args),
-    "std": lambda *args: np.std(args),
-    "median": lambda *args: np.median(args),
-    "cumsum": lambda *args: np.cumsum(args),
-    "cumprod": lambda *args: np.cumprod(args),
-    "argmax": lambda *args: np.argmax(args),
-    "argmin": lambda *args: np.argmin(args),
-    "var": lambda *args: np.var(args)})
 
 
 class FeatureFunc:
