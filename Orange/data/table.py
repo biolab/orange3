@@ -17,6 +17,8 @@ from typing import List, TYPE_CHECKING, Union
 import bottleneck as bn
 import numpy as np
 
+import dask.array
+
 from scipy import sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
@@ -98,10 +100,14 @@ class RowInstance(Instance):
         if sp.issparse(self._x):
             self.sparse_x = sp.csr_matrix(self._x)
             self._x = np.asarray(self._x.todense())[0]
+        if isinstance(self._x, dask.array.Array):
+            self._x = self._x.compute()
         self._y = table._Y[row_index]
         if sp.issparse(self._y):
             self.sparse_y = sp.csr_matrix(self._y)
             self._y = np.asarray(self._y.todense())[0]
+        if isinstance(self._y, dask.array.Array):
+            self._y = self._y.compute()
         self._y = np.atleast_1d(self._y)
         self._metas = table.metas[row_index]
         if sp.issparse(self._metas):
