@@ -1064,17 +1064,17 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         Returns:
             (tuple): a list of pens and list of brushes
         """
-
+        alpha_subset, alpha_unset = self._alpha_for_subsets()
         if subset is not None:
-            colors = [QColor(*color, alpha)
-                      for alpha in self._alpha_for_subsets()]
-            brushes = [QBrush(color) for color in colors]
-            brush = np.where(subset, *brushes)
+            qcolor = QColor(*color, alpha_subset)
+            brush = np.where(subset, QBrush(qcolor), QBrush(QColor(0, 0, 0, 0)))
+            pen = np.where(subset,
+                           _make_pen(qcolor, 1.5),
+                           _make_pen(QColor(*color, alpha_unset), 1.5))
         else:
             qcolor = QColor(*color, self.alpha_value)
             brush = np.full(self.n_shown, QBrush(qcolor))
-        qcolor = QColor(*color, self.alpha_value)
-        pen = [_make_pen(qcolor, 1.5)] * self.n_shown
+            pen = [_make_pen(qcolor, 1.5)] * self.n_shown
         return pen, brush
 
     def _get_continuous_colors(self, c_data, subset):

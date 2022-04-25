@@ -681,8 +681,14 @@ class TestOWScatterPlotBase(WidgetTest):
         data = graph.scatterplot_item.data
         self.assertTrue(all(pen.color().hue() == hue for pen in data["pen"]))
         self.assertTrue(all(pen.color().hue() == hue for pen in data["brush"]))
-        self.assertEqual(len(set(map(id, data["pen"]))), 1)
+        self.assertEqual(len(set(map(id, data["pen"]))), 2)
+        self.assertEqual(data["pen"][3].color(), data["pen"][4].color())
+        self.assertNotEqual(data["pen"][4].color().alpha(),
+                            data["pen"][5].color().alpha())
         self.assertEqual(len(set(map(id, data["brush"]))), 2)  # transparent and colored
+        self.assertEqual(data["brush"][3].color(), data["brush"][4].color())
+        self.assertNotEqual(data["brush"][4].color().alpha(),
+                            data["brush"][5].color().alpha())
 
     def test_colors_update_legend_and_density(self):
         graph = self.graph
