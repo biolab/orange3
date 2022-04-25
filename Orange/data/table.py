@@ -16,6 +16,8 @@ from typing import List, TYPE_CHECKING
 import bottleneck as bn
 import numpy as np
 
+import dask.array
+
 from scipy import sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
@@ -97,10 +99,14 @@ class RowInstance(Instance):
         if sp.issparse(self._x):
             self.sparse_x = sp.csr_matrix(self._x)
             self._x = np.asarray(self._x.todense())[0]
+        if isinstance(self._x, dask.array.Array):
+            self._x = self._x.compute()
         self._y = table._Y[row_index]
         if sp.issparse(self._y):
             self.sparse_y = sp.csr_matrix(self._y)
             self._y = np.asarray(self._y.todense())[0]
+        if isinstance(self._y, dask.array.Array):
+            self._y = self._y.compute()
         self._y = np.atleast_1d(self._y)
         self._metas = table.metas[row_index]
         if sp.issparse(self._metas):
@@ -159,11 +165,16 @@ class RowInstance(Instance):
                 self._metas[-1 - key] = value
 
     def _str(self, limit):
+        def maybe_compute(a):
+            if isinstance(a, dask.array.Array):
+                return a.compute()
+            return a
+
         def sp_values(matrix, variables):
             if not sp.issparse(matrix):
                 if matrix.ndim == 1:
                     matrix = matrix[:, np.newaxis]
-                return Instance.str_values(matrix[row], variables, limit)
+                return Instance.str_values(maybe_compute(matrix[row]), variables, limit)
 
             row_entries, idx = [], 0
             while idx < len(variables):
