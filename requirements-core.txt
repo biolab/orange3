@@ -3,6 +3,7 @@ bottleneck>=1.3.4
 catboost>=1.0.1
 # Encoding detection
 chardet>=3.0.2
+h5py
 httpx>=0.21.0
 # Multiprocessing abstraction
 joblib>=1.0.0
