@@ -624,15 +624,15 @@ class OWPredictions(OWWidget):
                 if self.shown_probs in (self.MODEL_PROBS, self.BOTH_PROBS):
                     tooltip_probs = [self.class_values[i]
                                      for i in shown_probs if i is not None]
-                delegate = PredictionsItemDelegate(
+                delegate = ClassificationItemDelegate(
                     self.class_values, colors, shown_probs, tooltip_probs,
                     parent=self.predictionsview)
                 sort_col_indices.append([col for col in shown_probs
                                          if col is not None])
 
             else:
-                delegate = PredictionsItemDelegate(
-                    None, colors, (), (), target.format_str if target is not None else None,
+                delegate = RegressionItemDelegate(
+                    target.format_str if target is not None else None,
                     parent=self.predictionsview)
                 sort_col_indices.append(None)
 
@@ -861,62 +861,20 @@ class DataItemDelegate(ItemDelegate):
 
 class PredictionsItemDelegate(ItemDelegate):
     """
-    A Item Delegate for custom formatting of predictions/probabilities
+    A base Item Delegate for formatting and drawing predictions/probabilities
     """
     #: Roles supplied by the `PredictionsModel`
     DefaultRoles = (Qt.DisplayRole, )
 
-    def __init__(
-            self, class_values, colors, shown_probabilities=(),
-            tooltip_probabilities=(),
-            target_format=None, parent=None,
-    ):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.class_values = class_values  # will be None for continuous
-        self.colors = [QColor(*c) for c in colors]
-        # target format for cont. vars
-        self.target_format = target_format if target_format else '%.2f'
-        self.shown_probabilities = self.fmt = self.tooltip = None  # set below
-        self.setFormat(shown_probabilities, tooltip_probabilities)
-
-    def setFormat(self, shown_probabilities=(), tooltip_probabilities=()):
-        self.shown_probabilities = shown_probabilities
-        if self.class_values is None:
-            # is continuous class
-            self.fmt = f"{{value:{self.target_format[1:]}}}"
-        else:
-            self.fmt = " \N{RIGHTWARDS ARROW} ".join(
-                [" : ".join(f"{{dist[{i}]:.2f}}" if i is not None else "-"
-                            for i in shown_probabilities)]
-                * bool(shown_probabilities)
-                + ["{value!s}"])
-        if tooltip_probabilities:
-            self.tooltip = f"p({', '.join(tooltip_probabilities)})"
-        else:
-            self.tooltip = ""
+        self.fmt = ""
 
     def displayText(self, value, _):
-        try:
-            value, dist = value
-        except ValueError:
+        if value is None:
             return ""
-        else:
-            return self.fmt.format(value=value, dist=dist)
-
-    def helpEvent(self, event, view, option, index):
-        if self.tooltip is not None:
-            # ... but can be an empty string, so the current tooltip is removed
-            QToolTip.showText(event.globalPos(), self.tooltip, view)
-            return True
-        else:
-            return super().helpEvent(event, view, option, index)
-
-    def initStyleOption(self, option, index):
-        super().initStyleOption(option, index)
-        if self.class_values is None:
-            option.displayAlignment = \
-                (option.displayAlignment & Qt.AlignVertical_Mask) | \
-                Qt.AlignRight
+        value, dist = value
+        return self.fmt.format(value=value, dist=dist)
 
     def sizeHint(self, option, index):
         # reimplemented
@@ -931,20 +889,7 @@ class PredictionsItemDelegate(ItemDelegate):
         height = sh.height() + metrics.leading() + 2 * margin
         return QSize(sh.width(), height)
 
-    def distribution(self, index):
-        value = self.cachedData(index, Qt.DisplayRole)
-        if isinstance(value, tuple) and len(value) == 2:
-            _, dist = value
-            return dist
-        else:
-            return None
-
     def paint(self, painter, option, index):
-        dist = self.distribution(index)
-        if dist is None or self.colors is None:
-            super().paint(painter, option, index)
-            return
-
         if option.widget is not None:
             style = option.widget.style()
         else:
@@ -983,13 +928,48 @@ class PredictionsItemDelegate(ItemDelegate):
             textrect.bottomLeft() + QPoint(0, spacing),
             QSize(rect.width(), distheight))
         painter.setPen(QPen(Qt.lightGray, 0.3))
-        self.drawDistBar(painter, distrect, dist)
+        self.drawBar(painter, option, index, distrect)
         painter.restore()
         if text:
             option.text = text
             self.drawViewItemText(style, painter, option, textrect)
 
-    def drawDistBar(self, painter, rect, distribution):
+    def drawBar(self, painter, option, index, rect):
+        pass
+
+
+class ClassificationItemDelegate(PredictionsItemDelegate):
+    def __init__(
+            self, class_values, colors, shown_probabilities=(),
+            tooltip_probabilities=(), parent=None):
+        super().__init__(parent)
+        self.class_values = class_values
+        self.colors = [QColor(*c) for c in colors]
+
+        self.shown_probabilities = shown_probabilities
+        self.fmt = ""
+        if shown_probabilities:
+            probs = " : ".join(f"{{dist[{i}]:.2f}}" if i is not None else "-"
+                               for i in shown_probabilities)
+            self.fmt = f"{probs} → {{value!s}}"
+        else:
+            self.fmt = "{value!s}"
+
+        if tooltip_probabilities:
+            self.tooltip = f"p({', '.join(tooltip_probabilities)})"
+        else:
+            self.tooltip = ""
+
+    def helpEvent(self, event, view, option, index):
+        QToolTip.showText(event.globalPos(), self.tooltip, view)
+        return True
+
+    def drawBar(self, painter, _1, _2, rect):
+        value = self.cachedData(index, Qt.DisplayRole)
+        if not isinstance(value, tuple) or len(value) != 2:
+            return
+        _, distribution = value
+
         painter.save()
         painter.translate(rect.topLeft())
         for i in self.shown_probabilities:
@@ -1003,6 +983,18 @@ class PredictionsItemDelegate(ItemDelegate):
             painter.drawRoundedRect(QRectF(0, 0, width, rect.height()), 1, 2)
             painter.translate(width, 0.0)
         painter.restore()
+
+
+class RegressionItemDelegate(PredictionsItemDelegate):
+    def __init__(self, target_format=None, parent=None):
+        super().__init__(parent)
+        self.fmt = f"{{value:{(target_format or '%.2f')[1:]}}}"
+
+    def initStyleOption(self, option, index):
+        super().initStyleOption(option, index)
+        option.displayAlignment = \
+            (option.displayAlignment & Qt.AlignVertical_Mask) | \
+            Qt.AlignRight
 
 
 class PredictionsModel(AbstractSortTableModel):

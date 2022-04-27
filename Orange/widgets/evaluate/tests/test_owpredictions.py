@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import numpy as np
 
 from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt
+from AnyQt.QtWidgets import QToolTip
 
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner, NaiveBayesLearner
@@ -15,10 +16,10 @@ from Orange.data.io import TabReader
 from Orange.evaluation.scoring import TargetScore
 from Orange.preprocess import Remove
 from Orange.regression import LinearRegressionLearner, MeanLearner
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.evaluate.owpredictions import (
     OWPredictions, SharedSelectionModel, SharedSelectionStore, DataModel,
-    PredictionsModel)
+    PredictionsModel, ClassificationItemDelegate, PredictionsItemDelegate)
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
@@ -628,8 +629,9 @@ class TestOWPredictions(WidgetTest):
         widget.shown_probs = widget.NO_PROBS
         widget._update_prediction_delegate()
         for delegate in widget._delegates:
-            self.assertEqual(list(delegate.shown_probabilities), [])
-            self.assertEqual(delegate.tooltip, "")
+            if isinstance(delegate, ClassificationItemDelegate):
+                self.assertEqual(list(delegate.shown_probabilities), [])
+                self.assertEqual(delegate.tooltip, "")
         set_prob_ind.assert_called_with([[], [], [], [], None])
 
         widget.shown_probs = widget.DATA_PROBS
@@ -639,8 +641,6 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [0, 1, None])
         self.assertEqual(widget._delegates[2].shown_probabilities, [None, 1, 2])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None, None, None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
-        self.assertEqual(widget._delegates[4].tooltip, "")
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(a, b, c)")
         set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], [], None])
@@ -655,8 +655,6 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[2].tooltip, "p(c, b, d)")
         self.assertEqual(widget._delegates[3].shown_probabilities, [4])
         self.assertEqual(widget._delegates[3].tooltip, "p(e)")
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
-        self.assertEqual(widget._delegates[4].tooltip, "")
         set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [2, 1, 3], [4], None])
 
         widget.shown_probs = widget.BOTH_PROBS
@@ -669,8 +667,6 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[2].tooltip, "p(b, c)")
         self.assertEqual(widget._delegates[3].shown_probabilities, [])
         self.assertEqual(widget._delegates[3].tooltip, "")
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
-        self.assertEqual(widget._delegates[4].tooltip, "")
         set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], [], None])
 
         n_fixed = len(widget.PROB_OPTS)
@@ -680,7 +676,6 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [0])
         self.assertEqual(widget._delegates[2].shown_probabilities, [None])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(a)")
         set_prob_ind.assert_called_with([[0], [0], [], [], None])
@@ -692,7 +687,6 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [1])
         self.assertEqual(widget._delegates[2].shown_probabilities, [1])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(b)")
         set_prob_ind.assert_called_with([[1], [1], [1], [], None])
@@ -704,7 +698,6 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [None])
         self.assertEqual(widget._delegates[2].shown_probabilities, [2])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(c)")
         set_prob_ind.assert_called_with([[2], [], [2], [], None])
@@ -714,7 +707,6 @@ class TestOWPredictions(WidgetTest):
 
         widget = self.widget
         widget.shown_probs = widget.DATA_PROBS
-        set_prob_ind = widget.predictionsview.model().setProbInd
 
         widget.data = Table.from_list(Domain([], ContinuousVariable("c")), [])
 
@@ -727,12 +719,6 @@ class TestOWPredictions(WidgetTest):
 
         widget._set_target_combos()
         self.assertEqual(widget.shown_probs, widget.NO_PROBS)
-
-        widget._update_prediction_delegate()
-        for delegate in widget._delegates:
-            self.assertEqual(list(delegate.shown_probabilities), [])
-            self.assertEqual(delegate.tooltip, "")
-        set_prob_ind.assert_called_with([[], [], [], [], None])
 
     class _Scorer(TargetScore):
         # pylint: disable=arguments-differ
@@ -1297,6 +1283,41 @@ class PredictionsModelTest(unittest.TestCase):
         model.sort(0, Qt.AscendingOrder)
         self.assertEqual([model.data(model.index(i, 0))[0]
                           for i in range(model.rowCount())], [0, 0, 1, 1, 2])
+
+
+class TestPredictionsItemDelegate(GuiTest):
+    def test_displayText(self):
+        delegate = PredictionsItemDelegate()
+        delegate.fmt = "{value:.3f}"
+        self.assertEqual(delegate.displayText((0.12345, [1, 2, 3]), Mock()), "0.123")
+        delegate.fmt = "{value:.1f}"
+        self.assertEqual(delegate.displayText((0.12345, [1, 2, 3]), Mock()), "0.1")
+        delegate.fmt = "{value:.1f} - {dist[2]}"
+        self.assertEqual(delegate.displayText((0.12345, [1, 2, 3]), Mock()), "0.1 - 3")
+
+        self.assertEqual(delegate.displayText(None, Mock()), "")
+
+
+class TestClassificationItemDelegate(GuiTest):
+    @patch.object(QToolTip, "showText")
+    def test_format(self, showText):
+        delegate = ClassificationItemDelegate(["foo", "bar", "baz"],
+                                              [(1, 2, 3), (4, 5, 6), (7, 8, 9)],
+                                              (1, None, 0), ("foo", "baz")
+                                              )
+        delegate.helpEvent(Mock(), Mock(), Mock(), Mock())
+        self.assertEqual(showText.call_args[0][1], "p(foo, baz)")
+        self.assertEqual(delegate.displayText((["baz", (0.4, 0.6)]), Mock()),
+                         "0.60 : - : 0.40 → baz")
+        showText.reset_mock()
+
+        delegate = ClassificationItemDelegate(["foo", "bar", "baz"],
+                                              [(1, 2, 3), (4, 5, 6), (7, 8, 9)],
+                                              )
+        delegate.helpEvent(Mock(), Mock(), Mock(), Mock())
+        self.assertEqual(showText.call_args[0][1], "")
+        self.assertEqual(delegate.displayText((["baz", (0.4, 0.6)]), Mock()),
+                         "baz")
 
 
 if __name__ == "__main__":
