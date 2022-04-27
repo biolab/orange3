@@ -611,6 +611,7 @@ class TestOWPredictions(WidgetTest):
         widget = self.widget
         prob_combo = widget.controls.shown_probs
         set_prob_ind = widget.predictionsview.model().setProbInd
+        widget._non_errored_predictors = lambda: widget.predictors[:4]
 
         widget.data = Table.from_list(
             Domain([], DiscreteVariable("c", values=tuple("abc"))), [])
@@ -632,7 +633,7 @@ class TestOWPredictions(WidgetTest):
             if isinstance(delegate, ClassificationItemDelegate):
                 self.assertEqual(list(delegate.shown_probabilities), [])
                 self.assertEqual(delegate.tooltip, "")
-        set_prob_ind.assert_called_with([[], [], [], [], None])
+        set_prob_ind.assert_called_with([[], [], [], []])
 
         widget.shown_probs = widget.DATA_PROBS
         widget._update_prediction_delegate()
@@ -643,7 +644,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[3].shown_probabilities, [None, None, None])
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(a, b, c)")
-        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], [], None])
+        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], []])
 
         widget.shown_probs = widget.MODEL_PROBS
         widget._update_prediction_delegate()
@@ -655,7 +656,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[2].tooltip, "p(c, b, d)")
         self.assertEqual(widget._delegates[3].shown_probabilities, [4])
         self.assertEqual(widget._delegates[3].tooltip, "p(e)")
-        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [2, 1, 3], [4], None])
+        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [2, 1, 3], [4]])
 
         widget.shown_probs = widget.BOTH_PROBS
         widget._update_prediction_delegate()
@@ -667,7 +668,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[2].tooltip, "p(b, c)")
         self.assertEqual(widget._delegates[3].shown_probabilities, [])
         self.assertEqual(widget._delegates[3].tooltip, "")
-        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], [], None])
+        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], []])
 
         n_fixed = len(widget.PROB_OPTS)
         widget.shown_probs = n_fixed  # a
@@ -678,7 +679,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(a)")
-        set_prob_ind.assert_called_with([[0], [0], [], [], None])
+        set_prob_ind.assert_called_with([[0], [0], [], []])
 
         n_fixed = len(widget.PROB_OPTS)
         widget.shown_probs = n_fixed + 1  # b
@@ -689,7 +690,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(b)")
-        set_prob_ind.assert_called_with([[1], [1], [1], [], None])
+        set_prob_ind.assert_called_with([[1], [1], [1], []])
 
         n_fixed = len(widget.PROB_OPTS)
         widget.shown_probs = n_fixed + 2  # c
@@ -700,7 +701,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(c)")
-        set_prob_ind.assert_called_with([[2], [], [2], [], None])
+        set_prob_ind.assert_called_with([[2], [], [2], []])
 
     def test_update_delegates_continuous(self):
         self._mock_predictors()

@@ -617,7 +617,7 @@ class OWPredictions(OWWidget):
                                                 - len(self.PROB_OPTS)]
             tooltip_probs = (shown_class, )
         sort_col_indices = []
-        for col, slot in enumerate(self.predictors):
+        for col, slot in enumerate(self._non_errored_predictors()):
             target = slot.predictor.domain.class_var
             if target is not None and target.is_discrete:
                 shown_probs = self._shown_prob_indices(target, in_target=True)
