@@ -1,3 +1,4 @@
+import warnings
 from contextlib import contextmanager
 from functools import partial
 from operator import itemgetter
@@ -8,9 +9,9 @@ import numpy
 from AnyQt.QtWidgets import (
     QTableView, QSplitter, QToolTip, QStyle, QApplication, QSizePolicy,
     QPushButton)
-from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor
+from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor, QBrush
 from AnyQt.QtCore import (
-    Qt, QSize, QRect, QRectF, QPoint, QLocale,
+    Qt, QSize, QRect, QRectF, QPoint, QPointF, QLocale,
     QModelIndex, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
@@ -501,7 +502,10 @@ class OWPredictions(OWWidget):
             headers.append(p.predictor.name)
 
         if all_values:
-            model = PredictionsModel(all_values, all_probs, headers)
+            model = PredictionsModel(
+                all_values, all_probs,
+                self.data.Y if self.class_var else None,
+                headers)
             model.list_sorted.connect(
                 partial(
                     self._update_data_sort_order, self.predictionsview,
@@ -617,6 +621,14 @@ class OWPredictions(OWWidget):
                                                 - len(self.PROB_OPTS)]
             tooltip_probs = (shown_class, )
         sort_col_indices = []
+        if self.data \
+                and self.data.domain.class_var and not self.is_discrete_class:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*All-NaN.*", RuntimeWarning)
+                minv = numpy.nanmin(self.data.Y)
+                maxv = numpy.nanmax(self.data.Y)
+        else:
+            minv = maxv = numpy.nan
         for col, slot in enumerate(self._non_errored_predictors()):
             target = slot.predictor.domain.class_var
             if target is not None and target.is_discrete:
@@ -631,8 +643,15 @@ class OWPredictions(OWWidget):
                                          if col is not None])
 
             else:
+                predictions = slot.results.unmapped_predicted
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", ".*All-NaN.*",
+                                            RuntimeWarning)
+                    minpv = numpy.nanmin([minv, numpy.nanmin(predictions)])
+                    maxpv = numpy.nanmax([maxv, numpy.nanmax(predictions)])
                 delegate = RegressionItemDelegate(
                     target.format_str if target is not None else None,
+                    minpv, maxpv,
                     parent=self.predictionsview)
                 sort_col_indices.append(None)
 
@@ -935,7 +954,7 @@ class PredictionsItemDelegate(ItemDelegate):
             self.drawViewItemText(style, painter, option, textrect)
 
     def drawBar(self, painter, option, index, rect):
-        pass
+        pass  # pragma: no cover
 
 
 class ClassificationItemDelegate(PredictionsItemDelegate):
@@ -960,11 +979,13 @@ class ClassificationItemDelegate(PredictionsItemDelegate):
         else:
             self.tooltip = ""
 
+    # pylint: disable=unused-argument
     def helpEvent(self, event, view, option, index):
         QToolTip.showText(event.globalPos(), self.tooltip, view)
         return True
 
-    def drawBar(self, painter, _1, _2, rect):
+    # pylint: disable=unused-argument
+    def drawBar(self, painter, option, index, rect):
         value = self.cachedData(index, Qt.DisplayRole)
         if not isinstance(value, tuple) or len(value) != 2:
             return
@@ -972,23 +993,41 @@ class ClassificationItemDelegate(PredictionsItemDelegate):
 
         painter.save()
         painter.translate(rect.topLeft())
+        actual = index.data(Qt.UserRole)
         for i in self.shown_probabilities:
             if i is None:
                 continue
             dvalue = distribution[i]
             if not dvalue > 0:  # This also skips nans
                 continue
-            painter.setBrush(self.colors[i])
             width = rect.width() * dvalue
-            painter.drawRoundedRect(QRectF(0, 0, width, rect.height()), 1, 2)
+            height = rect.height()
+            painter.setBrush(self.colors[i])
+            if i == actual:
+                painter.drawRoundedRect(QRectF(0, 0, width, height), 1, 2)
+            else:
+                painter.drawRoundedRect(
+                    QRectF(0, height / 4, width, height / 2), 1, 2)
             painter.translate(width, 0.0)
         painter.restore()
 
 
 class RegressionItemDelegate(PredictionsItemDelegate):
-    def __init__(self, target_format=None, parent=None):
+    def __init__(self,
+                 target_format: Optional[str]=None,
+                 minv: Optional[float]=None, maxv: Optional[float]=None,
+                 parent=None):
         super().__init__(parent)
         self.fmt = f"{{value:{(target_format or '%.2f')[1:]}}}"
+        assert (minv is None) is (maxv is None)
+        assert (not isinstance(minv, float) or numpy.isnan(float(minv))) \
+               is (not isinstance(maxv, float) or numpy.isnan(float(maxv)))
+        if minv is None or numpy.isnan(minv):
+            self.offset = 0
+            self.span = 1
+        else:
+            self.offset = minv
+            self.span = maxv - minv
 
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
@@ -996,17 +1035,51 @@ class RegressionItemDelegate(PredictionsItemDelegate):
             (option.displayAlignment & Qt.AlignVertical_Mask) | \
             Qt.AlignRight
 
+    def drawBar(self, painter, option, index, rect):
+        value = self.cachedData(index, Qt.DisplayRole)
+        if not isinstance(value, tuple) or len(value) != 2:
+            return
+        value, _ = value
+
+        width = rect.width()
+        height = rect.height()
+        xactual = (index.data(Qt.UserRole) - self.offset) / self.span * width
+        xvalue = (value - self.offset) / self.span * width
+
+        painter.save()
+        painter.translate(rect.topLeft())
+        if numpy.isfinite(xvalue):
+            painter.setBrush(QBrush(Qt.blue))
+            painter.drawRect(QRectF(0, 0,
+                                    numpy.nanmin([xvalue, xactual]), height))
+            if numpy.isfinite(xactual):
+                if xvalue > xactual:
+                    painter.setBrush(QBrush(Qt.red))
+                    painter.drawRect(QRectF(xactual, 0, xvalue - xactual, height))
+                elif xvalue < xactual:
+                    painter.setPen(QPen(QBrush(Qt.red), 1, Qt.DotLine))
+                    painter.drawLine(QPointF(xvalue, height / 2), QPointF(xactual, height / 2))
+        if numpy.isfinite(xactual):
+            painter.setPen(QPen(QBrush(Qt.black), 1))
+            painter.setBrush(Qt.white)
+            painter.drawEllipse(QPointF(xactual, height / 2), 1.5, 1.5)
+        painter.restore()
+
 
 class PredictionsModel(AbstractSortTableModel):
     list_sorted = pyqtSignal()
 
-    def __init__(self, values=None, probs=None, headers=None, parent=None):
+    def __init__(self, values=None, probs=None, actual=None,
+                 headers=None, parent=None):
         super().__init__(parent)
         self._values = values
         self._probs = probs
+        self._actual = actual
         self.__probInd = None
         if values is not None:
-            assert len(self._values) == len(self._probs) != 0
+            assert len(values) == len(probs) != 0
+            assert len(values[0]) == len(probs[0])
+            assert actual is None or len(probs[0]) == len(actual)
             sizes = {len(x) for c in (values, probs) for x in c}
             assert len(sizes) == 1
             self.__columnCount = len(values)
@@ -1026,10 +1099,12 @@ class PredictionsModel(AbstractSortTableModel):
         return 0 if parent.isValid() else self.__columnCount
 
     def data(self, index, role=Qt.DisplayRole):
+        row = self.mapToSourceRows(index.row())
         if role in (Qt.DisplayRole, Qt.EditRole):
             column = index.column()
-            row = self.mapToSourceRows(index.row())
             return self._values[column][row], self._probs[column][row]
+        if role == Qt.UserRole:
+            return self._actual[row] if self._actual is not None else numpy.nan
         return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
