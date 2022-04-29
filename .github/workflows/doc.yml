@@ -31,4 +31,6 @@ jobs:
         run: pip install tox
 
       - name: Build documentation
-        run:  xvfb-run -a -s "-screen 0 1280x1024x24" tox -e build_doc
+        run: tox -e build_doc
+        env:
+          QT_QPA_PLATFORM: offscreen

@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse as sp
+from pandas import isna
 
 from Orange.data import Instance, Table, Domain
 from Orange.util import Reprable
@@ -215,5 +216,14 @@ class Lookup(Transformation):
                and np.allclose(self.unknown, other.unknown, equal_nan=True)
 
     def __hash__(self):
-        return hash((type(self), self.variable,
-                     tuple(self.lookup_table), self.unknown))
+        return hash(
+            (
+                type(self),
+                self.variable,
+                # nan value does not have constant hash in Python3.10
+                # to avoid different hashes for the same array change to None
+                # issue: https://bugs.python.org/issue43475#msg388508
+                tuple(None if isna(x) else x for x in self.lookup_table),
+                self.unknown,
+            )
+        )
