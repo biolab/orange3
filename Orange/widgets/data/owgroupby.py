@@ -59,7 +59,8 @@ AGGREGATIONS = {
     "Mean": Aggregation("mean", {ContinuousVariable, TimeVariable}),
     "Median": Aggregation("median", {ContinuousVariable, TimeVariable}),
     "Mode": Aggregation(
-        lambda x: pd.Series.mode(x).get(0, nan), {ContinuousVariable, TimeVariable}
+        lambda x: pd.Series.mode(x).get(0, nan),
+        {ContinuousVariable, DiscreteVariable, TimeVariable}
     ),
     "Standard deviation": Aggregation("std", {ContinuousVariable, TimeVariable}),
     "Variance": Aggregation("var", {ContinuousVariable, TimeVariable}),
