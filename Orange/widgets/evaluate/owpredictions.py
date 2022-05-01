@@ -368,11 +368,10 @@ class OWPredictions(OWWidget):
                 continue
             row = [QStandardItem(learner_name(pred.predictor)),
                    QStandardItem("N/A"), QStandardItem("N/A")]
+            actual = results.actual
+            predicted = results.predicted
+            probabilities = results.probabilities
             try:
-                actual = results.actual
-                predicted = results.predicted
-                probabilities = results.probabilities
-
                 if self.class_var:
                     mask = numpy.isnan(results.actual)
                 else:
