@@ -1327,7 +1327,7 @@ class OWCSVFileImport(widget.OWWidget):
 
 
 @singledispatch
-def sniff_csv(file, samplesize=2 ** 20, delimiters=None):
+def sniff_csv(file, samplesize=4 * 2 ** 10, delimiters=None):
     sniffer = csv.Sniffer()
     sample = file.read(samplesize)
     dialect = sniffer.sniff(sample, delimiters=delimiters)
@@ -1353,7 +1353,9 @@ class HeaderSniffer(csv.Sniffer):
 
 @sniff_csv.register(str)
 @sniff_csv.register(bytes)
-def sniff_csv_with_path(path, encoding="utf-8", samplesize=2 ** 20, delimiters=None):
+def sniff_csv_with_path(
+        path, encoding="utf-8", samplesize=4 * 2 ** 10, delimiters=None
+):
     with _open(path, "rt", encoding=encoding) as f:
         return sniff_csv(f, samplesize, delimiters)
 
