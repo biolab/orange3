@@ -762,9 +762,10 @@ class SilhouettePlot(QGraphicsWidget):
 
             if group.label:
                 layout.addItem(Line(orientation=Qt.Vertical), i + 1, 1)
-                label = QGraphicsSimpleTextItem(
-                    "{} ({})".format(group.label, len(group.scores)), self
-                )
+                text = group.label
+                if group.scores.size:
+                    text += f" ({np.mean(group.scores):.3f})"
+                label = QGraphicsSimpleTextItem(text, self)
                 label.setBrush(foreground)
                 label.setPen(QPen(Qt.NoPen))
                 label.setRotation(-90)
