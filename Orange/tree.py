@@ -12,7 +12,7 @@ class Node:
     """Tree node base class; instances of this class are also used as leaves
 
     Attributes:
-        attr (Odange.data.Variable): The attribute used for splitting
+        attr (Orange.data.Variable): The attribute used for splitting
         attr_idx (int): The index of the attribute used for splitting
         value (object): value used for prediction (e.g. class distribution)
         children (list of Node): child branches
