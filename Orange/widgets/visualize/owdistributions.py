@@ -903,6 +903,7 @@ class OWDistributions(OWWidget):
         self.controls.number_of_bins.setMaximum(max_bins)
         self.number_of_bins = min(
             max_bins, self._user_var_bins.get(self.var, self.number_of_bins))
+        self._user_var_bins[self.var] = self.number_of_bins
         self._set_bin_width_slider_label()
 
     @staticmethod
