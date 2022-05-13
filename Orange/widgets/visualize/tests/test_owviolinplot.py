@@ -66,6 +66,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.controls.show_strip_plot.setChecked(True)
         self.widget.controls.show_rug_plot.setChecked(True)
         self.widget.controls.order_violins.setChecked(True)
+        self.widget.controls.show_grid.setChecked(True)
         self.widget.controls.orientation_index.buttons[0].click()
         self.widget.controls.kernel_index.setCurrentIndex(1)
         self.widget.controls.scale_index.setCurrentIndex(1)
@@ -75,6 +76,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.controls.show_strip_plot.setChecked(False)
         self.widget.controls.show_rug_plot.setChecked(False)
         self.widget.controls.order_violins.setChecked(False)
+        self.widget.controls.show_grid.setChecked(False)
         self.widget.controls.orientation_index.buttons[1].click()
         self.widget.controls.kernel_index.setCurrentIndex(0)
         self.widget.controls.scale_index.setCurrentIndex(2)
@@ -84,6 +86,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.controls.show_strip_plot.setChecked(True)
         self.widget.controls.show_rug_plot.setChecked(True)
         self.widget.controls.order_violins.setChecked(True)
+        self.widget.controls.show_grid.setChecked(True)
         self.widget.controls.orientation_index.buttons[0].click()
         self.widget.controls.kernel_index.setCurrentIndex(1)
         self.widget.controls.scale_index.setCurrentIndex(1)
@@ -107,6 +110,39 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertTrue(self.widget.controls.order_violins.isEnabled())
         self.assertTrue(self.widget.controls.scale_index.isEnabled())
+
+    @patch("Orange.widgets.visualize.owviolinplot.ViolinPlot.set_show_grid")
+    def test_show_grid_sets_show_grid(self, show_grid):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.show_grid = True
+
+        show_grid.reset_mock()
+        self.widget.controls.show_grid.click()
+        show_grid.assert_called_once()
+
+        show_grid.reset_mock()
+        self.widget.controls.show_grid.click()
+        show_grid.assert_called_once()
+
+    def test_show_grid_orientation(self):
+        if not self.widget.show_grid:
+            self.widget.controls.show_grid.click()
+        assert self.widget.show_grid
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+
+        self.widget.controls.orientation_index.buttons[1].click()  # Vertical
+        get_axis = self.widget.graph.plotItem.getAxis
+        self.assertIs(get_axis("bottom").grid, False)
+        self.assertIsNot(get_axis("left").grid, False)
+
+        self.widget.controls.orientation_index.buttons[0].click()
+        self.assertIsNot(get_axis("bottom").grid, False)
+        self.assertIs(get_axis("left").grid, False)
+
+        self.widget.controls.show_grid.click()
+        self.assertIs(get_axis("bottom").grid, False)
+        self.assertIs(get_axis("left").grid, False)
 
     def test_datasets(self):
         self.widget.controls.show_strip_plot.setChecked(True)
