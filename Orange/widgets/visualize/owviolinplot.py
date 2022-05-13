@@ -651,8 +651,8 @@ class ViolinPlot(PlotWidget):
         self.__selection_rects.clear()
 
     def _clear_axes(self):
-        self.setAxisItems({"bottom": AxisItem(orientation="bottom"),
-                           "left": AxisItem(orientation="left")})
+        self.getAxis("left").setTicks(None)
+        self.getAxis("bottom").setTicks(None)
         Updater.update_axes_titles_font(
             self.parameter_setter.axis_items,
             **self.parameter_setter.titles_settings
