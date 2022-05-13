@@ -1026,7 +1026,7 @@ class RegressionItemDelegate(PredictionsItemDelegate):
             self.span = 1
         else:
             self.offset = minv
-            self.span = maxv - minv
+            self.span = maxv - minv or 1
 
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
@@ -1048,16 +1048,8 @@ class RegressionItemDelegate(PredictionsItemDelegate):
         painter.save()
         painter.translate(rect.topLeft())
         if numpy.isfinite(xvalue):
-            painter.setBrush(QBrush(Qt.blue))
-            painter.drawRect(QRectF(0, 0,
-                                    numpy.nanmin([xvalue, xactual]), height))
-            if numpy.isfinite(xactual):
-                if xvalue > xactual:
-                    painter.setBrush(QBrush(Qt.red))
-                    painter.drawRect(QRectF(xactual, 0, xvalue - xactual, height))
-                elif xvalue < xactual:
-                    painter.setPen(QPen(QBrush(Qt.red), 1, Qt.DotLine))
-                    painter.drawLine(QPointF(xvalue, height / 2), QPointF(xactual, height / 2))
+            painter.setBrush(QBrush(Qt.magenta))
+            painter.drawRect(QRectF(0, 0, xvalue, height))
         if numpy.isfinite(xactual):
             painter.setPen(QPen(QBrush(Qt.black), 1))
             painter.setBrush(Qt.white)

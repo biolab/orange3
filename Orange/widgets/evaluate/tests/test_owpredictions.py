@@ -1475,7 +1475,6 @@ class TestRegressionItemDelegate(GuiTest):
         painter = Mock()
         dr = painter.drawRect
         el = painter.drawEllipse
-        dl = painter.drawLine
         index = Mock()
         rect = QRect(0, 0, 256, 16)
 
@@ -1488,7 +1487,6 @@ class TestRegressionItemDelegate(GuiTest):
 
         dr.assert_not_called()
         el.assert_not_called()
-        dl.assert_not_called()
 
         # Prediction is known
         delegate.cachedData = lambda *_: (8.0, None)
@@ -1498,7 +1496,6 @@ class TestRegressionItemDelegate(GuiTest):
         rrect = dr.call_args[0][0]
         self.assertEqual(rrect.width(), 192)
         el.assert_not_called()
-        dl.assert_not_called()
         dr.reset_mock()
 
         ### Actual is known
@@ -1514,7 +1511,6 @@ class TestRegressionItemDelegate(GuiTest):
         el.assert_called_once()
         center = el.call_args[0][0]
         self.assertEqual(center.x(), 192)
-        dl.assert_not_called()
         dr.reset_mock()
         el.reset_mock()
 
@@ -1528,11 +1524,6 @@ class TestRegressionItemDelegate(GuiTest):
         el.assert_called_once()
         center = el.call_args[0][0]
         self.assertEqual(center.x(), 192)
-        dl.assert_called_once()
-        lline = dl.call_args[0]
-        self.assertEqual(lline[0].x(), 128)
-        self.assertEqual(lline[1].x(), 192)
-        dl.reset_mock()
         dr.reset_mock()
         el.reset_mock()
 
@@ -1540,15 +1531,12 @@ class TestRegressionItemDelegate(GuiTest):
         delegate.cachedData = lambda *_: (9.0, None)
         delegate.drawBar(painter, Mock(), index, rect)
 
-        self.assertEqual(dr.call_count, 2)
-        rrect = dr.call_args_list[0][0][0]
-        self.assertEqual(rrect.width(), 192)
-        rrect = dr.call_args_list[1][0][0]
-        self.assertEqual(rrect.width(), 32)
+        dr.assert_called_once()
+        rrect = dr.call_args[0][0]
+        self.assertEqual(rrect.width(), 224)
         el.assert_called_once()
         center = el.call_args[0][0]
         self.assertEqual(center.x(), 192)
-        dl.assert_not_called()
         dr.reset_mock()
         el.reset_mock()
 
