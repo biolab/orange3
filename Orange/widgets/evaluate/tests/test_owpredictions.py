@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt
+from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt, QRect
+from AnyQt.QtWidgets import QToolTip
 
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner, NaiveBayesLearner
@@ -15,10 +16,11 @@ from Orange.data.io import TabReader
 from Orange.evaluation.scoring import TargetScore
 from Orange.preprocess import Remove
 from Orange.regression import LinearRegressionLearner, MeanLearner
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.evaluate.owpredictions import (
     OWPredictions, SharedSelectionModel, SharedSelectionStore, DataModel,
-    PredictionsModel)
+    PredictionsModel,
+    PredictionsItemDelegate, ClassificationItemDelegate, RegressionItemDelegate)
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
@@ -136,6 +138,40 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.data, no_class)
         out = self.get_output(self.widget.Outputs.predictions)
         np.testing.assert_allclose(out.get_column_view("constant")[0], 0)
+
+        predmodel = self.widget.predictionsview.model()
+        self.assertTrue(np.isnan(
+            predmodel.data(predmodel.index(0, 0), Qt.UserRole)))
+        self.assertIn(predmodel.data(predmodel.index(0, 0))[0],
+                      titanic.domain.class_var.values)
+
+    def test_invalid_regression_target(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.predictors,
+                         LinearRegressionLearner()(self.housing), 0)
+
+        dom = self.housing.domain
+        wrong_class = self.iris.transform(Domain(dom.attributes[:-1],
+                                                 dom.attributes[-1]))
+        self.send_signal(widget.Inputs.data, wrong_class)
+
+        # can't make a prediction
+        predmodel = self.widget.predictionsview.model()
+        self.assertTrue(np.isnan(
+            predmodel.data(predmodel.index(0, 0), Qt.UserRole)))
+        # ... but model reports a value
+        self.assertFalse(np.isnan(predmodel.data(predmodel.index(0, 0))[0]))
+
+        no_class = self.iris.transform(Domain(dom.attributes[:-1],
+                                              dom.attributes[-1]))
+        self.send_signal(widget.Inputs.data, no_class)
+
+        # can't make a prediction
+        predmodel = self.widget.predictionsview.model()
+        self.assertTrue(np.isnan(
+            predmodel.data(predmodel.index(0, 0), Qt.UserRole)))
+        # ... but model reports a value
+        self.assertFalse(np.isnan(predmodel.data(predmodel.index(0, 0))[0]))
 
     def test_bad_data(self):
         """
@@ -610,6 +646,7 @@ class TestOWPredictions(WidgetTest):
         widget = self.widget
         prob_combo = widget.controls.shown_probs
         set_prob_ind = widget.predictionsview.model().setProbInd
+        widget._non_errored_predictors = lambda: widget.predictors[:4]
 
         widget.data = Table.from_list(
             Domain([], DiscreteVariable("c", values=tuple("abc"))), [])
@@ -628,9 +665,10 @@ class TestOWPredictions(WidgetTest):
         widget.shown_probs = widget.NO_PROBS
         widget._update_prediction_delegate()
         for delegate in widget._delegates:
-            self.assertEqual(list(delegate.shown_probabilities), [])
-            self.assertEqual(delegate.tooltip, "")
-        set_prob_ind.assert_called_with([[], [], [], [], None])
+            if isinstance(delegate, ClassificationItemDelegate):
+                self.assertEqual(list(delegate.shown_probabilities), [])
+                self.assertEqual(delegate.tooltip, "")
+        set_prob_ind.assert_called_with([[], [], [], []])
 
         widget.shown_probs = widget.DATA_PROBS
         widget._update_prediction_delegate()
@@ -639,11 +677,9 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [0, 1, None])
         self.assertEqual(widget._delegates[2].shown_probabilities, [None, 1, 2])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None, None, None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
-        self.assertEqual(widget._delegates[4].tooltip, "")
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(a, b, c)")
-        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], [], None])
+        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], []])
 
         widget.shown_probs = widget.MODEL_PROBS
         widget._update_prediction_delegate()
@@ -655,9 +691,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[2].tooltip, "p(c, b, d)")
         self.assertEqual(widget._delegates[3].shown_probabilities, [4])
         self.assertEqual(widget._delegates[3].tooltip, "p(e)")
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
-        self.assertEqual(widget._delegates[4].tooltip, "")
-        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [2, 1, 3], [4], None])
+        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [2, 1, 3], [4]])
 
         widget.shown_probs = widget.BOTH_PROBS
         widget._update_prediction_delegate()
@@ -669,9 +703,7 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[2].tooltip, "p(b, c)")
         self.assertEqual(widget._delegates[3].shown_probabilities, [])
         self.assertEqual(widget._delegates[3].tooltip, "")
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
-        self.assertEqual(widget._delegates[4].tooltip, "")
-        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], [], None])
+        set_prob_ind.assert_called_with([[0, 1, 2], [0, 1], [1, 2], []])
 
         n_fixed = len(widget.PROB_OPTS)
         widget.shown_probs = n_fixed  # a
@@ -680,10 +712,9 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [0])
         self.assertEqual(widget._delegates[2].shown_probabilities, [None])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(a)")
-        set_prob_ind.assert_called_with([[0], [0], [], [], None])
+        set_prob_ind.assert_called_with([[0], [0], [], []])
 
         n_fixed = len(widget.PROB_OPTS)
         widget.shown_probs = n_fixed + 1  # b
@@ -692,10 +723,9 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [1])
         self.assertEqual(widget._delegates[2].shown_probabilities, [1])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(b)")
-        set_prob_ind.assert_called_with([[1], [1], [1], [], None])
+        set_prob_ind.assert_called_with([[1], [1], [1], []])
 
         n_fixed = len(widget.PROB_OPTS)
         widget.shown_probs = n_fixed + 2  # c
@@ -704,17 +734,15 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(widget._delegates[1].shown_probabilities, [None])
         self.assertEqual(widget._delegates[2].shown_probabilities, [2])
         self.assertEqual(widget._delegates[3].shown_probabilities, [None])
-        self.assertEqual(widget._delegates[4].shown_probabilities, ())
         for delegate in widget._delegates[:-1]:
             self.assertEqual(delegate.tooltip, "p(c)")
-        set_prob_ind.assert_called_with([[2], [], [2], [], None])
+        set_prob_ind.assert_called_with([[2], [], [2], []])
 
     def test_update_delegates_continuous(self):
         self._mock_predictors()
 
         widget = self.widget
         widget.shown_probs = widget.DATA_PROBS
-        set_prob_ind = widget.predictionsview.model().setProbInd
 
         widget.data = Table.from_list(Domain([], ContinuousVariable("c")), [])
 
@@ -728,11 +756,66 @@ class TestOWPredictions(WidgetTest):
         widget._set_target_combos()
         self.assertEqual(widget.shown_probs, widget.NO_PROBS)
 
-        widget._update_prediction_delegate()
-        for delegate in widget._delegates:
-            self.assertEqual(list(delegate.shown_probabilities), [])
-            self.assertEqual(delegate.tooltip, "")
-        set_prob_ind.assert_called_with([[], [], [], [], None])
+    def test_delegate_ranges(self):
+        widget = self.widget
+
+        class Model1(Model):
+            name = "foo"
+
+            def predict(self, X):
+                return X[:, 0] - 2
+
+        class Model2(Model):
+            name = "bar"
+
+            def predict(self, X):
+                return np.full(len(X), np.nan)
+
+        domain = Domain([ContinuousVariable("x")], ContinuousVariable("y"))
+        x = np.arange(12, 17, dtype=float)[:, None]
+        y = np.array([12, 13, 14, 15, np.nan])
+        data = Table(domain, x, y)
+
+        ddomain = Domain(
+            [ContinuousVariable("x")],
+            DiscreteVariable("y", values=tuple("abcdefghijklmnopq")))
+        self.send_signal(widget.Inputs.data, data)
+        self.send_signal(widget.Inputs.predictors, Model1(domain), 1)
+        self.send_signal(widget.Inputs.predictors, Model2(domain), 2)
+        self.send_signal(widget.Inputs.predictors, Model1(ddomain), 3)
+
+        delegate = widget.predictionsview.itemDelegateForColumn(0)
+        # values for model are 10 to 14 (incl), Y goes from 12 to 15 (incl)
+        self.assertIsInstance(delegate, RegressionItemDelegate)
+        self.assertEqual(delegate.offset, 10)
+        self.assertEqual(delegate.span, 5)
+
+        delegate = widget.predictionsview.itemDelegateForColumn(1)
+        # values for model are all-nan, Y goes from 12 to 15 (incl)
+        self.assertIsInstance(delegate, RegressionItemDelegate)
+        self.assertEqual(delegate.offset, 12)
+        self.assertEqual(delegate.span, 3)
+
+        delegate = widget.predictionsview.itemDelegateForColumn(2)
+        self.assertIsInstance(delegate, ClassificationItemDelegate)
+
+        data = Table(domain, x, np.full(5, np.nan))
+        self.send_signal(widget.Inputs.data, data)
+        delegate = widget.predictionsview.itemDelegateForColumn(0)
+        # values for model are 10 to 14 (incl), Y is nan
+        self.assertIsInstance(delegate, RegressionItemDelegate)
+        self.assertEqual(delegate.offset, 10)
+        self.assertEqual(delegate.span, 4)
+
+        delegate = widget.predictionsview.itemDelegateForColumn(1)
+        # values for model and y are nan
+        self.assertIsInstance(delegate, RegressionItemDelegate)
+        self.assertEqual(delegate.offset, 0)
+        self.assertEqual(delegate.span, 1)
+
+        delegate = widget.predictionsview.itemDelegateForColumn(2)
+        self.assertIsInstance(delegate, ClassificationItemDelegate)
+
 
     class _Scorer(TargetScore):
         # pylint: disable=arguments-differ
@@ -1150,6 +1233,7 @@ class PredictionsModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.values = np.array([[0, 1, 1, 2, 0], [0, 0, 0, 1, 0]], dtype=float)
+        cls.actual = np.array([0, 1, 2, 1, 0], dtype=float)
         cls.probs = [np.array([[80, 10, 10],
                                [30, 70, 0],
                                [15, 80, 5],
@@ -1163,7 +1247,7 @@ class PredictionsModelTest(unittest.TestCase):
         cls.no_probs = [np.zeros((5, 0)), np.zeros((5, 0))]
 
     def test_model_classification(self):
-        model = PredictionsModel(self.values, self.probs)
+        model = PredictionsModel(self.values, self.probs, self.actual)
         self.assertEqual(model.rowCount(), 5)
         self.assertEqual(model.columnCount(), 2)
 
@@ -1176,7 +1260,7 @@ class PredictionsModelTest(unittest.TestCase):
         np.testing.assert_equal(prob, [0.1, 0.6, 0.3])
 
     def test_model_regression(self):
-        model = PredictionsModel(self.values, self.no_probs)
+        model = PredictionsModel(self.values, self.no_probs, self.actual)
         self.assertEqual(model.rowCount(), 5)
         self.assertEqual(model.columnCount(), 2)
 
@@ -1188,17 +1272,27 @@ class PredictionsModelTest(unittest.TestCase):
         self.assertEqual(val, 1)
         np.testing.assert_equal(prob, [])
 
+    def test_model_actual(self):
+        model = PredictionsModel(self.values, self.no_probs, self.actual)
+        self.assertEqual(model.data(model.index(2, 0), Qt.UserRole),
+                         self.actual[2])
+
+    def test_model_no_actual(self):
+        model = PredictionsModel(self.values, self.no_probs, None)
+        self.assertTrue(np.isnan(model.data(model.index(2, 0), Qt.UserRole)),
+                         self.actual[2])
+
     def test_model_header(self):
-        model = PredictionsModel(self.values, self.probs)
+        model = PredictionsModel(self.values, self.probs, self.actual)
         self.assertIsNone(model.headerData(0, Qt.Horizontal))
         self.assertEqual(model.headerData(3, Qt.Vertical), "4")
 
-        model = PredictionsModel(self.values, self.probs, ["a", "b"])
+        model = PredictionsModel(self.values, self.probs, self.actual, ["a", "b"])
         self.assertEqual(model.headerData(0, Qt.Horizontal), "a")
         self.assertEqual(model.headerData(1, Qt.Horizontal), "b")
         self.assertEqual(model.headerData(3, Qt.Vertical), "4")
 
-        model = PredictionsModel(self.values, self.probs, ["a"])
+        model = PredictionsModel(self.values, self.probs, self.actual, ["a"])
         self.assertEqual(model.headerData(0, Qt.Horizontal), "a")
         self.assertIsNone(model.headerData(1, Qt.Horizontal))
         self.assertEqual(model.headerData(3, Qt.Vertical), "4")
@@ -1210,7 +1304,7 @@ class PredictionsModelTest(unittest.TestCase):
         self.assertIsNone(model.headerData(1, Qt.Horizontal))
 
     def test_sorting_classification(self):
-        model = PredictionsModel(self.values, self.probs)
+        model = PredictionsModel(self.values, self.probs, self.actual)
 
         val, prob = model.data(model.index(0, 1))
         self.assertEqual(val, 0)
@@ -1259,7 +1353,7 @@ class PredictionsModelTest(unittest.TestCase):
                           for i in range(model.rowCount())], [2, 1, 1, 0, 0])
 
     def test_sorting_classification_different(self):
-        model = PredictionsModel(self.values, self.probs)
+        model = PredictionsModel(self.values, self.probs, self.actual)
 
         model.setProbInd([[2], [0]])
         model.sort(0, Qt.DescendingOrder)
@@ -1278,7 +1372,7 @@ class PredictionsModelTest(unittest.TestCase):
         np.testing.assert_equal(prob, [0.9, 0.05, 0.05])
 
     def test_sorting_regression(self):
-        model = PredictionsModel(self.values, self.no_probs)
+        model = PredictionsModel(self.values, self.no_probs, self.actual)
 
         self.assertEqual(model.data(model.index(0, 1))[0], 0)
         self.assertEqual(model.data(model.index(3, 1))[0], 1)
@@ -1297,6 +1391,154 @@ class PredictionsModelTest(unittest.TestCase):
         model.sort(0, Qt.AscendingOrder)
         self.assertEqual([model.data(model.index(i, 0))[0]
                           for i in range(model.rowCount())], [0, 0, 1, 1, 2])
+
+
+class TestPredictionsItemDelegate(GuiTest):
+    def test_displayText(self):
+        delegate = PredictionsItemDelegate()
+        delegate.fmt = "{value:.3f}"
+        self.assertEqual(delegate.displayText((0.12345, [1, 2, 3]), Mock()), "0.123")
+        delegate.fmt = "{value:.1f}"
+        self.assertEqual(delegate.displayText((0.12345, [1, 2, 3]), Mock()), "0.1")
+        delegate.fmt = "{value:.1f} - {dist[2]}"
+        self.assertEqual(delegate.displayText((0.12345, [1, 2, 3]), Mock()), "0.1 - 3")
+
+        self.assertEqual(delegate.displayText(None, Mock()), "")
+
+
+class TestClassificationItemDelegate(GuiTest):
+    @patch.object(QToolTip, "showText")
+    def test_format(self, showText):
+        delegate = ClassificationItemDelegate(["foo", "bar", "baz"],
+                                              [(1, 2, 3), (4, 5, 6), (7, 8, 9)],
+                                              (1, None, 0), ("foo", "baz")
+                                              )
+        delegate.helpEvent(Mock(), Mock(), Mock(), Mock())
+        self.assertEqual(showText.call_args[0][1], "p(foo, baz)")
+        self.assertEqual(delegate.displayText((["baz", (0.4, 0.6)]), Mock()),
+                         "0.60 : - : 0.40 → baz")
+        showText.reset_mock()
+
+        delegate = ClassificationItemDelegate(["foo", "bar", "baz"],
+                                              [(1, 2, 3), (4, 5, 6), (7, 8, 9)],
+                                              )
+        delegate.helpEvent(Mock(), Mock(), Mock(), Mock())
+        self.assertEqual(showText.call_args[0][1], "")
+        self.assertEqual(delegate.displayText((["baz", (0.4, 0.6)]), Mock()),
+                         "baz")
+
+    def test_drawbar(self):
+        delegate = ClassificationItemDelegate(
+            ["foo", "bar", "baz", "bax"],
+            [(1, 2, 3), (4, 5, 6), (7, 8, 9), (10, 11, 12)],
+            (1, None, 0, 2), ("baz", "foo", "bax"))
+        painter = Mock()
+        rr = painter.drawRoundedRect
+        index = Mock()
+        index.data = lambda *_: 2
+        rect = QRect(0, 0, 256, 16)
+
+        delegate.cachedData = lambda *_: None
+        delegate.drawBar(painter, Mock(), index, rect)
+        rr.assert_not_called()
+
+        delegate.cachedData = lambda *_: (1, (0.25, 0, 0.75, 0))
+        delegate.drawBar(painter, Mock(), index, rect)
+        self.assertEqual(rr.call_count, 2)
+        rect = rr.call_args_list[0][0][0]
+        self.assertEqual(rect.width(), 64)
+        self.assertEqual(rect.height(), 8)
+        rect = rr.call_args_list[1][0][0]
+        self.assertEqual(rect.width(), 192)
+        self.assertEqual(rect.height(), 16)
+
+
+class TestRegressionItemDelegate(GuiTest):
+    def test_format(self):
+        delegate = RegressionItemDelegate("%6.3f")
+        self.assertEqual(delegate.displayText((5.13, None), Mock()), " 5.130")
+        self.assertEqual(delegate.offset, 0)
+        self.assertEqual(delegate.span, 1)
+
+        delegate = RegressionItemDelegate("%6.3f", 2, 5)
+        self.assertEqual(delegate.displayText((5.13, None), Mock()), " 5.130")
+        self.assertEqual(delegate.offset, 2)
+        self.assertEqual(delegate.span, 3)
+
+        delegate = RegressionItemDelegate(None, 2, 5)
+        self.assertEqual(delegate.displayText((5.1, None), Mock()), "5.10")
+        self.assertEqual(delegate.offset, 2)
+        self.assertEqual(delegate.span, 3)
+
+    def test_drawBar(self):
+        delegate = RegressionItemDelegate("%6.3f", 2, 10)
+        painter = Mock()
+        dr = painter.drawRect
+        el = painter.drawEllipse
+        index = Mock()
+        rect = QRect(0, 0, 256, 16)
+
+        ### Actual is missing
+        index.data = lambda *_: np.nan
+
+        # Prediction is missing
+        delegate.cachedData = lambda *_: None
+        delegate.drawBar(painter, Mock(), index, rect)
+
+        dr.assert_not_called()
+        el.assert_not_called()
+
+        # Prediction is known
+        delegate.cachedData = lambda *_: (8.0, None)
+        delegate.drawBar(painter, Mock(), index, rect)
+
+        dr.assert_called_once()
+        rrect = dr.call_args[0][0]
+        self.assertEqual(rrect.width(), 192)
+        el.assert_not_called()
+        dr.reset_mock()
+
+        ### Actual is known
+        index.data = lambda *_: 8.0
+
+        # Prediction is correct
+        delegate.cachedData = lambda *_: (8.0, None)
+        delegate.drawBar(painter, Mock(), index, rect)
+
+        dr.assert_called_once()
+        rrect = dr.call_args[0][0]
+        self.assertEqual(rrect.width(), 192)
+        el.assert_called_once()
+        center = el.call_args[0][0]
+        self.assertEqual(center.x(), 192)
+        dr.reset_mock()
+        el.reset_mock()
+
+        # Prediction is below
+        delegate.cachedData = lambda *_: (6.0, None)
+        delegate.drawBar(painter, Mock(), index, rect)
+
+        dr.assert_called_once()
+        rrect = dr.call_args[0][0]
+        self.assertEqual(rrect.width(), 128)
+        el.assert_called_once()
+        center = el.call_args[0][0]
+        self.assertEqual(center.x(), 192)
+        dr.reset_mock()
+        el.reset_mock()
+
+        # Prediction is above
+        delegate.cachedData = lambda *_: (9.0, None)
+        delegate.drawBar(painter, Mock(), index, rect)
+
+        dr.assert_called_once()
+        rrect = dr.call_args[0][0]
+        self.assertEqual(rrect.width(), 224)
+        el.assert_called_once()
+        center = el.call_args[0][0]
+        self.assertEqual(center.x(), 192)
+        dr.reset_mock()
+        el.reset_mock()
 
 
 if __name__ == "__main__":
