@@ -267,10 +267,16 @@ class OWPredictions(OWWidget):
             self.target_class = self.TARGET_AVERAGE
         else:
             self.shown_probs = self.NO_PROBS
+            model = prob_combo.model()
+            for v in (self.DATA_PROBS, self.BOTH_PROBS):
+                item = model.item(v)
+                item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
 
     def _update_control_visibility(self):
         for widget in self._prob_controls:
-            widget.setVisible(self.is_discrete_class)
+            widget.setVisible(self.is_discrete_class
+                              or any(slot.predictor.domain.has_discrete_class
+                                     for slot in self.predictors))
 
         for widget in self._target_controls:
             widget.setVisible(self.is_discrete_class and self.show_scores)
