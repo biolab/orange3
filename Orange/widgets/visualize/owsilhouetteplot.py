@@ -267,7 +267,7 @@ class OWSilhouettePlot(widget.OWWidget):
                      if var.is_string or var.is_discrete]
         self.annotation_var_model[:] = [None] + annotvars
         self.annotation_var = annotvars[0] if annotvars else None
-        self.openContext(Orange.data.Domain(groupvars))
+        self.openContext(domain)
 
     def _is_empty(self) -> bool:
         # Is empty (does not have any input).
@@ -539,27 +539,22 @@ class OWSilhouettePlot(widget.OWWidget):
     def migrate_context(cls, context, version):
         values = context.values
         if version < 2:
-            discrete_vars = (
-                name
-                for name, type_ in itertools.chain(
-                    context.attributes, context.class_vars, context.metas)
-                if type_ == 1)
+            # contexts were constructed from Domain containing vars shown in
+            # the list view, context.class_vars and context.metas were always
+            # empty, and context.attributes contained discrete attributes
             index, _ = values.pop("cluster_var_idx")
-            name = next(itertools.islice(discrete_vars, index, None)
-            )
-            values["cluster_var"] = (name, 101)
+            values["cluster_var"] = (context.attributes[index][0], 101)
 
             index = values.pop("annotation_var_idx")[0] - 1
             if index == -1:
                 values["annotation_var"] = None
-            else:
-                annot_vars = (
-                    (name, type_ + 100)
-                    for name, type_ in itertools.chain(
-                        context.attributes, context.class_vars, context.metas)
-                    if type_ in (1, 3))
-                values["annotation_var"] = next(
-                    itertools.islice(annot_vars, index, None))
+            elif index < len(context.attributes):
+                name, _ = context.attributes[index]
+                values["annotation_var"] = (name, 101)
+            # else we cannot migrate
+            # Even this migration can be erroneous if metas contained a mixture
+            # of discrete and string attributes; the latter were not stored in
+            # context, so indices in context could have been wrong
 
 
 class SelectAction(enum.IntEnum):

@@ -259,10 +259,10 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_migration(self):
         enc_domain = dict(
-            attributes=(('foo', 1), ('bar', 1), ('baz', 2), ('bax', 1)),
-            class_vars=(('cfoo', 1), ),
-            metas=(('mbar', 3), ('mbaz', 1)))
+            attributes=(('foo', 1), ('bar', 1), ('baz', 1), ('bax', 1),
+                        ('cfoo', 1), ('mbaz', 1)))
 
+        # No annotation
         context = Context(
             values=dict(cluster_var_idx=(0, -2), annotation_var_idx=(0, -2)),
             **enc_domain
@@ -274,23 +274,26 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(values["cluster_var"], ("foo", 101))
         self.assertEqual(values["annotation_var"], None)
 
+        # We have annotation
         context = Context(
-            values=dict(cluster_var_idx=(4, -2), annotation_var_idx=(4, -2)),
+            values=dict(cluster_var_idx=(2, -2), annotation_var_idx=(4, -2)),
             **enc_domain
         )
         OWSilhouettePlot.migrate_context(context, 1)
         self.assertNotIn("cluster_var_idx", values)
         self.assertNotIn("annotation_var_idx", values)
-        self.assertEqual(context.values["cluster_var"], ("mbaz", 101))
-        self.assertEqual(context.values["annotation_var"], ("cfoo", 101))
+        self.assertEqual(context.values["cluster_var"], ("baz", 101))
+        self.assertEqual(context.values["annotation_var"], ("bax", 101))
 
+        # We thought was had annotation, but the index is wrong due to
+        # incorrect domain
         context = Context(
-            values=dict(cluster_var_idx=(4, -2), annotation_var_idx=(5, -2)),
+            values=dict(cluster_var_idx=(4, -2), annotation_var_idx=(7, -2)),
             **enc_domain
         )
         OWSilhouettePlot.migrate_context(context, 1)
-        self.assertEqual(context.values["cluster_var"], ("mbaz", 101))
-        self.assertEqual(context.values["annotation_var"], ("mbar", 103))
+        self.assertEqual(context.values["cluster_var"], ("cfoo", 101))
+        self.assertNotIn("annotation_var_idx", values)
 
 
 if __name__ == "__main__":
