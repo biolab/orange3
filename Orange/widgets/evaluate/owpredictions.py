@@ -215,8 +215,7 @@ class OWPredictions(OWWidget):
                     self.predictionsview))
 
         self._set_target_combos()
-        if self.is_discrete_class:
-            self.openContext(self.class_var.values)
+        self.openContext(self.class_var.values if self.is_discrete_class else ())
         self._invalidate_predictions()
 
     def _store_selection(self):
