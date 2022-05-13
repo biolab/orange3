@@ -1,4 +1,6 @@
 """Widget for visualization of tree models"""
+from html import escape
+
 import numpy as np
 
 from AnyQt.QtWidgets import (
@@ -18,6 +20,7 @@ from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
 from Orange.data import Table
+from Orange.util import color_to_hex
 
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
@@ -325,9 +328,36 @@ class OWTreeGraph(OWTreeViewer2D):
         return node_obj
 
     def node_tooltip(self, node):
-        return "<p>" + "<br>".join(
-            to_html(str(rule))
-            for rule in self.tree_adapter.rules(node.node_inst)) + "</p>"
+        # We uses <br/> and &nbsp: styling of <li> in Qt doesn't work well
+        indent = "&nbsp;&nbsp;&nbsp;"
+        nbp = "<p style='white-space:pre'>"
+
+        rule = "<br/>".join(f"{indent}– {to_html(str(rule))}"
+                            for rule in self.tree_adapter.rules(node.node_inst))
+        if rule:
+            rule = f"<p><b>Selection</b></p><p>{rule}</p>"
+
+        distr = self.tree_adapter.get_distribution(node.node_inst)[0]
+        class_var = self.domain.class_var
+        name = escape(class_var.name)
+        if self.domain.class_var.is_discrete:
+            total = float(sum(distr)) or 1
+            content = f"{nbp}<b>Distribution of</b> '{name}'</p><p>" \
+                + "<br/>".join(
+                    f"{indent}<span style='color: {color_to_hex(color)}'>◼</span> "
+                    f"{escape(value)}: {prop:g} ({prop / total * 100:.1f} %)"
+                    for value, color, prop
+                    in zip(class_var.values, class_var.colors, distr)) \
+                + "</p>"
+        else:
+            mean, var = distr
+            content = f"{nbp}{class_var.name} = {mean:.3g} ± {var:.3g}<br/>" + \
+                f"({self.tree_adapter.num_samples(node.node_inst)} instances)</p>"
+
+        split = self._update_node_info_attr_name(node, "")
+        if split:
+            split = f"<p style='white-space:pre'><b>Next split: </b>{split}</p>"
+        return "<hr/>".join(filter(None, (rule, content, split)))
 
     def update_selection(self):
         if self.model is None:
