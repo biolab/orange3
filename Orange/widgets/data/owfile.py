@@ -525,10 +525,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         text += f"<p>{len(table)} {pl(len(table), 'instance')}"
 
-        missing_in_attr = missing_prop(table.has_missing_attribute()
-                                       and table.get_nan_frequency_attribute())
-        missing_in_class = missing_prop(table.has_missing_class()
-                                        and table.get_nan_frequency_class())
+        missing_in_attr = missing_prop(table.get_nan_frequency_attribute())
+        missing_in_class = missing_prop(table.get_nan_frequency_class())
         nattrs = len(domain.attributes)
         text += f"<br/>{nattrs} {pl(nattrs, 'feature')} {missing_in_attr}"
         if domain.has_continuous_class:
