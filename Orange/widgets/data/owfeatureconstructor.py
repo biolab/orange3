@@ -18,7 +18,7 @@ import unicodedata
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
-from itertools import chain, count
+from itertools import chain, count, starmap
 from typing import List, Dict, Any
 
 import numpy as np
@@ -32,14 +32,18 @@ from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
+from Orange.data import Variable, Table, Value, Instance
 from Orange.data.util import get_unique_names
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
-from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils import (
+    itemmodels, vartype, ftry, unique_everseen as unique
+)
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets import report
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
+
 
 FeatureDescriptor = \
     namedtuple("FeatureDescriptor", ["name", "expression"])
@@ -1162,25 +1166,57 @@ class FeatureFunc:
         self.mask_exceptions = True
         self.use_values = use_values
 
-    def __call__(self, instance, *_):
-        if isinstance(instance, Orange.data.Table):
-            return [self(inst) for inst in instance]
+    def __call__(self, table, *_):
+        if isinstance(table, Table):
+            return self.__call_table(table)
         else:
-            try:
-                args = [str(instance[var]) if var.is_string
-                    else var.values[int(instance[var])] if var.is_discrete and not self.use_values
-                    else instance[var]
-                    for _, var in self.args]
-                y = self.func(*args)
-            # user's expression can contain arbitrary errors
-            # this also covers missing attributes
-            except:  # pylint: disable=bare-except
-                if not self.mask_exceptions:
-                    raise
-                return np.nan
-            if self.cast:
-                y = self.cast(y)
-            return y
+            return self.__call_instance(table)
+
+    def __call_table(self, table):
+        try:
+            cols = [self.extract_column(table, var) for _, var in self.args]
+        except ValueError:
+            if self.mask_exceptions:
+                return np.full(len(table), np.nan)
+            else:
+                raise
+
+        if not cols:
+            args = [()] * len(table)
+        else:
+            args = zip(*cols)
+        f = self.func
+        if self.mask_exceptions:
+            y = list(starmap(ftry(f, Exception, np.nan), args))
+        else:
+            y = list(starmap(f, args))
+        if self.cast is not None:
+            cast = self.cast
+            y = [cast(y_) for y_ in y]
+        return y
+
+    def __call_instance(self, instance: Instance):
+        table = Table.from_numpy(
+            instance.domain,
+            np.array([instance.x]),
+            np.array([instance.y]),
+            np.array([instance.metas]),
+        )
+        return self.__call_table(table)[0]
+
+    def extract_column(self, table: Table, var: Variable):
+        data, _ = table.get_column_view(var)
+        if var.is_string:
+            return list(map(var.str_val, data))
+        elif var.is_discrete and not self.use_values:
+            values = np.array([*var.values, None], dtype=object)
+            idx = data.astype(int)
+            idx[~np.isfinite(data)] = len(values) - 1
+            return values[idx].tolist()
+        elif not self.use_values:
+            return data.tolist()
+        else:
+            return Value._as_values(var, data.tolist())  # pylint: disable=protected-access
 
     def __reduce__(self):
         return type(self), (self.expression, self.args,
@@ -1188,16 +1224,6 @@ class FeatureFunc:
 
     def __repr__(self):
         return "{0.__name__}{1!r}".format(*self.__reduce__())
-
-
-def unique(seq):
-    seen = set()
-    unique_el = []
-    for el in seq:
-        if el not in seen:
-            unique_el.append(el)
-            seen.add(el)
-    return unique_el
 
 
 if __name__ == "__main__":  # pragma: no cover

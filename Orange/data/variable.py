@@ -1,6 +1,7 @@
 import re
 import warnings
 from collections.abc import Iterable
+from typing import Sequence
 
 from datetime import datetime, timedelta, timezone
 from numbers import Number, Real, Integral
@@ -167,6 +168,44 @@ class Value(float):
             self.variable = variable
             self._value = value
         return self
+
+    @staticmethod
+    def _as_values_primitive(variable, data) -> Sequence['Value']:
+        assert variable.is_primitive()
+        _Value = Value
+        _float_new = float.__new__
+        res = [Value(variable, np.nan)] * len(data)
+        for i, v in enumerate(data):
+            v = _float_new(_Value, v)
+            v.variable = variable
+            res[i] = v
+        return res
+
+    @staticmethod
+    def _as_values_non_primitive(variable, data) -> Sequence['Value']:
+        assert not variable.is_primitive()
+        _Value = Value
+        _float_new = float.__new__
+        data_arr = np.array(data, dtype=object)
+        NA = data_arr == variable.Unknown
+        fdata = np.full(len(data), np.finfo(float).min)
+        fdata[NA] = np.nan
+        res = [Value(variable, Variable.Unknown)] * len(data)
+        for i, (v, fval) in enumerate(zip(data, fdata)):
+            val = _float_new(_Value, fval)
+            val.variable = variable
+            val._value = v
+            res[i] = val
+        return res
+
+    @staticmethod
+    def _as_values(variable, data):
+        """Equivalent but faster then `[Value(variable, v) for v in data]
+        """
+        if variable.is_primitive():
+            return Value._as_values_primitive(variable, data)
+        else:
+            return Value._as_values_non_primitive(variable, data)
 
     def __init__(self, _, __=Unknown):
         # __new__ does the job, pylint: disable=super-init-not-called

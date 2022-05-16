@@ -40,7 +40,7 @@ import Orange.data
 
 from Orange.preprocess.transformation import Transformation, Identity, Lookup
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, ftry
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -50,8 +50,6 @@ ndarray = np.ndarray  # pylint: disable=invalid-name
 MArray = np.ma.MaskedArray
 DType = Union[np.dtype, type]
 
-A = TypeVar("A")  # pylint: disable=invalid-name
-B = TypeVar("B")  # pylint: disable=invalid-name
 V = TypeVar("V", bound=Orange.data.Variable)  # pylint: disable=invalid-name
 H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
 
@@ -2629,21 +2627,6 @@ def apply_transform_string(var, trs):
     variable = out_type(name=name, compute_value=compute_value(var))
     variable.attributes.update(annotations)
     return variable
-
-
-def ftry(
-        func: Callable[..., A],
-        error: Union[Type[BaseException], Tuple[Type[BaseException]]],
-        default: B
-) -> Callable[..., Union[A, B]]:
-    """
-    Wrap a `func` such that if `errors` occur `default` is returned instead."""
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except error:
-            return default
-    return wrapper
 
 
 class DictMissingConst(dict):

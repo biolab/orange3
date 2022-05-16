@@ -64,3 +64,13 @@ class TestValue(unittest.TestCase):
         self.assertTrue(val == v and hash(val) == hash(v))
         val = Value(DiscreteVariable("var", ["red", "green", "blue"]), 1)
         self.assertRaises(TypeError, hash, val)
+
+    def test_as_values(self):
+        x = ContinuousVariable("x")
+        values = Value._as_values(x, [0., 1., 2.])  # pylint: disable=protected-access
+        self.assertIsInstance(values[0], Value)
+        self.assertEqual(values[0], 0)
+        s = StringVariable("s")
+        values = Value._as_values(s, ["a", "b", ""])  # pylint: disable=protected-access
+        self.assertIsInstance(values[0], Value)
+        self.assertEqual(values[0], "a")
