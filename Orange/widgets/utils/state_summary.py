@@ -81,8 +81,7 @@ def format_summary_details(data, format=Qt.PlainText):
     targets = format_variables_string(data.domain.class_vars)
     metas = format_variables_string(data.domain.metas)
 
-    features_missing = missing_values(data.has_missing_attribute()
-                                      and data.get_nan_frequency_attribute())
+    features_missing = missing_values(data.get_nan_frequency_attribute())
     n_features = len(data.domain.variables) + len(data.domain.metas)
     name = getattr(data, "name", None)
     if name == "untitled":

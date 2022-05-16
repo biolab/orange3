@@ -43,6 +43,10 @@ class DaskTable(Table):
 
         return self
 
+    def has_missing_attribute(self):
+        # just show who is calling this one
+        doNotCallMe
+
 
 def table_to_dask(table, filename):
 
