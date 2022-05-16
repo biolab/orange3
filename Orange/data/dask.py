@@ -4,7 +4,7 @@ import h5py
 import dask.array as da
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 
 
 class DaskTable(Table):
@@ -29,7 +29,7 @@ class DaskTable(Table):
         if 'W' in f:
             self.W = da.from_array(f['W'])
         else:
-            self.W = None
+            self.W = self.metas = np.ones((len(X), 0))
 
         # TODO ids need to be set
 
@@ -37,8 +37,7 @@ class DaskTable(Table):
         self.Y = da.from_array(Y)
         self.metas = np.ones((len(self.X), 0))  # TODO
 
-        self.domain = pickle.loads(f.attrs['domain'].tobytes())
-        print(self.domain)
+        self.domain = pickle.loads(np.array(f['domain']).tobytes())
 
         cls._init_ids(self)
 
@@ -50,5 +49,6 @@ def table_to_dask(table, filename):
     with h5py.File(filename, 'w') as f:
         f.create_dataset("X", data=table.X)
         f.create_dataset("Y", data=table.Y)
-        f.attrs["domain"] = np.void(pickle.dumps(table.domain))
+        domain = Domain(table.domain.attributes, table.domain.class_vars, None)
+        f.create_dataset("domain", data=np.void(pickle.dumps(domain)))
         #f.create_dataset("metas", data=table.metas)  # TODO object
