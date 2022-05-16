@@ -27,6 +27,7 @@ import openpyxl
 from Orange.data import _io, Table, Domain, ContinuousVariable
 from Orange.data import Compression, open_compressed, detect_encoding, \
     isnastr, guess_data_type, sanitize_variable
+from Orange.data.dask import DaskTable
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
 
 from Orange.util import flatten
@@ -515,3 +516,14 @@ class UrlReader(FileFormat):
         matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
                              content_disposition or '')
         return urlunquote(matches[-1]) if matches else default_name
+
+
+class DaskReader(FileFormat):
+    """Writer for dot (graph) files"""
+    EXTENSIONS = ('.hdf5',)
+    DESCRIPTION = 'Experimental Dask format'
+    SUPPORT_COMPRESSED = False
+    SUPPORT_SPARSE_DATA = False
+
+    def read(self):
+        return DaskTable.from_file(self.filename)
