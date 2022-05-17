@@ -39,6 +39,7 @@ class TestOWPredictions(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWPredictions)  # type: OWPredictions
         self.iris = Table("iris")
+        self.iris_classless = self.iris.transform(Domain(self.iris.domain.attributes, []))
         self.housing = Table("housing")
 
     def test_rowCount_from_model(self):
@@ -624,12 +625,12 @@ class TestOWPredictions(WidgetTest):
     def _mock_predictors(self):
         def pred(values):
             slot = Mock()
-            slot.predictor.domain.class_var = DiscreteVariable("c", tuple(values))
+            slot.predictor.domain = Domain([], DiscreteVariable("c", tuple(values)))
             return slot
 
         def predc():
             slot = Mock()
-            slot.predictor.domain.class_var = ContinuousVariable("c")
+            slot.predictor.domain = Domain([], ContinuousVariable("c"))
             return slot
 
         widget = self.widget
@@ -746,8 +747,17 @@ class TestOWPredictions(WidgetTest):
 
         widget.data = Table.from_list(Domain([], ContinuousVariable("c")), [])
 
+        # only regression
+        all_predictors = widget.predictors
+        widget.predictors = [widget.predictors[-1]]
         widget._update_control_visibility()
         self.assertTrue(widget.controls.shown_probs.isHidden())
+        self.assertTrue(widget.controls.target_class.isHidden())
+
+        # regression and classification
+        widget.predictors = all_predictors
+        widget._update_control_visibility()
+        self.assertFalse(widget.controls.shown_probs.isHidden())
         self.assertTrue(widget.controls.target_class.isHidden())
 
         widget._set_class_values()
@@ -755,6 +765,13 @@ class TestOWPredictions(WidgetTest):
 
         widget._set_target_combos()
         self.assertEqual(widget.shown_probs, widget.NO_PROBS)
+
+        def is_enabled(prob_item):
+            return widget.controls.shown_probs.model().item(prob_item).flags() & Qt.ItemIsEnabled
+        self.assertTrue(is_enabled(widget.NO_PROBS))
+        self.assertTrue(is_enabled(widget.MODEL_PROBS))
+        self.assertFalse(is_enabled(widget.DATA_PROBS))
+        self.assertFalse(is_enabled(widget.BOTH_PROBS))
 
     def test_delegate_ranges(self):
         widget = self.widget
@@ -815,7 +832,6 @@ class TestOWPredictions(WidgetTest):
 
         delegate = widget.predictionsview.itemDelegateForColumn(2)
         self.assertIsInstance(delegate, ClassificationItemDelegate)
-
 
     class _Scorer(TargetScore):
         # pylint: disable=arguments-differ
@@ -939,6 +955,37 @@ class TestOWPredictions(WidgetTest):
         np.testing.assert_equal(
             out.metas,
             np.hstack([pred.results.predicted.T for pred in widget.predictors]))
+
+    def test_classless(self):
+        widget = self.widget
+        iris012 = self.iris
+        purge = Remove(class_flags=Remove.RemoveUnusedValues)
+        iris01 = purge(iris012[:100])
+        iris12 = purge(iris012[50:])
+
+        bayes01 = NaiveBayesLearner()(iris01)
+        bayes12 = NaiveBayesLearner()(iris12)
+        bayes012 = NaiveBayesLearner()(iris012)
+
+        self.send_signal(widget.Inputs.data, self.iris_classless)
+        self.send_signal(widget.Inputs.predictors, bayes01, 0)
+        self.send_signal(widget.Inputs.predictors, bayes12, 1)
+        self.send_signal(widget.Inputs.predictors, bayes012, 2)
+
+        for i, pred in enumerate(widget.predictors):
+            p = pred.results.unmapped_probabilities
+            p[0] = 10 + 100 * i + np.arange(p.shape[1])
+            pred.results.unmapped_predicted[:] = i
+
+        widget.shown_probs = widget.NO_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 1, 2])
+
+        widget.shown_probs = widget.MODEL_PROBS
+        widget._commit_predictions()
+        out = self.get_output(widget.Outputs.predictions)
+        self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 2, 210, 211, 212])
 
     @patch("Orange.widgets.evaluate.owpredictions.usable_scorers",
            Mock(return_value=[_Scorer]))
