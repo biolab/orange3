@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 import datetime
 from collections import namedtuple
 
@@ -182,6 +183,15 @@ class TestUtils(unittest.TestCase):
                   f'Features: categorical (no missing values)\n' \
                   f'Target: —'
         self.assertEqual(details, format_summary_details(data))
+
+        data = Table.from_numpy(domain=None, X=np.random.random((10000, 1000)))
+        details = f'{len(data)} instances, ' \
+                  f'{len(data.domain.variables)} variables\n' \
+                  f'Features: {len(data.domain.variables)} numeric \n' \
+                  f'Target: —'
+        with patch.object(Table, "get_nan_frequency_attribute") as mock:
+            self.assertEqual(details, format_summary_details(data))
+            self.assertFalse(mock.called)
 
         data = None
         self.assertEqual('', format_summary_details(data))
