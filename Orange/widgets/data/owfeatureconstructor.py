@@ -1213,6 +1213,8 @@ class FeatureFunc:
             idx = data.astype(int)
             idx[~np.isfinite(data)] = len(values) - 1
             return values[idx].tolist()
+        elif var.is_time:  # time always needs Values due to str(val) formatting
+            return Value._as_values(var, data.tolist())  # pylint: disable=protected-access
         elif not self.use_values:
             return data.tolist()
         else:

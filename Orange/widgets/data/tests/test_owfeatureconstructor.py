@@ -305,6 +305,12 @@ class FeatureFuncTest(unittest.TestCase):
         self.assertTrue(np.all(np.isnan(r)))
         self.assertTrue(np.isnan(f(data2[0])))
 
+    def test_time_str(self):
+        data = Table.from_numpy(Domain([TimeVariable("T", have_date=True)]), [[0], [0]])
+        f = FeatureFunc("str(T)", [("T", data.domain[0])])
+        c = f(data)
+        self.assertEqual(c, ["1970-01-01", "1970-01-01"])
+
     def test_invalid_expression_variable(self):
         iris = Table("iris")
         f = FeatureFunc("1 / petal_length",
