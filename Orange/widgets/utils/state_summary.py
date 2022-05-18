@@ -18,6 +18,9 @@ from Orange.widgets.utils.signals import AttributeList
 from Orange.base import Model, Learner
 
 
+SIZE_LIMIT = 1e7
+
+
 def format_variables_string(variables):
     """
     A function that formats the descriptive part of the input/output summary for
@@ -81,7 +84,9 @@ def format_summary_details(data, format=Qt.PlainText):
     targets = format_variables_string(data.domain.class_vars)
     metas = format_variables_string(data.domain.metas)
 
-    features_missing = missing_values(data.get_nan_frequency_attribute())
+    features_missing = ""
+    if data.X.size < SIZE_LIMIT:
+        features_missing = missing_values(data.get_nan_frequency_attribute())
     n_features = len(data.domain.variables) + len(data.domain.metas)
     name = getattr(data, "name", None)
     if name == "untitled":

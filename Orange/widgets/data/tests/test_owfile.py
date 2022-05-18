@@ -76,6 +76,23 @@ class TestOWFile(WidgetTest):
     def tearDown(self):
         dataset_dirs.pop()
 
+    def test_describe(self):
+        table = Table("iris")
+        description = f"<p><b>Iris flower dataset</b><br/>" \
+                      f"Classical dataset with 150 instances of Iris setosa, Iris virginica and Iris versicolor.</p>" \
+                      f"<p>150 instance(s)<br/>" \
+                      f"4 feature(s) (no missing values)<br/>" \
+                      f"Classification; categorical class with 3 values (no missing values)<br/>" \
+                      f"0 meta attribute(s)</p>"
+        self.assertEqual(description, self.widget._describe(table))
+
+        table = Table.from_numpy(domain=None, X=np.random.random((10000, 1000)))
+        description = f"<p>10000 instance(s)<br/>" \
+                      f"1000 feature(s) <br/>" \
+                      f"Data has no target variable.<br/>" \
+                      f"0 meta attribute(s)</p>"
+        self.assertEqual(description, self.widget._describe(table))
+
     def test_dragEnterEvent_accepts_urls(self):
         event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))
         self.widget.dragEnterEvent(event)

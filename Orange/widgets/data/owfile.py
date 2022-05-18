@@ -524,8 +524,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         text += f"<p>{len(table)} instance(s)"
 
-        missing_in_attr = missing_prop(table.get_nan_frequency_attribute())
-        missing_in_class = missing_prop(table.get_nan_frequency_class())
+        missing_in_attr = missing_in_class = ""
+        if table.X.size < OWFile.SIZE_LIMIT:
+            missing_in_attr = missing_prop(table.get_nan_frequency_attribute())
+            missing_in_class = missing_prop(table.get_nan_frequency_class())
         text += f"<br/>{len(domain.attributes)} feature(s) {missing_in_attr}"
         if domain.has_continuous_class:
             text += f"<br/>Regression; numerical class {missing_in_class}"
