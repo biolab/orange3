@@ -16,6 +16,8 @@ import ast
 import types
 import unicodedata
 
+from concurrent.futures import CancelledError
+from dataclasses import dataclass
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count, starmap
@@ -43,6 +45,7 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets import report
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 
 
 FeatureDescriptor = \
@@ -477,7 +480,7 @@ class FeatureConstructorHandler(DomainContextHandler):
         return True
 
 
-class OWFeatureConstructor(OWWidget):
+class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
     name = "Feature Constructor"
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input dataset."
@@ -510,13 +513,15 @@ class OWFeatureConstructor(OWWidget):
     class Error(OWWidget.Error):
         more_values_needed = Msg("Categorical feature {} needs more values.")
         invalid_expressions = Msg("Invalid expressions: {}.")
+        transform_error = Msg("{}")
 
     class Warning(OWWidget.Warning):
         renamed_var = Msg("Recently added variable has been renamed, "
-                           "to avoid duplicates.\n")
+                          "to avoid duplicates.\n")
 
     def __init__(self):
         super().__init__()
+        ConcurrentWidgetMixin.__init__(self)
         self.data = None
         self.editors = {}
 
@@ -704,8 +709,13 @@ class OWFeatureConstructor(OWWidget):
         if self.data is not None:
             self.apply()
         else:
+            self.cancel()
             self.Outputs.data.send(None)
             self.fix_button.setHidden(True)
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     def addFeature(self, descriptor):
         self.featuremodel.append(descriptor)
@@ -768,47 +778,17 @@ class OWFeatureConstructor(OWWidget):
         return final
 
     def apply(self):
-        def report_error(err):
-            log = logging.getLogger(__name__)
-            log.error("", exc_info=True)
-            self.error("".join(format_exception_only(type(err), err)).rstrip())
-
+        self.cancel()
         self.Error.clear()
-
         if self.data is None:
             return
 
         desc = list(self.featuremodel)
         desc = self._validate_descriptors(desc)
-        try:
-            new_variables = construct_variables(
-                desc, self.data, self.expressions_with_values)
-        # user's expression can contain arbitrary errors
-        except Exception as err:  # pylint: disable=broad-except
-            report_error(err)
-            return
+        self.start(run, self.data, desc, self.expressions_with_values)
 
-        attrs = [var for var in new_variables if var.is_primitive()]
-        metas = [var for var in new_variables if not var.is_primitive()]
-        new_domain = Orange.data.Domain(
-            self.data.domain.attributes + tuple(attrs),
-            self.data.domain.class_vars,
-            metas=self.data.domain.metas + tuple(metas)
-        )
-
-        try:
-            for variable in new_variables:
-                variable.compute_value.mask_exceptions = False
-            data = self.data.transform(new_domain)
-        # user's expression can contain arbitrary errors
-        # pylint: disable=broad-except
-        except Exception as err:
-            report_error(err)
-            return
-        finally:
-            for variable in new_variables:
-                variable.compute_value.mask_exceptions = True
-
+    def on_done(self, result: "Result") -> None:
+        data, attrs = result.data, result.attributes
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
         if disc_attrs_not_ok:
@@ -816,6 +796,17 @@ class OWFeatureConstructor(OWWidget):
             return
 
         self.Outputs.data.send(data)
+
+    def on_exception(self, ex: Exception):
+        log = logging.getLogger(__name__)
+        log.error("", exc_info=ex)
+        self.Error.transform_error(
+            "".join(format_exception_only(type(ex), ex)).rstrip(),
+            exc_info=ex
+        )
+
+    def on_partial_result(self, _):
+        pass
 
     def send_report(self):
         items = OrderedDict()
@@ -892,6 +883,38 @@ class OWFeatureConstructor(OWWidget):
                          if vtype == 1}
             if used_vars & disc_vars:
                 context.values["expressions_with_values"] = True
+
+
+@dataclass
+class Result:
+    data: Table
+    attributes: List[Variable]
+    metas: List[Variable]
+
+
+def run(data: Table, desc, use_values, task: TaskState) -> Result:
+    if task.is_interruption_requested():
+        raise CancelledError  # pragma: no cover
+    new_variables = construct_variables(desc, data, use_values)
+    # Explicit cancellation point after `construct_variables` which can
+    # already run `compute_value`.
+    if task.is_interruption_requested():
+        raise CancelledError  # pragma: no cover
+    attrs = [var for var in new_variables if var.is_primitive()]
+    metas = [var for var in new_variables if not var.is_primitive()]
+    new_domain = Orange.data.Domain(
+        data.domain.attributes + tuple(attrs),
+        data.domain.class_vars,
+        metas=data.domain.metas + tuple(metas)
+    )
+    try:
+        for variable in new_variables:
+            variable.compute_value.mask_exceptions = False
+        data = data.transform(new_domain)
+    finally:
+        for variable in new_variables:
+            variable.compute_value.mask_exceptions = True
+    return Result(data, attrs, metas)
 
 
 def validate_exp(exp):
