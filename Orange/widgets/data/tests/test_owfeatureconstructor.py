@@ -324,6 +324,14 @@ class FeatureFuncTest(unittest.TestCase):
         self.assertTrue(np.isnan(f(iris[0])))
         self.assertFalse(np.isnan(f(iris[1])))
 
+    def test_hash_eq(self):
+        iris = Table("iris")
+        f = FeatureFunc("1 / petal_length",
+                        [("petal_length", iris.domain["petal length"])])
+        g = copy.deepcopy(f)
+        self.assertEqual(f, g)
+        self.assertEqual(hash(f), hash(g))
+
 
 class OWFeatureConstructorTests(WidgetTest):
     def setUp(self):

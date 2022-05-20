@@ -1189,6 +1189,15 @@ class FeatureFunc:
     def __repr__(self):
         return "{0.__name__}{1!r}".format(*self.__reduce__())
 
+    def __hash__(self):
+        return hash((self.expression, tuple(self.args),
+                     tuple(sorted(self.extra_env.items())), self.cast))
+
+    def __eq__(self, other):
+        return type(self) is type(other) \
+            and self.expression == other.expression and self.args == other.args \
+            and self.extra_env == other.extra_env and self.cast == other.cast
+
 
 def unique(seq):
     seen = set()
