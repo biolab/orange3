@@ -733,11 +733,14 @@ class OWFeatureConstructor(OWWidget):
 
     @staticmethod
     def check_attrs_values(attr, data):
-        for i in range(len(data)):
-            for var in attr:
-                if not math.isnan(data[i, var]) \
-                        and int(data[i, var]) >= len(var.values):
-                    return var.name
+        for var in attr:
+            col, _ = data.get_column_view(var)
+            mask = ~np.isnan(col)
+            grater_or_equal = np.greater_equal(
+                col, len(var.values), out=mask, where=mask
+            )
+            if grater_or_equal.any():
+                return var.name
         return None
 
     def _validate_descriptors(self, desc):
