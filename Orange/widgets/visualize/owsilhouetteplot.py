@@ -78,14 +78,15 @@ class OWSilhouettePlot(widget.OWWidget):
         "Orange.widgets.unsupervised.owsilhouetteplot.OWSilhouettePlot"
     ]
 
-    settingsHandler = settings.PerfectDomainContextHandler()
+    settingsHandler = settings.DomainContextHandler()
+    settings_version = 2
 
     #: Distance metric index
     distance_idx = settings.Setting(0)
-    #: Group/cluster variable index
-    cluster_var_idx = settings.ContextSetting(0)
-    #: Annotation variable index
-    annotation_var_idx = settings.ContextSetting(0)
+    #: Group/cluster variable
+    cluster_var = settings.ContextSetting(None)
+    #: Annotation variable
+    annotation_var = settings.ContextSetting(None)
     #: Group the (displayed) silhouettes by cluster
     group_by_cluster = settings.Setting(True)
     #: A fixed size for an instance bar
@@ -145,16 +146,17 @@ class OWSilhouettePlot(widget.OWWidget):
             orientation=Qt.Horizontal, callback=self._invalidate_distances)
         controllayout.addWidget(distbox)
 
-        box = gui.vBox(self.controlArea, "Cluster Label")
+        box = gui.vBox(self.controlArea, "Grouping")
+        self.cluster_var_model = itemmodels.VariableListModel(
+            parent=self, placeholder="(None)")
         self.cluster_var_cb = gui.comboBox(
-            box, self, "cluster_var_idx", contentsLength=14,
-            searchable=True, callback=self._invalidate_scores
+            box, self, "cluster_var", contentsLength=14,
+            searchable=True, callback=self._invalidate_scores,
+            model=self.cluster_var_model
         )
         gui.checkBox(
-            box, self, "group_by_cluster", "Group by cluster",
+            box, self, "group_by_cluster", "Show in groups",
             callback=self._replot)
-        self.cluster_var_model = itemmodels.VariableListModel(parent=self)
-        self.cluster_var_cb.setModel(self.cluster_var_model)
 
         box = gui.vBox(self.controlArea, "Bars")
         gui.widgetLabel(box, "Bar width:")
@@ -162,12 +164,12 @@ class OWSilhouettePlot(widget.OWWidget):
             box, self, "bar_size", minValue=1, maxValue=10, step=1,
             callback=self._update_bar_size)
         gui.widgetLabel(box, "Annotations:")
-        self.annotation_cb = gui.comboBox(
-            box, self, "annotation_var_idx", contentsLength=14,
-            callback=self._update_annotations)
         self.annotation_var_model = itemmodels.VariableListModel(parent=self)
-        self.annotation_var_model[:] = ["None"]
-        self.annotation_cb.setModel(self.annotation_var_model)
+        self.annotation_var_model[:] = [None]
+        self.annotation_cb = gui.comboBox(
+            box, self, "annotation_var", contentsLength=14,
+            callback=self._update_annotations,
+            model=self.annotation_var_model)
         ibox = gui.indentedBox(box, 5)
         self.ann_hidden_warning = warning = gui.widgetLabel(
             ibox, "(increase the width to show)")
@@ -258,14 +260,14 @@ class OWSilhouettePlot(widget.OWWidget):
             raise NoGroupVariable()
         self.cluster_var_model[:] = groupvars
         if domain.class_var in groupvars:
-            self.cluster_var_idx = groupvars.index(domain.class_var)
+            self.cluster_var = domain.class_var
         else:
-            self.cluster_var_idx = 0
+            self.cluster_var = groupvars[0]
         annotvars = [var for var in domain.variables + domain.metas
                      if var.is_string or var.is_discrete]
-        self.annotation_var_model[:] = ["None"] + annotvars
-        self.annotation_var_idx = 1 if annotvars else 0
-        self.openContext(Orange.data.Domain(groupvars))
+        self.annotation_var_model[:] = [None] + annotvars
+        self.annotation_var = annotvars[0] if annotvars else None
+        self.openContext(domain)
 
     def _is_empty(self) -> bool:
         # Is empty (does not have any input).
@@ -283,7 +285,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._silhouette = None
         self._labels = None
         self.cluster_var_model[:] = []
-        self.annotation_var_model[:] = ["None"]
+        self.annotation_var_model[:] = [None]
         self._clear_scene()
         self.Error.clear()
         self.Warning.clear()
@@ -346,8 +348,7 @@ class OWSilhouettePlot(widget.OWWidget):
         if self._matrix is None:
             return
 
-        labelvar = self.cluster_var_model[self.cluster_var_idx]
-        labels, _ = self.data.get_column_view(labelvar)
+        labels, _ = self.data.get_column_view(self.cluster_var)
         labels = np.asarray(labels, dtype=float)
         cluster_mask = np.isnan(labels)
         dist_mask = np.isnan(self._matrix).all(axis=0)
@@ -396,19 +397,19 @@ class OWSilhouettePlot(widget.OWWidget):
         self._silplot.setBarHeight(self.bar_size)
         self._silplot.setRowNamesVisible(visible)
         self.ann_hidden_warning.setVisible(
-            not visible and self.annotation_var_idx > 0)
+            not visible and self.annotation_var is not None)
 
     def _replot(self):
         # Clear and replot/initialize the scene
         self._clear_scene()
         if self._silhouette is not None and self._labels is not None:
-            var = self.cluster_var_model[self.cluster_var_idx]
             self._silplot = silplot = SilhouettePlot()
             self._set_bar_height()
 
             if self.group_by_cluster:
-                silplot.setScores(self._silhouette, self._labels, var.values,
-                                  var.colors)
+                silplot.setScores(
+                    self._silhouette, self._labels,
+                    self.cluster_var.values, self.cluster_var.colors)
             else:
                 silplot.setScores(
                     self._silhouette,
@@ -428,10 +429,7 @@ class OWSilhouettePlot(widget.OWWidget):
             self._set_bar_height()
 
     def _update_annotations(self):
-        if 0 < self.annotation_var_idx < len(self.annotation_var_model):
-            annot_var = self.annotation_var_model[self.annotation_var_idx]
-        else:
-            annot_var = None
+        annot_var = self.annotation_var
         self.ann_hidden_warning.setVisible(
             self.bar_size < 5 and annot_var is not None)
 
@@ -494,10 +492,8 @@ class OWSilhouettePlot(widget.OWWidget):
             else:
                 scores = self._silhouette
 
-            var = self.cluster_var_model[self.cluster_var_idx]
-
             domain = self.data.domain
-            proposed = "Silhouette ({})".format(escape(var.name))
+            proposed = "Silhouette ({})".format(escape(self.cluster_var.name))
             names = [var.name for var in itertools.chain(domain.attributes,
                                                          domain.class_vars,
                                                          domain.metas)]
@@ -528,17 +524,37 @@ class OWSilhouettePlot(widget.OWWidget):
             return
 
         self.report_plot()
-        caption = "Silhouette plot ({} distance), clustered by '{}'".format(
-            self.Distances[self.distance_idx][0],
-            self.cluster_var_model[self.cluster_var_idx])
-        if self.annotation_var_idx and self._silplot.rowNamesVisible():
-            caption += ", annotated with '{}'".format(
-                self.annotation_var_model[self.annotation_var_idx])
+        caption = "Silhouette plot " \
+                  f"({self.Distances[self.distance_idx][0]} distance), " \
+                  f"clustered by '{self.cluster_var.name}'"
+        if self.annotation_var and self._silplot.rowNamesVisible():
+            caption += f", annotated with '{self.annotation_var.name}'"
         self.report_caption(caption)
 
     def onDeleteWidget(self):
         self.clear()
         super().onDeleteWidget()
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        values = context.values
+        if version < 2:
+            # contexts were constructed from Domain containing vars shown in
+            # the list view, context.class_vars and context.metas were always
+            # empty, and context.attributes contained discrete attributes
+            index, _ = values.pop("cluster_var_idx")
+            values["cluster_var"] = (context.attributes[index][0], 101)
+
+            index = values.pop("annotation_var_idx")[0] - 1
+            if index == -1:
+                values["annotation_var"] = None
+            elif index < len(context.attributes):
+                name, _ = context.attributes[index]
+                values["annotation_var"] = (name, 101)
+            # else we cannot migrate
+            # Even this migration can be erroneous if metas contained a mixture
+            # of discrete and string attributes; the latter were not stored in
+            # context, so indices in context could have been wrong
 
 
 class SelectAction(enum.IntEnum):

@@ -3,8 +3,11 @@
 # pylint: disable=missing-docstring
 import random
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
+
+from orangewidget.settings import Context
 
 import Orange.distance
 from Orange.data import (
@@ -225,6 +228,72 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
 
         output = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(output.domain.metas[0].name, 'Silhouette (iris) (1)')
+
+    def test_report(self):
+        widget = self.widget
+        widget.report_plot = Mock()
+        widget.report_caption = Mock()
+
+        widget.send_report()
+        widget.report_plot.assert_not_called()
+        widget.report_caption.assert_not_called()
+
+        data = Table("zoo")
+        self.send_signal(widget.Inputs.data, data)
+
+        widget.annotation_var = None
+        widget.send_report()
+        widget.report_plot.assert_called()
+        widget.report_caption.assert_called()
+        text = widget.report_caption.call_args[0][0]
+        self.assertIn(data.domain.class_var.name, text)
+        self.assertNotIn("nnotated", text)
+
+        widget.annotation_var = data.domain.metas[0]
+        widget._silplot.rowNamesVisible = lambda: True
+        widget.send_report()
+        text = widget.report_caption.call_args[0][0]
+        self.assertIn(data.domain.class_var.name, text)
+        self.assertIn("nnotated", text)
+        self.assertIn(data.domain.metas[0].name, text)
+
+    def test_migration(self):
+        enc_domain = dict(
+            attributes=(('foo', 1), ('bar', 1), ('baz', 1), ('bax', 1),
+                        ('cfoo', 1), ('mbaz', 1)))
+
+        # No annotation
+        context = Context(
+            values=dict(cluster_var_idx=(0, -2), annotation_var_idx=(0, -2)),
+            **enc_domain
+        )
+        OWSilhouettePlot.migrate_context(context, 1)
+        values = context.values
+        self.assertNotIn("cluster_var_idx", values)
+        self.assertNotIn("annotation_var_idx", values)
+        self.assertEqual(values["cluster_var"], ("foo", 101))
+        self.assertEqual(values["annotation_var"], None)
+
+        # We have annotation
+        context = Context(
+            values=dict(cluster_var_idx=(2, -2), annotation_var_idx=(4, -2)),
+            **enc_domain
+        )
+        OWSilhouettePlot.migrate_context(context, 1)
+        self.assertNotIn("cluster_var_idx", values)
+        self.assertNotIn("annotation_var_idx", values)
+        self.assertEqual(context.values["cluster_var"], ("baz", 101))
+        self.assertEqual(context.values["annotation_var"], ("bax", 101))
+
+        # We thought was had annotation, but the index is wrong due to
+        # incorrect domain
+        context = Context(
+            values=dict(cluster_var_idx=(4, -2), annotation_var_idx=(7, -2)),
+            **enc_domain
+        )
+        OWSilhouettePlot.migrate_context(context, 1)
+        self.assertEqual(context.values["cluster_var"], ("cfoo", 101))
+        self.assertNotIn("annotation_var_idx", values)
 
 
 if __name__ == "__main__":
