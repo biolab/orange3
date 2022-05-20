@@ -1,9 +1,15 @@
+from typing import TYPE_CHECKING, Mapping, Optional
+
 import numpy as np
 import scipy.sparse as sp
 from pandas import isna
 
-from Orange.data import Instance, Table, Domain
-from Orange.util import Reprable
+from Orange.data import Instance, Table, Domain, Variable
+from Orange.misc.collections import DictMissingConst
+from Orange.util import Reprable, nan_eq, nan_hash_stand, frompyfunc
+
+if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
 
 
 class Transformation(Reprable):
@@ -224,6 +230,75 @@ class Lookup(Transformation):
                 # to avoid different hashes for the same array change to None
                 # issue: https://bugs.python.org/issue43475#msg388508
                 tuple(None if isna(x) else x for x in self.lookup_table),
-                self.unknown,
+                nan_hash_stand(self.unknown),
             )
         )
+
+
+class MappingTransform(Transformation):
+    """
+    Map values via a dictionary lookup.
+
+    Parameters
+    ----------
+    variable: Variable
+    mapping: Mapping
+        The mapping (for the non NA values).
+    dtype: Optional[DTypeLike]
+        The optional target dtype.
+    unknown: Any
+        The constant with whitch to replace unknown values in input.
+    """
+    def __init__(
+            self,
+            variable: Variable,
+            mapping: Mapping,
+            dtype: Optional['DTypeLike'] = None,
+            unknown=np.nan,
+    ) -> None:
+        super().__init__(variable)
+        if any(nan_eq(k, np.nan) for k in mapping.keys()):  # ill-defined mapping
+            raise ValueError("'nan' value in mapping.keys()")
+        self.mapping = mapping
+        self.dtype = dtype
+        self.unknown = unknown
+        self._mapper = self._make_dict_mapper(
+            DictMissingConst(unknown, mapping), dtype
+        )
+
+    @staticmethod
+    def _make_dict_mapper(mapping, dtype):
+        return frompyfunc(mapping.__getitem__, 1, 1, dtype)
+
+    def transform(self, c):
+        return self._mapper(c)
+
+    def __reduce_ex__(self, protocol):
+        return type(self), (self.variable, self.mapping, self.dtype, self.unknown)
+
+    def __eq__(self, other):
+        return super().__eq__(other) \
+               and nan_mapping_eq(self.mapping, other.mapping) \
+               and self.dtype == other.dtype \
+               and nan_eq(self.unknown, other.unknown)
+
+    def __hash__(self):
+        return hash((type(self), self.variable, nan_mapping_hash(self.mapping),
+                     self.dtype, nan_hash_stand(self.unknown)))
+
+
+def nan_mapping_hash(a: Mapping) -> int:
+    return hash(tuple((k, nan_hash_stand(v)) for k, v in a.items()))
+
+
+def nan_mapping_eq(a: Mapping, b: Mapping) -> bool:
+    if len(a) != len(b):
+        return False
+    try:
+        for k, va in a.items():
+            vb = b[k]
+            if not nan_eq(va, vb):
+                return False
+    except LookupError:
+        return False
+    return True

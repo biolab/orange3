@@ -3,7 +3,9 @@ import logging
 import os
 import inspect
 import datetime
+import math
 from contextlib import contextmanager
+from typing import TYPE_CHECKING, Callable
 
 import pkg_resources
 from enum import Enum as _Enum
@@ -17,8 +19,13 @@ import warnings
 # Exposed here for convenience. Prefer patching to try-finally blocks
 from unittest.mock import patch  # pylint: disable=unused-import
 
+import numpy as np
+
 # Backwards-compat
 from Orange.data.util import scale  # pylint: disable=unused-import
+
+if TYPE_CHECKING:
+    from numpy.typing import DTypeLike
 
 
 log = logging.getLogger(__name__)
@@ -529,6 +536,78 @@ def utc_from_timestamp(timestamp) -> datetime.datetime:
     """
     return datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + \
            datetime.timedelta(seconds=float(timestamp))
+
+
+def frompyfunc(func: Callable, nin: int, nout: int, dtype: 'DTypeLike'):
+    """
+    Wrap an `func` callable into an ufunc-like function with `out`, `dtype`,
+    `where`, ... parameters. The `dtype` is used as the default.
+
+    Unlike numpy.frompyfunc this function always returns output array of
+    the specified `dtype`. Note that the conversion is space efficient.
+    """
+    func_ = np.frompyfunc(func, nin, nout)
+
+    @wraps(func)
+    def funcv(*args, out=None, dtype=dtype, casting="unsafe", **kwargs):
+        if not args:
+            raise TypeError
+        args = [np.asanyarray(a) for a in args]
+        args = np.broadcast_arrays(*args)
+        shape = args[0].shape
+        have_out = out is not None
+        if out is None and dtype is not None:
+            out = np.empty(shape, dtype)
+
+        res = func_(*args, out, dtype=dtype, casting=casting, **kwargs)
+        if res.shape == () and not have_out:
+            return res.item()
+        else:
+            return res
+
+    return funcv
+
+
+_isnan = math.isnan
+
+
+def nan_eq(a, b) -> bool:
+    """
+    Same as `a == b` except where both `a` and `b` are  NaN values in which
+    case `True` is returned.
+
+    .. seealso:: nan_hash_stand
+    """
+    try:
+        both_nan = _isnan(a) and _isnan(b)
+    except TypeError:
+        return a == b
+    else:
+        return both_nan or a == b
+
+
+def nan_hash_stand(value):
+    """
+    If `value` is a NaN then return a singular global *standin* NaN instance,
+    otherwise return `value` unchanged.
+
+    Use this where a hash of `value` is needed and `value` might be a NaN
+    to account for distinct hashes of NaN instances.
+
+    E.g. the folowing `__eq__` and `__hash__` pairs would be ill-defined for
+    `A(float("nan"))` instances if `nan_hash_stand` and `nan_eq` were not
+    used.
+    >>> class A:
+    ...     def __init__(self, v): self.v = v
+    ...     def __hash__(self): return hash(nan_hash_stand(self.v))
+    ...     def __eq__(self, other): return nan_eq(self.v, other.v)
+    """
+    try:
+        if _isnan(value):
+            return math.nan
+    except TypeError:
+        pass
+    return value
 
 
 # For best result, keep this at the bottom

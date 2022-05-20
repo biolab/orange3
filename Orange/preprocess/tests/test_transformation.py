@@ -5,7 +5,8 @@ import scipy.sparse as sp
 
 from Orange.data import DiscreteVariable
 from Orange.preprocess.transformation import \
-    Transformation, _Indicator, Normalizer, Lookup, Indicator, Indicator1
+    Transformation, _Indicator, Normalizer, Lookup, Indicator, Indicator1, \
+    MappingTransform
 
 
 class TestTransformEquality(unittest.TestCase):
@@ -83,6 +84,36 @@ class TestTransformEquality(unittest.TestCase):
         t1a = Lookup(self.disc1a, np.array([0, 2, 1]), 2)
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
+
+    def test_mapping(self):
+        def test_equal(a, b):
+            self.assertEqual(a, b)
+            self.assertEqual(hash(a), hash(b))
+
+        t1 = MappingTransform(self.disc1, {"a": "1", "b": "2", "c":"3"})
+        t1a = MappingTransform(self.disc1a, {"a": "1", "b": "2", "c":"3"})
+        t2 = MappingTransform(self.disc2, {"a": "1", "b": "2", "c":"3"},
+                              unknown="")
+        test_equal(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        t1 = MappingTransform(self.disc1, {"a": 1, "b": 2, "c": float("nan")},
+                              unknown=float("nan"))
+        t1_ = MappingTransform(self.disc1, {"a": 1, "b": 2, "c": float("nan")},
+                               unknown=float("nan"))
+        test_equal(t1, t1_)
+        t1_ = MappingTransform(self.disc1, {"a": 1, "b": float("nan"), "c": 2},
+                               unknown=float("nan"))
+        self.assertNotEqual(t1, t1_)
+
+        t1_ = MappingTransform(self.disc1, {}, unknown=float("nan"))
+        self.assertNotEqual(t1, t1_)
+        t1_ = MappingTransform(self.disc1, {"f": 4, "k": 2, "j": 10},
+                               unknown=float("nan"))
+        self.assertNotEqual(t1, t1_)
+
+        with self.assertRaises(ValueError):
+            MappingTransform(self.disc1, {float("nan"): 1})
 
 
 class TestIndicator(unittest.TestCase):
