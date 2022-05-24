@@ -248,7 +248,7 @@ class PyTableModel(AbstractSortTableModel):
         self.beginInsertColumns(parent, column, column + count - 1)
         for row in self._table:
             row[column:column] = [''] * count
-        self._rows = self._table_dim()[0]
+        self._cols = self._table_dim()[1]
         self.endInsertColumns()
         return True
 
