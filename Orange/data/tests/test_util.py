@@ -120,6 +120,47 @@ class TestGetUniqueNames(unittest.TestCase):
             ["foo (1)", "bar (1)", "baz (4)"]
         )
 
+    def test_get_unique_names_duplicated_proposals(self):
+        names = ["foo", "bar", "baz", "baz (3)"]
+
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo"]),
+            ['foo (1)', 'boo (1)', 'boo (2)']
+        )
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo", "baz"]),
+            ['foo (4)', 'boo (4)', 'boo (5)', 'baz (4)']
+        )
+        self.assertEqual(
+            get_unique_names([], ["foo", "boo", "boo", "baz"]),
+            ['foo', 'boo (1)', 'boo (2)', 'baz']
+        )
+        self.assertEqual(
+            get_unique_names(["foo", "bong"], ["foo", "boo", "boo", "baz"]),
+            ['foo (1)', 'boo (1)', 'boo (2)', 'baz']
+        )
+
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo"],
+                             equal_numbers=False),
+            ['foo (1)', 'boo (1)', 'boo (2)']
+        )
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo", "baz"],
+                             equal_numbers=False),
+            ['foo (1)', 'boo (1)', 'boo (2)', 'baz (4)']
+        )
+        self.assertEqual(
+            get_unique_names([], ["foo", "boo", "boo", "baz"],
+                             equal_numbers=False),
+            ['foo', 'boo (1)', 'boo (2)', 'baz']
+        )
+        self.assertEqual(
+            get_unique_names(["foo", "bong"], ["foo", "boo", "boo", "baz"],
+                             equal_numbers=False),
+            ['foo (1)', 'boo (1)', 'boo (2)', 'baz']
+        )
+
     def test_get_unique_names_from_duplicates(self):
         self.assertEqual(
             get_unique_names_duplicates(["foo", "bar", "baz"]),
