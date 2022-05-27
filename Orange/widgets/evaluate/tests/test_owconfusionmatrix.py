@@ -1,7 +1,8 @@
 # pylint: disable=missing-docstring, protected-access
+import unittest
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.classification import NaiveBayesLearner, TreeLearner
 from Orange.regression import MeanLearner
 from Orange.evaluation.testing import CrossValidation, TestOnTrainingData, \
@@ -125,3 +126,33 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.evaluation_results, input_data)
         output = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(output.domain.metas[0].name, 'iris(Learner #1) (1)')
+
+    def test_unique_var_names(self):
+        bayes = NaiveBayesLearner()
+        domain = self.iris.domain
+        results = CrossValidation(k=3, store_data=True)(self.iris, [bayes])
+        self.widget.append_probabilities = True
+        self.widget.append_predictions = True
+        self.send_signal(self.widget.Inputs.evaluation_results, results)
+
+        out_data = self.get_output(self.widget.Outputs.annotated_data)
+
+        widget2 = self.create_widget(OWConfusionMatrix)
+        data2 = out_data.transform(
+            Domain(domain.attributes, domain.class_vars,
+                   [meta for meta in out_data.domain.metas if "versicolor" not in meta.name]))
+        results2 = CrossValidation(k=3, store_data=True)(data2, [bayes])
+        widget2.append_probabilities = True
+        widget2.append_predictions = True
+        self.send_signal(widget2.Inputs.evaluation_results, results2)
+        out_data2 = self.get_output(widget2.Outputs.annotated_data)
+        self.assertEqual({meta.name for meta in out_data2.domain.metas},
+                         {'Selected', 'Selected (1)',
+                          'iris(Learner #1)', 'iris(Learner #1) (1)',
+                          'p(Iris-setosa)', 'p(Iris-virginica)',
+                          'p(Iris-setosa) (1)', 'p(Iris-versicolor) (1)',
+                          'p(Iris-virginica) (1)'})
+
+
+if __name__ == "__main__":
+    unittest.main()

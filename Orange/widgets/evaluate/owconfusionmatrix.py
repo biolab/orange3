@@ -384,9 +384,9 @@ class OWConfusionMatrix(widget.OWWidget):
                         self.results.probabilities is not None:
             probs = self.results.probabilities[self.selected_learner[0]]
             extra.append(np.array(probs, dtype=object))
-            pvars = [Orange.data.ContinuousVariable("p({})".format(value))
-                     for value in class_var.values]
-            metas = metas + tuple(pvars)
+            names = [f"p({value})" for value in class_var.values]
+            names = get_unique_names(self.data.domain, names)
+            metas += tuple(map(Orange.data.ContinuousVariable, names))
 
         domain = Orange.data.Domain(self.data.domain.attributes,
                                     self.data.domain.class_vars,
