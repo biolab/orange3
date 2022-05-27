@@ -353,6 +353,19 @@ class OWFeatureConstructorTests(WidgetTest):
         self.widget.apply()
         self.assertTrue(self.widget.Error.invalid_expressions.is_shown())
 
+    def test_transform_error(self):
+        data = Table("iris")[::5]
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.addFeature(ContinuousDescriptor("X", "1/0", 3))
+        self.widget.apply()
+        self.wait_until_finished(self.widget)
+        self.assertTrue(self.widget.Error.transform_error.is_shown())
+        self.widget.removeFeature(0)
+        self.widget.addFeature(ContinuousDescriptor("X", "1", 3))
+        self.widget.apply()
+        self.wait_until_finished(self.widget)
+        self.assertFalse(self.widget.Error.transform_error.is_shown())
+
     def test_renaming_duplicate_vars(self):
         data = Table("iris")
         self.widget.setData(data)
@@ -381,6 +394,7 @@ class OWFeatureConstructorTests(WidgetTest):
         )
         self.assertFalse(self.widget.Error.more_values_needed.is_shown())
         self.widget.apply()
+        self.wait_until_finished(self.widget)
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
 
     @patch("Orange.widgets.data.owfeatureconstructor.QMessageBox")
