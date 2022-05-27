@@ -442,6 +442,16 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.data, None)
         self.assertEqual(sb.maximum(), default)
 
+    def test_inherited_table(self):
+        # pylint: disable=abstract-method
+        class Table2(Table):
+            pass
+
+        data = Table2(self.iris)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.reference, data[0:1])
+        self.assertIsInstance(self.get_output(self.widget.Outputs.data), Table2)
+
 
 if __name__ == "__main__":
     unittest.main()
