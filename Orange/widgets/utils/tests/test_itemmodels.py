@@ -156,11 +156,11 @@ class TestPyTableModel(unittest.TestCase):
         model.append([2, 3])
         self.assertEqual(list(inserted)[-1][1:], [1, 1])
         del model[:]
-        self.assertEqual(list(removed)[0][1:], [0, 1])
+        self.assertEqual(list(removed)[-1][1:], [0, 1])
         model.extend([[0, 1], [0, 2]])
         self.assertEqual(list(inserted)[-1][1:], [0, 1])
         model.clear()
-        self.assertEqual(list(removed)[0][1:], [0, 1])
+        self.assertEqual(list(removed)[-1][1:], [0, 1])
         model[:] = [[1], [2]]
         self.assertEqual(list(inserted)[-1][1:], [0, 0])
 
