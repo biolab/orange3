@@ -112,7 +112,9 @@ class GraphicsPixmapWidget(QGraphicsWidget):
         exposedcrect = crect.intersected(exposed)
         pixmaptransform = self.pixmapTransform()
         # map exposed rect to exposed pixmap coords
-        assert pixmaptransform.type() <= QTransform.TxRotate
+        assert pixmaptransform.type() in (
+            QTransform.TxNone, QTransform.TxTranslate, QTransform.TxScale
+        )
         pixmaptransform, ok = pixmaptransform.inverted()
         if not ok:
             painter.drawPixmap(
