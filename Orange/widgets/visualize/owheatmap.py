@@ -229,8 +229,8 @@ class OWHeatMap(widget.OWWidget):
         #: The original data with all features (retained to
         #: preserve the domain on the output)
         self.input_data = None
-        #: The effective data striped of discrete features, and often
-        #: merged using k-means
+        #: The effective data stripped of discrete features and hidden
+        #: attributes, and often merged using k-means
         self.data = None
         self.effective_data = None
         #: Source of column annotations (derived from self.data)
@@ -602,13 +602,16 @@ class OWHeatMap(widget.OWWidget):
             self.Error.no_continuous()
             input_data = data = None
 
-        # Data contains some discrete attributes which must be filtered
+        # Data contains some discrete or hidden attributes which must be
+        # filtered
         if data is not None and \
-                any(var.is_discrete for var in data.domain.attributes):
+                any(var.is_discrete or var.attributes.get('hidden', False)
+                    for var in data.domain.attributes):
             ndisc = sum(var.is_discrete for var in data.domain.attributes)
             data = data.transform(
                 Domain([var for var in data.domain.attributes
-                        if var.is_continuous],
+                        if var.is_continuous and
+                        not var.attributes.get('hidden', False)],
                        data.domain.class_vars,
                        data.domain.metas))
             if not data.domain.attributes:
