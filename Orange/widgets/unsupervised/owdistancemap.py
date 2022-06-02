@@ -713,16 +713,16 @@ class TextList(TextListWidget):
         fontsize = min(self._point_size(lineheight), maxfontsize)
 
         font_ = QFont()
-        font_.setPointSize(fontsize)
+        font_.setPointSizeF(fontsize)
         self.setFont(font_)
 
     def _point_size(self, height):
         font = self.font()
-        font.setPointSize(height)
+        font.setPointSizeF(height)
         fix = 0
         while QFontMetrics(font).lineSpacing() > height and height - fix > 1:
             fix += 1
-            font.setPointSize(height - fix)
+            font.setPointSizeF(height - fix)
         return height - fix
 
 
