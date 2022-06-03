@@ -235,6 +235,29 @@ class TestVariable(unittest.TestCase):
         self.assertEqual(hash(a), hash(a1))
         self.assertEqual(hash(c1), hash(c2))
 
+    def test_compute_value_eq_warning(self):
+        with warnings.catch_warnings(record=True) as warns:
+            ContinuousVariable("x")
+            self.assertEqual(warns, [])
+            ContinuousVariable("x", compute_value=lambda *_: 42)
+            self.assertEqual(warns, [])
+
+            class Valid:
+                def __eq__(self, other):
+                    return self is other
+
+                def __hash__(self):
+                    return super().__hash__(self)
+
+            ContinuousVariable("x", compute_value=Valid())
+            self.assertEqual(warns, [])
+
+            class Invalid:
+                pass
+
+            ContinuousVariable("x", compute_value=Invalid())
+            self.assertNotEqual(warns, [])
+
 
 def variabletest(varcls):
     def decorate(cls):
