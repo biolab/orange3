@@ -372,14 +372,14 @@ class TestOWSaveBase(WidgetTest):
                                        ("C:/Temp/", "C:/Temp/Project/abc.csv"),
                                        ("C:/Temp", "c:\\Temp\\Project\\abc.csv"),
                                        ("c:\\Temp", "c:/Temp/Project\\abc.csv")]:
-            widget.workflowEnv = lambda: {"basedir": workflow_dir}
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
             widget.filename = filename
             self.assertFalse(os.path.isabs(widget.stored_path))
         # absolute stored paths
         for workflow_dir, filename in [("C:/Temp", "C:/Folder/abc.csv"),
                                        ("C:/Temp/Project", "C:/Temp/abc.csv"),
                                        ("C:\\Temp\\Project", "C:\\Temp\\abc.csv")]:
-            widget.workflowEnv = lambda: {"basedir": workflow_dir}
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
             widget.filename = filename
             self.assertTrue(os.path.isabs(widget.stored_path))
 
@@ -393,13 +393,13 @@ class TestOWSaveBase(WidgetTest):
                                        ("/temp", "/temp/project/abc.csv"),
                                        ("/temp/", "/temp/abc.csv"),
                                        ("/temp/", "/temp/project/abc.csv")]:
-            widget.workflowEnv = lambda: {"basedir": workflow_dir}
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
             widget.filename = filename
             self.assertFalse(os.path.isabs(widget.stored_path))
         # absolute stored paths
         for workflow_dir, filename in [("/temp", "/folder/abc.csv"),
                                        ("/temp/project", "/temp/abc.csv")]:
-            widget.workflowEnv = lambda: {"basedir": workflow_dir}
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
             widget.filename = filename
             self.assertTrue(os.path.isabs(widget.stored_path))
 
