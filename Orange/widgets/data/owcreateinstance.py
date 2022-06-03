@@ -16,6 +16,7 @@ from orangewidget.gui import Slider
 
 from Orange.data import DiscreteVariable, ContinuousVariable, \
     TimeVariable, Table, StringVariable, Variable, Domain
+from Orange.data.util import get_unique_names
 from Orange.widgets import gui
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.settings import Setting
@@ -646,12 +647,21 @@ class OWCreateInstance(OWWidget):
                 data[:, var_name] = value
         return data
 
-    def _append_to_data(self, data: Table) -> Table:
+    def _append_to_data(self, instance: Table) -> Table:
         assert self.data
-        assert len(data) == 1
+        assert len(instance) == 1
+        source_label = "__source_widget"
 
-        var = DiscreteVariable("Source ID", values=(self.data.name, data.name))
-        data = Table.concatenate([self.data, data], axis=0)
+        data = Table.concatenate([self.data, instance], axis=0)
+        for var in self.data.domain.variables + self.data.domain.metas:
+            if var.attributes.get(source_label) == OWCreateInstance:
+                with data.unlocked():
+                    data.get_column_view(var)[0][-1] = 1
+                return data
+
+        name = get_unique_names(self.data.domain, "Source ID")
+        var = DiscreteVariable(name, values=(self.data.name, instance.name))
+        var.attributes[source_label] = OWCreateInstance
         domain = Domain(data.domain.attributes, data.domain.class_vars,
                         data.domain.metas + (var,))
         data = data.transform(domain)

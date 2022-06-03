@@ -54,6 +54,8 @@ class TestOWCreateInstance(WidgetTest):
         self.assertIn("Source ID", [m.name for m in output.domain.metas])
         self.assertTupleEqual(output.domain.metas[0].values,
                               ("iris", "created"))
+        self.assertDictEqual(output.domain.metas[0].attributes,
+                             {"__source_widget": OWCreateInstance})
 
     def _get_init_buttons(self, widget=None):
         if not widget:
@@ -212,6 +214,47 @@ class TestOWCreateInstance(WidgetTest):
         data = self.data.to_sparse()
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.reference, data)
+
+    def test_cascade_widgets(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        output = self.get_output(self.widget.Outputs.data)
+
+        widget = self.create_widget(OWCreateInstance)
+        self.send_signal(widget.Inputs.data, output, widget=widget)
+        output = self.get_output(widget.Outputs.data, widget=widget)
+        self.assertEqual(len(output), 152)
+        self.assertEqual(len(output.domain.metas), 1)
+        self.assertEqual(output.domain.metas[0].name, "Source ID")
+        self.assertTrue(all(output.metas[:150, 0] == 0))
+        self.assertTrue(all(output.metas[150:, 0] == 1))
+
+    def test_cascade_widgets_attributes(self):
+        data = self.data.copy()
+        data.domain.attributes[0].attributes = \
+            {"__source_widget": OWCreateInstance}
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 151)
+        self.assertEqual(len(output.domain.variables), 5)
+        self.assertEqual(len(output.domain.metas), 0)
+
+    def test_cascade_widgets_class_vars(self):
+        data = self.data.copy()
+        data.domain.class_var.attributes = \
+            {"__source_widget": OWCreateInstance}
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 151)
+        self.assertEqual(len(output.domain.variables), 5)
+        self.assertEqual(len(output.domain.metas), 0)
+
+        domain = Domain(data.domain.variables[:3], data.domain.variables[3:])
+        data = data.transform(domain)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 151)
+        self.assertEqual(len(output.domain.variables), 5)
+        self.assertEqual(len(output.domain.metas), 0)
 
 
 class TestDiscreteVariableEditor(GuiTest):
