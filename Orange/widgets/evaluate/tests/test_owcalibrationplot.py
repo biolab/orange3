@@ -9,12 +9,13 @@ from pyqtgraph import InfiniteLine
 
 from sklearn.exceptions import ConvergenceWarning
 
+from orangewidget.utils.combobox import qcombobox_emit_activated
+
 from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable
 import Orange.evaluation
 import Orange.classification
 from Orange.evaluation import Results
 from Orange.evaluation.performance_curves import Curves
-
 from Orange.widgets.evaluate.tests.base import EvaluateTest
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.tests.base import WidgetTest
@@ -141,8 +142,7 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
     @staticmethod
     def _set_combo(combo, val):
         combo.setCurrentIndex(val)
-        combo.activated[int].emit(val)
-        combo.activated[str].emit(combo.currentText())
+        qcombobox_emit_activated(combo, val)
 
     @staticmethod
     def _set_radio_buttons(radios, val):

@@ -374,9 +374,9 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         indices = self.widget.grouped_indices_inverted
         self.assertSetEqual(set(widget.graph.selection), set(indices))
         pens = widget.graph.bar_item.opts["pens"]
-        self.assertTrue(all([pen.style() == 2 for i, pen
+        self.assertTrue(all([pen.style() == Qt.DashLine for i, pen
                              in enumerate(pens) if i in indices]))
-        self.assertTrue(all([pen.style() == 1 for i, pen
+        self.assertTrue(all([pen.style() == Qt.SolidLine for i, pen
                              in enumerate(pens) if i not in indices]))
 
 

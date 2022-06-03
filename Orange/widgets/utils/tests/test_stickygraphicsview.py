@@ -121,16 +121,8 @@ def qWheelScroll(
     if pos.isNull():
         pos = widget.rect().center()
     globalPos = widget.mapToGlobal(pos)
-
-    if angleDelta.y() >= angleDelta.x():
-        qt4orient = Qt.Vertical
-        qt4delta = angleDelta.y()
-    else:
-        qt4orient = Qt.Horizontal
-        qt4delta = angleDelta.x()
-
     event = QWheelEvent(
         QPointF(pos), QPointF(globalPos), QPoint(), angleDelta,
-        qt4delta, qt4orient, buttons, modifiers
+        buttons, modifiers, Qt.NoScrollPhase, False
     )
     QApplication.sendEvent(widget, event)

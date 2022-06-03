@@ -9,6 +9,8 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtCore import (
     pyqtSignal as Signal, pyqtProperty as Property, pyqtSlot as Slot
 )
+from orangecanvas.utils import qsizepolicy_is_expanding, \
+    qsizepolicy_is_shrinking
 
 from Orange.widgets.utils.graphicslayoutitem import scaled
 
@@ -282,9 +284,10 @@ def adjusted_size(
     elif policy == QSizePolicy.Ignored:
         return min(max(available, minimum), maximum)
     size = hint
-    if policy & QSizePolicy.ExpandFlag and hint < available:
+
+    if qsizepolicy_is_expanding(policy) and hint < available:
         size = min(max(size, available), maximum)
-    if policy & QSizePolicy.ShrinkFlag and hint > available:
+    if qsizepolicy_is_shrinking(policy) and hint > available:
         size = max(min(size, available), minimum)
     return size
 

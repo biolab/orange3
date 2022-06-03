@@ -216,22 +216,29 @@ class TestOWPivot(WidgetTest):
         simulate.combobox_activate_item(self.widget.controls.val_feature,
                                         self.heart_disease.domain[0].name)
 
+        def pos(row, col) -> QPoint:
+            model = view.model()
+            rect = view.visualRect(  # pylint:disable=protected-access
+                model.index(row + view._n_leading_rows,
+                            col + view._n_leading_cols))
+            return rect.center()
+
         # column in a group
-        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=QPoint(208, 154))
+        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=pos(2, 0))
         self.assertSetEqual({(3, 0), (2, 0)}, view.get_selection())
 
         # column
-        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=QPoint(340, 40))
+        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=pos(-1, 1))
         self.assertSetEqual({(0, 1), (3, 1), (1, 1), (2, 1)},
                             view.get_selection())
 
         # group
-        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=QPoint(155, 75))
+        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=pos(0, -1))
         self.assertSetEqual({(0, 1), (1, 0), (0, 0), (1, 1)},
                             view.get_selection())
 
         # all
-        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=QPoint(400, 198))
+        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=pos(4, 2))
         self.assertSetEqual({(0, 1), (0, 0), (3, 0), (3, 1), (2, 1), (2, 0),
                              (1, 0), (1, 1)}, view.get_selection())
 

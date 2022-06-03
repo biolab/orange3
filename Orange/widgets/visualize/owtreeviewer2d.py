@@ -244,7 +244,6 @@ class TreeGraphicsView(QGraphicsView):
         self.setFocusPolicy(Qt.WheelFocus)
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.TextAntialiasing)
-        self.setRenderHint(QPainter.HighQualityAntialiasing)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

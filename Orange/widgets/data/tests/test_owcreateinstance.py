@@ -373,6 +373,10 @@ class TestStringVariableEditor(GuiTest):
         self.callback.assert_called_once()
 
 
+def _datetime(y, m, d) -> QDateTime:
+    return QDateTime(QDate(y, m, d), QTime(0, 0))
+
+
 class TestTimeVariableEditor(GuiTest):
     @classmethod
     def setUpClass(cls):
@@ -387,13 +391,12 @@ class TestTimeVariableEditor(GuiTest):
 
     def test_init(self):
         self.assertEqual(self.editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
     def test_edit(self):
         """ Edit datetimeedit by user. """
-        datetime = QDateTime(QDate(2001, 9, 9))
+        datetime = _datetime(2001, 9, 9,)
         self.editor._edit.setDateTime(datetime)
         self.assertEqual(self.editor.value, 999993600)
         self.assertEqual(self.editor._edit.dateTime(), datetime)
@@ -403,8 +406,7 @@ class TestTimeVariableEditor(GuiTest):
         """ Programmatically set datetimeedit value. """
         value = 999993600
         self.editor.value = value
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(2001, 9, 9)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(2001, 9, 9))
         self.assertEqual(self.editor.value, value)
         self.callback.assert_called_once()
 
@@ -415,8 +417,7 @@ class TestTimeVariableEditor(GuiTest):
             callback
         )
         self.assertEqual(editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
         datetime = QDateTime(QDate(2001, 9, 9), QTime(1, 2, 3))
@@ -431,8 +432,7 @@ class TestTimeVariableEditor(GuiTest):
             self.parent, TimeVariable("var", have_time=1), callback
         )
         self.assertEqual(editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
         datetime = QDateTime(QDate(1900, 1, 1), QTime(1, 2, 3))
@@ -445,8 +445,7 @@ class TestTimeVariableEditor(GuiTest):
         callback = Mock()
         editor = TimeVariableEditor(self.parent, TimeVariable("var"), callback)
         self.assertEqual(editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
         datetime = QDateTime(QDate(2001, 9, 9), QTime(1, 2, 3))

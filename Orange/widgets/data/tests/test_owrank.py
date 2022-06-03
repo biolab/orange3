@@ -7,7 +7,8 @@ from unittest.mock import patch
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
-from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
+from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel, \
+    QT_VERSION_INFO
 from AnyQt.QtWidgets import QCheckBox, QApplication
 
 from orangewidget.settings import Context, IncompatibleContext
@@ -353,6 +354,8 @@ class TestOWRank(WidgetTest):
         self.widget.selected_methods.add('ANOVA')
         self.send_signal(self.widget.Inputs.data, table)
 
+    @unittest.skipIf(lambda: QT_VERSION_INFO < (6,),
+                     "headerState is not restored in Qt6")
     def test_setting_migration_fixes_header_state(self):
         # Settings as of version 3.3.5
         settings = {

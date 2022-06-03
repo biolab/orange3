@@ -286,12 +286,12 @@ class VimIndicator(QWidget):
         p.drawRoundedRect(rect, 5, 5)
         p.restore()
 
-        textstart = (width - fm.width(self.indicator_text)) // 2
+        textstart = (width - fm.horizontalAdvance(self.indicator_text)) // 2
         p.drawText(textstart, height // 2 + 5, self.indicator_text)
 
     def minimumSizeHint(self):
         fm = QFontMetrics(self.font())
-        width = round(fm.width(self.indicator_text)) + 10
+        width = int(round(fm.horizontalAdvance(self.indicator_text)) + 10)
         height = fm.height() + 6
         return QSize(width, height)
 
@@ -637,7 +637,6 @@ class OWPythonScript(OWWidget):
         self.editorBox.layout().addWidget(return_stmt)
 
         self.editorBox.setAlignment(Qt.AlignVCenter)
-        self.text.setTabStopWidth(4)
 
         self.text.modificationChanged[bool].connect(self.onModificationChanged)
 

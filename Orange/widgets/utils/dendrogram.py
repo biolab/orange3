@@ -347,7 +347,7 @@ class DendrogramWidget(QGraphicsWidget):
         self.clear()
         self._root = root
         if root is not None:
-            foreground = self.palette().color(QPalette.Foreground)
+            foreground = self.palette().color(QPalette.WindowText)
             pen = make_pen(foreground, width=1, cosmetic=True,
                            join_style=Qt.MiterJoin)
             for node in postorder(root):
@@ -445,7 +445,7 @@ class DendrogramWidget(QGraphicsWidget):
 
         if self._highlighted_item:
             # Restore the previous item
-            highlight = self.palette().color(QPalette.Foreground)
+            highlight = self.palette().color(QPalette.WindowText)
             set_pen(self._highlighted_item,
                     make_pen(highlight, width=1, cosmetic=True))
 
@@ -856,7 +856,7 @@ class DendrogramWidget(QGraphicsWidget):
             for it in postorder(item, branches):
                 it.setPen(update_pen(it.pen(), brush=color))
         if self._root is not None:
-            foreground = self.palette().color(QPalette.Foreground)
+            foreground = self.palette().color(QPalette.WindowText)
             item = self.item(self._root)
             set_color(item, foreground)
         highlight = self.palette().color(QPalette.Highlight)

@@ -49,6 +49,11 @@ jobs:
             python-version: 3.7
             tox_env: orange-oldest
             name: Oldest dependencies
+          - os: ubuntu-20.04
+            python-version: 3.9
+            tox_env: pyqt6
+            name: PyQt6
+
 
     services:
       postgres:
@@ -120,6 +125,14 @@ jobs:
             python-version: 3.8
             tox_env: orange-latest
             name: Latest
+          - os: windows-latest
+            python-version: 3.9
+            tox_env: pyqt6
+            name: PyQt6
+          - os: macos-10.15
+            python-version: 3.9
+            tox_env: pyqt6
+            name: PyQt6
 
     steps:
       - uses: actions/checkout@v2

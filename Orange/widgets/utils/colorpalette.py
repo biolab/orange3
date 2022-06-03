@@ -915,7 +915,7 @@ class ColorButton(QWidget):
     def setColor(self, color):
         self.color = color
         palette = QPalette()
-        palette.setBrush(QPalette.Background, color)
+        palette.setBrush(QPalette.Window, color)
         self.icon.setPalette(palette)
 
     def getColor(self):

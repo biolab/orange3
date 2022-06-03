@@ -512,7 +512,7 @@ class VariableEditor(QWidget):
         self.unlink_var_cb.toggled.connect(self._set_unlink)
         form.addRow("", self.unlink_var_cb)
 
-        vlayout = QVBoxLayout(margin=0, spacing=1)
+        vlayout = QVBoxLayout(spacing=1)
         self.labels_edit = view = QTreeView(
             objectName="annotation-pairs-edit",
             rootIsDecorated=False,
@@ -1119,7 +1119,7 @@ class DiscreteVariableEditor(VariableEditor):
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         )
 
-        vlayout = QVBoxLayout(spacing=1, margin=0)
+        vlayout = QVBoxLayout(spacing=1)
         self.values_edit = QListView(
             editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed,
             selectionMode=QListView.ExtendedSelection,
@@ -1135,7 +1135,7 @@ class DiscreteVariableEditor(VariableEditor):
         self.values_model.rowsMoved.connect(self.on_value_selection_changed)
 
         vlayout.addWidget(self.values_edit)
-        hlayout = QHBoxLayout(spacing=1, margin=0)
+        hlayout = QHBoxLayout(spacing=1)
 
         self.categories_action_group = group = QActionGroup(
             self, objectName="action-group-categories", enabled=False

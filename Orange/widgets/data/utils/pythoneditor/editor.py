@@ -23,7 +23,7 @@ from Orange.widgets.data.utils.pythoneditor.brackethighlighter import BracketHig
 from Orange.widgets.data.utils.pythoneditor.indenter import Indenter
 from Orange.widgets.data.utils.pythoneditor.lines import Lines
 from Orange.widgets.data.utils.pythoneditor.rectangularselection import RectangularSelection
-from Orange.widgets.data.utils.pythoneditor.vim import Vim, isChar
+from Orange.widgets.data.utils.pythoneditor.vim import Vim, isChar, code, key_code
 
 
 # pylint: disable=protected-access
@@ -952,7 +952,7 @@ class PythonEditor(QPlainTextEdit):
             # make action shortcuts override keyboard events (non-default Qt behaviour)
             for action in self.actions():
                 seq = action.shortcut()
-                if seq.count() == 1 and seq[0] == event.key() | int(event.modifiers()):
+                if seq.count() == 1 and key_code(seq[0]) == code(event):
                     action.trigger()
                     break
             else:
@@ -1023,7 +1023,7 @@ class PythonEditor(QPlainTextEdit):
     def _updateTabStopWidth(self):
         """Update tabstop width after font or indentation changed
         """
-        self.setTabStopWidth(self.fontMetrics().horizontalAdvance(' ' * self._indenter.width))
+        self.setTabStopDistance(self.fontMetrics().horizontalAdvance(' ' * self._indenter.width))
 
     @property
     def lines(self):

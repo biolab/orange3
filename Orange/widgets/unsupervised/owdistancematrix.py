@@ -86,12 +86,12 @@ class DistanceMatrixModel(QAbstractTableModel):
         if role == FixedFormatNumericColumnDelegate.ColumnDataSpanRole:
             return 0., self.span
         if row == col and self.zero_diag:
-            if role == Qt.BackgroundColorRole and self.variable:
+            if role == Qt.BackgroundRole and self.variable:
                 return self.color_for_label(row, 200)
             return
         if role == Qt.DisplayRole:
             return float(self.distances[row, col])
-        if role == Qt.BackgroundColorRole:
+        if role == Qt.BackgroundRole:
             return self.color_for_cell(row, col)
         if role == Qt.ForegroundRole:
             return QColor(Qt.black)  # the background is light-ish

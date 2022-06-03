@@ -6,6 +6,9 @@ from unittest.mock import Mock
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, Qt
+from AnyQt.QtWidgets import QCheckBox
+
+from orangewidget.utils.combobox import qcombobox_emit_activated
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
@@ -22,14 +25,12 @@ class TestOWDistributions(WidgetTest):
     def _set_cvar(self, cvar):
         combo = self.widget.controls.cvar
         self.widget.cvar = cvar
-        combo.activated[int].emit(combo.currentIndex())
-        combo.activated[str].emit(combo.currentText())
+        qcombobox_emit_activated(combo, combo.currentIndex())
 
     def _set_fitter(self, i):
         combo = self.widget.controls.fitted_distribution
         combo.setCurrentIndex(i)
-        combo.activated[int].emit(combo.currentIndex())
-        combo.activated[str].emit(combo.currentText())
+        qcombobox_emit_activated(combo, i)
 
     def _set_var(self, var):
         listview = self.widget.controls.var
@@ -43,8 +44,9 @@ class TestOWDistributions(WidgetTest):
         selectionmodel.selectionChanged.emit(newselection, oldselection)
 
     @staticmethod
-    def _set_check(checkbox, value):
-        checkbox.setCheckState(value)
+    def _set_check(checkbox: QCheckBox, value: bool):
+        state = Qt.Checked if value else Qt.Unchecked
+        checkbox.setCheckState(state)
         checkbox.toggled[bool].emit(value)
 
     def _set_slider(self, i):
@@ -415,8 +417,6 @@ class TestOWDistributions(WidgetTest):
         # changing them simultaneously doesn't significantly degrade the tests
         def test_plot_types_combinations(self):
             """Check that the widget doesn't crash at any plot combination"""
-            from AnyQt.QtWidgets import qApp
-
             widget = self.widget
             c = widget.controls
             self.send_signal(widget.Inputs.data, self.iris)
@@ -431,13 +431,11 @@ class TestOWDistributions(WidgetTest):
                         self._set_check(c.stacked_columns, b)
                         self._set_check(c.show_probs, b)
                         self._set_check(c.sort_by_freq, b)
-                        qApp.processEvents()
+                        widget.grab()  # run layout and paint
     else:
         def test_plot_types_combinations(self):
             """Check that the widget doesn't crash at any plot combination"""
             # pylint: disable=too-many-nested-blocks
-            from AnyQt.QtWidgets import qApp
-
             widget = self.widget
             c = widget.controls
             set_chk = self._set_check
@@ -458,7 +456,7 @@ class TestOWDistributions(WidgetTest):
                                         set_chk(c.stacked_columns, stack)
                                         set_chk(c.show_probs, show_probs)
                                         set_chk(c.sort_by_freq, sort_by_freq)
-                                        qApp.processEvents()
+                                        widget.grab()  # run layout and paint
 
     def test_selection_grouping(self):
         """Widget groups consecutive selected bars"""
