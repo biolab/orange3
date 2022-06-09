@@ -946,6 +946,7 @@ class TableModel(AbstractSortTableModel):
              _Qt_DisplayRole=Qt.DisplayRole,
              _Qt_EditRole=Qt.EditRole,
              _Qt_BackgroundRole=Qt.BackgroundRole,
+             _Qt_ForegroundRole=Qt.ForegroundRole,
              _ValueRole=ValueRole,
              _ClassValueRole=ClassValueRole,
              _VariableRole=VariableRole,
@@ -956,6 +957,7 @@ class TableModel(AbstractSortTableModel):
              _recognizedRoles=frozenset([Qt.DisplayRole,
                                          Qt.EditRole,
                                          Qt.BackgroundRole,
+                                         Qt.ForegroundRole,
                                          ValueRole,
                                          ClassValueRole,
                                          VariableRole,
@@ -990,6 +992,12 @@ class TableModel(AbstractSortTableModel):
             return instance[coldesc.var]
         elif role == _Qt_BackgroundRole:
             return coldesc.background
+        elif role == _Qt_ForegroundRole:
+            if coldesc.background is not None:
+                # The background is light-ish, force dark text color
+                return QColor(0, 0, 0, 200)
+            else:
+                return None
         elif role == _ValueRole and isinstance(coldesc, TableModel.Column):
             return instance[coldesc.var]
         elif role == _ClassValueRole:

@@ -101,4 +101,7 @@ class TableDataDelegate(DataDelegate):
     :class:`Orange.widgets.utils.itemmodels.TableModel`
     """
     #: Roles supplied by TableModel we want DataDelegate to use.
-    DefaultRoles = (Qt.DisplayRole, Qt.TextAlignmentRole, Qt.BackgroundRole)
+    DefaultRoles = (
+        Qt.DisplayRole, Qt.TextAlignmentRole, Qt.BackgroundRole,
+        Qt.ForegroundRole
+    )
