@@ -110,7 +110,6 @@ class ComboBoxTest(GuiTest):
     def test_warn_value_type(self, gui_combobox):
         with self.assertWarns(DeprecationWarning):
             gui.comboBox(None, None, "foo", valueType=int, editable=True)
-        self.assertEqual(gui_combobox.call_args[1], {"editable": True})
 
 
 class TestRankModel(GuiTest):

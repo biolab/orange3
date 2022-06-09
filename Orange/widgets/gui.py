@@ -467,12 +467,22 @@ class ControlledList(list):
         super().remove(item)
 
 
-def comboBox(*args, **kwargs):
-    if "valueType" in kwargs:
-        del kwargs["valueType"]
+def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
+             orientation=Qt.Vertical, items=(), callback=None,
+             sendSelectedValue=None, emptyString=None, editable=False,
+             contentsLength=None, searchable=False, *, model=None,
+             tooltips=None, **misc):
+    if "valueType" in misc:
+        del misc["valueType"]
         warnings.warn("Argument 'valueType' is deprecated and ignored",
                       DeprecationWarning)
-    return gui_comboBox(*args, **kwargs)
+    return gui_comboBox(
+        widget, master, value, box, label, labelWidth, orientation, items,
+        callback, sendSelectedValue, emptyString, editable,
+        contentsLength, searchable, model=model, tooltips=tooltips, **misc)
+
+
+comboBox.__doc__ = gui_comboBox.__doc__
 
 
 class CallBackListView(ControlledCallback):
