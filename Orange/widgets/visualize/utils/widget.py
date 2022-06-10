@@ -651,6 +651,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     def clear(self):
         self.selection = None
         self.graph.selection = None
+        self.graph.clear()
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
