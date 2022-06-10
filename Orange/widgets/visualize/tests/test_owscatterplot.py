@@ -14,7 +14,7 @@ from Orange.data import (
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
-from Orange.widgets.tests.utils import simulate
+from Orange.widgets.tests.utils import simulate, excepthook_catch
 from Orange.widgets.utils.colorpalettes import DefaultRGBColors
 from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
@@ -1129,6 +1129,14 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
         with self.assertRaises(ValueError):
             float(ticks[0])
+
+    def test_clear_plot(self):
+        self.widget.cb_class_density.setChecked(True)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        data = self.data.transform(Domain(self.data.domain.attributes))[:100]
+        self.send_signal(self.widget.Inputs.data, data)
+        with excepthook_catch():
+            self.send_signal(self.widget.Inputs.data, self.data)
 
     def test_visual_settings(self):
         super().test_visual_settings()
