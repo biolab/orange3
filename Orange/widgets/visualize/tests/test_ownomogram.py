@@ -22,61 +22,15 @@ from Orange.widgets.visualize.ownomogram import (
 
 
 class TestOWNomogram(WidgetTest):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.data = Table("heart_disease")
-        cls.nb_cls = NaiveBayesLearner()(cls.data)
-        cls.lr_cls = LogisticRegressionLearner()(cls.data)
-        cls.titanic = Table("titanic")
-        cls.lenses = Table(test_filename("datasets/lenses.tab"))
-
     def setUp(self):
+        super().setUp()
+        self.data = Table("heart_disease")
+        self.nb_cls = NaiveBayesLearner()(self.data)
+        self.lr_cls = LogisticRegressionLearner()(self.data)
+        self.titanic = Table("titanic")
+        self.lenses = Table(test_filename("datasets/lenses.tab"))
+
         self.widget = self.create_widget(OWNomogram)  # type: OWNomogram
-
-    def test_input_nb_cls(self):
-        """Check naive bayes classifier on input"""
-        self.send_signal(self.widget.Inputs.classifier, self.nb_cls)
-        self.assertEqual(len([item for item in self.widget.scene.items() if
-                              isinstance(item, DiscreteFeatureItem)]),
-                         min(self.widget.n_attributes,
-                             len(self.data.domain.attributes)))
-
-    def test_input_lr_cls(self):
-        """Check logistic regression classifier on input"""
-        self.widget.display_index = 0  # display ALL features
-        self.send_signal(self.widget.Inputs.classifier, self.lr_cls)
-        self.assertEqual(
-            len([item for item in self.widget.scene.items() if
-                 isinstance(item, DiscreteFeatureItem)]),
-            len([a for a in self.data.domain.attributes if a.is_discrete]))
-        self.assertEqual(
-            len([item for item in self.widget.scene.items() if
-                 isinstance(item, ContinuousFeatureItem)]),
-            len([a for a in self.data.domain.attributes if a.is_continuous]))
-
-    def test_input_invalid_cls(self):
-        """Check any classifier on input"""
-        majority_cls = MajorityLearner()(self.data)
-        self.send_signal(self.widget.Inputs.classifier, majority_cls)
-        self.assertTrue(self.widget.Error.invalid_classifier.is_shown())
-        self.send_signal(self.widget.Inputs.classifier, None)
-        self.assertFalse(self.widget.Error.invalid_classifier.is_shown())
-
-    def test_input_instance(self):
-        """ Check data instance on input"""
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertIsNotNone(self.widget.instances)
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsNone(self.widget.instances)
-
-    def test_target_values(self):
-        """Check Target class combo values"""
-        self.send_signal(self.widget.Inputs.classifier, self.nb_cls)
-        for i, text in enumerate(self.data.domain.class_var.values):
-            self.assertEqual(text, self.widget.class_combo.itemText(i))
-        self.send_signal(self.widget.Inputs.classifier, None)
-        self.assertEqual(0, self.widget.class_combo.count())
 
     def test_nomogram_nb(self):
         """Check probabilities for naive bayes classifier for various values
@@ -89,79 +43,14 @@ class TestOWNomogram(WidgetTest):
         self.widget.display_index = 0  # show ALL features
         self._test_helper(self.lr_cls, [61, 39])
 
-    def test_nomogram_nb_multiclass(self):
-        """Check probabilities for naive bayes classifier for various values
-        of classes and radio buttons for multiclass data"""
-        cls = NaiveBayesLearner()(self.lenses)
-        self._test_helper(cls, [19, 53, 13])
-
-    def test_nomogram_lr_multiclass(self):
-        """Check probabilities for logistic regression classifier for various
-        values of classes and radio buttons for multiclass data"""
-        cls = LogisticRegressionLearner(
-            multi_class="ovr", solver="liblinear"
-        )(self.lenses)
-        self._test_helper(cls, [9, 45, 52])
-
-    def test_nomogram_with_instance_nb(self):
-        """Check initialized marker values and feature sorting for naive bayes
-        classifier and data on input"""
-        cls = NaiveBayesLearner()(self.titanic)
-        data = self.titanic[10:11]
-        self.send_signal(self.widget.Inputs.classifier, cls)
-        self.send_signal(self.widget.Inputs.data, data)
-        self._check_values(data.domain.attributes, data)
-        self._test_sort([["status", "age", "sex"],
-                         ["age", "sex", "status"],
-                         ["sex", "status", "age"],
-                         ["sex", "status", "age"],
-                         ["sex", "status", "age"]])
-
-    def test_nomogram_with_instance_lr(self):
-        """Check initialized marker values and feature sorting for logistic
-        regression classifier and data on input"""
-        cls = LogisticRegressionLearner()(self.titanic)
-        data = self.titanic[10:11]
-        self.send_signal(self.widget.Inputs.classifier, cls)
-        self.send_signal(self.widget.Inputs.data, data)
-        self._check_values(data.domain.attributes, data)
-        self._test_sort([["status", "age", "sex"],
-                         ["age", "sex", "status"],
-                         ["sex", "status", "age"],
-                         ["sex", "status", "age"],
-                         ["sex", "status", "age"]])
-
-    def test_constant_feature_disc(self):
-        """Check nomogram for data with constant discrete feature"""
-        domain = Domain([DiscreteVariable("d1", ("a", "c")),
-                         DiscreteVariable("d2", ("b",))],
-                        DiscreteVariable("cls", ("e", "d")))
-        X = np.array([[0, 0], [1, 0], [0, 0], [1, 0]])
-        data = Table(domain, X, np.array([0, 1, 1, 0]))
-        cls = NaiveBayesLearner()(data)
-        self._test_helper(cls, [50, 50])
-        cls = LogisticRegressionLearner()(data)
-        self._test_helper(cls, [50, 50])
-
-    def test_constant_feature_cont(self):
-        """Check nomogram for data with constant continuous feature"""
-        domain = Domain([DiscreteVariable("d", ("a", "b")),
-                         ContinuousVariable("c")],
-                        DiscreteVariable("cls", ("c", "d")))
-        X = np.array([[0, 0], [1, 0], [0, 0], [1, 0]])
-        data = Table(domain, X, np.array([0, 1, 1, 0]))
-        cls = NaiveBayesLearner()(data)
-        self._test_helper(cls, [50, 50])
-        cls = LogisticRegressionLearner()(data)
-        self._test_helper(cls, [50, 50])
 
     def _test_helper(self, cls, values):
         self.send_signal(self.widget.Inputs.classifier, cls)
 
         # check for all class values
         for i in range(self.widget.class_combo.count()):
-            self.widget.class_combo.activated.emit(i)
             self.widget.class_combo.setCurrentIndex(i)
+            self.widget.class_combo.activated.emit(i)
 
             # check probabilities marker value
             self._test_helper_check_probability(values[i])
@@ -192,6 +81,8 @@ class TestOWNomogram(WidgetTest):
             self.widget.cont_feature_dim_combo.setCurrentIndex(0)
 
     def _test_helper_check_probability(self, value):
+        assert len([item for item in self.widget.scene.items() if
+                       isinstance(item, ProbabilitiesDotItem)]) == 1
         prob_marker = [item for item in self.widget.scene.items() if
                        isinstance(item, ProbabilitiesDotItem)][0]
         self.assertIn("Probability: {}".format(value),
@@ -213,132 +104,6 @@ class TestOWNomogram(WidgetTest):
                        for i in range(self.widget.nomogram_main.layout().count())]
             self.assertListEqual(names[i], ordered)
 
-    def test_tooltip(self):
-        # had problems on PyQt4
-        m = MovableToolTip()
-        m.show(QPoint(0, 0), "Some text.")
-
-    def test_output(self):
-        cls = LogisticRegressionLearner()(self.titanic)
-        data = self.titanic[10:11]
-        status, age, sex = data.domain.attributes
-        self.send_signal(self.widget.Inputs.classifier, cls)
-        self.widget.sort_combo.setCurrentIndex(1)
-        self.widget.sort_combo.activated.emit(1)
-
-        # Output more attributer than there are -> output all
-        self.widget.n_attributes = 5
-        self.widget.n_spin.valueChanged.emit(5)
-        attrs = self.get_output(self.widget.Outputs.features)
-        self.assertEqual(attrs, [age, sex, status])
-
-        # Output the first two
-        self.widget.n_attributes = 2
-        self.widget.n_spin.valueChanged.emit(2)
-        attrs = self.get_output(self.widget.Outputs.features)
-        self.assertEqual(attrs, [age, sex])
-
-        # Set to output all
-        self.widget.display_index = 0
-        qbuttongroup_emit_clicked(self.widget.controls.display_index.group, 0)
-        attrs = self.get_output(self.widget.Outputs.features)
-        self.assertEqual(attrs, [age, sex, status])
-
-        # Remove classifier -> output None
-        self.send_signal(self.widget.Inputs.classifier, None)
-        attrs = self.get_output(self.widget.Outputs.features)
-        self.assertIsNone(attrs)
-
-    def test_reset_settings(self):
-        self.widget.n_attributes = 5
-        self.widget.n_spin.valueChanged.emit(5)
-        self.widget.reset_settings()
-        self.assertEqual(10, self.widget.n_attributes)
-
-    @patch("Orange.widgets.visualize.ownomogram.QGraphicsTextItem")
-    def test_adjust_scale(self, mocked_item: Mock):
-        def mocked_width():
-            nonlocal ind
-            ind += 1
-            most_right = {4: 30, 9: 59, 14: 59}
-            return [2, 30, 59, 2, most_right.get(ind)][ind % 5]
-
-        ind = -1
-        mocked_item().boundingRect().width.side_effect = mocked_width
-        attrs = [DiscreteVariable("var1", values=("foo1", "foo2")),
-                 DiscreteVariable("var2", values=("foo3", "foo4"))]
-        points = [np.array([0, 1.8]), np.array([1.5, 2.0])]
-        diff = np.max(points) - np.min(points)
-        # foo3 eventually overcomes foo2, while the scale is getting smaller
-        #
-        #  0                        1              1.5         1.8     2
-        # foo1                                          _______foo2_______
-        #                               __________foo3__________      foo4
-        self.widget._adjust_scale(attrs, points, 100, diff, [0, 1], [], 0)
-        # most left text at 1. iteration
-        self.assertEqual(mocked_item.call_args_list[5][0][0], "foo2")
-        # most left text at 2. iteration
-        self.assertEqual(mocked_item.call_args_list[10][0][0], "foo3")
-        # most left text at 3. iteration is the same -> stop
-        self.assertEqual(mocked_item.call_args_list[15][0][0], "foo3")
-
-    def test_dots_stop_flashing(self):
-        self.widget.set_data(self.data)
-        self.widget.set_classifier(self.nb_cls)
-        animator = self.widget.dot_animator
-        dot = animator._GraphicsColorAnimator__items[0]
-        dot._mousePressFunc()
-        anim = animator._GraphicsColorAnimator__animation
-        self.assertNotEqual(anim.state(), QPropertyAnimation.Running)
-
-    def test_reconstruct_domain(self):
-        data = Table("heart_disease")
-        cls = LogisticRegressionLearner()(data)
-        domain = OWNomogram.reconstruct_domain(cls, cls.domain)
-        transformed_data = cls.original_data.transform(domain)
-        self.assertEqual(transformed_data.X.shape, data.X.shape)
-        self.assertFalse(np.isnan(transformed_data.X[0]).any())
-
-        scaled_data = Scale()(data)
-        cls = LogisticRegressionLearner()(scaled_data)
-        domain = OWNomogram.reconstruct_domain(cls, cls.domain)
-        transformed_data = cls.original_data.transform(domain)
-        self.assertEqual(transformed_data.X.shape, scaled_data.X.shape)
-        self.assertFalse(np.isnan(transformed_data.X[0]).any())
-
-        disc_data = Continuize()(data)
-        cls = LogisticRegressionLearner()(disc_data)
-        domain = OWNomogram.reconstruct_domain(cls, cls.domain)
-        transformed_data = cls.original_data.transform(domain)
-        self.assertEqual(transformed_data.X.shape, disc_data.X.shape)
-        self.assertFalse(np.isnan(transformed_data.X[0]).any())
-
-    def test_missing_class_value(self):
-        iris = Table("iris")
-        iris_set_ver = iris[:100]
-        target_cb = self.widget.controls.target_class_index
-
-        lr = LogisticRegressionLearner()(iris)
-        self.send_signal(self.widget.Inputs.classifier, lr)
-        simulate.combobox_activate_index(target_cb, 2)
-        self.assertEqual(target_cb.currentIndex(), 2)
-        self.assertEqual(target_cb.count(), 3)
-
-        lr = LogisticRegressionLearner()(iris_set_ver)
-        self.send_signal(self.widget.Inputs.classifier, lr)
-        self.assertEqual(target_cb.currentIndex(), 0)
-        self.assertEqual(target_cb.count(), 2)
-
-        nb = NaiveBayesLearner()(iris)
-        self.send_signal(self.widget.Inputs.classifier, nb)
-        simulate.combobox_activate_index(target_cb, 2)
-        self.assertEqual(target_cb.currentIndex(), 2)
-        self.assertEqual(target_cb.count(), 3)
-
-        nb = NaiveBayesLearner()(iris_set_ver)
-        self.send_signal(self.widget.Inputs.classifier, nb)
-        self.assertEqual(target_cb.currentIndex(), 2)
-        self.assertEqual(target_cb.count(), 3)
 
 
 if __name__ == "__main__":

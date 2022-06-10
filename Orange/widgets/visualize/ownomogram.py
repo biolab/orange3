@@ -1,3 +1,4 @@
+import sys
 import time
 import warnings
 from itertools import chain
@@ -1178,10 +1179,13 @@ class OWNomogram(OWWidget):
         nomogram_footer = NomogramItem()
 
         def get_normalized_probabilities(val):
+            print(f"val={val}, p={self.p}, k={k}, cls_index={cls_index}, d_={d}", file=sys.stderr)
             if not self.normalize_probabilities:
+                print("nnp", 1 / (1 + np.exp(k[cls_index] - val / d_)), file=sys.stderr)
                 return 1 / (1 + np.exp(k[cls_index] - val / d_))
             totals = self.__get_totals_for_class_values(minimums)
             p_sum = np.sum(1 / (1 + np.exp(k - totals / d_)))
+            print(1 / (1 + np.exp(k[cls_index] - val / d_)) / p_sum, file=sys.stderr)
             return 1 / (1 + np.exp(k[cls_index] - val / d_)) / p_sum
 
         def get_points(prob):
