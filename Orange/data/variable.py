@@ -1097,8 +1097,14 @@ class TimeVariable(ContinuousVariable):
             return str(val.value) if isinstance(val, Value) else str(val)
 
         # If you know how to simplify this, be my guest
+        # first, round to 6 decimals. By skipping this, you risk that
+        # microseconds would be rounded to 1_000_000 two lines later
+        val = round(val, 6)
         seconds = int(val)
+        # Rounding is needed to avoid rounding down; it will never be rounded
+        # to 1_000_000 because of the round we have above
         microseconds = int(round((val - seconds) * 1e6))
+        # If you know how to simplify this, be my guest
         if val < 0:
             if microseconds:
                 seconds, microseconds = seconds - 1, int(1e6) + microseconds
