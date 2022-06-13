@@ -692,7 +692,11 @@ class OWHeatMap(widget.OWWidget):
     def update_heatmaps(self):
         if self.data is not None:
             self.clear_scene()
-            self.clear_messages()
+            self.Error.clear()
+            self.Warning.clear()
+            self.Information.row_clust.clear()
+            self.Information.col_clust.clear()
+            self.Information.sampled.clear()
             if self.col_clustering != Clustering.None_ and \
                     len(self.data.domain.attributes) < 2:
                 self.Error.not_enough_features()

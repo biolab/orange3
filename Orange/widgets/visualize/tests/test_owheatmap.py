@@ -72,6 +72,9 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.Information.active)
         self.send_signal(self.widget.Inputs.data, data[:21])
         self.assertTrue(self.widget.Information.active)
+        data = Table("heart_disease.tab")[:10]
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.Information.discrete_ignored.is_shown())
 
     def test_settings_changed(self):
         self.send_signal(self.widget.Inputs.data, self.data)
