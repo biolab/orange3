@@ -31,6 +31,22 @@ class TestKNNLearner(unittest.TestCase):
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
 
+    def test_nan(self):
+        lrn1 = KNNRegressionLearner(n_neighbors=1)
+        lrn3 = KNNRegressionLearner(n_neighbors=3)
+        X = np.arange(1, 7)[:, None]
+        Y = np.array([np.nan, np.nan, np.nan, 1, 1, 1])
+        attr = (ContinuousVariable("Feat 1"),)
+        class_var = (ContinuousVariable("Class"),)
+        domain = Domain(attr, class_var)
+        data = Table(domain, X, Y)
+        clf = lrn1(data)
+        predictions = clf(data)
+        self.assertEqual(predictions[0], 1.0)
+        clf = lrn3(data)
+        predictions = clf(data)
+        self.assertEqual(predictions[3], 1.0)
+
     def test_random(self):
         nrows, ncols = 1000, 5
         x = np.random.randint(-20, 51, (nrows, ncols))
