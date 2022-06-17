@@ -16,7 +16,7 @@ import scipy.stats as ss
 import scipy.sparse as sp
 from AnyQt.QtCore import Qt, QSize, QRectF, QModelIndex, pyqtSlot, \
     QItemSelection, QItemSelectionRange, QItemSelectionModel
-from AnyQt.QtGui import QPainter, QColor
+from AnyQt.QtGui import QPainter, QColor, QPalette
 from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
     QHeaderView, QStyle, QStyleOptionViewItem
 
@@ -752,13 +752,20 @@ class OWFeatureStatistics(widget.OWWidget):
 
         self.data = None  # type: Optional[Table]
 
-        # Main area
         self.model = FeatureStatisticsTableModel(parent=self)
         self.table_view = FeatureStatisticsTableView(self.model, parent=self)
         self.table_view.selectionModel().selectionChanged.connect(self.on_select)
         self.table_view.horizontalHeader().sectionClicked.connect(self.on_header_click)
 
-        self.controlArea.layout().addWidget(self.table_view)
+        box = gui.vBox(self.controlArea)
+        box.setContentsMargins(0, 0, 0, 4)
+        pal = QPalette()
+        pal.setColor(QPalette.Window,
+                     self.table_view.palette().color(QPalette.Base))
+        box.setAutoFillBackground(True)
+        box.setPalette(pal)
+
+        box.layout().addWidget(self.table_view)
 
         self.color_var_model = DomainModel(
             valid_types=(ContinuousVariable, DiscreteVariable),
