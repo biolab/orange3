@@ -69,7 +69,7 @@ class OWConcurrentWidget(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.task is not None:
             self.cancel()
             self.run_button.setText("Resume")
-            self.commit()
+            self.commit.deferred()
         # Resume task
         else:
             self._run()
