@@ -112,12 +112,12 @@ class OWSaveBase(widget.OWWidget, openclass=True):
     def last_dir(self, absolute_path):
         """Store _absolute_path and update relative path (stored_path)"""
         self._absolute_path = absolute_path
-
+        self.stored_path = absolute_path
         workflow_dir = self.workflowEnv().get("basedir", None)
-        if workflow_dir and absolute_path.startswith(workflow_dir.rstrip("/")):
-            self.stored_path = os.path.relpath(absolute_path, workflow_dir)
-        else:
-            self.stored_path = absolute_path
+        if workflow_dir:
+            relative_path = os.path.relpath(absolute_path, start=workflow_dir)
+            if not relative_path.startswith(".."):
+                self.stored_path = relative_path
 
     def _abs_path_from_setting(self):
         """
