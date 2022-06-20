@@ -1,7 +1,9 @@
+from datetime import datetime
 import math
 from collections import namedtuple
 from itertools import chain, count
 import numpy as np
+import dask.array as da
 
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
@@ -15,7 +17,7 @@ from orangewidget.utils.listview import ListViewSearch
 import scipy.special
 from scipy.stats import f_oneway, chi2_contingency
 
-import Orange.data
+from Orange.data import Table
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values, \
     IsDefined
 from Orange.statistics import contingency, distribution
@@ -46,12 +48,21 @@ def compute_scale(min_, max_):
     return first_val, step
 
 
+def maybe_compute(ar):
+    if isinstance(ar, da.Array):
+        return ar.compute()
+    return ar
+
+
 ContDataRange = namedtuple("ContDataRange", ["low", "high", "group_value"])
 DiscDataRange = namedtuple("DiscDataRange", ["value", "group_value"])
 
 
 class BoxData:
     def __init__(self, col, group_val=None):
+        if isinstance(col, da.Array):
+            self.dask_compute(col, group_val)
+            return
         self.n = len(col) - np.sum(np.isnan(col))
         if self.n == 0:
             return
@@ -68,6 +79,27 @@ class BoxData:
         if self.q75 == self.median:
             self.q75 = None
 
+    def dask_compute(self, ar, group):
+        # temporarily moved computation for dask arrays
+        # only works for arrays without NaNs
+        print("DASK COMPUTE")
+        nans = da.isnan(ar)
+        if nans.any():
+            print("BOXDATA: has nans, expect bad results")
+        ar.compute_chunk_sizes()
+        self.n = ar.shape[0]
+        if self.n == 0:
+            return
+        self.a_min = da.min(ar).compute()
+        self.a_max = da.max(ar).compute()
+        self.mean = da.mean(ar).compute()
+        self.var = da.var(ar).compute()
+        self.dev = math.sqrt(self.var)
+        self.q25, self.median, self.q75 = da.percentile(ar, [25, 50, 75]).compute()
+        self.data_range = ContDataRange(self.q25, self.q75, group)
+        self.q25 = None if self.q25 == self.median else self.q25
+        self.q75 = None if self.q75 == self.median else self.q75
+
 
 class FilterGraphicsRectItem(QGraphicsRectItem):
     def __init__(self, data_range, *args):
@@ -83,6 +115,7 @@ class SortProxyModel(QSortFilterProxyModel):
         r_score = right.data(role)
         return r_score is not None and (l_score is None or l_score < r_score)
 
+
 class OWBoxPlot(widget.OWWidget):
     name = "Box Plot"
     description = "Visualize the distribution of feature values in a box plot."
@@ -91,11 +124,11 @@ class OWBoxPlot(widget.OWWidget):
     keywords = ["whisker"]
 
     class Inputs:
-        data = Input("Data", Orange.data.Table)
+        data = Input("Data", Table)
 
     class Outputs:
-        selected_data = Output("Selected Data", Orange.data.Table, default=True)
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     class Warning(widget.OWWidget.Warning):
         no_vars = widget.Msg(
@@ -490,7 +523,7 @@ class OWBoxPlot(widget.OWWidget):
                 box.setSelected(box.data_range in selection)
 
     def _group_cols(self, data, group, attr):
-        if isinstance(attr, np.ndarray):
+        if isinstance(attr, (np.ndarray, da.Array)):
             attr_col = attr
         else:
             attr_col = data.get_column_view(group)[0].astype(float)
@@ -515,6 +548,7 @@ class OWBoxPlot(widget.OWWidget):
             missing_val_str = f"missing '{self.group_var.name}'"
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
+                # TODO: why doesn't this work? ... compute grouped continuous data
                 stats, label_texts = [], []
                 attr_col = dataset.get_column_view(attr)[0].astype(float)
                 for group, value in \
@@ -654,7 +688,7 @@ class OWBoxPlot(widget.OWWidget):
                 for cont, val in zip(conts, self.group_var.values + ("", ))
                 if np.sum(cont) > 0
             ]
-            sums_ = np.sum(conts, axis=1)
+            sums_ = maybe_compute(np.sum(conts, axis=1))
             sums_ = sums_[sums_ > 0]  # only bars with sum > 0 are shown
 
             if self.sort_freqs:
@@ -1120,8 +1154,8 @@ class OWBoxPlot(widget.OWWidget):
         else:
             selected, selection = None, []
         self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(
-            create_annotated_table(self.dataset, selection))
+        # FIXME: create_annotated_table uses a lot of memory, it probably copies the whole array
+        # self.Outputs.annotated_data.send(create_annotated_table(self.dataset, selection))
 
     def _gather_conditions(self):
         conditions = []
@@ -1260,4 +1294,4 @@ class OWBoxPlot(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWBoxPlot).run(Orange.data.Table("heart_disease.tab"))
+    WidgetPreview(OWBoxPlot).run(Table("heart_disease.tab"))
