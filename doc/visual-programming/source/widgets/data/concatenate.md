@@ -12,16 +12,18 @@ Concatenates data from multiple sources.
 
 - Data: concatenated data
 
-The widget concatenates multiple sets of instances (data sets). The merge is “vertical”, in a sense that two sets of 10 and 5 instances yield a new set of 15 instances.
+The widget concatenates multiple sets of instances (data sets). The merge is "vertical", in a sense that two sets of 10 and 5 instances yield a new set of 15 instances.
 
-![](images/Concatenate-stamped.png)
+![](images/Concatenate.png)
 
-1. Set the attribute merging method.
-2. Add the identification of source data sets to the output data set.
-3. Produce a report.
-4. If *Apply automatically* is ticked, changes are communicated automatically. Otherwise, click *Apply*.
+1. Set the attribute merging method:
+   - *all variables that appear in input tables* will output columns from all input tables, assinging missing values for columns that were absent in each table
+   - *only variables that appear in all tables* will output an intersection of columns from all input tables
+   Check the *Treat variables with the same name as the same variable, even if they are computed using different formulae* option to consider columns with the same name as the same column in all input tables. Leaving it unchecked will not match by column name but by column identity.
+2. Add the identification of source data sets to the output data set. The option will output an additional column with *Feature name* and a given type, defined in the *Place* option. The default will place source ID as a class variable. The new column will contain the names of the input tables as values.
+3. If *Apply automatically* is ticked, changes are communicated automatically. Otherwise, click *Apply*.
 
-If one of the tables is connected to the widget as the primary table, the resulting table will contain its own attributes. If there is no primary table, the attributes can be either a union of all attributes that appear in the tables specified as *Additional Tables*, or their intersection, that is, a list of attributes common to all the connected tables.
+If one of the tables is connected to the widget as the primary table, the resulting table will contain only the attributes from this table. If there is no primary table, the attributes can be either a union of all attributes that appear in the tables specified as *Additional Tables*, or their intersection, that is, a list of attributes common to all the connected tables.
 
 Example
 -------
