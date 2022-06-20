@@ -1,4 +1,3 @@
-from datetime import datetime
 import math
 from collections import namedtuple
 from itertools import chain, count
@@ -61,9 +60,7 @@ DiscDataRange = namedtuple("DiscDataRange", ["value", "group_value"])
 
 class BoxData:
     def __init__(self, col, group_val=None):
-        if isinstance(col, da.Array):
-            self.dask_compute(col, group_val)
-            return
+        col = np.asarray(col)
         self.n = len(col) - np.sum(np.isnan(col))
         if self.n == 0:
             return
@@ -79,27 +76,6 @@ class BoxData:
             self.q25 = None
         if self.q75 == self.median:
             self.q75 = None
-
-    def dask_compute(self, ar, group):
-        # temporarily moved computation for dask arrays
-        # only works for arrays without NaNs
-        print("DASK COMPUTE")
-        nans = da.isnan(ar)
-        if nans.any():
-            print("BOXDATA: has nans, expect bad results")
-        ar.compute_chunk_sizes()
-        self.n = ar.shape[0]
-        if self.n == 0:
-            return
-        self.a_min = da.min(ar).compute()
-        self.a_max = da.max(ar).compute()
-        self.mean = da.mean(ar).compute()
-        self.var = da.var(ar).compute()
-        self.dev = math.sqrt(self.var)
-        self.q25, self.median, self.q75 = da.percentile(ar, [25, 50, 75]).compute()
-        self.data_range = ContDataRange(self.q25, self.q75, group)
-        self.q25 = None if self.q25 == self.median else self.q25
-        self.q75 = None if self.q75 == self.median else self.q75
 
 
 class FilterGraphicsRectItem(QGraphicsRectItem):
@@ -606,7 +582,6 @@ class OWBoxPlot(widget.OWWidget):
             missing_val_str = f"missing '{self.group_var.name}'"
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
-                # TODO: why doesn't this work? ... compute grouped continuous data
                 stats, label_texts = [], []
                 attr_col = dataset.get_column(attr)
                 for group, value in \
@@ -1189,7 +1164,7 @@ class OWBoxPlot(widget.OWWidget):
             rect.setPen(QPen(Qt.NoPen))
             value = value or missing_val_str
             if self.show_stretched:
-                tooltip = f"{value}: {100 * freq / total:.2f}%"
+                tooltip = f"{value}: {maybe_compute(100 * freq / total):.2f}%"
             else:
                 tooltip = f"{value}: ({int(freq)})"
             rect.setToolTip(tooltip)
