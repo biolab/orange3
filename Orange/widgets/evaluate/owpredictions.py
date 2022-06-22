@@ -1,3 +1,4 @@
+import math
 import warnings
 from contextlib import contextmanager
 from functools import partial
@@ -8,7 +9,7 @@ from typing import Set, Sequence, Union, Optional, List, NamedTuple
 import numpy
 from AnyQt.QtWidgets import (
     QTableView, QSplitter, QToolTip, QStyle, QApplication, QSizePolicy,
-    QPushButton)
+    QPushButton, QAbstractItemDelegate)
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor, QBrush
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QPointF, QLocale,
@@ -42,6 +43,17 @@ PredictorSlot = NamedTuple(
         ("name", str),       # Predictor name
         ("results", Optional[Results]),    # Computed prediction results or None.
 ])
+
+
+NO_ERR, DIFF_ERROR, ABSDIFF_ERROR, REL_ERROR, ABSREL_ERROR = range(5)
+ERROR_OPTS = ["(None)", "Difference", "Absolute difference",
+              "Relative", "Absolute relative"]
+ERROR_TOOLTIPS = [
+    "Don't show columns with errors",
+    "Show difference between predicted and actual value",
+    "Show absolute difference between predicted and actual value",
+    "Show relative difference between predicted and actual value",
+    "Show absolute value of relative difference between predicted and actual value"]
 
 
 class OWPredictions(OWWidget):
@@ -85,12 +97,15 @@ class OWPredictions(OWWidget):
                      "Show probabilities for classes in data that are also\n"
                      "known to the model"
                      ]
+
     NO_PROBS, DATA_PROBS, MODEL_PROBS, BOTH_PROBS = range(4)
     shown_probs = settings.ContextSetting(NO_PROBS)
     selection = settings.Setting([], schema_only=True)
     show_scores = settings.Setting(True)
     TARGET_AVERAGE = "(Average over classes)"
     target_class = settings.ContextSetting(TARGET_AVERAGE)
+    show_probability_errors = settings.ContextSetting(True)
+    show_reg_errors = settings.ContextSetting(DIFF_ERROR)
 
     def __init__(self):
         super().__init__()
@@ -112,8 +127,27 @@ class OWPredictions(OWWidget):
             gui.widgetLabel(predopts, "Show probabilities for"),
             gui.comboBox(
                 predopts, self, "shown_probs", contentsLength=30,
-                callback=self._update_prediction_delegate)
+                callback=self._update_prediction_delegate),
         ]
+
+        self._cls_error_controls = [
+            gui.checkBox(
+                predopts, self, "show_probability_errors",
+                "Show classification errors",
+                tooltip="Show 1 - probability assigned to the correct class",
+                callback=self._update_errors_visibility
+            )
+        ]
+
+        err_label = gui.widgetLabel(predopts, "Shown regression error: ")
+        err_combo = gui.comboBox(
+            predopts, self, "show_reg_errors", items=ERROR_OPTS,
+            callback=self._reg_error_changed,
+            toolTip="See tooltips for individual options")
+        self._reg_error_controls = [err_label, err_combo]
+        for i, tip in enumerate(ERROR_TOOLTIPS):
+            err_combo.setItemData(i, tip, Qt.ToolTipRole)
+
         gui.rubber(predopts)
         self.reset_button = button = QPushButton("Restore Original Order")
         button.clicked.connect(self._reset_order)
@@ -272,15 +306,36 @@ class OWPredictions(OWWidget):
                 item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
 
     def _update_control_visibility(self):
+        visible_prob = self.is_discrete_class \
+            or any(slot.predictor.domain.has_discrete_class
+                   for slot in self.predictors)
         for widget in self._prob_controls:
-            widget.setVisible(self.is_discrete_class
-                              or any(slot.predictor.domain.has_discrete_class
-                                     for slot in self.predictors))
+            widget.setVisible(visible_prob)
+
+        for widget in self._cls_error_controls:
+            widget.setVisible(self.is_discrete_class)
+        for widget in self._reg_error_controls:
+            widget.setVisible(bool(self.class_var) and not self.is_discrete_class)
 
         for widget in self._target_controls:
             widget.setVisible(self.is_discrete_class and self.show_scores)
 
         self.score_opt_box.setVisible(bool(self.class_var))
+
+    def _reg_error_changed(self):
+        self.predictionsview.model().setRegErrorType(self.show_reg_errors)
+        self._update_prediction_delegate()
+
+    def _update_errors_visibility(self):
+        shown = self.class_var and (
+             self.show_probability_errors if self.is_discrete_class
+             else self.show_reg_errors != NO_ERR)
+        view = self.predictionsview
+        for col, slot in enumerate(self.predictors):
+            view.setColumnHidden(
+                2 * col + 1,
+                not shown or
+                self.is_discrete_class is not slot.predictor.domain.has_discrete_class)
 
     def _set_class_values(self):
         self.class_values = []
@@ -509,7 +564,7 @@ class OWPredictions(OWWidget):
             model = PredictionsModel(
                 all_values, all_probs,
                 self.data.Y if self.class_var else None,
-                headers)
+                headers, reg_error_type=self.show_reg_errors)
             model.list_sorted.connect(
                 partial(
                     self._update_data_sort_order, self.predictionsview,
@@ -633,6 +688,7 @@ class OWPredictions(OWWidget):
                 maxv = numpy.nanmax(self.data.Y)
         else:
             minv = maxv = numpy.nan
+        model = self.predictionsview.model()
         for col, slot in enumerate(self._non_errored_predictors()):
             target = slot.predictor.domain.class_var
             if target is not None and target.is_discrete:
@@ -641,8 +697,11 @@ class OWPredictions(OWWidget):
                     tooltip_probs = [self.class_values[i]
                                      for i in shown_probs if i is not None]
                 delegate = ClassificationItemDelegate(
-                    self.class_values, colors, shown_probs, tooltip_probs,
-                    parent=self.predictionsview)
+                    self.class_values, colors, shown_probs, tooltip_probs)
+                if self.is_discrete_class:
+                    error_delegate = ClassificationErrorDelegate()
+                else:
+                    error_delegate = NoopItemDelegate()
                 sort_col_indices.append([col for col in shown_probs
                                          if col is not None])
 
@@ -653,16 +712,30 @@ class OWPredictions(OWWidget):
                                             RuntimeWarning)
                     minpv = numpy.nanmin([minv, numpy.nanmin(predictions)])
                     maxpv = numpy.nanmax([maxv, numpy.nanmax(predictions)])
-                delegate = RegressionItemDelegate(
-                    target.format_str if target is not None else None,
-                    minpv, maxpv,
-                    parent=self.predictionsview)
+                format_str = target.format_str if target is not None else None
+                delegate = RegressionItemDelegate(format_str, minpv, maxpv)
+
+                if self.show_reg_errors == NO_ERR \
+                        or self.class_var is None or self.is_discrete_class:
+                    error_delegate = NoopItemDelegate()
+                else:
+                    errors = model.errorColumn(col)
+                    centered = self.show_reg_errors in (REL_ERROR, DIFF_ERROR)
+                    span = numpy.nanmax(numpy.abs(errors))
+                    error_delegate = RegressionErrorDelegate(
+                        format_str, centered, span)
                 sort_col_indices.append(None)
 
             # QAbstractItemView does not take ownership of delegates, so we must
+            delegate.setParent(self.predictionsview)
             self._delegates.append(delegate)
-            self.predictionsview.setItemDelegateForColumn(col, delegate)
-            self.predictionsview.setColumnHidden(col, False)
+            error_delegate.setParent(self.predictionsview)
+            self._delegates.append(error_delegate)
+            self.predictionsview.setItemDelegateForColumn(2 * col, delegate)
+            self.predictionsview.setColumnHidden(2 * col, False)
+            self.predictionsview.setItemDelegateForColumn(2 * col + 1, error_delegate)
+
+        self._update_errors_visibility()
 
         self.predictionsview.resizeColumnsToContents()
         self._recompute_splitter_sizes()
@@ -882,7 +955,7 @@ class DataItemDelegate(ItemDelegate):
     pass
 
 
-class PredictionsItemDelegate(ItemDelegate):
+class PredictionsBarItemDelegate(ItemDelegate):
     """
     A base Item Delegate for formatting and drawing predictions/probabilities
     """
@@ -892,12 +965,6 @@ class PredictionsItemDelegate(ItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.fmt = ""
-
-    def displayText(self, value, _):
-        if value is None:
-            return ""
-        value, dist = value
-        return self.fmt.format(value=value, dist=dist)
 
     def sizeHint(self, option, index):
         # reimplemented
@@ -961,6 +1028,14 @@ class PredictionsItemDelegate(ItemDelegate):
         pass  # pragma: no cover
 
 
+class PredictionsItemDelegate(PredictionsBarItemDelegate):
+    def displayText(self, value, _):
+        if value is None:
+            return ""
+        value, dist = value
+        return self.fmt.format(value=value, dist=dist)
+
+
 class ClassificationItemDelegate(PredictionsItemDelegate):
     def __init__(
             self, class_values, colors, shown_probabilities=(),
@@ -970,7 +1045,7 @@ class ClassificationItemDelegate(PredictionsItemDelegate):
         self.colors = [QColor(*c) for c in colors]
 
         self.shown_probabilities = shown_probabilities
-        self.fmt = ""
+
         if shown_probabilities:
             probs = " : ".join(f"{{dist[{i}]:.2f}}" if i is not None else "-"
                                for i in shown_probabilities)
@@ -1013,6 +1088,51 @@ class ClassificationItemDelegate(PredictionsItemDelegate):
                 painter.drawRoundedRect(
                     QRectF(0, height / 4, width, height / 2), 1, 2)
             painter.translate(width, 0.0)
+        painter.restore()
+
+
+class ErrorDelegate(PredictionsBarItemDelegate):
+    __size_hint = None
+
+    @classmethod
+    def sizeHint(cls, option, index):
+        if cls.__size_hint is None:
+            if option.widget is not None:
+                style = option.widget.style()
+            else:
+                style = QApplication.style()
+            margin = style.pixelMetric(
+                QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
+            cls.__size_hint = QSize(
+                2 * margin + option.fontMetrics.horizontalAdvance("X" * 6),
+                1)
+        return cls.__size_hint
+
+
+class NoopItemDelegate(QAbstractItemDelegate):
+    def paint(self, *_):
+        pass
+
+    @staticmethod
+    def sizeHint(*_):
+        return QSize(0, 0)
+
+
+class ClassificationErrorDelegate(ErrorDelegate):
+    def displayText(self, value, _):
+        return "?" if numpy.isnan(value) else f"{value:.3f}"
+
+    def drawBar(self, painter, option, index, rect):
+        value = self.cachedData(index, Qt.DisplayRole)
+        if numpy.isnan(value):
+            return
+
+        painter.save()
+        painter.translate(rect.topLeft())
+        length = rect.width() * value
+        height = rect.height()
+        painter.setBrush(QColor(255, 0, 0))
+        painter.drawRect(QRectF(0, 0, length, height))
         painter.restore()
 
 
@@ -1062,23 +1182,69 @@ class RegressionItemDelegate(PredictionsItemDelegate):
         painter.restore()
 
 
+class RegressionErrorDelegate(ErrorDelegate):
+    def __init__(self, fmt, centered, span, parent=None):
+        super().__init__(parent)
+        self.format = fmt
+        self.centered = centered
+        self.span = span  # can be 0 if no errors, or None if they're hidden
+
+    def initStyleOption(self, option, index):
+        super().initStyleOption(option, index)
+        option.displayAlignment = \
+            (option.displayAlignment & Qt.AlignVertical_Mask) | \
+            (Qt.AlignCenter if self.centered else Qt.AlignRight)
+
+    def displayText(self, value, _):
+        if not self.format:
+            return ""
+        if numpy.isnan(value):
+            return "?"
+        if numpy.isneginf(value):
+            return "-∞"
+        if numpy.isinf(value):
+            return "∞"
+        return self.format % value
+
+    def drawBar(self, painter, option, index, rect):
+        if not self.span:  # can be 0 if no errors, or None if they're hidden
+            return
+        error = self.cachedData(index, Qt.DisplayRole)
+        if numpy.isnan(error):
+            return
+        scaled = error / self.span
+
+        painter.save()
+        painter.translate(rect.topLeft())
+        width = rect.width()
+        height = rect.height()
+        if self.centered:
+            painter.setBrush(QColor(0, 0, 255) if error < 0 else QColor(255, 0, 0))
+            painter.drawRect(QRectF(width / 2, 0, width / 2 * scaled, height))
+        else:
+            painter.setBrush(QColor(255, 0, 0))
+            painter.drawRect(QRectF(0, 0, width * scaled, height))
+        painter.restore()
+
+
 class PredictionsModel(AbstractSortTableModel):
     list_sorted = pyqtSignal()
 
     def __init__(self, values=None, probs=None, actual=None,
-                 headers=None, parent=None):
+                 headers=None, reg_error_type=NO_ERR, parent=None):
         super().__init__(parent)
         self._values = values
         self._probs = probs
         self._actual = actual
         self.__probInd = None
+        self._reg_err_type = reg_error_type
         if values is not None:
             assert len(values) == len(probs) != 0
             assert len(values[0]) == len(probs[0])
             assert actual is None or len(probs[0]) == len(actual)
             sizes = {len(x) for c in (values, probs) for x in c}
             assert len(sizes) == 1
-            self.__columnCount = len(values)
+            self.__columnCount = 2 * len(values)
             self.__rowCount = sizes.pop()
             if headers is None:
                 headers = [None] * self.__columnCount
@@ -1094,11 +1260,40 @@ class PredictionsModel(AbstractSortTableModel):
     def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else self.__columnCount
 
+    def setRegErrorType(self, err_type):
+        self._reg_err_type = err_type
+
     def data(self, index, role=Qt.DisplayRole):
         row = self.mapToSourceRows(index.row())
         if role in (Qt.DisplayRole, Qt.EditRole):
             column = index.column()
-            return self._values[column][row], self._probs[column][row]
+            error_column = column % 2 == 1
+            column //= 2
+            if error_column:
+                if self._actual is None:
+                    return None
+                actual = self._actual[row]
+                if numpy.isnan(actual):
+                    return None
+                elif self._probs[column].size:
+                    return 1 - self._probs[column][row, int(actual)]
+                else:
+                    diff = self._values[column][row] - actual
+                    if self._reg_err_type == DIFF_ERROR:
+                        return diff
+                    elif self._reg_err_type == ABSDIFF_ERROR:
+                        return abs(diff)
+                    elif actual == diff == 0:
+                        return 0
+                    elif self._reg_err_type == REL_ERROR:
+                        return diff / abs(actual) if actual != 0 \
+                            else math.copysign(numpy.inf, diff)
+                    elif self._reg_err_type == ABSREL_ERROR:
+                        return abs(diff / actual) if actual != 0 else numpy.inf
+                    else:
+                        return None
+            else:
+                return self._values[column][row], self._probs[column][row]
         if role == Qt.UserRole:
             return self._actual[row] if self._actual is not None else numpy.nan
         return None
@@ -1107,15 +1302,49 @@ class PredictionsModel(AbstractSortTableModel):
         if role == Qt.DisplayRole:
             if orientation == Qt.Vertical:
                 return str(section + 1)
-            elif self._header is not None and section < len(self._header):
-                return self._header[section]
+            elif self._header is not None and section < 2 * len(self._header):
+                if section % 2 == 1:
+                    return "error"
+                else:
+                    return self._header[section // 2]
         return None
+
+    def errorColumn(self, column):
+        probs = self._probs[column]
+        if probs is not None and probs.size:
+            actuals = self._actual.copy()
+            nans = numpy.isnan(actuals)
+            actuals[nans] = 0
+            errors = 1 - numpy.choose(actuals.astype(int), self._probs[column].T)
+            errors[nans] = 2
+            errors[numpy.isnan(errors)] = 2
+            return errors
+        else:
+            actual = self._actual
+            diff = self._values[column] - actual
+            if self._reg_err_type == DIFF_ERROR:
+                return diff
+            elif self._reg_err_type == ABSDIFF_ERROR:
+                return numpy.abs(diff)
+            # we want inf's here
+            with numpy.errstate(divide="ignore", invalid="ignore"):
+                rel = diff / numpy.abs(actual)
+            rel[diff == 0] = 0  # 0 / 0 will become nan in previous line
+            if self._reg_err_type == REL_ERROR:
+                return rel
+            elif self._reg_err_type == ABSREL_ERROR:
+                return numpy.abs(rel)
+            else:
+                return numpy.zeros(len(actual))
 
     def setProbInd(self, indicess):
         self.__probInd = indicess
         self.sort(self.sortColumn(), self.sortOrder())
 
     def sortColumnData(self, column):
+        if column % 2 == 1:
+            return self.errorColumn(column // 2)
+        column //= 2
         values = self._values[column]
         probs = self._probs[column]
         # Let us assume that probs can be None, numpy array or list of arrays
@@ -1131,7 +1360,6 @@ class PredictionsModel(AbstractSortTableModel):
     def sort(self, column, order=Qt.AscendingOrder):
         super().sort(column, order)
         self.list_sorted.emit()
-
 
 # PredictionsModel and DataModel have the same signal and sort method, but
 # extracting them into a mixin (because they're derived from different classes)
