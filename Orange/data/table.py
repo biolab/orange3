@@ -2359,8 +2359,12 @@ def _subarray(arr, rows, cols):
     if arr.ndim == 1:
         return arr[rows]
     cols = _optimize_indices(cols, arr.shape[1])
-    return arr[_rxc_ix(rows, cols)]
-
+    if isinstance(rows, slice) or isinstance(cols, slice):
+        return arr[rows, cols]
+    else:
+        # rows and columns are independent selectors,
+        # so they need to be reshaped to produce an open mesh
+        return arr[np.ix_(rows, cols)]
 
 def _optimize_indices(indices, maxlen):
     """
@@ -2402,47 +2406,6 @@ def _optimize_indices(indices, maxlen):
                 return slice(begin, end + step, step)
 
     return indices
-
-
-def _rxc_ix(rows, cols):
-    """
-    Construct an index object to index the `rows` x `cols` cross product.
-
-    Rows and columns can be a 1d bool or int sequence, or a slice.
-    The later is a convenience and is interpreted the same
-    as `slice(None, None, -1)`
-
-    Parameters
-    ----------
-    rows : 1D sequence, slice
-        Row indices.
-    cols : 1D sequence, slice
-        Column indices.
-
-    See Also
-    --------
-    numpy.ix_
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> a = np.arange(10).reshape(2, 5)
-    >>> a[_rxc_ix([0, 1], [3, 4])]
-    array([[3, 4],
-           [8, 9]])
-    >>> a[_rxc_ix([False, True], slice(None, None, 1))]
-    array([[5, 6, 7, 8, 9]])
-
-    """
-    isslice = (isinstance(rows, slice), isinstance(cols, slice))
-    if isslice == (True, True):
-        return rows, cols
-    elif isslice == (True, False):
-        return rows, np.ix_(cols)[0]
-    elif isslice == (False, True):
-        return np.ix_(rows)[0], cols
-    else:
-        return np.ix_(rows, cols)
 
 
 def assure_domain_conversion_sparsity(target, source):
