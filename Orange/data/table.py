@@ -2438,12 +2438,11 @@ def _rxc_ix(rows, cols):
     if isslice == (True, True):
         return rows, cols
     elif isslice == (True, False):
-        return rows, np.asarray(np.ix_(cols), int).ravel()
+        return rows, np.ix_(cols)[0]
     elif isslice == (False, True):
-        return np.asarray(np.ix_(rows), int).ravel(), cols
+        return np.ix_(rows)[0], cols
     else:
-        r, c = np.ix_(rows, cols)
-        return np.asarray(r, int), np.asarray(c, int)
+        return np.ix_(rows, cols)
 
 
 def assure_domain_conversion_sparsity(target, source):
