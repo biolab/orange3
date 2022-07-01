@@ -3,7 +3,9 @@
 
 import unittest
 
-from Orange.data import Table, Variable
+import numpy as np
+
+from Orange.data import Table
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
     Chi2
 from Orange.preprocess import SelectBestFeatures, Impute, SelectRandomFeatures
@@ -82,7 +84,8 @@ class TestFSS(unittest.TestCase):
             self.assertEqual(len(scores), 4)
 
             score = method(d1, c.petal_length)
-            self.assertIsInstance(score, float)
+            self.assertEqual(score.ndim, 0)  # a scalar
+            self.assertTrue(np.issubdtype(score.dtype, float))
 
     def test_continuous_scores_on_discrete_features(self):
         data = Impute()(self.imports)
