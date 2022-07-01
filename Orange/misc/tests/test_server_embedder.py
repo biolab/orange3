@@ -27,10 +27,11 @@ class DummyResponse:
 def make_dummy_post(response):
     @staticmethod
     # pylint: disable=unused-argument
-    async def dummy_post(url, headers, data):
+    async def dummy_post(url, headers, content=None, data=None):
         # when sleeping some workers to still compute while other are done
         # it causes that not all embeddings are computed if we do not wait all
         # workers to finish
+        assert (content is None) ^ (data is None)
         await asyncio.sleep(random() / 10)
         return DummyResponse(content=response)
 
