@@ -230,6 +230,7 @@ class _ArrayConversion:
         self.src_cols = src_cols
         self.is_sparse = is_sparse
         self.results_inplace = not is_sparse
+        self.is_dask = False
         self.subarray_from = self._can_copy_all(src_cols, source_domain)
         self.variables = variables
         dtype = np.float64
@@ -330,6 +331,9 @@ class _ArrayConversion:
                     Y[row_indices, col - n_src_attrs]
                 )
 
+            if self.is_dask:
+                col_array = col_array.reshape(-1, 1)
+
             if self.results_inplace:
                 out[target_indices, i] = col_array
             else:
@@ -341,6 +345,8 @@ class _ArrayConversion:
             return self.join_columns(data)
 
     def join_columns(self, data):
+        if self.is_dask:
+            return dask.array.hstack(data)
         if self.is_sparse:
             # creating csr directly would need plenty of manual work which
             # would probably slow down the process - conversion coo to csr
@@ -361,6 +367,8 @@ class _ArrayConversion:
             return out.tocsr()
 
     def join_partial_results(self, parts):
+        if self.is_dask:
+            return dask.array.vstack(parts)
         if self.is_sparse:
             return sp.vstack(parts)
         else:
@@ -825,6 +833,18 @@ class Table(Sequence, Storage):
                 _idcache_restore(_thread_local.domain_cache, (domain, source.domain))
             if table_conversion is None:
                 table_conversion = _FromTableConversion(source.domain, domain)
+
+                # TODO, these are wrong. We have to decide how to know the output is a dask array
+                table_conversion.X.is_dask = isinstance(source.X, dask.array.Array)
+                table_conversion.Y.is_dask = isinstance(source.Y, dask.array.Array)
+                table_conversion.metas.is_dask = isinstance(source.metas, dask.array.Array)
+                if table_conversion.X.is_dask:
+                    table_conversion.X.results_inplace = False
+                if table_conversion.Y.is_dask:
+                    table_conversion.Y.results_inplace = False
+                if table_conversion.metas.is_dask:
+                    table_conversion.metas.results_inplace = False
+
                 _idcache_save(_thread_local.domain_cache, (domain, source.domain),
                               table_conversion)
 
