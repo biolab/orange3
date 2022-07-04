@@ -16,6 +16,7 @@ from typing import List, TYPE_CHECKING, Union
 
 import bottleneck as bn
 import numpy as np
+import dask.array as da
 
 import dask.array
 
@@ -1802,10 +1803,11 @@ class Table(Sequence, Storage):
         else:
             conditions = [filter]
             conjunction = True
+
         if conjunction:
-            sel = np.ones(len(self), dtype=bool)
+            sel = da.ones(len(self), dtype=bool)
         else:
-            sel = np.zeros(len(self), dtype=bool)
+            sel = da.zeros(len(self), dtype=bool)
 
         for f in conditions:
             selection = self._filter_to_indicator(f)
@@ -1885,7 +1887,7 @@ class Table(Sequence, Storage):
         if len(col_indices) == 1:
             sel = col_filter(col_indices[0])
         else:
-            sel = np.ones(len(self), dtype=bool)
+            sel = da.ones(len(self), dtype=bool)
             for col_idx in col_indices:
                 sel *= col_filter(col_idx)
 
@@ -1909,7 +1911,7 @@ class Table(Sequence, Storage):
             col = col.astype(float)
             return ~np.isnan(col)
 
-        sel = np.zeros(len(self), dtype=bool)
+        sel = da.zeros(len(self), dtype=bool)
         for val in filter.values:
             if not isinstance(val, Real):
                 val = self.domain[filter.column].to_val(val)
