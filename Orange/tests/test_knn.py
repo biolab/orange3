@@ -65,7 +65,7 @@ class TestKNNLearner(unittest.TestCase):
         clf = lrn(t)
         z = clf(x2)
         correct = (z == y2.flatten())
-        ca = sum(correct) / len(correct)
+        ca = np.mean(correct)
         self.assertGreater(ca, 0.1)
         self.assertLess(ca, 0.3)
 
