@@ -43,6 +43,12 @@ class DaskTable(Table):
 
         return self
 
+    def has_missing_attribute(self):
+        raise NotImplementedError()
+
+    def checksum(self, include_metas=True):
+        raise NotImplementedError()
+
 
 def table_to_dask(table, filename):
 
