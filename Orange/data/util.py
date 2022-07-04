@@ -6,6 +6,7 @@ from collections import Counter
 from itertools import chain, count
 from typing import Callable, Union, List, Type
 
+import dask.array as da
 import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
@@ -131,6 +132,8 @@ def array_equal(a1, a2):
 def assure_array_dense(a):
     if sp.issparse(a):
         a = a.toarray()
+    if isinstance(a, da.Array):
+        return a
     return np.asarray(a)
 
 

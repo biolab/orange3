@@ -225,6 +225,7 @@ class _ArrayConversion:
         self.target = target
         self.src_cols = src_cols
         self.is_sparse = is_sparse
+        self.is_dask = False
         self.subarray_from = self._can_copy_all(src_cols, source_domain)
         self.variables = variables
         dtype = np.float64
@@ -330,6 +331,8 @@ class _ArrayConversion:
                 data.append(col_array.data)
                 sp_col.append(np.full(len(col_array.data), i))
                 sp_row.append(col_array.indices)  # row indices should be same
+            elif self.is_dask:
+                data.append(col_array.reshape(-1, 1))
             else:
                 out[target_indices, i] = col_array
 
@@ -343,7 +346,8 @@ class _ArrayConversion:
                 dtype=self.dtype
             )
             out = out.tocsr()
-
+        elif self.is_dask:
+            out = dask.array.hstack(data)
         return out
 
 
@@ -751,6 +755,12 @@ class Table(Sequence, Storage):
                 _idcache_restore(_thread_local.domain_cache, (domain, source.domain))
             if table_conversion is None:
                 table_conversion = _FromTableConversion(source.domain, domain)
+
+                # TODO, these are wrong. We have to decide how to know the output is a dask array
+                table_conversion.X.is_dask = isinstance(source.X, dask.array.Array)
+                table_conversion.Y.is_dask = isinstance(source, dask.array.Array)
+                table_conversion.metas.is_dask = isinstance(source, dask.array.Array)
+
                 _idcache_save(_thread_local.domain_cache, (domain, source.domain),
                               table_conversion)
 
@@ -765,7 +775,7 @@ class Table(Sequence, Storage):
                 parts = {}
 
                 for array_conv in table_conversion.columnwise:
-                    if array_conv.is_sparse:
+                    if array_conv.is_sparse or array_conv.is_dask:
                         parts[array_conv.target] = []
                     else:
                         # F-order enables faster writing to the array while accessing and
@@ -795,10 +805,11 @@ class Table(Sequence, Storage):
                         part_rows = min(n_rows, i_done+PART) - i_done
 
                         for array_conv in table_conversion.columnwise:
+                            # dense arrays are populated in-place
                             out = array_conv.get_columns(source, source_indices, part_rows,
                                                          parts[array_conv.target],
                                                          target_indices)
-                            if array_conv.is_sparse:  # dense arrays are populated in-place
+                            if array_conv.is_sparse or array_conv.is_dask:
                                 parts[array_conv.target].append(out)
 
                         i_done += PART
@@ -809,7 +820,12 @@ class Table(Sequence, Storage):
 
                     for array_conv in table_conversion.columnwise:
                         cparts = parts[array_conv.target]
-                        out = cparts if not array_conv.is_sparse else sp.vstack(cparts)
+                        if array_conv.is_dask:
+                            out = dask.array.vstack(cparts)
+                        elif array_conv.is_sparse:
+                            out = sp.vstack(cparts)
+                        else:
+                            out = cparts
                         setattr(self, array_conv.target, out)
 
                 if source.has_weights():
