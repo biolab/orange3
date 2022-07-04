@@ -51,6 +51,10 @@ class DaskTable(Table):
     def checksum(self, include_metas=True):
         raise NotImplementedError()
 
+    def _filter_values(self, filter):
+        selection = self._values_filter_to_indicator(filter)
+        return self[selection.compute()]
+
 
 def table_to_dask(table, filename):
 
