@@ -40,7 +40,7 @@ class TestCUR(unittest.TestCase):
         err_svd = np.linalg.norm(data.X - X_k, 'fro')
         cur = CUR(rank=rank, max_error=max_error, compute_U=True, random_state=0)
         cur_model = cur(data)
-        X_hat = np.dot(cur_model.C_, np.dot(cur_model.U_, cur_model.R_))
+        X_hat = np.linalg.multi_dot([cur_model.C_, cur_model.U_, cur_model.R_])
         err_cur = np.linalg.norm(data.X - X_hat, 'fro')
         self.assertLess(err_cur, (3 + cur_model.max_error) * err_svd)
 
