@@ -1209,8 +1209,7 @@ class OWBoxPlot(widget.OWWidget):
         else:
             selected, selection = None, []
         self.Outputs.selected_data.send(selected)
-        # FIXME: create_annotated_table uses a lot of memory, it probably copies the whole array
-        # self.Outputs.annotated_data.send(create_annotated_table(self.dataset, selection))
+        self.Outputs.annotated_data.send(create_annotated_table(self.dataset, selection))
 
     def _gather_conditions(self):
         conditions = []
