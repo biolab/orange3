@@ -579,7 +579,6 @@ class OWTable(OWWidget):
         """
         Commit/send the current selected row/column selection.
         """
-        return
         selected_data = table = rowsel = None
         if self.input is not None:
             model = self.input.model
