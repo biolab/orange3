@@ -708,7 +708,6 @@ class OWDataTable(OWWidget):
         """
         Commit/send the current selected row/column selection.
         """
-        return
         selected_data = table = rowsel = None
         view = self.tabs.currentWidget()
         if view and view.model() is not None:
