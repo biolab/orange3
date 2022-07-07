@@ -653,8 +653,8 @@ class OWSelectRows(widget.OWWidget):
                 filters.negate = True
                 non_matching_output = filters(self.data)
 
-                # row_sel = np.in1d(self.data.ids, matching_output.ids)
-                # annotated_output = create_annotated_table(self.data, row_sel)
+                row_sel = np.in1d(self.data.ids, matching_output.ids)
+                annotated_output = create_annotated_table(self.data, row_sel)
 
             # if hasattr(self.data, "name"):
             #     matching_output.name = self.data.name
@@ -673,18 +673,18 @@ class OWSelectRows(widget.OWWidget):
 
                 matching_output = remover(matching_output)
                 non_matching_output = remover(non_matching_output)
-                # annotated_output = remover(annotated_output)
+                annotated_output = remover(annotated_output)
 
-        # if not matching_output:
-        #     matching_output = None
-        # if not non_matching_output:
-        #     non_matching_output = None
-        # if not annotated_output:
-        #     annotated_output = None
+        if not matching_output:
+            matching_output = None
+        if not non_matching_output:
+            non_matching_output = None
+        if not annotated_output:
+            annotated_output = None
 
         self.Outputs.matching_data.send(matching_output)
         self.Outputs.unmatched_data.send(non_matching_output)
-        # self.Outputs.annotated_data.send(annotated_output)
+        self.Outputs.annotated_data.send(annotated_output)
 
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)
