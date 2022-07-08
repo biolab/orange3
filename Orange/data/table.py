@@ -1571,7 +1571,8 @@ class Table(Sequence, Storage):
     def get_nan_frequency_attribute(self):
         if self.X.size == 0:
             return 0
-        return np.isnan(self.X).sum() / self.X.size
+        vals = self.X if not sp.issparse(self.X) else self.X.data
+        return np.isnan(vals).sum() / self.X.size
 
     def get_nan_frequency_class(self):
         if self.Y.size == 0:
