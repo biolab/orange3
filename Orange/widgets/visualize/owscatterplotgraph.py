@@ -185,7 +185,9 @@ class DiscretizedScale:
         self.width = resolution
 
     def get_bins(self):
-        return self.offset + self.width * np.arange(self.bins + 1)
+        # if width is a very large int, dtype of width * np.arange is object
+        # hence we cast it to float
+        return self.offset + float(self.width) * np.arange(self.bins + 1)
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
