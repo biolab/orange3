@@ -2,7 +2,6 @@ import sys
 import itertools
 import warnings
 from xml.sax.saxutils import escape
-from math import log10, floor, ceil
 from datetime import datetime, timezone
 
 import numpy as np
@@ -27,7 +26,7 @@ from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import (
     HelpEventDelegate as EventDelegate, InteractiveViewBox as ViewBox,
-    PaletteItemSample, SymbolItemSample, AxisItem, PlotWidget
+    PaletteItemSample, SymbolItemSample, AxisItem, PlotWidget, DiscretizedScale
 )
 
 SELECTION_WIDTH = 5
@@ -132,62 +131,6 @@ def bound_anchor_pos(corner, parentpos):
     if iry < 0.1 and pry > 0.9:
         iry = pry = 1.0
     return (irx, iry), (prx, pry)
-
-
-class DiscretizedScale:
-    """
-    Compute suitable bins for continuous value from its minimal and
-    maximal value.
-
-    The width of the bin is a power of 10 (including negative powers).
-    The minimal value is rounded up and the maximal is rounded down. If this
-    gives less than 3 bins, the width is divided by four; if it gives
-    less than 6, it is halved.
-
-    .. attribute:: offset
-        The start of the first bin.
-
-    .. attribute:: width
-        The width of the bins
-
-    .. attribute:: bins
-        The number of bins
-
-    .. attribute:: decimals
-        The number of decimals used for printing out the boundaries
-    """
-    def __init__(self, min_v, max_v):
-        """
-        :param min_v: Minimal value
-        :type min_v: float
-        :param max_v: Maximal value
-        :type max_v: float
-        """
-        super().__init__()
-        dif = max_v - min_v if max_v != min_v else 1
-        if np.isnan(dif):
-            min_v = 0
-            dif = decimals = 1
-        else:
-            decimals = -floor(log10(dif))
-        resolution = 10 ** -decimals
-        bins = ceil(dif / resolution)
-        if bins < 6:
-            decimals += 1
-            if bins < 3:
-                resolution /= 4
-            else:
-                resolution /= 2
-            bins = ceil(dif / resolution)
-        self.offset = resolution * floor(min_v // resolution)
-        self.bins = bins
-        self.decimals = max(decimals, 0)
-        self.width = resolution
-
-    def get_bins(self):
-        # if width is a very large int, dtype of width * np.arange is object
-        # hence we cast it to float
-        return self.offset + float(self.width) * np.arange(self.bins + 1)
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):

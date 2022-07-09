@@ -1,4 +1,5 @@
 import itertools
+from math import log10, floor, ceil
 
 import numpy as np
 
@@ -432,6 +433,62 @@ class ElidedLabelsAxis(pg.AxisItem):
         text_specs = [(rect, flags, elide(text, Qt.ElideRight, max_width))
                       for rect, flags, text in text_specs]
         return axis_spec, tick_specs, text_specs
+
+
+class DiscretizedScale:
+    """
+    Compute suitable bins for continuous value from its minimal and
+    maximal value.
+
+    The width of the bin is a power of 10 (including negative powers).
+    The minimal value is rounded up and the maximal is rounded down. If this
+    gives less than 3 bins, the width is divided by four; if it gives
+    less than 6, it is halved.
+
+    .. attribute:: offset
+        The start of the first bin.
+
+    .. attribute:: width
+        The width of the bins
+
+    .. attribute:: bins
+        The number of bins
+
+    .. attribute:: decimals
+        The number of decimals used for printing out the boundaries
+    """
+    def __init__(self, min_v, max_v):
+        """
+        :param min_v: Minimal value
+        :type min_v: float
+        :param max_v: Maximal value
+        :type max_v: float
+        """
+        super().__init__()
+        dif = max_v - min_v if max_v != min_v else 1
+        if np.isnan(dif):
+            min_v = 0
+            dif = decimals = 1
+        else:
+            decimals = -floor(log10(dif))
+        resolution = 10 ** -decimals
+        bins = ceil(dif / resolution)
+        if bins < 6:
+            decimals += 1
+            if bins < 3:
+                resolution /= 4
+            else:
+                resolution /= 2
+            bins = ceil(dif / resolution)
+        self.offset = resolution * floor(min_v // resolution)
+        self.bins = bins
+        self.decimals = max(decimals, 0)
+        self.width = resolution
+
+    def get_bins(self):
+        # if width is a very large int, dtype of width * np.arange is object
+        # hence we cast it to float
+        return self.offset + float(self.width) * np.arange(self.bins + 1)
 
 
 class PaletteItemSample(ItemSample):
