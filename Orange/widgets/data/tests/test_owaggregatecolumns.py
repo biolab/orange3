@@ -13,6 +13,7 @@ from Orange.data import (
 )
 from Orange.widgets.data.owaggregatecolumns import OWAggregateColumns
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils.signals import AttributeList
 
 
 class TestOWAggregateColumn(WidgetTest):
@@ -69,7 +70,7 @@ class TestOWAggregateColumn(WidgetTest):
     def test_var_name(self):
         domain = self.data1.domain
         self.send_signal(self.widget.Inputs.data, self.data1)
-        self.widget.variables = self.widget.variable_model[:]
+        self.widget.selection_method = self.widget.SelectAllAndMeta
 
         self.widget.var_name = "test"
         output = self.widget._compute_data()
@@ -84,15 +85,16 @@ class TestOWAggregateColumn(WidgetTest):
     def test_var_types(self):
         domain = self.data1.domain
         self.send_signal(self.widget.Inputs.data, self.data1)
+        variables = [domain[n] for n in "t1 c2 t2".split()]
 
-        self.widget.variables = [domain[n] for n in "t1 c2 t2".split()]
         for self.widget.operation in self.widget.Operations:
-            self.assertIsInstance(self.widget._new_var(), ContinuousVariable)
+            self.assertIsInstance(self.widget._new_var(variables),
+                                  ContinuousVariable)
 
-        self.widget.variables = [domain[n] for n in "t1 t2".split()]
+        variables = [domain[n] for n in "t1 t2".split()]
         for self.widget.operation in self.widget.Operations:
             self.assertIsInstance(
-                self.widget._new_var(),
+                self.widget._new_var(variables),
                 TimeVariable
                 if self.widget.operation in ("Min", "Max", "Mean", "Median")
                 else ContinuousVariable)
@@ -100,7 +102,7 @@ class TestOWAggregateColumn(WidgetTest):
     def test_operations(self):
         domain = self.data1.domain
         self.send_signal(self.widget.Inputs.data, self.data1)
-        self.widget.variables = [domain[n] for n in "c1 c2 t2".split()]
+        variables = [domain[n] for n in "c1 c2 t2".split()]
 
         m1, m2 = 4 / 3, 8 / 3
         for self.widget.operation, expected in {
@@ -111,7 +113,7 @@ class TestOWAggregateColumn(WidgetTest):
                              ((m2 - 3) ** 2 + (m2 - 1) ** 2 + (m2 - 4) ** 2) / 3],
                 "Median": [1, 3]}.items():
             np.testing.assert_equal(
-                self.widget._compute_column(), expected,
+                self.widget._compute_column(variables), expected,
                 err_msg=f"error in '{self.widget.operation}'")
 
     def test_operations_with_nan(self):
@@ -119,7 +121,7 @@ class TestOWAggregateColumn(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data1)
         with self.data1.unlocked():
             self.data1.X[1, 0] = np.nan
-        self.widget.variables = [domain[n] for n in "c1 c2 t2".split()]
+        variables = [domain[n] for n in "c1 c2 t2".split()]
 
         m1, m2 = 4 / 3, 5 / 2
         for self.widget.operation, expected in {
@@ -130,7 +132,7 @@ class TestOWAggregateColumn(WidgetTest):
                              ((m2 - 1) ** 2 + (m2 - 4) ** 2) / 2],
                 "Median": [1, 2.5]}.items():
             np.testing.assert_equal(
-                self.widget._compute_column(), expected,
+                self.widget._compute_column(variables), expected,
                 err_msg=f"error in '{self.widget.operation}'")
 
     def test_contexts(self):
@@ -157,6 +159,151 @@ class TestOWAggregateColumn(WidgetTest):
         self.send_signal(widget.Inputs.data, self.data1)
         self.assertSequenceEqual(self.widget.variables[:],
                                  self.data1.domain.variables[1:3])
+
+    def test_features_signal(self):
+        widget = self.widget
+        widget.selection_method = widget.SelectAll
+        self.send_signal(widget.Inputs.data, self.data1)
+
+        self.assertEqual([attr.name for attr in widget._variables()],
+                         "c1 c2 t1".split())
+
+        attr_list = [self.data1.domain[attr] for attr in "c1 t2".split()]
+        self.send_signal(widget.Inputs.features, AttributeList(attr_list))
+        self.assertEqual(widget._variables(), attr_list)
+        self.assertFalse(widget.Warning.missing_features.is_shown())
+        self.assertFalse(widget.Warning.discrete_features.is_shown())
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [3, 7])
+
+        attr_list = [self.data1.domain[attr] for attr in "c1 t2 d1".split()]
+        self.send_signal(widget.Inputs.features, AttributeList(attr_list))
+        self.assertEqual(widget._variables(), attr_list[:2])
+        self.assertFalse(widget.Warning.missing_features.is_shown())
+        self.assertTrue(widget.Warning.discrete_features.is_shown())
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [3, 7])
+
+        attr_list.append(ContinuousVariable("foo"))
+        self.send_signal(widget.Inputs.features, AttributeList(attr_list))
+        self.assertEqual(widget._variables(), attr_list[:2])
+        self.assertTrue(widget.Warning.missing_features.is_shown())
+        self.assertTrue(widget.Warning.discrete_features.is_shown())
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [3, 7])
+
+        self.send_signal(widget.Inputs.features, None)
+        self.assertFalse(widget.Warning.missing_features.is_shown())
+        self.assertFalse(widget.Warning.discrete_features.is_shown())
+
+        del attr_list[2]  # discrete variable
+        attr_list.append(ContinuousVariable("foo"))
+        self.send_signal(widget.Inputs.features, AttributeList(attr_list))
+        self.assertEqual(widget._variables(), attr_list[:2])
+        self.assertTrue(widget.Warning.missing_features.is_shown())
+        self.assertFalse(widget.Warning.discrete_features.is_shown())
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [3, 7])
+
+        self.assertEqual(widget.selection_group.checkedId(),
+                         widget.InputFeatures)
+        self.assertTrue(all(
+            button.isEnabled() is (i == widget.InputFeatures)
+            for i, button in enumerate(widget.selection_group.buttons())))
+        self.assertFalse(widget.controls.variables.isEnabled())
+
+        self.send_signal(widget.Inputs.features, None)
+        self.assertEqual([attr.name for attr in widget._variables()],
+                         "c1 c2 t1".split())
+        self.assertEqual(widget.selection_group.checkedId(), widget.SelectAll)
+        self.assertTrue(all(
+            button.isEnabled() is (i != widget.InputFeatures)
+            for i, button in enumerate(widget.selection_group.buttons())))
+        self.assertFalse(widget.controls.variables.isEnabled())
+
+        self.send_signal(widget.Inputs.features, AttributeList())
+        self.assertEqual(widget.selection_group.checkedId(), widget.InputFeatures)
+        self.assertTrue(all(button.isDisabled())
+                        for button in widget.selection_group.buttons())
+        self.assertFalse(widget.controls.variables.isEnabled())
+
+        attr_list = [self.data1.domain[attr] for attr in "d1 d2".split()]
+        self.send_signal(widget.Inputs.features, AttributeList(attr_list))
+        self.assertEqual(widget.selection_group.checkedId(), widget.InputFeatures)
+        self.assertTrue(all(button.isDisabled())
+                        for button in widget.selection_group.buttons())
+        self.assertFalse(widget.controls.variables.isEnabled())
+        self.assertNotIn(
+            "agg",
+            [var.name for var in self.get_output(widget.Outputs.data).domain])
+
+    def test_selection_radios(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.data1)
+        widget.variables = [self.data1.domain[attr] for attr in "c1 t2".split()]
+
+        widget.selection_group.button(widget.SelectAll).click()
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [3, 46])
+
+        widget.selection_group.button(widget.SelectAllAndMeta).click()
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [6, 50])
+
+        widget.selection_group.button(widget.SelectManually).click()
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [3, 7])
+
+    def test_operation_changed(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.data1)
+        widget.selection_group.button(widget.SelectAll).click()
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [3, 46])
+
+        oper = widget.Operations["Max"].name
+        widget.operation_combo.setCurrentText(oper)
+        widget.operation_combo.textActivated[str].emit(oper)
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.data).get_column_view("agg")[0],
+            [2, 42])
+
+    def test_and_others(self):
+        self.assertEqual(
+            self.widget._and_others(self.data1.domain.variables[:1], 1),
+            "'c1'")
+        self.assertEqual(
+            self.widget._and_others(self.data1.domain.variables[:1], 10),
+            "'c1'")
+        self.assertEqual(
+            self.widget._and_others(self.data1.domain.variables, 20),
+            "'c1', 'c2', 'd1', 'd2', 't1' and 'd3'")
+        self.assertEqual(
+            self.widget._and_others(self.data1.domain.variables, 6),
+            "'c1', 'c2', 'd1', 'd2', 't1' and 'd3'")
+        self.assertEqual(
+            self.widget._and_others(self.data1.domain.variables, 5),
+            "'c1', 'c2', 'd1', 'd2', 't1' and 1 more")
+        self.assertEqual(
+            self.widget._and_others(self.data1.domain.variables, 2),
+            "'c1', 'c2' and 4 more")
+
+    def test_missing(self):
+        attrs = self.data1.domain.attributes
+        self.assertEqual(self.widget._missing(attrs, attrs), "")
+
+        self.assertEqual(self.widget._missing(attrs, attrs[1:]),
+                         f"'{attrs[0].name}'")
+        self.assertEqual(self.widget._missing(attrs, attrs[2:]),
+                         f"'{attrs[0].name}' and '{attrs[1].name}'")
 
     def test_report(self):
         self.widget.send_report()
