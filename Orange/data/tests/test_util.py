@@ -3,7 +3,7 @@ import numpy as np
 
 from Orange.data import Domain, ContinuousVariable
 from Orange.data.util import get_unique_names, get_unique_names_duplicates, \
-    get_unique_names_domain, one_hot, sanitized_name
+    get_unique_names_domain, one_hot, sanitized_name, SharedComputeValue
 
 
 class TestGetUniqueNames(unittest.TestCase):
@@ -307,6 +307,34 @@ class TestSanitizedName(unittest.TestCase):
         self.assertEqual(sanitized_name("Foo Bar"), "Foo_Bar")
         self.assertEqual(sanitized_name("0Foo"), "_0Foo")
         self.assertEqual(sanitized_name("1 Foo Bar"), "_1_Foo_Bar")
+
+
+class TestSharedComputeValue(unittest.TestCase):
+    def test_eq_hash(self):
+        x = ContinuousVariable("x")
+        y = ContinuousVariable("y")
+        x2 = ContinuousVariable("x")
+        assert x == x2
+        assert hash(x) == hash(x2)
+        assert x != y
+        assert hash(x) != hash(y)
+
+        c1 = SharedComputeValue(abs, x)
+        c2 = SharedComputeValue(abs, x2)
+
+        d = SharedComputeValue(abs, y)
+        e = SharedComputeValue(len, x)
+
+        self.assertNotEqual(c1, None)
+
+        self.assertEqual(c1, c2)
+        self.assertEqual(hash(c1), hash(c2))
+
+        self.assertNotEqual(c1, d)
+        self.assertNotEqual(hash(c1), hash(d))
+
+        self.assertNotEqual(c1, e)
+        self.assertNotEqual(hash(c1), hash(e))
 
 
 if __name__ == "__main__":

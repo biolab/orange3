@@ -85,6 +85,14 @@ class SharedComputeValue:
         Subclasses need to implement this function."""
         raise NotImplementedError
 
+    def __eq__(self, other):
+        return isinstance(other, type(self)) \
+               and self.compute_shared == other.compute_shared \
+               and self.variable == other.variable
+
+    def __hash__(self):
+        return hash((self.compute_shared, self.variable))
+
 
 def vstack(arrays):
     """vstack that supports sparse and dense arrays
