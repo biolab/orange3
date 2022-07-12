@@ -119,3 +119,29 @@ class TestSharedComputeValue(unittest.TestCase):
 
             DummyPlus(compute_shared=Subclass())
             self.assertNotEqual(warns, [])
+
+    def test_eq_hash(self):
+        x = Orange.data.ContinuousVariable("x")
+        y = Orange.data.ContinuousVariable("y")
+        x2 = Orange.data.ContinuousVariable("x")
+        assert x == x2
+        assert hash(x) == hash(x2)
+        assert x != y
+        assert hash(x) != hash(y)
+
+        c1 = SharedComputeValue(abs, x)
+        c2 = SharedComputeValue(abs, x2)
+
+        d = SharedComputeValue(abs, y)
+        e = SharedComputeValue(len, x)
+
+        self.assertNotEqual(c1, None)
+
+        self.assertEqual(c1, c2)
+        self.assertEqual(hash(c1), hash(c2))
+
+        self.assertNotEqual(c1, d)
+        self.assertNotEqual(hash(c1), hash(d))
+
+        self.assertNotEqual(c1, e)
+        self.assertNotEqual(hash(c1), hash(e))
