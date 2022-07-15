@@ -53,6 +53,7 @@ class Transformation(Reprable):
         """
         inst = isinstance(data, Instance)
         if inst:
+            # TODO deprecate this
             data = Table.from_list(data.domain, [data])
         data = data.transform(self._target_domain)
         if self.variable.is_primitive():
