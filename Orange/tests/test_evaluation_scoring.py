@@ -2,8 +2,11 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from distutils.version import LooseVersion
+
 import numpy as np
 
+import Orange
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner, SklTreeLearner, NaiveBayesLearner,\
@@ -13,6 +16,7 @@ from Orange.evaluation import AUC, CA, Results, Recall, \
 from Orange.evaluation.scoring import Specificity
 from Orange.preprocess import discretize, Discretize
 from Orange.tests import test_filename
+from Orange.util import OrangeDeprecationWarning
 
 
 class TestScoreMetaType(unittest.TestCase):
@@ -320,15 +324,21 @@ class TestAUC(unittest.TestCase):
 class TestComputeCD(unittest.TestCase):
     def test_compute_CD(self):
         avranks = [1.9, 3.2, 2.8, 3.3]
-        cd = scoring.compute_CD(avranks, 30)
+        with self.assertWarns(OrangeDeprecationWarning):
+            cd = scoring.compute_CD(avranks, 30)
         np.testing.assert_almost_equal(cd, 0.856344)
 
-        cd = scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
+        with self.assertWarns(OrangeDeprecationWarning):
+            cd = scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
         np.testing.assert_almost_equal(cd, 0.798)
 
-        # Do what you will, just don't crash
-        scoring.graph_ranks(avranks, "abcd", cd)
-        scoring.graph_ranks(avranks, "abcd", cd, cdmethod=0)
+    def test_CD_deprecated(self):
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.34"):
+            self.fail(
+                "`scoring.compute_CD` and `scoring.graph_ranks` were deprecated in "
+                "version 3.33. Please remove the deprecated methods, TestComputeCD, "
+                "and references in documentation."
+            )
 
 
 class TestLogLoss(unittest.TestCase):
