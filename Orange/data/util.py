@@ -175,7 +175,7 @@ def assure_column_sparse(a):
 
 def assure_column_dense(a):
     # quick check and exit for the most common case
-    if isinstance(a, np.ndarray) and len(a.shape) == 1:
+    if isinstance(a, (np.ndarray, da.Array)) and len(a.shape) == 1:
         return a
     a = assure_array_dense(a)
     # column assignments must be (n, )
