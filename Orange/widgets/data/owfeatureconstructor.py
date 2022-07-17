@@ -1266,7 +1266,7 @@ class FeatureFunc:
     def extract_column(self, table: Table, var: Variable):
         data, _ = table.get_column_view(var)
         if var.is_string:
-            return list(map(var.str_val, data))
+            return data
         elif var.is_discrete and not self.use_values:
             values = np.array([*var.values, None], dtype=object)
             idx = data.astype(int)
