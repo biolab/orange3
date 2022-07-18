@@ -355,7 +355,7 @@ def stats(X, weights=None, compute_variance=False):
             nans,
             X.shape[0] - nans))
     elif is_sparse and X.size:
-        if compute_variance:
+        if compute_variance and weighted:
             raise NotImplementedError
 
         non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
@@ -364,7 +364,8 @@ def stats(X, weights=None, compute_variance=False):
             nanmin(X, axis=0),
             nanmax(X, axis=0),
             nanmean(X, axis=0, weights=weights),
-            np.zeros(X.shape[1]),      # variance not supported
+            nanvar(X, axis=0) if compute_variance else \
+                np.zeros(X.shape[1] if X.ndim == 2 else 1),
             X.shape[0] - non_zero,
             non_zero))
     else:
