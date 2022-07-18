@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-10.15, windows-2019]
+        os: [macos-11, windows-2019]
         python-version: [3.7, 3.8, 3.9, '3.10']
         tox_env: [orange-released]
         name: [Released]
@@ -121,7 +121,7 @@ jobs:
             python-version: 3.8
             tox_env: orange-latest
             name: Latest
-          - os: macos-10.15
+          - os: macos-11
             python-version: 3.8
             tox_env: orange-latest
             name: Latest
@@ -129,7 +129,7 @@ jobs:
             python-version: 3.9
             tox_env: pyqt6
             name: PyQt6
-          - os: macos-10.15
+          - os: macos-11
             python-version: 3.9
             tox_env: pyqt6
             name: PyQt6
