@@ -26,26 +26,69 @@ class DaskTable(Table):
         self = cls()
 
         f = h5py.File(filename, "r")
-        X = f['X']
-        Y = f['Y']
-        if 'W' in f:
-            self.W = da.from_array(f['W'])
-        else:
-            self.W = np.ones((len(X), 0))
-        self.X = da.from_array(X)
-        self.Y = da.from_array(Y)
 
-        # TODO for now, metas are in memory
-        if "metas" in f:
-            self.metas = pickle.loads(np.array(f['metas']).tobytes())
+        if "X" in f:
+            self._X = da.from_array(f["X"])
         else:
-            self.metas = np.ones((len(self.X), 0))
+            self._X = None
+
+        if "Y" in f:
+            self._Y = da.from_array(f["Y"])
+        else:
+            self._Y = None
+
+        # metas are in memory
+        if "metas" in f:
+            self._metas = pickle.loads(np.array(f['metas']).tobytes())
+        else:
+            self._metas = None
+
+        size = None
+        # get size from X, Y, or metas
+        for el in ("_X", "_Y", "_metas"):
+            array = getattr(self, el)
+            if array is not None:
+                size = len(array)
+                break
+
+        if self._X is None:
+            self._X = da.zeros((size, 0))
+
+        if self._Y is None:
+            self._Y = da.zeros((size, 0))
+
+        if self._metas is None:
+            self._metas = np.zeros((size, 0))
+
+        self._W = np.ones((size, 0))  # weights are unsupported
 
         self.domain = pickle.loads(np.array(f['domain']).tobytes())
 
         cls._init_ids(self)
 
         return self
+
+    def set_weights(self, weight=1):
+        raise NotImplementedError()
+
+    def save(self, filename):
+        # the following code works with both Table and DaskTable
+        with h5py.File(filename, 'w') as f:
+            f.create_dataset("domain", data=np.void(pickle.dumps(self.domain)))
+            f.create_dataset("metas", data=np.void(pickle.dumps(self.metas)))
+
+        if isinstance(self.X, da.Array):
+            da.to_hdf5(filename, '/X', self.X)
+        else:
+            with h5py.File(filename, 'r+') as f:
+                f.create_dataset("X", data=self.X)
+
+        if self.Y.size:
+            if isinstance(self.Y, da.Array):
+                da.to_hdf5(filename, '/Y', self.Y)
+            else:
+                with h5py.File(filename, 'r+') as f:
+                    f.create_dataset("Y", data=self.Y)
 
     def has_missing_attribute(self):
         raise NotImplementedError()
@@ -56,6 +99,9 @@ class DaskTable(Table):
     def _filter_values(self, filter):
         selection = self._values_filter_to_indicator(filter)
         return self[selection.compute()]
+
+    def _update_locks(self, *args, **kwargs):
+        return
 
 
 def table_to_dask(table, filename):
