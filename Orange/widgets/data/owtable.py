@@ -281,6 +281,8 @@ class OWTable(OWWidget):
     @Inputs.data
     def set_dataset(self, data: Optional[Table]):
         """Set the input dataset."""
+        if data.is_dask_table():
+            self.show_distributions = False
         # reset the (header) view state.
         self.view.setModel(None)
         self.view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
@@ -390,7 +392,7 @@ class OWTable(OWWidget):
             if isinstance(summary, tsummary.ApproxSummary):
                 length = summary.len.result() if summary.len.done() else \
                     summary.approx_len
-            elif isinstance(summary, tsummary.Summary):
+            elif isinstance(summary, (tsummary.Summary, tsummary.DaskSummary)):
                 length = summary.len
             return length
 
