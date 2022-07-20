@@ -49,6 +49,14 @@ class ApproxSummary(NamedTuple):
     M: Optional[_ArrayStat]
 
 
+class DaskSummary(NamedTuple):
+    len: int
+    domain: Domain
+    X: Optional[_ArrayStat]
+    Y: Optional[_ArrayStat]
+    M: Optional[_ArrayStat]
+
+
 def _sql_table_len(table) -> 'Future[int]':
     exc = ThreadPoolExecutor()
     return exc.submit(table.__len__)
@@ -61,6 +69,8 @@ def table_summary(table: Table) -> Union[Summary, ApproxSummary]:
         return ApproxSummary(approx_len, len_future, table.domain,
                              None, None, None)
                              # NotAvailable(), NotAvailable(), NotAvailable())
+    elif table.is_dask_table():
+        return DaskSummary(len(table), table.domain, None, None, None)
     else:
         domain = table.domain
         n_instances = len(table)
@@ -123,6 +133,9 @@ def format_summary(summary: Union[ApproxSummary, Summary]) -> List[str]:
         text.append(f"{ninst} {pl(ninst, 'instance')}")
         if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
             text[-1] += " (no missing data)"
+    elif isinstance(summary, DaskSummary):
+        ninst = summary.len
+        text.append(f"{ninst} {pl(ninst, 'instance')}")
 
     nattrs = len(summary.domain.attributes)
     text.append(f"{nattrs}  {pl(nattrs, 'feature')}"
