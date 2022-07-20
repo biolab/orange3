@@ -281,6 +281,8 @@ class OWDataTable(OWWidget):
     @Inputs.data
     def set_dataset(self, index: int, data: Table):
         """Set the input dataset."""
+        if data.is_dask_table():
+            self.show_distributions = False
         datasetname = getattr(data, "name", "Data")
         slot = self._inputs[index]
         view = slot.view
@@ -482,7 +484,7 @@ class OWDataTable(OWWidget):
             if isinstance(summary, ApproxSummary):
                 length = summary.len.result() if summary.len.done() else \
                     summary.approx_len
-            elif isinstance(summary, Summary):
+            elif isinstance(summary, (Summary, DaskSummary)):
                 length = summary.len
             return length
 
@@ -533,6 +535,8 @@ class OWDataTable(OWWidget):
             text.append(f"{summary.len} instances")
             if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
                 text[-1] += " (no missing data)"
+        elif isinstance(summary, DaskSummary):
+            text.append(f"{summary.len} instances")
 
         text.append(desc(len(summary.domain.attributes), "feature")
                     + format_part(summary.X))
@@ -796,6 +800,9 @@ ApproxSummary = namedtuple(
     "ApproxSummary",
     ["approx_len", "len", "domain", "X", "Y", "M"])
 
+DaskSummary = namedtuple(
+    "DaskSummary", ["len", "domain", "X", "Y", "M"])
+
 
 def table_summary(table):
     if isinstance(table, SqlTable):
@@ -808,6 +815,8 @@ def table_summary(table):
 
         return ApproxSummary(approx_len, len_future, table.domain,
                              NotAvailable(), NotAvailable(), NotAvailable())
+    elif table.is_dask_table():
+        return DaskSummary(len(table), table.domain, None, None, None)
     else:
         domain = table.domain
         n_instances = len(table)
