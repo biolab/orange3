@@ -220,6 +220,8 @@ class PickleReader(FileFormat):
 
     @classmethod
     def write_file(cls, filename, data):
+        if isinstance(data, DaskTable):
+            raise IOError("Dask Table can not be pickled")
         with cls.open(filename, 'wb') as f:
             pickle.dump(data, f, protocol=PICKLE_PROTOCOL)
 
@@ -521,9 +523,13 @@ class UrlReader(FileFormat):
 class DaskReader(FileFormat):
     """Writer for dot (graph) files"""
     EXTENSIONS = ('.hdf5',)
-    DESCRIPTION = 'Experimental Dask format'
+    DESCRIPTION = 'Orange on-disk data'
     SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False
 
     def read(self):
         return DaskTable.from_file(self.filename)
+
+    @classmethod
+    def write_file(cls, filename, data):
+        DaskTable.save(data, filename)
