@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from AnyQt.QtCore import Qt
 
+from Orange.data.dask import DaskTable
 from orangewidget.tests.utils import excepthook_catch
 
 from Orange.widgets.data.owtable import OWTable
@@ -11,6 +12,7 @@ from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.data import Table, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.tests.sql.base import DataBaseTest as dbt
+from Orange.tests.test_dasktable import open_as_dask
 
 
 class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
@@ -240,6 +242,15 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         model = w.view.model()
         self.assertFalse(model.index(0, 0).data(model.SubsetRole))
         self.assertFalse(model.headerData(0, Qt.Vertical, model.SubsetRole))
+
+    def test_dask(self):
+        w = self.widget
+        with open_as_dask("zoo") as zoo:
+            self.send_signal(w.Inputs.data, zoo)
+            selected = self.get_output(w.Outputs.selected_data)
+            self.assertIsInstance(selected, DaskTable)
+            annotated = self.get_output(w.Outputs.annotated_data)
+            self.assertIsInstance(annotated, DaskTable)
 
 
 class TestOWTableSQL(TestOWTable, dbt):
