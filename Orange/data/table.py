@@ -757,10 +757,10 @@ class Table(Sequence, Storage):
             if table_conversion is None:
                 table_conversion = _FromTableConversion(source.domain, domain)
 
-                # TODO, these are wrong. We have to decide how to know the output is a dask array
+                # TODO decide when should the output be a dask array
                 table_conversion.X.is_dask = isinstance(source.X, dask.array.Array)
-                table_conversion.Y.is_dask = isinstance(source, dask.array.Array)
-                table_conversion.metas.is_dask = isinstance(source, dask.array.Array)
+                table_conversion.Y.is_dask = isinstance(source.Y, dask.array.Array)
+                table_conversion.metas.is_dask = False
 
                 _idcache_save(_thread_local.domain_cache, (domain, source.domain),
                               table_conversion)
