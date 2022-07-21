@@ -1,4 +1,5 @@
 import unittest
+from contextlib import contextmanager
 
 import numpy.testing
 import dask.array as da
@@ -6,6 +7,16 @@ import dask.array as da
 from Orange.data import Table, Domain
 from Orange.data.dask import DaskTable
 from Orange.tests import named_file
+
+
+@contextmanager
+def open_as_dask(table):
+    if isinstance(table, str):
+        table = Table(table)
+    with named_file('') as fn:
+        DaskTable.save(table, fn)
+        dasktable = DaskTable.from_file(fn)
+        yield dasktable
 
 
 class TableTestCase(unittest.TestCase):
