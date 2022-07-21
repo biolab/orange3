@@ -154,7 +154,7 @@ def dask_stats(X, compute_variance=False):
             da.nanmax(X, axis=0).reshape(-1, 1),
             da.nanmean(X, axis=0).reshape(-1, 1),
             da.nanvar(X, axis=0).reshape(-1, 1) if compute_variance else \
-                da.zeros((X.shape[1], 1)),
+                da.zeros(nans.shape),
             nans,
             X.shape[0] - nans), axis=1)
     else:
