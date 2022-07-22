@@ -34,6 +34,7 @@ from Orange.widgets import gui
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.pathutils import samepath
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, MultiInput, Output
 
@@ -1036,11 +1037,18 @@ class OWPythonScriptDropHandler(SingleFileDropHandler):
             "script": content,
             "filename": path,
         }
+        defaults: List['_ScriptData'] = \
+            OWPythonScript.settingsHandler.defaults.get("scriptLibrary", [])
+
+        def is_same(item: '_ScriptData'):
+            """Is item same file as the dropped path."""
+            return item["filename"] is not None \
+                   and samepath(item["filename"], path)
+
+        defaults = [it for it in defaults if not is_same(it)]
         params = {
             "__version__": OWPythonScript.settings_version,
-            "scriptLibrary": [
-                item,
-            ],
+            "scriptLibrary": [item] + defaults,
             "scriptText": content
         }
         return params
