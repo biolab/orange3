@@ -322,6 +322,11 @@ class OWBoxPlot(widget.OWWidget):
 
         self.dataset = dataset
         if dataset:
+            sample_at = 1000
+            if len(self.dataset) > sample_at:
+                rows = np.random.choice(len(self.dataset), size=sample_at, replace=False)
+                self.sample = Table.from_table_rows(self.dataset, rows)
+                self.sample.X = np.asarray(self.sample.X)
             self.reset_attrs()
             self.reset_groups()
             self._select_default_variables()
@@ -348,6 +353,7 @@ class OWBoxPlot(widget.OWWidget):
         self.attrs[:] = []
         self.group_vars[:] = [None]
         self.selection = ()
+        self.sample = None
 
     def _select_default_variables(self):
         # visualize first non-class variable, group by class (if present)
@@ -385,18 +391,18 @@ class OWBoxPlot(widget.OWWidget):
                 return 3
             if attr.is_continuous:
                 # One-way ANOVA
-                col = data.get_column_view(attr)[0].astype(float)
+                col = np.asarray(data.get_column_view(attr)[0].astype(float))
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
-                p = self._chi_square(group_var, attr)[1]
+                p = self._chi_square(group_var, attr, sample=True)[1]
             if math.isnan(p):
                 return 2
             return p
 
-        data = self.dataset
+        data = self.sample or self.dataset
         if data is None:
             return
         domain = data.domain
@@ -425,12 +431,12 @@ class OWBoxPlot(widget.OWWidget):
                 groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
-                p = self._chi_square(group, attr)[1]
+                p = self._chi_square(group, attr, sample=True)[1]
             if math.isnan(p):
                 return 2
             return p
 
-        data = self.dataset
+        data = self.sample or self.dataset
         if data is None:
             return
         attr = self.attribute
@@ -457,12 +463,13 @@ class OWBoxPlot(widget.OWWidget):
         if len(selection) == 1:
             view.scrollTo(selection[0])
 
-    def _chi_square(self, group_var, attr):
+    def _chi_square(self, group_var, attr, sample=False):
         # Chi-square with the given distribution into groups
         if not attr.values or not group_var.values:
             return 0, 2, 0
+        data = self.sample if self.sample is not None and sample else self.dataset
         observed = np.array(
-            contingency.get_contingency(self.dataset, group_var, attr))
+            contingency.get_contingency(data, group_var, attr))
         observed = observed[observed.sum(axis=1) != 0, :]
         observed = observed[:, observed.sum(axis=0) != 0]
         if min(observed.shape) < 2:
@@ -524,7 +531,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def _group_cols(self, data, group, attr):
         if isinstance(attr, (np.ndarray, da.Array)):
-            attr_col = attr
+            attr_col = np.asarray(attr)
         else:
             attr_col = data.get_column_view(group)[0].astype(float)
         group_col = data.get_column_view(group)[0].astype(float)
