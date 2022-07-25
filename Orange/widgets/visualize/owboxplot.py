@@ -17,6 +17,7 @@ import scipy.special
 from scipy.stats import f_oneway, chi2_contingency
 
 from Orange.data import Table
+from Orange.data.dask import maybe_compute
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values, \
     IsDefined
 from Orange.statistics import contingency, distribution
@@ -47,18 +48,13 @@ def compute_scale(min_, max_):
     return first_val, step
 
 
-def maybe_compute(ar):
-    if isinstance(ar, da.Array):
-        return ar.compute()
-    return ar
-
-
 ContDataRange = namedtuple("ContDataRange", ["low", "high", "group_value"])
 DiscDataRange = namedtuple("DiscDataRange", ["value", "group_value"])
 
 
 class BoxData:
     def __init__(self, col, group_val=None):
+        # handles numpy and dask arrays assuming a single column will always fit into memory
         col = np.asarray(col)
         self.n = len(col) - np.sum(np.isnan(col))
         if self.n == 0:
@@ -367,7 +363,7 @@ class OWBoxPlot(widget.OWWidget):
                 return 3
             if attr.is_continuous:
                 # One-way ANOVA
-                col = np.asarray(data.get_column_view(attr)[0].astype(float))
+                col = np.asarray(data.get_column_view(attr)[0], dtype=float)
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group) > 1]
@@ -418,7 +414,7 @@ class OWBoxPlot(widget.OWWidget):
         attr = self.attribute
         if self.order_grouping_by_importance:
             if attr.is_continuous:
-                attr_col = data.get_column_view(attr)[0].astype(float)
+                attr_col = np.asarray(data.get_column_view(attr)[0], dtype=float)
             self._sort_list(self.group_vars, self.group_list, compute_stat)
         else:
             self._sort_list(self.group_vars, self.group_list, None)
@@ -509,8 +505,8 @@ class OWBoxPlot(widget.OWWidget):
         if isinstance(attr, (np.ndarray, da.Array)):
             attr_col = np.asarray(attr)
         else:
-            attr_col = data.get_column_view(group)[0].astype(float)
-        group_col = data.get_column_view(group)[0].astype(float)
+            attr_col = np.asarray(data.get_column_view(group)[0], dtype=float)
+        group_col = np.asarray(data.get_column_view(group)[0], dtype=float)
         groups = [attr_col[group_col == i] for i in range(len(group.values))]
         groups = [col[~np.isnan(col)] for col in groups]
         return groups
@@ -532,7 +528,7 @@ class OWBoxPlot(widget.OWWidget):
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
                 stats, label_texts = [], []
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = np.asarray(dataset.get_column_view(attr)[0], dtype=float)
                 for group, value in \
                         zip(self._group_cols(dataset, self.group_var, attr_col),
                             group_var_labels):
@@ -551,7 +547,7 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.conts = None
             if self.attribute.is_continuous:
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = np.asarray(dataset.get_column_view(attr)[0], dtype=float)
                 self.stats = [BoxData(attr_col)]
             else:
                 self.dist = distribution.get_distribution(dataset, attr)
