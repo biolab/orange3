@@ -12,6 +12,10 @@ from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
 
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import open_as_dask
+
+
+Table.LOCKING = False
 
 
 class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -357,6 +361,27 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         for box in self.widget.box_scene.items():
             if isinstance(box, FilterGraphicsRectItem):
                 box.setSelected(True)
+
+
+class TestOWBoxPlotWithDask(TestOWBoxPlot):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+
+        with open_as_dask(Table("iris")) as data:
+            cls.iris = data
+        with open_as_dask(Table("zoo")) as data:
+            cls.zoo = data
+        with open_as_dask(Table("housing")) as data:
+            cls.housing = data
+        with open_as_dask(Table("titanic")) as data:
+            cls.titanic = data
+        with open_as_dask(Table("heart_disease")) as data:
+            cls.heart = data
+        cls.data = cls.iris
+        cls.signal_name = "Data"
+        cls.signal_data = cls.data
 
 
 if __name__ == '__main__':
