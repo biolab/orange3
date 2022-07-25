@@ -114,6 +114,17 @@ class DaskTable(Table):
     def _update_locks(self, *args, **kwargs):
         return
 
+    def ensure_copy(self):
+        self._X = self._X.copy()
+        self._Y = self._Y.copy()
+        self._metas = self._metas.copy()
+        self._W = self._W.copy()
+
+    def get_nan_frequency_attribute(self):
+        if self.X.size == 0:
+            return 0
+        return np.isnan(self.X).sum().compute() / self.X.size
+
 
 def table_to_dask(table, filename):
 
