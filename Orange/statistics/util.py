@@ -355,8 +355,8 @@ def stats(X, weights=None, compute_variance=False):
         return np.column_stack((
             np.nanmin(X, axis=0),
             np.nanmax(X, axis=0),
-            np.nanmean(X, axis=0) if not weighted else weighted_mean(),
-            np.nanvar(X, axis=0) if compute_variance else \
+            nanmean(X, axis=0) if not weighted else weighted_mean(),
+            nanvar(X, axis=0) if compute_variance else \
                 np.zeros(X.shape[1] if X.ndim == 2 else 1),
             nans,
             X.shape[0] - nans))
