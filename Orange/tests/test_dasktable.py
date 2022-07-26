@@ -55,6 +55,14 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(data.X.shape, (10**5, 1))
             self.assertEqual(data._Y.shape, (10**5, 0))
 
+    def test_compute(self):
+        zoo = Table('zoo')
+        with named_file('', suffix='.hdf5') as fn:
+            DaskTable.save(zoo, fn)
+            dzoo = DaskTable.from_file(fn)
+            self.same_tables(dzoo.compute(), dzoo)
+            dzoo.close()
+
     def test_save_table(self):
         zoo = Table('zoo')
         with named_file('', suffix='.hdf5') as fn:

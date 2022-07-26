@@ -102,6 +102,14 @@ class DaskTable(Table):
         selection = self._values_filter_to_indicator(filter)
         return self[selection.compute()]
 
+    def compute(self) -> Table:
+        X, Y = da.compute(self.X, self.Y)
+        table = Table.from_numpy(self.domain, X, Y,
+                                 metas=self.metas, W=self.W,
+                                 attributes=self.attributes, ids=self.ids)
+        table.name = self.name
+        return table
+
     def _update_locks(self, *args, **kwargs):
         return
 
