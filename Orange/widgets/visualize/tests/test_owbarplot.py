@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+import dask.array as da
 import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt
@@ -13,6 +14,7 @@ from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest, simulate, \
     WidgetOutputsTestMixin, datasets
 from Orange.widgets.visualize.owbarplot import OWBarPlot
+from Orange.tests.test_dasktable import open_as_dask
 
 
 class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -160,6 +162,18 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
             simulate.combobox_run_through_all(controls.group_var)
             simulate.combobox_run_through_all(controls.annot_var)
             simulate.combobox_run_through_all(controls.color_var)
+
+    def test_dask_datasets(self):
+        controls = self.widget.controls
+        for ds in datasets.datasets():
+            with open_as_dask(ds) as dt:
+                self.assertIsInstance(dt.X, da.Array)
+                self.send_signal(self.widget.Inputs.data, dt)
+                self.assertIsInstance(self.widget.data.X, np.ndarray)
+                simulate.combobox_run_through_all(controls.selected_var)
+                simulate.combobox_run_through_all(controls.group_var)
+                simulate.combobox_run_through_all(controls.annot_var)
+                simulate.combobox_run_through_all(controls.color_var)
 
     def test_selection(self):
         self.send_signal(self.widget.Inputs.data, self.data)
