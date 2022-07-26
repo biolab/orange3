@@ -1,6 +1,7 @@
 import pickle
 
 import h5py
+import dask
 import dask.array as da
 import numpy as np
 import pandas
@@ -139,6 +140,14 @@ class DaskTable(Table):
             stats = da.concatenate(stats, axis=0)
         stats = stats.compute()
         return stats
+
+    def compute(self) -> Table:
+        X, Y = dask.compute(self.X, self.Y)
+        table = Table.from_numpy(self.domain, X, Y,
+                                 metas=self.metas, W=self.W,
+                                 attributes=self.attributes, ids=self.ids)
+        table.name = self.name
+        return table
 
     def _update_locks(self, *args, **kwargs):
         return
