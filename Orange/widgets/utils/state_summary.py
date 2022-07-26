@@ -18,7 +18,7 @@ from Orange.widgets.utils.signals import AttributeList
 from Orange.base import Model, Learner
 
 
-SIZE_LIMIT = 1e7
+COMPUTE_NANS_LIMIT = 1e7
 
 
 def format_variables_string(variables):
@@ -85,7 +85,7 @@ def format_summary_details(data, format=Qt.PlainText):
     metas = format_variables_string(data.domain.metas)
 
     features_missing = ""
-    if data.X.size < SIZE_LIMIT:
+    if data.X.size < COMPUTE_NANS_LIMIT:
         features_missing = missing_values(data.get_nan_frequency_attribute())
     n_features = len(data.domain.variables) + len(data.domain.metas)
     name = getattr(data, "name", None)

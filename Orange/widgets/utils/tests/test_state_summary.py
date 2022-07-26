@@ -185,7 +185,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(details, format_summary_details(data))
 
         data = Table.from_numpy(domain=None, X=np.random.random((10000, 1000)))
-        details = f'{len(data)} instances, ' \
+        details = f'{len(data):n} instances, ' \
                   f'{len(data.domain.variables)} variables\n' \
                   f'Features: {len(data.domain.variables)} numeric \n' \
                   f'Target: —'
