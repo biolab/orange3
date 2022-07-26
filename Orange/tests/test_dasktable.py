@@ -15,9 +15,12 @@ def open_as_dask(table):
     if isinstance(table, str):
         table = Table(table)
     with named_file('') as fn:
-        DaskTable.save(table, fn)
-        dasktable = DaskTable.from_file(fn)
-        yield dasktable
+        try:
+            DaskTable.save(table, fn)
+            dasktable = DaskTable.from_file(fn)
+            yield dasktable
+        finally:
+            dasktable.close()
 
 
 class TableTestCase(unittest.TestCase):
