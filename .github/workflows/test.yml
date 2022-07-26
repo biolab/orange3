@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - master
+      - dask
   pull_request:
     branches:
       - master
+      - dask
 
 jobs:
   lint:
