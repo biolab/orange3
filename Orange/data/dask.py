@@ -25,7 +25,7 @@ class DaskTable(Table):
         """
         self = cls()
 
-        f = h5py.File(filename, "r")
+        self.__h5file = f = h5py.File(filename, "r")
 
         def read_format_da(name):
             # dask's automatic chunking has problems with 0-dimension arrays
@@ -66,6 +66,9 @@ class DaskTable(Table):
         cls._init_ids(self)
 
         return self
+
+    def close(self):
+        self.__h5file.close()
 
     def set_weights(self, weight=1):
         raise NotImplementedError()

@@ -58,6 +58,7 @@ class TableTestCase(unittest.TestCase):
             DaskTable.save(zoo, fn)
             dzoo = DaskTable.from_file(fn)
             self.same_tables(zoo, dzoo)
+            dzoo.close()
 
     def test_save_dasktable(self):
         zoo = Table('zoo')
@@ -68,6 +69,8 @@ class TableTestCase(unittest.TestCase):
                 dzoo.save(fn2)
                 dzoo2 = DaskTable.from_file(fn)
                 self.same_tables(zoo, dzoo2)
+                dzoo2.close()
+            dzoo.close()
 
     def test_save_dasktable_empty(self):
         zoo = Table('zoo')
@@ -79,3 +82,5 @@ class TableTestCase(unittest.TestCase):
                 dzoo.save(fn2)
                 dzoo2 = DaskTable.from_file(fn)
                 self.same_tables(zoo, dzoo2)
+                dzoo2.close()
+            dzoo.close()
