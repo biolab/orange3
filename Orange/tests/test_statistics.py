@@ -119,6 +119,13 @@ class TestUtil(unittest.TestCase):
                                            [0, 0, 0, 0, 3, 0],
                                            [0, 0, 0, 0, 3, 0]])
 
+        r = stats(X, compute_variance=True)
+        np.testing.assert_almost_equal(r, [[0, 1, 1/3, 2/9, 2, 1],
+                                           [0, 1, 1/3, 2/9, 2, 1],
+                                           [0, 1, 1/3, 2/9, 2, 1],
+                                           [0, 0, 0, 0, 3, 0],
+                                           [0, 0, 0, 0, 3, 0]])
+
     def test_stats_weights(self):
         X = np.arange(4).reshape(2, 2).astype(float)
         weights = np.array([1, 3])
@@ -134,6 +141,9 @@ class TestUtil(unittest.TestCase):
         weights = np.array([1, 3])
         np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 1, 1],
                                                     [1, 3, 2.5, 0, 0, 2]])
+
+        with self.assertRaises(NotImplementedError):
+            stats(X, weights, compute_variance=True)
 
     def test_stats_non_numeric(self):
         X = np.array([
