@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 from contextlib import contextmanager
 
@@ -22,6 +24,31 @@ def open_as_dask(table):
             yield dasktable
         finally:
             dasktable.close()
+
+
+class _TempDaskTableHandler:
+
+    def __init__(self, table):
+        # pylint: disable=consider-using-with
+        if isinstance(table, str):
+            table = Table(table)
+        file = tempfile.NamedTemporaryFile("wt", delete=False)
+        self.fn = fn = file.name
+        file.close()
+        DaskTable.save(table, fn)
+        self.dasktable = DaskTable.from_file(fn)
+        self.dasktable._keep_alive_until_dasktable_is_needed = self
+
+    def __del__(self):
+        self.dasktable.close()
+        os.remove(self.fn)
+
+
+def temp_dasktable(table):
+    """ Return a DaskTable created from a Table through a temporary file.
+    The temporary file is deleted after garbage collection. """
+    table = _TempDaskTableHandler(table)
+    return table.dasktable
 
 
 class TableTestCase(unittest.TestCase):
