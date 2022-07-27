@@ -805,8 +805,9 @@ class OWSOM(OWWidget):
         self.view.setTransform(QTransform.fromScale(scale, scale))
         if self.hexagonal:
             self.view.setSceneRect(
-                0, -1, self.size_x - 1,
-                (self.size_y + leg_extra) * sqrt3_2 + leg_height / scale)
+                # -1.5: 1 is necessary, 0.5 is to add some border
+                -0.5, -1.5 / np.sqrt(3), self.size_x,
+                (self.size_y + leg_extra) * sqrt3_2 + leg_height / scale - 1 / np.sqrt(3))
         else:
             self.view.setSceneRect(
                 -0.25, -0.25, self.size_x - 0.5,
