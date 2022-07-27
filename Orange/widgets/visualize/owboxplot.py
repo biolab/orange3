@@ -350,8 +350,8 @@ class OWBoxPlot(widget.OWWidget):
             sample_at = 1000
             if len(self.dataset) > sample_at:
                 rows = np.random.choice(len(self.dataset), size=sample_at, replace=False)
-                self.sample = Table.from_table_rows(self.dataset, rows)
-                self.sample.X = np.asarray(self.sample.X)
+                self.sample = self.dataset[rows]
+                self.sample.compute()
             self.reset_attrs()
             self.reset_groups()
             self._select_default_variables()
