@@ -5,6 +5,7 @@ import h5py
 import dask
 import dask.array as da
 import numpy as np
+import pandas
 
 from Orange.data import Table
 
@@ -112,6 +113,44 @@ class DaskTable(Table):
         table.name = self.name
         return table
 
+    def _compute_basic_stats(self, columns=None,
+                             include_metas=False, compute_variance=False):
+        rr = []
+        stats = []
+        if not columns:
+            if self.domain.attributes:
+                rr.append(dask_stats(self._X,
+                                     compute_variance=compute_variance))
+            if self.domain.class_vars:
+                rr.append(dask_stats(self._Y,
+                                     compute_variance=compute_variance))
+            if include_metas and self.domain.metas:
+                rr.append(dask_stats(self.metas,
+                                     compute_variance=compute_variance))
+            if len(rr):
+                stats = da.concatenate(rr, axis=0)
+        else:
+            nattrs = len(self.domain.attributes)
+            for column in columns:
+                c = self.domain.index(column)
+                if 0 <= c < nattrs:
+                    S = dask_stats(self._X[:, [c]],
+                                   compute_variance=compute_variance)
+                elif c >= nattrs:
+                    if self._Y.ndim == 1 and c == nattrs:
+                        S = dask_stats(self._Y[:, None],
+                                       compute_variance=compute_variance)
+                    else:
+                        S = dask_stats(self._Y[:, [c - nattrs]],
+                                       compute_variance=compute_variance)
+                else:
+                    S = dask_stats(self._metas[:, [-1 - c]],
+                                   compute_variance=compute_variance)
+                stats.append(S)
+            stats = da.concatenate(stats, axis=0)
+        stats = stats.compute()
+        return stats
+
     def _update_locks(self, *args, **kwargs):
         return
 
@@ -129,6 +168,32 @@ class DaskTable(Table):
     def unlocked(self, *parts):
         # table locking is currently disabled
         return contextlib.nullcontext()
+
+
+def dask_stats(X, compute_variance=False):
+    is_numeric = np.issubdtype(X.dtype, np.number)
+
+    if X.size and is_numeric:
+        nans = da.isnan(X).sum(axis=0).reshape(-1, 1)
+        return da.concatenate((
+            da.nanmin(X, axis=0).reshape(-1, 1),
+            da.nanmax(X, axis=0).reshape(-1, 1),
+            da.nanmean(X, axis=0).reshape(-1, 1),
+            da.nanvar(X, axis=0).reshape(-1, 1) if compute_variance else \
+                da.zeros(nans.shape),
+            nans,
+            X.shape[0] - nans), axis=1)
+    else:
+        # metas is currently a numpy table
+        nans = (pandas.isnull(X).sum(axis=0) + (X == "").sum(axis=0)) \
+            if X.size else np.zeros(X.shape[1])
+        return np.column_stack((
+            np.tile(np.inf, X.shape[1]),
+            np.tile(-np.inf, X.shape[1]),
+            np.zeros(X.shape[1]),
+            np.zeros(X.shape[1]),
+            nans,
+            X.shape[0] - nans))
 
 
 def table_to_dask(table, filename):
