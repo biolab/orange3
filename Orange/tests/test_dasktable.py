@@ -34,6 +34,14 @@ class TableTestCase(unittest.TestCase):
         numpy.testing.assert_equal(dasktable.Y, table.Y)
         numpy.testing.assert_equal(dasktable.metas, table.metas)
 
+    def test_compute(self):
+        zoo = Table('zoo')
+        with named_file('', suffix='.hdf5') as fn:
+            DaskTable.save(zoo, fn)
+            dzoo = DaskTable.from_file(fn)
+            self.same_tables(dzoo.compute(), dzoo)
+            dzoo.close()
+
     def test_save_table(self):
         zoo = Table('zoo')
         with named_file('', suffix='.hdf5') as fn:
