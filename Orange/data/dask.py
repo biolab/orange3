@@ -1,6 +1,8 @@
+import contextlib
 import pickle
 
 import h5py
+import dask
 import dask.array as da
 import numpy as np
 import pandas
@@ -140,8 +142,20 @@ class DaskTable(Table):
         stats = stats.compute()
         return stats
 
+    def compute(self) -> Table:
+        X, Y = dask.compute(self.X, self.Y)
+        table = Table.from_numpy(self.domain, X, Y,
+                                 metas=self.metas, W=self.W,
+                                 attributes=self.attributes, ids=self.ids)
+        table.name = self.name
+        return table
+
     def _update_locks(self, *args, **kwargs):
         return
+
+    def unlocked(self, *parts):
+        # table locking is currently disabled
+        return contextlib.nullcontext()
 
 
 def dask_stats(X, compute_variance=False):
