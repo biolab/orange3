@@ -30,6 +30,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
+from Orange.data.dask import DaskTable
 
 
 def compute_scale(min_, max_):
@@ -158,6 +159,8 @@ class OWBoxPlot(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         no_vars = widget.Msg(
             "Data contains no categorical or numeric variables")
+        data_sampled = widget.Msg(
+            "Relevance was approximated on sampled data")
 
     buttons_area_orientation = None
 
@@ -347,10 +350,11 @@ class OWBoxPlot(widget.OWWidget):
         self.dataset = dataset
         if dataset:
             sample_at = 1000
-            if len(self.dataset) > sample_at:
+            if isinstance(self.dataset, DaskTable) and \
+                    len(self.dataset) > sample_at:
                 rows = np.random.choice(len(self.dataset), size=sample_at, replace=False)
                 self.sample = self.dataset[rows]
-                self.sample.compute()
+                self.sample = self.sample.compute()
             self.reset_attrs()
             self.reset_groups()
             self._select_default_variables()
@@ -477,6 +481,13 @@ class OWBoxPlot(widget.OWWidget):
             c = count()
             def key(_):  # pylint: disable=function-redefined
                 return next(c)
+
+        if self.sample is not None and (self.order_grouping_by_importance or
+                                        (self.order_by_importance and
+                                         self.group_var is not None)):
+            self.Warning.data_sampled()
+        else:
+            self.Warning.data_sampled.clear()
 
         for i, attr in enumerate(source_model):
             source_model.setData(source_model.index(i), key(attr), Qt.UserRole)
@@ -716,7 +727,7 @@ class OWBoxPlot(widget.OWWidget):
                 for cont, val in zip(conts, self.group_var.values + ("", ))
                 if np.sum(cont) > 0
             ]
-            sums_ = da.compute(np.sum(conts, axis=1))
+            sums_ = da.compute(np.sum(conts, axis=1))[0]
             sums_ = sums_[sums_ > 0]  # only bars with sum > 0 are shown
 
             if self.sort_freqs:
@@ -1159,7 +1170,7 @@ class OWBoxPlot(widget.OWWidget):
             rect.setPen(QPen(Qt.NoPen))
             value = value or missing_val_str
             if self.show_stretched:
-                tooltip = f"{value}: {da.compute(100 * freq / total):.2f}%"
+                tooltip = f"{value}: {da.compute(100 * freq / total)[0]:.2f}%"
             else:
                 tooltip = f"{value}: ({int(freq)})"
             rect.setToolTip(tooltip)
