@@ -3,6 +3,8 @@
 import unittest
 
 from Orange.data import Table
+from Orange.data.dask import DaskTable
+from Orange.tests.test_dasktable import temp_dasktable
 from Orange.widgets.data.owdatasampler import OWDataSampler
 from Orange.widgets.tests.base import WidgetTest
 
@@ -12,7 +14,6 @@ class TestOWDataSampler(WidgetTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.iris = Table("iris")
-        cls.zoo = Table("zoo")
 
     def setUp(self):
         self.widget = self.create_widget(OWDataSampler)  # type: OWDataSampler
@@ -230,6 +231,22 @@ class TestOWDataSampler(WidgetTest):
         self.select_sampling_type(3)
         w.commit()
         w.send_report()
+
+
+class TestOWDataSamplerDask(TestOWDataSampler):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.iris = temp_dasktable("iris")
+
+    def test_dask_outputs(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.iris)
+        sample = self.get_output(w.Outputs.data_sample)
+        self.assertIsInstance(sample, DaskTable)
+        remaining = self.get_output(w.Outputs.remaining_data)
+        self.assertIsInstance(remaining, DaskTable)
+        self.assertEqual(len(self.iris), len(sample) + len(remaining))
 
 
 if __name__ == "__main__":
