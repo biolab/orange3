@@ -164,7 +164,6 @@ class DaskTable(Table):
             return 0
         return np.isnan(self.X).sum().compute() / self.X.size
 
-
     def unlocked(self, *parts):
         # table locking is currently disabled
         return contextlib.nullcontext()
