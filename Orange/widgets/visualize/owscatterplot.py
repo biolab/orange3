@@ -16,6 +16,7 @@ from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.data import Table, Domain, DiscreteVariable, Variable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
+from Orange.data.dask import sample_dask_table
 from Orange.preprocess.score import ReliefF, RReliefF
 
 from Orange.widgets import gui, report
@@ -445,6 +446,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.vizrank_button.setToolTip(err_msg)
 
     @OWDataProjectionWidget.Inputs.data
+    @sample_dask_table
     def set_data(self, data):
         super().set_data(data)
         self._vizrank_color_change()

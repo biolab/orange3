@@ -9,6 +9,7 @@ import pandas
 
 from Orange.data import Table
 
+
 DEFAULT_SAMPLE_SIZE = 1000
 
 
