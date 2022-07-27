@@ -4,14 +4,17 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+import dask.array as da
 from AnyQt.QtCore import QItemSelectionModel
 
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain, \
     DiscreteVariable
+from Orange.data.dask import DaskTable
 from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
 
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -48,7 +51,10 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_dont_show_hidden_attrs(self):
         """Check widget's data"""
-        iris = Table("iris")
+        iris = self.iris.copy()
+        # domain must also be copied, otherwise it's changes
+        # will persist and cause subsequent tests to fail
+        iris.domain = self.iris.domain.copy()
         iris.domain["iris"].attributes["hidden"] = True
         iris.domain["petal length"].attributes["hidden"] = True
         self.send_signal(self.widget.Inputs.data, iris)
@@ -234,7 +240,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         domain = self.iris.domain
         metas = domain.attributes[:-1] + (StringVariable("str"),)
         domain = Domain([], domain.class_var, metas)
-        data = Table.from_table(domain, self.iris)
+        data = self.iris.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
 
     def test_label_overlap(self):
@@ -263,8 +269,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_sorting_disc_group_var(self):
         """Test if subgroups are sorted by their size"""
-        table = Table("heart_disease")
-        self.send_signal(self.widget.Inputs.data, table)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self.__select_variable("gender")
         self.__select_group("chest pain")
 
@@ -357,6 +362,45 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         for box in self.widget.box_scene.items():
             if isinstance(box, FilterGraphicsRectItem):
                 box.setSelected(True)
+
+
+class TestOWBoxPlotWithDask(TestOWBoxPlot):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+        cls.iris = temp_dasktable("iris")
+        cls.zoo = temp_dasktable("zoo")
+        cls.housing = temp_dasktable("housing")
+        cls.titanic = temp_dasktable("titanic")
+        cls.heart = temp_dasktable("heart_disease")
+        cls.data = cls.iris
+        cls.signal_name = "Data"
+        cls.signal_data = cls.data
+
+    def test_sample_warning(self):
+        """Test if warning is shown when sorting with sampled data"""
+        self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.assertFalse(self.widget.Warning.data_sampled.is_shown())
+
+        self.widget.controls.order_by_importance.setChecked(True)
+        self.assertTrue(self.widget.Warning.data_sampled.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertFalse(self.widget.Warning.data_sampled.is_shown())
+
+    def test_sample_is_numpy(self):
+        """Test if sample exists, and make sure it has been precomputed"""
+        self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.assertIsInstance(self.widget.dataset, DaskTable)
+        self.assertIsInstance(self.widget.dataset.X, da.Array)
+        self.assertIsInstance(self.widget.sample, Table)
+        self.assertIsInstance(self.widget.sample.X, np.ndarray)
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertIsInstance(self.widget.dataset, DaskTable)
+        self.assertIsInstance(self.widget.dataset.X, da.Array)
+        self.assertIsNone(self.widget.sample)
 
 
 if __name__ == '__main__':
