@@ -1,3 +1,4 @@
+import contextlib
 import pickle
 
 import h5py
@@ -151,6 +152,10 @@ class DaskTable(Table):
 
     def _update_locks(self, *args, **kwargs):
         return
+
+    def unlocked(self, *parts):
+        # table locking is currently disabled
+        return contextlib.nullcontext()
 
 
 def dask_stats(X, compute_variance=False):
