@@ -1,4 +1,3 @@
-from datetime import datetime
 import math
 from collections import namedtuple
 from itertools import chain, count
@@ -30,6 +29,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
+from Orange.data.dask import DaskTable
 
 
 def compute_scale(min_, max_):
@@ -48,21 +48,14 @@ def compute_scale(min_, max_):
     return first_val, step
 
 
-def maybe_compute(ar):
-    if isinstance(ar, da.Array):
-        return ar.compute()
-    return ar
-
-
 ContDataRange = namedtuple("ContDataRange", ["low", "high", "group_value"])
 DiscDataRange = namedtuple("DiscDataRange", ["value", "group_value"])
 
 
 class BoxData:
     def __init__(self, col, group_val=None):
-        if isinstance(col, da.Array):
-            self.dask_compute(col, group_val)
-            return
+        # handles numpy and dask arrays assuming a single column will always fit into memory
+        col = np.asarray(col)
         self.n = len(col) - np.sum(np.isnan(col))
         if self.n == 0:
             return
@@ -78,27 +71,6 @@ class BoxData:
             self.q25 = None
         if self.q75 == self.median:
             self.q75 = None
-
-    def dask_compute(self, ar, group):
-        # temporarily moved computation for dask arrays
-        # only works for arrays without NaNs
-        print("DASK COMPUTE")
-        nans = da.isnan(ar)
-        if nans.any():
-            print("BOXDATA: has nans, expect bad results")
-        ar.compute_chunk_sizes()
-        self.n = ar.shape[0]
-        if self.n == 0:
-            return
-        self.a_min = da.min(ar).compute()
-        self.a_max = da.max(ar).compute()
-        self.mean = da.mean(ar).compute()
-        self.var = da.var(ar).compute()
-        self.dev = math.sqrt(self.var)
-        self.q25, self.median, self.q75 = da.percentile(ar, [25, 50, 75]).compute()
-        self.data_range = ContDataRange(self.q25, self.q75, group)
-        self.q25 = None if self.q25 == self.median else self.q25
-        self.q75 = None if self.q75 == self.median else self.q75
 
 
 class FilterGraphicsRectItem(QGraphicsRectItem):
@@ -133,6 +105,8 @@ class OWBoxPlot(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         no_vars = widget.Msg(
             "Data contains no categorical or numeric variables")
+        data_sampled = widget.Msg(
+            "Relevance was approximated on sampled data")
 
     buttons_area_orientation = None
 
@@ -322,6 +296,12 @@ class OWBoxPlot(widget.OWWidget):
 
         self.dataset = dataset
         if dataset:
+            sample_at = 1000
+            if isinstance(self.dataset, DaskTable) and \
+                    len(self.dataset) > sample_at:
+                rows = np.random.choice(len(self.dataset), size=sample_at, replace=False)
+                self.sample = self.dataset[rows]
+                self.sample = self.sample.compute()
             self.reset_attrs()
             self.reset_groups()
             self._select_default_variables()
@@ -348,6 +328,7 @@ class OWBoxPlot(widget.OWWidget):
         self.attrs[:] = []
         self.group_vars[:] = [None]
         self.selection = ()
+        self.sample = None
 
     def _select_default_variables(self):
         # visualize first non-class variable, group by class (if present)
@@ -385,18 +366,18 @@ class OWBoxPlot(widget.OWWidget):
                 return 3
             if attr.is_continuous:
                 # One-way ANOVA
-                col = data.get_column_view(attr)[0].astype(float)
+                col = np.asarray(data.get_column_view(attr)[0], dtype=float)
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
-                p = self._chi_square(group_var, attr)[1]
+                p = self._chi_square(group_var, attr, sample=True)[1]
             if math.isnan(p):
                 return 2
             return p
 
-        data = self.dataset
+        data = self.sample or self.dataset
         if data is None:
             return
         domain = data.domain
@@ -425,18 +406,18 @@ class OWBoxPlot(widget.OWWidget):
                 groups = [group for group in groups if len(group) > 1]
                 p = f_oneway(*groups)[1] if len(groups) > 1 else 2
             else:
-                p = self._chi_square(group, attr)[1]
+                p = self._chi_square(group, attr, sample=True)[1]
             if math.isnan(p):
                 return 2
             return p
 
-        data = self.dataset
+        data = self.sample or self.dataset
         if data is None:
             return
         attr = self.attribute
         if self.order_grouping_by_importance:
             if attr.is_continuous:
-                attr_col = data.get_column_view(attr)[0].astype(float)
+                attr_col = np.asarray(data.get_column_view(attr)[0], dtype=float)
             self._sort_list(self.group_vars, self.group_list, compute_stat)
         else:
             self._sort_list(self.group_vars, self.group_list, None)
@@ -446,6 +427,13 @@ class OWBoxPlot(widget.OWWidget):
             c = count()
             def key(_):  # pylint: disable=function-redefined
                 return next(c)
+
+        if self.sample is not None and (self.order_grouping_by_importance or
+                                        (self.order_by_importance and
+                                         self.group_var is not None)):
+            self.Warning.data_sampled()
+        else:
+            self.Warning.data_sampled.clear()
 
         for i, attr in enumerate(source_model):
             source_model.setData(source_model.index(i), key(attr), Qt.UserRole)
@@ -457,12 +445,13 @@ class OWBoxPlot(widget.OWWidget):
         if len(selection) == 1:
             view.scrollTo(selection[0])
 
-    def _chi_square(self, group_var, attr):
+    def _chi_square(self, group_var, attr, sample=False):
         # Chi-square with the given distribution into groups
         if not attr.values or not group_var.values:
             return 0, 2, 0
+        data = self.sample if self.sample is not None and sample else self.dataset
         observed = np.array(
-            contingency.get_contingency(self.dataset, group_var, attr))
+            contingency.get_contingency(data, group_var, attr))
         observed = observed[observed.sum(axis=1) != 0, :]
         observed = observed[:, observed.sum(axis=0) != 0]
         if min(observed.shape) < 2:
@@ -524,10 +513,10 @@ class OWBoxPlot(widget.OWWidget):
 
     def _group_cols(self, data, group, attr):
         if isinstance(attr, (np.ndarray, da.Array)):
-            attr_col = attr
+            attr_col = np.asarray(attr)
         else:
-            attr_col = data.get_column_view(group)[0].astype(float)
-        group_col = data.get_column_view(group)[0].astype(float)
+            attr_col = np.asarray(data.get_column_view(group)[0], dtype=float)
+        group_col = np.asarray(data.get_column_view(group)[0], dtype=float)
         groups = [attr_col[group_col == i] for i in range(len(group.values))]
         groups = [col[~np.isnan(col)] for col in groups]
         return groups
@@ -548,9 +537,8 @@ class OWBoxPlot(widget.OWWidget):
             missing_val_str = f"missing '{self.group_var.name}'"
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
-                # TODO: why doesn't this work? ... compute grouped continuous data
                 stats, label_texts = [], []
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = np.asarray(dataset.get_column_view(attr)[0], dtype=float)
                 for group, value in \
                         zip(self._group_cols(dataset, self.group_var, attr_col),
                             group_var_labels):
@@ -569,7 +557,7 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.conts = None
             if self.attribute.is_continuous:
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = np.asarray(dataset.get_column_view(attr)[0], dtype=float)
                 self.stats = [BoxData(attr_col)]
             else:
                 self.dist = distribution.get_distribution(dataset, attr)
@@ -688,7 +676,7 @@ class OWBoxPlot(widget.OWWidget):
                 for cont, val in zip(conts, self.group_var.values + ("", ))
                 if np.sum(cont) > 0
             ]
-            sums_ = maybe_compute(np.sum(conts, axis=1))
+            sums_ = da.compute(np.sum(conts, axis=1))[0]
             sums_ = sums_[sums_ > 0]  # only bars with sum > 0 are shown
 
             if self.sort_freqs:
@@ -1129,7 +1117,7 @@ class OWBoxPlot(widget.OWWidget):
             rect.setPen(QPen(Qt.NoPen))
             value = value or missing_val_str
             if self.show_stretched:
-                tooltip = f"{value}: {100 * freq / total:.2f}%"
+                tooltip = f"{value}: {da.compute(100 * freq / total)[0]:.2f}%"
             else:
                 tooltip = f"{value}: ({int(freq)})"
             rect.setToolTip(tooltip)

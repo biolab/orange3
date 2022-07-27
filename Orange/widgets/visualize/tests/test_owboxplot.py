@@ -12,6 +12,7 @@ from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
 
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -234,7 +235,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         domain = self.iris.domain
         metas = domain.attributes[:-1] + (StringVariable("str"),)
         domain = Domain([], domain.class_var, metas)
-        data = Table.from_table(domain, self.iris)
+        data = self.iris.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
 
     def test_label_overlap(self):
@@ -357,6 +358,21 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         for box in self.widget.box_scene.items():
             if isinstance(box, FilterGraphicsRectItem):
                 box.setSelected(True)
+
+
+class TestOWBoxPlotWithDask(TestOWBoxPlot):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+        cls.iris = temp_dasktable("iris")
+        cls.zoo = temp_dasktable("zoo")
+        cls.housing = temp_dasktable("housing")
+        cls.titanic = temp_dasktable("titanic")
+        cls.heart = temp_dasktable("heart_disease")
+        cls.data = cls.iris
+        cls.signal_name = "Data"
+        cls.signal_data = cls.data
 
 
 if __name__ == '__main__':
