@@ -34,10 +34,11 @@ class BasicStats:
             = stats[0]
 
 class DomainBasicStats:
-    def __init__(self, data, include_metas=False):
+    def __init__(self, data, include_metas=False, compute_variance=False):
         self.domain = data.domain
         self.stats = [BasicStats(s) for s in
-                      data._compute_basic_stats(include_metas=include_metas)]
+                      data._compute_basic_stats(include_metas=include_metas,
+                                                compute_variance=compute_variance)]
 
     def __getitem__(self, index):
         """

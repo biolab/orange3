@@ -1930,19 +1930,19 @@ class Table(Sequence, Storage):
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):
-        if compute_variance:
-            raise NotImplementedError("computation of variance is "
-                                      "not implemented yet")
         W = self._W if self.has_weights() else None
         rr = []
         stats = []
         if not columns:
             if self.domain.attributes:
-                rr.append(fast_stats(self._X, W))
+                rr.append(fast_stats(self._X, W,
+                                     compute_variance=compute_variance))
             if self.domain.class_vars:
-                rr.append(fast_stats(self._Y, W))
+                rr.append(fast_stats(self._Y, W,
+                                     compute_variance=compute_variance))
             if include_metas and self.domain.metas:
-                rr.append(fast_stats(self.metas, W))
+                rr.append(fast_stats(self.metas, W,
+                                     compute_variance=compute_variance))
             if len(rr):
                 stats = np.vstack(tuple(rr))
         else:
@@ -1950,14 +1950,18 @@ class Table(Sequence, Storage):
             for column in columns:
                 c = self.domain.index(column)
                 if 0 <= c < nattrs:
-                    S = fast_stats(self._X[:, [c]], W and W[:, [c]])
+                    S = fast_stats(self._X[:, [c]], W and W[:, [c]],
+                                   compute_variance=compute_variance)
                 elif c >= nattrs:
                     if self._Y.ndim == 1 and c == nattrs:
-                        S = fast_stats(self._Y[:, None], W and W[:, None])
+                        S = fast_stats(self._Y[:, None], W and W[:, None],
+                                       compute_variance=compute_variance)
                     else:
-                        S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]])
+                        S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]],
+                                       compute_variance=compute_variance)
                 else:
-                    S = fast_stats(self._metas[:, [-1 - c]], W and W[:, [-1 - c]])
+                    S = fast_stats(self._metas[:, [-1 - c]], W and W[:, [-1 - c]],
+                                   compute_variance=compute_variance)
                 stats.append(S[0])
         return stats
 
