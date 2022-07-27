@@ -16,8 +16,6 @@ from Orange.widgets.tests.base import WidgetTest, simulate, \
 from Orange.widgets.visualize.owbarplot import OWBarPlot
 from Orange.tests.test_dasktable import open_as_dask
 
-Table.LOCKING = False
-
 
 class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
