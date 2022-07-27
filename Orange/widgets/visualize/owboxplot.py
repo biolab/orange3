@@ -18,7 +18,6 @@ import scipy.special
 from scipy.stats import f_oneway, chi2_contingency
 
 from Orange.data import Table
-from Orange.data.dask import maybe_compute
 from Orange.data.filter import FilterDiscrete, FilterContinuous, Values, \
     IsDefined
 from Orange.statistics import contingency, distribution
@@ -717,7 +716,7 @@ class OWBoxPlot(widget.OWWidget):
                 for cont, val in zip(conts, self.group_var.values + ("", ))
                 if np.sum(cont) > 0
             ]
-            sums_ = maybe_compute(np.sum(conts, axis=1))
+            sums_ = da.compute(np.sum(conts, axis=1))
             sums_ = sums_[sums_ > 0]  # only bars with sum > 0 are shown
 
             if self.sort_freqs:
@@ -1160,7 +1159,7 @@ class OWBoxPlot(widget.OWWidget):
             rect.setPen(QPen(Qt.NoPen))
             value = value or missing_val_str
             if self.show_stretched:
-                tooltip = f"{value}: {maybe_compute(100 * freq / total):.2f}%"
+                tooltip = f"{value}: {da.compute(100 * freq / total):.2f}%"
             else:
                 tooltip = f"{value}: ({int(freq)})"
             rect.setToolTip(tooltip)
