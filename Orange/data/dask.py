@@ -1,3 +1,4 @@
+import contextlib
 import pickle
 
 import h5py
@@ -124,6 +125,10 @@ class DaskTable(Table):
         if self.X.size == 0:
             return 0
         return np.isnan(self.X).sum().compute() / self.X.size
+
+    def unlocked(self, *parts):
+        # table locking is currently disabled
+        return contextlib.nullcontext()
 
 
 def table_to_dask(table, filename):
