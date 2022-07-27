@@ -9,6 +9,8 @@ import pandas
 
 from Orange.data import Table
 
+DEFAULT_SAMPLE_SIZE = 1000
+
 
 class DaskTable(Table):
 
@@ -149,6 +151,28 @@ class DaskTable(Table):
                                  attributes=self.attributes, ids=self.ids)
         table.name = self.name
         return table
+
+    def sample(self, rows: int = DEFAULT_SAMPLE_SIZE):
+        """
+        Return a randomly sampled number of rows. TODO: enable column sampling
+
+        Parameters
+        ----------
+        rows : int
+            A number of rows to return.
+
+        Returns
+        -------
+        sample : `DaskTable`
+            Randomly sampled DaskTable
+
+        """
+        if rows > len(self):
+            raise ValueError('Sampling with replacement is not supported. '
+                             'Row sample cannot be larger than data.')
+        rng = np.random.default_rng(seed=0)
+        row_instances = rng.choice(len(self), rows, replace=False)
+        return self[row_instances]
 
     def _update_locks(self, *args, **kwargs):
         return

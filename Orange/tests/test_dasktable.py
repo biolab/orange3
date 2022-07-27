@@ -138,3 +138,16 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(c.max, 50)
             self.assertAlmostEqual(c.mean, 22.5328063)
             self.assertAlmostEqual(c.var, 84.4195562)
+
+    def test_sample(self):
+        zoo = Table('zoo')
+        with named_file('', suffix='.hdf5') as fn:
+            DaskTable.save(zoo, fn)
+            dzoo = DaskTable.from_file(fn)
+            with self.assertRaises(ValueError):
+                dzoo.sample(rows=1000)
+            dzoo_sample = dzoo.sample(rows=10)
+            self.assertIsInstance(dzoo_sample.X, da.Array)
+            self.assertIsInstance(dzoo_sample.Y, da.Array)
+            self.assertTrue(len(dzoo_sample) == 10)
+            dzoo.close()
