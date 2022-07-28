@@ -25,6 +25,7 @@ from Orange.widgets.settings import ContextSetting, DomainContextHandler, \
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME, \
     create_annotated_table
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.dask import sample_dask_table
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.visualize.owboxplot import SortProxyModel
 from Orange.widgets.visualize.utils.customizableplot import \
@@ -931,6 +932,7 @@ class OWViolinPlot(OWWidget):
 
     @Inputs.data
     @check_sql_input
+    @sample_dask_table
     def set_data(self, data: Optional[Table]):
         self.closeContext()
         self.clear()
