@@ -16,7 +16,6 @@ from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.data import Table, Domain, DiscreteVariable, Variable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
-from Orange.data.dask import sample_dask_table
 from Orange.preprocess.score import ReliefF, RReliefF
 
 from Orange.widgets import gui, report
@@ -24,6 +23,7 @@ from Orange.widgets.io import MatplotlibFormat, MatplotlibPDFFormat
 from Orange.widgets.settings import (
     Setting, ContextSetting, SettingProvider, IncompatibleContext)
 from Orange.widgets.utils import get_variable_values_sorted
+from Orange.widgets.utils.dask import sample_dask_table
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
