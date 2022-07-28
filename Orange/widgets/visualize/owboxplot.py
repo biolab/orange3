@@ -214,7 +214,7 @@ class OWBoxPlot(widget.OWWidget):
         self._axis_font.setPixelSize(12)
         self._label_font = QFont()
         self._label_font.setPixelSize(11)
-        self.dataset = None
+        self.sample = self.dataset = None
         self.stats = []
         self.dist = self.conts = None
 
