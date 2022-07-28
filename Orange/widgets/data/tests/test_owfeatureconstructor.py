@@ -276,7 +276,7 @@ class FeatureFuncTest(unittest.TestCase):
 
     def test_repr(self):
         self.assertEqual(repr(FeatureFunc("a + 1", [("a", 2)])),
-                         "FeatureFunc('a + 1', [('a', 2)], {}, None)")
+                         "FeatureFunc('a + 1', [('a', 2)], {}, None, False)")
 
     def test_call(self):
         iris = Table("iris")
@@ -523,6 +523,30 @@ class OWFeatureConstructorTests(WidgetTest):
         w.send_report()
         args = w.report_items.call_args[0][1]
         self.assertEqual(list(args), list("abcdefg"))
+
+    def test_output_domain_picklable(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, Table("iris")[::5])
+        features = [
+            ContinuousDescriptor("X1", "max(0, sepal_width - 5)", 2),
+            DiscreteDescriptor("D1", "HIGH if sepal_width > 5 else LOW",
+                               ("HIGH", "LOW"), False),
+            DiscreteDescriptor("D2", "'HIGH' if sepal_length > 5 else 'LOW'",
+                               (), False),
+            DateTimeDescriptor("T1", "0"),
+            DateTimeDescriptor("T2", "'1900-01-01'"),
+        ]
+        for f in features:
+            w.addFeature(f)
+        w.apply()
+        out = self.get_output(w.Outputs.data)
+        domain_a = out.domain
+        domain_b= pickle.loads(pickle.dumps(domain_a))
+        for name in ["X1", "D1", "D2", "T1", "T2"]:
+            a = domain_a[name]
+            b = domain_b[name]
+            self.assertEqual(a, b)
+            self.assertEqual(hash(a), hash(b))
 
 
 class TestFeatureEditor(unittest.TestCase):
