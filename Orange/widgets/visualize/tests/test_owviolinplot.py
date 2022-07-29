@@ -14,6 +14,7 @@ from Orange.widgets.tests.base import datasets, simulate, \
     WidgetOutputsTestMixin, WidgetTest
 from Orange.widgets.visualize.owviolinplot import OWViolinPlot, \
     ViolinPlotViewBox, scale_density, WIDTH
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 class TestUtils(unittest.TestCase):
@@ -389,6 +390,15 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
             if model.data(idx) == value:
                 list_.selectionModel().setCurrentIndex(
                     idx, QItemSelectionModel.ClearAndSelect)
+
+
+class TestOWViolinPlotWithDask(TestOWViolinPlot):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.data = temp_dasktable(cls.data)
+        cls.signal_data = cls.data
+        cls.housing = temp_dasktable("housing")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
 from Orange.widgets.visualize.utils.widget import MAX_COLORS
 from Orange.widgets.widget import AttributeList
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
@@ -1177,6 +1178,18 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.set_visual_settings(key, value)
         for item in graph.reg_line_items:
             self.assertEqual(item.pen.width(), 10)
+
+
+class TestOWScatterPlotWithDask(TestOWScatterPlot):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.data = temp_dasktable(cls.data)
+        cls.signal_data = cls.data
+
+    def test_vizrank_enabled_sparse_data(self):
+        pass
 
 
 if __name__ == "__main__":

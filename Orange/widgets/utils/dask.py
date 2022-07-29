@@ -4,7 +4,6 @@ from Orange.data.dask import DaskTable, DEFAULT_SAMPLE_SIZE
 from Orange.widgets.utils.messages import UnboundMsg
 
 
-# TODO: Decide on a warning message to be displayed.
 _sampled_dask_table = UnboundMsg(
     'The plot shows sampled data.'
 )
