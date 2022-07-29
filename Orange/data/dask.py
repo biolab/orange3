@@ -173,7 +173,7 @@ class DaskTable(Table):
                              'Row sample cannot be larger than data.')
         rng = np.random.default_rng(seed=0)
         row_instances = rng.choice(len(self), rows, replace=False)
-        return self[row_instances]
+        return self[np.sort(row_instances)]
 
     def _update_locks(self, *args, **kwargs):
         return
