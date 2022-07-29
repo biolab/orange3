@@ -824,6 +824,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.n_valid = self.n_shown = 0
             return None, None
         self.n_valid = len(x)
+        self.set_sample_size(1000)
         self._create_sample()
         x = self._filter_visible(x)
         y = self._filter_visible(y)

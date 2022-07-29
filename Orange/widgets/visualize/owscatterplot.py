@@ -500,6 +500,11 @@ class OWScatterPlot(OWDataProjectionWidget):
 
         x_data = self.get_column(self.attr_x, filter_valid=False)
         y_data = self.get_column(self.attr_y, filter_valid=False)
+        # get_embedding is called multiple times.
+        # TODO: Need to investigate how to optimize this.
+        import dask
+        print('COMPUTE IS CALLED IN GET_EMBEDDING')
+        x_data, y_data = dask.compute(x_data, y_data)
         if x_data is None or y_data is None:
             return None
 
