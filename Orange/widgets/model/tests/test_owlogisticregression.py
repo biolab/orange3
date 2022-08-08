@@ -48,7 +48,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
 
         self.parameters = [
             ParameterMapping('penalty', self.widget.penalty_combo,
-                             self.widget.penalty_types_short),
+                             self.widget.penalty_types_short[:2]),
             ParameterMapping('C', c_slider,
                              values=[self.widget.C_s[0], self.widget.C_s[-1]],
                              getter=lambda: self.widget.C_s[c_slider.value()],
@@ -123,3 +123,19 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         self.widget.apply_button.button.click()
         self.assertEqual(self.widget.model.skl_model.class_weight, "balanced")
         self.assertTrue(self.widget.Warning.class_weights_used.is_shown())
+
+    def test_no_penalty(self):
+        self.widget.set_penalty("none")
+        self.widget.apply_button.button.click()
+        lr = self.get_output(self.widget.Outputs.learner)
+        self.assertEqual(lr.penalty, "none")
+        self.assertEqual(lr.C, 1.0)
+        self.assertEqual(self.widget.c_label.text(), "N/A")
+        self.assertFalse(self.widget.c_slider.isEnabledTo(self.widget))
+
+        self.widget.set_penalty("l2")
+        self.widget.apply_button.button.click()
+        lr = self.get_output(self.widget.Outputs.learner)
+        self.assertEqual(lr.penalty, "l2")
+        self.assertEqual(self.widget.c_label.text(), "C=1")
+        self.assertTrue(self.widget.c_slider.isEnabledTo(self.widget))
