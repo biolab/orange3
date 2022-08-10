@@ -6,7 +6,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr, \
-    OrangeDeprecationWarning
+    OrangeDeprecationWarning, nan_eq, nan_hash_stand
 from Orange.data import Table
 from Orange.data.util import vstack, hstack, array_equal
 from Orange.statistics.util import stats
@@ -71,6 +71,21 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(deepgetattr(a, 'l.__len__.__call__'), a.l.__len__.__call__)
         self.assertTrue(deepgetattr(a, 'l.__nx__.__x__', 42), 42)
         self.assertRaises(AttributeError, lambda: deepgetattr(a, 'l.__nx__.__x__'))
+
+    def test_nan_eq(self):
+        self.assertTrue(nan_eq(float("nan"), float("nan")))
+        self.assertTrue(nan_eq(1, 1.0))
+        self.assertFalse(nan_eq(float("nan"), 1))
+        self.assertFalse(nan_eq(1, float("nan")))
+        self.assertFalse(nan_eq(float("inf"), float("nan")))
+        self.assertFalse(nan_eq(float("nan"), float("inf")))
+        self.assertFalse(nan_eq(1, 2))
+        self.assertFalse(nan_eq(None, 2))
+        self.assertFalse(nan_eq(2, None))
+
+    def test_nan_hash_stand(self):
+        self.assertEqual(hash(nan_hash_stand(float("nan"))),
+                         hash(nan_hash_stand(float("nan"))))
 
     def test_vstack(self):
         numpy = np.array([[1., 2.], [3., 4.]])

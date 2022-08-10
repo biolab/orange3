@@ -38,7 +38,11 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import Orange.data
 
-from Orange.preprocess.transformation import Transformation, Identity, Lookup
+from Orange.preprocess.transformation import (
+    Transformation, Identity, Lookup, MappingTransform
+)
+from Orange.misc.collections import DictMissingConst
+from Orange.util import frompyfunc
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, ftry
 from Orange.widgets.utils.buttons import FixedSizeButton
@@ -2629,28 +2633,6 @@ def apply_transform_string(var, trs):
     return variable
 
 
-class DictMissingConst(dict):
-    """
-    `dict` with a constant for `__missing__()` value.
-    """
-    __slots__ = ("__missing",)
-
-    def __init__(self, missing, *args, **kwargs):
-        self.__missing = missing
-        super().__init__(*args, **kwargs)
-
-    def __missing__(self, key):
-        return self.__missing
-
-    def __eq__(self, other):
-        return super().__eq__(other) and isinstance(other, DictMissingConst) \
-            and (self.__missing == other[()]  # get `__missing`
-                 or np.isnan(self.__missing) and np.isnan(other[()]))
-
-    def __hash__(self):
-        return hash((self.__missing, frozenset(self.items())))
-
-
 def make_dict_mapper(
         mapping: Mapping, dtype: Optional[DType] = None
 ) -> Callable:
@@ -2660,14 +2642,7 @@ def make_dict_mapper(
     `make_dict_mapper` it is used as a the default return dtype,
     otherwise the default dtype is `object`.
     """
-    _vmapper = np.frompyfunc(mapping.__getitem__, 1, 1)
-
-    def mapper(arr, out=None, dtype=dtype, **kwargs):
-        arr = np.asanyarray(arr)
-        if out is None and dtype is not None and arr.shape != ():
-            out = np.empty_like(arr, dtype)
-        return _vmapper(arr, out, dtype=dtype, casting="unsafe", **kwargs)
-    return mapper
+    return frompyfunc(mapping.__getitem__, 1, 1, dtype)
 
 
 as_string = np.frompyfunc(str, 1, 1)
@@ -2734,15 +2709,13 @@ def apply_reinterpret_d(var, tr, data):
 @apply_reinterpret.register(Orange.data.ContinuousVariable)
 def apply_reinterpret_c(var, tr, data: MArray):
     if isinstance(tr, AsCategorical):
-        # This is ill defined and should not result in a 'compute_value'
+        # This is ill-defined and should not result in a 'compute_value'
         # (post-hoc expunge from the domain once translated?)
         values, index = categorize_unique(data)
         coldata = index.astype(float)
         coldata[index.mask] = np.nan
         tr = LookupMappingTransform(
-            var, DictMissingConst(
-                np.nan, {v: i for i, v in enumerate(values)}
-            )
+            var, {v: i for i, v in enumerate(values)}, dtype=np.float64, unknown=np.nan
         )
         values = tuple(as_string(values))
         rvar = Orange.data.DiscreteVariable(
@@ -2764,12 +2737,10 @@ def apply_reinterpret_c(var, tr, data: MArray):
 @apply_reinterpret.register(Orange.data.StringVariable)
 def apply_reinterpret_s(var: Orange.data.StringVariable, tr, data: MArray):
     if isinstance(tr, AsCategorical):
-        # This is ill defined and should not result in a 'compute_value'
+        # This is ill-defined and should not result in a 'compute_value'
         # (post-hoc expunge from the domain once translated?)
         _, values = categorical_from_vector(data)
-        mapping = DictMissingConst(
-            np.nan, {v: float(i) for i, v in enumerate(values)}
-        )
+        mapping = {v: float(i) for i, v in enumerate(values)}
         tr = LookupMappingTransform(var, mapping)
         rvar = Orange.data.DiscreteVariable(
             name=var.name, values=values, compute_value=tr
@@ -2791,9 +2762,7 @@ def apply_reinterpret_t(var: Orange.data.TimeVariable, tr, data):
     if isinstance(tr, AsCategorical):
         values, _ = categorize_unique(data)
         or_values = values.astype(float) / 1e6
-        mapping = DictMissingConst(
-            np.nan, {v: i for i, v in enumerate(or_values)}
-        )
+        mapping = {v: i for i, v in enumerate(or_values)}
         tr = LookupMappingTransform(var, mapping)
         values = tuple(as_string(values))
         rvar = Orange.data.DiscreteVariable(
@@ -2881,34 +2850,8 @@ class ReparseTimeTransform(Transformation):
         return np.nan
 
 
-class LookupMappingTransform(Transformation):
-    """
-    Map values via a dictionary lookup.
-    """
-    def __init__(
-            self,
-            variable: Orange.data.Variable,
-            mapping: Mapping,
-            dtype: Optional[np.dtype] = None
-    ) -> None:
-        super().__init__(variable)
-        self.mapping = mapping
-        self.dtype = dtype
-        self._mapper = make_dict_mapper(mapping, dtype)
-
-    def transform(self, c):
-        return self._mapper(c)
-
-    def __reduce_ex__(self, protocol):
-        return type(self), (self.variable, self.mapping, self.dtype)
-
-    def __eq__(self, other):
-        return self.variable == other.variable \
-               and self.mapping == other.mapping \
-               and self.dtype == other.dtype
-
-    def __hash__(self):
-        return hash((type(self), self.variable, self.mapping, self.dtype))
+# Alias for back compatibility (unpickling transforms)
+LookupMappingTransform = MappingTransform
 
 
 @singledispatch

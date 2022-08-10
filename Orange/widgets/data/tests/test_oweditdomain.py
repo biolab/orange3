@@ -32,7 +32,7 @@ from Orange.widgets.data.oweditdomain import (
     AsString, AsCategorical, AsContinuous, AsTime,
     table_column_data, ReinterpretVariableEditor, CategoricalVector,
     VariableEditDelegate, TransformRole,
-    RealVector, TimeVector, StringVector, make_dict_mapper, DictMissingConst,
+    RealVector, TimeVector, StringVector, make_dict_mapper,
     LookupMappingTransform, as_float_or_nan, column_str_repr,
     GroupItemsDialog, VariableListModel, StrpTime
 )
@@ -1032,13 +1032,6 @@ class TestUtils(TestCase):
         self.assertIs(r, r_)
         assert_array_equal(r, [1, 1, 2])
 
-    def test_dict_missing(self):
-        d = DictMissingConst("<->", {1: 1, 2: 2})
-        self.assertEqual(d[1], 1)
-        self.assertEqual(d[-1], "<->")
-        # must be sufficiently different from defaultdict to warrant existence
-        self.assertEqual(d, DictMissingConst("<->", {1: 1, 2: 2}))
-
     def test_as_float_or_nan(self):
         a = np.array(["a", "1.1", ".2", "NaN"], object)
         r = as_float_or_nan(a)
@@ -1071,7 +1064,7 @@ class TestLookupMappingTransform(TestCase):
     def setUp(self) -> None:
         self.lookup = LookupMappingTransform(
             StringVariable("S"),
-            DictMissingConst(np.nan, {"": np.nan, "a": 0, "b": 1}),
+            {"": np.nan, "a": 0, "b": 1},
             dtype=float,
         )
 
@@ -1093,9 +1086,9 @@ class TestLookupMappingTransform(TestCase):
         v2 = DiscreteVariable("v1", values=tuple("abc"))
         v3 = DiscreteVariable("v3", values=tuple("abc"))
 
-        map1 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
-        map2 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
-        map3 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map1 = {"a": 2, "b": 0, "c": 1}
+        map2 = {"a": 2, "b": 0, "c": 1}
+        map3 = {"a": 2, "b": 0, "c": 1}
 
         t1 = LookupMappingTransform(v1, map1, float)
         t1a = LookupMappingTransform(v2, map2, float)
@@ -1107,15 +1100,15 @@ class TestLookupMappingTransform(TestCase):
         self.assertEqual(hash(t1), hash(t1a))
         self.assertNotEqual(hash(t1), hash(t2))
 
-        map1a = DictMissingConst(np.nan, {"a": 2, "b": 1, "c": 0})
+        map1a = {"a": 2, "b": 1, "c": 0}
         t1 = LookupMappingTransform(v1, map1, float)
         t1a = LookupMappingTransform(v1, map1a, float)
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 
-        map1a = DictMissingConst(2, {"a": 2, "b": 0, "c": 1})
+        map1a = {"a": 2, "b": 0, "c": 1}
         t1 = LookupMappingTransform(v1, map1, float)
-        t1a = LookupMappingTransform(v1, map1a, float)
+        t1a = LookupMappingTransform(v1, map1a, float, unknown=2)
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 

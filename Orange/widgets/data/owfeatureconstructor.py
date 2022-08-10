@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count, starmap
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Mapping
 
 import numpy as np
 
@@ -31,9 +31,12 @@ from AnyQt.QtWidgets import (
     QPushButton, QMenu, QListView, QFrame, QLabel, QMessageBox)
 from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
+
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
+from Orange.preprocess.transformation import MappingTransform
+from Orange.util import frompyfunc
 from Orange.data import Variable, Table, Value, Instance
 from Orange.data.util import get_unique_names
 from Orange.widgets import gui
@@ -63,7 +66,6 @@ DiscreteDescriptor = \
 
 StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 
-#warningIcon = gui.createAttributePixmap('!', QColor((202, 0, 32)))
 
 def make_variable(descriptor, compute_value):
     if isinstance(descriptor, ContinuousDescriptor):
@@ -1019,7 +1021,6 @@ def bind_variable(descriptor, env, data, use_values):
 
     values = {}
     cast = None
-    nan = float("nan")
 
     if isinstance(descriptor, DiscreteDescriptor):
         if not descriptor.values:
@@ -1028,27 +1029,60 @@ def bind_variable(descriptor, env, data, use_values):
             values = sorted({str(x) for x in str_func(data)})
             values = {name: i for i, name in enumerate(values)}
             descriptor = descriptor._replace(values=values)
-
-            def cast(x):  # pylint: disable=function-redefined
-                return values.get(x, nan)
-
+            cast = MappingTransformCast(values)
         else:
             values = [sanitized_name(v) for v in descriptor.values]
             values = {name: i for i, name in enumerate(values)}
 
     if isinstance(descriptor, DateTimeDescriptor):
-        parse = Orange.data.TimeVariable("_").parse
-
-        def cast(e):  # pylint: disable=function-redefined
-            if isinstance(e, (int, float)):
-                return e
-            if e == "" or e is None:
-                return np.nan
-            return parse(e)
+        cast = DateTimeCast()
 
     func = FeatureFunc(descriptor.expression, source_vars, values, cast,
                        use_values=use_values)
     return descriptor, func
+
+
+_parse_datetime = Orange.data.TimeVariable("_").parse
+_cast_datetime_num_types = (int, float)
+
+
+def cast_datetime(e):
+    if isinstance(e, _cast_datetime_num_types):
+        return e
+    if e == "" or e is None:
+        return np.nan
+    return _parse_datetime(e)
+
+
+_cast_datetime = frompyfunc(cast_datetime, 1, 1, dtype=float)
+
+
+class DateTimeCast:
+    def __call__(self, values):
+        return _cast_datetime(values)
+
+    def __eq__(self, other):
+        return isinstance(other, DateTimeCast)
+
+    def __hash__(self):
+        return hash(cast_datetime)
+
+
+class MappingTransformCast:
+    def __init__(self, mapping: Mapping):
+        self.t = MappingTransform(None, mapping)
+
+    def __reduce_ex__(self, protocol):
+        return type(self), (self.t.mapping, )
+
+    def __call__(self, values):
+        return self.t.transform(values)
+
+    def __eq__(self, other):
+        return isinstance(other, MappingTransformCast) and self.t == other.t
+
+    def __hash__(self):
+        return hash(self.t)
 
 
 def make_lambda(expression, args, env=None):
@@ -1217,8 +1251,7 @@ class FeatureFunc:
         else:
             y = list(starmap(f, args))
         if self.cast is not None:
-            cast = self.cast
-            y = [cast(y_) for y_ in y]
+            y = self.cast(y)
         return y
 
     def __call_instance(self, instance: Instance):
@@ -1248,7 +1281,7 @@ class FeatureFunc:
 
     def __reduce__(self):
         return type(self), (self.expression, self.args,
-                            self.extra_env, self.cast)
+                            self.extra_env, self.cast, self.use_values)
 
     def __repr__(self):
         return "{0.__name__}{1!r}".format(*self.__reduce__())
