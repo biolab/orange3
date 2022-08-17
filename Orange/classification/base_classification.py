@@ -16,7 +16,8 @@ class LearnerClassification(Learner):
 
 
 class ModelClassification(Model):
-    pass
+    def predict_proba(self, data):
+        return self(data, ret=Model.Probs)
 
 
 class SklModelClassification(SklModel, ModelClassification):

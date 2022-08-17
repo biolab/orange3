@@ -269,6 +269,19 @@ class ModelTest(unittest.TestCase):
                     (1, len(data.domain.class_var.values)), res.shape
                 )
 
+    def test_predict_proba(self):
+        data = Table("heart_disease")
+        for learner in all_learners():
+            with self.subTest(learner.__name__):
+                if learner in (ThresholdLearner, CalibratedLearner):
+                    model = learner(LogisticRegressionLearner())(data)
+                else:
+                    model = learner()(data)
+                probs = model.predict_proba(data)
+                shape = (len(data), len(data.domain.class_var.values))
+                self.assertEqual(probs.shape, shape)
+                self.assertTrue(np.all(np.sum(probs, axis=1) - 1 < 0.0001))
+
 
 class ExpandProbabilitiesTest(unittest.TestCase):
     def prepareTable(self, rows, attr, vars, class_var_domain):
