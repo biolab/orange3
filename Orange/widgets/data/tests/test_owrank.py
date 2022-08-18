@@ -21,7 +21,7 @@ from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, \
-    REG_SCORES, TableModel
+    REG_SCORES, BarRatioTableModel
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 
@@ -551,25 +551,6 @@ class TestOWRank(WidgetTest):
         self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.reduced_data)
         self.assertEqual(len(output), len(self.housing))
-
-
-class TestRankModel(GuiTest):
-    @staticmethod
-    def test_argsort():
-        func = TableModel()._argsortData  # pylint: disable=protected-access
-        assert_equal = np.testing.assert_equal
-
-        test_array = np.array([4.2, 7.2, np.nan, 1.3, np.nan])
-        assert_equal(func(test_array, Qt.AscendingOrder)[:3], [3, 0, 1])
-        assert_equal(func(test_array, Qt.DescendingOrder)[:3], [1, 0, 3])
-
-        test_array = np.array([4, 7, 2])
-        assert_equal(func(test_array, Qt.AscendingOrder), [2, 0, 1])
-        assert_equal(func(test_array, Qt.DescendingOrder), [1, 0, 2])
-
-        test_array = np.array(["Bertha", "daniela", "ann", "Cecilia"])
-        assert_equal(func(test_array, Qt.AscendingOrder), [2, 0, 3, 1])
-        assert_equal(func(test_array, Qt.DescendingOrder), [1, 3, 0, 2])
 
 
 if __name__ == "__main__":
