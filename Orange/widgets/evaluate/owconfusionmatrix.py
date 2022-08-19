@@ -99,7 +99,8 @@ class OWConfusionMatrix(widget.OWWidget):
 
     quantities = ["Number of instances",
                   "Proportion of predicted",
-                  "Proportion of actual"]
+                  "Proportion of actual",
+                  "Sum of probabilities"]
 
     settings_version = 1
     settingsHandler = ClassValuesContextHandler()
@@ -445,7 +446,8 @@ class OWConfusionMatrix(widget.OWWidget):
 
         # Update the displayed confusion matrix
         if self.results is not None and self.selected_learner:
-            cmatrix = confusion_matrix(self.results, self.selected_learner[0])
+            learner_index = self.selected_learner[0]
+            cmatrix = confusion_matrix(self.results, learner_index)
             colsum = cmatrix.sum(axis=0)
             rowsum = cmatrix.sum(axis=1)
             n = len(cmatrix)
@@ -456,6 +458,16 @@ class OWConfusionMatrix(widget.OWWidget):
             if self.selected_quantity == 0:
                 normalized = cmatrix.astype(int)
                 formatstr = "{}"
+                div = np.array([colors.max()])
+            elif self.selected_quantity == 3:
+                normalized = np.zeros((n, n), dtype=float)
+                probabilities = self.results.probabilities[learner_index]
+                for index in np.unique(self.results.actual).astype(int):
+                    mask = self.results.actual == index
+                    normalized[index] = np.sum(probabilities[mask], axis=0)
+                colsum = normalized.sum(axis=0)
+                rowsum = normalized.sum(axis=1)
+                formatstr = "{:2.1f}"
                 div = np.array([colors.max()])
             else:
                 if self.selected_quantity == 1:
@@ -496,6 +508,7 @@ class OWConfusionMatrix(widget.OWWidget):
             bold_font.setBold(True)
 
             def _sum_item(value, border=""):
+                value = int(round(value))
                 item = QStandardItem()
                 item.setData(value, Qt.DisplayRole)
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -506,9 +519,9 @@ class OWConfusionMatrix(widget.OWWidget):
                 return item
 
             for i in range(n):
-                self._set_item(n + 2, i + 2, _sum_item(int(colsum[i]), "t"))
-                self._set_item(i + 2, n + 2, _sum_item(int(rowsum[i]), "l"))
-            self._set_item(n + 2, n + 2, _sum_item(int(rowsum.sum())))
+                self._set_item(n + 2, i + 2, _sum_item(colsum[i], "t"))
+                self._set_item(i + 2, n + 2, _sum_item(rowsum[i], "l"))
+            self._set_item(n + 2, n + 2, _sum_item(rowsum.sum()))
 
     def send_report(self):
         """Send report"""
