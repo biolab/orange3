@@ -2,7 +2,11 @@ __all__ = ["pl", "plsi"]
 
 
 def pl(n, forms):
-    return forms.split("|")[n != 1]
+    if "|" in forms:
+        return forms.split("|")[n != 1]
+    else:
+        return forms + "s" * (n != 1)
+
 
 def plsi(n, forms):
     forms = forms.split("|")
