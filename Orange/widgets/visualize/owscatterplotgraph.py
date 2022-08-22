@@ -344,6 +344,11 @@ class AxisItem(AxisItem):
             return super().tickValues(minVal, maxVal, size)
 
         ticks = bins.thresholds
+        # Remove ticks that will later be removed in AxisItem.generateDrawSpecs
+        # because they are out of range. Removing them here is needed so that
+        # they do not affect spaces and label format
+        ticks = ticks[(ticks[0] < minVal)
+                      :len(ticks) - (ticks[-1] > maxVal)]
 
         max_steps = max(int(size / self._label_width), 1)
         if len(ticks) > max_steps:
