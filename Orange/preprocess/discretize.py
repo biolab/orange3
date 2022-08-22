@@ -1,7 +1,8 @@
 import calendar
 import re
 import time
-from typing import NamedTuple, List, Union, Callable
+from numbers import Number
+from typing import NamedTuple, List, Union, Callable, Optional
 import datetime
 from itertools import count
 
@@ -672,7 +673,10 @@ class EntropyMDL(Discretization):
             data.domain[attribute], points)
 
     @classmethod
-    def _normalize(cls, X, axis=None, out=None):
+    def _normalize(cls,
+                   X: Union[List[List[Number]], np.ndarray],
+                   axis: Optional[int] = None,
+                   out: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Normalize `X` array so it sums to 1.0 over the `axis`.
 
@@ -687,6 +691,7 @@ class EntropyMDL(Discretization):
         """
         X = np.asarray(X, dtype=float)
         scale = np.sum(X, axis=axis, keepdims=True)
+        scale[scale == 0] = 1
         if out is None:
             return X / scale
         else:
@@ -716,6 +721,8 @@ class EntropyMDL(Discretization):
         # req: np.all(np.abs(np.sum(D, axis=axis) - 1) < 1e-9)
 
         D = np.asarray(D)
+        if np.sum(D) == 0:
+            return 0
         Dc = np.clip(D, np.finfo(D.dtype).eps, 1.0)
         return - np.sum(D * np.log2(Dc), axis=axis)
 
