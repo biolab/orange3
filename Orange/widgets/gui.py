@@ -1,20 +1,19 @@
 """
 Wrappers for controls used in widgets
 """
-import math
-import numpy as np
-
 import logging
 import sys
 import warnings
 import weakref
 from collections.abc import Sequence
 
+import math
+import numpy as np
+
 from AnyQt import QtWidgets, QtCore, QtGui
-from AnyQt.QtCore import Qt, QSize, QItemSelection, pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QSize, QItemSelection
 from AnyQt.QtGui import QColor, QWheelEvent
-from AnyQt.QtWidgets import QWidget, QListView, QComboBox, QTableView, \
-    QItemDelegate
+from AnyQt.QtWidgets import QWidget, QListView, QComboBox
 
 from orangewidget.utils.itemdelegates import (
     BarItemDataDelegate as _BarItemDataDelegate

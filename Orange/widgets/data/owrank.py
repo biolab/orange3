@@ -6,6 +6,8 @@ from types import SimpleNamespace
 from typing import Any, Callable, List, Tuple
 
 import numpy as np
+from scipy.sparse import issparse
+
 from AnyQt.QtCore import (
     QItemSelection, QItemSelectionModel, QItemSelectionRange, Qt,
     pyqtSignal as Signal
@@ -15,16 +17,14 @@ from AnyQt.QtWidgets import (
     QRadioButton, QStackedWidget, QTableView
 )
 
-from Orange.widgets.gui import TableView, BarRatioTableModel
 from orangewidget.settings import IncompatibleContext
-from scipy.sparse import issparse
-
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, Domain, StringVariable, Table
 )
 from Orange.data.util import get_unique_names_duplicates
 from Orange.preprocess import score
 from Orange.widgets import gui, report
+from Orange.widgets.gui import BarRatioTableModel
 from Orange.widgets.settings import (
     ContextSetting, DomainContextHandler, Setting
 )
@@ -32,7 +32,8 @@ from Orange.widgets.unsupervised.owdistances import InterruptException
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import AttributeList, Input, MultiInput, Output, Msg, OWWidget
+from Orange.widgets.widget import AttributeList, Input, MultiInput, Output, Msg, \
+    OWWidget
 
 log = logging.getLogger(__name__)
 

@@ -12,7 +12,6 @@ from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel, \
 from AnyQt.QtWidgets import QCheckBox, QApplication
 
 from orangewidget.settings import Context, IncompatibleContext
-from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.modelling import RandomForestLearner, SGDLearner
@@ -21,7 +20,7 @@ from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, \
-    REG_SCORES, BarRatioTableModel
+    REG_SCORES
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 
