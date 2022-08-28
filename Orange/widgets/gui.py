@@ -1,13 +1,14 @@
 """
 Wrappers for controls used in widgets
 """
-import math
-
 import logging
 import sys
 import warnings
 import weakref
 from collections.abc import Sequence
+
+import math
+import numpy as np
 
 from AnyQt import QtWidgets, QtCore, QtGui
 from AnyQt.QtCore import Qt, QSize, QItemSelection
@@ -40,7 +41,7 @@ from orangewidget.gui import (
     ControlledCallback, ControlledCallFront, ValueCallback, connectControl,
     is_macstyle
 )
-
+from orangewidget.utils.itemmodels import PyTableModel
 
 try:
     # Some Orange widgets might expect this here
@@ -50,11 +51,10 @@ except ImportError:
     pass  # Neither WebKit nor WebEngine are available
 
 import Orange.data
-from Orange.widgets.utils import getdeepattr
+from Orange.widgets.utils import getdeepattr, vartype
 from Orange.data import \
     ContinuousVariable, StringVariable, TimeVariable, DiscreteVariable, \
     Variable, Value
-from Orange.widgets.utils import vartype
 
 __all__ = [
     # Re-exported
@@ -78,7 +78,7 @@ __all__ = [
     "createAttributePixmap", "attributeIconDict", "attributeItem",
     "listView", "ListViewWithSizeHint", "listBox", "OrangeListBox",
     "TableValueRole", "TableClassValueRole", "TableDistribution",
-    "TableVariable", "TableBarItem", "palette_combo_box"
+    "TableVariable", "TableBarItem", "palette_combo_box", "BarRatioTableModel"
 ]
 
 
@@ -663,3 +663,73 @@ class HScrollStepMixin:
             super().wheelEvent(new_event)
         else:
             super().wheelEvent(event)
+
+
+class BarRatioTableModel(PyTableModel):
+    """A model for displaying python tables.
+    Adds a BarRatioRole that returns Data, normalized between the extremes.
+    NaNs are listed last when sorting."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._extremes = {}
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == BarRatioRole and index.isValid():
+            value = super().data(index, Qt.EditRole)
+            if not isinstance(value, float):
+                return None
+            vmin, vmax = self._extremes.get(index.column(), (-np.inf, np.inf))
+            value = (value - vmin) / ((vmax - vmin) or 1)
+            return value
+
+        if role == Qt.DisplayRole and index.column() != 0:
+            role = Qt.EditRole
+
+        value = super().data(index, role)
+
+        # Display nothing for non-existent attr value counts in column 1
+        if role == Qt.EditRole \
+                and index.column() == 1 and np.isnan(value):
+            return ''
+
+        return value
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.InitialSortOrderRole:
+            return Qt.DescendingOrder if section > 0 else Qt.AscendingOrder
+        return super().headerData(section, orientation, role)
+
+    def setExtremesFrom(self, column, values):
+        """Set extremes for column's ratio bars from values"""
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*All-NaN slice encountered.*", RuntimeWarning)
+                vmin = np.nanmin(values)
+            if np.isnan(vmin):
+                raise TypeError
+        except TypeError:
+            vmin, vmax = -np.inf, np.inf
+        else:
+            vmax = np.nanmax(values)
+        self._extremes[column] = (vmin, vmax)
+
+    def resetSorting(self, yes_reset=False):
+        # pylint: disable=arguments-differ
+        """We don't want to invalidate our sort proxy model everytime we
+        wrap a new list. Our proxymodel only invalidates explicitly
+        (i.e. when new data is set)"""
+        if yes_reset:
+            super().resetSorting()
+
+    def _argsortData(self, data, order):
+        if data.dtype not in (float, int):
+            data = np.char.lower(data)
+        indices = np.argsort(data, kind='mergesort')
+        if order == Qt.DescendingOrder:
+            indices = indices[::-1]
+            if data.dtype == float:
+                # Always sort NaNs last
+                return np.roll(indices, -np.isnan(data).sum())
+        return indices
