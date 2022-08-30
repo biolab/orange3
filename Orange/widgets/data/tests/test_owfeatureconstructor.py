@@ -8,6 +8,7 @@ import copy
 from unittest.mock import patch, Mock
 
 import numpy as np
+from scipy import sparse as sp
 
 from orangewidget.settings import Context
 
@@ -148,6 +149,20 @@ class FeatureConstructorTest(unittest.TestCase):
                                      construct_variables(desc, data)))
         np.testing.assert_equal(data.X, data.metas)
 
+    def test_transform_sparse(self):
+        domain = Domain([ContinuousVariable("A")])
+        desc = [
+            ContinuousDescriptor(name="X", expression="A", number_of_decimals=2)
+        ]
+        X = sp.csc_matrix(np.arange(5).reshape(5, 1))
+        data = Table.from_numpy(domain, X)
+        data_ = data.transform(Domain(data.domain.attributes,
+                                      [],
+                                      construct_variables(desc, data)))
+        np.testing.assert_equal(
+            data.get_column_view(0)[0], data_.get_column_view(0)[0]
+        )
+
 
 class TestTools(unittest.TestCase):
     def test_free_vars(self):
@@ -276,7 +291,7 @@ class FeatureFuncTest(unittest.TestCase):
 
     def test_repr(self):
         self.assertEqual(repr(FeatureFunc("a + 1", [("a", 2)])),
-                         "FeatureFunc('a + 1', [('a', 2)], {}, None, False)")
+                         "FeatureFunc('a + 1', [('a', 2)], {}, None, False, None)")
 
     def test_call(self):
         iris = Table("iris")
@@ -291,7 +306,7 @@ class FeatureFuncTest(unittest.TestCase):
         f = FeatureFunc("name[0]",
                         [("name", zoo.domain["name"])])
         r = f(zoo)
-        self.assertEqual(r, [x[0] for x in zoo.metas[:, 0]])
+        self.assertEqual(list(r), [x[0] for x in zoo.metas[:, 0]])
         self.assertEqual(f(zoo[0]), str(zoo[0, "name"])[0])
 
     def test_missing_variable(self):
@@ -309,7 +324,7 @@ class FeatureFuncTest(unittest.TestCase):
         data = Table.from_numpy(Domain([TimeVariable("T", have_date=True)]), [[0], [0]])
         f = FeatureFunc("str(T)", [("T", data.domain[0])])
         c = f(data)
-        self.assertEqual(c, ["1970-01-01", "1970-01-01"])
+        self.assertEqual(list(c), ["1970-01-01", "1970-01-01"])
 
     def test_invalid_expression_variable(self):
         iris = Table("iris")
