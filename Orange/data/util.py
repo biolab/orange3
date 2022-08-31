@@ -2,6 +2,8 @@
 Data-manipulation utilities.
 """
 import re
+import types
+import warnings
 from collections import Counter
 from itertools import chain, count
 from typing import Callable, Union, List, Type
@@ -72,6 +74,12 @@ class SharedComputeValue:
     def __init__(self, compute_shared, variable=None):
         self.compute_shared = compute_shared
         self.variable = variable
+        if compute_shared is not None \
+                and not isinstance(compute_shared, (types.BuiltinFunctionType,
+                                                   types.FunctionType)) \
+                and not redefines_eq_and_hash(compute_shared):
+            warnings.warn(f"{type(compute_shared).__name__} should define"
+                          f"__eq__ and __hash__ to be used for compute_shared")
 
     def __call__(self, data, shared_data=None):
         """Fallback if common parts are not passed."""
@@ -84,6 +92,14 @@ class SharedComputeValue:
         part of computation and return new variable values.
         Subclasses need to implement this function."""
         raise NotImplementedError
+
+    def __eq__(self, other):
+        return type(self) is type(other) \
+               and self.compute_shared == other.compute_shared \
+               and self.variable == other.variable
+
+    def __hash__(self):
+        return hash((type(self), self.compute_shared, self.variable))
 
 
 def vstack(arrays):
