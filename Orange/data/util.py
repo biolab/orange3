@@ -339,8 +339,4 @@ def redefines_eq_and_hash(this):
     if this.__hash__ is None:
         return False
 
-    for o in this.mro()[1:]:
-        if this.__eq__ is o.__eq__ or this.__hash__ is o.__hash__:
-            return False
-
-    return True
+    return "__hash__" in this.__dict__ and "__eq__" in this.__dict__
