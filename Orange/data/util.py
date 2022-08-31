@@ -307,3 +307,24 @@ def sanitized_name(name: str) -> str:
     if sanitized[0].isdigit():
         sanitized = "_" + sanitized
     return sanitized
+
+
+def redefines_eq_and_hash(this):
+    """
+    Check if the passed object (or class) redefines __eq__ and __hash__.
+
+    Args:
+        this: class or object
+    """
+    if not isinstance(this, type):
+        this = type(this)
+
+    # if only __eq__ is defined, __hash__ is set to None
+    if this.__hash__ is None:
+        return False
+
+    for o in this.mro()[1:]:
+        if this.__eq__ is o.__eq__ or this.__hash__ is o.__hash__:
+            return False
+
+    return True
