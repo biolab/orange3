@@ -136,7 +136,7 @@ class OWConfusionMatrix(widget.OWWidget):
         )
 
         self.outputbox = gui.vBox(self.buttonsArea)
-        box = gui.hBox(self.outputbox)
+        box = gui.vBox(self.outputbox, box="Output")
         gui.checkBox(box, self, "append_predictions",
                      "Predictions", callback=self._invalidate)
         gui.checkBox(box, self, "append_probabilities",
