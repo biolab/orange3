@@ -258,6 +258,24 @@ class TestVariable(unittest.TestCase):
             ContinuousVariable("x", compute_value=Invalid())
             self.assertNotEqual(warns, [])
 
+        with warnings.catch_warnings(record=True) as warns:
+
+            class MissingHash:
+                def __eq__(self, other):
+                    return self is other
+
+            ContinuousVariable("x", compute_value=MissingHash())
+            self.assertNotEqual(warns, [])
+
+        with warnings.catch_warnings(record=True) as warns:
+
+            class MissingEq:
+                def __hash__(self):
+                    return super().__hash__(self)
+
+            ContinuousVariable("x", compute_value=MissingEq())
+            self.assertNotEqual(warns, [])
+
 
 def variabletest(varcls):
     def decorate(cls):

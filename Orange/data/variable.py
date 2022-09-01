@@ -13,6 +13,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import _variable
+from Orange.data.util import redefines_eq_and_hash
 from Orange.util import Registry, Reprable, OrangeDeprecationWarning
 
 
@@ -368,11 +369,11 @@ class Variable(Reprable, metaclass=VariableMeta):
             warnings.warn("Variable must have a name", OrangeDeprecationWarning,
                           stacklevel=3)
         self._name = name
+
         if compute_value is not None \
                 and not isinstance(compute_value, (types.BuiltinFunctionType,
                                                    types.FunctionType)) \
-                and (type(compute_value).__eq__ is object.__eq__
-                     or compute_value.__hash__ is object.__hash__):
+                and not redefines_eq_and_hash(compute_value):
             warnings.warn(f"{type(compute_value).__name__} should define"
                           f"__eq__ and __hash__ to be used for compute_value")
 

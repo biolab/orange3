@@ -3,7 +3,7 @@ import numpy as np
 
 from Orange.data import Domain, ContinuousVariable
 from Orange.data.util import get_unique_names, get_unique_names_duplicates, \
-    get_unique_names_domain, one_hot, sanitized_name
+    get_unique_names_domain, one_hot, sanitized_name, redefines_eq_and_hash
 
 
 class TestGetUniqueNames(unittest.TestCase):
@@ -307,6 +307,40 @@ class TestSanitizedName(unittest.TestCase):
         self.assertEqual(sanitized_name("Foo Bar"), "Foo_Bar")
         self.assertEqual(sanitized_name("0Foo"), "_0Foo")
         self.assertEqual(sanitized_name("1 Foo Bar"), "_1_Foo_Bar")
+
+
+class TestRedefinesEqAndHash(unittest.TestCase):
+
+    class Valid:
+        def __eq__(self, other):
+            pass
+
+        def __hash__(self):
+            pass
+
+    class Subclass(Valid):
+        pass
+
+    class OnlyEq:
+        def __eq__(self, other):
+            pass
+
+    class OnlyHash:
+        def __hash__(self):
+            pass
+
+    def test_valid(self):
+        self.assertTrue(redefines_eq_and_hash(self.Valid))
+        self.assertTrue(redefines_eq_and_hash(self.Valid()))
+
+    def test_subclass(self):
+        self.assertFalse(redefines_eq_and_hash(self.Subclass))
+
+    def test_only_eq(self):
+        self.assertFalse(redefines_eq_and_hash(self.OnlyEq))
+
+    def test_only_hash(self):
+        self.assertFalse(redefines_eq_and_hash(self.OnlyHash))
 
 
 if __name__ == "__main__":
