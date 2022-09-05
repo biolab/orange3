@@ -244,7 +244,7 @@ class InteractiveViewBox(pg.ViewBox):
             # uses mapRectFromParent. We don't want to copy the parts of the
             # method that work, hence we only use our code under the following
             # conditions.
-            if ev.button() & (Qt.LeftButton | Qt.MidButton) \
+            if ev.button() & (Qt.LeftButton | Qt.MiddleButton) \
                     and self.state['mouseMode'] == pg.ViewBox.RectMode \
                     and ev.isFinish():
                 zoom()
