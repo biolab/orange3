@@ -374,7 +374,7 @@ class Variable(Reprable, metaclass=VariableMeta):
                 and not isinstance(compute_value, (types.BuiltinFunctionType,
                                                    types.FunctionType)) \
                 and not redefines_eq_and_hash(compute_value):
-            warnings.warn(f"{type(compute_value).__name__} should define"
+            warnings.warn(f"{type(compute_value).__name__} should define "
                           f"__eq__ and __hash__ to be used for compute_value")
 
         self._compute_value = compute_value
