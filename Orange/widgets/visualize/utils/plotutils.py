@@ -1,5 +1,6 @@
 import itertools
 from math import log10, floor, ceil
+from typing import Union, Optional, Callable
 
 import numpy as np
 
@@ -480,10 +481,10 @@ class DiscretizedScale:
             else:
                 resolution /= 2
             bins = ceil(dif / resolution)
-        self.offset = resolution * floor(min_v // resolution)
+        self.offset: Union[int, float] = resolution * floor(min_v // resolution)
         self.bins = bins
         self.decimals = max(decimals, 0)
-        self.width = resolution
+        self.width: Union[int, float] = resolution
 
     def get_bins(self):
         # if width is a very large int, dtype of width * np.arange is object
@@ -494,7 +495,8 @@ class DiscretizedScale:
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
 
-    def __init__(self, palette, scale, label_formatter=None):
+    def __init__(self, palette, scale,
+                 label_formatter: Optional[Callable[[float], str]] = None):
         """
         :param palette: palette used for showing continuous values
         :type palette: BinnedContinuousPalette
@@ -507,7 +509,9 @@ class PaletteItemSample(ItemSample):
         self.scale = scale
         if label_formatter is None:
             label_formatter = "{{:.{}f}}".format(scale.decimals).format
-        cuts = [label_formatter(scale.offset + i * scale.width)
+        # offset and width can be in, but label_formatter expects float
+        # (because it can be ContinuousVariable.str_val), hence cast to float
+        cuts = [label_formatter(float(scale.offset + i * scale.width))
                 for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cuts, cuts[1:])]

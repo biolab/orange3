@@ -1,6 +1,7 @@
 import sys
 import itertools
 import warnings
+from typing import Callable
 from xml.sax.saxutils import escape
 from datetime import datetime, timezone
 
@@ -1456,7 +1457,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 SymbolItemSample(pen=color, brush=color, size=10, symbol=symbol),
                 escape(label))
 
-    def _update_continuous_color_legend(self, label_formatter):
+    def _update_continuous_color_legend(self, label_formatter: Callable[[float], str]):
         self.color_legend.clear()
         if self.scale is None or self.scatterplot_item is None:
             return
