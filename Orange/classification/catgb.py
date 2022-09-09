@@ -4,8 +4,8 @@ import numpy as np
 
 import catboost
 
-from Orange.base import CatGBBaseLearner
-from Orange.classification import Learner
+from Orange.base import CatGBBaseLearner, CatGBModel
+from Orange.classification import Learner, Model
 from Orange.data import Variable, DiscreteVariable, Table
 from Orange.preprocess.score import LearnerScorer
 
@@ -21,5 +21,10 @@ class _FeatureScorerMixin(LearnerScorer):
         return model.cat_model.feature_importances_, model.domain.attributes
 
 
+class CatGBClsModel(CatGBModel, Model):
+    pass
+
+
 class CatGBClassifier(CatGBBaseLearner, Learner, _FeatureScorerMixin):
     __wraps__ = catboost.CatBoostClassifier
+    __returns__ = CatGBClsModel

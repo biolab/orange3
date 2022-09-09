@@ -6,7 +6,7 @@ import numpy as np
 import xgboost
 
 from Orange.base import XGBBase
-from Orange.classification import Learner
+from Orange.classification import Learner, SklModel
 from Orange.data import Variable, DiscreteVariable, Table
 from Orange.preprocess.score import LearnerScorer
 
@@ -24,6 +24,7 @@ class _FeatureScorerMixin(LearnerScorer):
 
 class XGBClassifier(XGBBase, Learner, _FeatureScorerMixin):
     __wraps__ = xgboost.XGBClassifier
+    __returns__ = SklModel
 
     def __init__(self,
                  max_depth=None,
@@ -87,6 +88,7 @@ class XGBClassifier(XGBBase, Learner, _FeatureScorerMixin):
 
 class XGBRFClassifier(XGBBase, Learner, _FeatureScorerMixin):
     __wraps__ = xgboost.XGBRFClassifier
+    __returns__ = SklModel
 
     def __init__(self,
                  max_depth=None,

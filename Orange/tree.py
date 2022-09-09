@@ -376,3 +376,6 @@ class TreeModel(TreeModelInterface):
         conditions = OrderedDict()
         self.root.parent = None
         _compute_subtree(self.root)
+
+    def predict_proba(self, data):
+        return self(data, ret=TreeModelInterface.Probs)
