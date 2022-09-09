@@ -8,7 +8,7 @@ from collections import namedtuple
 from functools import partial
 from json import JSONDecodeError
 from os import getenv
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Dict, Union
 
 from AnyQt.QtCore import QSettings
 from httpx import AsyncClient, NetworkError, ReadTimeout, Response
@@ -306,7 +306,7 @@ class ServerEmbedderCommunicator:
             queue.task_done()
 
     async def _send_request(
-            self, client: AsyncClient, data: bytes, url: str
+            self, client: AsyncClient, data: Union[bytes, Dict], url: str
     ) -> Optional[List[float]]:
         """
         This function sends a single request to the server.
@@ -331,7 +331,9 @@ class ServerEmbedderCommunicator:
             "Content-Length": str(len(data)),
         }
         try:
-            response = await client.post(url, headers=headers, data=data)
+            # bytes are sent as content parameter and dictionary as data
+            kwargs = dict(content=data) if isinstance(data, bytes) else dict(data=data)
+            response = await client.post(url, headers=headers, **kwargs)
         except ReadTimeout as ex:
             log.debug("Read timeout", exc_info=True)
             # it happens when server do not respond in time defined by timeout
