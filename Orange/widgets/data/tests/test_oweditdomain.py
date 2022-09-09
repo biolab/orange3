@@ -962,6 +962,7 @@ class TestReinterpretTransforms(TestCase):
         When this test start to fail:
         - remove this test
         - remove if clause in datetime_to_epoch function and supporting comments
+        - remove same if clause in var function in owgroupby (line 77, 78)
         - set pandas dependency version to pandas>=1.4
         """
         from datetime import datetime

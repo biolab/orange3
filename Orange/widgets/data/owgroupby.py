@@ -26,6 +26,7 @@ from orangewidget.utils.listview import ListViewSearch
 from orangewidget.utils.signals import Input, Output
 from orangewidget.utils import enum_as_int
 from orangewidget.widget import Msg
+from pandas.core.dtypes.common import is_datetime64_any_dtype
 
 from Orange.data import (
     ContinuousVariable,
@@ -56,6 +57,42 @@ def concatenate(x):
     return " ".join(str(v) for v in x if not pd.isnull(v) and len(str(v)) > 0)
 
 
+def std(s):
+    """
+    Std that also handle time variable. Pandas's std return Timedelta object in
+    case of datetime columns - transform TimeDelta to seconds
+    """
+    std_ = s.std()
+    if isinstance(std_, pd.Timedelta):
+        return std_.total_seconds()
+    # std returns NaT when cannot compute value - change it to nan to keep colum numeric
+    return nan if pd.isna(std_) else std_
+
+
+def var(s):
+    """
+    Variance that also handle time variable. Pandas's variance function somehow
+    doesn't support DateTimeArray - this function fist converts datetime series
+    to UNIX epoch and then computes variance
+    """
+    if is_datetime64_any_dtype(s):
+        initial_ts = pd.Timestamp("1970-01-01", tz=None if s.dt.tz is None else "UTC")
+        if s.dt.tz is not None:
+            s = s.tz_convert("UTC")
+        s = (s - initial_ts) / pd.Timedelta("1s")
+    var_ = s.var()
+    return var_.total_seconds() if isinstance(var_, pd.Timedelta) else var_
+
+
+def span(s):
+    """
+    Span that also handle time variable. Time substitution return Timedelta
+    object in case of datetime columns - transform TimeDelta to seconds
+    """
+    span_ = pd.Series.max(s) - pd.Series.min(s)
+    return span_.total_seconds() if isinstance(span_, pd.Timedelta) else span_
+
+
 AGGREGATIONS = {
     "Mean": Aggregation("mean", {ContinuousVariable, TimeVariable}),
     "Median": Aggregation("median", {ContinuousVariable, TimeVariable}),
@@ -63,19 +100,16 @@ AGGREGATIONS = {
         lambda x: pd.Series.mode(x).get(0, nan),
         {ContinuousVariable, DiscreteVariable, TimeVariable}
     ),
-    "Standard deviation": Aggregation("std", {ContinuousVariable, TimeVariable}),
-    "Variance": Aggregation("var", {ContinuousVariable, TimeVariable}),
-    "Sum": Aggregation("sum", {ContinuousVariable, TimeVariable}),
+    "Standard deviation": Aggregation(std, {ContinuousVariable, TimeVariable}),
+    "Variance": Aggregation(var, {ContinuousVariable, TimeVariable}),
+    "Sum": Aggregation("sum", {ContinuousVariable}),
     "Concatenate": Aggregation(
         concatenate,
         {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
     ),
     "Min. value": Aggregation("min", {ContinuousVariable, TimeVariable}),
     "Max. value": Aggregation("max", {ContinuousVariable, TimeVariable}),
-    "Span": Aggregation(
-        lambda x: pd.Series.max(x) - pd.Series.min(x),
-        {ContinuousVariable, TimeVariable},
-    ),
+    "Span": Aggregation(span, {ContinuousVariable, TimeVariable}),
     "First value": Aggregation(
         "first", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
     ),
@@ -505,6 +539,17 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
     def __aggregation_compatible(agg, attr):
         """Check a compatibility of aggregation with the variable"""
         return type(attr) in AGGREGATIONS[agg].types
+
+    @classmethod
+    def migrate_context(cls, context, _):
+        """
+        Before widget allowed using Sum on Time variable, now it is forbidden.
+        This function removes Sum from the context for TimeVariables (104)
+        """
+        for var_, v in context.values["aggregations"][0].items():
+            if len(var_) == 2:
+                if var_[1] == 104:
+                    v.discard("Sum")
 
 
 if __name__ == "__main__":

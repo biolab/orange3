@@ -14,6 +14,9 @@ from Orange.data import (
     table_to_frame,
     Domain,
     ContinuousVariable,
+    DiscreteVariable,
+    TimeVariable,
+    StringVariable,
 )
 from Orange.data.tests.test_aggregate import create_sample_data
 from Orange.widgets.data.owgroupby import OWGroupBy
@@ -665,6 +668,28 @@ class TestOWGroupBy(WidgetTest):
             self.widget.aggregations,
         )
 
+    def test_context_time_variable(self):
+        """
+        Test migrate_context which removes sum for TimeVariable since
+        GroupBy does not support it anymore for TimeVariable
+        """
+        tv = TimeVariable("T", have_time=True, have_date=True)
+        data = Table.from_numpy(
+            Domain([DiscreteVariable("G", values=["G1", "G2"]), tv]),
+            np.array([[0.0, 0.0], [0, 10], [0, 20], [1, 500], [1, 1000]]),
+        )
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.aggregations[tv].add("Sum")
+        self.widget.aggregations[tv].add("Median")
+        self.send_signal(self.widget.Inputs.data, self.iris)
+
+        widget = self.create_widget(
+            OWGroupBy,
+            stored_settings=self.widget.settingsHandler.pack_data(self.widget),
+        )
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        self.assertSetEqual(widget.aggregations[tv], {"Mean", "Median"})
+
     @patch(
         "Orange.data.aggregate.OrangeTableGroupBy.aggregate",
         Mock(side_effect=ValueError("Test unexpected err")),
@@ -690,15 +715,210 @@ class TestOWGroupBy(WidgetTest):
 
         # time variable as a group by variable
         self.send_signal(self.widget.Inputs.data, data)
-        self._set_selection(self.widget.gb_attrs_view, [1])
+        self._set_selection(self.widget.gb_attrs_view, [3])
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(3, len(output))
 
         # time variable as a grouped variable
-        self.send_signal(self.widget.Inputs.data, data)
-        self._set_selection(self.widget.gb_attrs_view, [5])
+        attributes = [data.domain["c2"], data.domain["d2"]]
+        self.send_signal(self.widget.Inputs.data, data[:, attributes])
+        self._set_selection(self.widget.gb_attrs_view, [1])  # d2
+        # check all aggregations
+        self.assert_aggregations_equal(["Mean", "Mode"])
+        self.select_table_rows(self.widget.agg_table_view, [0])  # c2
+        for cb in self.widget.agg_checkboxes.values():
+            if cb.text() != "Mean":
+                cb.click()
+        self.assert_aggregations_equal(["Mean, Median, Mode and 12 more", "Mode"])
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(2, len(output))
+
+    def test_time_variable_results(self):
+        data = Table.from_numpy(
+            Domain(
+                [
+                    DiscreteVariable("G", values=["G1", "G2", "G3"]),
+                    TimeVariable("T", have_time=True, have_date=True),
+                ]
+            ),
+            np.array([[0.0, 0], [0, 10], [0, 20], [1, 500], [1, 1000], [2, 1]]),
+        )
+        self.send_signal(self.widget.Inputs.data, data)
+
+        # disable aggregating G
+        self.select_table_rows(self.widget.agg_table_view, [0])  # T
+        self.widget.agg_checkboxes["Mode"].click()
+        # select all possible aggregations for T
+        self.select_table_rows(self.widget.agg_table_view, [1])  # T
+        for cb in self.widget.agg_checkboxes.values():
+            if cb.text() != "Mean":
+                cb.click()
+        self.assert_aggregations_equal(["", "Mean, Median, Mode and 12 more"])
+
+        expected_df = pd.DataFrame(
+            {
+                "T - Mean": [
+                    "1970-01-01 00:00:10",
+                    "1970-01-01 00:12:30",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Median": [
+                    "1970-01-01 00:00:10",
+                    "1970-01-01 00:12:30",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Mode": [
+                    "1970-01-01 00:00:00",
+                    "1970-01-01 00:08:20",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Standard deviation": [10, 353.5533905932738, np.nan],
+                "T - Variance": [100, 125000, np.nan],
+                "T - Min. value": [
+                    "1970-01-01 00:00:00",
+                    "1970-01-01 00:08:20",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Max. value": [
+                    "1970-01-01 00:00:20",
+                    "1970-01-01 00:16:40",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Span": [20, 500, 0],
+                "T - First value": [
+                    "1970-01-01 00:00:00",
+                    "1970-01-01 00:08:20",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Last value": [
+                    "1970-01-01 00:00:20",
+                    "1970-01-01 00:16:40",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Count defined": [3, 2, 1],
+                "T - Count": [3, 2, 1],
+                "T - Proportion defined": [1, 1, 1],
+                "T - Concatenate": [
+                    "1970-01-01 00:00:00 1970-01-01 00:00:10 1970-01-01 00:00:20",
+                    "1970-01-01 00:08:20 1970-01-01 00:16:40",
+                    "1970-01-01 00:00:01",
+                ],
+                "G": ["G1", "G2", "G3"],
+            }
+        )
+        df_col = [
+            "T - Mean",
+            "T - Median",
+            "T - Mode",
+            "T - Min. value",
+            "T - Max. value",
+            "T - First value",
+            "T - Last value",
+        ]
+        expected_df[df_col] = expected_df[df_col].apply(pd.to_datetime)
+        output = self.get_output(self.widget.Outputs.data)
+        output_df = table_to_frame(output, include_metas=True)
+        # remove random since it is not possible to test
+        output_df = output_df.loc[:, ~output_df.columns.str.endswith("Random value")]
+
+        pd.testing.assert_frame_equal(
+            output_df,
+            expected_df,
+            check_dtype=False,
+            check_column_type=False,
+            check_categorical=False,
+            atol=1e-3,
+        )
+        expected_attributes = (
+            TimeVariable("T - Mean", have_date=1, have_time=1),
+            TimeVariable("T - Median", have_date=1, have_time=1),
+            TimeVariable("T - Mode", have_date=1, have_time=1),
+            ContinuousVariable(name="T - Standard deviation"),
+            ContinuousVariable(name="T - Variance"),
+            TimeVariable("T - Min. value", have_date=1, have_time=1),
+            TimeVariable("T - Max. value", have_date=1, have_time=1),
+            ContinuousVariable(name="T - Span"),
+            TimeVariable("T - First value", have_date=1, have_time=1),
+            TimeVariable("T - Last value", have_date=1, have_time=1),
+            TimeVariable("T - Random value", have_date=1, have_time=1),
+            ContinuousVariable(name="T - Count defined"),
+            ContinuousVariable(name="T - Count"),
+            ContinuousVariable(name="T - Proportion defined"),
+        )
+        expected_metas = (
+            StringVariable(name="T - Concatenate"),
+            DiscreteVariable(name="G", values=("G1", "G2", "G3")),
+        )
+        self.assertTupleEqual(output.domain.attributes, expected_attributes)
+        self.assertTupleEqual(output.domain.metas, expected_metas)
+
+    def test_tz_time_variable_results(self):
+        """ Test results in case of timezoned time variable"""
+        tv = TimeVariable("T", have_time=True, have_date=True)
+        data = Table.from_numpy(
+            Domain([DiscreteVariable("G", values=["G1", "G2"]), tv]),
+            np.array([[0.0, tv.parse("1970-01-01 01:00:00+01:00")],
+                      [0, tv.parse("1970-01-01 01:00:10+01:00")],
+                     [0, tv.parse("1970-01-01 01:00:20+01:00")]]),
+        )
+
+        self.send_signal(self.widget.Inputs.data, data)
+
+        # disable aggregating G
+        self.select_table_rows(self.widget.agg_table_view, [0])  # T
+        self.widget.agg_checkboxes["Mode"].click()
+        # select all possible aggregations for T
+        self.select_table_rows(self.widget.agg_table_view, [1])  # T
+        for cb in self.widget.agg_checkboxes.values():
+            if cb.text() != "Mean":
+                cb.click()
+        self.assert_aggregations_equal(["", "Mean, Median, Mode and 12 more"])
+
+        expected_df = pd.DataFrame(
+            {
+                "T - Mean": ["1970-01-01 00:00:10"],
+                "T - Median": ["1970-01-01 00:00:10"],
+                "T - Mode": ["1970-01-01 00:00:00"],
+                "T - Standard deviation": [10],
+                "T - Variance": [100],
+                "T - Min. value": ["1970-01-01 00:00:00"],
+                "T - Max. value": ["1970-01-01 00:00:20"],
+                "T - Span": [20, ],
+                "T - First value": ["1970-01-01 00:00:00"],
+                "T - Last value": ["1970-01-01 00:00:20"],
+                "T - Count defined": [3],
+                "T - Count": [3],
+                "T - Proportion defined": [1],
+                "T - Concatenate": [
+                    "1970-01-01 00:00:00 1970-01-01 00:00:10 1970-01-01 00:00:20",
+                ],
+                "G": ["G1"],
+            }
+        )
+        df_col = [
+            "T - Mean",
+            "T - Median",
+            "T - Mode",
+            "T - Min. value",
+            "T - Max. value",
+            "T - First value",
+            "T - Last value",
+        ]
+        expected_df[df_col] = expected_df[df_col].apply(pd.to_datetime)
+        output_df = table_to_frame(
+            self.get_output(self.widget.Outputs.data), include_metas=True
+        )
+        # remove random since it is not possible to test
+        output_df = output_df.loc[:, ~output_df.columns.str.endswith("Random value")]
+
+        pd.testing.assert_frame_equal(
+            output_df,
+            expected_df,
+            check_dtype=False,
+            check_column_type=False,
+            check_categorical=False,
+            atol=1e-3,
+        )
 
     def test_only_nan_in_group(self):
         data = Table(
