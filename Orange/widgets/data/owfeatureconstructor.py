@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count, starmap
-from typing import List, Dict, Any, Mapping
+from typing import List, Dict, Any, Mapping, Optional
 
 import numpy as np
 
@@ -1021,6 +1021,7 @@ def bind_variable(descriptor, env, data, use_values):
 
     values = {}
     cast = None
+    dtype = object if isinstance(descriptor, StringDescriptor) else float
 
     if isinstance(descriptor, DiscreteDescriptor):
         if not descriptor.values:
@@ -1038,7 +1039,7 @@ def bind_variable(descriptor, env, data, use_values):
         cast = DateTimeCast()
 
     func = FeatureFunc(descriptor.expression, source_vars, values, cast,
-                       use_values=use_values)
+                       use_values=use_values, dtype=dtype)
     return descriptor, func
 
 
@@ -1216,7 +1217,10 @@ class FeatureFunc:
         A function for casting the expressions result to the appropriate
         type (e.g. string representation of date/time variables to floats)
     """
-    def __init__(self, expression, args, extra_env=None, cast=None, use_values=False):
+    dtype: Optional['DType'] = None
+
+    def __init__(self, expression, args, extra_env=None, cast=None, use_values=False,
+                 dtype=None):
         self.expression = expression
         self.args = args
         self.extra_env = dict(extra_env or {})
@@ -1225,6 +1229,7 @@ class FeatureFunc:
         self.cast = cast
         self.mask_exceptions = True
         self.use_values = use_values
+        self.dtype = dtype
 
     def __call__(self, table, *_):
         if isinstance(table, Table):
@@ -1252,7 +1257,7 @@ class FeatureFunc:
             y = list(starmap(f, args))
         if self.cast is not None:
             y = self.cast(y)
-        return y
+        return np.asarray(y, dtype=self.dtype)
 
     def __call_instance(self, instance: Instance):
         table = Table.from_numpy(
@@ -1281,7 +1286,8 @@ class FeatureFunc:
 
     def __reduce__(self):
         return type(self), (self.expression, self.args,
-                            self.extra_env, self.cast, self.use_values)
+                            self.extra_env, self.cast, self.use_values,
+                            self.dtype)
 
     def __repr__(self):
         return "{0.__name__}{1!r}".format(*self.__reduce__())
