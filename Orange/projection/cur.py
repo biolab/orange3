@@ -93,7 +93,7 @@ class CUR(Projector):
         if self.compute_U:
             pinvC = np.linalg.pinv(self.C_)
             pinvR = np.linalg.pinv(self.R_)
-            self.U_ = np.dot(np.dot(pinvC, X), pinvR)
+            self.U_ = np.linalg.multi_dot([pinvC, X, pinvR])
         else:
             self.U_ = None
 
