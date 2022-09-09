@@ -628,7 +628,7 @@ class ContinuousVariable(Variable):
         """
         return _variable.val_from_str_add_cont(self, s)
 
-    def repr_val(self, val):
+    def repr_val(self, val: float):
         """
         Return the value as a string with the prescribed number of decimals.
         """

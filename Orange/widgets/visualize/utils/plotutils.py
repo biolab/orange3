@@ -1,4 +1,6 @@
 import itertools
+from math import log10, floor, ceil
+from typing import Union, Optional, Callable
 
 import numpy as np
 
@@ -434,10 +436,67 @@ class ElidedLabelsAxis(pg.AxisItem):
         return axis_spec, tick_specs, text_specs
 
 
+class DiscretizedScale:
+    """
+    Compute suitable bins for continuous value from its minimal and
+    maximal value.
+
+    The width of the bin is a power of 10 (including negative powers).
+    The minimal value is rounded up and the maximal is rounded down. If this
+    gives less than 3 bins, the width is divided by four; if it gives
+    less than 6, it is halved.
+
+    .. attribute:: offset
+        The start of the first bin.
+
+    .. attribute:: width
+        The width of the bins
+
+    .. attribute:: bins
+        The number of bins
+
+    .. attribute:: decimals
+        The number of decimals used for printing out the boundaries
+    """
+    def __init__(self, min_v, max_v):
+        """
+        :param min_v: Minimal value
+        :type min_v: float
+        :param max_v: Maximal value
+        :type max_v: float
+        """
+        super().__init__()
+        dif = max_v - min_v if max_v != min_v else 1
+        if np.isnan(dif):
+            min_v = 0
+            dif = decimals = 1
+        else:
+            decimals = -floor(log10(dif))
+        resolution = 10 ** -decimals
+        bins = ceil(dif / resolution)
+        if bins < 6:
+            decimals += 1
+            if bins < 3:
+                resolution /= 4
+            else:
+                resolution /= 2
+            bins = ceil(dif / resolution)
+        self.offset: Union[int, float] = resolution * floor(min_v // resolution)
+        self.bins = bins
+        self.decimals = max(decimals, 0)
+        self.width: Union[int, float] = resolution
+
+    def get_bins(self):
+        # if width is a very large int, dtype of width * np.arange is object
+        # hence we cast it to float
+        return self.offset + float(self.width) * np.arange(self.bins + 1)
+
+
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
 
-    def __init__(self, palette, scale, label_formatter=None):
+    def __init__(self, palette, scale,
+                 label_formatter: Optional[Callable[[float], str]] = None):
         """
         :param palette: palette used for showing continuous values
         :type palette: BinnedContinuousPalette
@@ -450,7 +509,9 @@ class PaletteItemSample(ItemSample):
         self.scale = scale
         if label_formatter is None:
             label_formatter = "{{:.{}f}}".format(scale.decimals).format
-        cuts = [label_formatter(scale.offset + i * scale.width)
+        # offset and width can be in, but label_formatter expects float
+        # (because it can be ContinuousVariable.str_val), hence cast to float
+        cuts = [label_formatter(float(scale.offset + i * scale.width))
                 for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cuts, cuts[1:])]
