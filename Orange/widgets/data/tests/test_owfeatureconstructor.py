@@ -21,7 +21,7 @@ from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
     FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler,
-    DateTimeDescriptor)
+    DateTimeDescriptor, StringFeatureEditor)
 
 from Orange.widgets.data.owfeatureconstructor import (
     freevars, validate_exp, FeatureFunc
@@ -419,6 +419,20 @@ class OWFeatureConstructorTests(WidgetTest):
         self.widget.apply()
         self.wait_until_finished(self.widget)
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
+
+    def test_missing_strings(self):
+        domain = Domain([], metas=[StringVariable("S1")])
+        data = Table.from_list(domain, [["A"], ["B"], [None]])
+        self.widget.setData(data)
+
+        editor = StringFeatureEditor()
+        editor.nameedit.setText("S2")
+        editor.expressionedit.setText("S1 + S1")
+        self.widget.addFeature(editor.editorData())
+        self.widget.apply()
+        output = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_equal(output.metas,
+                                [["A", "AA"], ["B", "BB"], ["", ""]])
 
     @patch("Orange.widgets.data.owfeatureconstructor.QMessageBox")
     def test_fix_values(self, msgbox):
