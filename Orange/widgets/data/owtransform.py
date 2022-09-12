@@ -36,42 +36,21 @@ class OWTransform(OWWidget):
         self.template_data = None  # type: Optional[Table]
         self.transformed_info = describe_data(None)  # type: OrderedDict
 
-        info_box = gui.widgetBox(self.controlArea, "Info")
-        self.input_label = gui.widgetLabel(info_box, "")
-        self.template_label = gui.widgetLabel(info_box, "")
-        self.output_label = gui.widgetLabel(info_box, "")
-        self.set_input_label_text()
-        self.set_template_label_text()
+        box = gui.widgetBox(self.controlArea, True)
+        gui.label(
+            box, self, """
+The widget takes Data, to which it re-applies transformations
+that were applied to Template Data.
 
-    def set_input_label_text(self):
-        text = "No data on input."
-        if self.data:
-            text = "Input data with {:,} instances and {:,} features.".format(
-                len(self.data),
-                len(self.data.domain.attributes))
-        self.input_label.setText(text)
-
-    def set_template_label_text(self):
-        text = "No template data on input."
-        if self.data and self.template_data:
-            text = "Template domain applied."
-        elif self.template_data:
-            text = "Template data includes {:,} features.".format(
-                len(self.template_data.domain.attributes))
-        self.template_label.setText(text)
-
-    def set_output_label_text(self, data):
-        text = ""
-        if data:
-            text = "Output data includes {:,} features.".format(
-                len(data.domain.attributes))
-        self.output_label.setText(text)
+These include selecting a subset of variables as well as
+computing variables from other variables appearing in the data,
+like, for instance, discretization, feature construction, PCA etc.
+""".strip(), box=True)
 
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
         self.data = data
-        self.set_input_label_text()
 
     @Inputs.template_data
     @check_sql_input
@@ -93,8 +72,6 @@ class OWTransform(OWWidget):
         data = transformed_data
         self.transformed_info = describe_data(data)
         self.Outputs.transformed_data.send(data)
-        self.set_template_label_text()
-        self.set_output_label_text(data)
 
     def send_report(self):
         if self.data:
