@@ -4,6 +4,8 @@ from os.path import isfile, join, dirname
 import unittest
 import pkg_resources
 
+from AnyQt.QtTest import QTest
+
 from orangecanvas.registry import WidgetRegistry
 from orangewidget.workflow import widgetsscheme
 
@@ -46,6 +48,7 @@ class TestWorkflows(GuiTest):
             new_scheme.widget_manager.set_creation_policy(
                 new_scheme.widget_manager.Immediate
             )
+            new_scheme.signal_manager.pause()
             with open(ows_file, "rb") as f:
                 try:
                     with excepthook_catch(raise_on_exit=True):
@@ -55,6 +58,9 @@ class TestWorkflows(GuiTest):
                               format(ows_file, str(e)))
                 finally:
                     new_scheme.clear()
+                    new_scheme.deleteLater()
+                    del new_scheme
+                    QTest.qWait(0)
 
     def test_examples_order(self):
         # register test entrypoints
