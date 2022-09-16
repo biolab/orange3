@@ -101,6 +101,11 @@ class OWConfusionMatrix(widget.OWWidget):
                   "Proportion of predicted",
                   "Proportion of actual",
                   "Sum of probabilities"]
+    qu_tooltips = ["Number of correctly and incorrectly classified instances",
+                   "Proportion of predicted",
+                   "Proportion of actual",
+                   "Number of instances, distributed across columns "
+                   "according to predicted probabilities"]
 
     settings_version = 1
     settingsHandler = ClassValuesContextHandler()
@@ -150,8 +155,8 @@ class OWConfusionMatrix(widget.OWWidget):
 
         sbox = gui.hBox(box)
         gui.rubber(sbox)
-        gui.comboBox(sbox, self, "selected_quantity",
-                     items=self.quantities, label="Show: ",
+        gui.comboBox(sbox, self, "selected_quantity", label="Show: ",
+                     items=self.quantities, tooltips=self.qu_tooltips,
                      orientation=Qt.Horizontal, callback=self._update)
 
         self.tablemodel = QStandardItemModel(self)
