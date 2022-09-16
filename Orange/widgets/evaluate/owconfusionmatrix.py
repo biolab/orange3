@@ -99,7 +99,13 @@ class OWConfusionMatrix(widget.OWWidget):
 
     quantities = ["Number of instances",
                   "Proportion of predicted",
-                  "Proportion of actual"]
+                  "Proportion of actual",
+                  "Sum of probabilities"]
+    qu_tooltips = ["Number of correctly and incorrectly classified instances",
+                   "Proportion of predicted",
+                   "Proportion of actual",
+                   "Number of instances, distributed across columns "
+                   "according to predicted probabilities"]
 
     settings_version = 1
     settingsHandler = ClassValuesContextHandler()
@@ -149,8 +155,8 @@ class OWConfusionMatrix(widget.OWWidget):
 
         sbox = gui.hBox(box)
         gui.rubber(sbox)
-        gui.comboBox(sbox, self, "selected_quantity",
-                     items=self.quantities, label="Show: ",
+        gui.comboBox(sbox, self, "selected_quantity", label="Show: ",
+                     items=self.quantities, tooltips=self.qu_tooltips,
                      orientation=Qt.Horizontal, callback=self._update)
 
         self.tablemodel = QStandardItemModel(self)
@@ -445,9 +451,22 @@ class OWConfusionMatrix(widget.OWWidget):
 
         # Update the displayed confusion matrix
         if self.results is not None and self.selected_learner:
-            cmatrix = confusion_matrix(self.results, self.selected_learner[0])
-            colsum = cmatrix.sum(axis=0)
-            rowsum = cmatrix.sum(axis=1)
+            learner_index = self.selected_learner[0]
+            if self.selected_quantity != 3:
+                cmatrix = confusion_matrix(self.results, learner_index)
+                colsum = cmatrix.sum(axis=0)
+                rowsum = cmatrix.sum(axis=1)
+
+            else:
+                probabilities = self.results.probabilities[learner_index]
+                n = probabilities.shape[1]
+                cmatrix = np.zeros((n, n), dtype=float)
+                for index in np.unique(self.results.actual).astype(int):
+                    mask = self.results.actual == index
+                    cmatrix[index] = np.sum(probabilities[mask], axis=0)
+                colsum = cmatrix.sum(axis=0)
+                rowsum = cmatrix.sum(axis=1)
+
             n = len(cmatrix)
             diag = np.diag_indices(n)
 
@@ -457,14 +476,18 @@ class OWConfusionMatrix(widget.OWWidget):
                 normalized = cmatrix.astype(int)
                 formatstr = "{}"
                 div = np.array([colors.max()])
-            else:
-                if self.selected_quantity == 1:
-                    normalized = 100 * cmatrix / colsum
-                    div = colors.max(axis=0)
-                else:
-                    normalized = 100 * cmatrix / rowsum[:, np.newaxis]
-                    div = colors.max(axis=1)[:, np.newaxis]
+            elif self.selected_quantity == 1:
+                normalized = 100 * cmatrix / colsum
+                div = colors.max(axis=0)
                 formatstr = "{:2.1f} %"
+            elif self.selected_quantity == 2:
+                normalized = 100 * cmatrix / rowsum[:, np.newaxis]
+                div = colors.max(axis=1)[:, np.newaxis]
+                formatstr = "{:2.1f} %"
+            elif self.selected_quantity == 3:
+                normalized = cmatrix
+                formatstr = "{:2.1f}"
+                div = np.array([colors.max()])
             div[div == 0] = 1
             colors /= div
             maxval = normalized[diag].max()
@@ -496,6 +519,7 @@ class OWConfusionMatrix(widget.OWWidget):
             bold_font.setBold(True)
 
             def _sum_item(value, border=""):
+                value = int(round(value))
                 item = QStandardItem()
                 item.setData(value, Qt.DisplayRole)
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
@@ -506,9 +530,9 @@ class OWConfusionMatrix(widget.OWWidget):
                 return item
 
             for i in range(n):
-                self._set_item(n + 2, i + 2, _sum_item(int(colsum[i]), "t"))
-                self._set_item(i + 2, n + 2, _sum_item(int(rowsum[i]), "l"))
-            self._set_item(n + 2, n + 2, _sum_item(int(rowsum.sum())))
+                self._set_item(n + 2, i + 2, _sum_item(colsum[i], "t"))
+                self._set_item(i + 2, n + 2, _sum_item(rowsum[i], "l"))
+            self._set_item(n + 2, n + 2, _sum_item(rowsum.sum()))
 
     def send_report(self):
         """Send report"""

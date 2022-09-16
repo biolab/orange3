@@ -9,7 +9,7 @@ from Orange.evaluation.testing import CrossValidation, TestOnTrainingData, \
     ShuffleSplit, Results
 from Orange.widgets.evaluate.owconfusionmatrix import OWConfusionMatrix
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
-from Orange.widgets.tests.utils import possible_duplicate_table
+from Orange.widgets.tests.utils import possible_duplicate_table, simulate
 
 
 class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
@@ -152,6 +152,40 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
                           'p(Iris-setosa)', 'p(Iris-virginica)',
                           'p(Iris-setosa) (1)', 'p(Iris-versicolor) (1)',
                           'p(Iris-virginica) (1)'})
+
+    def test_sum_of_probabilities(self):
+        results: Results = self.results_1_iris
+        self.send_signal(self.widget.Inputs.evaluation_results, results)
+
+        model = self.widget.tablemodel
+        n = model.rowCount() - 3
+        matrix = np.zeros((n, n))
+        probabilities = results.probabilities[0]
+        for label_index in np.unique(results.actual).astype(int):
+            mask = results.actual == label_index
+            prob_sum = np.sum(probabilities[mask], axis=0)
+            matrix[label_index] = prob_sum
+        colsum = matrix.sum(axis=0)
+        rowsum = matrix.sum(axis=1)
+
+        simulate.combobox_activate_index(
+            self.widget.controls.selected_quantity, 3)
+        # matrix
+        for i in range(n):
+            for j in range(n):
+                value = model.data(model.index(i + 2, j + 2))
+                self.assertAlmostEqual(float(value), matrix[i, j], 1)
+        # rowsum
+        for i in range(n):
+            value = model.data(model.index(i + 2, n + 2))
+            self.assertAlmostEqual(float(value), rowsum[i], 0)
+        # colsum
+        for i in range(n):
+            value = model.data(model.index(n + 2, i + 2))
+            self.assertAlmostEqual(float(value), colsum[i], 0)
+        # total
+        value = model.data(model.index(n + 2, n + 2))
+        self.assertAlmostEqual(float(value), colsum.sum(), 0)
 
 
 if __name__ == "__main__":
