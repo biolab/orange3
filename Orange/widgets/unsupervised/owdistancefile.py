@@ -8,7 +8,8 @@ from orangewidget.workflow.drophandler import SingleFileDropHandler
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath, \
+    stored_recent_paths_prepend
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
@@ -151,7 +152,7 @@ class OWDistanceFileDropHandler(SingleFileDropHandler):
     def parametersFromFile(self, path):
         r = RecentPath(os.path.abspath(path), None, None,
                        os.path.basename(path))
-        return {"recent_paths": [r]}
+        return {"recent_paths": stored_recent_paths_prepend(self.WIDGET, r)}
 
     def canDropFile(self, path: str) -> bool:
         return os.path.splitext(path)[1].lower() == ".dst"

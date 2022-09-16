@@ -24,7 +24,7 @@ from Orange.widgets.settings import Setting, ContextSetting, \
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
-    open_filename_dialog
+    open_filename_dialog, stored_recent_paths_prepend
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 
@@ -673,7 +673,7 @@ class OWFileDropHandler(SingleUrlDropHandler):
             r = RecentPath(os.path.abspath(path), None, None,
                            os.path.basename(path))
             return {
-                "recent_paths": [r],
+                "recent_paths": stored_recent_paths_prepend(self.WIDGET, r),
                 "source": OWFile.LOCAL_FILE,
             }
         else:

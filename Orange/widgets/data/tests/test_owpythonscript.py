@@ -3,6 +3,7 @@
 # pylint: disable=wildcard-import, protected-access
 import sys
 import unittest
+from unittest.mock import patch
 
 from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
 from AnyQt.QtGui import QDragEnterEvent
@@ -272,6 +273,27 @@ class TestOWPythonScriptDropHandler(unittest.TestCase):
     def test_parametersFromFile(self):
         handler = OWPythonScriptDropHandler()
         r = handler.parametersFromFile(__file__)
+        item = r["scriptLibrary"][0]
+        self.assertEqual(item["filename"], __file__)
+        scripts = [
+            {
+                "name": "Add",
+                "script": "1 + 1",
+                "filename": None,
+            },
+            {
+                "name": os.path.basename(__file__),
+                "script": "42",
+                "filename": __file__,
+            },
+        ]
+        defs = {
+            "scriptLibrary": scripts,
+            "__version__": 2
+        }
+        with patch.object(OWPythonScript.settingsHandler, "defaults", defs):
+            r = handler.parametersFromFile(__file__)
+        self.assertEqual(len(r["scriptLibrary"]), 2)
         item = r["scriptLibrary"][0]
         self.assertEqual(item["filename"], __file__)
 

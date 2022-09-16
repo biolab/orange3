@@ -718,6 +718,19 @@ class TestOWFileDropHandler(unittest.TestCase):
         self.assertEqual(r["source"], OWFile.LOCAL_FILE)
         self.assertEqual(r["recent_paths"][0].basename, "test.tab")
 
+        defs = {
+            "source": OWFile.LOCAL_FILE,
+            "recent_paths": [
+                RecentPath("/foo.tab", None,  None, "foo.tab"),
+                RecentPath(path.abspath("test.tab"), None, None, "test.tab"),
+            ]
+        }
+        with patch.object(OWFile.settingsHandler, "defaults", defs):
+            r = handler.parametersFromUrl(QUrl.fromLocalFile("test.tab"))
+
+        self.assertEqual(len(r["recent_paths"]), 2)
+        self.assertEqual(r["recent_paths"][0].basename, "test.tab")
+
 
 if __name__ == "__main__":
     unittest.main()
