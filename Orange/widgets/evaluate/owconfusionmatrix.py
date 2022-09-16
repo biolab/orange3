@@ -447,9 +447,21 @@ class OWConfusionMatrix(widget.OWWidget):
         # Update the displayed confusion matrix
         if self.results is not None and self.selected_learner:
             learner_index = self.selected_learner[0]
-            cmatrix = confusion_matrix(self.results, learner_index)
-            colsum = cmatrix.sum(axis=0)
-            rowsum = cmatrix.sum(axis=1)
+            if self.selected_quantity != 3:
+                cmatrix = confusion_matrix(self.results, learner_index)
+                colsum = cmatrix.sum(axis=0)
+                rowsum = cmatrix.sum(axis=1)
+
+            else:
+                probabilities = self.results.probabilities[learner_index]
+                n = probabilities.shape[1]
+                cmatrix = np.zeros((n, n), dtype=float)
+                for index in np.unique(self.results.actual).astype(int):
+                    mask = self.results.actual == index
+                    cmatrix[index] = np.sum(probabilities[mask], axis=0)
+                colsum = cmatrix.sum(axis=0)
+                rowsum = cmatrix.sum(axis=1)
+
             n = len(cmatrix)
             diag = np.diag_indices(n)
 
@@ -459,24 +471,18 @@ class OWConfusionMatrix(widget.OWWidget):
                 normalized = cmatrix.astype(int)
                 formatstr = "{}"
                 div = np.array([colors.max()])
+            elif self.selected_quantity == 1:
+                normalized = 100 * cmatrix / colsum
+                div = colors.max(axis=0)
+                formatstr = "{:2.1f} %"
+            elif self.selected_quantity == 2:
+                normalized = 100 * cmatrix / rowsum[:, np.newaxis]
+                div = colors.max(axis=1)[:, np.newaxis]
+                formatstr = "{:2.1f} %"
             elif self.selected_quantity == 3:
-                normalized = np.zeros((n, n), dtype=float)
-                probabilities = self.results.probabilities[learner_index]
-                for index in np.unique(self.results.actual).astype(int):
-                    mask = self.results.actual == index
-                    normalized[index] = np.sum(probabilities[mask], axis=0)
-                colsum = normalized.sum(axis=0)
-                rowsum = normalized.sum(axis=1)
+                normalized = cmatrix
                 formatstr = "{:2.1f}"
                 div = np.array([colors.max()])
-            else:
-                if self.selected_quantity == 1:
-                    normalized = 100 * cmatrix / colsum
-                    div = colors.max(axis=0)
-                else:
-                    normalized = 100 * cmatrix / rowsum[:, np.newaxis]
-                    div = colors.max(axis=1)[:, np.newaxis]
-                formatstr = "{:2.1f} %"
             div[div == 0] = 1
             colors /= div
             maxval = normalized[diag].max()
