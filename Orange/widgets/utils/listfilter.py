@@ -135,6 +135,9 @@ class VariableFilterProxyModel(QSortFilterProxyModel):
         self._filter_string = str(filter).lower()
         self.invalidateFilter()
 
+    def filter_string(self):
+        return self._filter_string
+
     def filter_accepts_variable(self, var):
         row_str = var.name + " ".join(("%s=%s" % item)
                                       for item in var.attributes.items())
