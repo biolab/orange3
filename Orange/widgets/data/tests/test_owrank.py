@@ -2,6 +2,7 @@
 import time
 import warnings
 import unittest
+from itertools import count
 from unittest.mock import patch
 
 import numpy as np
@@ -9,9 +10,11 @@ from sklearn.exceptions import ConvergenceWarning
 
 from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel, \
     QT_VERSION_INFO
+from AnyQt.QtGui import QIcon
 from AnyQt.QtWidgets import QCheckBox, QApplication
 
 from orangewidget.settings import Context, IncompatibleContext
+from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.modelling import RandomForestLearner, SGDLearner
@@ -19,8 +22,9 @@ from Orange.preprocess.score import Scorer
 from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
+from Orange.widgets import gui
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, \
-    REG_SCORES
+    REG_SCORES, RankTableModel
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 
@@ -31,6 +35,62 @@ class SlowScorer(Scorer):
     def score_data(self, data, feature=None):
         time.sleep(1)
         return np.ones((1, len(data.domain.attributes)))
+
+
+class TestRankModel(GuiTest):
+    def setUp(self):
+        attributes = [DiscreteVariable("ann", values=tuple("ab")),
+                      DiscreteVariable("great", values=tuple("defg"))] \
+            + [ContinuousVariable(x) for x in "def"]
+        self.attributes = attributes
+        attributes[0].attributes["foo"] = "bar"
+        data = [[var, nvals] + [10 * i + j for j in range(3)]
+                for i, var, nvals in zip(count(), attributes,
+                                         (2, 4, np.nan, np.nan, np.nan))]
+        self.model = RankTableModel()
+        self.model.wrap(data)
+
+    def _get(self, row, column, role=Qt.DisplayRole):
+        return self.model.index(row, column).data(role)
+
+    def test_data(self):
+        # scores
+        self.assertEqual(self._get(0, 4), 2)
+        self.assertEqual(self._get(1, 2), 10)
+
+        # n values
+        self.assertEqual(self._get(0, 1), 2)
+        self.assertEqual(self._get(1, 1), 4)
+        self.assertEqual(self._get(2, 1), "")
+
+        # variables
+        self.assertEqual(self._get(0, 0), "ann")
+        self.assertEqual(self._get(1, 0), "great")
+        self.assertEqual(self._get(3, 0), "e")
+
+        self.assertIsInstance(self._get(0, 0, Qt.DecorationRole), QIcon)
+        self.assertIsInstance(self._get(2, 0, Qt.DecorationRole), QIcon)
+
+        self.assertIn("foo", self._get(0, 0, Qt.ToolTipRole))
+        self.assertIn("bar", self._get(0, 0, Qt.ToolTipRole))
+        self.assertNotIn("bar", self._get(1, 0, Qt.ToolTipRole))
+
+        self.assertIs(self._get(0, 0, gui.TableVariable), self.attributes[0])
+        self.assertIs(self._get(3, 0, gui.TableVariable), self.attributes[3])
+
+    def test_sorting(self):
+        self.model.sort(0, Qt.AscendingOrder)
+        self.assertIs(self._get(0, 0, gui.TableVariable), self.attributes[0])
+        self.assertIs(self._get(1, 0, gui.TableVariable), self.attributes[2])
+        self.assertIs(self._get(0, 2 + 1), 1)
+        self.assertIs(self._get(1, 2 + 0), 20)
+
+        self.model.sort(2, Qt.DescendingOrder)
+        self.assertIs(self._get(0, 0, gui.TableVariable), self.attributes[4])
+        self.assertIs(self._get(4, 0, gui.TableVariable), self.attributes[0])
+        self.assertIs(self._get(4, 2 + 1), 1)
+        self.assertIs(self._get(3, 2 + 0), 10)
+        self.assertIs(self._get(0, 2 + 0), 40)
 
 
 class TestOWRank(WidgetTest):
