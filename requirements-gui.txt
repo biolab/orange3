@@ -5,6 +5,6 @@ AnyQt>=0.1.0
 
 # ignore pyqtgraph 0.12.4 due to https://github.com/pyqtgraph/pyqtgraph/issues/2237
 pyqtgraph>=0.12.2,!=0.12.4
-matplotlib>=2.2.5
+matplotlib>=3.2.0
 qtconsole>=4.7.2
 pygments>=2.8.0
