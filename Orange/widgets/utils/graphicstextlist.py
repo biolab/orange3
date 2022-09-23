@@ -2,13 +2,16 @@ import bisect
 import math
 from typing import Optional, Union, Any, Iterable, List, Callable, cast
 
-from AnyQt.QtCore import Qt, QSizeF, QEvent, QMarginsF, QPointF
+from AnyQt.QtCore import (
+    Qt, QSizeF, QEvent, QMarginsF, QPointF, QAbstractItemModel
+)
 from AnyQt.QtGui import QFont, QFontMetrics, QFontInfo, QPalette
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
     QGraphicsItem, QGraphicsScene, QGraphicsSceneResizeEvent, QToolTip,
     QGraphicsSceneHelpEvent
 )
+
 from . import apply_all
 from .graphicslayoutitem import scaled
 
@@ -29,30 +32,27 @@ class _FuncArray:
         return self.length
 
 
-class TextListWidget(QGraphicsWidget):
+class TextListBase(QGraphicsWidget):
     """
-    A linear text list widget.
+    A base class for linear text list view and widget.
 
     Displays a list of uniformly spaced text lines.
 
     Parameters
     ----------
     parent: Optional[QGraphicsItem]
-    items: Iterable[str]
     alignment: Qt.Alignment
     orientation: Qt.Orientation
     """
     def __init__(
             self,
             parent: Optional[QGraphicsItem] = None,
-            items: Iterable[str] = (),
             alignment: Union[Qt.AlignmentFlag, Qt.Alignment] = Qt.AlignLeading,
             orientation: Qt.Orientation = Qt.Vertical,
             autoScale=False,
             elideMode=Qt.ElideNone,
             **kwargs: Any
     ) -> None:
-        self.__items: List[str] = []
         self.__textitems: List[QGraphicsSimpleTextItem] = []
         self.__group: Optional[QGraphicsItemGroup] = None
         self.__spacing = 0
@@ -78,19 +78,14 @@ class TextListWidget(QGraphicsWidget):
         if parent is not None:
             self.setParentItem(parent)
 
-        if items is not None:
-            self.setItems(items)
+    def data(self, row, role=Qt.DisplayRole):
+        raise NotImplemented
 
-    def setItems(self, items: Iterable[str]) -> None:
-        """
-        Set items for display
+    def count(self):
+        raise NotImplemented
 
-        Parameters
-        ----------
-        items: Iterable[str]
-        """
+    def reset(self):
         self.__clear()
-        self.__items = list(items)
         self.__widthCache.clear()
         self.__setup()
         self.__layout()
@@ -138,12 +133,6 @@ class TextListWidget(QGraphicsWidget):
         self.__widthCache.clear()
         self.updateGeometry()
 
-    def count(self) -> int:
-        """
-        Return the number of items
-        """
-        return len(self.__items)
-
     def indexAt(self, pos: QPointF) -> Optional[int]:
         """
         Return the index of item at `pos`.
@@ -185,20 +174,32 @@ class TextListWidget(QGraphicsWidget):
 
     def __width_for_font(self, font: QFont) -> float:
         """Return item width for the font"""
-        key = font.key()
-        if key in self.__widthCache:
-            return self.__widthCache[key]
-        fm = QFontMetrics(font)
-        width = max((fm.boundingRect(text).width() for text in self.__items),
-                    default=0)
-        self.__widthCache[key] = width
+        if self.data(0, Qt.FontRole) is not None:
+            if None in self.__widthCache:
+                return self.__widthCache[None]
+            width = max(
+                (QFontMetrics(self.data(row, Qt.FontRole))
+                 .boundingRect(self.data(row))
+                 .width()
+                 for row in range(self.count())
+                 ), default=0)
+            self.__widthCache[None] = width
+        else:
+            key = font.key()
+            if key in self.__widthCache:
+                return self.__widthCache[key]
+            fm = QFontMetrics(font)
+            width = max((fm.boundingRect(self.data(row)).width()
+                         for row in range(self.count())),
+                        default=0)
+            self.__widthCache[key] = width
         return width
 
     def __naturalsh(self) -> QSizeF:
         """Return the natural size hint (preferred sh with no constraints)."""
         fm = QFontMetrics(self.font())
         spacing = self.__spacing
-        N = len(self.__items)
+        N = self.count()
         width = self.__width_for_font(self.font())
         height = N * fm.height() + max(N - 1, 0) * spacing
         return QSizeF(width, height)
@@ -225,7 +226,7 @@ class TextListWidget(QGraphicsWidget):
             viewport = event.widget()
             view = viewport.parentWidget()
             rect = view.mapFromScene(rect).boundingRect()
-            QToolTip.showText(event.screenPos(), self.__items[idx],
+            QToolTip.showText(event.screenPos(), self.data(idx),
                               view, rect)
             event.setAccepted(True)
 
@@ -234,7 +235,7 @@ class TextListWidget(QGraphicsWidget):
             self.updateGeometry()
             if self.__autoScale:
                 self.__layout()
-            else:
+            elif self.data(0, Qt.FontRole) is None:
                 font = self.font()
                 apply_all(self.__textitems, lambda it: it.setFont(font))
 
@@ -245,23 +246,10 @@ class TextListWidget(QGraphicsWidget):
                 item.setBrush(brush)
         super().changeEvent(event)
 
-    def __setup(self) -> None:
-        self.__clear()
-        font = self.__effectiveFont if self.__autoScale else self.font()
-        assert self.__group is None
-        group = QGraphicsItemGroup()
-        brush = self.palette().brush(QPalette.Text)
-        for text in self.__items:
-            t = QGraphicsSimpleTextItem(group)
-            t.setBrush(brush)
-            t.setFont(font)
-            t.setText(text)
-            t.setData(0, text)
-            self.__textitems.append(t)
-        group.setParentItem(self)
-        self.__group = group
-
     def __layout(self) -> None:
+        if not self.__textitems:
+            return
+
         margins = QMarginsF(*self.getContentsMargins())
         if self.__orientation == Qt.Horizontal:
             # transposed margins
@@ -281,7 +269,7 @@ class TextListWidget(QGraphicsWidget):
         if align_horizontal == 0:
             align_horizontal = Qt.AlignLeft
 
-        N = len(self.__items)
+        N = self.count()
 
         if not N:
             return
@@ -306,7 +294,8 @@ class TextListWidget(QGraphicsWidget):
             fm = QFontMetrics(font)
             fontheight = fm.height()
 
-        if self.__autoScale and self.__effectiveFont != font:
+        if self.__autoScale and self.__effectiveFont != font \
+                and self.data(0, Qt.FontRole) is None:
             self.__effectiveFont = font
             apply_all(self.__textitems, lambda it: it.setFont(font))
 
@@ -315,7 +304,8 @@ class TextListWidget(QGraphicsWidget):
                 textwidth = math.ceil(crect.width())
             else:
                 textwidth = math.ceil(crect.height())
-            for text, item in zip(self.__items, self.__textitems):
+            for row, item in enumerate(self.__textitems):
+                text = self.data(row)
                 textelide = fm.elidedText(
                     text, self.__elideMode, textwidth, Qt.TextSingleLine
                 )
@@ -364,6 +354,122 @@ class TextListWidget(QGraphicsWidget):
         if self.__group is not None:
             remove([self.__group], self.scene())
             self.__group = None
+
+    def __setup(self) -> None:
+        self.__clear()
+        font = self.__effectiveFont if self.__autoScale else self.font()
+        assert self.__group is None
+        group = QGraphicsItemGroup()
+        brush = self.palette().brush(QPalette.Text)
+        for row in range(self.count()):
+            text = self.data(row)
+            t = QGraphicsSimpleTextItem(group)
+            t.setBrush(self.data(row, Qt.ForegroundRole) or brush)
+            t.setFont(self.data(row, Qt.FontRole) or font)
+            t.setText(text)
+            t.setData(0, text)
+            t.setToolTip(self.data(row, Qt.ToolTipRole))
+            self.__textitems.append(t)
+        group.setParentItem(self)
+        self.__group = group
+
+
+class TextListWidget(TextListBase):
+    """
+    A linear text list widget.
+
+    Displays a list of uniformly spaced text lines.
+
+    Parameters
+    ----------
+    parent: Optional[QGraphicsItem]
+    items: Iterable[str]
+    alignment: Qt.Alignment
+    orientation: Qt.Orientation
+    """
+    def __init__(
+            self,
+            parent: Optional[QGraphicsItem] = None,
+            items: Iterable[str] = (),
+            alignment: Union[Qt.AlignmentFlag, Qt.Alignment] = Qt.AlignLeading,
+            orientation: Qt.Orientation = Qt.Vertical,
+            autoScale=False,
+            elideMode=Qt.ElideNone,
+            **kwargs: Any
+    ) -> None:
+        self.__items: List[str] = []
+        super().__init__(parent, alignment, orientation, autoScale, elideMode,
+                         **kwargs)
+        if items is not None:
+            self.setItems(items)
+
+    def setItems(self, items: Iterable[str]) -> None:
+        self.__items = list(items)
+        self.reset()
+
+    def clear(self) -> None:
+        """Remove all items."""
+        self.__items = []
+        super().clear()
+
+    def count(self) -> int:
+        """Return the number of items"""
+        return len(self.__items)
+
+    def data(self, row, role=Qt.DisplayRole):
+        if row < len(self.__items):
+            if role == Qt.DisplayRole:
+                return self.__items[row]
+        return None
+
+
+class TextListView(TextListBase):
+    """
+    A linear text list view.
+
+    Displays a list of uniformly spaced text lines.
+
+    Parameters
+    ----------
+    parent: Optional[QGraphicsItem]
+    items: Iterable[str]
+    alignment: Qt.Alignment
+    orientation: Qt.Orientation
+    """
+    def __init__(
+            self,
+            parent: Optional[QGraphicsItem] = None,
+            alignment: Union[Qt.AlignmentFlag, Qt.Alignment] = Qt.AlignLeading,
+            orientation: Qt.Orientation = Qt.Vertical,
+            autoScale=False,
+            elideMode=Qt.ElideNone,
+            **kwargs: Any
+    ) -> None:
+        self.__model = None
+        super().__init__(parent, alignment, orientation, autoScale, elideMode,
+                         **kwargs)
+
+    def setModel(self, model: QAbstractItemModel) -> None:
+        self.__model = model
+        self.reset()
+        model.dataChanged.connect(self.reset)
+        model.rowsInserted.connect(self.reset)
+        model.rowsRemoved.connect(self.reset)
+        model.rowsMoved.connect(self.reset)
+        model.modelReset.connect(self.reset)
+
+    def model(self):
+        return self.__model
+
+    def count(self) -> int:
+        if self.__model is None:
+            return 0
+        return self.__model.rowCount()
+
+    def data(self, row, role=Qt.DisplayRole):
+        if self.__model is None:
+            return None
+        return self.__model.index(row, 0).data(role)
 
 
 def effective_point_size_for_height(

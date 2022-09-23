@@ -14,6 +14,8 @@ from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath
 from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from orangewidget.utils.itemmodels import PyListModel
+
 import Orange.data
 from Orange.data.domain import filter_visible
 from Orange.data import Domain
@@ -32,7 +34,7 @@ from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
-from Orange.widgets.utils.graphicstextlist import TextListWidget
+from Orange.widgets.utils.graphicstextlist import TextListView
 from Orange.widgets.utils.dendrogram import DendrogramWidget
 
 __all__ = ["OWHierarchicalClustering"]
@@ -100,6 +102,28 @@ if typing.TYPE_CHECKING:
     SelectionState = Tuple[List[Tuple[int]], List[Tuple[int, int, float]]]
 
 
+class SelectedLabelsModel(PyListModel):
+    def __init__(self):
+        super().__init__([])
+        self.selection = set()
+        self.__font = QFont()
+
+    def set_selection(self, selection):
+        self.selection = set(selection)
+        self.dataChanged.emit(self.index(0, 0), self.index(len(self) - 1, 0))
+
+    def setFont(self, font):
+        self.__font = font
+        self.dataChanged.emit(self.index(0, 0), self.index(len(self) - 1, 0))
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.FontRole:
+            font = QFont(self.__font)
+            font.setBold(index.row() in self.selection)
+            return font
+        return super().data(index, role)
+
+
 class OWHierarchicalClustering(widget.OWWidget):
     name = "Hierarchical Clustering"
     description = "Display a dendrogram of a hierarchical clustering " \
@@ -110,6 +134,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     class Inputs:
         distances = Input("Distances", Orange.misc.DistMatrix)
+        subset = Input("Data Subset", Orange.data.Table, explicit=True)
 
     class Outputs:
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
@@ -156,6 +181,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.matrix = None
         self.items = None
+        self.subset = None
         self.linkmatrix = None
         self.root = None
         self._displayed_root = None
@@ -302,7 +328,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.dendrogram.selectionChanged.connect(self._invalidate_output)
         self.dendrogram.selectionEdited.connect(self._selection_edited)
 
-        self.labels = TextListWidget()
+        self.labels = TextListView()
+        self.label_model = SelectedLabelsModel()
+        self.labels.setModel(self.label_model)
         self.labels.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self.labels.setAlignment(Qt.AlignLeft)
         self.labels.setMaximumWidth(200)
@@ -361,6 +389,23 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.commit.now()
 
+    @Inputs.subset
+    def set_subset(self, data):
+        self.subset = data
+        if self.annotation == "None":
+            self._update_labels()
+
+    def handleNewSignals(self):
+        if self.subset is None or self.items is None:
+            self.selection = set()
+        else:
+            subsetids = set(self.subset.ids)
+            self.selection = {
+                row for row, rowid in enumerate(self.items.ids)
+                if rowid in subsetids
+            }
+        self.label_model.set_selection(self.selection)
+
     def _set_items(self, items, axis=1):
         self.closeContext()
         self.items = items
@@ -396,7 +441,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def _clear_plot(self):
         self.dendrogram.set_root(None)
-        self.labels.setItems([])
+        self.label_model.clear()
 
     def _set_displayed_root(self, root):
         self._clear_plot()
@@ -444,7 +489,11 @@ class OWHierarchicalClustering(widget.OWWidget):
             indices = [leaf.value.index for leaf in leaves(self.root)]
 
             if self.annotation == "None":
-                labels = []
+                if self.selection:
+                    labels = [" •"[row in self.selection]
+                              for row in range(len(self.items))]
+                else:
+                    labels = []
             elif self.annotation == "Enumeration":
                 labels = [str(i+1) for i in indices]
             elif self.annotation == "Name":
@@ -462,7 +511,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [", ".join(labels[leaf.value.first: leaf.value.last])
                           for leaf in joined]
 
-        self.labels.setItems(labels)
+        self.label_model[:] = labels
         self.labels.setMinimumWidth(1 if labels else -1)
 
     def _restore_selection(self, state):
@@ -835,6 +884,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         factor = (1.25 ** self.zoom_factor)
         font = qfont_scaled(font, factor)
         self._main_graphics.setFont(font)
+        self.label_model.setFont(font)
 
     def send_report(self):
         annot = self.label_cb.currentText()
@@ -1032,4 +1082,5 @@ if __name__ == "__main__":  # pragma: no cover
     from Orange import distance
     data = Orange.data.Table("iris")
     matrix = distance.Euclidean(distance._preprocess(data))
-    WidgetPreview(OWHierarchicalClustering).run(matrix)
+    subset = data[10:30]
+    WidgetPreview(OWHierarchicalClustering).run(matrix, set_subset=subset)
