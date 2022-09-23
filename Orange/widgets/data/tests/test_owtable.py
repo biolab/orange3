@@ -196,6 +196,24 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
             w.controls.show_attribute_labels.toggle()
         self.assertFalse(w.show_attribute_labels)
 
+    def test_deprecate_multiple_inputs(self):
+        w = self.widget
+        self.assertFalse(w.Warning.multiple_inputs.is_shown())
+        self.send_signal(w.Inputs.data, self.data, 0)
+        self.assertFalse(w.Warning.multiple_inputs.is_shown())
+        self.send_signal(w.Inputs.data, self.data, 0)
+        self.assertFalse(w.Warning.multiple_inputs.is_shown())
+        self.send_signal(w.Inputs.data, self.data, 1)
+        self.assertTrue(w.Warning.multiple_inputs.is_shown())
+        self.send_signal(w.Inputs.data, self.data, 2)
+        self.assertTrue(w.Warning.multiple_inputs.is_shown())
+        self.send_signal(w.Inputs.data, None, 1)
+        self.assertTrue(w.Warning.multiple_inputs.is_shown())
+        self.send_signal(w.Inputs.data, None, 0)
+        self.assertFalse(w.Warning.multiple_inputs.is_shown())
+        self.send_signal(w.Inputs.data, None, 2)
+        self.assertFalse(w.Warning.multiple_inputs.is_shown())
+
 
 if __name__ == "__main__":
     unittest.main()
