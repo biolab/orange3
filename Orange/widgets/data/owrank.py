@@ -31,6 +31,7 @@ from Orange.widgets.settings import (
 from Orange.widgets.unsupervised.owdistances import InterruptException
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import AttributeList, Input, MultiInput, Output, Msg, \
     OWWidget
@@ -75,6 +76,29 @@ REG_SCORES = [
 SCORES = CLS_SCORES + REG_SCORES
 
 VARNAME_COL, NVAL_COL = range(2)
+
+
+class RankTableModel(BarRatioTableModel):
+    """
+    BarRatioTableModel that passes the first column (variables) into
+    VariableListModel to get the tooltips and decoration
+    """
+    def __init__(self, *args, **kwargs):
+        self._variable_model = VariableListModel()
+        super().__init__(*args, **kwargs)
+
+    def wrap(self, table):
+        super().wrap(table)
+        self._variable_model[:] = [var for var, *_ in table]
+
+    def data(self, index, role=Qt.DisplayRole):
+        column = index.column()
+        if column == 0:
+            row = self.mapToSourceRows(index.row())
+            index = self._variable_model.index(row, column)
+            return self._variable_model.data(index, role)
+        else:
+            return super().data(index, role)
 
 
 class TableView(QTableView):
@@ -240,7 +264,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
                                      if method.is_default}
 
         # GUI
-        self.ranksModel = model = BarRatioTableModel(parent=self)  # type:
+        self.ranksModel = model = RankTableModel(parent=self)  # type:
         # BarRatioTableModel
         self.ranksView = view = TableView(self)            # type: TableView
         self.mainArea.layout().addWidget(view)
@@ -538,7 +562,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
         # Store the header states
         sort_order = self.ranksModel.sortOrder()
-        sort_column = self.ranksModel.sortColumn() - 2  # -2 for '#' (discrete count) column
+        sort_column = self.ranksModel.sortColumn() - 2  # -2 for name and '#' columns
         self.sorting = (sort_column, sort_order)
 
     def methodSelectionChanged(self, state: int, method_name):
