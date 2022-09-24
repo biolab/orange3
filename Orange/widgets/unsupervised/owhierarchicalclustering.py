@@ -163,6 +163,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     top_n = settings.Setting(3)
     #: Dendrogram zoom factor
     zoom_factor = settings.Setting(0)
+    #: Show labels only for subset (if present)
+    label_only_subset = settings.Setting(False)
 
     autocommit = settings.Setting(True)
 
@@ -212,6 +214,10 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.connect_control("annotation", on_annotation_changed)
 
         box.layout().addWidget(self.label_cb)
+        gui.checkBox(
+            box, self, "label_only_subset", "Show labels only for subset",
+            disabled=True,
+            callback=self._update_labels, stateWhenDisabled=False)
 
         box = gui.radioButtons(
             self.controlArea, self, "pruning", box="Pruning",
@@ -392,6 +398,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     @Inputs.subset
     def set_subset(self, data):
         self.subset = data
+        self.controls.label_only_subset.setDisabled(data is None)
         if self.annotation == "None":
             self._update_labels()
 
@@ -438,6 +445,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             model[:] = self.basic_annotations + ["Name"] * name_option
             self.annotation = self.annotation_if_names if name_option \
                 else self.annotation_if_enumerate
+
 
     def _clear_plot(self):
         self.dendrogram.set_root(None)
@@ -505,6 +513,9 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [labels[idx] for idx in indices]
             else:
                 labels = []
+            if labels and self.label_only_subset:
+                labels = [label if row in self.selection else ""
+                          for row, label in enumerate(labels)]
 
             if labels and self._displayed_root is not self.root:
                 joined = leaves(self._displayed_root)
