@@ -3,13 +3,15 @@ import math
 from typing import Optional, Union, Any, Iterable, List, Callable, cast
 
 from AnyQt.QtCore import (
-    Qt, QSizeF, QEvent, QMarginsF, QPointF, QAbstractItemModel
+    Qt, QSizeF, QEvent, QMarginsF, QPointF, QAbstractItemModel, QRect
 )
-from AnyQt.QtGui import QFont, QFontMetrics, QFontInfo, QPalette
+from AnyQt.QtGui import (
+    QFont, QFontMetrics, QFontInfo, QPalette, QPixmap, QPainter, QPen
+)
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QSizePolicy, QGraphicsItemGroup, QGraphicsSimpleTextItem,
     QGraphicsItem, QGraphicsScene, QGraphicsSceneResizeEvent, QToolTip,
-    QGraphicsSceneHelpEvent
+    QGraphicsSceneHelpEvent, QGraphicsPixmapItem
 )
 
 from . import apply_all
@@ -55,6 +57,7 @@ class TextListBase(QGraphicsWidget):
     ) -> None:
         self.__textitems: List[QGraphicsSimpleTextItem] = []
         self.__group: Optional[QGraphicsItemGroup] = None
+        self.__strip: Optional[QGraphicsPixmapItem] = None
         self.__spacing = 0
         self.__alignment = Qt.AlignmentFlag(alignment)
         self.__orientation = orientation
@@ -201,6 +204,8 @@ class TextListBase(QGraphicsWidget):
         spacing = self.__spacing
         N = self.count()
         width = self.__width_for_font(self.font())
+        if self.has_color_strip():
+            width += int(round((fm.height() + spacing) * 1.3))
         height = N * fm.height() + max(N - 1, 0) * spacing
         return QSizeF(width, height)
 
@@ -335,25 +340,63 @@ class TextListBase(QGraphicsWidget):
                     crect.top() + i * advance + align_dy
                 )
 
+        self.__remove_items((self.__strip, ), self.scene())
+        self.__strip = self.__color_strip(round(advance))
+        offset = int(round(advance * 1.3)) if self.__strip else 0
         if self.__orientation == Qt.Vertical:
             self.__group.setRotation(0)
-            self.__group.setPos(0, 0)
+            self.__group.setPos(offset, 0)
+            if self.__strip:
+                self.__strip.setPos(0, 0)
         else:
             self.__group.setRotation(-90)
-            self.__group.setPos(self.rect().bottomLeft())
+            y = self.rect().bottom()
+            self.__group.setPos(0, y - offset)
+            if self.__strip:
+                self.__strip.setPos(0, y)
+
+    def has_color_strip(self):
+        return self.data(0, Qt.BackgroundRole) is not None
+
+    def __color_strip(self, size: int):
+        if not self.has_color_strip() or not size:
+            return None
+        has_selection = self.data(0, Qt.UserRole) is not None
+        margin = int(round(size * 0.2))
+        side = size - 2 * margin
+        pixmap = QPixmap(size, size * self.count())
+        pixmap.fill(Qt.transparent)
+        painter = QPainter()
+        painter.begin(pixmap)
+        painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing |
+                               painter.SmoothPixmapTransform)
+        for row in range(self.count()):
+            color = self.data(row, Qt.BackgroundRole)
+            painter.setPen(QPen(color, 1))
+            if has_selection and not self.data(row, Qt.UserRole):
+                painter.setBrush(Qt.NoBrush)
+            else:
+                painter.setBrush(color.lighter(140))
+            rect = QRect(margin, margin + row * size, side, side)
+            painter.drawRect(rect)
+        painter.end()
+        return QGraphicsPixmapItem(pixmap, self)
 
     def __clear(self) -> None:
-        def remove(items: Iterable[QGraphicsItem],
-                   scene: Optional[QGraphicsScene]):
-            for item in items:
-                if scene is not None:
-                    scene.removeItem(item)
-                else:
-                    item.setParentItem(None)
         self.__textitems = []
-        if self.__group is not None:
-            remove([self.__group], self.scene())
-            self.__group = None
+        self.__remove_items((self.__group, self.__strip), self.scene())
+        self.__group = self.__strip = None
+
+    @staticmethod
+    def __remove_items(items: Iterable[QGraphicsItem],
+                       scene: Optional[QGraphicsScene]):
+        for item in items:
+            if item is None:
+                continue
+            if scene is not None:
+                scene.removeItem(item)
+            else:
+                item.setParentItem(None)
 
     def __setup(self) -> None:
         self.__clear()

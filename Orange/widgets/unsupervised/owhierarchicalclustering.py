@@ -8,17 +8,19 @@ import numpy as np
 
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsScene, QGridLayout, QSizePolicy,
-    QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent
+    QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent, QLabel
 )
 from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath
-from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent, \
+    QModelIndex
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from orangewidget.utils.itemmodels import PyListModel
 
 import Orange.data
 from Orange.data.domain import filter_visible
-from Orange.data import Domain
+from Orange.data import Domain, DiscreteVariable, ContinuousVariable, \
+    StringVariable
 import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
@@ -107,20 +109,39 @@ class SelectedLabelsModel(PyListModel):
         super().__init__([])
         self.selection = set()
         self.__font = QFont()
+        self.__colors = None
+
+    def rowCount(self, parent=QModelIndex()):
+        count = super().rowCount()
+        if self.__colors is not None:
+            count = max(count, len(self.__colors))
+        return count
+
+    def _emit_data_changed(self):
+        self.dataChanged.emit(self.index(0, 0), self.index(len(self) - 1, 0))
 
     def set_selection(self, selection):
         self.selection = set(selection)
-        self.dataChanged.emit(self.index(0, 0), self.index(len(self) - 1, 0))
+        self._emit_data_changed()
+
+    def set_colors(self, colors):
+        self.__colors = colors
+        self._emit_data_changed()
 
     def setFont(self, font):
         self.__font = font
-        self.dataChanged.emit(self.index(0, 0), self.index(len(self) - 1, 0))
+        self._emit_data_changed()
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.FontRole:
             font = QFont(self.__font)
             font.setBold(index.row() in self.selection)
             return font
+        if role == Qt.BackgroundRole and self.__colors is not None:
+            return self.__colors[index.row()]
+        if role == Qt.UserRole and self.selection:
+            return index.row() in self.selection
+
         return super().data(index, role)
 
 
@@ -165,6 +186,9 @@ class OWHierarchicalClustering(widget.OWWidget):
     zoom_factor = settings.Setting(0)
     #: Show labels only for subset (if present)
     label_only_subset = settings.Setting(False)
+    #: Color for label decoration
+    color_by: Union[DiscreteVariable, ContinuousVariable, None] = \
+        settings.ContextSetting(None)
 
     autocommit = settings.Setting(True)
 
@@ -196,7 +220,8 @@ class OWHierarchicalClustering(widget.OWWidget):
         model = itemmodels.VariableListModel()
         model[:] = self.basic_annotations
 
-        box = gui.widgetBox(self.controlArea, "Annotations")
+        grid = QGridLayout()
+        gui.widgetBox(self.controlArea, "Annotations", orientation=grid)
         self.label_cb = cb = combobox.ComboBoxSearch(
             minimumContentsLength=14,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
@@ -205,19 +230,33 @@ class OWHierarchicalClustering(widget.OWWidget):
         cb.setCurrentIndex(cb.findData(self.annotation, Qt.EditRole))
 
         def on_annotation_activated():
-            self.annotation = cb.currentData(Qt.EditRole)
+            self.annotation = self.label_cb.currentData(Qt.EditRole)
             self._update_labels()
         cb.activated.connect(on_annotation_activated)
 
         def on_annotation_changed(value):
-            cb.setCurrentIndex(cb.findData(value, Qt.EditRole))
+            self.label_cb.setCurrentIndex(
+                self.label_cb.findData(value, Qt.EditRole))
         self.connect_control("annotation", on_annotation_changed)
 
-        box.layout().addWidget(self.label_cb)
-        gui.checkBox(
-            box, self, "label_only_subset", "Show labels only for subset",
+        grid.addWidget(self.label_cb, 0, 0, 1, 2)
+
+        cb = gui.checkBox(
+            None, self, "label_only_subset", "Show labels only for subset",
             disabled=True,
             callback=self._update_labels, stateWhenDisabled=False)
+        grid.addWidget(cb, 1, 0, 1, 2)
+
+        model = itemmodels.DomainModel(
+            valid_types=(DiscreteVariable, ContinuousVariable),
+            placeholder="None")
+        cb = gui.comboBox(
+            None, self, "color_by", orientation=Qt.Horizontal,
+            model=model, callback=self._update_labels,
+            sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
+                                   QSizePolicy.Fixed))
+        grid.addWidget(QLabel("Color by:"), 2, 0)
+        grid.addWidget(cb, 2, 1)
 
         box = gui.radioButtons(
             self.controlArea, self, "pruning", box="Pruning",
@@ -399,16 +438,16 @@ class OWHierarchicalClustering(widget.OWWidget):
     def set_subset(self, data):
         self.subset = data
         self.controls.label_only_subset.setDisabled(data is None)
-        if self.annotation == "None":
-            self._update_labels()
+        self._update_labels()
 
     def handleNewSignals(self):
         if self.subset is None or self.items is None:
             self.selection = set()
         else:
             subsetids = set(self.subset.ids)
+            indices = [leaf.value.index for leaf in leaves(self.root)]
             self.selection = {
-                row for row, rowid in enumerate(self.items.ids)
+                row for row, rowid in enumerate(self.items.ids[indices])
                 if rowid in subsetids
             }
         self.label_model.set_selection(self.selection)
@@ -417,6 +456,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.closeContext()
         self.items = items
         model = self.label_cb.model()
+        color_model = self.controls.color_by.model()
+        color_model.set_domain(None)
+        self.color_by = None
         if len(model) == 3:
             self.annotation_if_names = self.annotation
         elif len(model) == 2:
@@ -431,10 +473,19 @@ class OWHierarchicalClustering(widget.OWWidget):
                 next(filter_visible(items.domain.attributes), False) else [],
                 filter_visible(items.domain.attributes)
             )
-            if items.domain.class_vars:
-                self.annotation = items.domain.class_vars[0]
+            for meta in items.domain.metas:
+                if isinstance(meta, StringVariable):
+                    self.annotation = meta
+                    break
             else:
-                self.annotation = "Enumeration"
+                if items.domain.class_vars:
+                    self.annotation = items.domain.class_vars[0]
+                else:
+                    self.annotation = "Enumeration"
+
+            color_model.set_domain(items.domain)
+            if items.domain.class_vars:
+                self.color_by = items.domain.class_vars[0]
             self.openContext(items.domain)
         else:
             name_option = bool(
@@ -497,9 +548,9 @@ class OWHierarchicalClustering(widget.OWWidget):
             indices = [leaf.value.index for leaf in leaves(self.root)]
 
             if self.annotation == "None":
-                if self.selection:
+                if self.selection and self.color_by is None:
                     labels = [" •"[row in self.selection]
-                              for row in range(len(self.items))]
+                              for row in indices]
                 else:
                     labels = []
             elif self.annotation == "Enumeration":
@@ -524,6 +575,13 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.label_model[:] = labels
         self.labels.setMinimumWidth(1 if labels else -1)
+
+        if self.color_by is not None:
+            self.label_model.set_colors(
+                self.color_by.palette.values_to_qcolors(
+                    self.items.get_column_view(self.color_by)[0][indices]))
+        else:
+            self.label_model.set_colors(None)
 
     def _restore_selection(self, state):
         # type: (SelectionState) -> bool
