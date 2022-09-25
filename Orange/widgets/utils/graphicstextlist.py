@@ -82,10 +82,10 @@ class TextListBase(QGraphicsWidget):
             self.setParentItem(parent)
 
     def data(self, row, role=Qt.DisplayRole):
-        raise NotImplemented
+        raise NotImplementedError
 
     def count(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def reset(self):
         self.__clear()
@@ -132,7 +132,6 @@ class TextListBase(QGraphicsWidget):
         Remove all items.
         """
         self.__clear()
-        self.__items = []
         self.__widthCache.clear()
         self.updateGeometry()
 
@@ -144,11 +143,18 @@ class TextListBase(QGraphicsWidget):
             return item.mapRectToParent(item.boundingRect())
 
         if self.__orientation == Qt.Vertical:
-            y = lambda pos: pos.y()
+            def y(pos):
+                return pos.y()
         else:
-            y = lambda pos: pos.x()
-        top = lambda idx: brect(items[idx]).top()
-        bottom = lambda idx: brect(items[idx]).bottom()
+            def y(pos):
+                return pos.x()
+
+        def top(idx):
+            return brect(items[idx]).top()
+
+        def bottom(idx):
+            return brect(items[idx]).bottom()
+
         items = self.__textitems
         if not items:
             return None

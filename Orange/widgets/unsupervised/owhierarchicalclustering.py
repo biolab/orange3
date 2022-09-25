@@ -107,7 +107,7 @@ if typing.TYPE_CHECKING:
 class SelectedLabelsModel(PyListModel):
     def __init__(self):
         super().__init__([])
-        self.selection = set()
+        self.subset = set()
         self.__font = QFont()
         self.__colors = None
 
@@ -120,8 +120,8 @@ class SelectedLabelsModel(PyListModel):
     def _emit_data_changed(self):
         self.dataChanged.emit(self.index(0, 0), self.index(len(self) - 1, 0))
 
-    def set_selection(self, selection):
-        self.selection = set(selection)
+    def set_subset(self, subset):
+        self.subset = set(subset)
         self._emit_data_changed()
 
     def set_colors(self, colors):
@@ -135,12 +135,12 @@ class SelectedLabelsModel(PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.FontRole:
             font = QFont(self.__font)
-            font.setBold(index.row() in self.selection)
+            font.setBold(index.row() in self.subset)
             return font
         if role == Qt.BackgroundRole and self.__colors is not None:
             return self.__colors[index.row()]
-        if role == Qt.UserRole and self.selection:
-            return index.row() in self.selection
+        if role == Qt.UserRole and self.subset:
+            return index.row() in self.subset
 
         return super().data(index, role)
 
@@ -208,6 +208,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.matrix = None
         self.items = None
         self.subset = None
+        self.subset_rows = set()
         self.linkmatrix = None
         self.root = None
         self._displayed_root = None
@@ -435,22 +436,22 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.commit.now()
 
     @Inputs.subset
-    def set_subset(self, data):
-        self.subset = data
-        self.controls.label_only_subset.setDisabled(data is None)
+    def set_subset(self, subset):
+        self.subset = subset
+        self.controls.label_only_subset.setDisabled(subset is None)
         self._update_labels()
 
     def handleNewSignals(self):
         if self.subset is None or self.items is None:
-            self.selection = set()
+            self.subset_rows = set()
         else:
             subsetids = set(self.subset.ids)
             indices = [leaf.value.index for leaf in leaves(self.root)]
-            self.selection = {
+            self.subset_rows = {
                 row for row, rowid in enumerate(self.items.ids[indices])
                 if rowid in subsetids
             }
-        self.label_model.set_selection(self.selection)
+        self.label_model.set_subset(self.subset_rows)
 
     def _set_items(self, items, axis=1):
         self.closeContext()
@@ -548,9 +549,8 @@ class OWHierarchicalClustering(widget.OWWidget):
             indices = [leaf.value.index for leaf in leaves(self.root)]
 
             if self.annotation == "None":
-                if self.selection and self.color_by is None:
-                    labels = [" •"[row in self.selection]
-                              for row in indices]
+                if self.subset_rows and self.color_by is None:
+                    labels = [" •"[row in self.subset_rows] for row in indices]
                 else:
                     labels = []
             elif self.annotation == "Enumeration":
@@ -565,7 +565,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             else:
                 labels = []
             if labels and self.label_only_subset:
-                labels = [label if row in self.selection else ""
+                labels = [label if row in self.subset_rows else ""
                           for row, label in enumerate(labels)]
 
             if labels and self._displayed_root is not self.root:
@@ -1147,9 +1147,14 @@ def clusters_at_height(root, height):
     return cluster_list
 
 
-if __name__ == "__main__":  # pragma: no cover
-    from Orange import distance
+def main():
+    # pragma: no cover
+    from Orange import distance  # pylint: disable=import-outside-toplevel
     data = Orange.data.Table("iris")
     matrix = distance.Euclidean(distance._preprocess(data))
     subset = data[10:30]
     WidgetPreview(OWHierarchicalClustering).run(matrix, set_subset=subset)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
