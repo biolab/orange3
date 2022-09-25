@@ -199,6 +199,14 @@ class OWHierarchicalClustering(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         not_finite_distances = Msg("Some distances are infinite")
 
+    class Warning(widget.OWWidget.Warning):
+        subset_on_no_table = \
+            Msg("Unused data subset: distances do not refer to data instances")
+        subset_not_subset = \
+            Msg("Some data from the subset does not appear in distance matrix")
+        subset_wrong = \
+            Msg("Subset data refers to a different table")
+
     #: Stored (manual) selection state (from a saved workflow) to restore.
     __pending_selection_restore = None  # type: Optional[SelectionState]
 
@@ -403,12 +411,6 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     @Inputs.distances
     def set_distances(self, matrix):
-        if self.__pending_selection_restore is not None:
-            selection_state = self.__pending_selection_restore
-        else:
-            # save the current selection to (possibly) restore later
-            selection_state = self._save_selection()
-
         self.error()
         self.Error.clear()
         if matrix is not None:
@@ -422,36 +424,53 @@ class OWHierarchicalClustering(widget.OWWidget):
                 matrix = None
 
         self.matrix = matrix
+
+    @Inputs.subset
+    def set_subset(self, subset):
+        self.subset = subset
+        self.controls.label_only_subset.setDisabled(subset is None)
+
+    def handleNewSignals(self):
+        if self.__pending_selection_restore is not None:
+            selection_state = self.__pending_selection_restore
+        else:
+            # save the current selection to (possibly) restore later
+            selection_state = self._save_selection()
+
+        matrix = self.matrix
         if matrix is not None:
             self._set_items(matrix.row_items, matrix.axis)
         else:
             self._set_items(None)
-        self._invalidate_clustering()
+        self._update()
 
         # Can now attempt to restore session state from a saved workflow.
         if self.root and selection_state is not None:
             self._restore_selection(selection_state)
             self.__pending_selection_restore = None
 
-        self.commit.now()
-
-    @Inputs.subset
-    def set_subset(self, subset):
-        self.subset = subset
-        self.controls.label_only_subset.setDisabled(subset is None)
-        self._update_labels()
-
-    def handleNewSignals(self):
-        if self.subset is None or self.items is None:
-            self.subset_rows = set()
-        else:
+        self.Warning.clear()
+        rows = set()
+        if self.subset:
             subsetids = set(self.subset.ids)
-            indices = [leaf.value.index for leaf in leaves(self.root)]
-            self.subset_rows = {
-                row for row, rowid in enumerate(self.items.ids[indices])
-                if rowid in subsetids
-            }
+            if not isinstance(self.items, Orange.data.Table) \
+                    or not self.matrix.axis:
+                self.Warning.subset_on_no_table()
+            elif (dataids := set(self.items.ids)) and not subsetids & dataids:
+                self.Warning.subset_wrong()
+            elif not subsetids <= dataids:
+                self.Warning.subset_not_subset()
+            else:
+                indices = [leaf.value.index for leaf in leaves(self.root)]
+                rows = {
+                    row for row, rowid in enumerate(self.items.ids[indices])
+                    if rowid in subsetids
+                }
+
+        self.subset_rows = rows
         self.label_model.set_subset(self.subset_rows)
+        self._update_labels()
+        self.commit.now()
 
     def _set_items(self, items, axis=1):
         self.closeContext()
@@ -544,6 +563,14 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._apply_selection()
 
     def _update_labels(self):
+        if not hasattr(self, "label_model"):
+            # This method can be called during widget initialization when
+            # creating check box for label_only_subset, if it's value is
+            # initially True.
+            # See https://github.com/biolab/orange-widget-base/pull/213;
+            # if it's merged, this check can be removed.
+            return
+
         labels = []
         if self.root and self._displayed_root:
             indices = [leaf.value.index for leaf in leaves(self.root)]
@@ -564,7 +591,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [labels[idx] for idx in indices]
             else:
                 labels = []
-            if labels and self.label_only_subset:
+            if labels and self.label_only_subset and self.subset_rows:
                 labels = [label if row in self.subset_rows else ""
                           for row, label in enumerate(labels)]
 
