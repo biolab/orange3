@@ -368,7 +368,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._main_graphics.setLayout(scenelayout)
         self.scene.addItem(self._main_graphics)
 
-        self.dendrogram = DendrogramWidget()
+        self.dendrogram = DendrogramWidget(pen_width=2)
         self.dendrogram.setSizePolicy(QSizePolicy.MinimumExpanding,
                                       QSizePolicy.MinimumExpanding)
         self.dendrogram.selectionChanged.connect(self._invalidate_output)
