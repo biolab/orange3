@@ -161,6 +161,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
+    settings_version = 2
     settingsHandler = _DomainContextHandler()
 
     #: Selected linkage
@@ -194,7 +195,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     graph_name = "scene"
 
-    basic_annotations = ["None", "Enumeration"]
+    basic_annotations = [None, "Enumeration"]
 
     class Error(widget.OWWidget.Error):
         not_finite_distances = Msg("Some distances are infinite")
@@ -226,7 +227,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
             callback=self._invalidate_clustering)
 
-        model = itemmodels.VariableListModel()
+        model = itemmodels.VariableListModel(placeholder="None")
         model[:] = self.basic_annotations
 
         grid = QGridLayout()
@@ -264,7 +265,8 @@ class OWHierarchicalClustering(widget.OWWidget):
             model=model, callback=self._update_labels,
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
                                    QSizePolicy.Fixed))
-        grid.addWidget(QLabel("Color by:"), 2, 0)
+        self.color_by_label = QLabel("Color by:")
+        grid.addWidget(self.color_by_label, 2, 0)
         grid.addWidget(cb, 2, 1)
 
         box = gui.radioButtons(
@@ -479,44 +481,54 @@ class OWHierarchicalClustering(widget.OWWidget):
         color_model = self.controls.color_by.model()
         color_model.set_domain(None)
         self.color_by = None
-        if len(model) == 3:
-            self.annotation_if_names = self.annotation
-        elif len(model) == 2:
-            self.annotation_if_enumerate = self.annotation
+        if len(model) == 2 and model[0] is None:
+            if model[1] == "Name":
+                self.annotation_if_names = self.annotation
+            if model[1] == self.basic_annotations[1]:
+                self.annotation_if_enumerate = self.annotation
         if isinstance(items, Orange.data.Table) and axis:
-            model[:] = chain(
-                self.basic_annotations,
-                [model.Separator],
-                items.domain.class_vars,
-                items.domain.metas,
-                [model.Separator] if (items.domain.class_vars or items.domain.metas) and
-                next(filter_visible(items.domain.attributes), False) else [],
-                filter_visible(items.domain.attributes)
-            )
+            metas_class = tuple(
+                filter_visible(chain(items.domain.metas,
+                                     items.domain.class_vars)))
+            visible_attrs = tuple(filter_visible(items.domain.attributes))
+            if not (metas_class or visible_attrs):
+                model[:] = self.basic_annotations
+            else:
+                model[:] = (
+                    (None, )
+                    + metas_class
+                    + (model.Separator, ) * bool(metas_class and visible_attrs)
+                    + visible_attrs)
             for meta in items.domain.metas:
                 if isinstance(meta, StringVariable):
                     self.annotation = meta
                     break
             else:
                 if items.domain.class_vars:
+                    # No string metas: show class
                     self.annotation = items.domain.class_vars[0]
                 else:
-                    self.annotation = "Enumeration"
+                    # No string metas and no class: show the first option
+                    # which is not None (in the worst case, Enumeration)
+                    self.annotation = model[1]
 
             color_model.set_domain(items.domain)
             if items.domain.class_vars:
                 self.color_by = items.domain.class_vars[0]
             self.openContext(items.domain)
+        elif isinstance(items, Orange.data.Table) and not axis \
+                or (isinstance(items, list) and \
+                    all(isinstance(var, Orange.data.Variable)
+                        for var in items)):
+            model[:] = (None, "Name")
+            self.annotation = self.annotation_if_names
         else:
-            name_option = bool(
-                items is not None and (
-                    not axis or
-                    isinstance(items, list) and
-                    all(isinstance(var, Orange.data.Variable) for var in items)))
-            model[:] = self.basic_annotations + ["Name"] * name_option
-            self.annotation = self.annotation_if_names if name_option \
-                else self.annotation_if_enumerate
+            model[:] = self.basic_annotations
+            self.annotation = self.annotation_if_enumerate
 
+        no_colors = len(color_model) == 1
+        self.controls.color_by.setDisabled(no_colors)
+        self.color_by_label.setDisabled(no_colors)
 
     def _clear_plot(self):
         self.dendrogram.set_root(None)
@@ -575,7 +587,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         if self.root and self._displayed_root:
             indices = [leaf.value.index for leaf in leaves(self.root)]
 
-            if self.annotation == "None":
+            if self.annotation is None:
                 if self.subset_rows and self.color_by is None:
                     labels = [" •"[row in self.subset_rows] for row in indices]
                 else:
@@ -1000,6 +1012,12 @@ class OWHierarchicalClustering(widget.OWWidget):
             ("Selection", sel),
         ))
         self.report_plot()
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 2:
+            if context.values["annotation"] == "None":
+                context.values["annotation"] = None
 
 
 def qfont_scaled(font, factor):
