@@ -2,6 +2,8 @@ from enum import IntEnum
 from typing import NamedTuple, Dict, Tuple
 
 import numpy as np
+from sklearn.metrics import precision_recall_curve
+from sklearn.preprocessing import label_binarize
 
 from AnyQt.QtWidgets import QListView, QFrame
 from AnyQt.QtGui import QColor, QPen, QFont
@@ -13,6 +15,7 @@ from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 from orangewidget.widget import Msg
 
 import Orange
+from Orange.base import Model
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
@@ -44,7 +47,7 @@ PointsAndHull = NamedTuple(
 
 
 class CurveTypes(IntEnum):
-    LiftCurve, CumulativeGains = range(2)
+    LiftCurve, CumulativeGains, PrecisionRecall = range(3)
 
 
 class ParameterSetter(CommonParameterSetter):
@@ -148,12 +151,12 @@ class ParameterSetter(CommonParameterSetter):
 
 
 class OWLiftCurve(widget.OWWidget):
-    name = "Lift Curve"
-    description = "Construct and display a lift curve " \
+    name = "Performance Curve"
+    description = "Construct and display a performance curve " \
                   "from the evaluation of classifiers."
     icon = "icons/LiftCurve.svg"
     priority = 1020
-    keywords = ["lift", "cumulative gain"]
+    keywords = ["lift", "cumulative gain", "precision", "recall", "curve"]
 
     class Inputs:
         evaluation_results = Input(
@@ -179,7 +182,8 @@ class OWLiftCurve(widget.OWWidget):
 
     graph_name = "plot"
 
-    YLabels = ("Lift", "TP Rate")
+    XLabels = ("P Rate", "P Rate", "Recall")
+    YLabels = ("Lift", "TP Rate", "Precision")
 
     def __init__(self):
         super().__init__()
@@ -187,7 +191,7 @@ class OWLiftCurve(widget.OWWidget):
         self.results = None
         self.classifier_names = []
         self.colors = []
-        self._points_hull: Dict[Tuple[int, int], PointsAndHull] = {}
+        self._points_hull: Dict[Tuple[int, int, int], PointsAndHull] = {}
 
         box = gui.vBox(self.controlArea, box="Curve")
         self.target_cb = gui.comboBox(
@@ -197,7 +201,8 @@ class OWLiftCurve(widget.OWWidget):
             contentsLength=8, searchable=True
         )
         gui.radioButtons(
-            box, self, "curve_type", ("Lift Curve", "Cumulative Gains"),
+            box, self, "curve_type",
+            ("Lift Curve", "Cumulative Gains", "Precision Recall"),
             callback=self._on_curve_type_changed
         )
 
@@ -227,12 +232,10 @@ class OWLiftCurve(widget.OWWidget):
 
         tickfont = QFont(self.font())
         tickfont.setPixelSize(max(int(tickfont.pixelSize() * 2 // 3), 11))
-
-        for pos, label in (("bottom", "P Rate"), ("left", "")):
+        for pos in ("bottom", "left"):
             axis = self.plot.getAxis(pos)
             axis.setTickFont(tickfont)
-            axis.setLabel(label)
-        self._set_left_label()
+        self._set_axes_labels()
 
         self.plot.showGrid(True, True, alpha=0.1)
 
@@ -296,26 +299,29 @@ class OWLiftCurve(widget.OWWidget):
     _on_classifiers_changed = _replot
 
     def _on_curve_type_changed(self):
-        self._set_left_label()
+        self._set_axes_labels()
         self._replot()
 
-    def _set_left_label(self):
+    def _set_axes_labels(self):
+        self.plot.getAxis("bottom").setLabel(self.XLabels[self.curve_type])
         self.plot.getAxis("left").setLabel(self.YLabels[self.curve_type])
 
     def _setup_plot(self):
         self._plot_default_line()
         is_valid = [
-            self._plot_curve(self.target_index, clf_idx)
+            self._plot_curve(self.target_index, clf_idx, self.curve_type)
             for clf_idx in self.selected_classifiers
         ]
         self.plot.autoRange()
         self._set_undefined_curves_err_warn(is_valid)
 
-    def _plot_curve(self, target, clf_idx):
-        key = (target, clf_idx)
+    def _plot_curve(self, target, clf_idx, curve_type):
+        curve_type = curve_type if curve_type == CurveTypes.PrecisionRecall \
+            else CurveTypes.LiftCurve
+        key = (target, clf_idx, curve_type)
         if key not in self._points_hull:
-            self._points_hull[key] = \
-                points_from_results(self.results, target, clf_idx)
+            self._points_hull[key] = points_from_results(
+                self.results, target, clf_idx, self.curve_type)
         points, hull = self._points_hull[key]
 
         if not points.is_valid:
@@ -332,17 +338,20 @@ class OWLiftCurve(widget.OWWidget):
         wide_pen = QPen(color, width, Updater.LINE_STYLES[style])
         wide_pen.setCosmetic(True)
 
-        def _plot(points, pen):
+        def _plot(points, pen, kwargs={}):
             contacted, respondents, _ = points
             if self.curve_type == CurveTypes.LiftCurve:
                 respondents = respondents / contacted
             curve = pg.PlotCurveItem(contacted, respondents, pen=pen,
-                                     antialias=True)
+                                     antialias=True, **kwargs)
             self.plot.addItem(curve)
             return curve
 
+        pen_ = wide_pen if not self.display_convex_hull else pen
+        line_kwargs = {"stepMode": "right"} \
+            if self.curve_type == CurveTypes.PrecisionRecall else {}
         self.plot.curve_items.append(
-            _plot(points, wide_pen if not self.display_convex_hull else pen)
+            _plot(points, pen_, line_kwargs)
         )
         if self.display_convex_hull:
             self.plot.hull_items.append(_plot(hull, wide_pen))
@@ -354,6 +363,8 @@ class OWLiftCurve(widget.OWWidget):
         style = param_setter.default_line_settings[Updater.STYLE_LABEL]
         pen = QPen(QColor(20, 20, 20), width, Updater.LINE_STYLES[style])
         pen.setCosmetic(True)
+        if self.curve_type == CurveTypes.PrecisionRecall:
+            return
         y0 = 1 if self.curve_type == CurveTypes.LiftCurve else 0
         curve = pg.PlotCurveItem([0, 1], [y0, 1], pen=pen, antialias=True)
         self.plot.addItem(curve)
@@ -382,11 +393,25 @@ class OWLiftCurve(widget.OWWidget):
         self.visual_settings[key] = value
 
 
-def points_from_results(results, target, clf_index):
-    x, y, thresholds = cumulative_gains_from_results(results, target, clf_index)
+def points_from_results(results, target, clf_index, curve_type):
+    func = precision_recall_from_results \
+        if curve_type == CurveTypes.PrecisionRecall \
+        else cumulative_gains_from_results
+    x, y, thresholds = func(results, target, clf_index)
     points = CurveData(x, y, thresholds)
     hull = CurveData(*convex_hull([(x, y, thresholds)]))
     return PointsAndHull(points, hull)
+
+
+def precision_recall_from_results(results, target, clf_idx):
+    y_true = results.actual
+    classes = np.unique(results.actual)
+    if len(classes) > 2:
+        y_true = label_binarize(y_true, classes=sorted(classes))
+        y_true = y_true[:, target]
+    scores = results.probabilities[clf_idx][:, target]
+    precision, recall, thresholds = precision_recall_curve(y_true, scores)
+    return recall, precision, thresholds
 
 
 def cumulative_gains_from_results(results, target, clf_idx):
