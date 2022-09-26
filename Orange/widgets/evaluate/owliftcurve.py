@@ -16,6 +16,7 @@ from orangewidget.widget import Msg
 
 import Orange
 from Orange.base import Model
+from Orange.classification import ThresholdClassifier
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
@@ -26,7 +27,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem
-from Orange.widgets.widget import Input
+from Orange.widgets.widget import Input, Output
 from Orange.widgets import report
 
 
@@ -162,15 +163,18 @@ class OWLiftCurve(widget.OWWidget):
         evaluation_results = Input(
             "Evaluation Results", Orange.evaluation.Results)
 
+    class Outputs:
+        calibrated_model = Output("Calibrated Model", Model)
+
     class Warning(widget.OWWidget.Warning):
         undefined_curves = Msg(
             "Some curves are undefined; check models and data")
 
     class Error(widget.OWWidget.Error):
-        undefined_curves = Msg(
-            "No defined curves; check models and data")
+        undefined_curves = Msg("No defined curves; check models and data")
 
-    buttons_area_orientation = None
+    class Information(widget.OWWidget.Information):
+        no_output = Msg("Can't output a model: {}")
 
     settingsHandler = EvaluationResultsContextHandler()
     target_index = settings.ContextSetting(0)
@@ -178,6 +182,10 @@ class OWLiftCurve(widget.OWWidget):
 
     display_convex_hull = settings.Setting(True)
     curve_type = settings.Setting(CurveTypes.LiftCurve)
+    show_threshold = settings.Setting(True)
+    show_points = settings.Setting(True)
+    rate = settings.Setting(0.5)
+    auto_commit = settings.Setting(True)
     visual_settings = settings.Setting({}, schema_only=True)
 
     graph_name = "plot"
@@ -192,6 +200,8 @@ class OWLiftCurve(widget.OWWidget):
         self.classifier_names = []
         self.colors = []
         self._points_hull: Dict[Tuple[int, int, int], PointsAndHull] = {}
+        self.line = None
+        self.tooltip = None
 
         box = gui.vBox(self.controlArea, box="Curve")
         self.target_cb = gui.comboBox(
@@ -214,10 +224,18 @@ class OWLiftCurve(widget.OWWidget):
         )
         self.classifiers_list_box.setMaximumHeight(100)
 
-        gui.checkBox(self.controlArea, self, "display_convex_hull",
-                     "Show convex hull", box="Settings", callback=self._replot)
+        box = gui.vBox(self.controlArea, box="Settings")
+        gui.checkBox(box, self, "display_convex_hull", "Show convex hull",
+                     callback=self._replot, stateWhenDisabled=False)
+        gui.checkBox(box, self, "show_threshold", "Show thresholds",
+                     callback=self._on_show_threshold_changed)
+        gui.checkBox(box, self, "show_points", "Show points",
+                     callback=self._on_show_points_changed)
+        self._enable_controls()
 
         gui.rubber(self.controlArea)
+
+        gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.plotview = GraphicsView()
         self.plotview.setFrameStyle(QFrame.StyledPanel)
@@ -254,6 +272,7 @@ class OWLiftCurve(widget.OWWidget):
             self.openContext(self.results.domain.class_var,
                              self.classifier_names)
             self._setup_plot()
+        self.commit.now()
 
     def clear(self):
         self.plot.clear()
@@ -268,6 +287,10 @@ class OWLiftCurve(widget.OWWidget):
         self.classifier_names = []
         self.colors = []
         self._points_hull = {}
+
+    def _enable_controls(self):
+        enable = self.curve_type != CurveTypes.PrecisionRecall
+        self.controls.display_convex_hull.setEnabled(enable)
 
     def _initialize(self, results):
         n_models = len(results.predicted)
@@ -295,12 +318,33 @@ class OWLiftCurve(widget.OWWidget):
         if self.results is not None:
             self._setup_plot()
 
-    _on_target_changed = _replot
-    _on_classifiers_changed = _replot
+    def _on_target_changed(self):
+        self._replot()
+        self.commit.deferred()
+
+    def _on_classifiers_changed(self):
+        self._on_show_threshold_changed()
+        self._replot()
+        self.commit.deferred()
 
     def _on_curve_type_changed(self):
+        self._enable_controls()
         self._set_axes_labels()
         self._replot()
+        self.commit.deferred()
+
+    def _on_threshold_change(self):
+        self.rate = round(self.line.pos().x(), 5)
+        self.line.setPos(self.rate)
+        self._set_tooltip()
+
+    def _on_show_threshold_changed(self):
+        selected = len(self.selected_classifiers) > 0
+        self.tooltip.setVisible(self.show_threshold and selected)
+
+    def _on_show_points_changed(self):
+        for item in self.plot.curve_items:
+            item.scatter.setVisible(self.show_points)
 
     def _set_axes_labels(self):
         self.plot.getAxis("bottom").setLabel(self.XLabels[self.curve_type])
@@ -314,6 +358,29 @@ class OWLiftCurve(widget.OWWidget):
         ]
         self.plot.autoRange()
         self._set_undefined_curves_err_warn(is_valid)
+
+        self.line = pg.InfiniteLine(
+            pos=self.rate, movable=True,
+            pen=pg.mkPen(color="k", style=Qt.DashLine, width=2),
+            hoverPen=pg.mkPen(color="k", style=Qt.DashLine, width=3),
+            bounds=(0, 1),
+        )
+        self.line.sigPositionChanged.connect(self._on_threshold_change)
+        self.line.sigPositionChangeFinished.connect(
+            self._on_threshold_change_done)
+        self.plot.addItem(self.line)
+
+        self.tooltip = pg.TextItem(border=QColor(*(100, 100, 100, 200)),
+                                   fill=(250, 250, 250, 200))
+        self.tooltip.setZValue(1e9)
+        self.plot.addItem(self.tooltip)
+        self._set_tooltip()
+
+        self._on_show_points_changed()
+        self._on_show_threshold_changed()
+
+    def _on_threshold_change_done(self):
+        self.commit.deferred()
 
     def _plot_curve(self, target, clf_idx, curve_type):
         curve_type = curve_type if curve_type == CurveTypes.PrecisionRecall \
@@ -338,24 +405,73 @@ class OWLiftCurve(widget.OWWidget):
         wide_pen = QPen(color, width, Updater.LINE_STYLES[style])
         wide_pen.setCosmetic(True)
 
+        def tip(x, y, data):
+            xlabel = self.XLabels[self.curve_type]
+            ylabel = self.YLabels[self.curve_type]
+            return f"{xlabel}: {round(x, 3)}\n" \
+                   f"{ylabel}: {round(y, 3)}\n" \
+                   f"Threshold: {round(data, 3)}"
+
         def _plot(points, pen, kwargs={}):
             contacted, respondents, _ = points
             if self.curve_type == CurveTypes.LiftCurve:
                 respondents = respondents / contacted
-            curve = pg.PlotCurveItem(contacted, respondents, pen=pen,
-                                     antialias=True, **kwargs)
+            curve = pg.PlotDataItem(contacted, respondents, pen=pen,
+                                    antialias=True, **kwargs)
+            curve.scatter.opts["hoverable"] = True
+            curve.scatter.opts["tip"] = tip
             self.plot.addItem(curve)
             return curve
 
+        light_color = QColor(color)
+        light_color.setAlphaF(0.25)
         pen_ = wide_pen if not self.display_convex_hull else pen
-        line_kwargs = {"stepMode": "right"} \
-            if self.curve_type == CurveTypes.PrecisionRecall else {}
-        self.plot.curve_items.append(
-            _plot(points, pen_, line_kwargs)
-        )
+        line_kwargs = {"symbol": "o", "symbolSize": 8,
+                       "symbolPen": light_color, "symbolBrush": light_color,
+                       "data": points.thresholds}
+
+        if self.curve_type == CurveTypes.PrecisionRecall:
+            line_kwargs["stepMode"] = "right"
+
+        self.plot.curve_items.append(_plot(points, pen_, line_kwargs))
         if self.display_convex_hull:
             self.plot.hull_items.append(_plot(hull, wide_pen))
         return True
+
+    def _set_tooltip(self):
+        html = ""
+        if len(self.plot.curve_items) > 0:
+            html = '<div style="color: #333; font-size: 12px;"' \
+                   ' <span>Thresholds:</span>'
+            for item in self.plot.curve_items:
+                threshold = self._get_threshold(item.xData, item.opts["data"])
+                html += f'<div>' \
+                        f'<span style="font-weight: 700; ' \
+                        f'color: {item.opts["pen"].color().name()}"> — </span>' \
+                        f'<span>{round(threshold, 3)}</span>' \
+                        f'</div>'
+            html += '</div>'
+
+        self.tooltip.setHtml(html)
+
+        view_box = self.plot.getViewBox()
+        y_min, y_max = view_box.viewRange()[1]
+        self.tooltip.setPos(self.rate, y_min + (y_max - y_min) * 0.8)
+        half_width = self.tooltip.boundingRect().width() * \
+            view_box.viewPixelSize()[0] / 2
+        anchor = [0.5, 0]
+        if half_width > self.rate - 0:
+            anchor[0] = 0
+        elif half_width > 1 - self.rate:
+            anchor[0] = 1
+        self.tooltip.setAnchor(anchor)
+
+    def _get_threshold(self, contacted, thresholds):
+        indices = np.array(thresholds).argsort()[::-1]
+        diff = contacted[indices]
+        value = diff[diff - self.rate >= 0][0]
+        ind = np.where(np.round(contacted, 6) == np.round(value, 6))[0][-1]
+        return thresholds[ind]
 
     def _plot_default_line(self):
         param_setter = self.plot.parameter_setter
@@ -363,10 +479,14 @@ class OWLiftCurve(widget.OWWidget):
         style = param_setter.default_line_settings[Updater.STYLE_LABEL]
         pen = QPen(QColor(20, 20, 20), width, Updater.LINE_STYLES[style])
         pen.setCosmetic(True)
-        if self.curve_type == CurveTypes.PrecisionRecall:
-            return
-        y0 = 1 if self.curve_type == CurveTypes.LiftCurve else 0
-        curve = pg.PlotCurveItem([0, 1], [y0, 1], pen=pen, antialias=True)
+        if self.curve_type == CurveTypes.LiftCurve:
+            y0, y1 = 1, 1
+        elif self.curve_type == CurveTypes.CumulativeGains:
+            y0, y1 = 0, 1
+        else:
+            y_true = self.results.actual
+            y0 = y1 = sum(y_true == self.target_index) / len(y_true)
+        curve = pg.PlotCurveItem([0, 1], [y0, y1], pen=pen, antialias=True)
         self.plot.addItem(curve)
         self.plot.default_line_item = curve
 
@@ -378,6 +498,39 @@ class OWLiftCurve(widget.OWWidget):
                 self.Warning.undefined_curves()
             else:
                 self.Error.undefined_curves()
+
+    @gui.deferred
+    def commit(self):
+        self.Information.no_output.clear()
+        wrapped = None
+        results = self.results
+        if results is not None:
+            problems = [
+                msg for condition, msg in (
+                    (results.folds is not None and len(results.folds) > 1,
+                     "each training data sample produces a different model"),
+                    (results.models is None,
+                     "test results do not contain stored models - try testing "
+                     "on separate data or on training data"),
+                    (len(self.selected_classifiers) != 1,
+                     "select a single model - the widget can output only one"),
+                    (len(results.domain.class_var.values) != 2,
+                     "cannot calibrate non-binary classes"))
+                if condition]
+            if len(problems) == 1:
+                self.Information.no_output(problems[0])
+            elif problems:
+                self.Information.no_output(
+                    "".join(f"\n - {problem}" for problem in problems))
+            else:
+                clsf_idx = self.selected_classifiers[0]
+                model = results.models[0, clsf_idx]
+                item = self.plot.curve_items[0]
+                threshold = self._get_threshold(item.xData, item.opts["data"])
+                threshold = [1 - threshold, threshold][self.target_index]
+                wrapped = ThresholdClassifier(model, threshold)
+
+        self.Outputs.calibrated_model.send(wrapped)
 
     def send_report(self):
         if self.results is None:
@@ -411,6 +564,13 @@ def precision_recall_from_results(results, target, clf_idx):
         y_true = y_true[:, target]
     scores = results.probabilities[clf_idx][:, target]
     precision, recall, thresholds = precision_recall_curve(y_true, scores)
+
+    if thresholds[-1] < 1:
+        thresholds = np.append(thresholds, 1)
+    else:
+        recall = recall[:-1]
+        precision = precision[:-1]
+
     return recall, precision, thresholds
 
 

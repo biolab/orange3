@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 import copy
 import unittest
 from unittest.mock import Mock
@@ -6,6 +7,7 @@ import numpy as np
 
 from AnyQt.QtGui import QFont, QPen
 
+from Orange.classification import ThresholdClassifier
 from Orange.data import Table
 import Orange.evaluation
 import Orange.classification
@@ -66,6 +68,70 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
         radio_buttons = self.widget.controls.curve_type.buttons
         radio_buttons[CurveTypes.PrecisionRecall].click()
         self.assertEqual(self.widget.curve_type, CurveTypes.PrecisionRecall)
+
+    def test_disable_convex_hull(self):
+        self.send_signal(self.widget.Inputs.evaluation_results, self.res)
+        self.assertTrue(self.widget.controls.display_convex_hull.isEnabled())
+        radio_buttons = self.widget.controls.curve_type.buttons
+        radio_buttons[CurveTypes.PrecisionRecall].click()
+        self.assertFalse(self.widget.controls.display_convex_hull.isEnabled())
+        radio_buttons = self.widget.controls.curve_type.buttons
+        radio_buttons[CurveTypes.LiftCurve].click()
+        self.assertTrue(self.widget.controls.display_convex_hull.isEnabled())
+
+    def test_get_threshold(self):
+        recall = np.array([1, 2 / 3, 2 / 3, 1 / 3, 0])
+        thresholds = np.array([0.4, 0.5, 0.6, 0.9, 1])
+
+        self.widget.rate = 1
+        threshold = self.widget._get_threshold(recall, thresholds)
+        self.assertEqual(threshold, 0.4)
+
+        self.widget.rate = 0.7
+        threshold = self.widget._get_threshold(recall, thresholds)
+        self.assertEqual(threshold, 0.4)
+
+        self.widget.rate = 0.5
+        threshold = self.widget._get_threshold(recall, thresholds)
+        self.assertEqual(threshold, 0.6)
+
+        self.widget.rate = 0.3
+        threshold = self.widget._get_threshold(recall, thresholds)
+        self.assertEqual(threshold, 0.9)
+
+        self.widget.rate = 0
+        threshold = self.widget._get_threshold(recall, thresholds)
+        self.assertEqual(threshold, 1)
+
+    def test_threshold_tooltip(self):
+        data = Table("heart_disease")
+        test_on_test = Orange.evaluation.TestOnTestData(
+            store_data=True, store_models=True)
+        res = test_on_test(data=data[::2], test_data=data[1::2],
+                           learners=[Orange.classification.MajorityLearner(),
+                                     Orange.classification.KNNLearner()])
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
+        self.assertEqual(self.widget.tooltip.toPlainText(),
+                         "Thresholds:\n— 0.526\n— 0.4")
+
+    def test_output(self):
+        data = Table("heart_disease")
+        test_on_test = Orange.evaluation.TestOnTestData(
+            store_data=True, store_models=True)
+        res = test_on_test(data=data[::2], test_data=data[1::2],
+                           learners=[Orange.classification.MajorityLearner(),
+                                     Orange.classification.KNNLearner()])
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
+        model = self.get_output(self.widget.Outputs.calibrated_model)
+        self.assertIsNone(model)
+        self.assertTrue(self.widget.Information.no_output.is_shown())
+
+        self.widget.selected_classifiers = [1]
+        self.widget._on_classifiers_changed()
+        model = self.get_output(self.widget.Outputs.calibrated_model)
+        self.assertIsInstance(model, ThresholdClassifier)
+        self.assertEqual(model.threshold, 0.6)
+        self.assertFalse(self.widget.Information.no_output.is_shown())
 
     def test_visual_settings(self):
         graph = self.widget.plot
@@ -222,7 +288,7 @@ class UtilsTest(unittest.TestCase):
             precision_recall_from_results(results, 1, 2)
         np.testing.assert_equal(precision, np.array([3 / 5, 2 / 3, 1, 1, 1]))
         np.testing.assert_equal(recall, np.array([1, 2 / 3, 2 / 3, 1 / 3, 0]))
-        np.testing.assert_equal(thresholds, np.array([0.4, 0.5, 0.6, 0.9]))
+        np.testing.assert_equal(thresholds, np.array([0.4, 0.5, 0.6, 0.9, 1]))
 
     @staticmethod
     def test_precision_recall_from_results_multiclass():
@@ -242,7 +308,7 @@ class UtilsTest(unittest.TestCase):
             precision_recall_from_results(results, 1, 2)
         np.testing.assert_equal(precision, np.array([2 / 3, 1 / 2, 1, 1]))
         np.testing.assert_equal(recall, np.array([1, 1 / 2, 1 / 2, 0]))
-        np.testing.assert_equal(thresholds, np.array([0.3, 0.4, 0.9]))
+        np.testing.assert_equal(thresholds, np.array([0.3, 0.4, 0.9, 1]))
 
     @staticmethod
     def test_points_from_results_cumulative_gain():
