@@ -428,10 +428,7 @@ class OWLiftCurve(widget.OWWidget):
         pen_ = wide_pen if not self.display_convex_hull else pen
         line_kwargs = {"symbol": "o", "symbolSize": 8,
                        "symbolPen": light_color, "symbolBrush": light_color,
-                       "data": points.thresholds}
-
-        if self.curve_type == CurveTypes.PrecisionRecall:
-            line_kwargs["stepMode"] = "right"
+                       "data": points.thresholds, "stepMode": "right"}
 
         self.plot.curve_items.append(_plot(points, pen_, line_kwargs))
         if self.display_convex_hull:
