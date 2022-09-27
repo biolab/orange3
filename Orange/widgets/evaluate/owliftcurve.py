@@ -22,7 +22,6 @@ from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalettes
-from Orange.widgets.evaluate.owrocanalysis import convex_hull
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
     CommonParameterSetter
@@ -40,20 +39,12 @@ CurveData = NamedTuple(
 CurveData.is_valid = property(lambda self: self.contacted.size > 0)
 
 
-PointsAndHull = NamedTuple(
-    "PointsAndHull",
-    [("points", CurveData),
-     ("hull", CurveData)]
-)
-
-
 class CurveTypes(IntEnum):
     LiftCurve, CumulativeGains, PrecisionRecall = range(3)
 
 
 class ParameterSetter(CommonParameterSetter):
-    WIDE_LINE_LABEL = "Wide line"
-    LINE_LABEL = "Thin Line"
+    WIDE_LINE_LABEL = "Line"
     DEFAULT_LINE_LABEL = "Default Line"
 
     WIDE_LINE_WIDTH = 3
@@ -69,10 +60,6 @@ class ParameterSetter(CommonParameterSetter):
         self.wide_line_settings = {
             Updater.WIDTH_LABEL: self.WIDE_LINE_WIDTH,
             Updater.STYLE_LABEL: self.WIDE_LINE_STYLE,
-        }
-        self.line_settings = {
-            Updater.WIDTH_LABEL: self.LINE_WIDTH,
-            Updater.STYLE_LABEL: self.LINE_STYLE,
         }
         self.default_line_settings = {
             Updater.WIDTH_LABEL: self.DEFAULT_LINE_WIDTH,
@@ -97,11 +84,6 @@ class ParameterSetter(CommonParameterSetter):
                     Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
                                           self.WIDE_LINE_STYLE),
                 },
-                self.LINE_LABEL: {
-                    Updater.WIDTH_LABEL: (range(1, 15), self.LINE_WIDTH),
-                    Updater.STYLE_LABEL: (list(Updater.LINE_STYLES),
-                                          self.LINE_STYLE),
-                },
                 self.DEFAULT_LINE_LABEL: {
                     Updater.WIDTH_LABEL: (range(1, 15),
                                           self.DEFAULT_LINE_WIDTH),
@@ -113,18 +95,8 @@ class ParameterSetter(CommonParameterSetter):
 
         def update_wide_curves(**_settings):
             self.wide_line_settings.update(**_settings)
-            if self.master.display_convex_hull:
-                Updater.update_lines(self.master.hull_items,
-                                     **self.wide_line_settings)
-            else:
-                Updater.update_lines(self.master.curve_items,
-                                     **self.wide_line_settings)
-
-        def update_thin_curves(**_settings):
-            self.line_settings.update(**_settings)
-            if self.master.display_convex_hull:
-                Updater.update_lines(self.master.curve_items,
-                                     **self.line_settings)
+            Updater.update_lines(self.master.curve_items,
+                                 **self.wide_line_settings)
 
         def update_default_line(**_settings):
             self.default_line_settings.update(**_settings)
@@ -133,7 +105,6 @@ class ParameterSetter(CommonParameterSetter):
 
         self._setters[self.PLOT_BOX] = {
             self.WIDE_LINE_LABEL: update_wide_curves,
-            self.LINE_LABEL: update_thin_curves,
             self.DEFAULT_LINE_LABEL: update_default_line,
         }
 
@@ -180,7 +151,6 @@ class OWLiftCurve(widget.OWWidget):
     target_index = settings.ContextSetting(0)
     selected_classifiers = settings.ContextSetting([])
 
-    display_convex_hull = settings.Setting(True)
     curve_type = settings.Setting(CurveTypes.LiftCurve)
     show_threshold = settings.Setting(True)
     show_points = settings.Setting(True)
@@ -199,7 +169,7 @@ class OWLiftCurve(widget.OWWidget):
         self.results = None
         self.classifier_names = []
         self.colors = []
-        self._points_hull: Dict[Tuple[int, int, int], PointsAndHull] = {}
+        self._points: Dict[Tuple[int, int, int], CurveData] = {}
         self.line = None
         self.tooltip = None
 
@@ -225,13 +195,10 @@ class OWLiftCurve(widget.OWWidget):
         self.classifiers_list_box.setMaximumHeight(100)
 
         box = gui.vBox(self.controlArea, box="Settings")
-        gui.checkBox(box, self, "display_convex_hull", "Show convex hull",
-                     callback=self._replot, stateWhenDisabled=False)
         gui.checkBox(box, self, "show_threshold", "Show thresholds",
                      callback=self._on_show_threshold_changed)
         gui.checkBox(box, self, "show_points", "Show points",
                      callback=self._on_show_points_changed)
-        self._enable_controls()
 
         gui.rubber(self.controlArea)
 
@@ -242,9 +209,7 @@ class OWLiftCurve(widget.OWWidget):
         self.plot = PlotItem(enableMenu=False)
         self.plot.parameter_setter = ParameterSetter(self.plot)
         self.plot.curve_items = []
-        self.plot.hull_items = []
         self.plot.default_line_item = None
-        self.plot.display_convex_hull = self.display_convex_hull
         self.plot.setMouseEnabled(False, False)
         self.plot.hideButtons()
 
@@ -277,20 +242,14 @@ class OWLiftCurve(widget.OWWidget):
     def clear(self):
         self.plot.clear()
         self.plot.curve_items = []
-        self.plot.hull_items = []
         self.plot.default_line_item = None
-        self.plot.display_convex_hull = self.display_convex_hull
         self.Warning.clear()
         self.Error.clear()
         self.results = None
         self.target_cb.clear()
         self.classifier_names = []
         self.colors = []
-        self._points_hull = {}
-
-    def _enable_controls(self):
-        enable = self.curve_type != CurveTypes.PrecisionRecall
-        self.controls.display_convex_hull.setEnabled(enable)
+        self._points = {}
 
     def _initialize(self, results):
         n_models = len(results.predicted)
@@ -312,9 +271,7 @@ class OWLiftCurve(widget.OWWidget):
     def _replot(self):
         self.plot.clear()
         self.plot.curve_items = []
-        self.plot.hull_items = []
         self.plot.default_line_item = None
-        self.plot.display_convex_hull = self.display_convex_hull
         if self.results is not None:
             self._setup_plot()
 
@@ -328,7 +285,6 @@ class OWLiftCurve(widget.OWWidget):
         self.commit.deferred()
 
     def _on_curve_type_changed(self):
-        self._enable_controls()
         self._set_axes_labels()
         self._replot()
         self.commit.deferred()
@@ -386,20 +342,16 @@ class OWLiftCurve(widget.OWWidget):
         curve_type = curve_type if curve_type == CurveTypes.PrecisionRecall \
             else CurveTypes.LiftCurve
         key = (target, clf_idx, curve_type)
-        if key not in self._points_hull:
-            self._points_hull[key] = points_from_results(
+        if key not in self._points:
+            self._points[key] = points_from_results(
                 self.results, target, clf_idx, self.curve_type)
-        points, hull = self._points_hull[key]
+        points = self._points[key]
 
         if not points.is_valid:
             return False
 
         param_setter = self.plot.parameter_setter
         color = self.colors[clf_idx]
-        width = param_setter.line_settings[Updater.WIDTH_LABEL]
-        style = param_setter.line_settings[Updater.STYLE_LABEL]
-        pen = QPen(color, width, Updater.LINE_STYLES[style])
-        pen.setCosmetic(True)
         width = param_setter.wide_line_settings[Updater.WIDTH_LABEL]
         style = param_setter.wide_line_settings[Updater.STYLE_LABEL]
         wide_pen = QPen(color, width, Updater.LINE_STYLES[style])
@@ -425,14 +377,11 @@ class OWLiftCurve(widget.OWWidget):
 
         light_color = QColor(color)
         light_color.setAlphaF(0.25)
-        pen_ = wide_pen if not self.display_convex_hull else pen
         line_kwargs = {"symbol": "o", "symbolSize": 8,
                        "symbolPen": light_color, "symbolBrush": light_color,
                        "data": points.thresholds, "stepMode": "right"}
 
-        self.plot.curve_items.append(_plot(points, pen_, line_kwargs))
-        if self.display_convex_hull:
-            self.plot.hull_items.append(_plot(hull, wide_pen))
+        self.plot.curve_items.append(_plot(points, wide_pen, line_kwargs))
         return True
 
     def _set_tooltip(self):
@@ -548,9 +497,7 @@ def points_from_results(results, target, clf_index, curve_type):
         if curve_type == CurveTypes.PrecisionRecall \
         else cumulative_gains_from_results
     x, y, thresholds = func(results, target, clf_index)
-    points = CurveData(x, y, thresholds)
-    hull = CurveData(*convex_hull([(x, y, thresholds)]))
-    return PointsAndHull(points, hull)
+    return CurveData(x, y, thresholds)
 
 
 def precision_recall_from_results(results, target, clf_idx):

@@ -69,16 +69,6 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
         radio_buttons[CurveTypes.PrecisionRecall].click()
         self.assertEqual(self.widget.curve_type, CurveTypes.PrecisionRecall)
 
-    def test_disable_convex_hull(self):
-        self.send_signal(self.widget.Inputs.evaluation_results, self.res)
-        self.assertTrue(self.widget.controls.display_convex_hull.isEnabled())
-        radio_buttons = self.widget.controls.curve_type.buttons
-        radio_buttons[CurveTypes.PrecisionRecall].click()
-        self.assertFalse(self.widget.controls.display_convex_hull.isEnabled())
-        radio_buttons = self.widget.controls.curve_type.buttons
-        radio_buttons[CurveTypes.LiftCurve].click()
-        self.assertTrue(self.widget.controls.display_convex_hull.isEnabled())
-
     def test_get_threshold(self):
         recall = np.array([1, 2 / 3, 2 / 3, 1 / 3, 0])
         thresholds = np.array([0.4, 0.5, 0.6, 0.9, 1])
@@ -157,10 +147,6 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
 
             for line in graph.curve_items:
                 pen: QPen = line.opts["pen"]
-                self.assertEqual(pen.width(), 3)
-
-            for line in graph.hull_items:
-                pen: QPen = line.opts["pen"]
                 self.assertEqual(pen.width(), 10)
 
             pen: QPen = graph.default_line_item.opts["pen"]
@@ -194,10 +180,7 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
         key, value = ("Annotations", "Title", "Title"), "Foo"
         self.widget.set_visual_settings(key, value)
 
-        key, value = ("Figure", "Wide line", "Width"), 10
-        self.widget.set_visual_settings(key, value)
-
-        key, value = ("Figure", "Thin Line", "Width"), 3
+        key, value = ("Figure", "Line", "Width"), 10
         self.widget.set_visual_settings(key, value)
 
         key, value = ("Figure", "Default Line", "Width"), 4
@@ -321,9 +304,9 @@ class UtilsTest(unittest.TestCase):
         contacted, respondents, thresholds = \
             cumulative_gains_from_results(results, 1, 2)
         res = points_from_results(results, 1, 2, CurveTypes.CumulativeGains)
-        np.testing.assert_almost_equal(res.points.contacted, contacted)
-        np.testing.assert_almost_equal(res.points.respondents, respondents)
-        np.testing.assert_almost_equal(res.points.thresholds, thresholds)
+        np.testing.assert_almost_equal(res.contacted, contacted)
+        np.testing.assert_almost_equal(res.respondents, respondents)
+        np.testing.assert_almost_equal(res.thresholds, thresholds)
 
     @staticmethod
     def test_points_from_results_precision_recall():
@@ -336,9 +319,9 @@ class UtilsTest(unittest.TestCase):
         contacted, respondents, thresholds = \
             precision_recall_from_results(results, 1, 2)
         res = points_from_results(results, 1, 2, CurveTypes.PrecisionRecall)
-        np.testing.assert_almost_equal(res.points.contacted, contacted)
-        np.testing.assert_almost_equal(res.points.respondents, respondents)
-        np.testing.assert_almost_equal(res.points.thresholds, thresholds)
+        np.testing.assert_almost_equal(res.contacted, contacted)
+        np.testing.assert_almost_equal(res.respondents, respondents)
+        np.testing.assert_almost_equal(res.thresholds, thresholds)
 
 
 if __name__ == "__main__":
