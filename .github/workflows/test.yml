@@ -37,16 +37,16 @@ jobs:
       fail-fast: False
       matrix:
         os: [ubuntu-20.04]
-        python-version: [3.7, 3.8, 3.9, '3.10']
+        python-version: [3.8, 3.9, '3.10']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: ubuntu-20.04
-            python-version: 3.8
+            python-version: '3.10'
             tox_env: orange-latest
             name: Latest
           - os: ubuntu-18.04
-            python-version: 3.7
+            python-version: 3.8
             tox_env: orange-oldest
             name: Oldest dependencies
           - os: ubuntu-20.04
@@ -113,20 +113,20 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-11, windows-2019]
-        python-version: [3.7, 3.8, 3.9, '3.10']
+        python-version: [3.8, 3.9, '3.10']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: windows-latest
-            python-version: 3.8
+            python-version: '3.10'
             tox_env: orange-latest
             name: Latest
           - os: macos-11
-            python-version: 3.8
+            python-version: '3.10'
             tox_env: orange-latest
             name: Latest
           - os: windows-latest
-            python-version: 3.9
+            python-version: '3.10'
             tox_env: pyqt6
             name: PyQt6
           - os: macos-11
