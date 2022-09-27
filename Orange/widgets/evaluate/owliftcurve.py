@@ -40,7 +40,7 @@ CurveData.is_valid = property(lambda self: self.contacted.size > 0)
 
 
 class CurveTypes(IntEnum):
-    LiftCurve, CumulativeGains, PrecisionRecall = range(3)
+    LiftCurve, CumulativeGains, PrecisionRecall = range(3)  # pylint: disable=invalid-name
 
 
 class ParameterSetter(CommonParameterSetter):
@@ -303,8 +303,9 @@ class OWLiftCurve(widget.OWWidget):
             item.scatter.setVisible(self.show_points)
 
     def _set_axes_labels(self):
-        self.plot.getAxis("bottom").setLabel(self.XLabels[self.curve_type])
-        self.plot.getAxis("left").setLabel(self.YLabels[self.curve_type])
+        self.plot.getAxis("bottom").setLabel(
+            self.XLabels[int(self.curve_type)])
+        self.plot.getAxis("left").setLabel(self.YLabels[int(self.curve_type)])
 
     def _setup_plot(self):
         self._plot_default_line()
@@ -313,6 +314,8 @@ class OWLiftCurve(widget.OWWidget):
             for clf_idx in self.selected_classifiers
         ]
         self.plot.autoRange()
+        if self.curve_type != CurveTypes.LiftCurve:
+            self.plot.getViewBox().setYRange(0, 1)
         self._set_undefined_curves_err_warn(is_valid)
 
         self.line = pg.InfiniteLine(
@@ -321,6 +324,7 @@ class OWLiftCurve(widget.OWWidget):
             hoverPen=pg.mkPen(color="k", style=Qt.DashLine, width=3),
             bounds=(0, 1),
         )
+        self.line.setCursor(Qt.SizeHorCursor)
         self.line.sigPositionChanged.connect(self._on_threshold_change)
         self.line.sigPositionChangeFinished.connect(
             self._on_threshold_change_done)
@@ -358,13 +362,13 @@ class OWLiftCurve(widget.OWWidget):
         wide_pen.setCosmetic(True)
 
         def tip(x, y, data):
-            xlabel = self.XLabels[self.curve_type]
-            ylabel = self.YLabels[self.curve_type]
+            xlabel = self.XLabels[int(self.curve_type)]
+            ylabel = self.YLabels[int(self.curve_type)]
             return f"{xlabel}: {round(x, 3)}\n" \
                    f"{ylabel}: {round(y, 3)}\n" \
                    f"Threshold: {round(data, 3)}"
 
-        def _plot(points, pen, kwargs={}):
+        def _plot(points, pen, kwargs):
             contacted, respondents, _ = points
             if self.curve_type == CurveTypes.LiftCurve:
                 respondents = respondents / contacted
@@ -388,7 +392,7 @@ class OWLiftCurve(widget.OWWidget):
         html = ""
         if len(self.plot.curve_items) > 0:
             html = '<div style="color: #333; font-size: 12px;"' \
-                   ' <span>Thresholds:</span>'
+                   ' <span>Probability threshold(s):</span>'
             for item in self.plot.curve_items:
                 threshold = self._get_threshold(item.xData, item.opts["data"])
                 html += f'<div>' \
