@@ -711,13 +711,16 @@
     "keywords": []
    },
    {
-    "text": "Lift Curve",
-    "doc": "visual-programming/source/widgets/evaluate/liftcurve.md",
+    "text": "Performance Curve",
+    "doc": "visual-programming/source/widgets/evaluate/performancecurve.md",
     "icon": "../Orange/widgets/evaluate/icons/LiftCurve.svg",
     "background": "#C3F3F3",
     "keywords": [
      "lift",
-     "cumulative gain"
+     "cumulative gain",
+     "precision",
+     "recall",
+     "curve"
     ]
    },
    {
