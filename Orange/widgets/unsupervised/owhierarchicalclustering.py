@@ -10,7 +10,7 @@ from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsScene, QGridLayout, QSizePolicy,
     QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent, QLabel
 )
-from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath
+from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath, QColor
 from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent, \
     QModelIndex
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
@@ -137,8 +137,11 @@ class SelectedLabelsModel(PyListModel):
             font = QFont(self.__font)
             font.setBold(index.row() in self.subset)
             return font
-        if role == Qt.BackgroundRole and self.__colors is not None:
-            return self.__colors[index.row()]
+        if role == Qt.BackgroundRole:
+            if self.__colors is not None:
+                return self.__colors[index.row()]
+            elif not any(self) and self.subset:  # no labels, no color, but subset
+                return QColor(0, 0, 0)
         if role == Qt.UserRole and self.subset:
             return index.row() in self.subset
 
@@ -589,7 +592,8 @@ class OWHierarchicalClustering(widget.OWWidget):
 
             if self.annotation is None:
                 if self.subset_rows and self.color_by is None:
-                    labels = [" •"[row in self.subset_rows] for row in indices]
+                    # Model fails if number of labels and of colors mismatch
+                    labels = [""] * len(indices)
                 else:
                     labels = []
             elif self.annotation == "Enumeration":
