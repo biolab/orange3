@@ -127,7 +127,7 @@ Evaluate
 
    widgets/evaluate/calibrationplot
    widgets/evaluate/confusionmatrix
-   widgets/evaluate/liftcurve
+   widgets/evaluate/performancecurve
    widgets/evaluate/predictions
    widgets/evaluate/rocanalysis
    widgets/evaluate/testandscore
