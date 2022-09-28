@@ -4,6 +4,8 @@ from html import escape
 from AnyQt.QtCore import Qt
 
 from orangewidget.utils.signals import summarize, PartialSummary
+from Orange.widgets.utils.itemmodels import TableModel
+from Orange.widgets.utils.tableview import TableView
 
 from Orange.data import (
     StringVariable, DiscreteVariable, ContinuousVariable, TimeVariable,
@@ -163,9 +165,15 @@ def _nobr(s):
 
 @summarize.register
 def summarize_(data: Table):
+    def previewer():
+        view = TableView(selectionMode=TableView.NoSelection)
+        view.setModel(TableModel(data))
+        return view
+
     return PartialSummary(
         data.approx_len(),
-        format_summary_details(data, format=Qt.RichText))
+        format_summary_details(data, format=Qt.RichText),
+        previewer)
 
 
 @summarize.register
