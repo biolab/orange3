@@ -513,6 +513,9 @@ def precision_recall_from_results(results, target, clf_idx):
     scores = results.probabilities[clf_idx][:, target]
     precision, recall, thresholds = precision_recall_curve(y_true, scores)
 
+    # scikit's precision_recall_curve adds a (0, 1) point,
+    # so we add a corresponding threshold = 1.
+    # In case the probability threshold was 1 we remove the (0, 1) point.
     if thresholds[-1] < 1:
         thresholds = np.append(thresholds, 1)
     else:
