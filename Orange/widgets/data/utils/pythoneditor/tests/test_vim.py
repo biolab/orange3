@@ -24,6 +24,7 @@ class _Test(WidgetTest):
     """
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(SimpleWidget)
         self.qpart = self.widget.qpart
         self.qpart.lines = ['The quick brown fox',
@@ -38,6 +39,8 @@ class _Test(WidgetTest):
     def tearDown(self):
         self.qpart.hide()
         self.qpart.terminate()
+        del self.qpart
+        super().tearDown()
 
     def _onVimModeChanged(self, _, mode):
         self.vimMode = mode
