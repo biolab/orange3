@@ -65,7 +65,7 @@ class TestOWLouvain(WidgetTest):
         meta_var = ContinuousVariable(name='meta_var')
         table = Table.from_domain(domain=Domain([], metas=[meta_var]), n_rows=5)
         with table.unlocked():
-            table.get_column(meta_var, view=True)[:] = meta
+            table.set_column(meta_var, meta)
 
         self.send_signal(self.widget.Inputs.data, table)
         self.commit_and_wait()

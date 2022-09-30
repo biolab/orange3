@@ -378,7 +378,7 @@ class TestOWRank(WidgetTest):
         """Check NaNs are sorted last"""
         data = self.iris.copy()
         with data.unlocked():
-            data.get_column('petal length', view=True)[:] = np.nan
+            data.set_column('petal length', np.nan)
         self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_finished()
 

@@ -6,7 +6,6 @@ import warnings
 import numpy as np
 import scipy.sparse as sp
 
-import Orange
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable,
     Domain, Table, IsDefined, FilterContinuous, Values, FilterString,
@@ -533,10 +532,6 @@ class TestTableGetColumn(TableColumnViewTests):
         np.testing.assert_equal(col, data.X[:, 0])
         self.assertIs(col.base, data.X)
 
-        col = data.get_column(y, view=True)
-        np.testing.assert_equal(col, data.X[:, 0])
-        self.assertIs(col.base, data.X)
-
         col = data.get_column(y, copy=True)
         np.testing.assert_equal(col, data.X[:, 0])
         self.assertIsNone(col.base)
@@ -552,21 +547,10 @@ class TestTableGetColumn(TableColumnViewTests):
         np.testing.assert_equal(col2, [2, 4, 6])
         self.assertIsNone(col2.base)
 
-        self.assertRaises(ValueError, data.get_column, y2, view=True)
-
-    def test_get_column_wrong_arguments(self):
-        self.assertRaises(
-            ValueError, self.data.get_column, self.data.domain["y"],
-            copy=True, view=True)
-
     def test_get_column_discrete(self):
         data, d = self.data, self.data.domain["d"]
 
         col = data.get_column(d)
-        np.testing.assert_equal(col, [0, 0, 1])
-        self.assertIs(col.base, data.X)
-
-        col = data.get_column(d, view=True)
         np.testing.assert_equal(col, [0, 0, 1])
         self.assertIs(col.base, data.X)
 
@@ -576,7 +560,7 @@ class TestTableGetColumn(TableColumnViewTests):
 
         e = DiscreteVariable("d", values=("a", "b"))
         assert e == d
-        col = data.get_column(e, view=True)
+        col = data.get_column(e)
         np.testing.assert_equal(col, [0, 0, 1])
         self.assertIs(col.base, data.X)
 
@@ -589,10 +573,6 @@ class TestTableGetColumn(TableColumnViewTests):
         assert e == d  # because that's how Variable mapping works
         col = data.get_column(e)
         np.testing.assert_equal(col, [0, 0, 2])
-
-        e = DiscreteVariable("d", values=("a", "b", "c"))
-        assert e == d  # because that's how Variable mapping works
-        self.assertRaises(ValueError, data.get_column, e, view=True)
 
         with data.unlocked(data.X):
             data.X = sp.csr_matrix(data.X)
@@ -612,19 +592,11 @@ class TestTableGetColumn(TableColumnViewTests):
         self.assertFalse(sp.issparse(col))
         np.testing.assert_equal(col, orig_y)
 
-        self.assertRaises(ValueError, data.get_column, y, view=True)
-
         col = data.get_column(y, copy=True)
         self.assertFalse(sp.issparse(col))
         np.testing.assert_equal(col, orig_y)
 
     def test_get_column_no_variable(self):
-        self.assertRaises(ValueError, self.data.get_column,
-                          ContinuousVariable("y3"), view=True)
-
-        self.assertRaises(ValueError, self.data.get_column,
-                          ContinuousVariable("y3"), copy=True)
-
         self.assertRaises(ValueError, self.data.get_column,
                           ContinuousVariable("y3"))
 
@@ -632,10 +604,6 @@ class TestTableGetColumn(TableColumnViewTests):
         data = self.data
 
         col = data.get_column(0)
-        np.testing.assert_equal(col, data.X[:, 0])
-        self.assertIs(col.base, data.X)
-
-        col = data.get_column(0, view=True)
         np.testing.assert_equal(col, data.X[:, 0])
         self.assertIs(col.base, data.X)
 
@@ -655,10 +623,6 @@ class TestTableGetColumn(TableColumnViewTests):
         data = self.data
 
         col = data.get_column("y")
-        np.testing.assert_equal(col, data.X[:, 0])
-        self.assertIs(col.base, data.X)
-
-        col = data.get_column("y", view=True)
         np.testing.assert_equal(col, data.X[:, 0])
         self.assertIs(col.base, data.X)
 

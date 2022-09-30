@@ -1436,7 +1436,7 @@ class Table(Sequence, Storage):
         domain = Domain(attrs, classes, metavars)
         new_table = self.transform(domain)
         with new_table.unlocked(new_table.metas if to_metas else new_table.X):
-            new_table.get_column(variable, view=True)[:] = data
+            new_table.set_column(variable, data)
         return new_table
 
     def is_sparse(self):
@@ -1565,7 +1565,7 @@ class Table(Sequence, Storage):
         self.W = self.W[ind]
         self.ids = self.ids[ind]
 
-    @deprecated("Table.get_column(..., view=True)")
+    @deprecated("Table.get_column (or Table.set_column if you must)")
     def get_column_view(self, index: Union[Integral, Variable]) -> np.ndarray:
         """
         An obsolete function that was supposed to return a view with a column
@@ -1613,7 +1613,7 @@ class Table(Sequence, Storage):
         else:
             return self.metas[:, -1 - index]
 
-    def get_column(self, index, copy=False, view=False):
+    def get_column(self, index, copy=False):
         """
         Return a column with values of `index`.
 
@@ -1624,53 +1624,54 @@ class Table(Sequence, Storage):
         Args:
             index (int or str or Variable): attribute
             copy (bool): if set to True, ensure the result is a copy, not a view
-            view (bool): if set to True, check that result is a view, not a copy
 
         Returns:
             column (np.array): data column
         """
-        if copy and view:
-            raise ValueError(
-                "incompatible arguments; `copy` and `view` cannot both be True")
-
         if isinstance(index, Variable) and index not in self.domain:
             if index.compute_value is None:
-                raise ValueError(
-                    f"variable {index.name} is not in domain")
-            if view:
-                raise ValueError(
-                    f"cannot create a view to derived variable {index.name}")
+                raise ValueError(f"variable {index.name} is not in domain")
             return compute_column(index.compute_value, self)
 
         mapper = None
-        is_primitive = isinstance(index, Variable) and index.is_primitive()
         if not isinstance(index, Integral):
             if isinstance(index, DiscreteVariable) \
                     and index.values != self.domain[index].values:
-                if view:
-                    raise ValueError(
-                        "cannot create a view to discrete variable "
-                        f"{index.name} with different encoding")
-                else:
-                    mapper = index.get_mapper_from(self.domain[index])
+                mapper = index.get_mapper_from(self.domain[index])
             index = self.domain.index(index)
 
         col = self._get_column_view(index)
         if sp.issparse(col):
-            if view:
-                raise ValueError("cannot create a view into sparse matrix")
             col = col.toarray().reshape(-1)
+        if col.dtype == object and self.domain[index].is_primitive():
+            col = col.astype(np.float64)
         if mapper is not None:
             col = mapper(col)
         if copy and col.base is not None:
             col = col.copy()
-        if is_primitive and col.dtype == object:
-            # TODO: This should fail if view=True. However, if a call wants a
-            # view, it may not need the cast (e.g. assigns values into column
-            # of metas).
-            # Either drop view argument OR don't cast if view.
-            col = col.astype(np.float64)
         return col
+
+    def set_column(self, index: Union[int, str, Variable], data):
+        """
+        Set the values in the given column do `data`.
+
+        This function may be useful, but try avoiding it.
+
+        Table (or the corresponding
+        part must be unlocked). If variable is discrete, its encoding must
+        match the variable in the domain.
+
+        Args:
+            index (int, str, Variable): index of a column
+            data (object): a single value or 1d array of length len(self)
+        """
+        if not isinstance(index, Integral):
+            if isinstance(index, DiscreteVariable) \
+                    and self.domain[index].values != index.values:
+                raise ValueError(f"cannot set data for variable {index.name} "
+                                 "with different encoding")
+            index = self.domain.index(index)
+        self._get_column_view(index)[:] = data
 
     def _filter_is_defined(self, columns=None, negate=False):
         # structure of function is obvious; pylint: disable=too-many-branches

@@ -164,7 +164,7 @@ class OWNeighbors(OWWidget):
         distances = self.distances[indices]
         with neighbours.unlocked(neighbours.metas):
             if distances.size > 0:
-                neighbours.get_column(dist_var, view=1)[:] = distances
+                neighbours.set_column(dist_var, distances)
         return neighbours
 
 
