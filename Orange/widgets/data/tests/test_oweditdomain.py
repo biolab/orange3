@@ -921,13 +921,18 @@ class TestReinterpretTransforms(TestCase):
         times = (
             ["07.02.2022", "18.04.2021"],  # date only
             ["07.02.2022 01:02:03", "18.04.2021 01:02:03"],  # datetime
+            # datetime with timezone
+            ["2021-02-08 01:02:03+01:00", "2021-02-07 01:02:03+01:00"],
             ["010203", "010203"],  # time
             ["02-07", "04-18"],
         )
-        formats = ["25.11.2021", "25.11.2021 00:00:00", "000000", "11-25"]
+        formats = [
+            "25.11.2021", "25.11.2021 00:00:00", "2021-11-25 00:00:00", "000000", "11-25"
+        ]
         expected = [
             [d("2022-02-07"), d("2021-04-18")],
             [d("2022-02-07 01:02:03"), d("2021-04-18 01:02:03")],
+            [d("2021-02-08 01:02:03+0100"), d("2021-02-07 01:02:03+0100")],
             [d("01:02:03"), d("01:02:03")],
             [d("1900-02-07"), d("1900-04-18")],
         ]
@@ -951,6 +956,16 @@ class TestReinterpretTransforms(TestCase):
             ttable.metas,
             np.array(list(chain(expected, expected)), dtype=float).transpose()
         )
+
+    def test_raise_pandas_version(self):
+        """
+        When this test start to fail:
+        - remove this test
+        - remove if clause in datetime_to_epoch function and supporting comments
+        - set pandas dependency version to pandas>=1.4
+        """
+        from datetime import datetime
+        self.assertLess(datetime.today(), datetime(2023, 1, 1))
 
     def test_reinterpret_string(self):
         table = self.data_str

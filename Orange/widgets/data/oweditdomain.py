@@ -2828,7 +2828,15 @@ class ToContinuousTransform(Transformation):
 
 def datetime_to_epoch(dti: pd.DatetimeIndex, only_time) -> np.ndarray:
     """Convert datetime to epoch"""
-    delta = dti - (dti.normalize() if only_time else pd.Timestamp("1970-01-01"))
+    # when dti has timezone info also the subtracted timestamp must have it
+    # otherwise subtracting fails
+    initial_ts = pd.Timestamp("1970-01-01", tz=None if dti.tz is None else "UTC")
+    # pandas in versions before 1.4 don't support subtracting different timezones
+    # remove next two lines when read-the-docs start supporting config files
+    # for subprojects, or they change default python version to 3.8
+    if dti.tz is not None:
+        dti = dti.tz_convert("UTC")
+    delta = dti - (dti.normalize() if only_time else initial_ts)
     return (delta / pd.Timedelta("1s")).values
 
 
