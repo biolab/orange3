@@ -21,11 +21,13 @@ class Test(WidgetTest):
     """
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(SimpleWidget)
         self.qpart = self.widget.qpart
 
     def tearDown(self):
         self.qpart.terminate()
+        super().tearDown()
 
     def test_1(self):
         # Indent with Tab

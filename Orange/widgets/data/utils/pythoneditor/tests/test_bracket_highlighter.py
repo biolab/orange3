@@ -19,11 +19,13 @@ class Test(WidgetTest):
     """
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(SimpleWidget)
         self.qpart = self.widget.qpart
 
     def tearDown(self):
         self.qpart.terminate()
+        super().tearDown()
 
     def _verify(self, actual, expected):
         converted = []

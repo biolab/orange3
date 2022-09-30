@@ -254,8 +254,7 @@ class OWBoxPlot(widget.OWWidget):
         return QSize(900, 500)
 
     def eventFilter(self, obj, event):
-        if obj is self.box_view.viewport() and \
-                event.type() == QEvent.Resize:
+        if event.type() == QEvent.Resize and obj is self.box_view.viewport():
             self.update_graph()
         return super().eventFilter(obj, event)
 
