@@ -1130,6 +1130,10 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         with self.assertRaises(ValueError):
             float(ticks[0])
 
+        spacing, ticks = x_axis.tickValues(1581953776, 1582953776, 10)[0]
+        self.assertEqual(spacing, 1582953776 - 1581953776)
+        self.assertTrue(not ticks.size or 1581953776 <= ticks[0] <= 1582953776)
+
     def test_clear_plot(self):
         self.widget.cb_class_density.setChecked(True)
         self.send_signal(self.widget.Inputs.data, self.data)

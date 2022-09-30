@@ -302,7 +302,10 @@ class AxisItem(AxisItem):
             step = int(np.ceil(float(len(ticks)) / max_steps))
             ticks = ticks[::step]
 
-        spacing = min(b - a for a, b in zip(ticks[:-1], ticks[1:]))
+        # In case of a single tick, `default` will inform tickStrings
+        # about the appropriate scale.
+        spacing = min((b - a for a, b in zip(ticks[:-1], ticks[1:])),
+                      default=maxVal - minVal)
         return [(spacing, ticks)]
 
     def tickStrings(self, values, scale, spacing):
