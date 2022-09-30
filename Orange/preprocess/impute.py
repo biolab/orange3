@@ -88,7 +88,7 @@ class DropInstances(BaseImputeMethod):
     description = ""
 
     def __call__(self, data, variable):
-        col, _ = data.get_column_view(variable)
+        col = data.get_column(variable)
         return np.isnan(col)
 
 
@@ -192,7 +192,7 @@ class ReplaceUnknownsModel(Reprable):
         if isinstance(data, Orange.data.Instance):
             data = Orange.data.Table.from_list(data.domain, [data])
         domain = data.domain
-        column = np.array(data.get_column_view(self.variable)[0], copy=True)
+        column = data.get_column(self.variable, copy=True)
 
         mask = np.isnan(column)
         if not np.any(mask):

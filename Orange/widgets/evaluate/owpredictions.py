@@ -788,7 +788,7 @@ class OWPredictions(OWWidget):
             self.Outputs.evaluation_results.send(None)
             return
 
-        nanmask = numpy.isnan(self.data.get_column_view(self.class_var)[0])
+        nanmask = numpy.isnan(self.data.get_column(self.class_var))
         data = self.data[~nanmask]
         results = Results(data, store_data=True)
         results.folds = [...]

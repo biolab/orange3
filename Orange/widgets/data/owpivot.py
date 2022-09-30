@@ -95,8 +95,8 @@ class Pivot:
         if self._col_var and not self._col_var.is_discrete:
             raise TypeError("Column variable should be DiscreteVariable")
 
-        self._row_var_col = table.get_column_view(row_var)[0].astype(float)
-        self._col_var_col = table.get_column_view(self._col_var)[0].astype(float)
+        self._row_var_col = table.get_column(row_var)
+        self._col_var_col = table.get_column(self._col_var)
         self._row_var_groups = nanunique(self._row_var_col)
         self._col_var_groups = nanunique(self._col_var_col)
 
@@ -260,7 +260,7 @@ class Pivot:
                 if fun in self._depen_agg_done:
                     X[:, k] = group_tab.X[:, self._depen_agg_done[fun][v] - offset]
                 else:
-                    X[i, k] = fun(sub_table.get_column_view(v)[0])
+                    X[i, k] = fun(sub_table.get_column(v))
 
         #rename leading vars (seems the easiest) if needed
         current = [var.name for var in attrs]
@@ -962,7 +962,7 @@ class OWPivot(OWWidget):
 
             if self.data:
                 col_var = self.col_feature or self.row_feature
-                col = self.data.get_column_view(col_var)[0].astype(float)
+                col = self.data.get_column(col_var)
                 if len(nanunique(col)) >= self.MAX_VALUES:
                     self.table_view.clear()
                     self.Warning.too_many_values()

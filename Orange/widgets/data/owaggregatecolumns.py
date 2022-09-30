@@ -207,7 +207,7 @@ class OWAggregateColumns(widget.OWWidget):
     def _compute_column(self, variables):
         arr = np.empty((len(self.data), len(variables)))
         for i, var in enumerate(variables):
-            arr[:, i] = self.data.get_column_view(var)[0].astype(float)
+            arr[:, i] = self.data.get_column(var)
         func = self.Operations[self.operation].func
         return func(arr, axis=1)
 

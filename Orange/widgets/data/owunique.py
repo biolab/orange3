@@ -84,7 +84,7 @@ class OWUnique(widget.OWWidget):
 
     def _compute_unique_data(self):
         uniques = {}
-        keys = zip(*[self.data.get_column_view(attr)[0]
+        keys = zip(*[self.data.get_column(attr)
                      for attr in self.selected_vars or self.var_model])
         for i, key in enumerate(keys):
             uniques.setdefault(key, []).append(i)

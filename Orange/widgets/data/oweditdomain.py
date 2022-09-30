@@ -2318,11 +2318,10 @@ def table_column_data(
         var: Union[Orange.data.Variable, int],
         dtype=None
 ) -> MArray:
-    col, copy = table.get_column_view(var)
+    col = table.get_column(var)
     var = table.domain[var]  # type: Orange.data.Variable
     if var.is_primitive() and not np.issubdtype(col.dtype, np.inexact):
         col = col.astype(float)
-        copy = True
 
     if dtype is None:
         if isinstance(var, Orange.data.TimeVariable):
@@ -2344,9 +2343,8 @@ def table_column_data(
 
     if dtype != col.dtype:
         col = col.astype(dtype)
-        copy = True
 
-    if not copy:
+    if col.base is not None:
         col = col.copy()
     return MArray(col, mask=mask)
 

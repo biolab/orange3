@@ -305,8 +305,8 @@ class TestOWCreateClass(WidgetTest):
 
         widget.apply()
         outdata = self.get_output(self.widget.Outputs.data)
-        classes = outdata.get_column_view("class")[0]
-        attr = outdata.get_column_view("name")[0].astype(str)
+        classes = outdata.get_column("class")
+        attr = outdata.get_column("name").astype(str)
         has_a = np.char.find(attr, "a") != -1
         np.testing.assert_equal(classes[has_a], 0)
         np.testing.assert_equal(classes[~has_a], 1)
@@ -385,8 +385,8 @@ class TestOWCreateClass(WidgetTest):
         widget.apply()
         outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(outdata.domain.class_var.values, ("Cls1", "Cls2"))
-        classes = outdata.get_column_view("class")[0]
-        attr = outdata.get_column_view("thal")[0]
+        classes = outdata.get_column("class")
+        attr = outdata.get_column("thal")
         thal = self.heart.domain["thal"]
         reversable = np.equal(attr, thal.values.index("reversable defect"))
         fixed = np.equal(attr, thal.values.index("fixed defect"))
@@ -402,7 +402,7 @@ class TestOWCreateClass(WidgetTest):
         widget.apply()
         outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(outdata.domain.class_var.values, ("C1", ))
-        classes = outdata.get_column_view("class")[0]
+        classes = outdata.get_column("class")
         np.testing.assert_equal(classes, 0)
 
         thal = self.heart.domain["thal"]
@@ -426,8 +426,8 @@ class TestOWCreateClass(WidgetTest):
         widget.apply()
         outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(outdata.domain.class_var.values, ("C1", "C2"))
-        classes = outdata.get_column_view("class")[0]
-        attr = outdata.get_column_view("gender")[0]
+        classes = outdata.get_column("class")
+        attr = outdata.get_column("gender")
         female = np.equal(attr, gender.values.index("female"))
         np.testing.assert_equal(classes[female], 0)
         # pylint: disable=invalid-unary-operand-type

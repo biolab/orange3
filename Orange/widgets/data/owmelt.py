@@ -153,7 +153,7 @@ class OWMelt(widget.OWWidget):
         self.commit.now()
 
     def _is_unique(self, var):
-        col = self.data.get_column_view(var)[0]
+        col = self.data.get_column(var)
         col = col[self._notnan_mask(col)]
         return len(col) == len(set(col))
 
@@ -200,7 +200,7 @@ class OWMelt(widget.OWWidget):
         # Get identifiers, remove rows with missing id data
         id_names = ()
         if self.idvar:
-            idvalues, _ = self.data.get_column_view(self.idvar)
+            idvalues = self.data.get_column(self.idvar)
             idmask = self._notnan_mask(idvalues)
             x = self.data.X[idmask]
             idvalues = idvalues[idmask]

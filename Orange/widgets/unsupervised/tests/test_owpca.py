@@ -114,8 +114,7 @@ class TestOWPCA(WidgetTest):
         self.assertEqual(pc2.attributes["variance"], 0.25)
 
         result = self.get_output(self.widget.Outputs.components)
-        np.testing.assert_almost_equal(result.get_column_view("variance")[0].T,
-                                       [0.5, 0.25])
+        np.testing.assert_almost_equal(result.get_column("variance"), [0.5, 0.25])
 
     def test_sparse_data(self):
         """Check that PCA returns the same results for both dense and sparse data."""

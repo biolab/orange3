@@ -1436,7 +1436,7 @@ class Table(Sequence, Storage):
         domain = Domain(attrs, classes, metavars)
         new_table = self.transform(domain)
         with new_table.unlocked(new_table.metas if to_metas else new_table.X):
-            new_table.get_column_view(variable)[0][:] = data
+            new_table.get_column(variable, view=True)[:] = data
         return new_table
 
     def is_sparse(self):
@@ -1701,10 +1701,8 @@ class Table(Sequence, Storage):
         else:
             remove = np.zeros(len(self), dtype=bool)
             for column in columns:
-                col, sparse = self.get_column_view(column)
-                if sparse:
-                    remove += col == 0
-                elif self.domain[column].is_primitive():
+                col = self.get_column(column)
+                if self.domain[column].is_primitive():
                     remove += bn.anynan([col.astype(float)], axis=0)
                 else:
                     remove += col.astype(bool)
@@ -1731,7 +1729,7 @@ class Table(Sequence, Storage):
     def _filter_same_value(self, column, value, negate=False):
         if not isinstance(value, Real):
             value = self.domain[column].to_val(value)
-        sel = self.get_column_view(column)[0] == value
+        sel = self.get_column(column) == value
         if negate:
             sel = np.logical_not(sel)
         return self.from_table_rows(self, sel)
@@ -1817,7 +1815,7 @@ class Table(Sequence, Storage):
             raise TypeError("Invalid filter")
 
         def col_filter(col_idx):
-            col = self.get_column_view(col_idx)[0]
+            col = self.get_column(col_idx)
             if isinstance(filter, IsDefined):
                 if self.domain[col_idx].is_primitive():
                     return ~np.isnan(col.astype(float))

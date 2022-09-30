@@ -769,7 +769,7 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
     @staticmethod
     def check_attrs_values(attr, data):
         for var in attr:
-            col, _ = data.get_column_view(var)
+            col = data.get_column(var)
             mask = ~np.isnan(col)
             grater_or_equal = np.greater_equal(
                 col, len(var.values), out=mask, where=mask
@@ -1291,7 +1291,7 @@ class FeatureFunc:
         return self.__call_table(table)[0]
 
     def extract_column(self, table: Table, var: Variable):
-        data, _ = table.get_column_view(var)
+        data = table.get_column(var)
         if var.is_string:
             return data
         elif var.is_discrete and not self.use_values:

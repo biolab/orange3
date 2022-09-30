@@ -1115,7 +1115,7 @@ class OWHeatMap(widget.OWWidget):
         var = self.annotation_color_var
         if var is None:
             return None
-        column_data = column_data_from_table(self.input_data, var)
+        column_data = self.input_data.get_column(var)
         merges = self._merge_row_indices()
         if merges is not None:
             column_data = aggregate(var, column_data, merges)
@@ -1360,26 +1360,15 @@ def column_str_from_table(
         column: Union[int, Orange.data.Variable],
 ) -> np.ndarray:
     var = table.domain[column]
-    data, _ = table.get_column_view(column)
+    data = table.get_column(column)
     return np.asarray([var.str_val(v) for v in data], dtype=object)
-
-
-def column_data_from_table(
-        table: Orange.data.Table,
-        column: Union[int, Orange.data.Variable],
-) -> np.ndarray:
-    var = table.domain[column]
-    data, _ = table.get_column_view(column)
-    if var.is_primitive() and data.dtype.kind != "f":
-        data = data.astype(float)
-    return data
 
 
 def color_annotation_data(
         table: Table, var: Union[int, str, Variable]
 ) -> Tuple[np.ndarray, ColorMap, Variable]:
     var = table.domain[var]
-    column_data = column_data_from_table(table, var)
+    column_data = table.get_column(var)
     data, colormap = colorize(var, column_data)
     return data, colormap, var
 

@@ -607,7 +607,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 attr = self.matrix.row_items.domain.attributes
                 labels = [str(attr[i]) for i in indices]
             elif isinstance(self.annotation, Orange.data.Variable):
-                col_data, _ = self.items.get_column_view(self.annotation)
+                col_data = self.items.get_column(self.annotation)
                 labels = [self.annotation.str_val(val) for val in col_data]
                 labels = [labels[idx] for idx in indices]
             else:
@@ -627,7 +627,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.labels.setMinimumWidth(1 if labels else -1)
 
         if not self.pruning and self.color_by is not None:
-            col = self.items.get_column_view(self.color_by)[0].astype(float)
+            col = self.items.get_column(self.color_by)
             self.label_model.set_colors(
                 self.color_by.palette.values_to_qcolors(col[indices]))
         else:
@@ -770,7 +770,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             domain = Orange.data.Domain(attrs, classes, metas + (clust_var,))
             data = items.transform(domain)
             with data.unlocked(data.metas):
-                data.get_column_view(clust_var)[0][:] = c
+                data.get_column(clust_var, view=True)[:] = c
 
             if selected_indices:
                 selected_data = data[mask]

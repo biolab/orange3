@@ -404,8 +404,8 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         elif np.sum(np.all(np.isfinite(self.data.X), axis=1)) < 2:
             msg = "Not enough valid data instances"
         else:
-            is_enabled = not np.isnan(self.data.get_column_view(
-                self.attr_color)[0].astype(float)).all()
+            is_enabled = \
+                not np.isnan(self.data.get_column(self.attr_color)).all()
         self.btn_vizrank.setToolTip(msg)
         self.btn_vizrank.setEnabled(is_enabled)
         if is_enabled:
@@ -522,15 +522,10 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
 def column_data(table, var, dtype):
     dtype = np.dtype(dtype)
-    col, copy = table.get_column_view(var)
-    if not isinstance(col.dtype.type, np.inexact):
-        col = col.astype(float)
-        copy = True
+    col = table.get_column(var)
     if dtype != col.dtype:
         col = col.astype(dtype)
-        copy = True
-
-    if not copy:
+    if col.base is not None:
         col = col.copy()
     return col
 

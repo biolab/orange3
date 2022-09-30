@@ -101,13 +101,13 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         self.widget.set_selection()
 
         output = self.get_output(self.widget.Outputs.selected_data)
-        output, _ = output.get_column_view(0)
+        output = output.get_column(0)
         output_original = output.tolist()
 
         self.widget.tabs.currentWidget().sortByColumn(1, Qt.AscendingOrder)
 
         output = self.get_output(self.widget.Outputs.selected_data)
-        output, _ = output.get_column_view(0)
+        output = output.get_column(0)
         output_sorted = output.tolist()
 
         # the two outputs should not be the same.
