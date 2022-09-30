@@ -27,10 +27,11 @@ class DummyResponse:
 def make_dummy_post(response):
     @staticmethod
     # pylint: disable=unused-argument
-    async def dummy_post(url, headers, data):
+    async def dummy_post(url, headers, content=None, data=None):
         # when sleeping some workers to still compute while other are done
         # it causes that not all embeddings are computed if we do not wait all
         # workers to finish
+        assert (content is None) ^ (data is None)
         await asyncio.sleep(random() / 10)
         return DummyResponse(content=response)
 
@@ -199,7 +200,7 @@ class TestServerEmbedder(unittest.TestCase):
         - remove set_canceled and marked places connected to this method
         - this test
         """
-        self.assertGreaterEqual("3.33.0", Orange.__version__)
+        self.assertGreaterEqual("3.34.0", Orange.__version__)
 
         mock = MagicMock()
         self.embedder.embedd_data(self.test_data, processed_callback=mock)

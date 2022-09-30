@@ -86,7 +86,6 @@ class TestOWNomogram(WidgetTest):
     def test_nomogram_lr(self):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons"""
-        self.widget.display_index = 0  # show ALL features
         self._test_helper(self.lr_cls, [61, 39])
 
     def test_nomogram_nb_multiclass(self):
@@ -160,8 +159,7 @@ class TestOWNomogram(WidgetTest):
 
         # check for all class values
         for i in range(self.widget.class_combo.count()):
-            self.widget.class_combo.activated.emit(i)
-            self.widget.class_combo.setCurrentIndex(i)
+            simulate.combobox_activate_index(self.widget.class_combo, i)
 
             # check probabilities marker value
             self._test_helper_check_probability(values[i])
@@ -171,25 +169,26 @@ class TestOWNomogram(WidgetTest):
             self._test_helper_check_probability(values[i])
 
             # best ranked
-            self.widget.n_attributes = 5
-            self.widget.controls.display_index.buttons[1].click()
+            self.widget.n_spin.setValue(5)
+            self._test_helper_check_probability(values[i])
             visible_items = [item for item in self.widget.scene.items() if
                              isinstance(item, (DiscreteFeatureItem,
                                                ContinuousFeatureItem)) and
                              item.isVisible()]
             self.assertGreaterEqual(5, len(visible_items))
+            self._test_helper_check_probability(values[i])
 
             # 2D curve
-            self.widget.n_attributes = 15
-            self.widget.cont_feature_dim_combo.activated.emit(1)
-            self.widget.cont_feature_dim_combo.setCurrentIndex(1)
+            simulate.combobox_activate_index(
+                self.widget.cont_feature_dim_combo, 1)
             self._test_helper_check_probability(values[i])
 
             # initial state
             self.widget.controls.scale.buttons[1].click()
-            self.widget.controls.display_index.buttons[0].click()
-            self.widget.cont_feature_dim_combo.activated.emit(0)
-            self.widget.cont_feature_dim_combo.setCurrentIndex(0)
+            self.widget.n_spin.setValue(10)
+            simulate.combobox_activate_index(
+                self.widget.cont_feature_dim_combo, 0)
+            self._test_helper_check_probability(values[i])
 
     def _test_helper_check_probability(self, value):
         prob_marker = [item for item in self.widget.scene.items() if

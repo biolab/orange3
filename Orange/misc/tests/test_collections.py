@@ -1,6 +1,7 @@
+import pickle
 import unittest
 
-from Orange.misc.collections import frozendict, natural_sorted
+from Orange.misc.collections import frozendict, natural_sorted, DictMissingConst
 
 
 class TestFrozenDict(unittest.TestCase):
@@ -59,6 +60,24 @@ class TestUtils(unittest.TestCase):
         data = [1, 20, 2, 12]
         res = [1, 2, 12, 20]
         self.assertListEqual(res, natural_sorted(data))
+
+
+class TestDictMissingConst(unittest.TestCase):
+    def test_dict_missing(self):
+        d = DictMissingConst("<->", {1: 1, 2: 2})
+        self.assertEqual(d[1], 1)
+        self.assertEqual(d[-1], "<->")
+        # d[-1] must not grow the dict
+        self.assertEqual(len(d), 2)
+        self.assertEqual(d, DictMissingConst("<->", {1: 1, 2: 2}))
+        self.assertNotEqual(
+            DictMissingConst("A", {1: 1}), DictMissingConst("B", {1: 1}),
+        )
+        dc = pickle.loads(pickle.dumps(d))
+        self.assertEqual(d, dc)
+        self.assertEqual(dict(d), dict(dc))
+        self.assertEqual(d.missing, dc.missing)
+        self.assertEqual(d[object()], dc[object()])
 
 
 if __name__ == "__main__":

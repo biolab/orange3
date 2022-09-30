@@ -54,6 +54,8 @@ class TestOWCreateInstance(WidgetTest):
         self.assertIn("Source ID", [m.name for m in output.domain.metas])
         self.assertTupleEqual(output.domain.metas[0].values,
                               ("iris", "created"))
+        self.assertDictEqual(output.domain.metas[0].attributes,
+                             {"__source_widget": OWCreateInstance})
 
     def _get_init_buttons(self, widget=None):
         if not widget:
@@ -154,11 +156,9 @@ class TestOWCreateInstance(WidgetTest):
             reference[:] = np.nan
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.reference, reference)
-        output1 = self.get_output(self.widget.Outputs.data)
-        buttons = self._get_init_buttons()
-        buttons[3].click()  # Input
+        self._get_init_buttons()[3].click()  # Input
         output2 = self.get_output(self.widget.Outputs.data)
-        self.assert_table_equal(output1, output2)
+        np.testing.assert_array_equal(output2.X[-1], np.full(4, np.nan))
 
     def test_saved_workflow(self):
         data = self.data
@@ -167,6 +167,23 @@ class TestOWCreateInstance(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         buttons = self._get_init_buttons()
         buttons[2].click()  # Random
+        output1 = self.get_output(self.widget.Outputs.data)
+
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        widget = self.create_widget(OWCreateInstance, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        output2 = self.get_output(widget.Outputs.data)
+        self.assert_table_equal(output1, output2)
+
+    def test_saved_workflow_missing_values(self):
+        data = self.data
+        with data.unlocked():
+            data.X[0, 0] = np.nan
+            data.Y[0] = np.nan
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.reference, data[:1])
+
+        self._get_init_buttons()[3].click()  # Input
         output1 = self.get_output(self.widget.Outputs.data)
 
         settings = self.widget.settingsHandler.pack_data(self.widget)
@@ -213,6 +230,47 @@ class TestOWCreateInstance(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.reference, data)
 
+    def test_cascade_widgets(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        output = self.get_output(self.widget.Outputs.data)
+
+        widget = self.create_widget(OWCreateInstance)
+        self.send_signal(widget.Inputs.data, output, widget=widget)
+        output = self.get_output(widget.Outputs.data, widget=widget)
+        self.assertEqual(len(output), 152)
+        self.assertEqual(len(output.domain.metas), 1)
+        self.assertEqual(output.domain.metas[0].name, "Source ID")
+        self.assertTrue(all(output.metas[:150, 0] == 0))
+        self.assertTrue(all(output.metas[150:, 0] == 1))
+
+    def test_cascade_widgets_attributes(self):
+        data = self.data.copy()
+        data.domain.attributes[0].attributes = \
+            {"__source_widget": OWCreateInstance}
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 151)
+        self.assertEqual(len(output.domain.variables), 5)
+        self.assertEqual(len(output.domain.metas), 0)
+
+    def test_cascade_widgets_class_vars(self):
+        data = self.data.copy()
+        data.domain.class_var.attributes = \
+            {"__source_widget": OWCreateInstance}
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 151)
+        self.assertEqual(len(output.domain.variables), 5)
+        self.assertEqual(len(output.domain.metas), 0)
+
+        domain = Domain(data.domain.variables[:3], data.domain.variables[3:])
+        data = data.transform(domain)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(output), 151)
+        self.assertEqual(len(output.domain.variables), 5)
+        self.assertEqual(len(output.domain.metas), 0)
+
 
 class TestDiscreteVariableEditor(GuiTest):
     @classmethod
@@ -223,7 +281,7 @@ class TestDiscreteVariableEditor(GuiTest):
     def setUp(self):
         self.callback = Mock()
         self.editor = DiscreteVariableEditor(
-            self.parent, ["Foo", "Bar"], self.callback
+            self.parent, ("Foo", "Bar"), self.callback
         )
 
     def test_init(self):
@@ -243,6 +301,18 @@ class TestDiscreteVariableEditor(GuiTest):
         self.editor.value = 1
         self.assertEqual(self.editor.value, 1)
         self.assertEqual(self.editor._combo.currentText(), "Bar")
+        self.callback.assert_called_once()
+
+    def test_edit_missing_value(self):
+        self.editor._combo.setCurrentText("?")
+        self.assertTrue(np.isnan(self.editor.value))
+        self.assertEqual(self.editor._combo.currentText(), "?")
+        self.callback.assert_called_once()
+
+    def test_set_missing_value(self):
+        self.editor.value = 2
+        self.assertTrue(np.isnan(self.editor.value))
+        self.assertEqual(self.editor._combo.currentText(), "?")
         self.callback.assert_called_once()
 
 
@@ -324,6 +394,12 @@ class TestContinuousVariableEditor(GuiTest):
         self.assertEqual(self.editor.value, value)
         self.callback.assert_called_once()
 
+    def test_set_missing_value(self):
+        self.editor.value = np.nan
+        self.assertEqual(self.editor._slider.value(), self.min_value * 10)
+        self.assertFalse(np.isfinite(self.editor._spin.value()))
+        self.assertFalse(np.isfinite(self.editor.value))
+
     def test_missing_values(self):
         var = ContinuousVariable("var")
         self.assertRaises(ValueError, ContinuousVariableEditor, self.parent,
@@ -373,6 +449,10 @@ class TestStringVariableEditor(GuiTest):
         self.callback.assert_called_once()
 
 
+def _datetime(y, m, d) -> QDateTime:
+    return QDateTime(QDate(y, m, d), QTime(0, 0))
+
+
 class TestTimeVariableEditor(GuiTest):
     @classmethod
     def setUpClass(cls):
@@ -387,13 +467,12 @@ class TestTimeVariableEditor(GuiTest):
 
     def test_init(self):
         self.assertEqual(self.editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
     def test_edit(self):
         """ Edit datetimeedit by user. """
-        datetime = QDateTime(QDate(2001, 9, 9))
+        datetime = _datetime(2001, 9, 9,)
         self.editor._edit.setDateTime(datetime)
         self.assertEqual(self.editor.value, 999993600)
         self.assertEqual(self.editor._edit.dateTime(), datetime)
@@ -403,8 +482,7 @@ class TestTimeVariableEditor(GuiTest):
         """ Programmatically set datetimeedit value. """
         value = 999993600
         self.editor.value = value
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(2001, 9, 9)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(2001, 9, 9))
         self.assertEqual(self.editor.value, value)
         self.callback.assert_called_once()
 
@@ -415,8 +493,7 @@ class TestTimeVariableEditor(GuiTest):
             callback
         )
         self.assertEqual(editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
         datetime = QDateTime(QDate(2001, 9, 9), QTime(1, 2, 3))
@@ -431,8 +508,7 @@ class TestTimeVariableEditor(GuiTest):
             self.parent, TimeVariable("var", have_time=1), callback
         )
         self.assertEqual(editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
         datetime = QDateTime(QDate(1900, 1, 1), QTime(1, 2, 3))
@@ -445,8 +521,7 @@ class TestTimeVariableEditor(GuiTest):
         callback = Mock()
         editor = TimeVariableEditor(self.parent, TimeVariable("var"), callback)
         self.assertEqual(editor.value, 0)
-        self.assertEqual(self.editor._edit.dateTime(),
-                         QDateTime(QDate(1970, 1, 1), QTime(0, 0, 0)))
+        self.assertEqual(self.editor._edit.dateTime(), _datetime(1970, 1, 1))
         self.callback.assert_not_called()
 
         datetime = QDateTime(QDate(2001, 9, 9), QTime(1, 2, 3))

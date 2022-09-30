@@ -1,4 +1,5 @@
 import unittest
+import warnings
 from unittest.mock import Mock
 
 import numpy as np
@@ -72,3 +73,75 @@ class TestSharedComputeValue(unittest.TestCase):
         #test with descendants of table
         DummyTable.from_table(c.domain, data)
         self.assertEqual(obj.compute_shared.call_count, 4)
+
+    def test_compute_shared_eq_warning(self):
+        with warnings.catch_warnings(record=True) as warns:
+            DummyPlus(compute_shared=lambda *_: 42)
+
+            class Valid:
+                def __eq__(self, other):
+                    pass
+
+                def __hash__(self):
+                    pass
+
+            DummyPlus(compute_shared=Valid())
+            self.assertEqual(warns, [])
+
+            class Invalid:
+                pass
+
+            DummyPlus(compute_shared=Invalid())
+            self.assertNotEqual(warns, [])
+
+        with warnings.catch_warnings(record=True) as warns:
+
+            class MissingHash:
+                def __eq__(self, other):
+                    pass
+
+            DummyPlus(compute_shared=MissingHash())
+            self.assertNotEqual(warns, [])
+
+        with warnings.catch_warnings(record=True) as warns:
+
+            class MissingEq:
+                def __hash__(self):
+                    pass
+
+            DummyPlus(compute_shared=MissingEq())
+            self.assertNotEqual(warns, [])
+
+        with warnings.catch_warnings(record=True) as warns:
+
+            class Subclass(Valid):
+                pass
+
+            DummyPlus(compute_shared=Subclass())
+            self.assertNotEqual(warns, [])
+
+    def test_eq_hash(self):
+        x = Orange.data.ContinuousVariable("x")
+        y = Orange.data.ContinuousVariable("y")
+        x2 = Orange.data.ContinuousVariable("x")
+        assert x == x2
+        assert hash(x) == hash(x2)
+        assert x != y
+        assert hash(x) != hash(y)
+
+        c1 = SharedComputeValue(abs, x)
+        c2 = SharedComputeValue(abs, x2)
+
+        d = SharedComputeValue(abs, y)
+        e = SharedComputeValue(len, x)
+
+        self.assertNotEqual(c1, None)
+
+        self.assertEqual(c1, c2)
+        self.assertEqual(hash(c1), hash(c2))
+
+        self.assertNotEqual(c1, d)
+        self.assertNotEqual(hash(c1), hash(d))
+
+        self.assertNotEqual(c1, e)
+        self.assertNotEqual(hash(c1), hash(e))

@@ -156,17 +156,16 @@ class OWNeighbors(OWWidget):
         return np.argpartition(dist, up_to - 1)[:up_to]
 
     def _data_with_similarity(self, indices):
-        data = self.data
-        varname = get_unique_names(data.domain, "distance")
-        metas = data.domain.metas + (ContinuousVariable(varname), )
-        domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-        data_metas = self.distances[indices].reshape((-1, 1))
-        if data.domain.metas:
-            data_metas = np.hstack((data.metas[indices], data_metas))
-        neighbors = Table(domain, data.X[indices], data.Y[indices], data_metas)
-        neighbors.ids = data.ids[indices]
-        neighbors.attributes = self.data.attributes
-        return neighbors
+        domain = self.data.domain
+        dist_var = ContinuousVariable(get_unique_names(domain, "distance"))
+        metas = domain.metas + (dist_var, )
+        domain = Domain(domain.attributes, domain.class_vars, metas)
+        neighbours = self.data.from_table(domain, self.data, row_indices=indices)
+        distances = self.distances[indices]
+        with neighbours.unlocked(neighbours.metas):
+            if distances.size > 0:
+                neighbours.get_column_view(dist_var)[0][:] = distances
+        return neighbours
 
 
 if __name__ == "__main__":  # pragma: no cover

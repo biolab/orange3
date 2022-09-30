@@ -38,7 +38,7 @@ from Orange.widgets.utils.itemselectionmodel import (
 from Orange.widgets.utils.tableview import TableView, \
     table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, MultiInput, Output
+from Orange.widgets.widget import OWWidget, MultiInput, Output, Msg
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -190,6 +190,12 @@ class OWDataTable(OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
+    class Warning(OWWidget.Warning):
+        multiple_inputs = Msg(
+            "Multiple Data inputs are deprecated.\n"
+            "This functionality will be removed soon.\n"
+            "Use multiple Tables instead.")
+
     buttons_area_orientation = Qt.Vertical
 
     show_distributions = Setting(False)
@@ -295,6 +301,7 @@ class OWDataTable(OWWidget):
         self._inputs[index] = slot
         self._setup_table_view(view, data)
         self.tabs.setCurrentWidget(view)
+        self._set_multi_input_warning()
 
     @Inputs.data.insert
     def insert_dataset(self, index: int, data: Table):
@@ -307,6 +314,7 @@ class OWDataTable(OWWidget):
         self.tabs.insertTab(index, view, datasetname)
         self._setup_table_view(view, data)
         self.tabs.setCurrentWidget(view)
+        self._set_multi_input_warning()
 
     @Inputs.data.remove
     def remove_dataset(self, index):
@@ -320,6 +328,10 @@ class OWDataTable(OWWidget):
         current = self.tabs.currentWidget()
         if current is not None:
             self._set_input_summary(current.input_slot)
+        self._set_multi_input_warning()
+
+    def _set_multi_input_warning(self):
+        self.Warning.multiple_inputs(shown=len(self._inputs) > 1)
 
     def handleNewSignals(self):
         super().handleNewSignals()

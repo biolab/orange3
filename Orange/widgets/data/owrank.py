@@ -1,5 +1,4 @@
 import logging
-import warnings
 from collections import namedtuple
 from functools import partial
 from itertools import chain
@@ -7,6 +6,8 @@ from types import SimpleNamespace
 from typing import Any, Callable, List, Tuple
 
 import numpy as np
+from scipy.sparse import issparse
+
 from AnyQt.QtCore import (
     QItemSelection, QItemSelectionModel, QItemSelectionRange, Qt,
     pyqtSignal as Signal
@@ -15,24 +16,25 @@ from AnyQt.QtWidgets import (
     QButtonGroup, QCheckBox, QGridLayout, QHeaderView, QItemDelegate,
     QRadioButton, QStackedWidget, QTableView
 )
-from orangewidget.settings import IncompatibleContext
-from scipy.sparse import issparse
 
+from orangewidget.settings import IncompatibleContext
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, Domain, StringVariable, Table
 )
 from Orange.data.util import get_unique_names_duplicates
 from Orange.preprocess import score
 from Orange.widgets import gui, report
+from Orange.widgets.gui import BarRatioTableModel
 from Orange.widgets.settings import (
     ContextSetting, DomainContextHandler, Setting
 )
 from Orange.widgets.unsupervised.owdistances import InterruptException
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
-from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import AttributeList, Input, MultiInput, Output, Msg, OWWidget
+from Orange.widgets.widget import AttributeList, Input, MultiInput, Output, Msg, \
+    OWWidget
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +78,29 @@ SCORES = CLS_SCORES + REG_SCORES
 VARNAME_COL, NVAL_COL = range(2)
 
 
+class RankTableModel(BarRatioTableModel):
+    """
+    BarRatioTableModel that passes the first column (variables) into
+    VariableListModel to get the tooltips and decoration
+    """
+    def __init__(self, *args, **kwargs):
+        self._variable_model = VariableListModel()
+        super().__init__(*args, **kwargs)
+
+    def wrap(self, table):
+        super().wrap(table)
+        self._variable_model[:] = [var for var, *_ in table]
+
+    def data(self, index, role=Qt.DisplayRole):
+        column = index.column()
+        if column == 0:
+            row = self.mapToSourceRows(index.row())
+            index = self._variable_model.index(row, column)
+            return self._variable_model.data(index, role)
+        else:
+            return super().data(index, role)
+
+
 class TableView(QTableView):
     manualSelection = Signal()
 
@@ -104,72 +129,6 @@ class TableView(QTableView):
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         self.manualSelection.emit()
-
-
-class TableModel(PyTableModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._extremes = {}
-
-    def data(self, index, role=Qt.DisplayRole):
-        if role == gui.BarRatioRole and index.isValid():
-            value = super().data(index, Qt.EditRole)
-            if not isinstance(value, float):
-                return None
-            vmin, vmax = self._extremes.get(index.column(), (-np.inf, np.inf))
-            value = (value - vmin) / ((vmax - vmin) or 1)
-            return value
-
-        if role == Qt.DisplayRole and index.column() != VARNAME_COL:
-            role = Qt.EditRole
-
-        value = super().data(index, role)
-
-        # Display nothing for non-existent attr value counts in column 1
-        if role == Qt.EditRole \
-                and index.column() == NVAL_COL and np.isnan(value):
-            return ''
-
-        return value
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.InitialSortOrderRole:
-            return Qt.DescendingOrder if section > 0 else Qt.AscendingOrder
-        return super().headerData(section, orientation, role)
-
-    def setExtremesFrom(self, column, values):
-        """Set extremes for columnn's ratio bars from values"""
-        try:
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", ".*All-NaN slice encountered.*", RuntimeWarning)
-                vmin = np.nanmin(values)
-            if np.isnan(vmin):
-                raise TypeError
-        except TypeError:
-            vmin, vmax = -np.inf, np.inf
-        else:
-            vmax = np.nanmax(values)
-        self._extremes[column] = (vmin, vmax)
-
-    def resetSorting(self, yes_reset=False):
-        # pylint: disable=arguments-differ
-        """We don't want to invalidate our sort proxy model everytime we
-        wrap a new list. Our proxymodel only invalidates explicitly
-        (i.e. when new data is set)"""
-        if yes_reset:
-            super().resetSorting()
-
-    def _argsortData(self, data, order):
-        if data.dtype not in (float, int):
-            data = np.char.lower(data)
-        indices = np.argsort(data, kind='mergesort')
-        if order == Qt.DescendingOrder:
-            indices = indices[::-1]
-            if data.dtype == float:
-                # Always sort NaNs last
-                return np.roll(indices, -np.isnan(data).sum())
-        return indices
 
 
 class Results(SimpleNamespace):
@@ -305,11 +264,12 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
                                      if method.is_default}
 
         # GUI
-        self.ranksModel = model = TableModel(parent=self)  # type: TableModel
+        self.ranksModel = model = RankTableModel(parent=self)  # type:
+        # BarRatioTableModel
         self.ranksView = view = TableView(self)            # type: TableView
         self.mainArea.layout().addWidget(view)
         view.setModel(model)
-        view.setColumnWidth(NVAL_COL, 30)
+        view.setColumnWidth(1, 30)
         view.selectionModel().selectionChanged.connect(self.on_select)
 
         def _set_select_manual():
@@ -345,7 +305,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setSpacing(6)
         self.selectButtons = QButtonGroup()
-        self.selectButtons.buttonClicked[int].connect(self.setSelectionMethod)
+        self.selectButtons.idClicked.connect(self.setSelectionMethod)
 
         def button(text, buttonid, toolTip=None):
             b = QRadioButton(text)
@@ -528,8 +488,8 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
         self.ranksModel.wrap(model_array.tolist())
         self.ranksModel.setHorizontalHeaderLabels(('', '#',) + labels)
-        self.ranksView.setColumnWidth(NVAL_COL, 40)
-        self.ranksView.resizeColumnToContents(VARNAME_COL)
+        self.ranksView.setColumnWidth(1, 40)
+        self.ranksView.resizeColumnToContents(0)
 
         # Re-apply sort
         try:
@@ -602,10 +562,11 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
         # Store the header states
         sort_order = self.ranksModel.sortOrder()
-        sort_column = self.ranksModel.sortColumn() - 2  # -2 for '#' (discrete count) column
+        sort_column = self.ranksModel.sortColumn() - 2  # -2 for name and '#' columns
         self.sorting = (sort_column, sort_order)
 
-    def methodSelectionChanged(self, state, method_name):
+    def methodSelectionChanged(self, state: int, method_name):
+        state = Qt.CheckState(state)
         if state == Qt.Checked:
             self.selected_methods.add(method_name)
         elif method_name in self.selected_methods:

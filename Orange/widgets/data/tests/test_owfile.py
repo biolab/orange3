@@ -3,16 +3,16 @@
 from os import path, remove, getcwd
 from os.path import dirname
 import unittest
+from threading import Thread
 from unittest.mock import Mock, patch
 import pickle
 import tempfile
 import warnings
-import time
 
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl, QThread, QObject
+from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl, QPointF
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from AnyQt.QtWidgets import QComboBox
 
@@ -116,7 +116,7 @@ class TestOWFile(WidgetTest):
         data.setUrls([QUrl(url)])
 
         return QDropEvent(
-            QPoint(0, 0), Qt.MoveAction, data,
+            QPointF(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
 
     def test_check_file_size(self):
@@ -666,23 +666,13 @@ a
 
     @patch("os.path.exists", new=lambda _: True)
     def test_warning_from_another_thread(self):
-        class AnotherWidget(QObject):
-            # This must be a method, not a staticmethod to run in the thread
-            def issue_warning(self):  # pylint: disable=no-self-use
-                time.sleep(0.1)
-                warnings.warn("warning from another thread")
-                warning_thread.quit()
-
         def read():
-            warning_thread.start()
-            time.sleep(0.2)
+            thread = Thread(
+                target=lambda: warnings.warn("warning from another thread")
+            )
+            thread.start()
+            thread.join()
             return Table(TITANIC_PATH)
-
-        warning_thread = QThread()
-        another_widget = AnotherWidget()
-        another_widget.moveToThread(warning_thread)
-        warning_thread.started.connect(another_widget.issue_warning)
-
         reader = Mock()
         reader.read = read
         self.widget._get_reader = lambda: reader
@@ -693,7 +683,6 @@ a
         with self.assertWarns(UserWarning):
             self.widget._try_load()
             self.assertFalse(self.widget.Warning.load_warning.is_shown())
-
 
     @patch("os.path.exists", new=lambda _: True)
     def test_warning_from_this_thread(self):
@@ -727,6 +716,19 @@ class TestOWFileDropHandler(unittest.TestCase):
         self.assertEqual(r["recent_urls"], ["https://example.com/test.tab"])
         r = handler.parametersFromUrl(QUrl.fromLocalFile("test.tab"))
         self.assertEqual(r["source"], OWFile.LOCAL_FILE)
+        self.assertEqual(r["recent_paths"][0].basename, "test.tab")
+
+        defs = {
+            "source": OWFile.LOCAL_FILE,
+            "recent_paths": [
+                RecentPath("/foo.tab", None,  None, "foo.tab"),
+                RecentPath(path.abspath("test.tab"), None, None, "test.tab"),
+            ]
+        }
+        with patch.object(OWFile.settingsHandler, "defaults", defs):
+            r = handler.parametersFromUrl(QUrl.fromLocalFile("test.tab"))
+
+        self.assertEqual(len(r["recent_paths"]), 2)
         self.assertEqual(r["recent_paths"][0].basename, "test.tab")
 
 

@@ -2,8 +2,8 @@ from collections import namedtuple
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QSize
-from AnyQt.QtWidgets import QListWidget, QSizePolicy
+from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QListWidget
 
 import pyqtgraph as pg
 
@@ -165,9 +165,8 @@ class OWCalibrationPlot(widget.OWWidget):
         self.classifiers_list_box = gui.listBox(
             self.controlArea, self, "selected_classifiers", "classifier_names",
             box="Classifier", selectionMode=QListWidget.ExtendedSelection,
-            sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred),
-            sizeHint=QSize(150, 40),
             callback=self._on_selection_changed)
+        self.classifiers_list_box.setMaximumHeight(100)
 
         box = gui.vBox(self.controlArea, "Metrics")
         combo = gui.comboBox(
@@ -188,6 +187,8 @@ class OWCalibrationPlot(widget.OWWidget):
 
         self.info_box = gui.widgetBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(self.info_box)
+
+        gui.rubber(self.controlArea)
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 

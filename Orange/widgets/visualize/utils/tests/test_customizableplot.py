@@ -12,13 +12,13 @@ class TestFonts(unittest.TestCase):
             font.return_value.family = Mock(return_value="mock regular")
 
             db.return_value = Mock()
-            db.return_value.families = Mock(
+            db.families = Mock(
                 return_value=["a", ".d", "e", ".b", "mock regular", "c"])
             self.assertEqual(customizableplot.available_font_families(),
                              ["mock regular", "", "a", ".b", "c", ".d", "e"])
 
             db.return_value = Mock()
-            db.return_value.families = Mock(
+            db.families = Mock(
                 return_value=["a", ".d", "e", ".b", "mock regular",
                               "mock bold", "mock italic", "c", "mock semi"])
             self.assertEqual(customizableplot.available_font_families(),

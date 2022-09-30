@@ -1,6 +1,7 @@
 import warnings
 from functools import partial
 from itertools import chain
+from typing import Union
 
 import numpy as np
 
@@ -11,12 +12,13 @@ from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
     QSortFilterProxyModel
 from sklearn.exceptions import UndefinedMetricWarning
 
-from Orange.data import DiscreteVariable, ContinuousVariable, Domain
+from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Variable
 from Orange.evaluation import scoring
 from Orange.widgets import gui
 from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
+from Orange.util import OrangeDeprecationWarning
 
 
 def check_results_adequacy(results, error_group, check_nan=True):
@@ -78,8 +80,8 @@ def learner_name(learner):
     return getattr(learner, "name", type(learner).__name__)
 
 
-def usable_scorers(domain: Domain):
-    if domain is None:
+def usable_scorers(domain_or_var: Union[Variable, Domain]):
+    if domain_or_var is None:
         return []
 
     order = {name: i
@@ -89,10 +91,20 @@ def usable_scorers(domain: Domain):
     scorer_candidates = [cls for cls in scoring.Score.registry.values()
                          if cls.is_scalar and not cls.__dict__.get("abstract")]
 
-    usable = [scorer for scorer in scorer_candidates if
-              scorer.is_compatible(domain) and scorer.class_types]
-    return sorted(usable, key=lambda cls: order.get(cls.name, 99))
+    if isinstance(domain_or_var, Variable):
+        warnings.warn(
+            "Passing Variable to usable_scorers is deprecated, and using Domain "
+            "is preferred. In light of this change, all Scorers should implement "
+            "the is_compatible method.",
+            OrangeDeprecationWarning)
 
+        usable = [scorer for scorer in scorer_candidates if
+                  isinstance(domain_or_var, scorer.class_types)]
+    else:
+        usable = [scorer for scorer in scorer_candidates if
+                  scorer.is_compatible(domain_or_var) and scorer.class_types]
+
+    return sorted(usable, key=lambda cls: order.get(cls.name, 99))
 
 
 def scorer_caller(scorer, ovr_results, target=None):

@@ -1,4 +1,6 @@
 """Widget for visualization of tree models"""
+from html import escape
+
 import numpy as np
 
 from AnyQt.QtWidgets import (
@@ -7,15 +9,18 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
+
 from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.base import TreeModel, SklModel
+from Orange.widgets import gui
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
 from Orange.data import Table
+from Orange.util import color_to_hex
 
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
@@ -177,6 +182,7 @@ class OWTreeGraph(OWTreeViewer2D):
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
     regression_colors = Setting(0)
+    show_intermediate = Setting(False)
 
     replaces = [
         "Orange.widgets.classify.owclassificationtreegraph.OWClassificationTreeGraph",
@@ -202,6 +208,13 @@ class OWTreeGraph(OWTreeViewer2D):
         combo.activated[int].connect(self.color_changed)
         self.display_box.layout().addRow(self.color_label, combo)
 
+        box = gui.hBox(None)
+        gui.rubber(box)
+        gui.checkBox(box, self, "show_intermediate",
+                     "Show details in non-leaves",
+                     callback=self.set_node_info)
+        self.display_box.layout().addRow(box)
+
     def set_node_info(self):
         """Set the content of the node"""
         for node in self.scene.nodes():
@@ -218,7 +231,9 @@ class OWTreeGraph(OWTreeViewer2D):
     def _update_node_info_attr_name(self, node, text):
         attr = self.tree_adapter.attribute(node.node_inst)
         if attr is not None:
-            text += "<hr/>{}".format(attr.name)
+            if text:
+                text += "<hr/>"
+            text += attr.name
         return text
 
     def activate_loaded_settings(self):
@@ -313,9 +328,36 @@ class OWTreeGraph(OWTreeViewer2D):
         return node_obj
 
     def node_tooltip(self, node):
-        return "<p>" + "<br>".join(
-            to_html(str(rule))
-            for rule in self.tree_adapter.rules(node.node_inst)) + "</p>"
+        # We uses <br/> and &nbsp: styling of <li> in Qt doesn't work well
+        indent = "&nbsp;&nbsp;&nbsp;"
+        nbp = "<p style='white-space:pre'>"
+
+        rule = "<br/>".join(f"{indent}– {to_html(str(rule))}"
+                            for rule in self.tree_adapter.rules(node.node_inst))
+        if rule:
+            rule = f"<p><b>Selection</b></p><p>{rule}</p>"
+
+        distr = self.tree_adapter.get_distribution(node.node_inst)[0]
+        class_var = self.domain.class_var
+        name = escape(class_var.name)
+        if self.domain.class_var.is_discrete:
+            total = float(sum(distr)) or 1
+            content = f"{nbp}<b>Distribution of</b> '{name}'</p><p>" \
+                + "<br/>".join(
+                    f"{indent}<span style='color: {color_to_hex(color)}'>◼</span> "
+                    f"{escape(value)}: {prop:g} ({prop / total * 100:.1f} %)"
+                    for value, color, prop
+                    in zip(class_var.values, class_var.colors, distr)) \
+                + "</p>"
+        else:
+            mean, var = distr
+            content = f"{nbp}{class_var.name} = {mean:.3g} ± {var:.3g}<br/>" + \
+                f"({self.tree_adapter.num_samples(node.node_inst)} instances)</p>"
+
+        split = self._update_node_info_attr_name(node, "")
+        if split:
+            split = f"<p style='white-space:pre'><b>Next split: </b>{split}</p>"
+        return "<hr/>".join(filter(None, (rule, content, split)))
 
     def update_selection(self):
         if self.model is None:
@@ -344,12 +386,18 @@ class OWTreeGraph(OWTreeViewer2D):
         self.report_plot(self.scene)
 
     def update_node_info(self, node):
-        if self.domain.class_var.is_discrete:
-            self.update_node_info_cls(node)
+        if self.tree_adapter.has_children(node.node_inst) and not self.show_intermediate:
+            text = ""
+        elif self.domain.class_var.is_discrete:
+            text = self.node_content_cls(node)
         else:
-            self.update_node_info_reg(node)
+            text = self.node_content_reg(node)
 
-    def update_node_info_cls(self, node):
+        text = self._update_node_info_attr_name(node, text)
+        node.setHtml(
+            f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
+
+    def node_content_cls(self, node):
         """Update the printed contents of the node for classification trees"""
         node_inst = node.node_inst
         distr = self.tree_adapter.get_distribution(node_inst)[0]
@@ -366,21 +414,16 @@ class OWTreeGraph(OWTreeViewer2D):
             text += f"100%, {total}/{total}"
         else:
             text += f"{100 * tabs:2.1f}%, {int(total * tabs)}/{total}"
+        return text
 
-        text = self._update_node_info_attr_name(node, text)
-        node.setHtml(
-            f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
-
-    def update_node_info_reg(self, node):
+    def node_content_reg(self, node):
         """Update the printed contents of the node for regression trees"""
         node_inst = node.node_inst
         mean, var = self.tree_adapter.get_distribution(node_inst)[0]
         insts = self.tree_adapter.num_samples(node_inst)
         text = f"<b>{mean:.1f}</b> ± {var:.1f}<br/>"
         text += f"{insts} instances"
-        text = self._update_node_info_attr_name(node, text)
-        node.setHtml(
-            f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
+        return text
 
     def toggle_node_color_cls(self):
         """Update the node color for classification trees"""

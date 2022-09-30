@@ -29,15 +29,15 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.housing = Table("housing")
-        cls.titanic = Table("titanic")
-        cls.brown_selected = Table("brown-selected")
-
         cls.signal_name = "Data"
         cls.signal_data = cls.data
 
     def setUp(self):
         self.widget = self.create_widget(OWHeatMap)  # type: OWHeatMap
+
+        self.housing = Table("housing")
+        self.titanic = Table("titanic")
+        self.brown_selected = Table("brown-selected")
 
     def test_input_data(self):
         """Check widget's data with data on the input"""
@@ -72,6 +72,9 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.Information.active)
         self.send_signal(self.widget.Inputs.data, data[:21])
         self.assertTrue(self.widget.Information.active)
+        data = Table("heart_disease.tab")[:10]
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(self.widget.Information.discrete_ignored.is_shown())
 
     def test_settings_changed(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -395,6 +398,14 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         widget.set_column_annotation_color_var(data.domain["diau g"])
         widget.set_column_annotation_color_var(None)
         self.assertFalse(widget.scene.widget.top_side_colors[0].isVisible())
+
+    def test_data_with_hidden(self):
+        w = self.widget
+        housing = self.housing.copy()
+        housing.domain.attributes[0].attributes["hidden"] = True
+        self.send_signal(self.widget.Inputs.data, housing)
+        self.assertEqual(len(w.effective_data.domain.attributes),
+                         len(housing.domain.attributes) - 1)
 
 
 if __name__ == "__main__":

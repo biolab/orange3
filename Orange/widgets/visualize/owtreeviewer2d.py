@@ -244,7 +244,6 @@ class TreeGraphicsView(QGraphicsView):
         self.setFocusPolicy(Qt.WheelFocus)
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.TextAntialiasing)
-        self.setRenderHint(QPainter.HighQualityAntialiasing)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -418,6 +417,10 @@ class OWTreeViewer2D(OWWidget, openclass=True):
 
         self.scene = TreeGraphicsScene(self)
         self.scene_view = TreeGraphicsView(self.scene)
+        self.scene_view.setStyleSheet("""QToolTip { padding: 3px;
+                                                    border: 1px solid #C0C0C0;
+                                      }""")
+
         self.scene_view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.mainArea.layout().addWidget(self.scene_view)
         self.toggle_zoom_slider()

@@ -2,6 +2,8 @@
 Data-manipulation utilities.
 """
 import re
+import types
+import warnings
 from collections import Counter
 from itertools import chain, count
 from typing import Callable, Union, List, Type
@@ -72,6 +74,12 @@ class SharedComputeValue:
     def __init__(self, compute_shared, variable=None):
         self.compute_shared = compute_shared
         self.variable = variable
+        if compute_shared is not None \
+                and not isinstance(compute_shared, (types.BuiltinFunctionType,
+                                                   types.FunctionType)) \
+                and not redefines_eq_and_hash(compute_shared):
+            warnings.warn(f"{type(compute_shared).__name__} should define "
+                          f"__eq__ and __hash__ to be used for compute_shared")
 
     def __call__(self, data, shared_data=None):
         """Fallback if common parts are not passed."""
@@ -84,6 +92,14 @@ class SharedComputeValue:
         part of computation and return new variable values.
         Subclasses need to implement this function."""
         raise NotImplementedError
+
+    def __eq__(self, other):
+        return type(self) is type(other) \
+               and self.compute_shared == other.compute_shared \
+               and self.variable == other.variable
+
+    def __hash__(self):
+        return hash((type(self), self.compute_shared, self.variable))
 
 
 def vstack(arrays):
@@ -213,8 +229,31 @@ def get_unique_names(names, proposed, equal_numbers=True):
         return get_unique_names(names, [proposed])[0]
     indices = {name: get_indices(names, name) for name in proposed}
     indices = {name: max(ind) + 1 for name, ind in indices.items() if ind}
+
+    duplicated_proposed = {name for name, count in Counter(proposed).items()
+                           if count > 1}
+    if duplicated_proposed:
+        # This could be merged with the code below, but it would make it slower
+        # because it can't be done within list comprehension
+        if equal_numbers:
+            max_index = max(indices.values(), default=1)
+            indices = {name: max_index
+                       for name in chain(indices, duplicated_proposed)}
+        else:
+            indices.update({name: 1
+                            for name in duplicated_proposed - set(indices)})
+        names = []
+        for name in proposed:
+            if name in indices:
+                names.append(f"{name} ({indices[name]})")
+                indices[name] += 1
+            else:
+                names.append(name)
+        return names
+
     if not (set(proposed) & set(names) or indices):
         return proposed
+
     if equal_numbers:
         max_index = max(indices.values())
         return [f"{name} ({max_index})" for name in proposed]
@@ -284,3 +323,20 @@ def sanitized_name(name: str) -> str:
     if sanitized[0].isdigit():
         sanitized = "_" + sanitized
     return sanitized
+
+
+def redefines_eq_and_hash(this):
+    """
+    Check if the passed object (or class) redefines __eq__ and __hash__.
+
+    Args:
+        this: class or object
+    """
+    if not isinstance(this, type):
+        this = type(this)
+
+    # if only __eq__ is defined, __hash__ is set to None
+    if this.__hash__ is None:
+        return False
+
+    return "__hash__" in this.__dict__ and "__eq__" in this.__dict__

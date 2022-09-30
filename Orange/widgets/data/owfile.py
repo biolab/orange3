@@ -24,7 +24,7 @@ from Orange.widgets.settings import Setting, ContextSetting, \
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
-    open_filename_dialog
+    open_filename_dialog, stored_recent_paths_prepend
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 
@@ -214,7 +214,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.sheet_box = gui.hBox(None, addToLayout=False, margin=0)
         self.sheet_combo = QComboBox()
-        self.sheet_combo.activated[str].connect(self.select_sheet)
+        self.sheet_combo.textActivated.connect(self.select_sheet)
         self.sheet_combo.setSizePolicy(Policy.Expanding, Policy.Fixed)
         self.sheet_combo.setMinimumSize(QSize(50, 1))
         self.sheet_label = QLabel()
@@ -240,7 +240,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_combo.setEditable(True)
         url_combo.setInsertPolicy(url_combo.InsertAtTop)
         url_edit = url_combo.lineEdit()
-        l, t, r, b = url_edit.getTextMargins()
+        margins = url_edit.textMargins()
+        l, t, r, b = margins.left(), margins.top(), margins.right(), margins.bottom()
         url_edit.setTextMargins(l + 5, t, r, b)
         layout.addWidget(url_combo, 3, 1, 1, 3)
         url_combo.activated.connect(self._url_set)
@@ -672,7 +673,7 @@ class OWFileDropHandler(SingleUrlDropHandler):
             r = RecentPath(os.path.abspath(path), None, None,
                            os.path.basename(path))
             return {
-                "recent_paths": [r],
+                "recent_paths": stored_recent_paths_prepend(self.WIDGET, r),
                 "source": OWFile.LOCAL_FILE,
             }
         else:

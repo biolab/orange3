@@ -3,7 +3,7 @@ import numpy as np
 
 from Orange.data import Domain, ContinuousVariable
 from Orange.data.util import get_unique_names, get_unique_names_duplicates, \
-    get_unique_names_domain, one_hot, sanitized_name
+    get_unique_names_domain, one_hot, sanitized_name, redefines_eq_and_hash
 
 
 class TestGetUniqueNames(unittest.TestCase):
@@ -118,6 +118,47 @@ class TestGetUniqueNames(unittest.TestCase):
         self.assertEqual(
             get_unique_names(domain, ["foo", "bar", "baz"], equal_numbers=False),
             ["foo (1)", "bar (1)", "baz (4)"]
+        )
+
+    def test_get_unique_names_duplicated_proposals(self):
+        names = ["foo", "bar", "baz", "baz (3)"]
+
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo"]),
+            ['foo (1)', 'boo (1)', 'boo (2)']
+        )
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo", "baz"]),
+            ['foo (4)', 'boo (4)', 'boo (5)', 'baz (4)']
+        )
+        self.assertEqual(
+            get_unique_names([], ["foo", "boo", "boo", "baz"]),
+            ['foo', 'boo (1)', 'boo (2)', 'baz']
+        )
+        self.assertEqual(
+            get_unique_names(["foo", "bong"], ["foo", "boo", "boo", "baz"]),
+            ['foo (1)', 'boo (1)', 'boo (2)', 'baz']
+        )
+
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo"],
+                             equal_numbers=False),
+            ['foo (1)', 'boo (1)', 'boo (2)']
+        )
+        self.assertEqual(
+            get_unique_names(names, ["foo", "boo", "boo", "baz"],
+                             equal_numbers=False),
+            ['foo (1)', 'boo (1)', 'boo (2)', 'baz (4)']
+        )
+        self.assertEqual(
+            get_unique_names([], ["foo", "boo", "boo", "baz"],
+                             equal_numbers=False),
+            ['foo', 'boo (1)', 'boo (2)', 'baz']
+        )
+        self.assertEqual(
+            get_unique_names(["foo", "bong"], ["foo", "boo", "boo", "baz"],
+                             equal_numbers=False),
+            ['foo (1)', 'boo (1)', 'boo (2)', 'baz']
         )
 
     def test_get_unique_names_from_duplicates(self):
@@ -266,6 +307,40 @@ class TestSanitizedName(unittest.TestCase):
         self.assertEqual(sanitized_name("Foo Bar"), "Foo_Bar")
         self.assertEqual(sanitized_name("0Foo"), "_0Foo")
         self.assertEqual(sanitized_name("1 Foo Bar"), "_1_Foo_Bar")
+
+
+class TestRedefinesEqAndHash(unittest.TestCase):
+
+    class Valid:
+        def __eq__(self, other):
+            pass
+
+        def __hash__(self):
+            pass
+
+    class Subclass(Valid):
+        pass
+
+    class OnlyEq:
+        def __eq__(self, other):
+            pass
+
+    class OnlyHash:
+        def __hash__(self):
+            pass
+
+    def test_valid(self):
+        self.assertTrue(redefines_eq_and_hash(self.Valid))
+        self.assertTrue(redefines_eq_and_hash(self.Valid()))
+
+    def test_subclass(self):
+        self.assertFalse(redefines_eq_and_hash(self.Subclass))
+
+    def test_only_eq(self):
+        self.assertFalse(redefines_eq_and_hash(self.OnlyEq))
+
+    def test_only_hash(self):
+        self.assertFalse(redefines_eq_and_hash(self.OnlyHash))
 
 
 if __name__ == "__main__":

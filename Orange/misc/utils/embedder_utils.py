@@ -78,7 +78,7 @@ class EmbedderCache:
 
 def get_proxies() -> Optional[Dict[str, str]]:
     """
-    Return dict with proxy addresses if they exists.
+    Return dict with proxy addresses if they exist.
 
     Returns
     -------
@@ -86,14 +86,18 @@ def get_proxies() -> Optional[Dict[str, str]]:
         Dictionary with format {proxy type: proxy address} or None if
         they not set.
     """
-    def add_protocol(url: Optional[str], prot: str) -> Optional[str]:
-        if url and not url.startswith(prot):
-            return f"{prot}://{url}"
-        return url
-    http_proxy = add_protocol(environ.get("http_proxy"), "http")
-    https_proxy = add_protocol(environ.get("https_proxy"), "https")
-    if http_proxy and https_proxy:  # both proxy addresses defined
-        return {"http://": https_proxy, "https://": https_proxy}
-    elif any([https_proxy, http_proxy]):  # one of the proxies defined
-        return {"all://": http_proxy or https_proxy}
-    return None  # proxies not defined
+    def add_scheme(url: Optional[str]) -> Optional[str]:
+        if url is not None and "://" not in url:
+            # if no scheme default to http - as other libraries do (e.g. requests)
+            return f"http://{url}"
+        else:
+            return url
+
+    http_proxy = add_scheme(environ.get("http_proxy"))
+    https_proxy = add_scheme(environ.get("https_proxy"))
+    proxy_dict = {}
+    if http_proxy:
+        proxy_dict["http://"] = http_proxy
+    if https_proxy:
+        proxy_dict["https://"] = https_proxy
+    return proxy_dict if proxy_dict else None

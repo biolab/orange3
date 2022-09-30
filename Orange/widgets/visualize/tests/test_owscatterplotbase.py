@@ -681,8 +681,14 @@ class TestOWScatterPlotBase(WidgetTest):
         data = graph.scatterplot_item.data
         self.assertTrue(all(pen.color().hue() == hue for pen in data["pen"]))
         self.assertTrue(all(pen.color().hue() == hue for pen in data["brush"]))
-        self.assertEqual(len(set(map(id, data["pen"]))), 1)
+        self.assertEqual(len(set(map(id, data["pen"]))), 2)
+        self.assertEqual(data["pen"][3].color(), data["pen"][4].color())
+        self.assertNotEqual(data["pen"][4].color().alpha(),
+                            data["pen"][5].color().alpha())
         self.assertEqual(len(set(map(id, data["brush"]))), 2)  # transparent and colored
+        self.assertEqual(data["brush"][3].color(), data["brush"][4].color())
+        self.assertNotEqual(data["brush"][4].color().alpha(),
+                            data["brush"][5].color().alpha())
 
     def test_colors_update_legend_and_density(self):
         graph = self.graph
@@ -1428,7 +1434,7 @@ class TestOWScatterPlotBase(WidgetTest):
                     graph.update_labels.assert_not_called()
                 self.master.selection_changed.assert_called_with()
 
-        select(0, [7, 8, 9])
+        select(Qt.NoModifier, [7, 8, 9])
         np.testing.assert_almost_equal(
             graph.selection, [0, 0, 0, 0, 0, 0, 0, 1, 1, 1])
 
@@ -1444,12 +1450,12 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_almost_equal(
             graph.selection, [0, 0, 0, 0, 2, 2, 1, 0, 1, 1])
 
-        select(0, [1, 8])
+        select(Qt.NoModifier, [1, 8])
         np.testing.assert_almost_equal(
             graph.selection, [0, 1, 0, 0, 0, 0, 0, 0, 1, 0])
 
         graph.label_only_selected = False
-        select(0, [3, 4])
+        select(Qt.NoModifier, [3, 4])
 
     def test_unselect_all(self):
         graph = self.graph

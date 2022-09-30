@@ -107,8 +107,8 @@ class HeaderView(QHeaderView):
                          else defaultAlignment)
 
         option.section = logicalIndex
-        option.state = QStyle.State(int(option.state) | int(state))
-        option.textAlignment = Qt.Alignment(int(textAlignment))
+        option.state = QStyle.State(option.state | state)
+        option.textAlignment = Qt.Alignment(textAlignment)
 
         option.iconAlignment = Qt.AlignVCenter
         text = model.headerData(logicalIndex, self.orientation(),

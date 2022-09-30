@@ -27,7 +27,7 @@ def available_font_families() -> List:
     """
     if not QApplication.instance():
         _ = QApplication(sys.argv)
-    fonts = QFontDatabase().families()
+    fonts = QFontDatabase.families()
     default = default_font_family()
 
     defaults = [default]

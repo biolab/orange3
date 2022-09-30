@@ -23,49 +23,24 @@ class TestOWTransform(WidgetTest):
         self.send_signal(self.widget.Inputs.template_data, self.disc_data)
         output = self.get_output(self.widget.Outputs.transformed_data)
         self.assertTableEqual(output, self.disc_data[::15])
-        self.assertEqual("Input data with 10 instances and 4 features.",
-                         self.widget.input_label.text())
-        self.assertEqual("Template domain applied.",
-                         self.widget.template_label.text())
-        self.assertEqual("Output data includes 4 features.",
-                         self.widget.output_label.text())
 
         # remove template data
         self.send_signal(self.widget.Inputs.template_data, None)
         output = self.get_output(self.widget.Outputs.transformed_data)
         self.assertIsNone(output)
-        self.assertEqual("Input data with 10 instances and 4 features.",
-                         self.widget.input_label.text())
-        self.assertEqual("No template data on input.",
-                         self.widget.template_label.text())
-        self.assertEqual("", self.widget.output_label.text())
 
         # send template data
         self.send_signal(self.widget.Inputs.template_data, self.disc_data)
         output = self.get_output(self.widget.Outputs.transformed_data)
         self.assertTableEqual(output, self.disc_data[::15])
-        self.assertEqual("Input data with 10 instances and 4 features.",
-                         self.widget.input_label.text())
-        self.assertEqual("Template domain applied.",
-                         self.widget.template_label.text())
-        self.assertEqual("Output data includes 4 features.",
-                         self.widget.output_label.text())
 
         # remove data
         self.send_signal(self.widget.Inputs.data, None)
         output = self.get_output(self.widget.Outputs.transformed_data)
         self.assertIsNone(output)
-        self.assertEqual("No data on input.", self.widget.input_label.text())
-        self.assertEqual("Template data includes 4 features.",
-                         self.widget.template_label.text())
-        self.assertEqual("", self.widget.output_label.text())
 
         # remove template data
         self.send_signal(self.widget.Inputs.template_data, None)
-        self.assertEqual("No data on input.", self.widget.input_label.text())
-        self.assertEqual("No template data on input.",
-                         self.widget.template_label.text())
-        self.assertEqual("", self.widget.output_label.text())
 
     def assertTableEqual(self, table1, table2):
         self.assertIs(table1.domain, table2.domain)
@@ -82,7 +57,7 @@ class TestOWTransform(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data[::10])
         self.send_signal(self.widget.Inputs.template_data, pca_out)
         output = self.get_output(self.widget.Outputs.transformed_data)
-        npt.assert_array_equal(pca_out.X[::10], output.X)
+        npt.assert_array_almost_equal(pca_out.X[::10], output.X)
 
     def test_error_transforming(self):
         data = self.data[::10]

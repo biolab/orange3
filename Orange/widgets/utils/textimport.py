@@ -668,7 +668,7 @@ class CSVImportWidget(QWidget):
         self.grouping_sep_edit_cb.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"(\.|,| |')?"), self)
         )
-        self.grouping_sep_edit_cb.activated[str].connect(
+        self.grouping_sep_edit_cb.textActivated.connect(
             self.__group_sep_activated)
 
         self.decimal_sep_edit_cb = TextEditCombo(
@@ -680,7 +680,7 @@ class CSVImportWidget(QWidget):
         self.decimal_sep_edit_cb.setValidator(
             QRegularExpressionValidator(QRegularExpression(r"(\.|,)"), self))
         self.decimal_sep_edit_cb.addItems([".", ","])
-        self.decimal_sep_edit_cb.activated[str].connect(
+        self.decimal_sep_edit_cb.textActivated.connect(
             self.__decimal_sep_activated)
 
         number_sep_layout.addWidget(QLabel("Grouping:"))
@@ -731,7 +731,7 @@ class CSVImportWidget(QWidget):
             objectName="-error-overlay",
             visible=False,
         )
-        overlay.setLayout(QVBoxLayout(margin=0))
+        overlay.setLayout(QVBoxLayout())
         self.__error_label = label = QLabel(objectName="-error-text-label")
         overlay.layout().addWidget(label)
         overlay.setWidget(self.dataview.viewport())
@@ -1338,14 +1338,14 @@ class TablePreview(QTableView):
         # type: (QModelIndex, int, int) -> None
         super().rowsInserted(parent, start, end)
         behavior = self.selectionBehavior()
-        if behavior & (QTableView.SelectColumns | QTableView.SelectRows):
+        if behavior in (QTableView.SelectColumns, QTableView.SelectRows):
             # extend the selection to the new rows
             smodel = self.selectionModel()
             selection = smodel.selection()
             command = QItemSelectionModel.Select
-            if behavior & QTableView.SelectRows:
+            if behavior == QTableView.SelectRows:
                 command |= QItemSelectionModel.Rows
-            if behavior & QTableView.SelectColumns:
+            if behavior == QTableView.SelectColumns:
                 command |= QItemSelectionModel.Columns
             smodel.select(selection, command)
 
@@ -1436,7 +1436,7 @@ class HeaderItemDelegate(PreviewItemDelegate):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
         super().initStyleOption(option, index)
         palette = option.palette
-        shadow = palette.color(QPalette.Foreground)  # type: QColor
+        shadow = palette.color(QPalette.WindowText)  # type: QColor
         if shadow.isValid():
             shadow.setAlphaF(0.1)
             option.backgroundBrush = QBrush(shadow, Qt.SolidPattern)

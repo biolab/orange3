@@ -14,7 +14,7 @@ from AnyQt.QtWidgets import (
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
     QSizePolicy
 )
-from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
+from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush, QFontMetrics
 from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
     pyqtProperty
 
@@ -784,7 +784,7 @@ class OWNomogram(OWWidget):
                 return self._is_resizing
 
             def sizeHint(self):
-                return QSize(400, 200)
+                return QSize(500, 200)
 
         class FixedSizeGraphicsView(_GraphicsView):
             def __init__(self, scene, parent):
@@ -949,11 +949,20 @@ class OWNomogram(OWWidget):
         attr_inds, attributes = zip(*self.get_ordered_attributes()[:n_attrs])
         self.Outputs.features.send(AttributeList(attributes))
 
-        name_items = [QGraphicsTextItem(attr.name) for attr in attributes]
         point_text = QGraphicsTextItem("Points")
+        metric = QFontMetrics(point_text.font())
+
+        def text_item(text):
+            elided_text = metric.elidedText(text, Qt.ElideRight, 200)
+            item = QGraphicsTextItem(elided_text)
+            item.setToolTip(text)
+            return item
+
+        name_items = [text_item(attr.name) for attr in attributes]
+
         probs_text = QGraphicsTextItem("Probabilities (%)")
         all_items = name_items + [point_text, probs_text]
-        name_offset = -max(t.boundingRect().width() for t in all_items) - 10
+        name_offset = -max(t.boundingRect().width() for t in all_items) - 30
         w = self.view.viewport().rect().width()
         max_width = w + name_offset - 30
 

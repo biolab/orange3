@@ -8,6 +8,7 @@ import copy
 from unittest.mock import patch, Mock
 
 import numpy as np
+from scipy import sparse as sp
 
 from orangewidget.settings import Context
 
@@ -20,7 +21,7 @@ from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
     FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler,
-    DateTimeDescriptor)
+    DateTimeDescriptor, StringFeatureEditor)
 
 from Orange.widgets.data.owfeatureconstructor import (
     freevars, validate_exp, FeatureFunc
@@ -147,6 +148,20 @@ class FeatureConstructorTest(unittest.TestCase):
                                      [],
                                      construct_variables(desc, data)))
         np.testing.assert_equal(data.X, data.metas)
+
+    def test_transform_sparse(self):
+        domain = Domain([ContinuousVariable("A")])
+        desc = [
+            ContinuousDescriptor(name="X", expression="A", number_of_decimals=2)
+        ]
+        X = sp.csc_matrix(np.arange(5).reshape(5, 1))
+        data = Table.from_numpy(domain, X)
+        data_ = data.transform(Domain(data.domain.attributes,
+                                      [],
+                                      construct_variables(desc, data)))
+        np.testing.assert_equal(
+            data.get_column_view(0)[0], data_.get_column_view(0)[0]
+        )
 
 
 class TestTools(unittest.TestCase):
@@ -276,7 +291,7 @@ class FeatureFuncTest(unittest.TestCase):
 
     def test_repr(self):
         self.assertEqual(repr(FeatureFunc("a + 1", [("a", 2)])),
-                         "FeatureFunc('a + 1', [('a', 2)], {}, None)")
+                         "FeatureFunc('a + 1', [('a', 2)], {}, None, False, None)")
 
     def test_call(self):
         iris = Table("iris")
@@ -291,7 +306,7 @@ class FeatureFuncTest(unittest.TestCase):
         f = FeatureFunc("name[0]",
                         [("name", zoo.domain["name"])])
         r = f(zoo)
-        self.assertEqual(r, [x[0] for x in zoo.metas[:, 0]])
+        self.assertEqual(list(r), [x[0] for x in zoo.metas[:, 0]])
         self.assertEqual(f(zoo[0]), str(zoo[0, "name"])[0])
 
     def test_missing_variable(self):
@@ -304,6 +319,12 @@ class FeatureFuncTest(unittest.TestCase):
         r = f(data2)
         self.assertTrue(np.all(np.isnan(r)))
         self.assertTrue(np.isnan(f(data2[0])))
+
+    def test_time_str(self):
+        data = Table.from_numpy(Domain([TimeVariable("T", have_date=True)]), [[0], [0]])
+        f = FeatureFunc("str(T)", [("T", data.domain[0])])
+        c = f(data)
+        self.assertEqual(list(c), ["1970-01-01", "1970-01-01"])
 
     def test_invalid_expression_variable(self):
         iris = Table("iris")
@@ -323,6 +344,14 @@ class FeatureFuncTest(unittest.TestCase):
         self.assertFalse(np.isnan(r[1]))
         self.assertTrue(np.isnan(f(iris[0])))
         self.assertFalse(np.isnan(f(iris[1])))
+
+    def test_hash_eq(self):
+        iris = Table("iris")
+        f = FeatureFunc("1 / petal_length",
+                        [("petal_length", iris.domain["petal length"])])
+        g = copy.deepcopy(f)
+        self.assertEqual(f, g)
+        self.assertEqual(hash(f), hash(g))
 
 
 class OWFeatureConstructorTests(WidgetTest):
@@ -346,6 +375,19 @@ class OWFeatureConstructorTests(WidgetTest):
         )
         self.widget.apply()
         self.assertTrue(self.widget.Error.invalid_expressions.is_shown())
+
+    def test_transform_error(self):
+        data = Table("iris")[::5]
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.addFeature(ContinuousDescriptor("X", "1/0", 3))
+        self.widget.apply()
+        self.wait_until_finished(self.widget)
+        self.assertTrue(self.widget.Error.transform_error.is_shown())
+        self.widget.removeFeature(0)
+        self.widget.addFeature(ContinuousDescriptor("X", "1", 3))
+        self.widget.apply()
+        self.wait_until_finished(self.widget)
+        self.assertFalse(self.widget.Error.transform_error.is_shown())
 
     def test_renaming_duplicate_vars(self):
         data = Table("iris")
@@ -375,7 +417,22 @@ class OWFeatureConstructorTests(WidgetTest):
         )
         self.assertFalse(self.widget.Error.more_values_needed.is_shown())
         self.widget.apply()
+        self.wait_until_finished(self.widget)
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
+
+    def test_missing_strings(self):
+        domain = Domain([], metas=[StringVariable("S1")])
+        data = Table.from_list(domain, [["A"], ["B"], [None]])
+        self.widget.setData(data)
+
+        editor = StringFeatureEditor()
+        editor.nameedit.setText("S2")
+        editor.expressionedit.setText("S1 + S1")
+        self.widget.addFeature(editor.editorData())
+        self.widget.apply()
+        output = self.get_output(self.widget.Outputs.data)
+        np.testing.assert_equal(output.metas,
+                                [["A", "AA"], ["B", "BB"], ["", ""]])
 
     @patch("Orange.widgets.data.owfeatureconstructor.QMessageBox")
     def test_fix_values(self, msgbox):
@@ -495,6 +552,30 @@ class OWFeatureConstructorTests(WidgetTest):
         w.send_report()
         args = w.report_items.call_args[0][1]
         self.assertEqual(list(args), list("abcdefg"))
+
+    def test_output_domain_picklable(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, Table("iris")[::5])
+        features = [
+            ContinuousDescriptor("X1", "max(0, sepal_width - 5)", 2),
+            DiscreteDescriptor("D1", "HIGH if sepal_width > 5 else LOW",
+                               ("HIGH", "LOW"), False),
+            DiscreteDescriptor("D2", "'HIGH' if sepal_length > 5 else 'LOW'",
+                               (), False),
+            DateTimeDescriptor("T1", "0"),
+            DateTimeDescriptor("T2", "'1900-01-01'"),
+        ]
+        for f in features:
+            w.addFeature(f)
+        w.apply()
+        out = self.get_output(w.Outputs.data)
+        domain_a = out.domain
+        domain_b= pickle.loads(pickle.dumps(domain_a))
+        for name in ["X1", "D1", "D2", "T1", "T2"]:
+            a = domain_a[name]
+            b = domain_b[name]
+            self.assertEqual(a, b)
+            self.assertEqual(hash(a), hash(b))
 
 
 class TestFeatureEditor(unittest.TestCase):

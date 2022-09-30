@@ -14,7 +14,7 @@ from Orange.data import (
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
-from Orange.widgets.tests.utils import simulate
+from Orange.widgets.tests.utils import simulate, excepthook_catch
 from Orange.widgets.utils.colorpalettes import DefaultRGBColors
 from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
@@ -975,13 +975,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         graph.orthonormal_regression = True
         graph._add_line(x, y, c)
-        graph._orthonormal_line.assert_called_once_with(x, y, c, 3, 1)
+        graph._orthonormal_line.assert_called_once_with(x, y, c, 3, Qt.SolidLine)
         graph._regression_line.assert_not_called()
         graph._orthonormal_line.reset_mock()
 
         graph.orthonormal_regression = False
         graph._add_line(x, y, c)
-        graph._regression_line.assert_called_with(x, y, c, 3, 1)
+        graph._regression_line.assert_called_with(x, y, c, 3, Qt.SolidLine)
         graph._orthonormal_line.assert_not_called()
 
     def test_no_regression_line(self):
@@ -1129,6 +1129,18 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         ticks = x_axis.tickStrings(_ticks[0][1], 1, _ticks[0][0])
         with self.assertRaises(ValueError):
             float(ticks[0])
+
+        spacing, ticks = x_axis.tickValues(1581953776, 1582953776, 10)[0]
+        self.assertEqual(spacing, 1582953776 - 1581953776)
+        self.assertTrue(not ticks.size or 1581953776 <= ticks[0] <= 1582953776)
+
+    def test_clear_plot(self):
+        self.widget.cb_class_density.setChecked(True)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        data = self.data.transform(Domain(self.data.domain.attributes))[:100]
+        self.send_signal(self.widget.Inputs.data, data)
+        with excepthook_catch():
+            self.send_signal(self.widget.Inputs.data, self.data)
 
     def test_visual_settings(self):
         super().test_visual_settings()

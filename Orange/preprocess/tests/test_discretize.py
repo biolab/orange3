@@ -1,14 +1,332 @@
 # File contains some long lines; breaking them would decrease readability
-# pylint: disable=line-too-long
+# pylint: disable=line-too-long,too-many-lines,protected-access
 import calendar
 import unittest
+from unittest.mock import patch
 from time import struct_time, mktime
 
 import numpy as np
 
-from Orange.data import ContinuousVariable
+from Orange.data import ContinuousVariable, TimeVariable, Table, Domain
 from Orange.preprocess.discretize import \
- _time_binnings, time_binnings, BinDefinition, Discretizer
+    _time_binnings, time_binnings, BinDefinition, Discretizer, FixedWidth, \
+    FixedTimeWidth , Binning, \
+    TooManyIntervals
+
+
+class TestFixedWidth(unittest.TestCase):
+    def test_discretization(self):
+        x = np.array([[0.21, 0.335, 0, 0.26, np.nan],
+                      [0] * 5,
+                      [np.nan] * 5]).T
+        domain = Domain([ContinuousVariable(f"c{i}") for i in range(x.shape[1])])
+        data = Table.from_numpy(domain, x, None)
+
+        dvar = FixedWidth(0.1, 2)(data, 0)
+        np.testing.assert_almost_equal(dvar.compute_value.points,
+                                       (0.1, 0.2, 0.3))
+        self.assertEqual(dvar.values,
+                         ('< 0.10', '0.10 - 0.20', '0.20 - 0.30', '≥ 0.30'))
+
+        dvar = FixedWidth(0.2, 1)(data, 0)
+        np.testing.assert_almost_equal(dvar.compute_value.points, (0.2, ))
+        self.assertEqual(dvar.values, ('< 0.2', '≥ 0.2'))
+
+        dvar = FixedWidth(1, 2)(data, 0)
+        np.testing.assert_almost_equal(dvar.compute_value.points, [])
+
+        dvar = FixedWidth(0.11, 2)(data, 1)
+        np.testing.assert_almost_equal(dvar.compute_value.points, [])
+
+        dvar = FixedWidth(0.11, 2)(data, 2)
+        np.testing.assert_almost_equal(dvar.compute_value.points, [])
+
+        self.assertRaises(TooManyIntervals, FixedWidth(0.0001, 1), data, 0)
+
+
+class TestFixedTimeWidth(unittest.TestCase):
+    def test_discretization(self):
+        t = TimeVariable("t")
+        x = np.array([[t.to_val("1914"), t.to_val("1945"), np.nan],
+                      [t.to_val("1914"), t.to_val("1914"), np.nan],
+                      [np.nan, np.nan, np.nan],
+                      ]).T
+        domain = Domain([t, TimeVariable("t2"), TimeVariable("t3")])
+        data = Table.from_numpy(domain, x, None)
+
+        dvar = FixedTimeWidth(10, 1)(data, 1)
+        np.testing.assert_almost_equal(dvar.compute_value.points, [])
+
+        dvar = FixedTimeWidth(10, 2)(data, 2)
+        np.testing.assert_almost_equal(dvar.compute_value.points, [])
+
+        self.assertRaises(TooManyIntervals, FixedWidth(0.0001, 1), data, 0)
+
+        dvar = FixedTimeWidth(10, 0)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(str(y))) for y in (1920, 1930, 1940)])
+        self.assertEqual(dvar.values,
+                         ('< 1920', '1920 - 1930', '1930 - 1940', '≥ 1940'))
+
+        dvar = FixedTimeWidth(5, 0)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(str(y))) for y in (1915, 1920, 1925, 1930, 1935,
+                                             1940, 1945)])
+        self.assertEqual(dvar.values,
+                         ('< 1915', '1915 - 1920', '1920 - 1925', '1925 - 1930',
+                          '1930 - 1935', '1935 - 1940', '1940 - 1945', '≥ 1945')
+                         )
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-07-28"), t.to_val("1918-11-11")]]).T)
+        dvar = FixedTimeWidth(6, 1)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1915-01-01", "1915-07-01",
+                                        "1916-01-01", "1916-07-01",
+                                        "1917-01-01", "1917-07-01",
+                                        "1918-01-01", "1918-07-01")])
+        self.assertEqual(dvar.values,
+                         ('< 15 Jan', '15 Jan - Jul', '15 Jul - 16 Jan',
+                          '16 Jan - Jul', '16 Jul - 17 Jan', '17 Jan - Jul',
+                          '17 Jul - 18 Jan', '18 Jan - Jul', '≥ 18 Jul'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-07-28"), t.to_val("1914-11-11")]]).T)
+        dvar = FixedTimeWidth(6, 1)(data, 0)
+        np.testing.assert_almost_equal(dvar.compute_value.points, [])
+
+        dvar = FixedTimeWidth(2, 1)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-09-01", "1914-11-01")])
+        self.assertEqual(dvar.values, ('< Sep', 'Sep - Nov', '≥ Nov'))
+
+        dvar = FixedTimeWidth(1, 1)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-08-01", "1914-09-01",
+                                        "1914-10-01", "1914-11-01")])
+        self.assertEqual(dvar.values, ('< Aug', 'Aug - Sep', 'Sep - Oct',
+                                       'Oct - Nov', '≥ Nov'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-28 10:45"),
+                       t.to_val("1914-07-04 15:25")]]).T)
+        dvar = FixedTimeWidth(2, 2)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-29", "1914-07-01",
+                                        "1914-07-03")])
+        self.assertEqual(dvar.values, ('< Jun 29', 'Jun 29 - Jul 01',
+                                       'Jul 01 - Jul 03', '≥ Jul 03'))
+
+        dvar = FixedTimeWidth(1, 2)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-29", "1914-06-30",
+                                        "1914-07-01", "1914-07-02",
+                                        "1914-07-03", "1914-07-04")])
+        self.assertEqual(dvar.values, ('< Jun 29', 'Jun 29 - Jun 30',
+                                       'Jun 30 - Jul 01', 'Jul 01 - Jul 02',
+                                        'Jul 02 - Jul 03', 'Jul 03 - Jul 04',
+                                        '≥ Jul 04'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-12-30 22:45"),
+                       t.to_val("1915-01-02 15:25")]]).T)
+        dvar = FixedTimeWidth(1, 2)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-12-31", "1915-01-01",
+                                        "1915-01-02")])
+        self.assertEqual(dvar.values, ('< 14 Dec 31',
+                                       '14 Dec 31 - 15 Jan 01',
+                                       '15 Jan 01 - Jan 02', '≥ 15 Jan 02'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-28 10:45"),
+                       t.to_val("1914-06-28 15:25")]]).T)
+        dvar = FixedTimeWidth(2, 3)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-28 12:00", "1914-06-28 14:00")])
+        self.assertEqual(dvar.values, ('< 12:00', '12:00 - 14:00', '≥ 14:00'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-28 10:45"),
+                       t.to_val("1914-06-28 15:25")]]).T)
+        dvar = FixedTimeWidth(1, 3)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-28 11:00", "1914-06-28 12:00",
+                                        "1914-06-28 13:00", "1914-06-28 14:00",
+                                        "1914-06-28 15:00")])
+        self.assertEqual(dvar.values, ('< 11:00', '11:00 - 12:00',
+                                       '12:00 - 13:00', '13:00 - 14:00',
+                                       '14:00 - 15:00', '≥ 15:00'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-28 22:45"),
+                       t.to_val("1914-06-29 03:25")]]).T)
+        dvar = FixedTimeWidth(1, 3)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-28 23:00", "1914-06-29 00:00",
+                                        "1914-06-29 01:00", "1914-06-29 02:00",
+                                        "1914-06-29 03:00")])
+        self.assertEqual(dvar.values, ('< Jun 28 23:00',
+                                       'Jun 28 23:00 - Jun 29 00:00',
+                                       'Jun 29 00:00 - 01:00',
+                                       'Jun 29 01:00 - 02:00',
+                                       'Jun 29 02:00 - 03:00',
+                                       '≥ Jun 29 03:00'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-28 22:43"),
+                       t.to_val("1914-06-28 23:01")]]).T)
+        dvar = FixedTimeWidth(5, 4)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-28 22:45", "1914-06-28 22:50",
+                                        "1914-06-28 22:55", "1914-06-28 23:00")])
+        self.assertEqual(dvar.values, ('< 22:45', "22:45 - 22:50",
+                                       "22:50 - 22:55", "22:55 - 23:00",
+                                       '≥ 23:00'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-30 23:48"),
+                       t.to_val("1914-07-01 00:06")]]).T)
+        dvar = FixedTimeWidth(5, 4)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-30 23:50", "1914-06-30 23:55",
+                                        "1914-07-01 00:00", "1914-07-01 00:05")])
+        self.assertEqual(dvar.values, ('< Jun 30 23:50', "Jun 30 23:50 - 23:55",
+                                       "Jun 30 23:55 - Jul 01 00:00",
+                                       "Jul 01 00:00 - 00:05", '≥ Jul 01 00:05'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-29 23:48"),
+                       t.to_val("1914-06-30 00:06")]]).T)
+        dvar = FixedTimeWidth(5, 4)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-29 23:50", "1914-06-29 23:55",
+                                        "1914-06-30 00:00", "1914-06-30 00:05")])
+        self.assertEqual(dvar.values, ('< Jun 29 23:50', "Jun 29 23:50 - 23:55",
+                                       "Jun 29 23:55 - Jun 30 00:00",
+                                       "Jun 30 00:00 - 00:05", '≥ Jun 30 00:05'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-29 23:48:05"),
+                       t.to_val("1914-06-29 23:51:59")]]).T)
+        dvar = FixedTimeWidth(1, 4)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-29 23:49", "1914-06-29 23:50",
+                                        "1914-06-29 23:51")])
+        self.assertEqual(dvar.values, ('< 23:49', "23:49 - 23:50",
+                                       "23:50 - 23:51", '≥ 23:51'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-06-29 23:48:05.123"),
+                       t.to_val("1914-06-29 23:48:33.684")]]).T)
+        dvar = FixedTimeWidth(10, 5)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-06-29 23:48:10",
+                                        "1914-06-29 23:48:20",
+                                        "1914-06-29 23:48:30")])
+        self.assertEqual(dvar.values, ('< 23:48:10', "23:48:10 - 23:48:20",
+                                       "23:48:20 - 23:48:30", '≥ 23:48:30'))
+
+        data = Table.from_numpy(
+            Domain([t]),
+            np.array([[t.to_val("1914-12-31 23:59:58.1"),
+                       t.to_val("1915-01-01 00:00:01.8")]]).T)
+        dvar = FixedTimeWidth(1, 5)(data, 0)
+        np.testing.assert_almost_equal(
+            dvar.compute_value.points,
+            [int(t.to_val(y)) for y in ("1914-12-31 23:59:59",
+                                        "1915-01-01 00:00:00",
+                                        "1915-01-01 00:00:01")])
+        self.assertEqual(dvar.values, ('< 23:59:59', "23:59:59 - 00:00:00",
+                                       "00:00:00 - 00:00:01", '≥ 00:00:01'))
+
+        self.assertRaises(TooManyIntervals, FixedTimeWidth(0.0001, 5), data, 0)
+
+
+class TestBinningDiscretizer(unittest.TestCase):
+    def test_no_data(self):
+        no_data = Table(Domain([ContinuousVariable("y")]), np.zeros((0, 1)))
+        dvar = Binning()(no_data, 0)
+        self.assertEqual(dvar.compute_value.points, [])
+
+    @patch("Orange.preprocess.discretize.time_binnings")
+    @patch("Orange.preprocess.discretize.decimal_binnings")
+    @patch("Orange.preprocess.discretize.Binning._create_binned_var")
+    def test_call(self, _, decbin, timebin):
+        data = Table(Domain([ContinuousVariable("y"), TimeVariable("t")]),
+                     np.array([[1, 2], [3, 4]]))
+
+        Binning(5)(data, 0)
+        timebin.assert_not_called()
+        self.assertEqual(list(decbin.call_args[0][0]), [1, 3])
+        decbin.reset_mock()
+
+        Binning(5)(data, 1)
+        decbin.assert_not_called()
+        self.assertEqual(list(timebin.call_args[0][0]), [2, 4])
+
+    def test_binning_selection(self):
+        var = ContinuousVariable("y")
+        discretize = Binning(2)
+        # pylint: disable=redefined-outer-name
+        create = discretize._create_binned_var
+
+        binnings = []
+        self.assertEqual(create(binnings, var).compute_value.points, [])
+
+        binnings = None
+        self.assertEqual(create(binnings, var).compute_value.points, [])
+
+        binnings = [
+            BinDefinition(np.arange(i + 1),
+                          [f"t{x}" for x in range(i + 1)],
+                          [f"t{x}" for x in range(i + 1)],
+                          1 / i, str(i)
+                          )
+            for i in (3, 5, 10, 20)
+        ]
+
+        for discretize.n in (2, 3):
+            self.assertEqual(create(binnings, var).values,
+                             ('< t1', "t1 - t2", "≥ t2"))
+
+        for discretize.n in (4, 5, 6, 7):
+            self.assertEqual(create(binnings, var).values,
+                             ('< t1', "t1 - t2", "t2 - t3", "t3 - t4", "≥ t4"))
+
+        for discretize.n in range(8, 15):
+            self.assertEqual(len(create(binnings, var).values), 10)
+
+        for discretize.n in range(16, 25):
+            self.assertEqual(len(create(binnings, var).values), 20)
 
 
 # pylint: disable=redefined-builtin
@@ -34,12 +352,12 @@ class TestTimeBinning(unittest.TestCase):
                 s = s.replace(localname, engname)
             return s
 
-        def tr(ss):
+        def tr2(ss):
             return list(map(tr1, ss))
 
         def testbin(start, end):
             bins = _time_binnings(create(*start), create(*end), 3, 51)
-            return [(bin.width_label, tr(bin.short_labels),
+            return [(bin.width_label, tr2(bin.short_labels),
                      list(bin.thresholds))
                     for bin in reversed(bins)]
 

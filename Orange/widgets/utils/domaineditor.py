@@ -161,7 +161,7 @@ class ComboDelegate(HorizontalGridDelegate):
                 self.view.closeEditor(me, self.NoHint)
 
         combo = Combo(parent)
-        combo.highlighted[str].connect(combo.highlight)
+        combo.textHighlighted.connect(combo.highlight)
         return combo
 
 

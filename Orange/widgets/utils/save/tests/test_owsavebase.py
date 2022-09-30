@@ -359,6 +359,50 @@ class TestOWSaveBase(WidgetTest):
         widget = self.create_widget(OWSave)
         self.assertEqual(widget.default_filter(), OWSave.filters[0])
 
+    @unittest.skipUnless(sys.platform.startswith("win"), "windows path tests")
+    def test_paths_win(self):
+        class OWSave(OWSaveBase):
+            name = "Mock save"
+            filters = ["csv (*.csv)", "txt (*.txt)"]
+        widget = self.create_widget(OWSave)
+        # relative stored paths
+        for workflow_dir, filename in [("C:/Temp", "C:/Temp/abc.csv"),
+                                       ("C:/Temp", "C:/Temp/Project/abc.csv"),
+                                       ("C:/Temp/", "C:/Temp/abc.csv"),
+                                       ("C:/Temp/", "C:/Temp/Project/abc.csv"),
+                                       ("C:/Temp", "c:\\Temp\\Project\\abc.csv"),
+                                       ("c:\\Temp", "c:/Temp/Project\\abc.csv")]:
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
+            widget.filename = filename
+            self.assertFalse(os.path.isabs(widget.stored_path))
+        # absolute stored paths
+        for workflow_dir, filename in [("C:/Temp", "C:/Folder/abc.csv"),
+                                       ("C:/Temp/Project", "C:/Temp/abc.csv"),
+                                       ("C:\\Temp\\Project", "C:\\Temp\\abc.csv")]:
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
+            widget.filename = filename
+            self.assertTrue(os.path.isabs(widget.stored_path))
+
+    def test_paths_unix(self):
+        class OWSave(OWSaveBase):
+            name = "Mock save"
+            filters = ["csv (*.csv)", "txt (*.txt)"]
+        widget = self.create_widget(OWSave)
+        # relative stored paths
+        for workflow_dir, filename in [("/temp", "/temp/abc.csv"),
+                                       ("/temp", "/temp/project/abc.csv"),
+                                       ("/temp/", "/temp/abc.csv"),
+                                       ("/temp/", "/temp/project/abc.csv")]:
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
+            widget.filename = filename
+            self.assertFalse(os.path.isabs(widget.stored_path))
+        # absolute stored paths
+        for workflow_dir, filename in [("/temp", "/folder/abc.csv"),
+                                       ("/temp/project", "/temp/abc.csv")]:
+            widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
+            widget.filename = filename
+            self.assertTrue(os.path.isabs(widget.stored_path))
+
 
 class TestOWSaveUtils(unittest.TestCase):
     def test_replace_extension(self):

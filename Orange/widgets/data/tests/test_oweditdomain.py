@@ -32,7 +32,7 @@ from Orange.widgets.data.oweditdomain import (
     AsString, AsCategorical, AsContinuous, AsTime,
     table_column_data, ReinterpretVariableEditor, CategoricalVector,
     VariableEditDelegate, TransformRole,
-    RealVector, TimeVector, StringVector, make_dict_mapper, DictMissingConst,
+    RealVector, TimeVector, StringVector, make_dict_mapper,
     LookupMappingTransform, as_float_or_nan, column_str_repr,
     GroupItemsDialog, VariableListModel, StrpTime
 )
@@ -921,13 +921,18 @@ class TestReinterpretTransforms(TestCase):
         times = (
             ["07.02.2022", "18.04.2021"],  # date only
             ["07.02.2022 01:02:03", "18.04.2021 01:02:03"],  # datetime
+            # datetime with timezone
+            ["2021-02-08 01:02:03+01:00", "2021-02-07 01:02:03+01:00"],
             ["010203", "010203"],  # time
             ["02-07", "04-18"],
         )
-        formats = ["25.11.2021", "25.11.2021 00:00:00", "000000", "11-25"]
+        formats = [
+            "25.11.2021", "25.11.2021 00:00:00", "2021-11-25 00:00:00", "000000", "11-25"
+        ]
         expected = [
             [d("2022-02-07"), d("2021-04-18")],
             [d("2022-02-07 01:02:03"), d("2021-04-18 01:02:03")],
+            [d("2021-02-08 01:02:03+0100"), d("2021-02-07 01:02:03+0100")],
             [d("01:02:03"), d("01:02:03")],
             [d("1900-02-07"), d("1900-04-18")],
         ]
@@ -951,6 +956,17 @@ class TestReinterpretTransforms(TestCase):
             ttable.metas,
             np.array(list(chain(expected, expected)), dtype=float).transpose()
         )
+
+    def test_raise_pandas_version(self):
+        """
+        When this test start to fail:
+        - remove this test
+        - remove if clause in datetime_to_epoch function and supporting comments
+        - remove same if clause in var function in owgroupby (line 77, 78)
+        - set pandas dependency version to pandas>=1.4
+        """
+        from datetime import datetime
+        self.assertLess(datetime.today(), datetime(2023, 1, 1))
 
     def test_reinterpret_string(self):
         table = self.data_str
@@ -1032,13 +1048,6 @@ class TestUtils(TestCase):
         self.assertIs(r, r_)
         assert_array_equal(r, [1, 1, 2])
 
-    def test_dict_missing(self):
-        d = DictMissingConst("<->", {1: 1, 2: 2})
-        self.assertEqual(d[1], 1)
-        self.assertEqual(d[-1], "<->")
-        # must be sufficiently different from defaultdict to warrant existence
-        self.assertEqual(d, DictMissingConst("<->", {1: 1, 2: 2}))
-
     def test_as_float_or_nan(self):
         a = np.array(["a", "1.1", ".2", "NaN"], object)
         r = as_float_or_nan(a)
@@ -1071,7 +1080,7 @@ class TestLookupMappingTransform(TestCase):
     def setUp(self) -> None:
         self.lookup = LookupMappingTransform(
             StringVariable("S"),
-            DictMissingConst(np.nan, {"": np.nan, "a": 0, "b": 1}),
+            {"": np.nan, "a": 0, "b": 1},
             dtype=float,
         )
 
@@ -1093,9 +1102,9 @@ class TestLookupMappingTransform(TestCase):
         v2 = DiscreteVariable("v1", values=tuple("abc"))
         v3 = DiscreteVariable("v3", values=tuple("abc"))
 
-        map1 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
-        map2 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
-        map3 = DictMissingConst(np.nan, {"a": 2, "b": 0, "c": 1})
+        map1 = {"a": 2, "b": 0, "c": 1}
+        map2 = {"a": 2, "b": 0, "c": 1}
+        map3 = {"a": 2, "b": 0, "c": 1}
 
         t1 = LookupMappingTransform(v1, map1, float)
         t1a = LookupMappingTransform(v2, map2, float)
@@ -1107,15 +1116,15 @@ class TestLookupMappingTransform(TestCase):
         self.assertEqual(hash(t1), hash(t1a))
         self.assertNotEqual(hash(t1), hash(t2))
 
-        map1a = DictMissingConst(np.nan, {"a": 2, "b": 1, "c": 0})
+        map1a = {"a": 2, "b": 1, "c": 0}
         t1 = LookupMappingTransform(v1, map1, float)
         t1a = LookupMappingTransform(v1, map1a, float)
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 
-        map1a = DictMissingConst(2, {"a": 2, "b": 0, "c": 1})
+        map1a = {"a": 2, "b": 0, "c": 1}
         t1 = LookupMappingTransform(v1, map1, float)
-        t1a = LookupMappingTransform(v1, map1a, float)
+        t1a = LookupMappingTransform(v1, map1a, float, unknown=2)
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 

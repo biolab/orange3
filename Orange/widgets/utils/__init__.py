@@ -3,7 +3,7 @@ import inspect
 import sys
 from collections import deque
 from typing import (
-    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union
+    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union, Tuple
 )
 from xml.sax.saxutils import escape
 
@@ -92,6 +92,8 @@ def qname(type_: type) -> str:
 
 _T1 = TypeVar("_T1")  # pylint: disable=invalid-name
 _E = TypeVar("_E", bound=enum.Enum)  # pylint: disable=invalid-name
+_A = TypeVar("_A")  # pylint: disable=invalid-name
+_B = TypeVar("_B")  # pylint: disable=invalid-name
 
 
 def apply_all(seq, op):
@@ -99,6 +101,22 @@ def apply_all(seq, op):
     """Apply `op` on all elements of `seq`."""
     # from itertools recipes `consume`
     deque(map(op, seq), maxlen=0)
+
+
+def ftry(
+        func: Callable[..., _A],
+        error: Union[Type[BaseException], Tuple[Type[BaseException]]],
+        default: _B
+) -> Callable[..., Union[_A, _B]]:
+    """
+    Wrap a `func` such that if `errors` occur `default` is returned instead.
+    """
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except error:
+            return default
+    return wrapper
 
 
 def unique_everseen(iterable, key=None):

@@ -11,6 +11,7 @@ Examples
 """
 
 import math
+import warnings
 
 import numpy as np
 import sklearn.metrics as skl_metrics
@@ -21,6 +22,8 @@ from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
            "MSE", "RMSE", "MAE", "R2", "compute_CD", "graph_ranks", "LogLoss"]
+
+from Orange.util import OrangeDeprecationWarning
 
 
 class ScoreMetaType(WrapperMeta):
@@ -388,7 +391,11 @@ def compute_CD(avranks, n, alpha="0.05", test="nemenyi"):
     according to given alpha (either alpha="0.05" or alpha="0.1") for average
     ranks and number of tested datasets N. Test can be either "nemenyi" for
     for Nemenyi two tailed test or "bonferroni-dunn" for Bonferroni-Dunn test.
+
+    This function is deprecated and will be removed in Orange 3.34.
     """
+    warnings.warn("compute_CD is deprecated and will be removed in Orange 3.34.",
+                  OrangeDeprecationWarning, stacklevel=2)
     k = len(avranks)
     d = {("nemenyi", "0.05"): [0, 0, 1.959964, 2.343701, 2.569032, 2.727774,
                                2.849705, 2.94832, 3.030879, 3.101730, 3.163684,
@@ -420,6 +427,8 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
     The image is ploted on `plt` imported using
     `import matplotlib.pyplot as plt`.
 
+    This function is deprecated and will be removed in Orange 3.34.
+
     Args:
         avranks (list of float): average ranks of methods.
         names (list of str): names of methods.
@@ -437,6 +446,8 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
         filename (str, optional): output file name (with extension). If not
             given, the function does not write a file.
     """
+    warnings.warn("graph_ranks is deprecated and will be removed in Orange 3.34.",
+                  OrangeDeprecationWarning, stacklevel=2)
     try:
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_agg import FigureCanvasAgg

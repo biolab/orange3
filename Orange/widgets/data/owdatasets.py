@@ -375,7 +375,7 @@ class OWDataSets(OWWidget):
         )
 
         scw = self.view.setColumnWidth
-        width = self.view.fontMetrics().width
+        width = self.view.fontMetrics().horizontalAdvance
         self.view.resizeColumnToContents(0)
         scw(self.Header.title, width("X" * 37))
         scw(self.Header.size, 20 + max(width("888 bytes "), width("9999.9 MB ")))

@@ -1,5 +1,6 @@
 # pylint: disable=protected-access
 import numpy as np
+from AnyQt.QtCore import Qt
 
 from Orange.base import Model
 from Orange.data import Table
@@ -35,7 +36,7 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
         when pruning parameters are not checked
         """
         for cb in self.checks:
-            cb.setCheckState(False)
+            cb.setCheckState(Qt.Unchecked)
         self.parameters = [DefaultParameterMapping(par.name, val)
                            for par, val in zip(self.parameters, (None, 2, 1))]
         self.test_parameters()

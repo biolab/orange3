@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from AnyQt.QtCore import QEvent, QPoint, Qt
+from AnyQt.QtCore import QEvent, QPointF, Qt
 from AnyQt.QtGui import QMouseEvent
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
@@ -79,8 +79,8 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.widget.attr_x, self.widget.attr_y = self.data.domain[:2]
         area = self.widget.areas[0]
         self.widget.select_area(area, QMouseEvent(
-            QEvent.MouseButtonPress, QPoint(), Qt.LeftButton,
-            Qt.LeftButton, Qt.KeyboardModifiers()))
+            QEvent.MouseButtonPress, QPointF(), Qt.LeftButton,
+            Qt.LeftButton, Qt.NoModifier))
         return [0, 4, 6, 7, 11, 17, 19, 21, 22, 24, 26, 39, 40, 43, 44, 46]
 
     def test_missing_values(self):

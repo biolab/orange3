@@ -1,6 +1,8 @@
 import re
+import types
 import warnings
 from collections.abc import Iterable
+from typing import Sequence
 
 from datetime import datetime, timedelta, timezone
 from numbers import Number, Real, Integral
@@ -11,6 +13,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import _variable
+from Orange.data.util import redefines_eq_and_hash
 from Orange.util import Registry, Reprable, OrangeDeprecationWarning
 
 
@@ -167,6 +170,44 @@ class Value(float):
             self.variable = variable
             self._value = value
         return self
+
+    @staticmethod
+    def _as_values_primitive(variable, data) -> Sequence['Value']:
+        assert variable.is_primitive()
+        _Value = Value
+        _float_new = float.__new__
+        res = [Value(variable, np.nan)] * len(data)
+        for i, v in enumerate(data):
+            v = _float_new(_Value, v)
+            v.variable = variable
+            res[i] = v
+        return res
+
+    @staticmethod
+    def _as_values_non_primitive(variable, data) -> Sequence['Value']:
+        assert not variable.is_primitive()
+        _Value = Value
+        _float_new = float.__new__
+        data_arr = np.array(data, dtype=object)
+        NA = data_arr == variable.Unknown
+        fdata = np.full(len(data), np.finfo(float).min)
+        fdata[NA] = np.nan
+        res = [Value(variable, Variable.Unknown)] * len(data)
+        for i, (v, fval) in enumerate(zip(data, fdata)):
+            val = _float_new(_Value, fval)
+            val.variable = variable
+            val._value = v
+            res[i] = val
+        return res
+
+    @staticmethod
+    def _as_values(variable, data):
+        """Equivalent but faster then `[Value(variable, v) for v in data]
+        """
+        if variable.is_primitive():
+            return Value._as_values_primitive(variable, data)
+        else:
+            return Value._as_values_non_primitive(variable, data)
 
     def __init__(self, _, __=Unknown):
         # __new__ does the job, pylint: disable=super-init-not-called
@@ -328,6 +369,14 @@ class Variable(Reprable, metaclass=VariableMeta):
             warnings.warn("Variable must have a name", OrangeDeprecationWarning,
                           stacklevel=3)
         self._name = name
+
+        if compute_value is not None \
+                and not isinstance(compute_value, (types.BuiltinFunctionType,
+                                                   types.FunctionType)) \
+                and not redefines_eq_and_hash(compute_value):
+            warnings.warn(f"{type(compute_value).__name__} should define "
+                          f"__eq__ and __hash__ to be used for compute_value")
+
         self._compute_value = compute_value
         self.unknown_str = MISSING_VALUES
         self.source_variable = None
@@ -579,7 +628,7 @@ class ContinuousVariable(Variable):
         """
         return _variable.val_from_str_add_cont(self, s)
 
-    def repr_val(self, val):
+    def repr_val(self, val: float):
         """
         Return the value as a string with the prescribed number of decimals.
         """
@@ -1049,8 +1098,14 @@ class TimeVariable(ContinuousVariable):
             return str(val.value) if isinstance(val, Value) else str(val)
 
         # If you know how to simplify this, be my guest
+        # first, round to 6 decimals. By skipping this, you risk that
+        # microseconds would be rounded to 1_000_000 two lines later
+        val = round(val, 6)
         seconds = int(val)
+        # Rounding is needed to avoid rounding down; it will never be rounded
+        # to 1_000_000 because of the round we have above
         microseconds = int(round((val - seconds) * 1e6))
+        # If you know how to simplify this, be my guest
         if val < 0:
             if microseconds:
                 seconds, microseconds = seconds - 1, int(1e6) + microseconds

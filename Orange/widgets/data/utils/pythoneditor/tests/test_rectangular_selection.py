@@ -27,12 +27,14 @@ class _Test(WidgetTest):
     """
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(SimpleWidget)
         self.qpart = self.widget.qpart
 
     def tearDown(self):
         self.qpart.hide()
         self.qpart.terminate()
+        super().tearDown()
 
     def test_real_to_visible(self):
         self.qpart.text = 'abcdfg'

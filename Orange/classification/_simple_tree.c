@@ -310,13 +310,13 @@ mse_c(struct Example *examples, int size, int attr, float cls_mse, struct Args *
 			var_lt.sum += ex->weight * cls_val;
 			var_lt.sum2 += ex->weight * cls_val * cls_val;
 
-			/* this calculation might be numarically unstable - fix */
+			/* this calculation might be numerically unstable - fix */
 			var_ge.n -= ex->weight;
 			var_ge.sum -= ex->weight * cls_val;
 			var_ge.sum2 -= ex->weight * cls_val * cls_val;
 		}
 
-		if (ex->x[attr] == ex_next->x[attr] || i + 1 < min_instances)
+		if (ex->x[attr] == ex_next->x[attr] || i + 1 < min_instances || var_lt.n == 0)
 			continue;
 
 		/* compute mse */
@@ -345,6 +345,10 @@ mse_d(struct Example *examples, int size, int attr, float cls_mse, struct Args *
 	struct Variance {
 		float n, sum, sum2;
 	} *variances, *v, *v_end;
+
+	if (cls_mse <= 0) {
+	    return 0.0;
+	}
 
 	attr_vals = args->attr_vals[attr];
 
@@ -381,8 +385,8 @@ mse_d(struct Example *examples, int size, int attr, float cls_mse, struct Args *
 			score += v->sum2 - v->sum * v->sum / v->n;
 	score = (cls_mse - score / size_attr_cls_known) / cls_mse * (size_attr_known / size_weight);
 
-	if (size_attr_cls_known <= 0.0 || cls_mse <= 0.0 || size_weight <= 0.0)
-		score = 0.0;
+	if (size_attr_cls_known <= 0.0 || size_weight <= 0.0)
+		score = -INFINITY;
 
 finish:
 	free(attr_dist);
@@ -441,15 +445,6 @@ build_tree_(struct Example *examples, int size, int depth, struct SimpleTreeNode
 		float n, sum, sum2, cls_val;
 
 		assert(args->type == Regression);
-		if (size == 0) {
-			assert(parent);
-			node->type = PredictorNode;
-			node->children_size = 0;
-			node->n = parent->n;
-			node->sum = parent->sum;
-			return node;
-		}
-
 		n = sum = sum2 = 0.0;
 		for (ex = examples, ex_end = examples + size; ex < ex_end; ex++)
 			if (!isnan(ex->y)) {
@@ -461,6 +456,17 @@ build_tree_(struct Example *examples, int size, int depth, struct SimpleTreeNode
 
 		node->n = n;
 		node->sum = sum;
+
+		if (n == 0) {
+			node->type = PredictorNode;
+			node->children_size = 0;
+			if (parent) {
+				node->n = parent->n;
+				node->sum = parent->sum;
+			}
+			return node;
+		}
+
 		cls_mse = (sum2 - sum * sum / n) / n;
 
 		if (cls_mse < 1e-5) {
@@ -747,7 +753,7 @@ predict_regression(double *x, int size, struct SimpleTreeNode *node, int num_att
 	for (i = 0; i < size; i++) {
 		sum = n = 0;
 		predict_regression_(x + i * num_attrs, node, &sum, &n);
-		p[i] = sum / n;
+		p[i] = n > 0 ? sum / n : sum;
 	}
 }
 

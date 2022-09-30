@@ -7,9 +7,9 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """
-from PyQt5.QtCore import Qt, QMimeData
-from PyQt5.QtWidgets import QApplication, QTextEdit
-from PyQt5.QtGui import QKeyEvent, QKeySequence, QPalette, QTextCursor
+from AnyQt.QtCore import Qt, QMimeData
+from AnyQt.QtWidgets import QApplication, QTextEdit
+from AnyQt.QtGui import QKeyEvent, QKeySequence, QPalette, QTextCursor
 
 
 class RectangularSelection:
@@ -71,7 +71,7 @@ class RectangularSelection:
                                                       self._qpart.cursorPosition[1])
             self._start = (line, visibleColumn)
         modifiersWithoutAltShift = keyEvent.modifiers() & (~(Qt.AltModifier | Qt.ShiftModifier))
-        newEvent = QKeyEvent(keyEvent.type(),
+        newEvent = QKeyEvent(QKeyEvent.Type(keyEvent.type()),
                              keyEvent.key(),
                              modifiersWithoutAltShift,
                              keyEvent.text(),

@@ -24,7 +24,7 @@ class _OverlayWidget(OverlayWidget):
         ds = QGraphicsDropShadowEffect(
             parent=self,
             objectName="sticky-view-shadow",
-            color=palette.color(QPalette.Foreground),
+            color=palette.color(QPalette.WindowText),
             blurRadius=15,
             offset=QPointF(0, 0),
             enabled=True
@@ -38,7 +38,7 @@ class _OverlayWidget(OverlayWidget):
                 QGraphicsDropShadowEffect, "sticky-view-shadow")
             if effect is not None:
                 palette = self.palette()
-                effect.setColor(palette.color(QPalette.Foreground))
+                effect.setColor(palette.color(QPalette.WindowText))
 
     def eventFilter(self, recv: QObject, event: QEvent) -> bool:
         if event.type() in (QEvent.Show, QEvent.Hide) and recv is self.widget():
@@ -151,8 +151,10 @@ class StickyGraphicsView(QGraphicsView):
             sizePolicy=sp,
             visible=False,
         )
-        over.setLayout(QVBoxLayout(margin=0))
-        over.layout().addWidget(header)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(header)
+        over.setLayout(layout)
         over.setWidget(widget)
 
         over = _OverlayWidget(
@@ -161,8 +163,10 @@ class StickyGraphicsView(QGraphicsView):
             sizePolicy=sp,
             visible=False
         )
-        over.setLayout(QVBoxLayout(margin=0))
-        over.layout().addWidget(footer)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(footer)
+        over.setLayout(layout)
         over.setWidget(widget)
 
         def bind(source: QScrollBar, target: QScrollBar) -> None:

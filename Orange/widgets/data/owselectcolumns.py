@@ -187,6 +187,12 @@ class OWSelectAttributes(widget.OWWidget):
         self.__interface_update_timer = QTimer(self, interval=0, singleShot=True)
         self.__interface_update_timer.timeout.connect(
             self.__update_interface_state)
+        # If __update_var_counts were connected directly to textChanged of
+        # view box's edit, it could be called before the related proxy is
+        # updated
+        self.__var_counts_update_timer = QTimer(self, interval=0, singleShot=True)
+        self.__var_counts_update_timer.timeout.connect(
+            self.update_var_counts)
         # The last view that has the selection for move operation's source
         self.__last_active_view = None  # type: Optional[QListView]
 
@@ -200,16 +206,21 @@ class OWSelectAttributes(widget.OWWidget):
         self.controlArea = new_control_area
 
         # init grid
+        self.view_boxes = []
         layout = QGridLayout()
         self.controlArea.setLayout(layout)
         layout.setContentsMargins(0, 0, 0, 0)
-        box = gui.vBox(self.controlArea, "Ignored",
+
+        name = "Ignored"
+        box = gui.vBox(self.controlArea, name,
                        addToLayout=False)
 
         self.available_attrs = VariablesListItemModel()
         filter_edit, self.available_attrs_view = variables_filter(
             parent=self, model=self.available_attrs)
         box.layout().addWidget(filter_edit)
+        self.view_boxes.append((name, box, self.available_attrs_view))
+        filter_edit.textChanged.connect(self.__var_counts_update_timer.start)
 
         def dropcompleted(action):
             if action == Qt.MoveAction:
@@ -223,7 +234,8 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(box, 0, 0, 3, 1)
 
         # 3rd column
-        box = gui.vBox(self.controlArea, "Features", addToLayout=False)
+        name = "Features"
+        box = gui.vBox(self.controlArea, name, addToLayout=False)
         self.used_attrs = VariablesListItemModel()
         filter_edit, self.used_attrs_view = variables_filter(
             parent=self, model=self.used_attrs,
@@ -245,8 +257,11 @@ class OWSelectAttributes(widget.OWWidget):
         box.layout().addWidget(filter_edit)
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
+        self.view_boxes.append((name, box, self.used_attrs_view))
+        filter_edit.textChanged.connect(self.__var_counts_update_timer.start)
 
-        box = gui.vBox(self.controlArea, "Target", addToLayout=False)
+        name = "Target"
+        box = gui.vBox(self.controlArea, name, addToLayout=False)
         self.class_attrs = VariablesListItemModel()
         self.class_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
@@ -259,8 +274,10 @@ class OWSelectAttributes(widget.OWWidget):
 
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
+        self.view_boxes.append((name, box, self.class_attrs_view))
 
-        box = gui.vBox(self.controlArea, "Metas", addToLayout=False)
+        name = "Metas"
+        box = gui.vBox(self.controlArea, name, addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
@@ -270,6 +287,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.meta_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
+        self.view_boxes.append((name, box, self.meta_attrs_view))
 
         # 2nd column
         bbox = gui.vBox(self.controlArea, addToLayout=False, margin=0)
@@ -541,9 +559,22 @@ class OWSelectAttributes(widget.OWWidget):
         if last_view is not None:
             self.update_interface_state(last_view)
 
+    def update_var_counts(self):
+        for name, box, view in self.view_boxes:
+            model = view.model()
+            source = source_model(view)  # may be the same as model
+            nall = source.rowCount()
+            nvars = view.model().rowCount()
+            if source is not model and model.filter_string():
+                box.setTitle(f"{name} ({nvars}/{nall})")
+            elif nall:
+                box.setTitle(f"{name} ({nvars})")
+            else:
+                box.setTitle(name)
+
     def update_interface_state(self, focus=None):
-        for view in [self.available_attrs_view, self.used_attrs_view,
-                     self.class_attrs_view, self.meta_attrs_view]:
+        self.update_var_counts()
+        for *_, view in self.view_boxes:
             if view is not focus and not view.hasFocus() \
                     and view.selectionModel().hasSelection():
                 view.selectionModel().clear()

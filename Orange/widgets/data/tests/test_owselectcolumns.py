@@ -133,10 +133,14 @@ class TestOWSelectAttributes(WidgetTest):
         self.widget = self.create_widget(OWSelectAttributes)
 
     def assertVariableCountsEqual(self, available, used, classattrs, metas=0):
-        self.assertEqual(len(self.widget.available_attrs), available)
-        self.assertEqual(len(self.widget.used_attrs), used)
-        self.assertEqual(len(self.widget.class_attrs), classattrs)
-        self.assertEqual(len(self.widget.meta_attrs), metas)
+        self.widget.update_interface_state()
+        for (name, box, view), nattrs in zip(self.widget.view_boxes,
+                                              (available, used, classattrs, metas)):
+            self.assertEqual(view.model().rowCount(), nattrs)
+            if nattrs:
+                self.assertEqual(box.title(), f"{name} ({nattrs})")
+            else:
+                self.assertEqual(box.title(), name)
 
     def assertControlsEnabled(self, _list, button, box, widget=None):
         if widget is None:

@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 
 import sklearn.linear_model as skl_linear_model
@@ -9,22 +7,12 @@ from Orange.data import Variable, ContinuousVariable
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import LearnerScorer
 from Orange.regression import Learner, Model, SklLearner, SklModel
-from Orange.util import OrangeDeprecationWarning
 
 
 __all__ = ["LinearRegressionLearner", "RidgeRegressionLearner",
            "LassoRegressionLearner", "SGDRegressionLearner",
            "ElasticNetLearner", "ElasticNetCVLearner",
            "PolynomialLearner"]
-
-
-def _remove_deprecated_normalize(params):
-    if params['normalize'] is False:
-        del params['normalize']
-    else:
-        warnings.warn("scikit-learn deprecated the normalize parameter; "
-                      "Orange will remove it with 3.32.0.",
-                      OrangeDeprecationWarning, stacklevel=3)
 
 
 class _FeatureScorerMixin(LearnerScorer):
@@ -54,25 +42,21 @@ class RidgeRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Ridge
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
-    def __init__(self, alpha=1.0, fit_intercept=True,
-                 normalize=False, copy_X=True, max_iter=None,
-                 tol=0.001, solver='auto', preprocessors=None):
+    def __init__(self, alpha=1.0, fit_intercept=True, copy_X=True,
+                 max_iter=None, tol=0.001, solver='auto', preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        _remove_deprecated_normalize(self.params)
 
 
 class LassoRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Lasso
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
-    def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
-                 precompute=False, copy_X=True, max_iter=1000,
-                 tol=0.0001, warm_start=False, positive=False,
-                 preprocessors=None):
+    def __init__(self, alpha=1.0, fit_intercept=True, precompute=False,
+                 copy_X=True, max_iter=1000, tol=0.0001, warm_start=False,
+                 positive=False, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        _remove_deprecated_normalize(self.params)
 
 
 class ElasticNetLearner(LinearRegressionLearner):
@@ -80,12 +64,10 @@ class ElasticNetLearner(LinearRegressionLearner):
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
-                 normalize=False, precompute=False, max_iter=1000,
-                 copy_X=True, tol=0.0001, warm_start=False, positive=False,
-                 preprocessors=None):
+                 precompute=False, max_iter=1000, copy_X=True, tol=0.0001,
+                 warm_start=False, positive=False, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        _remove_deprecated_normalize(self.params)
 
 
 class ElasticNetCVLearner(LinearRegressionLearner):
@@ -93,12 +75,11 @@ class ElasticNetCVLearner(LinearRegressionLearner):
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=None,
-                 fit_intercept=True, normalize=False, precompute='auto',
-                 max_iter=1000, tol=0.0001, cv=5, copy_X=True,
-                 verbose=0, n_jobs=1, positive=False, preprocessors=None):
+                 fit_intercept=True, precompute='auto', max_iter=1000,
+                 tol=0.0001, cv=5, copy_X=True, verbose=0, n_jobs=1,
+                 positive=False, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
-        _remove_deprecated_normalize(self.params)
 
 
 class SGDRegressionLearner(LinearRegressionLearner):

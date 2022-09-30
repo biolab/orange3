@@ -34,6 +34,7 @@ from Orange.widgets import gui
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.pathutils import samepath
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, MultiInput, Output
 
@@ -286,12 +287,12 @@ class VimIndicator(QWidget):
         p.drawRoundedRect(rect, 5, 5)
         p.restore()
 
-        textstart = (width - fm.width(self.indicator_text)) / 2
-        p.drawText(textstart, height / 2 + 5, self.indicator_text)
+        textstart = (width - fm.horizontalAdvance(self.indicator_text)) // 2
+        p.drawText(textstart, height // 2 + 5, self.indicator_text)
 
     def minimumSizeHint(self):
         fm = QFontMetrics(self.font())
-        width = round(fm.width(self.indicator_text)) + 10
+        width = int(round(fm.horizontalAdvance(self.indicator_text)) + 10)
         height = fm.height() + 6
         return QSize(width, height)
 
@@ -637,7 +638,6 @@ class OWPythonScript(OWWidget):
         self.editorBox.layout().addWidget(return_stmt)
 
         self.editorBox.setAlignment(Qt.AlignVCenter)
-        self.text.setTabStopWidth(4)
 
         self.text.modificationChanged[bool].connect(self.onModificationChanged)
 
@@ -1037,11 +1037,18 @@ class OWPythonScriptDropHandler(SingleFileDropHandler):
             "script": content,
             "filename": path,
         }
+        defaults: List['_ScriptData'] = \
+            OWPythonScript.settingsHandler.defaults.get("scriptLibrary", [])
+
+        def is_same(item: '_ScriptData'):
+            """Is item same file as the dropped path."""
+            return item["filename"] is not None \
+                   and samepath(item["filename"], path)
+
+        defaults = [it for it in defaults if not is_same(it)]
         params = {
             "__version__": OWPythonScript.settings_version,
-            "scriptLibrary": [
-                item,
-            ],
+            "scriptLibrary": [item] + defaults,
             "scriptText": content
         }
         return params

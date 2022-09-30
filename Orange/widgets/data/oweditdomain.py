@@ -38,9 +38,13 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import Orange.data
 
-from Orange.preprocess.transformation import Transformation, Identity, Lookup
+from Orange.preprocess.transformation import (
+    Transformation, Identity, Lookup, MappingTransform
+)
+from Orange.misc.collections import DictMissingConst
+from Orange.util import frompyfunc
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, ftry
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -50,8 +54,6 @@ ndarray = np.ndarray  # pylint: disable=invalid-name
 MArray = np.ma.MaskedArray
 DType = Union[np.dtype, type]
 
-A = TypeVar("A")  # pylint: disable=invalid-name
-B = TypeVar("B")  # pylint: disable=invalid-name
 V = TypeVar("V", bound=Orange.data.Variable)  # pylint: disable=invalid-name
 H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
 
@@ -514,7 +516,7 @@ class VariableEditor(QWidget):
         self.unlink_var_cb.toggled.connect(self._set_unlink)
         form.addRow("", self.unlink_var_cb)
 
-        vlayout = QVBoxLayout(margin=0, spacing=1)
+        vlayout = QVBoxLayout(spacing=1)
         self.labels_edit = view = QTreeView(
             objectName="annotation-pairs-edit",
             rootIsDecorated=False,
@@ -1121,7 +1123,7 @@ class DiscreteVariableEditor(VariableEditor):
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         )
 
-        vlayout = QVBoxLayout(spacing=1, margin=0)
+        vlayout = QVBoxLayout(spacing=1)
         self.values_edit = QListView(
             editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed,
             selectionMode=QListView.ExtendedSelection,
@@ -1137,7 +1139,7 @@ class DiscreteVariableEditor(VariableEditor):
         self.values_model.rowsMoved.connect(self.on_value_selection_changed)
 
         vlayout.addWidget(self.values_edit)
-        hlayout = QHBoxLayout(spacing=1, margin=0)
+        hlayout = QHBoxLayout(spacing=1)
 
         self.categories_action_group = group = QActionGroup(
             self, objectName="action-group-categories", enabled=False
@@ -2631,43 +2633,6 @@ def apply_transform_string(var, trs):
     return variable
 
 
-def ftry(
-        func: Callable[..., A],
-        error: Union[Type[BaseException], Tuple[Type[BaseException]]],
-        default: B
-) -> Callable[..., Union[A, B]]:
-    """
-    Wrap a `func` such that if `errors` occur `default` is returned instead."""
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except error:
-            return default
-    return wrapper
-
-
-class DictMissingConst(dict):
-    """
-    `dict` with a constant for `__missing__()` value.
-    """
-    __slots__ = ("__missing",)
-
-    def __init__(self, missing, *args, **kwargs):
-        self.__missing = missing
-        super().__init__(*args, **kwargs)
-
-    def __missing__(self, key):
-        return self.__missing
-
-    def __eq__(self, other):
-        return super().__eq__(other) and isinstance(other, DictMissingConst) \
-            and (self.__missing == other[()]  # get `__missing`
-                 or np.isnan(self.__missing) and np.isnan(other[()]))
-
-    def __hash__(self):
-        return hash((self.__missing, frozenset(self.items())))
-
-
 def make_dict_mapper(
         mapping: Mapping, dtype: Optional[DType] = None
 ) -> Callable:
@@ -2677,14 +2642,7 @@ def make_dict_mapper(
     `make_dict_mapper` it is used as a the default return dtype,
     otherwise the default dtype is `object`.
     """
-    _vmapper = np.frompyfunc(mapping.__getitem__, 1, 1)
-
-    def mapper(arr, out=None, dtype=dtype, **kwargs):
-        arr = np.asanyarray(arr)
-        if out is None and dtype is not None and arr.shape != ():
-            out = np.empty_like(arr, dtype)
-        return _vmapper(arr, out, dtype=dtype, casting="unsafe", **kwargs)
-    return mapper
+    return frompyfunc(mapping.__getitem__, 1, 1, dtype)
 
 
 as_string = np.frompyfunc(str, 1, 1)
@@ -2751,15 +2709,13 @@ def apply_reinterpret_d(var, tr, data):
 @apply_reinterpret.register(Orange.data.ContinuousVariable)
 def apply_reinterpret_c(var, tr, data: MArray):
     if isinstance(tr, AsCategorical):
-        # This is ill defined and should not result in a 'compute_value'
+        # This is ill-defined and should not result in a 'compute_value'
         # (post-hoc expunge from the domain once translated?)
         values, index = categorize_unique(data)
         coldata = index.astype(float)
         coldata[index.mask] = np.nan
         tr = LookupMappingTransform(
-            var, DictMissingConst(
-                np.nan, {v: i for i, v in enumerate(values)}
-            )
+            var, {v: i for i, v in enumerate(values)}, dtype=np.float64, unknown=np.nan
         )
         values = tuple(as_string(values))
         rvar = Orange.data.DiscreteVariable(
@@ -2781,12 +2737,10 @@ def apply_reinterpret_c(var, tr, data: MArray):
 @apply_reinterpret.register(Orange.data.StringVariable)
 def apply_reinterpret_s(var: Orange.data.StringVariable, tr, data: MArray):
     if isinstance(tr, AsCategorical):
-        # This is ill defined and should not result in a 'compute_value'
+        # This is ill-defined and should not result in a 'compute_value'
         # (post-hoc expunge from the domain once translated?)
         _, values = categorical_from_vector(data)
-        mapping = DictMissingConst(
-            np.nan, {v: float(i) for i, v in enumerate(values)}
-        )
+        mapping = {v: float(i) for i, v in enumerate(values)}
         tr = LookupMappingTransform(var, mapping)
         rvar = Orange.data.DiscreteVariable(
             name=var.name, values=values, compute_value=tr
@@ -2808,9 +2762,7 @@ def apply_reinterpret_t(var: Orange.data.TimeVariable, tr, data):
     if isinstance(tr, AsCategorical):
         values, _ = categorize_unique(data)
         or_values = values.astype(float) / 1e6
-        mapping = DictMissingConst(
-            np.nan, {v: i for i, v in enumerate(or_values)}
-        )
+        mapping = {v: i for i, v in enumerate(or_values)}
         tr = LookupMappingTransform(var, mapping)
         values = tuple(as_string(values))
         rvar = Orange.data.DiscreteVariable(
@@ -2876,7 +2828,15 @@ class ToContinuousTransform(Transformation):
 
 def datetime_to_epoch(dti: pd.DatetimeIndex, only_time) -> np.ndarray:
     """Convert datetime to epoch"""
-    delta = dti - (dti.normalize() if only_time else pd.Timestamp("1970-01-01"))
+    # when dti has timezone info also the subtracted timestamp must have it
+    # otherwise subtracting fails
+    initial_ts = pd.Timestamp("1970-01-01", tz=None if dti.tz is None else "UTC")
+    # pandas in versions before 1.4 don't support subtracting different timezones
+    # remove next two lines when read-the-docs start supporting config files
+    # for subprojects, or they change default python version to 3.8
+    if dti.tz is not None:
+        dti = dti.tz_convert("UTC")
+    delta = dti - (dti.normalize() if only_time else initial_ts)
     return (delta / pd.Timedelta("1s")).values
 
 
@@ -2898,34 +2858,8 @@ class ReparseTimeTransform(Transformation):
         return np.nan
 
 
-class LookupMappingTransform(Transformation):
-    """
-    Map values via a dictionary lookup.
-    """
-    def __init__(
-            self,
-            variable: Orange.data.Variable,
-            mapping: Mapping,
-            dtype: Optional[np.dtype] = None
-    ) -> None:
-        super().__init__(variable)
-        self.mapping = mapping
-        self.dtype = dtype
-        self._mapper = make_dict_mapper(mapping, dtype)
-
-    def transform(self, c):
-        return self._mapper(c)
-
-    def __reduce_ex__(self, protocol):
-        return type(self), (self.variable, self.mapping, self.dtype)
-
-    def __eq__(self, other):
-        return self.variable == other.variable \
-               and self.mapping == other.mapping \
-               and self.dtype == other.dtype
-
-    def __hash__(self):
-        return hash((type(self), self.variable, self.mapping, self.dtype))
+# Alias for back compatibility (unpickling transforms)
+LookupMappingTransform = MappingTransform
 
 
 @singledispatch

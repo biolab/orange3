@@ -53,3 +53,57 @@ def natural_sorted(values: Iterable) -> List:
             return element
 
     return sorted(values, key=natural_keys)
+
+
+class DictMissingConst(dict):
+    """
+    `dict` with a constant for `__missing__()` value.
+
+    This is mostly used for speed optimizations where
+    `DictMissingConst(default, d).__getitem__(k)` is the least overhead
+    equivalent to `d.get(k, default)` in the case where misses are not
+    frequent by avoiding LOAD_* bytecode instructions for `default` at
+    every call.
+
+    Note
+    ----
+    This differs from `defaultdict(lambda: CONST)` in that misses do not
+    grow the dict.
+
+    Parameters
+    ----------
+    missing: Any
+        The missing constant
+    *args
+    **kwargs
+        The `*args`, and `**kwargs` are passed to `dict` constructor.
+    """
+    __slots__ = ("__missing",)
+
+    def __init__(self, missing, *args, **kwargs):
+        self.__missing = missing
+        super().__init__(*args, **kwargs)
+
+    @property
+    def missing(self):
+        return self.__missing
+
+    def __missing__(self, key):
+        return self.__missing
+
+    def __eq__(self, other):
+        return super().__eq__(other) and isinstance(other, DictMissingConst) \
+            and self.missing == other.missing
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __reduce_ex__(self, protocol):
+        return type(self), (self.missing, list(self.items())), \
+               getattr(self, "__dict__", None)
+
+    def copy(self):
+        return type(self)(self.missing, self)
+
+    def __repr__(self):
+        return f"{type(self).__qualname__}({self.missing!r}, {dict(self)!r})"

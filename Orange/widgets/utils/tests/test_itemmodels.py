@@ -62,8 +62,8 @@ class TestPyTableModel(unittest.TestCase):
 
     def test_editable(self):
         editable_model = PyTableModel([[0]], editable=True)
-        self.assertFalse(int(self.model.flags(self.model.index(0, 0)) & Qt.ItemIsEditable))
-        self.assertTrue(int(editable_model.flags(editable_model.index(0, 0)) & Qt.ItemIsEditable))
+        self.assertFalse(bool(self.model.flags(self.model.index(0, 0)) & Qt.ItemIsEditable))
+        self.assertTrue(bool(editable_model.flags(editable_model.index(0, 0)) & Qt.ItemIsEditable))
 
     def test_sort(self):
         self.model.sort(1)
@@ -156,11 +156,11 @@ class TestPyTableModel(unittest.TestCase):
         model.append([2, 3])
         self.assertEqual(list(inserted)[-1][1:], [1, 1])
         del model[:]
-        self.assertEqual(list(removed)[0][1:], [0, 1])
+        self.assertEqual(list(removed)[-1][1:], [0, 1])
         model.extend([[0, 1], [0, 2]])
         self.assertEqual(list(inserted)[-1][1:], [0, 1])
         model.clear()
-        self.assertEqual(list(removed)[0][1:], [0, 1])
+        self.assertEqual(list(removed)[-1][1:], [0, 1])
         model[:] = [[1], [2]]
         self.assertEqual(list(inserted)[-1][1:], [0, 0])
 

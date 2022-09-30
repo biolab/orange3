@@ -5,6 +5,36 @@ Change Log
 ------------
 
 
+[3.33.0] - 2022-09-30
+--------------------
+##### Enhancements
+* drophandlers: Preserve defaults history ([#6069](../../pull/6069))
+* owlogisticregression: Add option for no regularization ([#6093](../../pull/6093))
+* Predictions: Show errors ([#6012](../../pull/6012))
+* Add support for PyQt6 ([#5884](../../pull/5884))
+* Feature Constructor: Make concurrent ([#5992](../../pull/5992))
+* Feature constructor optimization ([#5975](../../pull/5975))
+* Discretize: Simplify interface, add nicer binning ([#5919](../../pull/5919))
+
+##### Bugfixes
+* owboxplot: Fix an error in widget cleanup during tests ([#6136](../../pull/6136))
+* Group By - fix std and sum for TimeVariable ([#6133](../../pull/6133))
+* Handle timezones in Edit Domain ([#6123](../../pull/6123))
+* owfeatureconstructor: Cast FeatureFunc result to array ([#6115](../../pull/6115))
+* Server embedder - send bytes as content ([#6051](../../pull/6051))
+* plotutils - replace MidButton with MiddleButton ([#6124](../../pull/6124))
+* Feature Constructor cast function is not picklable ([#6002](../../pull/6002))
+* test_owfile: Fix unreliable `test_warning_from_another_thread` ([#6085](../../pull/6085))
+* Embedders - fix proxies, default on http, tests ([#6028](../../pull/6028))
+* TableModel: Define foreground color when providing background ([#6011](../../pull/6011))
+* owdistancemap: Fix an implicit float->int conversion error ([#5998](../../pull/5998))
+* Neighbours - support Table derived output types ([#5986](../../pull/5986))
+* Predictions: allow predicting probabilities for classless data ([#5972](../../pull/5972))
+* owcsvimport: Reduce sample size ([#5960](../../pull/5960))
+* make usable_scorers backwards compatible ([#5943](../../pull/5943))
+* owpythonscript: Fix implicit float to int cast error ([#5944](../../pull/5944))
+
+
 [3.32.0] - 2022-04-01
 --------------------
 ##### Enhancements
@@ -1678,7 +1708,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.32.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.33.0...HEAD
+[3.32.0]: https://github.com/biolab/orange3/compare/3.32.0...3.33.0
 [3.32.0]: https://github.com/biolab/orange3/compare/3.31.1...3.32.0
 [3.31.1]: https://github.com/biolab/orange3/compare/3.31.0...3.31.1
 [3.31.0]: https://github.com/biolab/orange3/compare/3.30.2...3.31.0

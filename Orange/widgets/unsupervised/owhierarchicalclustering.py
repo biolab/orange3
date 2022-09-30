@@ -637,7 +637,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.Outputs.annotated_data.send(annotated_data)
 
     def eventFilter(self, obj, event):
-        if obj is self.view.viewport() and event.type() == QEvent.Resize:
+        if event.type() == QEvent.Resize and obj is self.view.viewport():
             # NOTE: not using viewport.width(), due to 'transient' scroll bars
             # (macOS). Viewport covers the whole view, but QGraphicsView still
             # scrolls left, right with scroll bar extent (other
@@ -649,8 +649,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                      margin.left() - margin.right() - w_scroll)
             # layout with new width constraint
             self.__layout_main_graphics(width=width)
-        elif obj is self._main_graphics and \
-                event.type() == QEvent.LayoutRequest:
+        elif event.type() == QEvent.LayoutRequest and obj is self._main_graphics:
             # layout preserving the width (vertical re layout)
             self.__layout_main_graphics()
         return super().eventFilter(obj, event)

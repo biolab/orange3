@@ -1,3 +1,4 @@
+
 Silhouette Plot
 ===============
 
@@ -14,7 +15,7 @@ A graphical representation of consistency within clusters of data.
 
 The **Silhouette Plot** widget offers a graphical representation of consistency within clusters of data and provides the user with the means to visually assess cluster quality. The silhouette score is a measure of how similar an object is to its own cluster in comparison to other clusters and is crucial in the creation of a silhouette plot. The silhouette score close to 1 indicates that the data instance is close to the center of the cluster and instances possessing the silhouette scores close to 0 are on the border between two clusters.
 
-![](images/SilhouettePlot-stamped.png)
+![](images/SilhouettePlot.png)
 
 1. Choose the distance metric. You can choose between:
    - [Euclidean](https://en.wikipedia.org/wiki/Euclidean_distance) ("straight line" distance between two points)
@@ -24,12 +25,10 @@ The **Silhouette Plot** widget offers a graphical representation of consistency 
 3. Display options:
    - *Choose bar width*.
    - *Annotations*: annotate the silhouette plot.
-4. *Save Image* saves the created silhouette plot to your computer in a *.png* or *.svg* format.
-5. Produce a report.
-6. Output:
-   - *Add silhouette scores* (good clusters have higher silhouette scores)
-   - By clicking *Commit*, changes are communicated to the output of the widget. Alternatively, tick the box on the left and changes will be communicated automatically.
-7. The created silhouette plot.
+4. If *Send automatically* is ticked, changes are communicated automatically. Alternatively, press *Send*
+5. The created silhouette plot shows the silhouette score for each instance in the data. 
+   The group's silhouette score is beside the group's name in the parenthesis.
+6. Access help, save image, produce a report. On the right, the information on input and output are shown.
 
 Example
 -------
