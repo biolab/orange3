@@ -110,23 +110,8 @@ class Learner(ReprableWithPreprocessors):
         return self.fit(X, Y, W)
 
     def __call__(self, data, progress_callback=None):
-
-        for cls in type(self).mro():
-            if 'incompatibility_reason' in cls.__dict__:
-                incompatibility_reason = \
-                    self.incompatibility_reason(data.domain)  # pylint: disable=assignment-from-none
-                if incompatibility_reason is not None:
-                    raise ValueError(incompatibility_reason)
-                break
-            if 'check_learner_adequacy' in cls.__dict__:
-                warnings.warn(
-                    "check_learner_adequacy is deprecated and will be removed "
-                    "in upcoming releases. Learners should instead implement "
-                    "the incompatibility_reason method.",
-                    OrangeDeprecationWarning)
-                if not self.check_learner_adequacy(data.domain):
-                    raise ValueError(self.learner_adequacy_err_msg)
-                break
+        if reason := self.incompatibility_reason(data.domain) is not None:
+            raise ValueError(reason)
 
         origdomain = data.domain
 
@@ -191,9 +176,6 @@ class Learner(ReprableWithPreprocessors):
         if (self.use_default_preprocessors and
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
-
-    def check_learner_adequacy(self, _):
-        return True
 
     # pylint: disable=no-self-use
     def incompatibility_reason(self, _: Domain) -> Optional[str]:
