@@ -321,26 +321,6 @@ class TestAUC(unittest.TestCase):
         return AUC(results)[0]
 
 
-class TestComputeCD(unittest.TestCase):
-    def test_compute_CD(self):
-        avranks = [1.9, 3.2, 2.8, 3.3]
-        with self.assertWarns(OrangeDeprecationWarning):
-            cd = scoring.compute_CD(avranks, 30)
-        np.testing.assert_almost_equal(cd, 0.856344)
-
-        with self.assertWarns(OrangeDeprecationWarning):
-            cd = scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
-        np.testing.assert_almost_equal(cd, 0.798)
-
-    def test_CD_deprecated(self):
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.34"):
-            self.fail(
-                "`scoring.compute_CD` and `scoring.graph_ranks` were deprecated in "
-                "version 3.33. Please remove the deprecated methods, TestComputeCD, "
-                "and references in documentation."
-            )
-
-
 class TestLogLoss(unittest.TestCase):
     def test_log_loss(self):
         data = Table('iris')
