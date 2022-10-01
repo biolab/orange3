@@ -449,6 +449,57 @@ class TestFeatureStatisticsOutputs(WidgetTest):
         self.widget.unconditional_commit()
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
 
+    def test_output_statistics(self):
+        self.widget.auto_commit = True
+
+        data = make_table([continuous_full, continuous_missing,
+                           rgb_full, rgb_missing])
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.statistics)
+        np.testing.assert_almost_equal(
+            output.X,
+            [[2, 2, 0.7071068, 0, 4, 0],
+             [1.75, 1.5, 0.8451543, 0, 4, 1],
+             [np.nan, np.nan, 0.9502705, np.nan, np.nan, 0],
+             [np.nan, np.nan, 1.0397208, np.nan, np.nan, 1]],
+        )
+        np.testing.assert_equal(
+            output.metas,
+            [["continuous_full", ""],
+             ["continuous_missing", ""],
+             ["rgb_full", "g"],
+             ["rgb_missing", "g"]])
+
+        data = make_table([continuous_full, continuous_missing])
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.statistics)
+        np.testing.assert_almost_equal(
+            output.X,
+            [[2, 2, 0.7071068, 0, 4, 0],
+             [1.75, 1.5, 0.8451543, 0, 4, 1]]
+        )
+        np.testing.assert_equal(
+            output.metas,
+            [["continuous_full"],
+             ["continuous_missing"]])
+
+        data = make_table([rgb_full, rgb_missing])
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.statistics)
+        np.testing.assert_almost_equal(
+            output.X,
+            [[0.9502705, 0],
+             [1.0397208, 1]],
+        )
+        np.testing.assert_equal(
+            output.metas,
+            [["rgb_full", "g"],
+             ["rgb_missing", "g"]])
+
+        self.send_signal(self.widget.Inputs.data, None)
+        output = self.get_output(self.widget.Outputs.statistics)
+        self.assertIsNone(output)
+
     def test_output_combinations(self):
         # No selection -> reduced_data is not output, statistics is present
         self.widget.unconditional_commit()
