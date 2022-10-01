@@ -15,18 +15,6 @@ from Orange.util import OrangeDeprecationWarning
 
 
 class TestTableInit(unittest.TestCase):
-
-    def test_is_view_is_copy_deprecated(self):
-        """This test is to be included in the 3.32 release and will fail in
-        version 3.34. This serves as a reminder to remove the deprecated methods
-        and this test."""
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.34"):
-            self.fail(
-                "`Orange.data.Table.is_view` and `Orange.data.Table.is_copy` "
-                "were deprecated in version 3.32, and there have been two minor "
-                "versions in between. Please remove the deprecated methods."
-            )
-
     def test_empty_table(self):
         t = Table()
         self.assertEqual(t.domain.attributes, ())

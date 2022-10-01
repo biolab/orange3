@@ -1428,26 +1428,6 @@ class Table(Sequence, Storage):
             new_table.get_column_view(variable)[0][:] = data
         return new_table
 
-    @deprecated("array.base is not None for each subarray of Orange.data.Table (i.e. X, Y, W, metas)")
-    def is_view(self):
-        """
-        Return `True` if all arrays represent a view referring to another table
-        """
-        return ((not self._X.shape[-1] or self._X.base is not None) and
-                (not self._Y.shape[-1] or self._Y.base is not None) and
-                (not self._metas.shape[-1] or self._metas.base is not None) and
-                (not self._W.shape[-1] or self._W.base is not None))
-
-    @deprecated("array.base is None for each subarray of Orange.data.Table (i.e. X, Y, W, metas)")
-    def is_copy(self):
-        """
-        Return `True` if the table owns its data
-        """
-        return ((not self._X.shape[-1] or self._X.base is None) and
-                (self._Y.base is None) and
-                (self._metas.base is None) and
-                (self._W.base is None))
-
     def is_sparse(self):
         """
         Return `True` if the table stores data in sparse format
