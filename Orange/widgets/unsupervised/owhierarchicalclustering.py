@@ -39,7 +39,7 @@ __all__ = ["OWHierarchicalClustering"]
 
 
 LINKAGE = ["Single", "Average", "Weighted", "Complete", "Ward"]
-
+LINKAGE_ARGS = ["single", "average", "weighted", "complete", "ward"]
 
 def make_pen(brush=Qt.black, width=1, style=Qt.SolidLine,
              cap_style=Qt.SquareCap, join_style=Qt.BevelJoin,
@@ -123,8 +123,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     annotation = settings.ContextSetting("Enumeration")
     #: Out-of-context setting for the case when the "Name" option is available
     annotation_if_names = settings.Setting("Name")
-    #: Out-of-context setting for the case with just "Enumerate" and "None"
-    annotation_if_enumerate = settings.Setting("Enumerate")
+    #: Out-of-context setting for the case with just "Enumeration" and "None"
+    annotation_if_enumerate = settings.Setting("Enumeration")
     #: Selected tree pruning (none/max depth)
     pruning = settings.Setting(0)
     #: Maximum depth when max depth pruning is selected
@@ -417,7 +417,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         distances = self.matrix
 
         if distances is not None:
-            method = LINKAGE[self.linkage].lower()
+            method = LINKAGE_ARGS[self.linkage]
             Z = dist_matrix_linkage(distances, linkage=method)
 
             tree = tree_from_linkage(Z)
@@ -845,11 +845,11 @@ class OWHierarchicalClustering(widget.OWWidget):
         elif self.selection_method == 1:
             sel = "at {:.1f} of height".format(self.cut_ratio)
         else:
-            sel = "top {} clusters".format(self.top_n)
+            sel = f"top {self.top_n} clusters"
         self.report_items((
-            ("Linkage", LINKAGE[self.linkage].lower()),
+            ("Linkage", LINKAGE[self.linkage]),
             ("Annotation", annot),
-            ("Prunning",
+            ("Pruning",
              self.pruning != 0 and "{} levels".format(self.max_depth)),
             ("Selection", sel),
         ))
