@@ -110,7 +110,8 @@ class Learner(ReprableWithPreprocessors):
         return self.fit(X, Y, W)
 
     def __call__(self, data, progress_callback=None):
-        if reason := self.incompatibility_reason(data.domain) is not None:
+        reason = self.incompatibility_reason(data.domain)
+        if reason is not None:
             raise ValueError(reason)
 
         origdomain = data.domain
