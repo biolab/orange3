@@ -11,7 +11,6 @@ Examples
 """
 
 import math
-import warnings
 
 import numpy as np
 import sklearn.metrics as skl_metrics
@@ -22,8 +21,6 @@ from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
            "MSE", "RMSE", "MAE", "R2", "LogLoss"]
-
-from Orange.util import OrangeDeprecationWarning
 
 
 class ScoreMetaType(WrapperMeta):
