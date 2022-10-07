@@ -210,6 +210,8 @@ class OWHierarchicalClustering(widget.OWWidget):
             Msg("Some data from the subset does not appear in distance matrix")
         subset_wrong = \
             Msg("Subset data refers to a different table")
+        pruning_disables_colors = \
+            Msg("Pruned cluster doesn't show colors and indicate subset")
 
     #: Stored (manual) selection state (from a saved workflow) to restore.
     __pending_selection_restore = None  # type: Optional[SelectionState]
@@ -473,7 +475,6 @@ class OWHierarchicalClustering(widget.OWWidget):
                 }
 
         self.subset_rows = rows
-        self.label_model.set_subset(self.subset_rows)
         self._update_labels()
         self.commit.now()
 
@@ -586,12 +587,16 @@ class OWHierarchicalClustering(widget.OWWidget):
             # if it's merged, this check can be removed.
             return
 
+        self.Warning.pruning_disables_colors(
+            shown=self.pruning
+                  and (self.subset_rows or self.color_by is not None))
         labels = []
         if self.root and self._displayed_root:
             indices = [leaf.value.index for leaf in leaves(self.root)]
 
             if self.annotation is None:
-                if self.subset_rows and self.color_by is None:
+                if not self.pruning \
+                        and self.subset_rows and self.color_by is None:
                     # Model fails if number of labels and of colors mismatch
                     labels = [""] * len(indices)
                 else:
@@ -607,7 +612,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [labels[idx] for idx in indices]
             else:
                 labels = []
-            if labels and self.label_only_subset and self.subset_rows:
+            if not self.pruning and \
+                    labels and self.label_only_subset and self.subset_rows:
                 labels = [label if row in self.subset_rows else ""
                           for row, label in enumerate(labels)]
 
@@ -617,9 +623,10 @@ class OWHierarchicalClustering(widget.OWWidget):
                           for leaf in joined]
 
         self.label_model[:] = labels
+        self.label_model.set_subset(set() if self.pruning else self.subset_rows)
         self.labels.setMinimumWidth(1 if labels else -1)
 
-        if self.color_by is not None:
+        if not self.pruning and self.color_by is not None:
             self.label_model.set_colors(
                 self.color_by.palette.values_to_qcolors(
                     self.items.get_column_view(self.color_by)[0][indices]))
