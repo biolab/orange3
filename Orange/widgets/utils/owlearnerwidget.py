@@ -1,5 +1,4 @@
 from copy import deepcopy
-import warnings
 
 from AnyQt.QtCore import QTimer, Qt
 
@@ -13,7 +12,6 @@ from Orange.widgets.utils import getmembers
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
-from Orange.util import OrangeDeprecationWarning
 
 
 class OWBaseLearnerMeta(WidgetMetaClass):

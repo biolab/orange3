@@ -2,14 +2,11 @@
 # pylint: disable=missing-docstring
 import pickle
 import unittest
-from distutils.version import LooseVersion
 
-import Orange
 from Orange.base import SklLearner, Learner, Model
 from Orange.data import Domain, Table
 from Orange.preprocess import Discretize, Randomize, Continuize
 from Orange.regression import LinearRegressionLearner
-from Orange.util import OrangeDeprecationWarning
 
 
 class DummyLearner(Learner):

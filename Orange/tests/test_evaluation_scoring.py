@@ -2,11 +2,9 @@
 # pylint: disable=missing-docstring
 
 import unittest
-from distutils.version import LooseVersion
 
 import numpy as np
 
-import Orange
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner, SklTreeLearner, NaiveBayesLearner,\
@@ -16,7 +14,6 @@ from Orange.evaluation import AUC, CA, Results, Recall, \
 from Orange.evaluation.scoring import Specificity
 from Orange.preprocess import discretize, Discretize
 from Orange.tests import test_filename
-from Orange.util import OrangeDeprecationWarning
 
 
 class TestScoreMetaType(unittest.TestCase):

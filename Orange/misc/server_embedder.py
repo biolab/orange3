@@ -3,9 +3,7 @@ import json
 import logging
 import random
 import uuid
-import warnings
 from collections import namedtuple
-from functools import partial
 from json import JSONDecodeError
 from os import getenv
 from typing import Any, Callable, List, Optional, Dict, Union
@@ -16,7 +14,6 @@ from numpy import linspace
 
 from Orange.misc.utils.embedder_utils import (
     EmbedderCache,
-    EmbeddingCancelledException,
     EmbeddingConnectionError,
     get_proxies,
 )
