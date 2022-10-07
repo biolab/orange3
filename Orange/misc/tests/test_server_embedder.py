@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, call, patch
 import numpy as np
 from httpx import ReadTimeout
 
-import Orange
 from Orange.data import Domain, StringVariable, Table
 from Orange.misc.tests.example_embedder import ExampleServerEmbedder
 
@@ -130,15 +129,6 @@ class TestServerEmbedder(unittest.TestCase):
         # pylint: disable=protected-access
         self.assertEqual(200, len(self.embedder._cache._cache_dict))
 
-    @patch(_HTTPX_POST_METHOD, regular_dummy_sr)
-    def test_embedding_cancelled(self):
-        # pylint: disable=protected-access
-        # test for the server embedders
-        self.assertFalse(self.embedder._cancelled)
-        self.embedder.set_cancelled()
-        with self.assertRaises(Exception):
-            self.embedder.embedd_data(self.test_data)
-
     @patch(_HTTPX_POST_METHOD, side_effect=OSError)
     def test_connection_error(self, _):
         for num_rows in range(1, 20):
@@ -190,22 +180,6 @@ class TestServerEmbedder(unittest.TestCase):
         self.embedder.embedd_data(self.test_data, callback=mock)
 
         process_items = [call(x) for x in np.linspace(0, 1, len(self.test_data))]
-        mock.assert_has_calls(process_items)
-
-    @patch(_HTTPX_POST_METHOD, regular_dummy_sr)
-    def test_deprecated(self):
-        """
-        When this start to fail:
-        - remove process_callback parameter and marked places connected to this param
-        - remove set_canceled and marked places connected to this method
-        - this test
-        """
-        self.assertGreaterEqual("3.34.0", Orange.__version__)
-
-        mock = MagicMock()
-        self.embedder.embedd_data(self.test_data, processed_callback=mock)
-
-        process_items = [call(True) for _ in range(len(self.test_data))]
         mock.assert_has_calls(process_items)
 
 

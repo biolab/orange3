@@ -168,7 +168,7 @@ class TestScoreTable(GuiTest):
         self.assertEqual(order(3), "DEC")
 
     def test_column_settings_reminder(self):
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.34"):
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.35"):
             self.fail(
                 "Orange 3.32 added a workaround to show C-Index into ScoreTable.__init__. "
                 "This should have been properly fixed long ago."
