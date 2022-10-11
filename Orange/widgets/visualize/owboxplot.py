@@ -83,6 +83,7 @@ class SortProxyModel(QSortFilterProxyModel):
         r_score = right.data(role)
         return r_score is not None and (l_score is None or l_score < r_score)
 
+
 class OWBoxPlot(widget.OWWidget):
     name = "Box Plot"
     description = "Visualize the distribution of feature values in a box plot."
@@ -636,7 +637,7 @@ class OWBoxPlot(widget.OWWidget):
         if not self.show_stretched:
             if self.group_var:
                 self.labels = [
-                    QGraphicsTextItem("{}".format(int(sum(cont))))
+                    QGraphicsTextItem(f"{int(sum(cont))}")
                     for cont in self.conts.array_with_unknowns
                     if np.sum(cont) > 0]
             else:
@@ -852,7 +853,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def draw_axis(self):
         """Draw the horizontal axis and sets self.scale_x"""
-        misssing_stats = not self.stats
+        missing_stats = not self.stats
         stats = self.stats or [BoxData(np.array([0.]), self.attribute)]
         mean_labels = self.mean_labels or [self.mean_label(stats[0], self.attribute, "")]
         bottom = min(stat.a_min for stat in stats)
@@ -872,7 +873,7 @@ class OWBoxPlot(widget.OWWidget):
         viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
         self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
 
-        # In principle we should repeat this until convergence since the new
+        # In principle, we should repeat this until convergence since the new
         # scaling is too conservative. (No chance am I doing this.)
         mlb = min(stat.mean + mean_lab.min_x / scale_x
                   for stat, mean_lab in zip(stats, mean_labels))
@@ -891,7 +892,7 @@ class OWBoxPlot(widget.OWWidget):
                                        self._pen_axis_tick)
             l.setZValue(100)
             t = QGraphicsSimpleTextItem(
-                self.attribute.str_val(val) if not misssing_stats else "?")
+                self.attribute.str_val(val) if not missing_stats else "?")
             t.setFont(self._axis_font)
             t.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
@@ -1213,9 +1214,9 @@ class OWBoxPlot(widget.OWWidget):
         self.report_plot()
         text = ""
         if self.attribute:
-            text += "Box plot for attribute '{}' ".format(self.attribute.name)
+            text += f"Box plot for attribute '{self.attribute.name}' "
         if self.group_var:
-            text += "grouped by '{}'".format(self.group_var.name)
+            text += f"grouped by '{self.group_var.name}'"
         if text:
             self.report_caption(text)
 
