@@ -507,9 +507,12 @@ def nanmode(x, axis=0):
     returns zero). Also, this function returns count NaN if all values are NaN
     (scipy=1.3.0 returns some number)."""
     nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
-    res = scipy.stats.stats.mode(x, axis)
-    return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),
-                                        np.where(nans, np.nan, res.count))
+    res = scipy.stats.mode(x, axis, keepdims=True)
+    # type(res) is ModeResult. ModeResult is defined in scipy.stats.stats; this
+    # namespace is deprecated, but ModeResult is not exported to scipy.stats
+    # Hence we use type(res) to avoid a warning.
+    return type(res)(np.where(nans, np.nan, res.mode),
+                     np.where(nans, np.nan, res.count))
 
 
 def unique(x, return_counts=False):
