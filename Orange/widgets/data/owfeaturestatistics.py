@@ -805,7 +805,8 @@ class OWFeatureStatistics(widget.OWWidget):
         self.__restore_sorting()
         self.__color_var_changed()
 
-        self.commit()
+        self.commit_statistics()
+        self.commit.now()
 
     def __restore_selection(self):
         """Restore the selection on the table view from saved settings."""
@@ -845,8 +846,9 @@ class OWFeatureStatistics(widget.OWWidget):
             i.row() for i in self.table_view.selectionModel().selectedRows()
         ]))
         self.selected_vars = list(self.model.variables[selection_indices])
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         if not self.selected_vars:
             self.Outputs.reduced_data.send(None)
@@ -854,6 +856,7 @@ class OWFeatureStatistics(widget.OWWidget):
             # Send a table with only selected columns to output
             self.Outputs.reduced_data.send(self.data[:, self.selected_vars])
 
+    def commit_statistics(self):
         if not self.data:
             self.Outputs.statistics.send(None)
             return

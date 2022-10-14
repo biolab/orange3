@@ -335,7 +335,7 @@ class TestFeatureStatisticsOutputs(WidgetTest):
         # By default, nothing should be sent since auto commit is off
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
         # When we commit, the data should be on the output
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.reduced_data))
 
         # Send some new data
@@ -344,17 +344,8 @@ class TestFeatureStatisticsOutputs(WidgetTest):
         # By default, there should be nothing on the output
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
         # Nothing should change after commit, since we haven't selected any rows
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
-
-        # Now let's switch back to the original data, where we selected row 0
-        self.send_signal(self.widget.Inputs.data, self.data)
-        # Again, since auto commit is off, nothing should be on the output
-        self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
-        # Since the row selection is saved into context settings, the appropriate
-        # thing should be sent to output
-        self.widget.unconditional_commit()
-        self.assertIsNotNone(self.get_output(self.widget.Outputs.reduced_data))
 
     def test_changing_data_updates_output_with_autocommit(self):
         # Test behaviour of widget when auto commit is ON
@@ -380,7 +371,7 @@ class TestFeatureStatisticsOutputs(WidgetTest):
     def test_sends_single_attribute_table_to_output(self):
         # Check if selecting a single attribute row
         self.select_rows([0])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         desired_domain = Domain(attributes=[continuous_full.variable])
         output = self.get_output(self.widget.Outputs.reduced_data)
@@ -389,7 +380,7 @@ class TestFeatureStatisticsOutputs(WidgetTest):
     def test_sends_multiple_attribute_table_to_output(self):
         # Check if selecting a single attribute row
         self.select_rows([0, 1])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         desired_domain = Domain(attributes=[
             continuous_full.variable, continuous_missing.variable,
@@ -399,7 +390,7 @@ class TestFeatureStatisticsOutputs(WidgetTest):
 
     def test_sends_single_class_var_table_to_output(self):
         self.select_rows([2])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         desired_domain = Domain(attributes=[], class_vars=[rgb_full.variable])
         output = self.get_output(self.widget.Outputs.reduced_data)
@@ -407,7 +398,7 @@ class TestFeatureStatisticsOutputs(WidgetTest):
 
     def test_sends_single_meta_table_to_output(self):
         self.select_rows([4])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         desired_domain = Domain(attributes=[], metas=[ints_full.variable])
         output = self.get_output(self.widget.Outputs.reduced_data)
@@ -415,7 +406,7 @@ class TestFeatureStatisticsOutputs(WidgetTest):
 
     def test_sends_multiple_var_types_table_to_output(self):
         self.select_rows([0, 2, 4])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         desired_domain = Domain(
             attributes=[continuous_full.variable],
@@ -428,7 +419,7 @@ class TestFeatureStatisticsOutputs(WidgetTest):
     def test_sends_all_samples_to_output(self):
         """All rows should be sent to output for selected column."""
         self.select_rows([0, 2])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
 
         selected_vars = Domain(
             attributes=[continuous_full.variable],
@@ -442,11 +433,11 @@ class TestFeatureStatisticsOutputs(WidgetTest):
     def test_clearing_selection_sends_none_to_output(self):
         """Clearing all the selected rows should send `None` to output."""
         self.select_rows([0])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.reduced_data))
 
         self.widget.table_view.clearSelection()
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
 
     def test_output_statistics(self):
@@ -502,14 +493,14 @@ class TestFeatureStatisticsOutputs(WidgetTest):
 
     def test_output_combinations(self):
         # No selection -> reduced_data is not output, statistics is present
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
         self.assertEqual(len(self.get_output(self.widget.Outputs.statistics)),
                          self.widget.model.rowCount())
 
         # Has selection -> all outputs present
         self.select_rows([0, 1])
-        self.widget.unconditional_commit()
+        self.widget.commit.now()
         outp = self.get_output(self.widget.Outputs.reduced_data)
         self.assertEqual(len(outp), len(self.data))
         self.assertEqual(len(outp.domain.variables), 2)
