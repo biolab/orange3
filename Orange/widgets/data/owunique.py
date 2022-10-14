@@ -3,7 +3,7 @@ from operator import itemgetter
 import numpy as np
 
 from AnyQt.QtCore import Qt
-from orangewidget.utils.listview import ListViewSearch
+from orangewidget.utils.listview import ListViewFilter
 
 from Orange.data import Table
 from Orange.widgets import widget, gui, settings
@@ -48,7 +48,7 @@ class OWUnique(widget.OWWidget):
         var_list = gui.listView(
             self.controlArea, self, "selected_vars", box="Group by",
             model=self.var_model, callback=self.commit.deferred,
-            viewType=ListViewSearch
+            viewType=ListViewFilter
         )
         var_list.setSelectionMode(var_list.ExtendedSelection)
 
