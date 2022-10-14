@@ -456,8 +456,8 @@ class TestFeatureStatisticsOutputs(WidgetTest):
         )
         np.testing.assert_equal(
             output.metas,
-            [["continuous_full", ""],
-             ["continuous_missing", ""],
+            [["continuous_full", "0"],
+             ["continuous_missing", "0"],
              ["rgb_full", "g"],
              ["rgb_missing", "g"]])
 
@@ -471,8 +471,8 @@ class TestFeatureStatisticsOutputs(WidgetTest):
         )
         np.testing.assert_equal(
             output.metas,
-            [["continuous_full"],
-             ["continuous_missing"]])
+            [["continuous_full", "0"],
+             ["continuous_missing", "0"]])
 
         data = make_table([rgb_full, rgb_missing])
         self.send_signal(self.widget.Inputs.data, data)
