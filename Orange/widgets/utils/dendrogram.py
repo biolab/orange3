@@ -145,7 +145,7 @@ def update_pen(pen, brush=None, width=None, style=None,
     return pen
 
 
-def path_stroke(path, width=1, join_style=Qt.MiterJoin):
+def path_stroke(path, width=1, join_style=Qt.RoundJoin):
     stroke = QPainterPathStroker()
     stroke.setWidth(width)
     stroke.setJoinStyle(join_style)
@@ -153,7 +153,7 @@ def path_stroke(path, width=1, join_style=Qt.MiterJoin):
     return stroke.createStroke(path)
 
 
-def path_outline(path, width=1, join_style=Qt.MiterJoin):
+def path_outline(path, width=1, join_style=Qt.RoundJoin):
     stroke = path_stroke(path, width, join_style)
     return stroke.united(path)
 
@@ -249,6 +249,7 @@ class DendrogramWidget(QGraphicsWidget):
 
     def __init__(self, parent=None, root=None, orientation=Left,
                  hoverHighlightEnabled=True, selectionMode=ExtendedSelection,
+                 *, pen_width=1,
                  **kwargs):
         super().__init__(None, **kwargs)
         # Filter all events from children (`ClusterGraphicsItem`s)
@@ -271,6 +272,7 @@ class DendrogramWidget(QGraphicsWidget):
         self._cluster_parent = {}
         self.__hoverHighlightEnabled = hoverHighlightEnabled
         self.__selectionMode = selectionMode
+        self._pen_width = pen_width
         self.setContentsMargins(0, 0, 0, 0)
         self.setRoot(root)
         if parent is not None:
@@ -348,8 +350,7 @@ class DendrogramWidget(QGraphicsWidget):
         self._root = root
         if root is not None:
             foreground = self.palette().color(QPalette.WindowText)
-            pen = make_pen(foreground, width=1, cosmetic=True,
-                           join_style=Qt.MiterJoin)
+            pen = make_pen(foreground, width=self._pen_width, cosmetic=True)
             for node in postorder(root):
                 item = DendrogramWidget.ClusterGraphicsItem(self._itemgroup)
                 item.setAcceptHoverEvents(True)
@@ -447,12 +448,12 @@ class DendrogramWidget(QGraphicsWidget):
             # Restore the previous item
             highlight = self.palette().color(QPalette.WindowText)
             set_pen(self._highlighted_item,
-                    make_pen(highlight, width=1, cosmetic=True))
+                    make_pen(highlight, width=self._pen_width, cosmetic=True))
 
         self._highlighted_item = item
         if item:
             hpen = make_pen(self.palette().color(QPalette.Highlight),
-                            width=2, cosmetic=True)
+                            width=self._pen_width + 1, cosmetic=True)
             set_pen(item, hpen)
 
     def leafItems(self):

@@ -8,15 +8,19 @@ import numpy as np
 
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsScene, QGridLayout, QSizePolicy,
-    QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent
+    QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent, QLabel
 )
-from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath
-from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath, QColor
+from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent, \
+    QModelIndex
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+
+from orangewidget.utils.itemmodels import PyListModel
 
 import Orange.data
 from Orange.data.domain import filter_visible
-from Orange.data import Domain
+from Orange.data import Domain, DiscreteVariable, ContinuousVariable, \
+    StringVariable
 import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
@@ -32,7 +36,7 @@ from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
-from Orange.widgets.utils.graphicstextlist import TextListWidget
+from Orange.widgets.utils.graphicstextlist import TextListView
 from Orange.widgets.utils.dendrogram import DendrogramWidget
 
 __all__ = ["OWHierarchicalClustering"]
@@ -100,6 +104,50 @@ if typing.TYPE_CHECKING:
     SelectionState = Tuple[List[Tuple[int]], List[Tuple[int, int, float]]]
 
 
+class SelectedLabelsModel(PyListModel):
+    def __init__(self):
+        super().__init__([])
+        self.subset = set()
+        self.__font = QFont()
+        self.__colors = None
+
+    def rowCount(self, parent=QModelIndex()):
+        count = super().rowCount()
+        if self.__colors is not None:
+            count = max(count, len(self.__colors))
+        return count
+
+    def _emit_data_changed(self):
+        self.dataChanged.emit(self.index(0, 0), self.index(len(self) - 1, 0))
+
+    def set_subset(self, subset):
+        self.subset = set(subset)
+        self._emit_data_changed()
+
+    def set_colors(self, colors):
+        self.__colors = colors
+        self._emit_data_changed()
+
+    def setFont(self, font):
+        self.__font = font
+        self._emit_data_changed()
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.FontRole:
+            font = QFont(self.__font)
+            font.setBold(index.row() in self.subset)
+            return font
+        if role == Qt.BackgroundRole:
+            if self.__colors is not None:
+                return self.__colors[index.row()]
+            elif not any(self) and self.subset:  # no labels, no color, but subset
+                return QColor(0, 0, 0)
+        if role == Qt.UserRole and self.subset:
+            return index.row() in self.subset
+
+        return super().data(index, role)
+
+
 class OWHierarchicalClustering(widget.OWWidget):
     name = "Hierarchical Clustering"
     description = "Display a dendrogram of a hierarchical clustering " \
@@ -110,11 +158,13 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     class Inputs:
         distances = Input("Distances", Orange.misc.DistMatrix)
+        subset = Input("Data Subset", Orange.data.Table, explicit=True)
 
     class Outputs:
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
+    settings_version = 2
     settingsHandler = _DomainContextHandler()
 
     #: Selected linkage
@@ -138,15 +188,30 @@ class OWHierarchicalClustering(widget.OWWidget):
     top_n = settings.Setting(3)
     #: Dendrogram zoom factor
     zoom_factor = settings.Setting(0)
+    #: Show labels only for subset (if present)
+    label_only_subset = settings.Setting(False)
+    #: Color for label decoration
+    color_by: Union[DiscreteVariable, ContinuousVariable, None] = \
+        settings.ContextSetting(None)
 
     autocommit = settings.Setting(True)
 
     graph_name = "scene"
 
-    basic_annotations = ["None", "Enumeration"]
+    basic_annotations = [None, "Enumeration"]
 
     class Error(widget.OWWidget.Error):
         not_finite_distances = Msg("Some distances are infinite")
+
+    class Warning(widget.OWWidget.Warning):
+        subset_on_no_table = \
+            Msg("Unused data subset: distances do not refer to data instances")
+        subset_not_subset = \
+            Msg("Some data from the subset does not appear in distance matrix")
+        subset_wrong = \
+            Msg("Subset data refers to a different table")
+        pruning_disables_colors = \
+            Msg("Pruned cluster doesn't show colors and indicate subset")
 
     #: Stored (manual) selection state (from a saved workflow) to restore.
     __pending_selection_restore = None  # type: Optional[SelectionState]
@@ -156,6 +221,8 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.matrix = None
         self.items = None
+        self.subset = None
+        self.subset_rows = set()
         self.linkmatrix = None
         self.root = None
         self._displayed_root = None
@@ -165,10 +232,11 @@ class OWHierarchicalClustering(widget.OWWidget):
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
             callback=self._invalidate_clustering)
 
-        model = itemmodels.VariableListModel()
+        model = itemmodels.VariableListModel(placeholder="None")
         model[:] = self.basic_annotations
 
-        box = gui.widgetBox(self.controlArea, "Annotations")
+        grid = QGridLayout()
+        gui.widgetBox(self.controlArea, "Annotations", orientation=grid)
         self.label_cb = cb = combobox.ComboBoxSearch(
             minimumContentsLength=14,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
@@ -177,15 +245,34 @@ class OWHierarchicalClustering(widget.OWWidget):
         cb.setCurrentIndex(cb.findData(self.annotation, Qt.EditRole))
 
         def on_annotation_activated():
-            self.annotation = cb.currentData(Qt.EditRole)
+            self.annotation = self.label_cb.currentData(Qt.EditRole)
             self._update_labels()
         cb.activated.connect(on_annotation_activated)
 
         def on_annotation_changed(value):
-            cb.setCurrentIndex(cb.findData(value, Qt.EditRole))
+            self.label_cb.setCurrentIndex(
+                self.label_cb.findData(value, Qt.EditRole))
         self.connect_control("annotation", on_annotation_changed)
 
-        box.layout().addWidget(self.label_cb)
+        grid.addWidget(self.label_cb, 0, 0, 1, 2)
+
+        cb = gui.checkBox(
+            None, self, "label_only_subset", "Show labels only for subset",
+            disabled=True,
+            callback=self._update_labels, stateWhenDisabled=False)
+        grid.addWidget(cb, 1, 0, 1, 2)
+
+        model = itemmodels.DomainModel(
+            valid_types=(DiscreteVariable, ContinuousVariable),
+            placeholder="None")
+        cb = gui.comboBox(
+            None, self, "color_by", orientation=Qt.Horizontal,
+            model=model, callback=self._update_labels,
+            sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
+                                   QSizePolicy.Fixed))
+        self.color_by_label = QLabel("Color by:")
+        grid.addWidget(self.color_by_label, 2, 0)
+        grid.addWidget(cb, 2, 1)
 
         box = gui.radioButtons(
             self.controlArea, self, "pruning", box="Pruning",
@@ -296,13 +383,15 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._main_graphics.setLayout(scenelayout)
         self.scene.addItem(self._main_graphics)
 
-        self.dendrogram = DendrogramWidget()
+        self.dendrogram = DendrogramWidget(pen_width=2)
         self.dendrogram.setSizePolicy(QSizePolicy.MinimumExpanding,
                                       QSizePolicy.MinimumExpanding)
         self.dendrogram.selectionChanged.connect(self._invalidate_output)
         self.dendrogram.selectionEdited.connect(self._selection_edited)
 
-        self.labels = TextListWidget()
+        self.labels = TextListView()
+        self.label_model = SelectedLabelsModel()
+        self.labels.setModel(self.label_model)
         self.labels.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self.labels.setAlignment(Qt.AlignLeft)
         self.labels.setMaximumWidth(200)
@@ -329,12 +418,6 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     @Inputs.distances
     def set_distances(self, matrix):
-        if self.__pending_selection_restore is not None:
-            selection_state = self.__pending_selection_restore
-        else:
-            # save the current selection to (possibly) restore later
-            selection_state = self._save_selection()
-
         self.error()
         self.Error.clear()
         if matrix is not None:
@@ -348,55 +431,112 @@ class OWHierarchicalClustering(widget.OWWidget):
                 matrix = None
 
         self.matrix = matrix
+
+    @Inputs.subset
+    def set_subset(self, subset):
+        self.subset = subset
+        self.controls.label_only_subset.setDisabled(subset is None)
+
+    def handleNewSignals(self):
+        if self.__pending_selection_restore is not None:
+            selection_state = self.__pending_selection_restore
+        else:
+            # save the current selection to (possibly) restore later
+            selection_state = self._save_selection()
+
+        matrix = self.matrix
         if matrix is not None:
             self._set_items(matrix.row_items, matrix.axis)
         else:
             self._set_items(None)
-        self._invalidate_clustering()
+        self._update()
 
         # Can now attempt to restore session state from a saved workflow.
         if self.root and selection_state is not None:
             self._restore_selection(selection_state)
             self.__pending_selection_restore = None
 
+        self.Warning.clear()
+        rows = set()
+        if self.subset:
+            subsetids = set(self.subset.ids)
+            if not isinstance(self.items, Orange.data.Table) \
+                    or not self.matrix.axis:
+                self.Warning.subset_on_no_table()
+            elif (dataids := set(self.items.ids)) and not subsetids & dataids:
+                self.Warning.subset_wrong()
+            elif not subsetids <= dataids:
+                self.Warning.subset_not_subset()
+            else:
+                indices = [leaf.value.index for leaf in leaves(self.root)]
+                rows = {
+                    row for row, rowid in enumerate(self.items.ids[indices])
+                    if rowid in subsetids
+                }
+
+        self.subset_rows = rows
+        self._update_labels()
         self.commit.now()
 
     def _set_items(self, items, axis=1):
         self.closeContext()
         self.items = items
         model = self.label_cb.model()
-        if len(model) == 3:
-            self.annotation_if_names = self.annotation
-        elif len(model) == 2:
-            self.annotation_if_enumerate = self.annotation
+        color_model = self.controls.color_by.model()
+        color_model.set_domain(None)
+        self.color_by = None
+        if len(model) == 2 and model[0] is None:
+            if model[1] == "Name":
+                self.annotation_if_names = self.annotation
+            if model[1] == self.basic_annotations[1]:
+                self.annotation_if_enumerate = self.annotation
         if isinstance(items, Orange.data.Table) and axis:
-            model[:] = chain(
-                self.basic_annotations,
-                [model.Separator],
-                items.domain.class_vars,
-                items.domain.metas,
-                [model.Separator] if (items.domain.class_vars or items.domain.metas) and
-                next(filter_visible(items.domain.attributes), False) else [],
-                filter_visible(items.domain.attributes)
-            )
-            if items.domain.class_vars:
-                self.annotation = items.domain.class_vars[0]
+            metas_class = tuple(
+                filter_visible(chain(items.domain.metas,
+                                     items.domain.class_vars)))
+            visible_attrs = tuple(filter_visible(items.domain.attributes))
+            if not (metas_class or visible_attrs):
+                model[:] = self.basic_annotations
             else:
-                self.annotation = "Enumeration"
+                model[:] = (
+                    (None, )
+                    + metas_class
+                    + (model.Separator, ) * bool(metas_class and visible_attrs)
+                    + visible_attrs)
+            for meta in items.domain.metas:
+                if isinstance(meta, StringVariable):
+                    self.annotation = meta
+                    break
+            else:
+                if items.domain.class_vars:
+                    # No string metas: show class
+                    self.annotation = items.domain.class_vars[0]
+                else:
+                    # No string metas and no class: show the first option
+                    # which is not None (in the worst case, Enumeration)
+                    self.annotation = model[1]
+
+            color_model.set_domain(items.domain)
+            if items.domain.class_vars:
+                self.color_by = items.domain.class_vars[0]
             self.openContext(items.domain)
+        elif isinstance(items, Orange.data.Table) and not axis \
+                or (isinstance(items, list) and \
+                    all(isinstance(var, Orange.data.Variable)
+                        for var in items)):
+            model[:] = (None, "Name")
+            self.annotation = self.annotation_if_names
         else:
-            name_option = bool(
-                items is not None and (
-                    not axis or
-                    isinstance(items, list) and
-                    all(isinstance(var, Orange.data.Variable) for var in items)))
-            model[:] = self.basic_annotations + ["Name"] * name_option
-            self.annotation = self.annotation_if_names if name_option \
-                else self.annotation_if_enumerate
+            model[:] = self.basic_annotations
+            self.annotation = self.annotation_if_enumerate
+
+        no_colors = len(color_model) == 1
+        self.controls.color_by.setDisabled(no_colors)
+        self.color_by_label.setDisabled(no_colors)
 
     def _clear_plot(self):
         self.dendrogram.set_root(None)
-        self.labels.setItems([])
+        self.label_model.clear()
 
     def _set_displayed_root(self, root):
         self._clear_plot()
@@ -439,12 +579,28 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._apply_selection()
 
     def _update_labels(self):
+        if not hasattr(self, "label_model"):
+            # This method can be called during widget initialization when
+            # creating check box for label_only_subset, if it's value is
+            # initially True.
+            # See https://github.com/biolab/orange-widget-base/pull/213;
+            # if it's merged, this check can be removed.
+            return
+
+        self.Warning.pruning_disables_colors(
+            shown=self.pruning
+                  and (self.subset_rows or self.color_by is not None))
         labels = []
         if self.root and self._displayed_root:
             indices = [leaf.value.index for leaf in leaves(self.root)]
 
-            if self.annotation == "None":
-                labels = []
+            if self.annotation is None:
+                if not self.pruning \
+                        and self.subset_rows and self.color_by is None:
+                    # Model fails if number of labels and of colors mismatch
+                    labels = [""] * len(indices)
+                else:
+                    labels = []
             elif self.annotation == "Enumeration":
                 labels = [str(i+1) for i in indices]
             elif self.annotation == "Name":
@@ -456,14 +612,26 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [labels[idx] for idx in indices]
             else:
                 labels = []
+            if not self.pruning and \
+                    labels and self.label_only_subset and self.subset_rows:
+                labels = [label if row in self.subset_rows else ""
+                          for row, label in enumerate(labels)]
 
             if labels and self._displayed_root is not self.root:
                 joined = leaves(self._displayed_root)
                 labels = [", ".join(labels[leaf.value.first: leaf.value.last])
                           for leaf in joined]
 
-        self.labels.setItems(labels)
+        self.label_model[:] = labels
+        self.label_model.set_subset(set() if self.pruning else self.subset_rows)
         self.labels.setMinimumWidth(1 if labels else -1)
+
+        if not self.pruning and self.color_by is not None:
+            self.label_model.set_colors(
+                self.color_by.palette.values_to_qcolors(
+                    self.items.get_column_view(self.color_by)[0][indices]))
+        else:
+            self.label_model.set_colors(None)
 
     def _restore_selection(self, state):
         # type: (SelectionState) -> bool
@@ -835,6 +1003,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         factor = (1.25 ** self.zoom_factor)
         font = qfont_scaled(font, factor)
         self._main_graphics.setFont(font)
+        self.label_model.setFont(font)
 
     def send_report(self):
         annot = self.label_cb.currentText()
@@ -854,6 +1023,12 @@ class OWHierarchicalClustering(widget.OWWidget):
             ("Selection", sel),
         ))
         self.report_plot()
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 2:
+            if context.values["annotation"] == "None":
+                context.values["annotation"] = None
 
 
 def qfont_scaled(font, factor):
@@ -1028,8 +1203,14 @@ def clusters_at_height(root, height):
     return cluster_list
 
 
-if __name__ == "__main__":  # pragma: no cover
-    from Orange import distance
+def main():
+    # pragma: no cover
+    from Orange import distance  # pylint: disable=import-outside-toplevel
     data = Orange.data.Table("iris")
     matrix = distance.Euclidean(distance._preprocess(data))
-    WidgetPreview(OWHierarchicalClustering).run(matrix)
+    subset = data[10:30]
+    WidgetPreview(OWHierarchicalClustering).run(matrix, set_subset=subset)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
