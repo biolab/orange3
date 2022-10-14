@@ -11,7 +11,7 @@ import math
 import numpy as np
 
 from AnyQt import QtWidgets, QtCore, QtGui
-from AnyQt.QtCore import Qt, QSize, QItemSelection
+from AnyQt.QtCore import Qt, QSize, QItemSelection, QSortFilterProxyModel
 from AnyQt.QtGui import QColor, QWheelEvent
 from AnyQt.QtWidgets import QWidget, QListView, QComboBox
 
@@ -192,7 +192,10 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
     else:
         bg = widget
     view = viewType(preferred_size=sizeHint)
-    view.setModel(model)
+    if isinstance(view.model(), QSortFilterProxyModel):
+        view.model().setSourceModel(model)
+    else:
+        view.setModel(model)
     if value is not None:
         connectControl(master, value, callback,
                        view.selectionModel().selectionChanged,
@@ -495,8 +498,11 @@ class CallBackListView(ControlledCallback):
     def __call__(self, *_):
         # This must be imported locally to avoid circular imports
         from Orange.widgets.utils.itemmodels import PyListModel
-        values = [i.row()
-                  for i in self.view.selectionModel().selection().indexes()]
+
+        selection = self.view.selectionModel().selection()
+        if isinstance(self.view.model(), QSortFilterProxyModel):
+            selection = self.view.model().mapSelectionToSource(selection)
+        values = [i.row() for i in selection.indexes()]
         if values:
             # FIXME: irrespective of PyListModel check, this might/should always
             # callback with values!
@@ -535,6 +541,8 @@ class CallFrontListView(ControlledCallFront):
     def action(self, values):
         view = self.control
         model = view.model()
+        if isinstance(view.model(), QSortFilterProxyModel):
+            model = model.sourceModel()
         sel_model = view.selectionModel()
 
         if not isinstance(values, Sequence):
@@ -557,6 +565,8 @@ class CallFrontListView(ControlledCallFront):
                 index = value
             if index is not None:
                 selection.select(model.index(index), model.index(index))
+        if isinstance(view.model(), QSortFilterProxyModel):
+            selection = view.model().mapSelectionFromSource(selection)
         sel_model.select(selection, sel_model.ClearAndSelect)
 
 
