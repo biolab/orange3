@@ -127,7 +127,20 @@ Time variables
 Time variables are continuous variables with value 0 on the Unix epoch,
 1 January 1970 00:00:00.0 UTC. Positive numbers are dates beyond this date,
 and negative dates before. Due to limitation of Python :py:mod:`datetime` module,
-only dates in 1 A.D. or later are supported.
+only dates in 1 A.D. or later are supported. Note that Orange's Table stores datetime 
+values as UNIX epoch (seconds from 1970-01-01), thus :obj:`Table.from_numpy` expects values in this format.
+
+Orange's `TimeVariable` supports storing either date, time, or a combination of both:
+
+- `TimeVariable("Timestamp", have_date=True)` stores only date information -- it is analogous to `datetime.date`
+
+- `TimeVariable("Timestamp", have_time=True)` stores only time information (without date) -- it is analogous to `datetime.time``
+
+- `TimeVariable("Timestamp", have_time=True, have_date=True)` stores date and time -- it is analogous to `datetime.datetime`
+
+When the `parse` method is used to parse datetimes from a string, it is not necessary
+to set the `have_time` and `have_date` attributes since they will be inferred from
+from datetimes.
 
 .. autoclass:: TimeVariable
 
