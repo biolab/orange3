@@ -214,15 +214,17 @@ class TestOWDistances(WidgetTest):
 
         # by columns -- cannot handle too many rows
         self.send_signal(self.widget.Inputs.data, bigrows)
+        assert_no_error()
+        axis_buttons[0].click()
+        assert_error_shown()
+        axis_buttons[1].click()
+        assert_no_error()
+
+        self.send_signal(self.widget.Inputs.data, bigcols)
         assert_error_shown()
         axis_buttons[0].click()
         assert_no_error()
         axis_buttons[1].click()
-        assert_error_shown()
-
-        self.send_signal(self.widget.Inputs.data, bigcols)
-        assert_no_error()
-        axis_buttons[0].click()
         assert_error_shown()
 
         self.send_signal(widget.Inputs.data, self.iris)
