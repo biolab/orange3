@@ -290,52 +290,45 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             time_f=lambda x: ut.nanmedian(x, axis=0),
         )
 
-    def get_statistics_matrix(self, variables=None, return_labels=False):
-        """Get the numeric computed statistics in a single matrix. Optionally,
-        we can specify for which variables we want the stats. Also, we can get
-        the string column names as labels if desired.
+    def get_statistics_table(self):
+        """Get the numeric computed statistics in a single matrix."""
+        if self.table is None or not self.rowCount():
+            return None
 
-        Parameters
-        ----------
-        variables : Iterable[Union[Variable, int, str]]
-            Return statistics for only the variables specified. Accepts all
-            formats supported by `domain.index`
-        return_labels : bool
-            In addition to the statistics matrix, also return string labels for
-            the columns of the matrix e.g. 'Mean' or 'Dispersion', as specified
-            in `Columns`.
+        # don't match TimeVariable, pylint: disable=unidiomatic-typecheck
+        contivars = [type(var) is ContinuousVariable for var in self.variables]
+        if any(contivars):
+            def c(column):
+                return np.choose(contivars, [np.nan, column])
 
-        Returns
-        -------
-        Union[Tuple[List[str], np.ndarray], np.ndarray]
-
-        """
-        if self.table is None:
-            return np.atleast_2d([])
-
-        # If a list of variables is given, select only corresponding stats
-        # variables can be a list or array, pylint: disable=len-as-condition
-        if variables is not None and len(variables) != 0:
-            indices = [self.domain.index(var) for var in variables]
+            x = np.vstack((
+                c(self._center), c(self._median), self._dispersion,
+                c(self._min), c(self._max), self._missing,
+            )).T
+            attrs = [ContinuousVariable(column.name) for column in (
+                self.Columns.CENTER, self.Columns.MEDIAN,
+                self.Columns.DISPERSION,
+                self.Columns.MIN, self.Columns.MAX, self.Columns.MISSING)]
         else:
-            indices = ...
+            x = np.vstack((self._dispersion, self._missing)).T
+            attrs = [ContinuousVariable(name)
+                     for name in ("Entropy", self.Columns.MISSING.name)]
 
-        matrix = np.vstack((
-            self._center[indices], self._median[indices],
-            self._dispersion[indices],
-            self._min[indices], self._max[indices], self._missing[indices],
-        )).T
+        names = [var.name for var in self.variables]
+        if any(isinstance(var, DiscreteVariable) for var in self.variables):
+            majorities = [
+                var.str_val(val) if isinstance(var, DiscreteVariable) else ""
+                for var, val in zip(self.variables, self._median)]
+            metas = np.vstack((names, majorities)).T
+            meta_attrs = [StringVariable('Feature'), StringVariable('Mode')]
+        else:
+            metas = np.atleast_2d(names).T
+            meta_attrs = [StringVariable('Feature')]
 
-        # Return string labels for the returned matrix columns e.g. 'Mean',
-        # 'Dispersion' if requested
-        if return_labels:
-            labels = [self.Columns.CENTER.name, self.Columns.MEDIAN.name,
-                      self.Columns.DISPERSION.name,
-                      self.Columns.MIN.name, self.Columns.MAX.name,
-                      self.Columns.MISSING.name]
-            return labels, matrix
-
-        return matrix
+        domain = Domain(attributes=attrs, metas=meta_attrs)
+        statistics = Table.from_numpy(domain, x, metas=metas)
+        statistics.name = f'{self.table.name} (Feature Statistics)'
+        return statistics
 
     def __compute_stat(self, matrices, discrete_f=None, continuous_f=None,
                        time_f=None, string_f=None, default_val=np.nan):
@@ -866,14 +859,7 @@ class OWFeatureStatistics(widget.OWWidget):
             return
 
         # Send the statistics of the selected variables to ouput
-        labels, data = self.model.get_statistics_matrix(return_labels=True)
-        var_names = np.atleast_2d([var.name for var in self.model.variables]).T
-        domain = Domain(
-            attributes=[ContinuousVariable(name) for name in labels],
-            metas=[StringVariable('Feature')]
-        )
-        statistics = Table(domain, data, metas=var_names)
-        statistics.name = '{self.data.name} (Feature Statistics)'
+        statistics = self.model.get_statistics_table()
         self.Outputs.statistics.send(statistics)
 
     def send_report(self):
