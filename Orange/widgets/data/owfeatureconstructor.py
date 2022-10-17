@@ -53,21 +53,26 @@ from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 
 
 FeatureDescriptor = \
-    namedtuple("FeatureDescriptor", ["name", "expression", "meta"])
+    namedtuple("FeatureDescriptor", ["name", "expression", "meta"],
+               defaults=[False])
 
 ContinuousDescriptor = \
     namedtuple("ContinuousDescriptor",
-               ["name", "expression", "meta", "number_of_decimals"])
+               ["name", "expression", "number_of_decimals", "meta"],
+               defaults=[False])
 DateTimeDescriptor = \
     namedtuple("DateTimeDescriptor",
-               ["name", "expression", "meta"])
+               ["name", "expression", "meta"],
+               defaults=[False])
 DiscreteDescriptor = \
     namedtuple("DiscreteDescriptor",
-               ["name", "expression", "meta", "values", "ordered"])
+               ["name", "expression", "values", "ordered", "meta"],
+               defaults=[False])
 
 StringDescriptor = \
     namedtuple("StringDescriptor",
-               ["name", "expression", "meta"])
+               ["name", "expression", "meta"],
+               defaults=[True])
 
 
 def make_variable(descriptor, compute_value):
@@ -584,22 +589,22 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         cont = menu.addAction("Numeric")
         cont.triggered.connect(
             lambda: self.addFeature(
-                ContinuousDescriptor(generate_newname("X{}"), "", False, 3))
+                ContinuousDescriptor(generate_newname("X{}"), "", 3, meta=False))
         )
         disc = menu.addAction("Categorical")
         disc.triggered.connect(
             lambda: self.addFeature(
-                DiscreteDescriptor(generate_newname("D{}"), "", False, (), False))
+                DiscreteDescriptor(generate_newname("D{}"), "", (), False, meta=False))
         )
         string = menu.addAction("Text")
         string.triggered.connect(
             lambda: self.addFeature(
-                StringDescriptor(generate_newname("S{}"), "", True))
+                StringDescriptor(generate_newname("S{}"), "", meta=True))
         )
         datetime = menu.addAction("Date/Time")
         datetime.triggered.connect(
             lambda: self.addFeature(
-                DateTimeDescriptor(generate_newname("T{}"), "", False))
+                DateTimeDescriptor(generate_newname("T{}"), "", meta=False))
         )
 
         menu.addSeparator()

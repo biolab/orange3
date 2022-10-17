@@ -36,7 +36,7 @@ class FeatureConstructorTest(unittest.TestCase):
                      "if iris == 'Iris-versicolor' else iris_three"
         values = ('iris one', 'iris two', 'iris three')
         desc = PyListModel(
-            [DiscreteDescriptor(name=name, expression=expression, meta=False,
+            [DiscreteDescriptor(name=name, expression=expression,
                                 values=values, ordered=True)]
         )
         data = data.transform(Domain(data.domain.attributes +
@@ -54,7 +54,7 @@ class FeatureConstructorTest(unittest.TestCase):
         expression = "str(iris)[-1]"  # last letter - a or r
         values = ()
         desc = PyListModel(
-            [DiscreteDescriptor(name=name, expression=expression, meta=False,
+            [DiscreteDescriptor(name=name, expression=expression,
                                 values=values, ordered=False)]
         )
         data = data.transform(Domain(data.domain.attributes +
@@ -73,7 +73,7 @@ class FeatureConstructorTest(unittest.TestCase):
         name = 'Continuous Variable'
         expression = "pow(sepal_length + sepal_width, 2)"
         featuremodel = PyListModel(
-            [ContinuousDescriptor(name=name, expression=expression, meta=False,
+            [ContinuousDescriptor(name=name, expression=expression,
                                   number_of_decimals=2)]
         )
         data = data.transform(Domain(data.domain.attributes +
@@ -90,7 +90,7 @@ class FeatureConstructorTest(unittest.TestCase):
         name = 'Date'
         expression = '"2019-07-{:02}".format(int(MEDV/3))'
         featuremodel = PyListModel(
-            [DateTimeDescriptor(name=name, expression=expression, meta=False)]
+            [DateTimeDescriptor(name=name, expression=expression)]
         )
         data = data.transform(Domain(data.domain.attributes +
                                      construct_variables(featuremodel, data)[0],
@@ -106,7 +106,7 @@ class FeatureConstructorTest(unittest.TestCase):
         name = 'String Variable'
         expression = "str(iris) + '_name'"
         desc = PyListModel(
-            [StringDescriptor(name=name, expression=expression, meta=True)]
+            [StringDescriptor(name=name, expression=expression)]
         )
         data = data.transform(Domain(data.domain.attributes,
                                      data.domain.class_vars,
@@ -138,8 +138,8 @@ class FeatureConstructorTest(unittest.TestCase):
         domain = Domain([ContinuousVariable(x) for x in "ab"])
         data = Table.from_numpy(domain, np.arange(4).reshape(2, 2))
         desc = PyListModel(
-            [ContinuousDescriptor("x", "a + b", False, 1),
-             ContinuousDescriptor("y", "a + b", True, 1),
+            [ContinuousDescriptor("x", "a + b", 1, False),
+             ContinuousDescriptor("y", "a + b", 1, True),
              StringDescriptor("z", "a + b", True)])
         attrs, metas = construct_variables(desc, data)
         self.assertEqual([var.name for var in attrs], ["x"])
@@ -152,7 +152,7 @@ class FeatureConstructorTest(unittest.TestCase):
         name = 'Micro Variable'
         expression = micro
         desc = PyListModel(
-            [ContinuousDescriptor(name=name, expression=expression, meta=False,
+            [ContinuousDescriptor(name=name, expression=expression,
                                   number_of_decimals=2)]
         )
         data = Table.from_numpy(domain, np.arange(5).reshape(5, 1))
@@ -165,8 +165,7 @@ class FeatureConstructorTest(unittest.TestCase):
     def test_transform_sparse():
         domain = Domain([ContinuousVariable("A")])
         desc = [
-            ContinuousDescriptor(name="X", expression="A", meta=False,
-                                 number_of_decimals=2)
+            ContinuousDescriptor(name="X", expression="A", number_of_decimals=2)
         ]
         X = sp.csc_matrix(np.arange(5).reshape(5, 1))
         data = Table.from_numpy(domain, X)
@@ -374,18 +373,18 @@ class OWFeatureConstructorTests(WidgetTest):
 
     def test_create_variable_with_no_data(self):
         self.widget.addFeature(
-            ContinuousDescriptor("X1", "", False, 3))
+            ContinuousDescriptor("X1", "", 3))
 
     def test_error_invalid_expression(self):
         data = Table("iris")
         self.widget.setData(data)
         self.widget.addFeature(
-            ContinuousDescriptor("X", "0", False, 3)
+            ContinuousDescriptor("X", "0", 3)
         )
         self.widget.apply()
         self.assertFalse(self.widget.Error.invalid_expressions.is_shown())
         self.widget.addFeature(
-            ContinuousDescriptor("X", "0a", False, 3)
+            ContinuousDescriptor("X", "0a", 3)
         )
         self.widget.apply()
         self.assertTrue(self.widget.Error.invalid_expressions.is_shown())
@@ -393,12 +392,12 @@ class OWFeatureConstructorTests(WidgetTest):
     def test_transform_error(self):
         data = Table("iris")[::5]
         self.send_signal(self.widget.Inputs.data, data)
-        self.widget.addFeature(ContinuousDescriptor("X", "1/0", False, 3))
+        self.widget.addFeature(ContinuousDescriptor("X", "1/0", 3))
         self.widget.apply()
         self.wait_until_finished(self.widget)
         self.assertTrue(self.widget.Error.transform_error.is_shown())
         self.widget.removeFeature(0)
-        self.widget.addFeature(ContinuousDescriptor("X", "1", False, 3))
+        self.widget.addFeature(ContinuousDescriptor("X", "1", 3))
         self.widget.apply()
         self.wait_until_finished(self.widget)
         self.assertFalse(self.widget.Error.transform_error.is_shown())
@@ -407,7 +406,7 @@ class OWFeatureConstructorTests(WidgetTest):
         data = Table("iris")
         self.widget.setData(data)
         self.widget.addFeature(
-            ContinuousDescriptor("iris", "0", False, 3)
+            ContinuousDescriptor("iris", "0", 3)
         )
         self.widget.apply()
         output = self.get_output(self.widget.Outputs.data)
@@ -462,7 +461,7 @@ class OWFeatureConstructorTests(WidgetTest):
         self.send_signal(w.Inputs.data, Table.from_numpy(domain, [[0, 1, 2]]))
 
         w.descriptors = [StringDescriptor(
-            "y", "ana.value + berta.value + cilka.value", True)]
+            "y", "ana.value + berta.value + cilka.value")]
 
         # Reject fixing - no changes
         dlgexec.return_value=msgbox.RejectRole
@@ -476,13 +475,13 @@ class OWFeatureConstructorTests(WidgetTest):
         self.assertEqual(w.descriptors[0].expression, "ana + berta + cilka")
 
         w.descriptors = [StringDescriptor(
-            "y", "ana.value + dani.value + cilka.value", True)]
+            "y", "ana.value + dani.value + cilka.value")]
         with patch.object(w, "apply"):  # dani doesn't exist and will fail
             w.fix_expressions()
         self.assertEqual(w.descriptors[0].expression,
                          "ana + dani.value + cilka")
 
-        w.descriptors = [ContinuousDescriptor("y", "sqrt(berta)", 1, False)]
+        w.descriptors = [ContinuousDescriptor("y", "sqrt(berta)", 1)]
         w.fix_expressions()
         self.assertEqual(w.descriptors[0].expression,
                          "sqrt({'a': 0, 'b': 1, 'c': 2}[berta])")
@@ -499,8 +498,8 @@ class OWFeatureConstructorTests(WidgetTest):
                 attributes=dict(Ana=1, Cilka=2), metas={},
                 values=dict(
                     descriptors=[
-                        ContinuousDescriptor("y", "Ana + int(Cilka)", False, 1),
-                        StringDescriptor("u", "Ana.value + 'X'", True)
+                        ContinuousDescriptor("y", "Ana + int(Cilka)", 1),
+                        StringDescriptor("u", "Ana.value + 'X'")
                     ],
                     currentIndex=0)
              )]
@@ -519,7 +518,7 @@ class OWFeatureConstructorTests(WidgetTest):
                 attributes=dict(Ana=1, Cilka=2), metas={},
                 values=dict(
                     descriptors=[
-                        ContinuousDescriptor("y", "int(Cilka)", False, 1),
+                        ContinuousDescriptor("y", "int(Cilka)", 1),
                     ],
                     currentIndex=0)
              )]
@@ -546,13 +545,13 @@ class OWFeatureConstructorTests(WidgetTest):
                     attributes=dict(x=2, y=2, z=2), metas={},
                     values=dict(
                         descriptors=[
-                            ContinuousDescriptor("a", "x + 2", False, 1),
-                            DiscreteDescriptor("b", "x < 3", (), False, False),
-                            DiscreteDescriptor("c", "x > 15", (), False, True),
-                            DiscreteDescriptor("d", "y > x", ("foo", "bar"), False, False),
-                            DiscreteDescriptor("e", "x ** 2 + y == 5", ("foo", "bar"), False, True),
-                            StringDescriptor("f", "str(x)", True),
-                            DateTimeDescriptor("g", "z", False)
+                            ContinuousDescriptor("a", "x + 2", 1),
+                            DiscreteDescriptor("b", "x < 3", (), False),
+                            DiscreteDescriptor("c", "x > 15", (), True),
+                            DiscreteDescriptor("d", "y > x", ("foo", "bar"), False),
+                            DiscreteDescriptor("e", "x ** 2 + y == 5", ("foo", "bar"), True),
+                            StringDescriptor("f", "str(x)"),
+                            DateTimeDescriptor("g", "z")
                         ],
                         currentIndex=0)
                 )]
@@ -571,13 +570,13 @@ class OWFeatureConstructorTests(WidgetTest):
         w = self.widget
         self.send_signal(w.Inputs.data, Table("iris")[::5])
         features = [
-            ContinuousDescriptor("X1", "max(0, sepal_width - 5)", False, 2),
+            ContinuousDescriptor("X1", "max(0, sepal_width - 5)", 2),
             DiscreteDescriptor("D1", "HIGH if sepal_width > 5 else LOW",
-                               False, ("HIGH", "LOW"), False),
+                               ("HIGH", "LOW"), False),
             DiscreteDescriptor("D2", "'HIGH' if sepal_length > 5 else 'LOW'",
-                               False, (), False),
-            DateTimeDescriptor("T1", "0", False),
-            DateTimeDescriptor("T2", "'1900-01-01'", False),
+                               (), False),
+            DateTimeDescriptor("T1", "0"),
+            DateTimeDescriptor("T2", "'1900-01-01'"),
         ]
         for f in features:
             w.addFeature(f)
@@ -603,7 +602,7 @@ class FeatureConstructorHandlerTests(unittest.TestCase):
         self.assertTrue(
             FeatureConstructorHandler().is_valid_item(
                 OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "str(A) + str(B)", True),
+                StringDescriptor("X", "str(A) + str(B)"),
                 {"A": vartype(DiscreteVariable)},
                 {"B": vartype(DiscreteVariable)}
             )
@@ -613,7 +612,7 @@ class FeatureConstructorHandlerTests(unittest.TestCase):
         self.assertTrue(
             FeatureConstructorHandler().is_valid_item(
                 OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "str('foo')", True),
+                StringDescriptor("X", "str('foo')"),
                 {},
                 {}
             )
@@ -623,7 +622,7 @@ class FeatureConstructorHandlerTests(unittest.TestCase):
         self.assertFalse(
             FeatureConstructorHandler().is_valid_item(
                 OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "str(X)", True),
+                StringDescriptor("X", "str(X)"),
                 {},
                 {}
             )
@@ -633,7 +632,7 @@ class FeatureConstructorHandlerTests(unittest.TestCase):
         self.assertTrue(
             FeatureConstructorHandler().is_valid_item(
                 OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "A_2_f", True),
+                StringDescriptor("X", "A_2_f"),
                 {"A.2 f": vartype(DiscreteVariable)},
                 {}
             )
