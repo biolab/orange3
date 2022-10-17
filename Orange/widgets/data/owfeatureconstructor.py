@@ -521,7 +521,7 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
     descriptors = ContextSetting([])
     currentIndex = ContextSetting(-1)
     expressions_with_values = ContextSetting(False)
-    settings_version = 2
+    settings_version = 3
 
     EDITORS = [
         (ContinuousDescriptor, ContinuousFeatureEditor),
