@@ -185,8 +185,8 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
         def _check_tractability():
             if metric is distance.Mahalanobis:
-                if self.axis == 1:
-                    # when computing distances by columns, we want < 100 rows
+                if self.axis == 0:
+                    # when computing distances by columns, we want < 1000 rows
                     if len(data) > 1000:
                         self.Error.data_too_large_for_mahalanobis("rows")
                         return False
