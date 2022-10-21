@@ -110,8 +110,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
     HIDDEN_VAR_TYPES = (StringVariable,)
 
     class Columns(IntEnum):
-        ICON, NAME, DISTRIBUTION, CENTER, MEDIAN, DISPERSION, MIN, MAX, \
-        MISSING = range(9)
+        ICON, NAME, DISTRIBUTION, CENTER, MODE, MEDIAN, DISPERSION, MIN, MAX, \
+        MISSING = range(10)
 
         @property
         def name(self):
@@ -119,6 +119,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                     self.NAME: 'Name',
                     self.DISTRIBUTION: 'Distribution',
                     self.CENTER: 'Mean',
+                    self.MODE: 'Mode',
                     self.MEDIAN: 'Median',
                     self.DISPERSION: 'Dispersion',
                     self.MIN: 'Min.',
@@ -159,7 +160,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
         no_data = np.array([])
         self._variable_types = self._variable_names = no_data
-        self._min = self._max = self._center = self._median = no_data
+        self._min = self._max = no_data
+        self._center = self._median = self._mode = no_data
         self._dispersion = no_data
         self._missing = no_data
         # Clear model initially to set default values
@@ -283,9 +285,16 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             time_f=lambda x: ut.nanmean(x, axis=0),
         )
 
-        self._median = self.__compute_stat(
+        self._mode = self.__compute_stat(
             matrices,
             discrete_f=lambda x: __mode(x, axis=0),
+            continuous_f=lambda x: __mode(x, axis=0),
+            time_f=lambda x: __mode(x, axis=0),
+        )
+
+        self._median = self.__compute_stat(
+            matrices,
+            discrete_f=None,
             continuous_f=lambda x: ut.nanmedian(x, axis=0),
             time_f=lambda x: ut.nanmedian(x, axis=0),
         )
@@ -315,15 +324,10 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                      for name in ("Entropy", self.Columns.MISSING.name)]
 
         names = [var.name for var in self.variables]
-        if any(isinstance(var, DiscreteVariable) for var in self.variables):
-            majorities = [
-                var.str_val(val) if isinstance(var, DiscreteVariable) else ""
-                for var, val in zip(self.variables, self._median)]
-            metas = np.vstack((names, majorities)).T
-            meta_attrs = [StringVariable('Feature'), StringVariable('Mode')]
-        else:
-            metas = np.atleast_2d(names).T
-            meta_attrs = [StringVariable('Feature')]
+        modes = [var.str_val(val)
+                 for var, val in zip(self.variables, self._mode)]
+        metas = np.vstack((names, modes)).T
+        meta_attrs = [StringVariable('Feature'), StringVariable('Mode')]
 
         domain = Domain(attributes=attrs, metas=meta_attrs)
         statistics = Table.from_numpy(domain, x, metas=metas)
@@ -411,6 +415,13 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         elif column == self.Columns.CENTER:
             # Sorting discrete or string values by mean makes no sense
             vals = np.array(self._center)
+            vals[disc_idx] = var_name_indices[disc_idx]
+            vals[str_idx] = var_name_indices[str_idx]
+            return np.vstack((var_types_indices, np.zeros_like(vals), vals)).T
+        # Sort by: (type, mode)
+        elif column == self.Columns.MODE:
+            # Sorting discrete or string values by mode makes no sense
+            vals = np.array(self._mode)
             vals[disc_idx] = var_name_indices[disc_idx]
             vals[str_idx] = var_name_indices[str_idx]
             return np.vstack((var_types_indices, np.zeros_like(vals), vals)).T
@@ -563,6 +574,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
                     return self.__distributions_cache[row]
             elif column == self.Columns.CENTER:
                 return render_value(self._center[row])
+            elif column == self.Columns.MODE:
+                return render_value(self._mode[row])
             elif column == self.Columns.MEDIAN:
                 return render_value(self._median[row])
             elif column == self.Columns.DISPERSION:
@@ -805,7 +818,8 @@ class OWFeatureStatistics(widget.OWWidget):
         self.__restore_sorting()
         self.__color_var_changed()
 
-        self.commit()
+        self.commit_statistics()
+        self.commit.now()
 
     def __restore_selection(self):
         """Restore the selection on the table view from saved settings."""
@@ -845,8 +859,9 @@ class OWFeatureStatistics(widget.OWWidget):
             i.row() for i in self.table_view.selectionModel().selectedRows()
         ]))
         self.selected_vars = list(self.model.variables[selection_indices])
-        self.commit()
+        self.commit.deferred()
 
+    @gui.deferred
     def commit(self):
         if not self.selected_vars:
             self.Outputs.reduced_data.send(None)
@@ -854,6 +869,7 @@ class OWFeatureStatistics(widget.OWWidget):
             # Send a table with only selected columns to output
             self.Outputs.reduced_data.send(self.data[:, self.selected_vars])
 
+    def commit_statistics(self):
         if not self.data:
             self.Outputs.statistics.send(None)
             return
