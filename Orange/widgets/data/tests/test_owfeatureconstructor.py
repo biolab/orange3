@@ -39,8 +39,8 @@ class FeatureConstructorTest(unittest.TestCase):
             [DiscreteDescriptor(name=name, expression=expression,
                                 values=values, ordered=True)]
         )
-        data = data.transform(Domain(list(data.domain.attributes) +
-                                     construct_variables(desc, data),
+        data = data.transform(Domain(data.domain.attributes +
+                                     construct_variables(desc, data)[0],
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
@@ -57,8 +57,8 @@ class FeatureConstructorTest(unittest.TestCase):
             [DiscreteDescriptor(name=name, expression=expression,
                                 values=values, ordered=False)]
         )
-        data = data.transform(Domain(list(data.domain.attributes) +
-                                     construct_variables(desc, data),
+        data = data.transform(Domain(data.domain.attributes +
+                                     construct_variables(desc, data)[0],
                                      data.domain.class_vars,
                                      data.domain.metas))
         newvar = data.domain[name]
@@ -76,8 +76,8 @@ class FeatureConstructorTest(unittest.TestCase):
             [ContinuousDescriptor(name=name, expression=expression,
                                   number_of_decimals=2)]
         )
-        data = data.transform(Domain(list(data.domain.attributes) +
-                                     construct_variables(featuremodel, data),
+        data = data.transform(Domain(data.domain.attributes +
+                                     construct_variables(featuremodel, data)[0],
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
@@ -92,8 +92,8 @@ class FeatureConstructorTest(unittest.TestCase):
         featuremodel = PyListModel(
             [DateTimeDescriptor(name=name, expression=expression)]
         )
-        data = data.transform(Domain(list(data.domain.attributes) +
-                                     construct_variables(featuremodel, data),
+        data = data.transform(Domain(data.domain.attributes +
+                                     construct_variables(featuremodel, data)[0],
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], TimeVariable))
@@ -110,8 +110,8 @@ class FeatureConstructorTest(unittest.TestCase):
         )
         data = data.transform(Domain(data.domain.attributes,
                                      data.domain.class_vars,
-                                     list(data.domain.metas) +
-                                     construct_variables(desc, data)))
+                                     data.domain.metas +
+                                     construct_variables(desc, data)[1]))
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
             self.assertEqual(data[i * 50, name],
@@ -126,12 +126,24 @@ class FeatureConstructorTest(unittest.TestCase):
         desc = PyListModel(
             [ContinuousDescriptor(name="S",
                                   expression="_0_1 + _1",
+                                  meta=False,
                                   number_of_decimals=3)]
         )
-        nv = construct_variables(desc, data)
+        nv, _ = construct_variables(desc, data)
         ndata = data.transform(Domain(nv))
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
+
+    def test_construct_placement(self):
+        domain = Domain([ContinuousVariable(x) for x in "ab"])
+        data = Table.from_numpy(domain, np.arange(4).reshape(2, 2))
+        desc = PyListModel(
+            [ContinuousDescriptor("x", "a + b", 1, False),
+             ContinuousDescriptor("y", "a + b", 1, True),
+             StringDescriptor("z", "a + b", True)])
+        attrs, metas = construct_variables(desc, data)
+        self.assertEqual([var.name for var in attrs], ["x"])
+        self.assertEqual([var.name for var in metas], ["y", "z"])
 
     @staticmethod
     def test_unicode_normalization():
@@ -146,10 +158,11 @@ class FeatureConstructorTest(unittest.TestCase):
         data = Table.from_numpy(domain, np.arange(5).reshape(5, 1))
         data = data.transform(Domain(data.domain.attributes,
                                      [],
-                                     construct_variables(desc, data)))
+                                     construct_variables(desc, data)[0]))
         np.testing.assert_equal(data.X, data.metas)
 
-    def test_transform_sparse(self):
+    @staticmethod
+    def test_transform_sparse():
         domain = Domain([ContinuousVariable("A")])
         desc = [
             ContinuousDescriptor(name="X", expression="A", number_of_decimals=2)
@@ -158,7 +171,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data = Table.from_numpy(domain, X)
         data_ = data.transform(Domain(data.domain.attributes,
                                       [],
-                                      construct_variables(desc, data)))
+                                      construct_variables(desc, data)[0]))
         np.testing.assert_equal(
             data.get_column_view(0)[0], data_.get_column_view(0)[0]
         )

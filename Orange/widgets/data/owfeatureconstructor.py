@@ -26,9 +26,10 @@ from typing import List, Dict, Any, Mapping, Optional
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
+    QSizePolicy, QAbstractItemView, QComboBox, QLineEdit,
     QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
-    QPushButton, QMenu, QListView, QFrame, QLabel, QMessageBox)
+    QPushButton, QMenu, QListView, QFrame, QLabel, QMessageBox,
+    QGridLayout, QWidget, QCheckBox)
 from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
@@ -52,19 +53,26 @@ from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 
 
 FeatureDescriptor = \
-    namedtuple("FeatureDescriptor", ["name", "expression"])
+    namedtuple("FeatureDescriptor", ["name", "expression", "meta"],
+               defaults=[False])
 
 ContinuousDescriptor = \
     namedtuple("ContinuousDescriptor",
-               ["name", "expression", "number_of_decimals"])
+               ["name", "expression", "number_of_decimals", "meta"],
+               defaults=[False])
 DateTimeDescriptor = \
     namedtuple("DateTimeDescriptor",
-               ["name", "expression"])
+               ["name", "expression", "meta"],
+               defaults=[False])
 DiscreteDescriptor = \
     namedtuple("DiscreteDescriptor",
-               ["name", "expression", "values", "ordered"])
+               ["name", "expression", "values", "ordered", "meta"],
+               defaults=[False])
 
-StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
+StringDescriptor = \
+    namedtuple("StringDescriptor",
+               ["name", "expression", "meta"],
+               defaults=[True])
 
 
 def make_variable(descriptor, compute_value):
@@ -130,15 +138,16 @@ Categorical features are passed as strings
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        layout = QFormLayout(
-            fieldGrowthPolicy=QFormLayout.ExpandingFieldsGrow
-        )
+        layout = QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self.nameedit = QLineEdit(
             placeholderText="Name...",
             sizePolicy=QSizePolicy(QSizePolicy.Minimum,
                                    QSizePolicy.Fixed)
         )
+
+        self.metaattributecb = QCheckBox("Meta attribute")
+
         self.expressionedit = QLineEdit(
             placeholderText="Expression...",
             toolTip=self.ExpressionTooltip)
@@ -165,15 +174,17 @@ Categorical features are passed as strings
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum))
         self.functionscb.setModel(self.funcs_model)
 
-        hbox = QHBoxLayout()
-        hbox.addWidget(self.attributescb)
-        hbox.addWidget(self.functionscb)
+        layout.addWidget(self.nameedit, 0, 0)
+        layout.addWidget(self.metaattributecb, 1, 0)
+        layout.addWidget(self.expressionedit, 0, 1, 1, 2)
+        layout.addWidget(self.attributescb, 1, 1)
+        layout.addWidget(self.functionscb, 1, 2)
+        layout.addWidget(QWidget(), 2, 0)
 
-        layout.addRow(self.nameedit, self.expressionedit)
-        layout.addRow(self.tr(""), hbox)
         self.setLayout(layout)
 
         self.nameedit.editingFinished.connect(self._invalidate)
+        self.metaattributecb.clicked.connect(self._invalidate)
         self.expressionedit.textChanged.connect(self._invalidate)
         self.attributescb.currentIndexChanged.connect(self.on_attrs_changed)
         self.functionscb.currentIndexChanged.connect(self.on_funcs_changed)
@@ -196,6 +207,7 @@ Categorical features are passed as strings
 
     def setEditorData(self, data, domain):
         self.nameedit.setText(data.name)
+        self.metaattributecb.setChecked(data.meta)
         self.expressionedit.setText(data.expression)
         self.setModified(False)
         self.featureChanged.emit()
@@ -207,7 +219,8 @@ Categorical features are passed as strings
 
     def editorData(self):
         return FeatureDescriptor(name=self.nameedit.text(),
-                                 expression=self.nameedit.text())
+                                 expression=self.nameedit.text(),
+                                 meta=self.metaattributecb.isChecked())
 
     def _invalidate(self):
         self.setModified(True)
@@ -251,8 +264,9 @@ class ContinuousFeatureEditor(FeatureEditor):
     def editorData(self):
         return ContinuousDescriptor(
             name=self.nameedit.text(),
+            expression=self.expressionedit.text(),
+            meta=self.metaattributecb.isChecked(),
             number_of_decimals=None,
-            expression=self.expressionedit.text()
         )
 
 
@@ -265,7 +279,8 @@ class DateTimeFeatureEditor(FeatureEditor):
     def editorData(self):
         return DateTimeDescriptor(
             name=self.nameedit.text(),
-            expression=self.expressionedit.text()
+            expression=self.expressionedit.text(),
+            meta=self.metaattributecb.isChecked(),
         )
 
 
@@ -286,7 +301,8 @@ class DiscreteFeatureEditor(FeatureEditor):
         layout = self.layout()
         label = QLabel(self.tr("Values (optional)"))
         label.setToolTip(tooltip)
-        layout.addRow(label, self.valuesedit)
+        layout.addWidget(label, 2, 0)
+        layout.addWidget(self.valuesedit, 2, 1, 1, 2)
 
     def setEditorData(self, data, domain):
         self.valuesedit.setText(
@@ -300,6 +316,7 @@ class DiscreteFeatureEditor(FeatureEditor):
         values = tuple(filter(None, [v.replace(r"\,", ",").strip() for v in values]))
         return DiscreteDescriptor(
             name=self.nameedit.text(),
+            meta=self.metaattributecb.isChecked(),
             values=values,
             ordered=False,
             expression=self.expressionedit.text()
@@ -310,9 +327,15 @@ class StringFeatureEditor(FeatureEditor):
     ExpressionTooltip = "A string expression\n\n" \
                         + FeatureEditor.ExpressionTooltip
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.metaattributecb.setChecked(True)
+        self.metaattributecb.setDisabled(True)
+
     def editorData(self):
         return StringDescriptor(
             name=self.nameedit.text(),
+            meta=True,
             expression=self.expressionedit.text()
         )
 
@@ -503,7 +526,7 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
     descriptors = ContextSetting([])
     currentIndex = ContextSetting(-1)
     expressions_with_values = ContextSetting(False)
-    settings_version = 2
+    settings_version = 3
 
     EDITORS = [
         (ContinuousDescriptor, ContinuousFeatureEditor),
@@ -566,22 +589,22 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         cont = menu.addAction("Numeric")
         cont.triggered.connect(
             lambda: self.addFeature(
-                ContinuousDescriptor(generate_newname("X{}"), "", 3))
+                ContinuousDescriptor(generate_newname("X{}"), "", 3, meta=False))
         )
         disc = menu.addAction("Categorical")
         disc.triggered.connect(
             lambda: self.addFeature(
-                DiscreteDescriptor(generate_newname("D{}"), "", (), False))
+                DiscreteDescriptor(generate_newname("D{}"), "", (), False, meta=False))
         )
         string = menu.addAction("Text")
         string.triggered.connect(
             lambda: self.addFeature(
-                StringDescriptor(generate_newname("S{}"), ""))
+                StringDescriptor(generate_newname("S{}"), "", meta=True))
         )
         datetime = menu.addAction("Date/Time")
         datetime.triggered.connect(
             lambda: self.addFeature(
-                DateTimeDescriptor(generate_newname("T{}"), ""))
+                DateTimeDescriptor(generate_newname("T{}"), "", meta=False))
         )
 
         menu.addSeparator()
@@ -897,17 +920,15 @@ class Result:
 def run(data: Table, desc, use_values, task: TaskState) -> Result:
     if task.is_interruption_requested():
         raise CancelledError  # pragma: no cover
-    new_variables = construct_variables(desc, data, use_values)
+    new_variables, new_metas = construct_variables(desc, data, use_values)
     # Explicit cancellation point after `construct_variables` which can
     # already run `compute_value`.
     if task.is_interruption_requested():
         raise CancelledError  # pragma: no cover
-    attrs = [var for var in new_variables if var.is_primitive()]
-    metas = [var for var in new_variables if not var.is_primitive()]
     new_domain = Orange.data.Domain(
-        data.domain.attributes + tuple(attrs),
+        data.domain.attributes + new_variables,
         data.domain.class_vars,
-        metas=data.domain.metas + tuple(metas)
+        metas=data.domain.metas + new_metas
     )
     try:
         for variable in new_variables:
@@ -916,7 +937,7 @@ def run(data: Table, desc, use_values, task: TaskState) -> Result:
     finally:
         for variable in new_variables:
             variable.compute_value.mask_exceptions = True
-    return Result(data, attrs, metas)
+    return Result(data, new_variables, new_metas)
 
 
 def validate_exp(exp):
@@ -989,12 +1010,13 @@ def validate_exp(exp):
 def construct_variables(descriptions, data, use_values=False):
     # subs
     variables = []
+    metas = []
     source_vars = data.domain.variables + data.domain.metas
     for desc in descriptions:
         desc, func = bind_variable(desc, source_vars, data, use_values)
         var = make_variable(desc, func)
-        variables.append(var)
-    return variables
+        [variables, metas][desc.meta].append(var)
+    return tuple(variables), tuple(metas)
 
 
 def sanitized_name(name):
