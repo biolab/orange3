@@ -627,9 +627,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.labels.setMinimumWidth(1 if labels else -1)
 
         if not self.pruning and self.color_by is not None:
+            col = self.items.get_column_view(self.color_by)[0].astype(float)
             self.label_model.set_colors(
-                self.color_by.palette.values_to_qcolors(
-                    self.items.get_column_view(self.color_by)[0][indices]))
+                self.color_by.palette.values_to_qcolors(col[indices]))
         else:
             self.label_model.set_colors(None)
 
