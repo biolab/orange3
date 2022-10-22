@@ -89,6 +89,12 @@ class Identity(Transformation):
     def transform(self, c):
         return c
 
+    def __eq__(self, other):  # pylint: disable=useless-parent-delegation
+        return super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
+
 
 # pylint: disable=abstract-method
 class _Indicator(Transformation):
@@ -144,6 +150,12 @@ class Indicator(_Indicator):
                 # before), so we just convert it to sparse before transforming
                 c = c.toarray().ravel()
         return self._nan_fixed(c, c == self.value)
+
+    def __eq__(self, other):  # pylint: disable=useless-parent-delegation
+        return super().__eq__(other)
+
+    def __hash__(self):
+        return super().__hash__()
 
 
 class Indicator1(_Indicator):
