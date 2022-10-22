@@ -1,14 +1,16 @@
-from functools import partial
+from functools import partial, reduce
+from operator import add
 from types import SimpleNamespace
-from typing import NamedTuple, Optional, Callable, Union, Dict, Tuple, List
+from typing import NamedTuple, Optional, Callable, Union, Dict, List
 
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import Qt, QSize, QAbstractListModel, QObject
+from AnyQt.QtCore import Qt, QSize, QAbstractListModel, QObject, \
+    QItemSelectionModel
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import \
-    QButtonGroup, QRadioButton, QListView, QGridLayout, QStyledItemDelegate
+    QButtonGroup, QRadioButton, QListView, QStyledItemDelegate
 
 from orangewidget.utils import listview
 
@@ -17,7 +19,7 @@ from Orange.preprocess import Continuize as Continuizer
 from Orange.preprocess.transformation import Identity, Indicator, Normalizer
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
@@ -143,20 +145,21 @@ ContinuousOptions: Dict[int, ContinuousMethodDesc] = {
     )}
 
 
-class ContDomainModel(VariableListModel):
+class ContDomainModel(DomainModel):
     """
     Domain model that adds description of continuization methods
     """
+    def __init__(self, valid_type):
+        super().__init__(
+            (DomainModel.ATTRIBUTES, DomainModel.Separator, DomainModel.METAS),
+            valid_types=(valid_type, ), strict_type=True)
+
     def data(self, index, role=Qt.DisplayRole):
         value = super().data(index, role)
-        row = index.row()
         if role == Qt.DisplayRole:
             hint = index.data(Qt.UserRole)
             if hint is not None:
-                methods = \
-                    DiscreteOptions if isinstance(self[row], DiscreteVariable) \
-                    else ContinuousOptions
-                return value + f": {methods[hint].short_desc}"
+                value += f": {hint}"
         return value
 
 
@@ -171,8 +174,7 @@ class DefaultContModel(QAbstractListModel):
         if DefaultContModel.icon is None:
             DefaultContModel.icon = gui.createAttributePixmap(
                 "★", QColor(0, 0, 0, 0), Qt.black)
-        self.hints: Tuple[VarHint, VarHint] = (
-            Normalize.Leave, Continuize.FirstAsBase)
+        self.hint = ""
 
     @staticmethod
     def rowCount(parent):
@@ -184,18 +186,16 @@ class DefaultContModel(QAbstractListModel):
 
     def data(self, _, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return f"Default setting: " + \
-                   DiscreteOptions[self.hints[1]].short_desc + " / " + \
-                   ContinuousOptions[self.hints[0]].short_desc
+            return f"Default setting: {self.hint}"
         elif role == Qt.DecorationRole:
             return self.icon
         elif role == Qt.ToolTipRole:
-            return "Default for variables without specific setings"
+            return "Default for variables without specific settings"
         return None
 
     def setData(self, index, value, role=Qt.DisplayRole):
         if role == Qt.UserRole:
-            self.hints = value
+            self.hint = value
             self.dataChanged.emit(index, index)
 
 
@@ -225,11 +225,11 @@ class ListViewSearch(listview.ListViewSearch):
         super().__init__(preferred_size=QSize(350, -1), *args, **kwargs)
         self.setItemDelegate(self.Delegate(self))
 
-    def select_default(self, idx):
+    def select_default(self):
         """Select the item representing default settings"""
-        index = self.default_view.model().index(idx)
         self.default_view.selectionModel().select(
-            index, QItemSelectionModel.Select)
+            self.default_view.model().index(0),
+            QItemSelectionModel.Select)
 
     # pylint: disable=unused-private-member
     def __layout(self):
@@ -264,12 +264,8 @@ class ListViewSearch(listview.ListViewSearch):
         margins.setTop(def_height + 2 + src_height)
         self.setViewportMargins(margins)
 
-KeyType = Tuple[str, bool]  # the True if categorical
-DefaultKey = "", True
 
-def variable_key(var: ContinuousVariable) -> KeyType:
-    """Key for that variable in var_hints and discretized_vars"""
-    return var.name, isinstance(var, DiscreteVariable)
+DefaultKey = ""
 
 
 class OWContinuize(widget.OWWidget):
@@ -287,12 +283,14 @@ class OWContinuize(widget.OWWidget):
     class Outputs:
         data = Output("Data", Table)
 
-    want_main_area = False
+    want_control_area = False
+    want_main_area = True
 
     settings_version = 3
-    var_hints: Dict[KeyType, Union[int, Tuple[int, int]]] = Setting(
-        {DefaultKey: (Normalize.Leave, Continuize.FirstAsBase)},
-        schema_only=True)
+    disc_var_hints: Dict[str, int] = Setting(
+        {DefaultKey: Continuize.FirstAsBase}, schema_only=True)
+    cont_var_hints: Dict[str, int] = Setting(
+        {DefaultKey: Normalize.Leave}, schema_only=True)
     continuize_class = Setting(False, schema_only=True)
     autosend = Setting(True)
 
@@ -301,25 +299,19 @@ class OWContinuize(widget.OWWidget):
         self.data = None
         self._var_cache = {}
 
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(16)
-        gui.widgetBox(self.controlArea, True, spacing=8, orientation=grid)
+        def create(title, vartype, methods):
+            hbox = gui.hBox(box, title)
+            view = ListViewSearch(
+                selectionMode=ListViewSearch.ExtendedSelection,
+                uniformItemSizes=True)
+            view.setModel(ContDomainModel(vartype))
+            view.selectionModel().selectionChanged.connect(
+                lambda: self._var_selection_changed(view))
+            view.default_view.selectionModel().selectionChanged.connect(
+                lambda selected: self._default_selected(view, selected))
+            hbox.layout().addWidget(view)
 
-        self.varview = ListViewSearch(
-            selectionMode=ListViewSearch.ExtendedSelection,
-            uniformItemSizes=True)
-        # TODO: Add argument strict_valid_types that does not allow TimeVariable
-        # to pass as ContinuousVariable
-        self.varview.setModel(ContDomainModel())
-        self.varview.selectionModel().selectionChanged.connect(
-            self._var_selection_changed)
-        self.varview.default_view.selectionModel().selectionChanged.connect(
-            self._default_selected)
-        self._update_default_model()
-        grid.addWidget(self.varview, 0, 0, 6, 1)
-
-        def create_buttons(methods, title):
-            bbox = gui.vBox(None, title)
+            bbox = gui.vBox(hbox)
             bgroup = QButtonGroup(self)
             bgroup.idClicked.connect(self.update_hints)
             for desc in methods.values():
@@ -327,90 +319,106 @@ class OWContinuize(widget.OWWidget):
                 button.setToolTip(desc.tooltip)
                 bgroup.addButton(button, desc.id_)
                 bbox.layout().addWidget(button)
-            return bbox, bgroup
+            bbox.layout().addStretch(1)
+            return hbox, view, bbox, bgroup
 
-        self.discrete_buttons, self.discrete_group = create_buttons(
-            DiscreteOptions, "Continuization (for categorical)")
-        self.continuous_buttons, self.continuous_group = create_buttons(
-            ContinuousOptions, "Normalizations (for numeric)")
-        grid.addWidget(self.discrete_buttons, 0, 1)
-        grid.setRowMinimumHeight(1, 16)
-        grid.addWidget(self.continuous_buttons, 2, 1)
+        box = gui.vBox(self.mainArea, True, spacing=8)
+        self.disc_box, self.disc_view, self.disc_radios, self.disc_group = \
+            create("Categorical Variables", DiscreteVariable, DiscreteOptions)
+        self._update_default_model(
+            self.disc_view,
+            DiscreteOptions[self.disc_var_hints[DefaultKey]].short_desc)
+        self.disc_view.select_default()
 
-        grid.setRowMinimumHeight(3, 16)
-        grid.addWidget(
-            gui.checkBox(None, self, "continuize_class",
-                         "Change class to numeric", box="Target").box,
-            4, 1)
+        self.cont_box, self.cont_view, self.cont_radios, self.cont_group = \
+            create("Numeric Variables", ContinuousVariable, ContinuousOptions)
+        self._update_default_model(
+            self.cont_view,
+            ContinuousOptions[self.cont_var_hints[DefaultKey]].short_desc)
+        self.cont_view.select_default()
+        
+        boxes = (self.disc_radios, self.cont_radios)
+        width = max(box.sizeHint().width() for box in boxes)
+        for box in boxes:
+            box.setFixedWidth(width)
 
-        grid.setRowStretch(5, 1)
-        gui.rubber(self.buttonsArea)
+        box = self.class_box = gui.hBox(self.mainArea)
+        gui.checkBox(
+            box, self, "continuize_class",
+            "Change class to numeric", box="Target Variable")
 
-        gui.auto_apply(self.buttonsArea, self, "autosend")
+        box = gui.hBox(self.mainArea)
+        gui.rubber(box)
+        gui.auto_apply(box, self, "autosend")
 
-    def _update_default_model(self):
+    def _update_default_model(self, view, desc):
         """Update data in the model showing default settings"""
-        model = self.varview.default_view.model()
-        model.setData(model.index(0), self.var_hints[DefaultKey], Qt.UserRole)
+        model = view.default_view.model()
+        model.setData(model.index(0), desc, Qt.UserRole)
 
-    def _var_selection_changed(self):
-        selected = self.varview.selectionModel().selectedIndexes()
-        self.varview.default_view.selectionModel().clearSelection()
-        self._update_interface()
+    def _var_selection_changed(self, view):
+        if not view.selectionModel().selectedIndexes():
+            # Prevent infinite recursion (with _default_selected)
+            return
+        view.default_view.selectionModel().clearSelection()
+        self._update_interface(view)
 
-    def _default_selected(self):
-        self.varview.selectionModel().clearSelection()
-        self._update_interface()
+    def _default_selected(self, view, selected):
+        if not selected:
+            # Prevent infinite recursion (with _var_selection_selected)
+            return
+        view.selectionModel().clearSelection()
+        self._update_interface(view)
 
-    def varkeys_for_selection(self) -> List[KeyType]:
+    def varkeys_for_selection(self, view) -> List[str]:
         """
-        Return list of KeyType's for selected variables (for indexing var_hints)
+        Return names of selected variables for indexing var hints
 
         If 'Default settings' are selected, this returns DefaultKey
         """
-        model = self.varview.model()
-        varkeys = [variable_key(model[index.row()])
-                   for index in self.varview.selectionModel().selectedRows()]
+        model = view.model()
+        varkeys = [model[index.row()].name
+                   for index in view.selectionModel().selectedRows()]
         return varkeys or [DefaultKey]  # default settings are selected
 
-    def _update_interface(self):
-        keys = self.varkeys_for_selection()
-
-        parts = (
-            (self.discrete_group, self.discrete_buttons, True),
-            (self.continuous_group, self.continuous_buttons, False))
+    def _update_interface(self, view):
+        keys = self.varkeys_for_selection(view)
+        if view is self.disc_view:
+            group, buttons = self.disc_group, self.disc_radios
+            hints = self.disc_var_hints
+        else:
+            group, buttons = self.cont_group, self.cont_radios
+            hints = self.cont_var_hints
 
         if keys == [DefaultKey]:
-            hints = self.var_hints[DefaultKey]
-            for group, box, type_ in parts:
-                self._check_button(group, hints[type_], True)
-                self._set_radio_enabled(group, 99, False)
-                box.setDisabled(False)
+            self._check_button(group, hints[DefaultKey], True)
+            self._set_radio_enabled(group, 99, False)
             return
 
-        hints = {(self.var_hints.get(key, 99), key[1]) for key in keys}
-        for group, box, type_ in parts:
-            options = {hint for hint, a_type in hints if a_type is type_}
-            box.setDisabled(not options)
-            self._set_radio_enabled(group, 99, True)
-            if len(options) == 1:
-                self._check_button(group, options.pop(), True)
-            else:
-                self._uncheck_all_buttons(group)
-
-        # Disable or re-enable options that don't support sparse data
-        if self.data.is_sparse:
-            conts = {var for var, type_ in keys if not type_}
-            any_sparse = bool(
-                sp.issparse(self.data.X) and conts & set(self.data.attributes)
-                or sp.issparse(self.data.metas) and conts & set(self.data.metas)
-            )
+        self._set_radio_enabled(group, 99, True)
+        options = {hints.get(key, 99) for key in keys}
+        if len(options) == 1:
+            self._check_button(group, options.pop(), True)
         else:
-            any_sparse = False
-        for desc in ContinuousOptions.values():
-            if not desc.supports_sparse:
-                self._set_radio_enabled(
-                    self.continuous_group, desc.id_, not any_sparse)
+            self._uncheck_all_buttons(group)
+
+        if view is self.cont_view:
+            # Disable or re-enable options that don't support sparse data
+            domain = self.data.domain
+            if self.data.is_sparse:
+                skeys = set(keys)
+                any_sparse = bool(
+                    sp.issparse(self.data.X)
+                    and skeys & {var.name for var in domain.attributes}
+                    or
+                    sp.issparse(self.data.metas)
+                    and skeys & {var.name for var in domain.metas}
+                )
+            else:
+                any_sparse = False
+            for desc in ContinuousOptions.values():
+                if not desc.supports_sparse:
+                    self._set_radio_enabled(group, desc.id_, not any_sparse)
 
     def _uncheck_all_buttons(self, group: QButtonGroup):
         button = group.checkedButton()
@@ -430,50 +438,45 @@ class OWContinuize(widget.OWWidget):
         group.button(method_id).setChecked(checked)
 
     def update_hints(self, method_id: int):
-        is_discrete = QObject().sender() is self.discrete_group
-        keys = self.varkeys_for_selection()
-        if keys == [DefaultKey]:
-            self.var_hints[DefaultKey] = \
-                (self.var_hints[1], method_id) if is_discrete \
-                else (method_id, self.var_hints[0])
-            self._update_default_model()
+        if QObject().sender() is self.disc_group:
+            view, hints, methods = \
+                self.disc_view, self.disc_var_hints, DiscreteOptions
         else:
-            # Keep only discrete (continuous) indices and keys when the user
-            # changed the button for discrete (continuous) variables
-            selected_indexes = self.varview.selectionModel().selectedIndexes()
-            indexes = [index
-                       for index, (_, type_) in zip(selected_indexes, keys)
-                       if type_ is is_discrete]
-            keys = [key for key in keys if key[1] is is_discrete]
-            model = self.varview.model()
+            view, hints, methods = \
+                self.cont_view, self.cont_var_hints, ContinuousOptions
+        keys = self.varkeys_for_selection(view)
+        if keys == [DefaultKey]:
+            hints[DefaultKey] = method_id
+            self._update_default_model(view, methods[method_id].short_desc)
+        else:
+            indexes = view.selectionModel().selectedIndexes()
+            model = view.model()
             if method_id == 99:
                 for key in keys:
-                    if key in self.var_hints:
-                        del self.var_hints[key]
-                data = None
+                    if key in hints:
+                        del hints[key]
+                desc = None
             else:
-                self.var_hints.update(dict.fromkeys(keys, method_id))
-                data = method_id
+                hints.update(dict.fromkeys(keys, method_id))
+                desc = methods[method_id].short_desc
             for index in indexes:
-                model.setData(index, data, Qt.UserRole)
+                model.setData(index, desc, Qt.UserRole)
         self.commit.deferred()
 
     @Inputs.data
     @check_sql_input
     def setData(self, data):
-        model = self.varview.model()
-
         self.data = data
         self._var_cache.clear()
-        if data is None:
-            model.clear()
-            self.Outputs.data.send(None)
-            return
-
-        valid = (DiscreteVariable, ContinuousVariable)
-        attrs, metas = ([var for var in part if type(var) in valid]
-                        for part in (data.domain.attributes, data.domain.metas))
-        model[:] = attrs + [model.Separator] * bool(attrs and metas) + metas
+        domain = data.domain if data else None
+        self.disc_view.model().set_domain(domain)
+        self.cont_view.model().set_domain(domain)
+        self.disc_box.setVisible(
+            domain is None or domain.has_discrete_attributes(include_metas=True))
+        self.cont_box.setVisible(
+            domain is None or domain.has_continuous_attributes(include_metas=True))
+        self.class_box.setVisible(
+            domain is None or domain.has_discrete_class)
         self.commit.now()
 
     @gui.deferred
@@ -495,18 +498,13 @@ class OWContinuize(widget.OWWidget):
         self.Outputs.data.send(data)
 
     def _create_vars(self, part):
-        created = []
-        defaults = self.var_hints[DefaultKey]
-        for var in part:
-            key = variable_key(var)
-            hint = self.var_hints.get(key, defaults[key[1]])
-            if hint is None:
-                created.append(var)
-            elif var.is_continuous:
-                created.append(self._scaled_var(var, hint))
-            else:
-                created += self._continuized_vars(var, hint)
-        return created
+        return reduce(
+            add,
+            (self._continuized_vars(var) if var.is_discrete
+             else self._scaled_vars(var) if type(var) is ContinuousVariable
+             else [var]
+             for var in part),
+             [])
 
     def _get(self, var, stat):
         def most_frequent(col):
@@ -525,9 +523,10 @@ class OWContinuize(widget.OWWidget):
             cache[stat] = funcs[stat](self.data.get_column_view(var)[0].astype(float))
         return cache[stat]
 
-    def _scaled_var(self, var, hint):
+    def _scaled_vars(self, var):
+        hint = self.cont_var_hints.get(var.name, self.cont_var_hints[DefaultKey])
         if hint == Normalize.Leave:
-            return var
+            return [var]
 
         get = partial(self._get, var)
         if hint == Normalize.Standardize:
@@ -543,11 +542,13 @@ class OWContinuize(widget.OWWidget):
                 off, scale = (min_ + max_) / 2, 2 / span
             else:
                 off, scale = min_, 1 / span
-        return ContinuousVariable(
+        return [ContinuousVariable(
             var.name,
-            compute_value=Normalizer(var, off, scale))
+            compute_value=Normalizer(var, off, scale))]
 
-    def _continuized_vars(self, var, hint):
+    def _continuized_vars(self, var):
+        hint = self.disc_var_hints.get(var.name, self.cont_var_hints[DefaultKey])
+
         if hint == Continuize.Leave:
             return [var]
         if hint == Continuize.Remove:
@@ -571,7 +572,7 @@ class OWContinuize(widget.OWWidget):
         elif hint == Continuize.Indicators:
             base = -1
         else:
-            assert False
+            base = -1 #assert False
         return [
             ContinuousVariable(f"{var.name}={value}",
                                compute_value=Indicator(var, value=i))
