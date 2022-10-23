@@ -229,6 +229,9 @@ DefaultKey = ""
 
 
 class OWContinuize(widget.OWWidget):
+    # Many false positives for `hints`; pylint ignores type annotations
+    # pylint: disable=unsubscriptable-object,unsupported-assignment-operation
+    # pylint: disable=unsupported-membership-test, unsupported-delete-operation
     name = "Continuize"
     description = ("Transform categorical attributes into numeric and, " +
                    "optionally, scale numeric values.")
@@ -341,11 +344,9 @@ class OWContinuize(widget.OWWidget):
     def _update_radios(self, view):
         keys = self.varkeys_for_selection(view)
         if view is self.disc_view:
-            group, buttons = self.disc_group, self.disc_radios
-            hints = self.disc_var_hints
+            group, hints = self.disc_group, self.disc_var_hints
         else:
-            group, buttons = self.cont_group, self.cont_radios
-            hints = self.cont_var_hints
+            group, hints = self.cont_group, self.cont_var_hints
 
         if keys == [DefaultKey]:
             self._check_button(group, hints[DefaultKey], True)
@@ -422,6 +423,7 @@ class OWContinuize(widget.OWWidget):
             # disconnection
             for hints, type_ in ((self.cont_var_hints, ContinuousVariable),
                                  (self.disc_var_hints, DiscreteVariable)):
+                # time is not continuous, pylint: disable=unidiomatic-typecheck
                 filtered = {
                     var.name: hints[var]
                     for var in chain(domain.attributes, domain.metas)
@@ -459,6 +461,7 @@ class OWContinuize(widget.OWWidget):
         return self.data.transform(Domain(attrs, class_vars, metas))
 
     def _unsupported_sparse(self):
+        # time is not continuous, pylint: disable=unidiomatic-typecheck
         domain = self.data.domain
         disc = set()
         cont = set()
@@ -490,6 +493,7 @@ class OWContinuize(widget.OWWidget):
                 for method in methods.values() if method.id_ in problems]
 
     def _create_vars(self, part):
+        # time is not continuous, pylint: disable=unidiomatic-typecheck
         return reduce(
             add,
             (self._continuized_vars(var) if var.is_discrete
@@ -510,8 +514,7 @@ class OWContinuize(widget.OWWidget):
         name = var.name
         cache = self._var_cache.setdefault(name, {})
         if stat not in cache:
-            # TODO: use get_column
-            cache[stat] = funcs[stat](self.data.get_column_view(var)[0].astype(float))
+            cache[stat] = funcs[stat](self.data.get_column(var))
         return cache[stat]
 
     def _hint_for_var(self, var):
@@ -542,8 +545,9 @@ class OWContinuize(widget.OWWidget):
             var.name,
             compute_value=Normalizer(var, off, scale))]
 
-    def _continuized_vars(self, var):
-        hint = self._hint_for_var(var)
+    def _continuized_vars(self, var, hint=None):
+        if hint is None:
+            hint = self._hint_for_var(var)
 
         # Single variable
         if hint == Continuize.Leave:
@@ -588,7 +592,6 @@ class OWContinuize(widget.OWWidget):
     @classmethod
     def migrate_settings(cls, settings, version):
         if version < 2:
-            Normalize = cls.Normalize
             cont_treat = settings.pop("continuous_treatment", 0)
             zero_based = settings.pop("zero_based", True)
             if cont_treat == 1:
