@@ -1,7 +1,8 @@
 from functools import partial, reduce
+from itertools import chain
 from operator import add
 from types import SimpleNamespace
-from typing import NamedTuple, Optional, Callable, Union, Dict, List
+from typing import NamedTuple, Dict, List
 
 import numpy as np
 import scipy.sparse as sp
@@ -25,130 +26,89 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
-# When used as class, NamedTuple does not support inheritance, hence we use
-# it as function and "inherit" by adding elements to the list
-method_descs_base = [
-    ("id_", int),
-    ("label", str),  # Label used for radio button
-    ("short_desc", str),  # Short description for list views
-    ("tooltip", str),  # Tooltip for radio button
-    ("function", Optional[Callable[..., Union[DiscreteVariable, str]]])
-]
-
-DiscreteMethodDesc = NamedTuple(
-    "DiscreteMethodDesc",
-    method_descs_base
-)
-
-ContinuousMethodDesc = NamedTuple(
-    "ContinuousMethodDesc",
-    method_descs_base + [
-        ("supports_sparse", bool)
-    ]
-)
+class MethodDesc(NamedTuple):
+    id_: int
+    label: str  # Label used for radio button
+    short_desc: str  # Short description for list views
+    tooltip: str  # Tooltip for radio button
+    supports_sparse: bool = True
 
 
 Continuize = SimpleNamespace(
     Default=99,
     **{v.name: v.value for v in Continuizer.MultinomialTreatment})
 
-DiscreteOptions: Dict[int, DiscreteMethodDesc] = {
+DiscreteOptions: Dict[int, MethodDesc] = {
     method.id_: method
     for method in (
-        DiscreteMethodDesc(
+        MethodDesc(
             Continuize.Default, "Use default setting", "default",
-            "Treat the variable as defined in 'default setting'",
-            None),
-        DiscreteMethodDesc(
+            "Treat the variable as defined in 'default setting'"),
+        MethodDesc(
             Continuize.Leave, "Leave categorical", "leave",
-            "Leave the variable discrete",
-            None),
-        DiscreteMethodDesc(
-            Continuize.FirstAsBase,
-            "First value as base", "first as base",
-            "",
-            None),
-        DiscreteMethodDesc(
-            Continuize.FrequentAsBase,
-            "Most frequent value as base","frequent as base",
-            "",
-            None),
-        DiscreteMethodDesc(
-            Continuize.Indicators,
-            "One indicator variable per value", "indicators",
-            "",
-            None),
-        DiscreteMethodDesc(
-            Continuize.RemoveMultinomial,
-            "Remove if more than 3 values", "remove if >3",
-            "",
-            None),
-        DiscreteMethodDesc(
-            Continuize.Remove,
-            "Remove", "remove",
-            "",
-            None),
-        DiscreteMethodDesc(
-            Continuize.AsOrdinal,
-            "Treat as ordinal", "as ordinal",
-            "",
-            None),
-        DiscreteMethodDesc(
-            Continuize.AsNormalizedOrdinal,
-            "Treat as normalized ordinal", "as norm. ordinal",
-            "",
-            None),
+            "Leave the variable discrete"),
+        MethodDesc(
+            Continuize.FirstAsBase, "First value as base", "first as base",
+            "One indicator variable for each value except the first"),
+        MethodDesc(
+            Continuize.FrequentAsBase, "Most frequent as base", "frequent as base",
+            "One indicator variable for each value except the most frequent",
+            False),
+        MethodDesc(
+            Continuize.Indicators, "One-hot encoding", "one-hot",
+            "One indicator variable for each value",
+            False),
+        MethodDesc(
+            Continuize.RemoveMultinomial, "Remove if more than 3 values", "remove if >3",
+            "Remove variables with more than three values; indicator otherwise"),
+        MethodDesc(
+            Continuize.Remove, "Remove", "remove",
+            "Remove variable"),
+        MethodDesc(
+            Continuize.AsOrdinal, "Treat as ordinal", "as ordinal",
+            "Each value gets a consecutive number from 0 to number of values - 1"),
+        MethodDesc(
+            Continuize.AsNormalizedOrdinal, "Treat as normalized ordinal", "as norm. ordinal",
+            "Same as above, but scaled to [0, 1]")
     )}
 
 Normalize = SimpleNamespace(Default=99,
                             Leave=0, Standardize=1, Center=2, Scale=3,
                             Normalize11=4, Normalize01=5)
 
-ContinuousOptions: Dict[int, ContinuousMethodDesc] = {
+ContinuousOptions: Dict[int, MethodDesc] = {
     method.id_: method
     for method in (
-        ContinuousMethodDesc(
-            Normalize.Default,
-            "Use default setting", "default",
-            "Treat the variable as defined in 'default setting'",
-            None, True),
-        ContinuousMethodDesc(
-            Normalize.Leave,
-            "Leave as it is", "leave",
-            "",
-            None, True),
-        ContinuousMethodDesc(
-            Normalize.Standardize,
-            "Standardize to μ=0, σ²=1", "standardize",
-            "",
-            None, False),
-        ContinuousMethodDesc(
-            Normalize.Center,
-            "Center to μ=0", "center",
-            "",
-            None, False),
-        ContinuousMethodDesc(
-            Normalize.Scale,
-            "Scale to σ²=1", "scale",
-            "",
-            None, True),
-        ContinuousMethodDesc(
-            Normalize.Normalize11,
-            "Normalize to interval [-1, 1]", "to [-1, 1]",
-            "",
-            None, False),
-        ContinuousMethodDesc(
-            Normalize.Normalize01,
-            "Normalize to interval [0, 1]", "to [0, 1]",
-            "",
-            None, False),
+        MethodDesc(
+            Normalize.Default, "Use default setting", "default",
+            "Treat the variable as defined in 'default setting'"),
+        MethodDesc(
+            Normalize.Leave, "Leave as it is", "leave",
+            "Keep the variable as it is"),
+        MethodDesc(
+            Normalize.Standardize, "Standardize to μ=0, σ²=1", "standardize",
+            "Subtract the mean and divide by standard deviation",
+            False),
+        MethodDesc(
+            Normalize.Center, "Center to μ=0", "center",
+            "Subtract the mean",
+            False),
+        MethodDesc(
+            Normalize.Scale, "Scale to σ²=1", "scale",
+            "Divide by standard deviation"),
+        MethodDesc(
+            Normalize.Normalize11, "Normalize to interval [-1, 1]", "to [-1, 1]",
+            "Linear transformation into interval [-1, 1]",
+            False),
+        MethodDesc(
+            Normalize.Normalize01, "Normalize to interval [0, 1]", "to [0, 1]",
+            "Linear transformation into interval [0, 1]",
+            False),
     )}
 
 
 class ContDomainModel(DomainModel):
-    """
-    Domain model that adds description of continuization methods
-    """
+    """Domain model that adds description of chosen methods"""
     def __init__(self, valid_type):
         super().__init__(
             (DomainModel.ATTRIBUTES, DomainModel.Separator, DomainModel.METAS),
@@ -164,9 +124,7 @@ class ContDomainModel(DomainModel):
 
 
 class DefaultContModel(QAbstractListModel):
-    """
-    A model used for showing "Default settings" above the list view with var
-    """
+    """A model used for showing "Default settings" above the list view"""
     icon = None
 
     def __init__(self, *args, **kwargs):
@@ -174,7 +132,7 @@ class DefaultContModel(QAbstractListModel):
         if DefaultContModel.icon is None:
             DefaultContModel.icon = gui.createAttributePixmap(
                 "★", QColor(0, 0, 0, 0), Qt.black)
-        self.hint = ""
+        self.method = ""
 
     @staticmethod
     def rowCount(parent):
@@ -186,17 +144,16 @@ class DefaultContModel(QAbstractListModel):
 
     def data(self, _, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return f"Default setting: {self.hint}"
+            return f"Default: {self.method}"
         elif role == Qt.DecorationRole:
             return self.icon
         elif role == Qt.ToolTipRole:
             return "Default for variables without specific settings"
         return None
 
-    def setData(self, index, value, role=Qt.DisplayRole):
-        if role == Qt.UserRole:
-            self.hint = value
-            self.dataChanged.emit(index, index)
+    def setMethod(self, method):
+        self.method = method
+        self.dataChanged.emit(self.index(0, 0), self.index(0, 0))
 
 
 class ListViewSearch(listview.ListViewSearch):
@@ -230,6 +187,9 @@ class ListViewSearch(listview.ListViewSearch):
         self.default_view.selectionModel().select(
             self.default_view.model().index(0),
             QItemSelectionModel.Select)
+
+    def set_default_method(self, method):
+        self.default_view.model().setMethod(method)
 
     # pylint: disable=unused-private-member
     def __layout(self):
@@ -271,7 +231,7 @@ DefaultKey = ""
 class OWContinuize(widget.OWWidget):
     name = "Continuize"
     description = ("Transform categorical attributes into numeric and, " +
-                   "optionally, normalize numeric values.")
+                   "optionally, scale numeric values.")
     icon = "icons/Continuize.svg"
     category = "Transform"
     keywords = "continuize, encode, dummy, numeric, one-hot, binary, treatment, contrast"
@@ -283,8 +243,11 @@ class OWContinuize(widget.OWWidget):
     class Outputs:
         data = Output("Data", Table)
 
+    class Error(widget.OWWidget.Error):
+        unsupported_sparse = \
+            widget.Msg("Some chosen methods do support sparse data: {}")
+
     want_control_area = False
-    want_main_area = True
 
     settings_version = 3
     disc_var_hints: Dict[str, int] = Setting(
@@ -306,14 +269,14 @@ class OWContinuize(widget.OWWidget):
                 uniformItemSizes=True)
             view.setModel(ContDomainModel(vartype))
             view.selectionModel().selectionChanged.connect(
-                lambda: self._var_selection_changed(view))
+                lambda: self._on_var_selection_changed(view))
             view.default_view.selectionModel().selectionChanged.connect(
-                lambda selected: self._default_selected(view, selected))
+                lambda selected: self._on_default_selected(view, selected))
             hbox.layout().addWidget(view)
 
             bbox = gui.vBox(hbox)
             bgroup = QButtonGroup(self)
-            bgroup.idClicked.connect(self.update_hints)
+            bgroup.idClicked.connect(self._on_radio_clicked)
             for desc in methods.values():
                 button = QRadioButton(desc.label)
                 button.setToolTip(desc.tooltip)
@@ -325,18 +288,16 @@ class OWContinuize(widget.OWWidget):
         box = gui.vBox(self.mainArea, True, spacing=8)
         self.disc_box, self.disc_view, self.disc_radios, self.disc_group = \
             create("Categorical Variables", DiscreteVariable, DiscreteOptions)
-        self._update_default_model(
-            self.disc_view,
+        self.disc_view.set_default_method(
             DiscreteOptions[self.disc_var_hints[DefaultKey]].short_desc)
         self.disc_view.select_default()
 
         self.cont_box, self.cont_view, self.cont_radios, self.cont_group = \
             create("Numeric Variables", ContinuousVariable, ContinuousOptions)
-        self._update_default_model(
-            self.cont_view,
+        self.cont_view.set_default_method(
             ContinuousOptions[self.cont_var_hints[DefaultKey]].short_desc)
         self.cont_view.select_default()
-        
+
         boxes = (self.disc_radios, self.cont_radios)
         width = max(box.sizeHint().width() for box in boxes)
         for box in boxes:
@@ -345,30 +306,26 @@ class OWContinuize(widget.OWWidget):
         box = self.class_box = gui.hBox(self.mainArea)
         gui.checkBox(
             box, self, "continuize_class",
-            "Change class to numeric", box="Target Variable")
+            "Change class to numeric", box="Target Variable",
+            tooltip="Class values are numbered from 0 to number of classes - 1")
 
         box = gui.hBox(self.mainArea)
         gui.rubber(box)
         gui.auto_apply(box, self, "autosend")
 
-    def _update_default_model(self, view, desc):
-        """Update data in the model showing default settings"""
-        model = view.default_view.model()
-        model.setData(model.index(0), desc, Qt.UserRole)
-
-    def _var_selection_changed(self, view):
+    def _on_var_selection_changed(self, view):
         if not view.selectionModel().selectedIndexes():
-            # Prevent infinite recursion (with _default_selected)
+            # Prevent infinite recursion (with _on_default_selected)
             return
         view.default_view.selectionModel().clearSelection()
-        self._update_interface(view)
+        self._update_radios(view)
 
-    def _default_selected(self, view, selected):
+    def _on_default_selected(self, view, selected):
         if not selected:
             # Prevent infinite recursion (with _var_selection_selected)
             return
         view.selectionModel().clearSelection()
-        self._update_interface(view)
+        self._update_radios(view)
 
     def varkeys_for_selection(self, view) -> List[str]:
         """
@@ -381,7 +338,7 @@ class OWContinuize(widget.OWWidget):
                    for index in view.selectionModel().selectedRows()]
         return varkeys or [DefaultKey]  # default settings are selected
 
-    def _update_interface(self, view):
+    def _update_radios(self, view):
         keys = self.varkeys_for_selection(view)
         if view is self.disc_view:
             group, buttons = self.disc_group, self.disc_radios
@@ -402,25 +359,8 @@ class OWContinuize(widget.OWWidget):
         else:
             self._uncheck_all_buttons(group)
 
-        if view is self.cont_view:
-            # Disable or re-enable options that don't support sparse data
-            domain = self.data.domain
-            if self.data.is_sparse:
-                skeys = set(keys)
-                any_sparse = bool(
-                    sp.issparse(self.data.X)
-                    and skeys & {var.name for var in domain.attributes}
-                    or
-                    sp.issparse(self.data.metas)
-                    and skeys & {var.name for var in domain.metas}
-                )
-            else:
-                any_sparse = False
-            for desc in ContinuousOptions.values():
-                if not desc.supports_sparse:
-                    self._set_radio_enabled(group, desc.id_, not any_sparse)
-
-    def _uncheck_all_buttons(self, group: QButtonGroup):
+    @staticmethod
+    def _uncheck_all_buttons(group: QButtonGroup):
         button = group.checkedButton()
         if button is not None:
             group.setExclusive(False)
@@ -437,7 +377,7 @@ class OWContinuize(widget.OWWidget):
             self, group: QButtonGroup, method_id: int, checked: bool):
         group.button(method_id).setChecked(checked)
 
-    def update_hints(self, method_id: int):
+    def _on_radio_clicked(self, method_id: int):
         if QObject().sender() is self.disc_group:
             view, hints, methods = \
                 self.disc_view, self.disc_var_hints, DiscreteOptions
@@ -447,7 +387,7 @@ class OWContinuize(widget.OWWidget):
         keys = self.varkeys_for_selection(view)
         if keys == [DefaultKey]:
             hints[DefaultKey] = method_id
-            self._update_default_model(view, methods[method_id].short_desc)
+            view.set_default_method(methods[method_id].short_desc)
         else:
             indexes = view.selectionModel().selectedIndexes()
             model = view.model()
@@ -477,13 +417,35 @@ class OWContinuize(widget.OWWidget):
             domain is None or domain.has_continuous_attributes(include_metas=True))
         self.class_box.setVisible(
             domain is None or domain.has_discrete_class)
+        if data is not None:
+            # Clean up hints, but only when receiving new data, not on
+            # disconnection
+            for hints, type_ in ((self.cont_var_hints, ContinuousVariable),
+                                 (self.disc_var_hints, DiscreteVariable)):
+                filtered = {
+                    var.name: hints[var]
+                    for var in chain(domain.attributes, domain.metas)
+                    if type(var) is type_ and var.name in hints
+                }
+                filtered[DefaultKey] = hints[DefaultKey]
+                hints.clear()
+                hints.update(filtered)
         self.commit.now()
 
     @gui.deferred
     def commit(self):
+        self.Outputs.data.send(self._prepare_output())
+
+    def _prepare_output(self):
+        self.Error.unsupported_sparse.clear()
         if not self.data:
-            self.Outputs.data.send(None)
-            return
+            return None
+        if unsupp_sparse := self._unsupported_sparse():
+            if len(unsupp_sparse) == 1:
+                self.Error.unsupported_sparse(unsupp_sparse[0])
+            else:
+                self.Error.unsupported_sparse("\n" + ", ".join(unsupp_sparse))
+            return None
 
         domain = self.data.domain
         attrs = self._create_vars(domain.attributes)
@@ -494,8 +456,38 @@ class OWContinuize(widget.OWWidget):
                 if var.is_discrete else var
                 for var in class_vars]
         metas = self._create_vars(domain.metas)
-        data = self.data.transform(Domain(attrs, class_vars, metas))
-        self.Outputs.data.send(data)
+        return self.data.transform(Domain(attrs, class_vars, metas))
+
+    def _unsupported_sparse(self):
+        domain = self.data.domain
+        disc = set()
+        cont = set()
+        if sp.issparse(self.data.X):
+            disc |= {self._hint_for_var(var)
+                     for var in domain.attributes
+                     if var.is_discrete}
+            cont |= {self._hint_for_var(var)
+                     for var in domain.attributes
+                     if type(var) is ContinuousVariable}
+        if sp.issparse(self.data.metas):
+            disc |= {self._hint_for_var(var)
+                     for var in domain.meta
+                     if var.is_discrete}
+            cont |= {self._hint_for_var(var)
+                     for var in domain.metas
+                     if type(var) is ContinuousVariable}
+        disc &= {method.id_
+                 for method in DiscreteOptions.values()
+                 if not method.supports_sparse}
+        cont &= {method.id_
+                 for method in ContinuousOptions.values()
+                 if not method.supports_sparse}
+
+        # Retrieve them from DiscreteOptions/ContinuousOptions to keep the order
+        return [method.label
+                for methods, problems in ((DiscreteOptions, disc),
+                                          (ContinuousOptions, cont))
+                for method in methods.values() if method.id_ in problems]
 
     def _create_vars(self, part):
         return reduce(
@@ -518,13 +510,16 @@ class OWContinuize(widget.OWWidget):
         name = var.name
         cache = self._var_cache.setdefault(name, {})
         if stat not in cache:
-            # TODO: Sparse
-            # TODO: get_column
+            # TODO: use get_column
             cache[stat] = funcs[stat](self.data.get_column_view(var)[0].astype(float))
         return cache[stat]
 
+    def _hint_for_var(self, var):
+        hints = self.disc_var_hints if var.is_discrete else self.cont_var_hints
+        return hints.get(var.name, hints[DefaultKey])
+
     def _scaled_vars(self, var):
-        hint = self.cont_var_hints.get(var.name, self.cont_var_hints[DefaultKey])
+        hint = self._hint_for_var(var)
         if hint == Normalize.Leave:
             return [var]
 
@@ -542,37 +537,43 @@ class OWContinuize(widget.OWWidget):
                 off, scale = (min_ + max_) / 2, 2 / span
             else:
                 off, scale = min_, 1 / span
+
         return [ContinuousVariable(
             var.name,
             compute_value=Normalizer(var, off, scale))]
 
     def _continuized_vars(self, var):
-        hint = self.disc_var_hints.get(var.name, self.cont_var_hints[DefaultKey])
+        hint = self._hint_for_var(var)
 
+        # Single variable
         if hint == Continuize.Leave:
             return [var]
         if hint == Continuize.Remove:
             return []
+        if hint == Continuize.RemoveMultinomial and len(var.values) <= 2 or \
+                hint == Continuize.AsOrdinal:
+            return [ContinuousVariable(var.name,
+                                       compute_value=Identity(var))]
         if hint == Continuize.RemoveMultinomial:
-            return [var] if len(var.values) <= 2 else []
-        if hint == Continuize.AsOrdinal or len(var.values) < 2:
-            return [ContinuousVariable(
-                var.name,
-                compute_value=Identity(var))]
+            assert len(var.values) > 2
+            return []
+        if hint == Continuize.AsOrdinal:
+            return [ContinuousVariable(var.name,
+                                       compute_value=Identity(var))]
         if hint == Continuize.AsNormalizedOrdinal:
             scale = 1 / (len(var.values) - 1 or 1)
-            return [
-                ContinuousVariable(var.name,
-                                   compute_value=Normalizer(var, 0, scale))]
+            return [ContinuousVariable(var.name,
+                                       compute_value=Normalizer(var, 0, scale))]
 
+        # Multiple dummy variables
         if hint == Continuize.FirstAsBase:
             base = 0
         elif hint == Continuize.FrequentAsBase:
             base = self._get(var, "major")
         elif hint == Continuize.Indicators:
-            base = -1
+            base = None
         else:
-            base = -1 #assert False
+            assert False
         return [
             ContinuousVariable(f"{var.name}={value}",
                                compute_value=Indicator(var, value=i))
