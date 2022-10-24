@@ -208,7 +208,7 @@ class Columns:
             setattr(self, v.name.replace(" ", "_"), v)
 
 
-def compute_column(func, *args, **kwargs):
+def _compute_column(func, *args, **kwargs):
     col = func(*args, **kwargs)
     if isinstance(col, np.ndarray) and col.ndim != 1:
         err = f"{type(col)} must return a column, not {col.ndim}d array"
@@ -311,9 +311,9 @@ class _ArrayConversion:
                         shared = col.compute_shared(sourceri)
                         _idcache_save(shared_cache, (col.compute_shared, source), shared)
                     col_array = match_density(
-                        compute_column(col, sourceri, shared_data=shared))
+                        _compute_column(col, sourceri, shared_data=shared))
                 else:
-                    col_array = match_density(compute_column(col, sourceri))
+                    col_array = match_density(_compute_column(col, sourceri))
             elif col < 0:
                 col_array = match_density(
                     source.metas[row_indices, -1 - col]
@@ -1631,7 +1631,7 @@ class Table(Sequence, Storage):
         if isinstance(index, Variable) and index not in self.domain:
             if index.compute_value is None:
                 raise ValueError(f"variable {index.name} is not in domain")
-            return compute_column(index.compute_value, self)
+            return _compute_column(index.compute_value, self)
 
         mapper = None
         if not isinstance(index, Integral):
