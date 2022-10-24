@@ -1296,8 +1296,8 @@ class OWNomogram(OWWidget):
 
         orig_clv = original.class_var
         orig_data = classifier.original_data
-        values = (orig_clv.values[int(i)] for i in
-                  np.unique(orig_data.get_column_view(orig_clv)[0]))
+        values = (orig_clv.values[int(i)]
+                  for i in np.unique(orig_data.get_column(orig_clv)))
         class_var = DiscreteVariable(original.class_var.name, values)
         return Domain(attrs, class_var, original.metas)
 

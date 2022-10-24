@@ -352,7 +352,7 @@ class OWBoxPlot(widget.OWWidget):
                 return 3
             if attr.is_continuous:
                 # One-way ANOVA
-                col = data.get_column_view(attr)[0].astype(float)
+                col = data.get_column(attr)
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group) > 1]
@@ -370,8 +370,8 @@ class OWBoxPlot(widget.OWWidget):
         group_var = self.group_var
         if self.order_by_importance and group_var is not None:
             n_groups = len(group_var.values)
-            group_col = data.get_column_view(group_var)[0] if \
-                domain.has_continuous_attributes(
+            group_col = data.get_column(group_var) \
+                if domain.has_continuous_attributes(
                     include_class=True, include_metas=True) else None
             self._sort_list(self.attrs, self.attr_list, compute_score)
         else:
@@ -403,7 +403,7 @@ class OWBoxPlot(widget.OWWidget):
         attr = self.attribute
         if self.order_grouping_by_importance:
             if attr.is_continuous:
-                attr_col = data.get_column_view(attr)[0].astype(float)
+                attr_col = data.get_column(attr)
             self._sort_list(self.group_vars, self.group_list, compute_stat)
         else:
             self._sort_list(self.group_vars, self.group_list, None)
@@ -493,8 +493,8 @@ class OWBoxPlot(widget.OWWidget):
         if isinstance(attr, np.ndarray):
             attr_col = attr
         else:
-            attr_col = data.get_column_view(group)[0].astype(float)
-        group_col = data.get_column_view(group)[0].astype(float)
+            attr_col = data.get_column(group)
+        group_col = data.get_column(group)
         groups = [attr_col[group_col == i] for i in range(len(group.values))]
         groups = [col[~np.isnan(col)] for col in groups]
         return groups
@@ -516,7 +516,7 @@ class OWBoxPlot(widget.OWWidget):
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
                 stats, label_texts = [], []
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = dataset.get_column(attr)
                 for group, value in \
                         zip(self._group_cols(dataset, self.group_var, attr_col),
                             group_var_labels):
@@ -535,7 +535,7 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.conts = None
             if self.attribute.is_continuous:
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = dataset.get_column(attr)
                 self.stats = [BoxData(attr_col)]
             else:
                 self.dist = distribution.get_distribution(dataset, attr)

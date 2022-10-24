@@ -446,13 +446,13 @@ class TestOWKMeans(WidgetTest):
                 100):
             self.send_signal(self.widget.Inputs.data, table)
             outtable = self.get_output(widget.Outputs.annotated_data)
-            outtable = outtable.get_column_view("Silhouette")[0]
+            outtable = outtable.get_column("Silhouette")
         self.assertTrue(np.all(np.isnan(outtable)))
         self.assertTrue(widget.Warning.no_silhouettes.is_shown())
 
         self.send_signal(self.widget.Inputs.data, table[:100])
         outtable = self.get_output(widget.Outputs.annotated_data)
-        outtable = outtable.get_column_view("Silhouette")[0]
+        outtable = outtable.get_column("Silhouette")
         np.testing.assert_array_less(outtable, 1.01)
         np.testing.assert_array_less(-0.01, outtable)
         self.assertFalse(widget.Warning.no_silhouettes.is_shown())

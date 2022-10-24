@@ -172,8 +172,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data_ = data.transform(Domain(data.domain.attributes,
                                       [],
                                       construct_variables(desc, data)[0]))
-        np.testing.assert_equal(
-            data.get_column_view(0)[0], data_.get_column_view(0)[0]
+        np.testing.assert_equal(data.get_column(0), data_.get_column(0)
         )
 
 

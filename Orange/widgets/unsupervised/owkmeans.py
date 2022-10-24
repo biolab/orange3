@@ -545,8 +545,8 @@ class OWKMeans(widget.OWWidget):
         new_domain = add_columns(domain, metas=[cluster_var, silhouette_var])
         new_table = self.data.transform(new_domain)
         with new_table.unlocked(new_table.metas):
-            new_table.get_column_view(cluster_var)[0][:] = clust_ids
-            new_table.get_column_view(silhouette_var)[0][:] = scores
+            new_table.set_column(cluster_var, clust_ids)
+            new_table.set_column(silhouette_var, scores)
 
         domain_attributes = set(domain.attributes)
         centroid_attributes = [

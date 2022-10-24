@@ -348,7 +348,7 @@ class OWSilhouettePlot(widget.OWWidget):
         if self._matrix is None:
             return
 
-        labels, _ = self.data.get_column_view(self.cluster_var)
+        labels = self.data.get_column(self.cluster_var)
         labels = np.asarray(labels, dtype=float)
         cluster_mask = np.isnan(labels)
         dist_mask = np.isnan(self._matrix).all(axis=0)
@@ -435,7 +435,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
         if self._silplot is not None:
             if annot_var is not None:
-                column, _ = self.data.get_column_view(annot_var)
+                column = self.data.get_column(annot_var)
                 if self._mask is not None:
                     assert column.shape == self._mask.shape
                     # pylint: disable=invalid-unary-operand-type

@@ -390,7 +390,7 @@ class TestOWSelectRows(WidgetTest):
 
         annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(len(annotated), 150)
-        annotations = annotated.get_column_view(ANNOTATED_DATA_FEATURE_NAME)[0]
+        annotations = annotated.get_column(ANNOTATED_DATA_FEATURE_NAME)
         np.testing.assert_equal(annotations[:50], True)
         np.testing.assert_equal(annotations[50:], False)
 

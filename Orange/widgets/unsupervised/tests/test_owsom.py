@@ -449,20 +449,20 @@ class TestOWSOM(WidgetTest):
         widget.attr_color = domain["rest ECG"]
         np.testing.assert_equal(
             widget._get_color_column(),
-            widget.data.get_column_view("rest ECG")[0].astype(int))
+            widget.data.get_column("rest ECG").astype(int))
 
         # discrete meta
         widget.attr_color = domain["gender"]
         np.testing.assert_equal(
             widget._get_color_column(),
-            widget.data.get_column_view("gender")[0].astype(int))
+            widget.data.get_column("gender").astype(int))
 
 
         # numeric attribute
         widget.thresholds = np.array([120, 150])
         widget.attr_color = domain["max HR"]
         for c, d in zip(widget._get_color_column(),
-                        widget.data.get_column_view("max HR")[0]):
+                        widget.data.get_column("max HR")):
             if d < 120:
                 self.assertEqual(c, 0)
             if 120 <= d < 150:
@@ -474,7 +474,7 @@ class TestOWSOM(WidgetTest):
         widget.thresholds = np.array([50, 60])
         widget.attr_color = domain["age"]
         for c, d in zip(widget._get_color_column(),
-                        widget.data.get_column_view("age")[0]):
+                        widget.data.get_column("age")):
             if d < 50:
                 self.assertEqual(c, 0)
             if 50 <= d < 60:
@@ -485,16 +485,15 @@ class TestOWSOM(WidgetTest):
         # discrete meta with missing values
         widget.attr_color = domain["gender"]
         with widget.data.unlocked():
-            col = widget.data.get_column_view("gender")[0]
-            col[:5] = np.nan
-        col = col.copy()
+            col = widget.data.get_column("gender", copy=True)
+            widget.data.metas[:5, 1] = np.nan  # gender
         col[:5] = 2
         np.testing.assert_equal(widget._get_color_column(), col)
 
     @_patch_recompute_som
     def test_colored_circles_with_missing_values(self):
         with self.iris.unlocked():
-            self.iris.get_column_view("iris")[0][:5] = np.nan
+            self.iris.Y[:6] = np.nan
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertTrue(self.widget.Warning.missing_colors.is_shown())
 
@@ -558,7 +557,7 @@ class TestOWSOM(WidgetTest):
         out = self.get_output(widget.Outputs.annotated_data)
         self.assertEqual(len(out), 150)
         self.assertTrue(
-            np.all(out.get_column_view(ANNOTATED_DATA_FEATURE_NAME)[0] == 0))
+            np.all(out.get_column(ANNOTATED_DATA_FEATURE_NAME) == 0))
 
         m = np.zeros((widget.size_x, widget.size_y), dtype=bool)
         m[0, 0] = True
@@ -568,7 +567,7 @@ class TestOWSOM(WidgetTest):
 
         out = self.get_output(widget.Outputs.annotated_data)
         np.testing.assert_equal(
-            out.get_column_view(ANNOTATED_DATA_FEATURE_NAME)[0],
+            out.get_column(ANNOTATED_DATA_FEATURE_NAME),
             [1] * 30 + [0] * 120)
 
         m[0, 0] = False
@@ -579,7 +578,7 @@ class TestOWSOM(WidgetTest):
 
         out = self.get_output(widget.Outputs.annotated_data)
         np.testing.assert_equal(
-            out.get_column_view(ANNOTATED_DATA_FEATURE_NAME)[0],
+            out.get_column(ANNOTATED_DATA_FEATURE_NAME),
             [0] * 30 + [1] * 20 + [2] * 100)
 
         self.send_signal(self.widget.Inputs.data, None)

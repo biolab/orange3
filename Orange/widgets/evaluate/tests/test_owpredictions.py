@@ -58,18 +58,18 @@ class TestOWPredictions(WidgetTest):
         data = self.iris[::10].copy()
         with data.unlocked():
             data.Y[1] = np.nan
-        yvec, _ = data.get_column_view(data.domain.class_var)
+        yvec = data.get_column(data.domain.class_var)
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.predictors, ConstantLearner()(data), 1)
         pred = self.get_output(self.widget.Outputs.predictions)
         self.assertIsInstance(pred, Table)
         np.testing.assert_array_equal(
-            yvec, pred.get_column_view(data.domain.class_var)[0])
+            yvec, pred.get_column(data.domain.class_var))
 
         evres = self.get_output(self.widget.Outputs.evaluation_results)
         self.assertIsInstance(evres, Results)
         self.assertIsInstance(evres.data, Table)
-        ev_yvec, _ = evres.data.get_column_view(data.domain.class_var)
+        ev_yvec = evres.data.get_column(data.domain.class_var)
 
         self.assertTrue(np.all(~np.isnan(ev_yvec)))
         self.assertTrue(np.all(~np.isnan(evres.actual)))
@@ -145,7 +145,7 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, majority_titanic, 1)
         self.send_signal(self.widget.Inputs.data, no_class)
         out = self.get_output(self.widget.Outputs.predictions)
-        np.testing.assert_allclose(out.get_column_view("constant")[0], 0)
+        np.testing.assert_allclose(out.get_column("constant"), 0)
 
         predmodel = self.widget.predictionsview.model()
         self.assertTrue(np.isnan(

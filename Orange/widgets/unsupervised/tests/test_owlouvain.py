@@ -55,7 +55,7 @@ class TestOWLouvain(WidgetTest):
         self.commit_and_wait()
         output = self.get_output(self.widget.Outputs.annotated_data)
 
-        clustering = output.get_column_view('Cluster')[0].astype(int)
+        clustering = output.get_column('Cluster').astype(int)
         counts = np.bincount(clustering)
         np.testing.assert_equal(counts, sorted(counts, reverse=True))
 
@@ -65,7 +65,7 @@ class TestOWLouvain(WidgetTest):
         meta_var = ContinuousVariable(name='meta_var')
         table = Table.from_domain(domain=Domain([], metas=[meta_var]), n_rows=5)
         with table.unlocked():
-            table.get_column_view(meta_var)[0][:] = meta
+            table.set_column(meta_var, meta)
 
         self.send_signal(self.widget.Inputs.data, table)
         self.commit_and_wait()

@@ -177,7 +177,7 @@ class EqualWidth(Discretization):
                 stats = BasicStats(data, attribute)
                 points = self._split_eq_width(stats.min, stats.max)
             else:
-                values, _ = data.get_column_view(attribute)
+                values = data.get_column(attribute)
                 if values.size:
                     mn, mx = ut.nanmin(values), ut.nanmax(values)
                     points = self._split_eq_width(mn, mx)
@@ -204,7 +204,7 @@ class FixedWidth(Discretization):
         self.digits = digits
 
     def __call__(self, data: Table, attribute):
-        values, _ = data.get_column_view(attribute)
+        values = data.get_column(attribute)
         points = []
         if values.size:
             mn, mx = ut.nanmin(values), ut.nanmax(values)
@@ -229,7 +229,7 @@ class FixedTimeWidth(Discretization):
     def __call__(self, data: Table, attribute):
         fmt = ["%Y", "%y %b", "%y %b %d", "%y %b %d %H:%M", "%y %b %d %H:%M",
                 "%H:%M:%S"][self.unit]
-        values, _ = data.get_column_view(attribute)
+        values = data.get_column(attribute)
         times = []
         if values.size:
             mn, mx = ut.nanmin(values), ut.nanmax(values)
@@ -295,7 +295,7 @@ class Binning(Discretization):
 
     def __call__(self, data: Table, attribute):
         attribute = data.domain[attribute]
-        values, _ = data.get_column_view(attribute)
+        values = data.get_column(attribute)
         values = values.astype(float)
         if not values.size:
             return self._create_binned_var(None, attribute)

@@ -410,7 +410,7 @@ class VariableItemModel(QStandardItemModel):
                     [(TableModel.Meta, m) for m in domain.metas]
         for place, variable in variables:
             if variable.is_primitive():
-                values = data.get_column_view(variable)[0].astype(float)
+                values = data.get_column(variable)
                 if all(np.isnan(values)):
                     self.dataHasNanColumn.emit()
                     continue
@@ -599,9 +599,7 @@ class OWCreateInstance(OWWidget):
             if fun == "input":
                 if variable not in self.reference.domain:
                     continue
-                values = self.reference.get_column_view(variable)[0]
-                if variable.is_primitive():
-                    values = values.astype(float)
+                values = self.reference.get_column(variable)
             else:
                 values = self.model.data(index, ValuesRole)
 
@@ -673,17 +671,21 @@ class OWCreateInstance(OWWidget):
         source_label = "__source_widget"
 
         data = Table.concatenate([self.data, instance], axis=0)
-        for var in self.data.domain.variables + self.data.domain.metas:
-            if var.attributes.get(source_label) == OWCreateInstance:
-                with data.unlocked():
-                    data.get_column_view(var)[0][-1] = 1
-                return data
+        domain = self.data.domain
+        with data.unlocked():
+            for attrs, part in ((domain.attributes, data.X),
+                            (domain.class_vars, data.Y.reshape(len(data), -1)),
+                            (domain.metas, data.metas)):
+                for idx, var in enumerate(attrs):
+                    if var.attributes.get(source_label) == OWCreateInstance:
+                            part[-1, idx] = 1
+                            return data
 
         name = get_unique_names(self.data.domain, "Source ID")
         var = DiscreteVariable(name, values=(self.data.name, instance.name))
         var.attributes[source_label] = OWCreateInstance
-        domain = Domain(data.domain.attributes, data.domain.class_vars,
-                        data.domain.metas + (var,))
+        domain = Domain(domain.attributes, domain.class_vars,
+                        domain.metas + (var,))
         data = data.transform(domain)
         with data.unlocked(data.metas):
             data.metas[: len(self.data), -1] = 0

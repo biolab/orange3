@@ -43,7 +43,7 @@ def run(data: Table, learner: Learner, state: TaskState) -> Results:
     model = learner(data, wrap_callback(callback, end=0.6))
     pred = model(data, wrap_callback(callback, start=0.6, end=0.99))
 
-    col = pred.get_column_view(model.outlier_var)[0]
+    col = pred.get_column(model.outlier_var)
     inliers_ind = np.where(col == 1)[0]
     outliers_ind = np.where(col == 0)[0]
 

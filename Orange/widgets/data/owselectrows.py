@@ -500,7 +500,7 @@ class OWSelectRows(widget.OWWidget):
                     invalidate_datetime()
 
                 datetime_format = (var.have_date, var.have_time)
-                column = self.data.get_column_view(var_idx)[0]
+                column = self.data.get_column(var_idx)
                 w = DateTimeWidget(self, column, datetime_format)
                 w.set_datetime(lc[0])
                 box.controls = [w]

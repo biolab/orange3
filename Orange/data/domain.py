@@ -69,7 +69,7 @@ class DomainConversion:
                 sourceindex = source.index(sourcevar)
                 if var.is_discrete and var is not sourcevar:
                     mapping = var.get_mapper_from(sourcevar)
-                    return lambda table: mapping(table.get_column_view(sourceindex)[0])
+                    return lambda table: mapping(table.get_column(sourceindex))
                 return source.index(var)
             return var.compute_value  # , which may also be None
 

@@ -496,7 +496,7 @@ class OWBarPlot(OWWidget):
         if self.data:
             indices = np.arange(len(self.data))
             if self.group_var:
-                group_by = self.data.get_column_view(self.group_var)[0]
+                group_by = self.data.get_column(self.group_var)
                 indices = np.argsort(group_by, kind="mergesort")
         return indices
 
@@ -564,7 +564,7 @@ class OWBarPlot(OWWidget):
     def get_values(self) -> Optional[np.ndarray]:
         if not self.data or not self.selected_var:
             return None
-        return self.grouped_data.get_column_view(self.selected_var)[0]
+        return self.grouped_data.get_column(self.selected_var)
 
     def get_labels(self) -> Optional[Union[List, np.ndarray]]:
         if not self.data:
@@ -608,7 +608,7 @@ class OWBarPlot(OWWidget):
             return [create_color(np.nan, id_) for id_ in self.grouped_data.ids]
         else:
             assert self.color_var.is_discrete
-            col = self.grouped_data.get_column_view(self.color_var)[0]
+            col = self.grouped_data.get_column(self.color_var)
             return [create_color(i, id_) for id_, i in
                     zip(self.grouped_data.ids, col)]
 
