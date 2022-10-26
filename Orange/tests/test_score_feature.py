@@ -168,3 +168,25 @@ class FeatureScoringTest(unittest.TestCase):
         data = PCA(n_components=2)(iris)(iris)
         scores = learner.score_data(data)
         np.testing.assert_almost_equal(scores, [[0.7760495, 0.2239505]])
+
+    def test_learner_transform_without_variable(self):
+        data = self.housing
+
+        def preprocessor_random_column(data):
+            # a compute_value without .variable
+            def random_column(d):
+                return np.random.RandomState(42).rand(len(d))
+            nat = ContinuousVariable("nat", compute_value=random_column)
+            ndom = Domain(data.domain.attributes + (nat,), data.domain.class_vars)
+            return data.transform(ndom)
+
+        learner = RandomForestLearner(random_state=42,
+                                      preprocessors=[])
+        scores1 = learner.score_data(preprocessor_random_column(data))
+
+        learner = RandomForestLearner(random_state=42,
+                                      preprocessors=[preprocessor_random_column])
+        # the following line caused an infinite loop due to a bug fix in this commit
+        scores2 = learner.score_data(data)
+
+        np.testing.assert_equal(scores1[0][:-1], scores2[0])
