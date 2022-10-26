@@ -1,11 +1,58 @@
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Domain, ContinuousVariable
+from Orange.data.util import SubarrayComputeValue
 from Orange.statistics import basic_stats
 from Orange.util import Reprable
 from .preprocess import Normalize
 from .transformation import Normalizer as Norm
 __all__ = ["Normalizer"]
+
+
+class SubarrayNorms:
+
+    def __init__(self):
+        self.source_vars = []
+        self.offsets = []
+        self.factors = []
+
+    def __call__(self, data, cols):
+        X = data.transform(Domain(self.source_vars[cols])).X
+        offsets = self.offsets[cols]
+        factors = self.factors[cols]
+
+        if sp.issparse(X):
+            if np.any(offsets != 0):
+                raise ValueError('Normalization does not work for sparse data.')
+            return X.multiply(factors.reshape(1, -1))  # the "-" operation return dense
+        else:
+            return (X-offsets.reshape(1, -1)) * (factors.reshape(1, -1))
+
+
+def compress_norm_to_subarray(domain):
+    new_atts = []
+
+    st = SubarrayNorms()
+
+    ind = 0
+
+    for a in domain.attributes:
+        if a.compute_value and isinstance(a.compute_value, Norm):
+            tr = a.compute_value
+            st.source_vars.append(tr.variable)
+            st.offsets.append(tr.offset)
+            st.factors.append(tr.factor)
+            cv = SubarrayComputeValue(st, ind)
+            cv.variable = tr.variable  # something that scorers expect
+            a = a.copy(compute_value=cv)
+            ind += 1
+        new_atts.append(a)
+
+    st.factors = np.array(st.factors)
+    st.offsets = np.array(st.offsets)
+
+    return Domain(new_atts, domain.class_vars, domain.metas)
 
 
 class Normalizer(Reprable):
@@ -33,6 +80,7 @@ class Normalizer(Reprable):
                               (i, var) in enumerate(data.domain.class_vars)]
 
         domain = Domain(new_attrs, new_class_vars, data.domain.metas)
+        domain = compress_norm_to_subarray(domain)
         return data.transform(domain)
 
     def normalize(self, stats, var):
