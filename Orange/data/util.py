@@ -103,6 +103,18 @@ class SharedComputeValue:
         return hash((type(self), self.compute_shared, self.variable))
 
 
+class SubarrayComputeValue:
+
+    def __init__(self, compute_shared, index):
+        self.compute_shared = compute_shared
+        self.index = index
+
+    def __call__(self, data, shared_data=None):
+        """Fallback if common parts are not passed."""
+        shared_data = self.compute_shared(data, [self.index])
+        return shared_data
+
+
 def vstack(arrays):
     """vstack that supports sparse and dense arrays
 
