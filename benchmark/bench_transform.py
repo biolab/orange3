@@ -2,8 +2,10 @@ from functools import partial
 
 import numpy as np
 import scipy.sparse
+import dask.array
 
 from Orange.data import Table, ContinuousVariable, Domain
+from Orange.tests.test_dasktable import temp_dasktable
 from Orange.tests.test_table import preprocess_domain_single, preprocess_domain_shared
 
 from .base import Benchmark, benchmark
@@ -32,6 +34,12 @@ class BenchTransform(Benchmark):
             Domain([ContinuousVariable(str(i), sparse=True) for i in range(cols)]),
             sparse)
 
+    def setup_dask(self, rows, cols):
+        table = Table.from_numpy(  # pylint: disable=W0201
+            Domain([ContinuousVariable(str(i)) for i in range(cols)]),
+            np.random.RandomState(0).rand(rows, cols))
+        self.table = temp_dasktable(table)
+
     @benchmark(setup=partial(setup_dense, rows=10000, cols=100), number=5)
     def bench_copy_dense_long(self):
         add_unknown_attribute(self.table)
@@ -43,6 +51,21 @@ class BenchTransform(Benchmark):
     @benchmark(setup=partial(setup_dense, rows=100, cols=10000), number=2)
     def bench_copy_dense_wide(self):
         add_unknown_attribute(self.table)
+
+    @benchmark(setup=partial(setup_dask, rows=10000, cols=100), number=5)
+    def bench_copy_dask_long(self):
+        t = add_unknown_attribute(self.table)
+        self.assertIsInstance(t.X, dask.array.Array)
+
+    @benchmark(setup=partial(setup_dask, rows=1000, cols=1000), number=5)
+    def bench_copy_dask_square(self):
+        t = add_unknown_attribute(self.table)
+        self.assertIsInstance(t.X, dask.array.Array)
+
+    @benchmark(setup=partial(setup_dask, rows=100, cols=10000), number=2)
+    def bench_copy_dask_wide(self):
+        t = add_unknown_attribute(self.table)
+        self.assertIsInstance(t.X, dask.array.Array)
 
     @benchmark(setup=partial(setup_sparse, rows=10000, cols=100), number=5)
     def bench_copy_sparse_long(self):
@@ -63,6 +86,13 @@ class BenchTransform(Benchmark):
     def bench_subarray_dense_long(self):
         # adding a class should link X
         add_unknown_class(self.table)
+        self.assertIs(self.table.X, t.X)
+
+    @benchmark(setup=partial(setup_dask, rows=10000, cols=100), number=5)
+    def bench_subarray_dense_long(self):
+        # adding a class should link X
+        t = add_unknown_class(self.table)
+        self.assertIs(self.table.X, t.X)
 
     def setup_dense_transforms(self, rows, cols, transforms):
         self.setup_dense(rows, cols)
