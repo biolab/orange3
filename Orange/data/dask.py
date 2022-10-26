@@ -35,11 +35,6 @@ class _ArrayConversionDask(_ArrayConversion):
             return dask.array.vstack(parts)
         return super().join_partial_results(parts)
 
-    def prepare_column(self, col_array):
-        if self.is_dask:
-            return col_array.reshape(-1, 1)
-        return super().prepare_column(self, col_array)
-
     def join_columns(self, data):
         if self.is_dask:
             return dask.array.hstack(data)
