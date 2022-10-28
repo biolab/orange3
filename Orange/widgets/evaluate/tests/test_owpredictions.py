@@ -1839,6 +1839,10 @@ class TestClassificationErrorDelegate(GuiTest):
         delegate.drawBar(painter, Mock(), index, rect)
         dr.assert_not_called()
 
+        delegate.cachedData = lambda *_: None
+        delegate.drawBar(painter, Mock(), index, rect)
+        dr.assert_not_called()
+
         delegate.cachedData = lambda *_: 1 / 4
         delegate.drawBar(painter, Mock(), index, rect)
         dr.assert_called_once()
@@ -1873,6 +1877,10 @@ class TestRegressionErrorDelegate(GuiTest):
         delegate = RegressionErrorDelegate("%.5f", True, 12)
 
         delegate.cachedData = lambda *_: np.nan
+        delegate.drawBar(painter, Mock(), index, rect)
+        dr.assert_not_called()
+
+        delegate.cachedData = lambda *_: None
         delegate.drawBar(painter, Mock(), index, rect)
         dr.assert_not_called()
 
