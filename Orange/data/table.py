@@ -7,6 +7,7 @@ import weakref
 import zlib
 from collections.abc import Iterable, Sequence, Sized
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
@@ -821,7 +822,7 @@ class Table(Sequence, Storage):
                     self.ids = source.ids[row_indices]
                 else:
                     cls._init_ids(self)
-                self.attributes = getattr(source, 'attributes', {})
+                self.attributes = deepcopy(getattr(source, 'attributes', {}))
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
             return self
         finally:
@@ -879,7 +880,7 @@ class Table(Sequence, Storage):
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
             self.ids = np.array(source.ids[row_indices])
-            self.attributes = getattr(source, 'attributes', {})
+            self.attributes = deepcopy(getattr(source, 'attributes', {}))
         return self
 
     @classmethod
@@ -2284,7 +2285,7 @@ class Table(Sequence, Storage):
             self.domain = Domain(attributes, class_vars, metas)
             progress_callback(0.9)
             cls._init_ids(self)
-            self.attributes = table.attributes.copy()
+            self.attributes = deepcopy(table.attributes)
             self.attributes["old_domain"] = table.domain
             progress_callback(1)
             return self
