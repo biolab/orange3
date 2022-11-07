@@ -40,7 +40,7 @@ from Orange.widgets.utils.tableview import TableView, \
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, MultiInput, Output, Msg
 from Orange.widgets.utils import datacaching
-from Orange.widgets.utils.localization import *
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel

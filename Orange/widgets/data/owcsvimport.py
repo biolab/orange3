@@ -55,7 +55,7 @@ import Orange.data
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils.localization import *
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get, qname

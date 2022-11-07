@@ -14,12 +14,12 @@ from AnyQt.QtGui import QBrush
 from orangewidget.utils.filedialogs import format_filter
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
-from Orange.widgets.utils.localization import *
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.data.io_base import MissingReaderException
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
