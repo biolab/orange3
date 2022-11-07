@@ -64,7 +64,7 @@ class OWLoadModel(widget.OWWidget, RecentPathsWComboMixin):
     def browse_file(self):
         start_file = self.last_path() or stdpaths.Documents
         filename, _ = QFileDialog.getOpenFileName(
-            self, 'Open Distance File', start_file, self.FILTER)
+            self, 'Open Model File', start_file, self.FILTER)
         if not filename:
             return
         self.add_path(filename)
