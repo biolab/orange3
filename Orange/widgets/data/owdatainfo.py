@@ -1,24 +1,23 @@
-from collections import OrderedDict
 import threading
 import textwrap
 
-from Orange.widgets import widget, gui
-from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input
-from Orange.data.table import Table
-from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
-from Orange.widgets import report
+from Orange.data import \
+    Table, StringVariable, DiscreteVariable, ContinuousVariable
 try:
     from Orange.data.sql.table import SqlTable
 except ImportError:
     SqlTable = None
 
+from Orange.widgets import widget, gui
+from Orange.widgets.utils.localization import pl
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.widget import Input
+
 
 class OWDataInfo(widget.OWWidget):
     name = "Data Info"
     id = "orange.widgets.data.info"
-    description = """Display basic information about the dataset, such
-    as the number and type of variables in the columns and the number of rows."""
+    description = "Display basic information about the data set"
     icon = "icons/DataInfo.svg"
     priority = 80
     category = "Data"
@@ -34,174 +33,138 @@ class OWDataInfo(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self._clear_fields()
-
-        for box in ("Data Set Name", "Data Set Size", "Features", "Targets",
-                    "Meta Attributes", "Location", "Data Attributes"):
-            name = box.lower().replace(" ", "_")
-            bo = gui.vBox(self.controlArea, box)
-            gui.label(bo, self, "%%(%s)s" % name)
-
-        # ensure the widget has some decent minimum width.
-        self.targets = "Categorical outcome with 123 values"
-        self.layout().activate()
-        # NOTE: The minimum width is set on the 'contained' widget and
-        # not `self`. The layout will set a fixed size to `self` taking
-        # into account the minimum constraints of the children (it would
-        # override any minimum/fixed size set on `self`).
-        self.targets = ""
-        self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
+        self.data_desc = {}
+        self.data_attrs = {}
+        self.description = gui.widgetLabel(
+            gui.vBox(self.controlArea, box="Data table properties"))
+        self.attributes = gui.widgetLabel(
+            gui.vBox(self.controlArea, box="Additional attributes"))
 
     @Inputs.data
     def data(self, data):
         if data is None:
-            self._clear_fields()
+            self.data_desc = self.data_attrs = {}
+            self.update_info()
         else:
-            self._set_fields(data)
-            self._set_report(data)
+            self.data_desc = {
+                label: value
+                for label, func in (("Name", self._p_name),
+                                    ("Location", self._p_location),
+                                    ("Size", self._p_size),
+                                    ("Features", self._p_features),
+                                    ("Targets", self._p_targets),
+                                    ("Metas", self._p_metas))
+                if bool(value := func(data))}
+            self.data_attrs = data.attributes
+            self.update_info()
 
-    def _clear_fields(self):
-        self.data_set_name = ""
-        self.data_set_size = ""
-        self.features = self.targets = self.meta_attributes = ""
-        self.location = ""
-        self.data_desc = None
-        self.data_attributes = ""
+            if SqlTable is not None and isinstance(data, SqlTable):
+                def set_exact_length():
+                    self.data_desc["Size"] = self._p_size(data, exact=True)
+                    self.update_info()
+
+                threading.Thread(target=set_exact_length).start()
+
+    def update_info(self):
+        style = """<style>
+                       th { text-align: right; vertical-align: top; }
+                       th, td { padding-top: 4px; line-height: 125%}
+                    </style>"""
+
+        def dict_as_table(d):
+            return "<table>" + \
+                   "".join(f"<tr><th>{label}: </th><td>" + \
+                           '<br/>'.join(textwrap.wrap(value, width=60)) + \
+                           "</td></tr>"
+                           for label, value in d.items()) + \
+                   "</table>"
+
+        if not self.data_desc:
+            self.description.setText("No data.")
+        else:
+            self.description.setText(style + dict_as_table(self.data_desc))
+        self.attributes.setHidden(not self.data_attrs)
+        if self.data_attrs:
+            self.attributes.setText(
+                style + dict_as_table({k: str(v)
+                                       for k, v in self.data_attrs.items()}))
+
+    def send_report(self):
+        if self.data_desc:
+            self.report_items("Data table properties", self.data_desc)
+        if self.data_attrs:
+            self.report_items("Additional attributes", self.data_attrs)
 
     @staticmethod
-    def _count(s, tpe):
-        return sum(isinstance(x, tpe) for x in s)
+    def _p_name(data):
+        return getattr(data, "name", "-")
 
-    def _set_fields(self, data):
-        # Attributes are defined in a function called from __init__
-        # pylint: disable=attribute-defined-outside-init
-        def n_or_none(n):
-            return n or "-"
+    @staticmethod
+    def _p_location(data):
+        if SqlTable is not None and isinstance(data, SqlTable):
+            connection_string = ' '.join(
+                f'{key}={value}'
+                for key, value in data.connection_params.items()
+                if value is not None and key != 'password')
+            return f"SQL Table using connection:<br/>{connection_string}"
 
-        def pack_table(info):
-            return '<table>\n' + "\n".join(
-                '<tr><td align="right" width="90">{}:</td>\n'
-                '<td width="40">{}</td></tr>\n'.format(
-                    d,
-                    textwrap.shorten(str(v), width=30, placeholder="..."))
-                for d, v in info
-            ) + "</table>\n"
-
-        def pack_counts(s, include_non_primitive=False):
-            if not s:
-                return "None"
-            return pack_table(
-                (name, n_or_none(self._count(s, type_)))
-                for name, type_ in (
-                    ("Categorical", DiscreteVariable),
-                    ("Numeric", ContinuousVariable),
-                    ("Text", StringVariable))[:2 + include_non_primitive]
-            )
-
-        domain = data.domain
-        class_var = domain.class_var
+    @staticmethod
+    def _p_size(data, exact=False):
+        exact = exact or SqlTable is None or not isinstance(data, SqlTable)
+        if exact:
+            n = len(data)
+            desc = f"{n} {pl(n, 'row')}"
+        else:
+            n = data.approx_len()
+            desc = f"~{n} {pl(n, 'row')}"
+        ncols = len(data.domain.variables) + len(data.domain.metas)
+        desc += f", {ncols} {pl(ncols, 'column')}"
 
         sparseness = [s for s, m in (("features", data.X_density),
                                      ("meta attributes", data.metas_density),
                                      ("targets", data.Y_density)) if m() > 1]
         if sparseness:
-            sparseness = "<p>Sparse representation: {}</p>"\
-                         .format(", ".join(sparseness))
-        else:
-            sparseness = ""
-        self.data_set_size = pack_table((
-            ("Rows", '~{}'.format(data.approx_len())),
-            ("Columns", len(domain.variables)+len(domain.metas)))) + sparseness
+            desc += "; sparse {', '.join(sparseness)}"
+        return desc
 
-        def update_size():
-            self.data_set_size = pack_table((
-                ("Rows", len(data)),
-                ("Columns", len(domain.variables)+len(domain.metas)))) + sparseness
+    @classmethod
+    def _p_features(cls, data):
+        return cls._pack_var_counts(data.domain.attributes)
 
-        threading.Thread(target=update_size).start()
-
-        self.data_set_name = getattr(data, "name", "N/A")
-
-        self.features = pack_counts(domain.attributes)
-        self.meta_attributes = pack_counts(domain.metas, True)
-        if class_var:
+    def _p_targets(self, data):
+        if class_var := data.domain.class_var:
             if class_var.is_continuous:
-                self.targets = "Numeric target variable"
+                return "numeric target variable"
             else:
-                self.targets = "Categorical outcome with {} values"\
-                               .format(len(class_var.values))
-        elif domain.class_vars:
-            disc_class = self._count(domain.class_vars, DiscreteVariable)
-            cont_class = self._count(domain.class_vars, ContinuousVariable)
+                nclasses = len(class_var.values)
+                return "categorical outcome with " \
+                       f"{nclasses} {pl(nclasses, 'class|classes')}"
+        if class_vars := data.domain.class_vars:
+            disc_class = self._count(class_vars, DiscreteVariable)
+            cont_class = self._count(class_vars, ContinuousVariable)
             if not cont_class:
-                self.targets = "Multi-target data,\n{} categorical targets"\
-                               .format(n_or_none(disc_class))
+                return f"{disc_class} categorical {pl(disc_class, 'target')}"
             elif not disc_class:
-                self.targets = "Multi-target data,\n{} numeric targets"\
-                               .format(n_or_none(cont_class))
-            else:
-                self.targets = "<p>Multi-target data</p>\n" + \
-                               pack_counts(domain.class_vars)
-        else:
-            self.targets = "None"
+                return f"{cont_class} numeric {pl(cont_class, 'targets')}"
+            return "multi-target data,<br/>" + self._pack_var_counts(class_vars)
 
-        if data.attributes:
-            self.data_attributes = pack_table(data.attributes.items())
-        else:
-            self.data_attributes = ""
+    @classmethod
+    def _p_metas(cls, data):
+        return cls._pack_var_counts(data.domain.metas)
 
-    def _set_report(self, data):
-        # Attributes are defined in a function called from __init__
-        # pylint: disable=attribute-defined-outside-init
-        domain = data.domain
-        count = self._count
+    @staticmethod
+    def _count(s, tpe):
+        return sum(isinstance(x, tpe) for x in s)
 
-        self.data_desc = dd = OrderedDict()
-        dd["Name"] = self.data_set_name
-
-        if SqlTable is not None and isinstance(data, SqlTable):
-            connection_string = ' '.join(
-                '{}={}'.format(key, value)
-                for key, value in data.connection_params.items()
-                if value is not None and key != 'password')
-            self.location = "Table '{}', using connection:\n{}"\
-                            .format(data.table_name, connection_string)
-            dd["Rows"] = data.approx_len()
-        else:
-            self.location = "Data is stored in memory"
-            dd["Rows"] = len(data)
-
-        def join_if(items):
-            return ", ".join(s.format(n) for s, n in items if n)
-
-        dd["Features"] = len(domain.attributes) > 0 and join_if((
-            ("{} categorical", count(domain.attributes, DiscreteVariable)),
-            ("{} numeric", count(domain.attributes, ContinuousVariable))
-        ))
-        if domain.class_var:
-            name = domain.class_var.name
-            if domain.class_var.is_discrete:
-                dd["Target"] = "categorical outcome '{}'".format(name)
-            else:
-                dd["Target"] = "numeric target '{}'".format(name)
-        elif domain.class_vars:
-            disc_class = count(domain.class_vars, DiscreteVariable)
-            cont_class = count(domain.class_vars, ContinuousVariable)
-            tt = ""
-            if disc_class:
-                tt += report.plural("{number} categorical outcome{s}", disc_class)
-            if cont_class:
-                tt += report.plural("{number} numeric target{s}", cont_class)
-        dd["Meta attributes"] = len(domain.metas) > 0 and join_if((
-            ("{} categorical", count(domain.metas, DiscreteVariable)),
-            ("{} numeric", count(domain.metas, ContinuousVariable)),
-            ("{} text", count(domain.metas, StringVariable))
-        ))
-
-    def send_report(self):
-        if self.data_desc:
-            self.report_items(self.data_desc)
+    @classmethod
+    def _pack_var_counts(cls, s):
+        counts = (
+            (name, cls._count(s, type_))
+            for name, type_ in (("categorical", DiscreteVariable),
+                                ("numeric", ContinuousVariable),
+                                ("text", StringVariable)))
+        return ", ".join(f"{count} {name}" for name, count in counts if count)
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWDataInfo).run(Table("iris"))
+    WidgetPreview(OWDataInfo).run(Table("heart_disease"))
