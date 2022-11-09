@@ -19,6 +19,7 @@ from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.data.io_base import MissingReaderException
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
@@ -522,25 +523,29 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         if descs:
             text += f"<p>{'<br/>'.join(descs)}</p>"
 
-        text += f"<p>{len(table)} instance(s)"
+        text += f"<p>{len(table)} {pl(len(table), 'instance')}"
 
         missing_in_attr = missing_prop(table.has_missing_attribute()
                                        and table.get_nan_frequency_attribute())
         missing_in_class = missing_prop(table.has_missing_class()
                                         and table.get_nan_frequency_class())
-        text += f"<br/>{len(domain.attributes)} feature(s) {missing_in_attr}"
+        nattrs = len(domain.attributes)
+        text += f"<br/>{nattrs} {pl(nattrs, 'feature')} {missing_in_attr}"
         if domain.has_continuous_class:
             text += f"<br/>Regression; numerical class {missing_in_class}"
         elif domain.has_discrete_class:
+            nvals = len(domain.class_var.values)
             text += "<br/>Classification; categorical class " \
-                f"with {len(domain.class_var.values)} values {missing_in_class}"
+                f"with {nvals} {pl(nvals, 'value')} {missing_in_class}"
         elif table.domain.class_vars:
+            ntargets = len(table.domain.class_vars)
             text += "<br/>Multi-target; " \
-                f"{len(table.domain.class_vars)} target variables " \
+                f"{ntargets} target {pl(ntargets, 'variable')} " \
                 f"{missing_in_class}"
         else:
             text += "<br/>Data has no target variable."
-        text += f"<br/>{len(domain.metas)} meta attribute(s)"
+        nmetas = len(domain.metas)
+        text += f"<br/>{nmetas} {pl(nmetas, 'meta attribute')}"
         text += "</p>"
 
         if 'Timestamp' in table.domain:
