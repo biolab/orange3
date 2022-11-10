@@ -81,7 +81,7 @@ class TestOWSelectRows(WidgetTest):
         self.widget.auto_commit = True
         self.widget.set_data(iris)
 
-        for i, (op, _) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
+        for i, (op, *_) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
             self.widget.remove_all()
             self.widget.add_row(iris.domain[0], i, CFValues[op])
             self.widget.conditions_changed()
@@ -92,7 +92,7 @@ class TestOWSelectRows(WidgetTest):
             Domain([], metas=[iris.domain.attributes[0]]), iris
         )
         self.widget.set_data(iris)
-        for i, (op, _) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
+        for i, (op, *_) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
             self.widget.remove_all()
             self.widget.add_row(iris.domain.metas[0], i, CFValues[op])
             self.widget.conditions_changed()
@@ -102,7 +102,7 @@ class TestOWSelectRows(WidgetTest):
         zoo = Table("zoo")[::5]
         self.widget.auto_commit = False
         self.widget.set_data(zoo)
-        for i, (op, _) in enumerate(OWSelectRows.Operators[StringVariable]):
+        for i, (op, *_) in enumerate(OWSelectRows.Operators[StringVariable]):
             self.widget.remove_all()
             self.widget.add_row(zoo.domain.metas[0], i, SFValues[op])
             self.widget.conditions_changed()
@@ -135,7 +135,7 @@ class TestOWSelectRows(WidgetTest):
         self.widget.auto_commit = False
         self.widget.set_data(data)
 
-        for i, (op, _) in enumerate(OWSelectRows.Operators[TimeVariable]):
+        for i, (op, *_) in enumerate(OWSelectRows.Operators[TimeVariable]):
             self.widget.remove_all()
             self.widget.add_row(data.domain["breach_start"], i, TFValues[op])
             self.widget.conditions_changed()
@@ -146,7 +146,7 @@ class TestOWSelectRows(WidgetTest):
             Domain([], metas=[data.domain["breach_start"]]), data
         )
         self.widget.set_data(data)
-        for i, (op, _) in enumerate(OWSelectRows.Operators[TimeVariable]):
+        for i, (op, *_) in enumerate(OWSelectRows.Operators[TimeVariable]):
             self.widget.remove_all()
             self.widget.add_row(data.domain.metas[0], i, TFValues[op])
             self.widget.conditions_changed()
