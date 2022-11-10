@@ -3,6 +3,7 @@ import numpy as np
 from Orange.data import Table
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
@@ -98,13 +99,14 @@ that appear in Data Subset, based on row identity and not actual data.
         def data_info_text(data):
             if data is None:
                 return "No data."
-            return "{}\n{} instances\n{} variables".format(
-                data.name, len(data),
-                len(data.domain.variables) + len(data.domain.metas))
+            nvars = len(data.domain.variables) + len(data.domain.metas)
+            return f"{data.name}, " \
+                   f"{len(data)} {pl(len(data), 'instance')}, " \
+                   f"{nvars} {pl(nvars, 'variable')}"
 
-        d_text = data_info_text(self.data).replace("\n", ", ")
-        ds_text = data_info_text(self.data_subset).replace("\n", ", ")
-        self.report_items("", [("Data", d_text), ("Data Subset", ds_text)])
+        self.report_items("",
+                          [("Data", data_info_text(self.data)),
+                           ("Data Subset", data_info_text(self.data_subset))])
 
 
 if __name__ == "__main__":  # pragma: no cover
