@@ -10,6 +10,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.util import Reprable
@@ -67,14 +68,14 @@ class OWDataSampler(OWWidget):
         )
 
     class Warning(OWWidget.Warning):
-        could_not_stratify = Msg("Stratification failed\n{}")
-        bigger_sample = Msg('Sample is bigger than input')
+        could_not_stratify = Msg("Stratification failed.\n{}")
+        bigger_sample = Msg('Sample is bigger than input.')
 
     class Error(OWWidget.Error):
-        too_many_folds = Msg("Number of subsets exceeds data size")
-        sample_larger_than_data = Msg("Sample can't be larger than data")
-        not_enough_to_stratify = Msg("Data is too small to stratify")
-        no_data = Msg("Dataset is empty")
+        too_many_folds = Msg("Number of subsets exceeds data size.")
+        sample_larger_than_data = Msg("Sample can't be larger than data.")
+        not_enough_to_stratify = Msg("Data is too small to stratify.")
+        no_data = Msg("Dataset is empty.")
 
     def __init__(self):
         super().__init__()
@@ -310,14 +311,12 @@ class OWDataSampler(OWWidget):
 
     def send_report(self):
         if self.sampling_type == self.FixedProportion:
-            tpe = "Random sample with {} % of data".format(
-                self.sampleSizePercentage)
+            tpe = f"Random sample with {self.sampleSizePercentage} % of data"
         elif self.sampling_type == self.FixedSize:
             if self.sampleSizeNumber == 1:
                 tpe = "Random data instance"
             else:
-                tpe = "Random sample with {} data instances".format(
-                    self.sampleSizeNumber)
+                tpe = f"Random sample with {self.sampleSizeNumber} data instances"
                 if self.replacement:
                     tpe += ", with replacement"
         elif self.sampling_type == self.CrossValidation:
@@ -326,7 +325,7 @@ class OWDataSampler(OWWidget):
         elif self.sampling_type == self.Bootstrap:
             tpe = "Bootstrap"
         else:  # pragma: no cover
-            tpe = "Undefined"  # should not come here at all
+            assert False
         if self.stratify:
             tpe += ", stratified (if possible)"
         if self.use_seed:
@@ -334,9 +333,9 @@ class OWDataSampler(OWWidget):
         items = [("Sampling type", tpe)]
         if self.sampled_instances is not None:
             items += [
-                ("Input", "{} instances".format(len(self.data))),
-                ("Sample", "{} instances".format(self.sampled_instances)),
-                ("Remaining", "{} instances".format(self.remaining_instances)),
+                ("Input", f"{len(self.data)} {pl(len(self.data), 'instance')}"),
+                ("Sample", f"{self.sampled_instances} {pl(self.sampled_instances, 'instance')}"),
+                ("Remaining", f"{self.remaining_instances} {pl(self.remaining_instances, 'instance')}"),
             ]
         self.report_items(items)
 
