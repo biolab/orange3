@@ -459,6 +459,7 @@ class UrlReader(FileFormat):
     def _trim(cls, url):
         URL_TRIMMERS = (
             cls._trim_googlesheet,
+            cls._trim_googledrive,
             cls._trim_dropbox,
         )
         for trim in URL_TRIMMERS:
@@ -487,6 +488,18 @@ class UrlReader(FileFormat):
         if sheet:
             url += '&gid=' + sheet
         return url
+
+    @staticmethod
+    def _trim_googledrive(url):
+        parts = urlsplit(url)
+        if not parts.netloc.endswith("drive.google.com"):
+            raise ValueError
+        match = re.match(r'/file/d/(?P<id>[^/]+).*', parts.path)
+        if not match:
+            raise ValueError
+        id_ = match.group("id")
+        parts = parts._replace(path=f"uc?export=download&id={id_}", query=None)
+        return urlunsplit(parts)
 
     @staticmethod
     def _trim_dropbox(url):
