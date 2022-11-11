@@ -342,13 +342,21 @@ class OWTreeGraph(OWTreeViewer2D):
         name = escape(class_var.name)
         if self.domain.class_var.is_discrete:
             total = float(sum(distr)) or 1
+            show_all = len(distr) <= 2
             content = f"{nbp}<b>Distribution of</b> '{name}'</p><p>" \
-                + "<br/>".join(
-                    f"{indent}<span style='color: {color_to_hex(color)}'>◼</span> "
-                    f"{escape(value)}: {prop:g} ({prop / total * 100:.1f} %)"
+                + "<table>" + "".join(
+                    "<tr>"
+                    f"<td><span style='color: {color_to_hex(color)}'>◼</span> "
+                    f"{escape(value)}</td>"
+                    f"<td>{indent}</td>"
+                    f"<td align='right'>{prop:g}</td>"
+                    f"<td>{indent}</td>"
+                    f"<td align='right'>{prop / total * 100:.1f} %</td>"
+                    "</tr>"
                     for value, color, prop
-                    in zip(class_var.values, class_var.colors, distr)) \
-                + "</p>"
+                    in zip(class_var.values, class_var.colors, distr)
+                    if show_all or prop > 0) \
+                + "</table>"
         else:
             mean, var = distr
             content = f"{nbp}{class_var.name} = {mean:.3g} ± {var:.3g}<br/>" + \
