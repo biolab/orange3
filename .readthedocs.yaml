@@ -1,0 +1,14 @@
+version: 2
+
+build:
+   os: ubuntu-20.04
+   tools:
+      python: "3.10"
+
+sphinx:
+   # Path to the shared conf.py file.
+   configuration: doc/conf.py
+
+python:
+   install:
+   - requirements: requirements-readthedocs.txt

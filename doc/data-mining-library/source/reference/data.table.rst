@@ -86,8 +86,6 @@ The preferred way to construct a table is to invoke a named constructor.
 Inspection
 ----------
 
-.. automethod:: Table.is_view
-.. automethod:: Table.is_copy
 .. automethod:: Table.ensure_copy
 .. automethod:: Table.has_missing
 .. automethod:: Table.has_missing_class
