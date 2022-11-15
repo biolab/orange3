@@ -353,6 +353,16 @@ class TestNanmean(unittest.TestCase):
         self.random_state = check_random_state(42)
         self.x = self.random_state.uniform(size=(10, 5))
         np.fill_diagonal(self.x, np.nan)
+        self.y = np.array([[0, 1, 5],
+                           [3, 4, np.nan],
+                           [2, np.nan, np.nan],
+                           [np.nan, np.nan, np.nan]])
+        self.r0 = [5/3, 5/2, 5/1]
+        self.r1 = [6/3, 7/2, 2/1, np.nan]
+        self.w0 = np.array([4, 3, 2, 1])
+        self.w1 = np.array([1, 2, 3])
+        self.r0w = [13/9, 16/7, 20/4]
+        self.r1w = [17/6, 11/3, 2/1, np.nan]
 
     @dense_sparse
     def test_axis_none(self, array):
@@ -370,6 +380,41 @@ class TestNanmean(unittest.TestCase):
     def test_axis_1(self, array):
         np.testing.assert_almost_equal(
             np.nanmean(self.x, axis=1), nanmean(array(self.x), axis=1)
+        )
+
+    @dense_sparse
+    def test_weights_axis_none(self, array):
+        with self.assertRaises(NotImplementedError):
+            nanmean(array(self.x), weights=1)
+
+    @dense_sparse
+    def test_weights_axis_0(self, array):
+        np.testing.assert_almost_equal(
+            self.r0, nanmean(array(self.y), axis=0)
+        )
+        np.testing.assert_almost_equal(
+            self.r1, nanmean(array(self.y.T), axis=0)
+        )
+        np.testing.assert_almost_equal(
+            self.r0w, nanmean(array(self.y), axis=0, weights=self.w0)
+        )
+        np.testing.assert_almost_equal(
+            self.r1w, nanmean(array(self.y.T), axis=0, weights=self.w1)
+        )
+
+    @dense_sparse
+    def test_weights_axis_1(self, array):
+        np.testing.assert_almost_equal(
+            self.r1, nanmean(array(self.y), axis=1)
+        )
+        np.testing.assert_almost_equal(
+            self.r0, nanmean(array(self.y.T), axis=1)
+        )
+        np.testing.assert_almost_equal(
+            self.r1w, nanmean(array(self.y), axis=1, weights=self.w1)
+        )
+        np.testing.assert_almost_equal(
+            self.r0w, nanmean(array(self.y.T), axis=1, weights=self.w0)
         )
 
 
