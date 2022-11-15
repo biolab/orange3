@@ -128,6 +128,17 @@ class TestUtil(unittest.TestCase):
         X = np.arange(4).reshape(2, 2).astype(object)
         np.testing.assert_equal(stats(X, weights), stats(X))
 
+    def test_stats_nans_neutral_weights(self):
+        X = np.arange(4).reshape(2, 2).astype(float)
+        X[0, 0] = np.nan
+        np.testing.assert_equal(stats(X, weights=np.array([1, 1])), stats(X))
+
+    def test_stats_nans_neutral_weights_sparse(self):
+        X = np.arange(4).reshape(2, 2).astype(float)
+        X = csr_matrix(X)
+        X[0, 0] = np.nan
+        np.testing.assert_equal(stats(X, weights=np.array([1, 1])), stats(X))
+
     def test_stats_weights_sparse(self):
         X = np.arange(4).reshape(2, 2).astype(float)
         X = csr_matrix(X)
