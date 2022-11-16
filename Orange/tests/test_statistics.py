@@ -155,8 +155,9 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 1, 1],
                                                     [1, 3, 2.5, 0, 0, 2]])
 
-        with self.assertRaises(NotImplementedError):
-            stats(X, weights, compute_variance=True)
+        np.testing.assert_equal(stats(X, weights, compute_variance=True),
+                                [[0, 2, 1.5, 0.75, 1, 1],
+                                 [1, 3, 2.5, 0.75, 0, 2]])
 
     def test_stats_non_numeric(self):
         X = np.array([
