@@ -343,6 +343,8 @@ def stats(X, weights=None, compute_variance=False):
     is_sparse = sp.issparse(X)
 
     if X.size and is_numeric:
+        if is_sparse:
+            X = X.tocsc()
         if compute_variance:
             means, vars = nan_mean_var(X, axis=0, weights=weights)
         else:
@@ -360,7 +362,6 @@ def stats(X, weights=None, compute_variance=False):
             X.shape[0] - nans))
     elif is_sparse and X.size:
         non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
-        X = X.tocsc()
         return np.column_stack((
             nanmin(X, axis=0),
             nanmax(X, axis=0),
