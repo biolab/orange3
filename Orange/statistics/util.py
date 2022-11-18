@@ -476,6 +476,45 @@ def nanmean(x, axis=None, weights=None):
     return means
 
 
+def nan_mean_var(x, axis=None, weights=None):
+    """
+    Computes means and variance of dense and sparse matrices.
+    Supports weights. Based on mean_variance_axis.
+    """
+    if axis is None:
+        raise NotImplementedError("axis=None is not supported")
+
+    if not sp.issparse(x):
+        if weights is None:
+            means = bn.nanmean(x, axis=axis)
+            variances = bn.nanvar(x, axis=axis)
+        else:
+            if axis == 0:
+                weights = weights.reshape(-1, 1)
+            elif axis == 1:
+                weights = weights.reshape(1, -1)
+            else:
+                raise NotImplementedError
+
+            nanw = ~np.isnan(x) * weights  # do not divide by non-used weights
+            wsum = np.sum(nanw, axis=axis)
+            means = bn.nansum(x * weights, axis=axis) / wsum
+
+            if axis == 0:
+                mr = means.reshape(1, -1)
+            elif axis == 1:
+                mr = means.reshape(-1, 1)
+
+            variances = bn.nansum(((x - mr) ** 2) * weights, axis=axis) / wsum
+    else:
+        # mean_variance_axis is picky regarding the input type
+        if weights is not None:
+            weights = weights.astype(float)
+        means, variances = mean_variance_axis(x, axis=axis, weights=weights)
+
+    return means, variances
+
+
 def nanvar(x, axis=None, ddof=0):
     """ Equivalent of np.nanvar that supports sparse or dense matrices. """
     def nanvar_sparse(x):

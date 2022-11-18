@@ -318,9 +318,13 @@ class Continuous(Distribution):
         return np.random.choice(self[0, :], size, replace, normalized[1, :])
 
     def mean(self):
+        if len(self[0]) == 0:
+            return np.nan
         return np.average(np.asarray(self[0]), weights=np.asarray(self[1]))
 
     def variance(self):
+        if len(self[0]) == 0:
+            return np.nan
         mean = self.mean()
         return np.dot((self[0] - mean) ** 2, self[1]) / np.sum(self[1])
 
