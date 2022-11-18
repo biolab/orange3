@@ -1,5 +1,5 @@
 # pylint: disable=missing-docstring
-from typing import Iterable, Set
+from typing import Iterable, Set, NamedTuple, Callable
 from collections import defaultdict
 from itertools import product, chain
 
@@ -34,40 +34,25 @@ BorderRole = next(gui.OrangeUserRole)
 BorderColorRole = next(gui.OrangeUserRole)
 
 
-class AggregationFunctionsEnum(Enum):
-    (Count, Count_defined, Sum, Mean, Min, Max,
-     Mode, Median, Var, Majority) = range(10)
+class Function(NamedTuple):
+    value: int
+    name: str
+    func: Callable[[np.ndarray], np.ndarray]
 
-    def __init__(self, *_, **__):
-        super().__init__()
-        self.func = None
-
-    @property
-    def value(self):
-        return self._value_
-
-    def __call__(self, *args):
-        return self.func(args)  # pylint: disable=not-callable
-
-    def __str__(self):
-        return self._name_.replace("_", " ")
+    def __call__(self, x):
+        return self.func(x)
 
     def __gt__(self, other):
         return self._value_ > other.value
 
+    def __str__(self):
+        return self.name
+
+    def __int__(self):
+        return self.value
+
 
 class Pivot:
-    Functions = AggregationFunctionsEnum
-    (Count, Count_defined, Sum, Mean, Min, Max,
-     Mode, Median, Var, Majority) = Functions
-
-    AutonomousFunctions = (Count,)
-    AnyVarFunctions = (Count_defined,)
-    ContVarFunctions = (Sum, Mean, Min, Max, Mode, Median, Var)
-    DiscVarFunctions = (Majority,)
-    TimeVarFunctions = (Mean, Min, Max, Mode, Median)
-    FloatFunctions = (Count, Count_defined, Sum, Var)
-
     class Tables:
         table = None  # type: Table
         total_h = None  # type: Table
@@ -77,7 +62,7 @@ class Pivot:
         def __call__(self):
             return self.table, self.total_h, self.total_v, self.total
 
-    def __init__(self, table: Table, agg_funs: Iterable[Functions],
+    def __init__(self, table: Table, agg_funs: Iterable[Function],
                  row_var: Variable, col_var: Variable = None,
                  val_var: Variable = None):
         self._group_tables = self.Tables()
@@ -146,7 +131,7 @@ class Pivot:
     def single_var_grouping(self) -> bool:
         return self._row_var is self._col_var
 
-    def update_group_table(self, agg_funs: Iterable[Functions],
+    def update_group_table(self, agg_funs: Iterable[Function],
                            val_var: Variable = None):
         if not self._group_tables:
             return
@@ -422,7 +407,6 @@ class Pivot:
             return column_.reshape(shape)
         return column
 
-    @staticmethod
     def count_defined(x):
         if x.shape[0] == 0:
             return 0
@@ -437,31 +421,44 @@ class Pivot:
                 if x.size else np.zeros(x.shape[1])
         return x.shape[0] - nans
 
-    @staticmethod
     def stat(x, f):
         return f(x.astype(float), axis=0) if x.shape[0] > 0 else np.nan
 
-    @staticmethod
     def mode(x):
         return Pivot.stat(x, nanmode).mode if x.shape[0] > 0 else np.nan
 
-    @staticmethod
     def majority(x):
         if x.shape[0] == 0:
             return np.nan
         counts = bincount(x)[0]
         return np.argmax(counts) if counts.shape[0] else np.nan
 
-    Count.func = lambda x: len(x[0])
-    Count_defined.func = lambda x: Pivot.count_defined(x[0])
-    Sum.func = lambda x: nansum(x[0], axis=0) if x[0].shape[0] > 0 else 0
-    Mean.func = lambda x: Pivot.stat(x[0], nanmean)
-    Min.func = lambda x: Pivot.stat(x[0], nanmin)
-    Max.func = lambda x: Pivot.stat(x[0], nanmax)
-    Median.func = lambda x: Pivot.stat(x[0], nanmedian)
-    Mode.func = lambda x: Pivot.mode(x[0])
-    Var.func = lambda x: Pivot.stat(x[0], nanvar)
-    Majority.func = lambda x: Pivot.majority(x[0])
+    def wrapstat(f):
+        return lambda x: Pivot.stat(x, f)
+
+    Count, Count_defined, Sum, Mean, Min, Max, Mode, Median, Var, Majority = \
+    Functions = [
+        Function(i, *fdef) for i, fdef in enumerate((
+            ("Count", len),
+            ("Count defined", count_defined),
+            ("Sum", lambda x: nansum(x, axis=0) if x.shape[0] > 0 else 0),
+            ("Mean", wrapstat(nanmean)),
+            ("Min", wrapstat(nanmin)),
+            ("Max", wrapstat(nanmax)),
+            ("Mode", mode),
+            ("Median", wrapstat(nanmedian)),
+            ("Var", wrapstat(nanvar)),
+            ("Majority", majority)
+    ))]
+
+    AutonomousFunctions = (Count,)
+    AnyVarFunctions = (Count_defined,)
+    ContVarFunctions = (Sum, Mean, Min, Max, Mode, Median, Var)
+    DiscVarFunctions = (Majority,)
+    TimeVarFunctions = (Mean, Min, Max, Mode, Median)
+    FloatFunctions = (Count, Count_defined, Sum, Var)
+
+    func_by_key = {func.value: func for func in Functions}
 
 
 class BorderedItemDelegate(QStyledItemDelegate):
@@ -748,10 +745,11 @@ class OWPivot(OWWidget):
         no_variables = Msg("At least 1 primitive variable is required.")
 
     settingsHandler = DomainContextHandler()
+    settings_version = 2
     row_feature = ContextSetting(None)
     col_feature = ContextSetting(None)
     val_feature = ContextSetting(None)
-    sel_agg_functions = Setting(set([Pivot.Count]))
+    sel_agg_functions = Setting({Pivot.Count.value})
     selection = Setting(set(), schema_only=True)
     auto_commit = Setting(True)
 
@@ -835,7 +833,7 @@ class OWPivot(OWWidget):
                 row = 0
                 continue
             check_box = QCheckBox(str(agg), inbox)
-            check_box.setChecked(agg in self.sel_agg_functions)
+            check_box.setChecked(agg.value in self.sel_agg_functions)
             check_box.clicked.connect(lambda *args, a=agg:
                                       self.__aggregation_cb_clicked(a, args[0]))
             inbox.layout().addWidget(check_box, row, col)
@@ -861,7 +859,7 @@ class OWPivot(OWWidget):
                 or var and var.is_discrete and fun in Pivot.ContVarFunctions \
                 or var and var.is_continuous and fun in Pivot.DiscVarFunctions \
                 or var and not var.is_primitive() and fun in primitive_funcs
-        skipped = [str(fun) for fun in self.sel_agg_functions if add(fun)]
+        skipped = [str(fun) for fun in self._sel_agg_func() if add(fun)]
         return ", ".join(sorted(skipped))
 
     @property
@@ -870,6 +868,9 @@ class OWPivot(OWWidget):
             return False
         domain = self.data.domain
         return any(v.is_primitive() for v in domain.variables + domain.metas)
+
+    def _sel_agg_func(self):
+        return {Pivot.func_by_key[val] for val in self.sel_agg_functions}
 
     def __feature_changed(self):
         self.selection = set()
@@ -883,15 +884,15 @@ class OWPivot(OWWidget):
         self.pivot.update_pivot_table(self.val_feature)
         self.commit.deferred()
 
-    def __aggregation_cb_clicked(self, agg_fun: Pivot.Functions, checked: bool):
+    def __aggregation_cb_clicked(self, agg_fun: Function, checked: bool):
         self.selection = set()
         if checked:
-            self.sel_agg_functions.add(agg_fun)
+            self.sel_agg_functions.add(agg_fun.value)
         else:
-            self.sel_agg_functions.remove(agg_fun)
+            self.sel_agg_functions.remove(agg_fun.value)
         if self.no_col_feature or not self.pivot or not self.data:
             return
-        self.pivot.update_group_table(self.sel_agg_functions, self.val_feature)
+        self.pivot.update_group_table(self._sel_agg_func(), self.val_feature)
         self.commit.deferred()
 
     def __invalidate_filtered(self):
@@ -969,7 +970,7 @@ class OWPivot(OWWidget):
                     send_outputs(None, None, None)
                     return
 
-            self.pivot = Pivot(self.data, self.sel_agg_functions,
+            self.pivot = Pivot(self.data, self._sel_agg_func(),
                                self.row_feature,
                                self.col_feature, self.val_feature)
 
@@ -1025,6 +1026,18 @@ class OWPivot(OWWidget):
         if not self.data:
             self.report_items((("Group by", self.row_feature),))
             self.report_table(self.table_view)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            settings["sel_agg_functions"] = {
+                func.value for func in settings["sel_agg_functions"]}
+
+
+# Backwards compatibility; this is needed for unpickling older settings
+class AggregationFunctionsEnum(Enum):
+    (Count, Count_defined, Sum, Mean, Min, Max,
+     Mode, Median, Var, Majority) = range(10)
 
 
 if __name__ == "__main__":
