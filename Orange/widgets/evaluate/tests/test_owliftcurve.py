@@ -19,7 +19,7 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve, cumulative_gains, \
     cumulative_gains_from_results, CurveTypes, precision_recall_from_results, \
-    points_from_results
+    points_from_results, compute_area
 from Orange.tests import test_filename
 
 
@@ -393,6 +393,12 @@ class UtilsTest(unittest.TestCase):
         np.testing.assert_almost_equal(res.contacted, contacted)
         np.testing.assert_almost_equal(res.respondents, respondents)
         np.testing.assert_almost_equal(res.thresholds, thresholds)
+
+    def test_area(self):
+        x = np.array([5, 8, 9, 11])
+        y = np.array([7, 14, 8, 0])
+        area = compute_area(x, y)
+        self.assertEqual(area, 51)
 
 
 if __name__ == "__main__":
