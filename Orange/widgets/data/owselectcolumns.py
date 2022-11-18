@@ -666,7 +666,7 @@ class OWSelectAttributes(widget.OWWidget):
             diff = list(set(in_domain.variables + in_domain.metas) -
                         set(out_domain.variables + out_domain.metas))
             if diff:
-                text = "%i (%s)" % (len(diff), ", ".join(x.name for x in diff))
+                text = f'{len(diff)} ({", ".join(x.name for x in diff)})'
                 self.report_items((("Removed", text),))
 
 

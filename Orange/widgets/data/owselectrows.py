@@ -24,6 +24,7 @@ from Orange.preprocess import Remove
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import vartype
 from Orange.widgets import report
@@ -128,13 +129,6 @@ class FilterDiscreteType(enum.Enum):
     IsDefined = "IsDefined"
 
 
-def _plural(s):
-    s = s.replace("is ", "are ")
-    for word in ("equals", "contains", "begins", "ends"):
-        s = s.replace(word, word[:-1])
-    return s
-
-
 class OWSelectRows(widget.OWWidget):
     name = "Select Rows"
     description = "Select rows from the data based on values of variables."
@@ -164,15 +158,15 @@ class OWSelectRows(widget.OWWidget):
 
     Operators = {
         ContinuousVariable: [
-            (FilterContinuous.Equal, "equals"),
-            (FilterContinuous.NotEqual, "is not"),
-            (FilterContinuous.Less, "is below"),
-            (FilterContinuous.LessEqual, "is at most"),
-            (FilterContinuous.Greater, "is greater than"),
-            (FilterContinuous.GreaterEqual, "is at least"),
-            (FilterContinuous.Between, "is between"),
-            (FilterContinuous.Outside, "is outside"),
-            (FilterContinuous.IsDefined, "is defined"),
+            (FilterContinuous.Equal, "equals", "equal"),
+            (FilterContinuous.NotEqual, "is not", "are not"),
+            (FilterContinuous.Less, "is below", "are below"),
+            (FilterContinuous.LessEqual, "is at most", "are at most"),
+            (FilterContinuous.Greater, "is greater than", "are greater than"),
+            (FilterContinuous.GreaterEqual, "is at least", "are at least"),
+            (FilterContinuous.Between, "is between", "are between"),
+            (FilterContinuous.Outside, "is outside", "are outside"),
+            (FilterContinuous.IsDefined, "is defined", "are defined"),
         ],
         DiscreteVariable: [
             (FilterDiscreteType.Equal, "is"),
@@ -181,18 +175,18 @@ class OWSelectRows(widget.OWWidget):
             (FilterDiscreteType.IsDefined, "is defined")
         ],
         StringVariable: [
-            (FilterString.Equal, "equals"),
-            (FilterString.NotEqual, "is not"),
-            (FilterString.Less, "is before"),
-            (FilterString.LessEqual, "is equal or before"),
-            (FilterString.Greater, "is after"),
-            (FilterString.GreaterEqual, "is equal or after"),
-            (FilterString.Between, "is between"),
-            (FilterString.Outside, "is outside"),
-            (FilterString.Contains, "contains"),
-            (FilterString.StartsWith, "begins with"),
-            (FilterString.EndsWith, "ends with"),
-            (FilterString.IsDefined, "is defined"),
+            (FilterString.Equal, "equals", "equal"),
+            (FilterString.NotEqual, "is not", "are not"),
+            (FilterString.Less, "is before", "are before"),
+            (FilterString.LessEqual, "is equal or before", "are equal or before"),
+            (FilterString.Greater, "is after", "are after"),
+            (FilterString.GreaterEqual, "is equal or after", "are equal or after"),
+            (FilterString.Between, "is between", "are between"),
+            (FilterString.Outside, "is outside", "are outside"),
+            (FilterString.Contains, "contains", "contain"),
+            (FilterString.StartsWith, "begins with", "begin with"),
+            (FilterString.EndsWith, "ends with", "end with"),
+            (FilterString.IsDefined, "is defined", "are defined"),
         ]
     }
 
@@ -203,13 +197,13 @@ class OWSelectRows(widget.OWWidget):
             ("All variables", 0,
              [(None, "are defined")]),
             ("All numeric variables", 2,
-             [(v, _plural(t)) for v, t in Operators[ContinuousVariable]]),
+             [(v, t) for v, _, t in Operators[ContinuousVariable]]),
             ("All string variables", 3,
-             [(v, _plural(t)) for v, t in Operators[StringVariable]])):
+             [(v, t) for v, _, t in Operators[StringVariable]])):
         Operators[_all_name] = _all_ops
         AllTypes[_all_name] = _all_type
 
-    operator_names = {vtype: [name for _, name in filters]
+    operator_names = {vtype: [name for _, name, *_ in filters]
                       for vtype, filters in Operators.items()}
 
     class Error(widget.OWWidget.Error):
@@ -449,7 +443,7 @@ class OWSelectRows(widget.OWWidget):
         if box and vtype == box.var_type:
             lc = self._get_lineedit_contents(box) + lc
 
-        if oper_combo.currentText().endswith(" defined"):
+        if "defined" in oper_combo.currentText():
             label = QLabel()
             label.var_type = vtype
             self.cond_list.setCellWidget(oper_combo.row, 2, label)
@@ -586,7 +580,7 @@ class OWSelectRows(widget.OWWidget):
             floats, ok = zip(*[parse(v) for v in values])
             if not all(ok):
                 raise ValueError('Some values could not be parsed as floats'
-                                 'in the current locale: {}'.format(values))
+                                 f' in the current locale: {values}')
         except TypeError:
             floats = values  # values already floats
         assert all(isinstance(v, float) for v in floats)
@@ -612,7 +606,7 @@ class OWSelectRows(widget.OWWidget):
                     attr = domain[attr_index]
                     attr_type = vartype(attr)
                     operators = self.Operators[type(attr)]
-                opertype, _ = operators[oper_idx]
+                opertype, *_ = operators[oper_idx]
                 if attr_type == 0:
                     filt = data_filter.IsDefined()
                 elif attr_type in (2, 4):  # continuous, time
@@ -759,9 +753,9 @@ class OWSelectRows(widget.OWWidget):
             self.report_items(
                 "Output",
                 (("Matching data",
-                  "{} instances".format(match_inst) if match_inst else "None"),
+                  f"{match_inst} {pl(match_inst, 'instance')}" if match_inst else "None"),
                  ("Non-matching data",
-                  nonmatch_inst > 0 and "{} instances".format(nonmatch_inst))))
+                  nonmatch_inst > 0 and f"{nonmatch_inst} {pl(nonmatch_inst, 'instance')}")))
 
     @classmethod
     def migrate_context(cls, context, version):
