@@ -107,7 +107,7 @@ class OWDataSampler(OWWidget):
         ibox = gui.indentedBox(sampling)
         self.sampleSizeSpin = gui.spin(
             ibox, self, "sampleSizeNumber", label="Instances: ",
-            minv=1, maxv=self._MAX_SAMPLE_SIZE,
+            minv=0, maxv=self._MAX_SAMPLE_SIZE,
             callback=set_sampling_type(self.FixedSize),
             controlWidth=90)
         gui.checkBox(
@@ -395,11 +395,15 @@ class SampleRandomN(Reprable):
             o[sample] = 0
             others = np.nonzero(o)[0]
             return others, sample
-        if self.n == len(table):
+        if self.n in (0, len(table)):
             rgen = np.random.RandomState(self.random_state)
-            sample = np.arange(self.n)
-            rgen.shuffle(sample)
-            return np.array([], dtype=int), sample
+            shuffled = np.arange(len(table))
+            rgen.shuffle(shuffled)
+            empty = np.array([], dtype=int)
+            if self.n == 0:
+                return shuffled, empty
+            else:
+                return empty, shuffled
         elif self.stratified and table.domain.has_discrete_class:
             test_size = max(len(table.domain.class_var.values), self.n)
             splitter = skl.StratifiedShuffleSplit(

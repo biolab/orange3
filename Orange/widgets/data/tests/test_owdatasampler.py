@@ -131,6 +131,13 @@ class TestOWDataSampler(WidgetTest):
         self.widget.commit()
         return self.widget.sampleSizeSpin.value()
 
+    def set_fixed_proportion(self, proportion):
+        """Set fixed sample proportion.
+        """
+        self.select_sampling_type(self.widget.FixedProportion)
+        self.widget.sampleSizePercentageSlider.setValue(proportion)
+        self.widget.commit()
+
     def assertNoIntersection(self, sample, other):
         self.assertFalse(bool(set(sample.ids) & set(other.ids)))
 
@@ -169,6 +176,26 @@ class TestOWDataSampler(WidgetTest):
         w.commit()
         self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 15)
         self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 135)
+
+    def test_empty_sample(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.iris)
+
+        self.set_fixed_sample_size(150)
+        self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 150)
+        self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 0)
+
+        self.set_fixed_sample_size(0)
+        self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 0)
+        self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 150)
+
+        self.set_fixed_proportion(100)
+        self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 150)
+        self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 0)
+
+        self.set_fixed_proportion(0)
+        self.assertEqual(len(self.get_output(w.Outputs.data_sample)), 0)
+        self.assertEqual(len(self.get_output(w.Outputs.remaining_data)), 150)
 
     def test_send_report(self):
         w = self.widget
