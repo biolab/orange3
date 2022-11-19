@@ -27,6 +27,7 @@ from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
     ProjectCUR, Scale as _Scale, Randomize as _Randomize, RemoveSparse
 from Orange.widgets import widget, gui
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
@@ -253,9 +254,9 @@ class ContinuizeEditor(BaseEditor):
     def __repr__(self):
         return self.Continuizers[self.__treatment]
 
-class RemoveSparseEditor(BaseEditor):
 
-    options = ["missing", "zeros"]
+class RemoveSparseEditor(BaseEditor):
+    options = ["missing values", "zeros"]
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -266,11 +267,9 @@ class RemoveSparseEditor(BaseEditor):
         self.setLayout(QVBoxLayout())
 
         self.layout().addWidget(QLabel("Remove features with too many"))
-        options = ["missing values",
-                   "zeros"]
         self.filter_buttons = QButtonGroup(exclusive=True)
         self.filter_buttons.buttonClicked.connect(self.filterByClicked)
-        for idx, option, in enumerate(options):
+        for idx, option, in enumerate(self.options):
             btn = QRadioButton(self, text=option, checked=idx == 0)
             self.filter_buttons.addButton(btn, id=idx)
             self.layout().addWidget(btn)
@@ -353,6 +352,15 @@ class RemoveSparseEditor(BaseEditor):
         else:
             threshold = params.pop('percThresh', 5) / 100
         return RemoveSparse(threshold, filter0)
+
+    def __repr__(self):
+        desc = f"remove features with too many {self.options[self.filter0]}, threshold: "
+        if self.useFixedThreshold:
+            desc += f"{self.fixedThresh} {pl(self.fixedThresh, 'instance')}"
+        else:
+            desc += f"{self.percThresh} %"
+        return desc
+
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
@@ -726,6 +734,12 @@ class RandomFeatureSelectEditor(BaseEditor):
         else:
             # further implementations
             raise NotImplementedError
+
+    def __repr__(self):
+        if self.__strategy == self.Fixed:
+            return f"select {self.__k} {pl(self.__k,'feature')}"
+        else:
+            return f"select {self.__p} % features"
 
 
 def index_to_enum(enum, i):
