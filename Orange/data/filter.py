@@ -31,6 +31,12 @@ class Filter(Reprable):
     def __call__(self, data):
         return
 
+    def __eq__(self, other):
+        return type(self) is type(other) and self.negate == other.negate
+
+    def __hash__(self):
+        return hash(self.negate)
+
 
 class IsDefined(Filter):
     """
@@ -53,7 +59,7 @@ class IsDefined(Filter):
 
     def __init__(self, columns=None, negate=False):
         super().__init__(negate)
-        self.columns = columns
+        self.columns = tuple(columns) if columns is not None else None
 
     def __call__(self, data):
         if isinstance(data, Instance):
@@ -69,6 +75,12 @@ class IsDefined(Filter):
         if self.negate:
             r = np.logical_not(r)
         return data[r]
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.columns == other.columns
+
+    def __hash__(self):
+        return super().__hash__() ^ hash(self.columns)
 
 
 class HasClass(Filter):

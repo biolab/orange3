@@ -69,6 +69,27 @@ class TestIsDefinedFilter(unittest.TestCase):
         self.assertTrue(filter_(instance_with_missing))
         self.assertFalse(filter_(instance_without_missing))
 
+    def test_eq_hash(self):
+        f1 = IsDefined()
+        f1n = IsDefined(negate=True)
+        f1nc = IsDefined(negate=True, columns=("a", "b"))
+        g1 = IsDefined()
+        g1n = IsDefined(negate=True)
+        g1nc = IsDefined(negate=True, columns=("a", "b"))
+
+        self.assertEqual(f1, g1)
+        self.assertEqual(f1n, g1n)
+        self.assertEqual(f1nc, g1nc)
+        self.assertNotEqual(f1, None)
+        self.assertNotEqual(f1, [1, 2, 3])
+        self.assertNotEqual(f1, f1n)
+        self.assertNotEqual(f1, f1nc)
+        self.assertNotEqual(f1nc, f1n)
+
+        self.assertEqual(hash(f1), hash(g1))
+        self.assertEqual(hash(f1n), hash(g1n))
+        self.assertEqual(hash(f1nc), hash(g1nc))
+
     @patch('Orange.data.Table._filter_is_defined', NIMOCK)
     def test_is_defined_filter_not_implemented(self):
         self.test_is_defined_filter_table()

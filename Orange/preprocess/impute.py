@@ -207,6 +207,14 @@ class ReplaceUnknownsModel(Reprable):
         column[mask] = predicted
         return column
 
+    def __eq__(self, other):
+        return type(self) is type(other) \
+               and self.variable == other.variable \
+               and self.model == other.model
+
+    def __hash__(self):
+        return super().__hash__() ^ hash(self.variable) ^ hash(self.model)
+
 
 class Model(BaseImputeMethod):
     _name = "Model-based imputer"
