@@ -354,7 +354,9 @@ class MosaicVizRankTests(WidgetTest):
     def test_finished(self):
         data = Table("iris.tab")
         self.send_signal(self.widget.Inputs.data, data)
+        assert not self.vizrank.keep_running
         self.vizrank.toggle()
+        assert self.vizrank.keep_running
         self.process_events(until=lambda: not self.vizrank.keep_running)
         self.assertEqual(len(self.vizrank.scores), self.vizrank.state_count())
 
