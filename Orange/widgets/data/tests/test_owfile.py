@@ -76,22 +76,16 @@ class TestOWFile(WidgetTest):
     def tearDown(self):
         dataset_dirs.pop()
 
-    def test_describe(self):
+    def test_describe_call_get_nans(self):
         table = Table("iris")
-        description = f"<p><b>Iris flower dataset</b><br/>" \
-                      f"Classical dataset with 150 instances of Iris setosa, Iris virginica and Iris versicolor.</p>" \
-                      f"<p>150 instances<br/>" \
-                      f"4 features (no missing values)<br/>" \
-                      f"Classification; categorical class with 3 values (no missing values)<br/>" \
-                      f"0 meta attributes</p>"
-        self.assertEqual(description, self.widget._describe(table))
+        with patch.object(Table, "get_nan_frequency_attribute", return_value=0.) as mock:
+            self.widget._describe(table)
+            mock.assert_called()
 
         table = Table.from_numpy(domain=None, X=np.random.random((10000, 1000)))
-        description = f"<p>10000 instances<br/>" \
-                      f"1000 features <br/>" \
-                      f"Data has no target variable.<br/>" \
-                      f"0 meta attributes</p>"
-        self.assertEqual(description, self.widget._describe(table))
+        with patch.object(Table, "get_nan_frequency_attribute", return_value=0.) as mock:
+            self.widget._describe(table)
+            mock.assert_not_called()
 
     def test_dragEnterEvent_accepts_urls(self):
         event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))

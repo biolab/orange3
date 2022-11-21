@@ -191,7 +191,7 @@ class TestUtils(unittest.TestCase):
                   f'Target: —'
         with patch.object(Table, "get_nan_frequency_attribute") as mock:
             self.assertEqual(details, format_summary_details(data))
-            self.assertFalse(mock.called)
+            mock.assert_not_called()
 
         data = None
         self.assertEqual('', format_summary_details(data))
