@@ -266,6 +266,14 @@ class TestVariable(unittest.TestCase):
 
         with warnings.catch_warnings(record=True) as warns:
 
+            class InheritEqInherited(AlsoValid):
+                pass
+
+            ContinuousVariable("x", compute_value=InheritEqInherited())
+            self.assertNotEqual(warns, [])
+
+        with warnings.catch_warnings(record=True) as warns:
+
             class MissingHash:
                 def __eq__(self, other):
                     return self is other
