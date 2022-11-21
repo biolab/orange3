@@ -213,7 +213,7 @@ class ReplaceUnknownsModel(Reprable):
                and self.model == other.model
 
     def __hash__(self):
-        return super().__hash__() ^ hash(self.variable) ^ hash(self.model)
+        return hash((super().__hash__(), hash(self.variable), hash(self.model)))
 
 
 class Model(BaseImputeMethod):

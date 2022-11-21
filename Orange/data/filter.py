@@ -80,7 +80,7 @@ class IsDefined(Filter):
         return super().__eq__(other) and self.columns == other.columns
 
     def __hash__(self):
-        return super().__hash__() ^ hash(self.columns)
+        return hash((super().__hash__(), hash(self.columns)))
 
 
 class HasClass(Filter):
