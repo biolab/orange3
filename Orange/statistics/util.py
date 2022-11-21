@@ -341,30 +341,32 @@ def stats(X, weights=None, compute_variance=False):
     """
     is_numeric = np.issubdtype(X.dtype, np.number)
     is_sparse = sp.issparse(X)
-    weighted = weights is not None and X.dtype != object
-    weights = weights if weighted else None
+
+    if X.size and is_numeric:
+        if is_sparse:
+            X = X.tocsc()
+        if compute_variance:
+            means, vars = nan_mean_var(X, axis=0, weights=weights)
+        else:
+            means = nanmean(X, axis=0, weights=weights)
+            vars = np.zeros(X.shape[1] if X.ndim == 2 else 1)
 
     if X.size and is_numeric and not is_sparse:
         nans = np.isnan(X).sum(axis=0)
         return np.column_stack((
             np.nanmin(X, axis=0),
             np.nanmax(X, axis=0),
-            nanmean(X, axis=0, weights=weights),
-            nanvar(X, axis=0) if compute_variance else \
-                np.zeros(X.shape[1] if X.ndim == 2 else 1),
+            means,
+            vars,
             nans,
             X.shape[0] - nans))
     elif is_sparse and X.size:
-        if compute_variance:
-            raise NotImplementedError
-
         non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
-        X = X.tocsc()
         return np.column_stack((
             nanmin(X, axis=0),
             nanmax(X, axis=0),
-            nanmean(X, axis=0, weights=weights),
-            np.zeros(X.shape[1]),      # variance not supported
+            means,
+            vars,
             X.shape[0] - non_zero,
             non_zero))
     else:

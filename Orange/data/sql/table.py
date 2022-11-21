@@ -347,7 +347,7 @@ class SqlTable(Table):
         return False
 
     def _compute_basic_stats(self, columns=None,
-                             include_metas=False, compute_var=False):
+                             include_metas=False, compute_variance=False):
         if self.approx_len() > LARGE_TABLE:
             self = self.sample_time(DEFAULT_SAMPLE_TIME)
 
