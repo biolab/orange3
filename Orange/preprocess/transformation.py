@@ -84,6 +84,8 @@ class Transformation(Reprable):
 class Identity(Transformation):
     """Return an untransformed value of `c`.
     """
+    InheritEq = True
+
     def transform(self, c):
         return c
 
@@ -125,6 +127,9 @@ class Indicator(_Indicator):
     Return an indicator value that equals 1 if the variable has the specified
     value and 0 otherwise.
     """
+
+    InheritEq = True
+
     def transform(self, c):
         if sp.issparse(c):
             if self.value != 0:
@@ -146,6 +151,9 @@ class Indicator1(_Indicator):
     Return an indicator value that equals 1 if the variable has the specified
     value and -1 otherwise.
     """
+
+    InheritEq = True
+
     def transform(self, column):
         # The result of this is always dense
         if sp.issparse(column):
