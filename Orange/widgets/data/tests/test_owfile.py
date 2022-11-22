@@ -76,6 +76,17 @@ class TestOWFile(WidgetTest):
     def tearDown(self):
         dataset_dirs.pop()
 
+    def test_describe_call_get_nans(self):
+        table = Table("iris")
+        with patch.object(Table, "get_nan_frequency_attribute", return_value=0.) as mock:
+            self.widget._describe(table)
+            mock.assert_called()
+
+        table = Table.from_numpy(domain=None, X=np.random.random((10000, 1000)))
+        with patch.object(Table, "get_nan_frequency_attribute", return_value=0.) as mock:
+            self.widget._describe(table)
+            mock.assert_not_called()
+
     def test_dragEnterEvent_accepts_urls(self):
         event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))
         self.widget.dragEnterEvent(event)
