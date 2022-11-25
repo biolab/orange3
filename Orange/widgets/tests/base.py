@@ -14,6 +14,7 @@ from AnyQt.QtWidgets import (
     QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
 
+from orangewidget.utils.signals import MultiInput
 from orangewidget.widget import StateInfo
 from orangewidget.tests.base import (
     GuiTest, WidgetTest as WidgetTestBase, DummySignalManager, DEFAULT_TIMEOUT
@@ -23,7 +24,7 @@ from Orange.classification.base_classification import (
     LearnerClassification, ModelClassification
 )
 from Orange.data import (
-    Table, Domain, DiscreteVariable, ContinuousVariable, Variable
+    Table, Domain, DiscreteVariable, ContinuousVariable, StringVariable
 )
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize, Continuize
@@ -41,6 +42,58 @@ from Orange.widgets.widget import OWWidget
 
 
 class WidgetTest(WidgetTestBase):
+    __e3 = np.empty((3, 0), dtype=np.float64)
+    __y3 = np.ones(3, dtype=np.float64)
+    __dataa = [
+        ("data with just nans", Table(
+            Domain([ContinuousVariable(x) for x in "abc"],
+                   ContinuousVariable("y"),
+                   [StringVariable("m")]),
+            np.full((3, 3), np.nan),
+            np.full(3, np.nan),
+            np.full((3, 1), "", dtype=object))),
+        ("data without rows", Table(
+            Domain([ContinuousVariable(x) for x in "abc"]),
+            __e3.T)),
+        ("data with just attributes", Table(
+            Domain([ContinuousVariable(x) for x in "abc"]),
+            np.ones((3, 3), dtype=np.float64))),
+        ("no data (after having attributes)", None),
+        ("data with just class", Table(
+            Domain([], DiscreteVariable("y", values=tuple("abc"))),
+            __e3, __y3)
+         ),
+        ("data with just continouos outcome", Table(
+            Domain([], ContinuousVariable("y")),
+            __e3, __y3)
+         ),
+        ("no data (after having class)", None),
+        ("data with just metas", Table(
+            Domain([], None, [StringVariable(x) for x in "abc"]),
+            __e3, __e3, np.full((3, 3), "x", dtype=object))),
+        ("with without attributes, class or metas", Table(
+            Domain([], None, []), __e3, __e3, __e3)
+         ),
+        ("no data (after seeing a ghost)", None),
+    ]
+
+    def __init_subclass__(cls, **kwargs):
+        super(cls).__init_subclass__(**kwargs)
+
+        if not hasattr(cls, "test_zero_size_data"):
+            def test_zero_size_data(self):
+                widget = getattr(self, "widget", None)
+                if widget is None:
+                    self.skipTest("not tested because .widget is not set")
+                for input in widget.get_signals("inputs"):
+                    input_id = (1, ) if isinstance(input, MultiInput) else ()
+                    if input.type is Table:
+                        for msg, data in cls.__dataa:
+                            with self.subTest(msg):
+                                self.send_signal(input, data, *input_id)
+
+            cls.test_zero_size_data = test_zero_size_data
+
     def assert_table_equal(self, table1, table2):
         if table1 is None or table2 is None:
             self.assertIs(table1, table2)
