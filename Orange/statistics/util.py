@@ -370,6 +370,8 @@ def stats(X, weights=None, compute_variance=False):
             X.shape[0] - non_zero,
             non_zero))
     else:
+        if X.ndim == 1:
+            X = X[:, None]
         nans = (pandas.isnull(X).sum(axis=0) + (X == "").sum(axis=0)) \
             if X.size else np.zeros(X.shape[1])
         return np.column_stack((
