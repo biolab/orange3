@@ -170,6 +170,18 @@ class TestUtil(unittest.TestCase):
                                            [np.inf, -np.inf, 0, 0, 2, 1],
                                            [np.inf, -np.inf, 0, 0, 0, 3]])
 
+    def test_stats_empty(self):
+        X = np.array([])
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 0, 0]])
+
+        X = np.zeros((0,))
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 0, 0]])
+
+        X = np.zeros((0, 4))
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 0, 0]] * 4)
+
+
+
     def test_stats_long_string_mem_use(self):
         X = np.full((1000, 1000), "a", dtype=object)
         t = time.time()
