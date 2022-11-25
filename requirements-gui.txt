@@ -1,5 +1,5 @@
 orange-canvas-core>=0.1.28,<0.2a
-orange-widget-base>=4.18.0
+orange-widget-base>=4.19.0
 
 AnyQt>=0.1.0
 
