@@ -145,7 +145,7 @@ class OWDataInfo(widget.OWWidget):
             if not cont_class:
                 return f"{disc_class} categorical {pl(disc_class, 'target')}"
             elif not disc_class:
-                return f"{cont_class} numeric {pl(cont_class, 'targets')}"
+                return f"{cont_class} numeric {pl(cont_class, 'target')}"
             return "multi-target data,<br/>" + self._pack_var_counts(class_vars)
 
     @classmethod
