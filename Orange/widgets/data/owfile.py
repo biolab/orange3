@@ -5,17 +5,19 @@ from urllib.parse import urlparse
 from typing import List, Dict, Any
 
 import numpy as np
+from AnyQt import QtWidgets # ALBA new import
 from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy, QCompleter
-from AnyQt.QtCore import Qt, QTimer, QSize, QUrl
-from AnyQt.QtGui import QBrush
+from AnyQt.QtCore import Qt, QTimer, QSize, QUrl, QModelIndex # ALBA new import: QModelIndex
+from AnyQt.QtGui import QBrush, QStandardItemModel, QStandardItem # ALBA new import: QStandardItemModel, QStandardItem
 
 from orangewidget.utils.filedialogs import format_filter
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
+from Orange.data.io import FileFormat, UrlReader, \
+    class_from_qualified_name, GenericHDF5Reader # ALBA new import: GenericHDF5Reader
 from Orange.data.io_base import MissingReaderException
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
@@ -43,7 +45,7 @@ def add_origin(examples, filename):
     """
     Adds attribute with file location to each string variable
     Used for relative filenames stored in string variables (e.g. pictures)
-    TODO: we should consider a cleaner solution (special variable type, ...)
+    ToDO: we should consider a cleaner solution (special variable type, ...)
     """
     if not filename:
         return
@@ -424,7 +426,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return lambda x=ex: self.Error.unknown(str(x))
 
         try:
-            self._update_sheet_combo()
+            if isinstance(self.reader, GenericHDF5Reader): # ALBA new lines 
+                self._hdf5_tree_model()
+            else:
+                self._update_sheet_combo()
         except Exception:
             return self.Error.sheet_error
 
@@ -445,7 +450,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.data = data
         self.openContext(data.domain)
         self.apply_domain_edit()  # sends data
-        return None
+        return None 
 
     def _get_reader(self) -> FileFormat:
         if self.source == self.LOCAL_FILE:
@@ -475,6 +480,16 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             url = self.url_combo.currentText().strip()
             return UrlReader(url)
+
+    def _hdf5_tree_model(self): # ALBA new function
+        box = gui.widgetBox(self.controlArea,
+                            orientation=QGridLayout().setSpacing(4), 
+                            box="Data sets")
+        self.tree_model = QStandardItemModel()
+        self.dataset_tree = QtWidgets.QTreeView(box)
+        self.dataset_tree.setModel(self.tree_model)
+        box.layout().addWidget(self.dataset_tree)
+        self.dataset_tree.clicked[QModelIndex].connect(self.open_dataset)
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
