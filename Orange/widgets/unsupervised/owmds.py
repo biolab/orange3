@@ -5,6 +5,7 @@ import numpy as np
 import scipy.spatial.distance
 
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QSizePolicy
 
 import pyqtgraph as pg
 
@@ -228,7 +229,11 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
                      orientation=Qt.Horizontal,
                      items=[t for t, _ in OWMDS.RefreshRate],
                      callback=self.__refresh_rate_combo_changed)
-        self.run_button = gui.button(box, self, "Start", self._toggle_run)
+        hbox = gui.hBox(box)
+        self.run_button = gui.button(hbox, self, "Start", self._toggle_run)
+        self.step_button = gui.button(
+            hbox, self, ">", self._step,
+            sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Fixed))
 
     def __refresh_rate_combo_changed(self):
         if self.task is not None:
@@ -344,20 +349,25 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.task is not None:
             self.cancel()
             self.run_button.setText("Resume")
+            self.step_button.setEnabled(True)
             self.commit.deferred()
         else:
             self._run()
 
-    def _run(self):
+    def _step(self):
+        self._run(1)
+
+    def _run(self, steps=None):
         if self.effective_matrix is None \
                 or np.allclose(self.effective_matrix, 0):
             return
         self.run_button.setText("Stop")
+        self.step_button.setEnabled(False)
         _, step_size = OWMDS.RefreshRate[self.refresh_rate]
         if step_size == -1:
             step_size = self.max_iter
         init_type = "PCA" if self.initialization == OWMDS.PCA else "random"
-        self.start(run_mds, self.effective_matrix, self.max_iter,
+        self.start(run_mds, self.effective_matrix, steps or self.max_iter,
                    step_size, init_type, self.embedding)
 
     # ConcurrentWidgetMixin
@@ -382,6 +392,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.graph.update_coordinates()
         self.graph.update_density()
         self.run_button.setText("Start")
+        self.step_button.setEnabled(True)
         self.commit.deferred()
 
     def on_exception(self, ex: Exception):
@@ -390,6 +401,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         else:
             self.Error.optimization_error(str(ex))
         self.run_button.setText("Start")
+        self.step_button.setEnabled(True)
 
     def do_PCA(self):
         self.do_initialization(self.PCA)
@@ -402,6 +414,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def do_initialization(self, init_type: int):
         self.run_button.setText("Start")
+        self.step_button.setEnabled(True)
         self.__invalidate_embedding(init_type)
         self.graph.update_coordinates()
         self.commit.deferred()
