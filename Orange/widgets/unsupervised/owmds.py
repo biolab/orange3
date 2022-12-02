@@ -4,7 +4,8 @@ from types import SimpleNamespace as namespace
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QTimer
+from AnyQt.QtTest import QSignalSpy
 from AnyQt.QtWidgets import QSizePolicy
 
 import pyqtgraph as pg
@@ -46,6 +47,15 @@ def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
     state.set_status("Running...")
     oldstress = np.finfo(float).max
 
+    ticked = False
+
+    def timedout():
+        nonlocal ticked
+        ticked = True
+
+    timer = QTimer(interval=100)
+    timer.timeout.connect(timedout)
+    timer.start()
     while True:
         step_iter = min(max_iter - iterations_done, step_size)
         mds = MDS(
@@ -72,6 +82,9 @@ def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
         oldstress = stress
         if state.is_interruption_requested():
             return res
+        if not ticked:
+            QSignalSpy(timer.timeout).wait(100)
+        ticked = False
 
 
 #: Maximum number of displayed closest pairs.
