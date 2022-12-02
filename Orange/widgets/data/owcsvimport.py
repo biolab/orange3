@@ -1554,10 +1554,13 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
             file, sep=opts.dialect.delimiter, dialect=opts.dialect,
             skipinitialspace=opts.dialect.skipinitialspace,
             header=header, skiprows=skiprows,
-            dtype=dtypes, parse_dates=parse_dates, prefix=prefix,
+            dtype=dtypes, parse_dates=parse_dates,
             na_values=na_values, keep_default_na=False,
             **numbers_format_kwds
         )
+
+        if prefix:
+            df.columns = [f"{prefix}{column}" for column in df.columns]
 
         # for older workflows avoid guessing type guessing
         if not compatibility_mode:
