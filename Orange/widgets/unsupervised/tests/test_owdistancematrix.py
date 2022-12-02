@@ -84,6 +84,30 @@ class TestOWDistanceMatrix(WidgetTest):
         ac.activated.emit(idx)
         self.assertEqual(self.widget.tablemodel.labels, ["1", "?"])
 
+    def test_choose_label(self):
+        self.assertIs(OWDistanceMatrix._choose_label(self.iris),
+                      self.iris.domain.class_var)
+
+        domain = Domain([ContinuousVariable(x) for x in "xyz"],
+                        ContinuousVariable("t"),
+                        [ContinuousVariable("m")] +
+                        [StringVariable(c) for c in "abc"]
+                        )
+        data = Table.from_numpy(
+            domain,
+            np.zeros((4, 3), dtype=float),
+            np.arange(4, dtype=float),
+            np.array([[0, "a", "a", "a"],
+                      [1, "b", "b", "b"],
+                      [2, "a", "c", "b"],
+                      [0, "b", "a", "a"]])
+        )
+        self.assertIs(OWDistanceMatrix._choose_label(data),
+                      domain.metas[2])
+        domain2 = Domain(domain.attributes, domain.class_var, domain.metas[:-2])
+        self.assertIs(OWDistanceMatrix._choose_label(data.transform(domain2)),
+                      domain.metas[1])
+
 
 class TestDelegates(GuiTest):
     def test_delegate(self):
