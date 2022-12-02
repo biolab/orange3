@@ -84,19 +84,11 @@ class OWMDSGraph(OWScatterPlotBase):
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
         self.pairs_curve = None
-        self.draw_pairs = True
         self._similar_pairs = None
         self.effective_matrix = None
 
     def set_effective_matrix(self, effective_matrix):
         self.effective_matrix = effective_matrix
-
-    def pause_drawing_pairs(self):
-        self.draw_pairs = False
-
-    def resume_drawing_pairs(self):
-        self.draw_pairs = True
-        self.update_pairs(True)
 
     def update_coordinates(self):
         super().update_coordinates()
@@ -109,7 +101,7 @@ class OWMDSGraph(OWScatterPlotBase):
     def update_pairs(self, reconnect):
         if self.pairs_curve:
             self.plot_widget.removeItem(self.pairs_curve)
-        if not self.draw_pairs or self.connected_pairs == 0 \
+        if self.connected_pairs == 0 \
                 or self.effective_matrix is None \
                 or self.scatterplot_item is None:
             return
@@ -149,6 +141,7 @@ class OWMDSGraph(OWScatterPlotBase):
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
             pen=pg.mkPen(0.8, width=2, cosmetic=True),
             connect="pairs", antialias=True)
+        self.pairs_curve.setSegmentedLineMode("on")
         self.pairs_curve.setZValue(-1)
         self.plot_widget.addItem(self.pairs_curve)
 
@@ -208,8 +201,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         self.embedding = None  # type: Optional[np.ndarray]
         self.effective_matrix = None  # type: Optional[DistMatrix]
-
-        self.graph.pause_drawing_pairs()
 
         self.size_model = self.gui.points_models[2]
         self.size_model.order = \
@@ -360,7 +351,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.effective_matrix is None \
                 or np.allclose(self.effective_matrix, 0):
             return
-        self.graph.pause_drawing_pairs()
         self.run_button.setText("Stop")
         _, step_size = OWMDS.RefreshRate[self.refresh_rate]
         if step_size == -1:
@@ -388,7 +378,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         assert isinstance(result.embedding, np.ndarray)
         assert len(result.embedding) == len(self.effective_matrix)
         self.embedding = result.embedding
-        self.graph.resume_drawing_pairs()
+        self.graph.update_coordinates()
+        self.graph.update_density()
         self.run_button.setText("Start")
         self.commit.deferred()
 
@@ -397,7 +388,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self.Error.out_of_memory()
         else:
             self.Error.optimization_error(str(ex))
-        self.graph.resume_drawing_pairs()
         self.run_button.setText("Start")
 
     def do_PCA(self):
@@ -444,7 +434,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self._initialize()
         self.input_changed.emit(self.data)
         if self._invalidated:
-            self.graph.pause_drawing_pairs()
             self.__invalidate_embedding()
             self.enable_controls()
             if self.effective_matrix is not None:
