@@ -4,9 +4,9 @@ from types import SimpleNamespace as namespace
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtCore import Qt, QTimer
+from AnyQt.QtCore import QTimer
 from AnyQt.QtTest import QSignalSpy
-from AnyQt.QtWidgets import QSizePolicy
+from AnyQt.QtWidgets import QSizePolicy, QGridLayout, QLabel
 
 import pyqtgraph as pg
 
@@ -154,7 +154,7 @@ class OWMDSGraph(OWScatterPlotBase):
         emb_y_pairs = emb_y_pairs[pairs_mask, :]
         self.pairs_curve = pg.PlotCurveItem(
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
-            pen=pg.mkPen(0.8, width=2, cosmetic=True),
+            pen=pg.mkPen(0.8, width=4, cosmetic=True),
             connect="pairs", antialias=True)
         self.pairs_curve.setSegmentedLineMode("on")
         self.pairs_curve.setZValue(-1)
@@ -238,15 +238,23 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         gui.button(hbox, self, "PCA", callback=self.do_PCA, autoDefault=False)
         gui.button(hbox, self, "Randomize", callback=self.do_random, autoDefault=False)
         gui.button(hbox, self, "Jitter", callback=self.do_jitter, autoDefault=False)
-        gui.comboBox(box, self, "refresh_rate", label="Refresh: ",
-                     orientation=Qt.Horizontal,
-                     items=[t for t, _ in OWMDS.RefreshRate],
-                     callback=self.__refresh_rate_combo_changed)
-        hbox = gui.hBox(box)
-        self.run_button = gui.button(hbox, self, "Start", self._toggle_run)
+        gui.separator(box, height=18)
+        grid = QGridLayout()
+        gui.widgetBox(box, orientation=grid)
+        self.run_button = gui.button(None, self, "Start", self._toggle_run)
         self.step_button = gui.button(
-            hbox, self, ">", self._step,
+            None, self, "⏵⏸", self._step,
             sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Fixed))
+        grid.addWidget(self.run_button, 0, 0, 1, 2)
+        grid.addWidget(self.step_button, 0, 2)
+        grid.addWidget(QLabel("Refresh:"), 1, 0)
+        grid.addWidget(
+            gui.comboBox(
+                None, self, "refresh_rate",
+                items=[t for t, _ in OWMDS.RefreshRate],
+                sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed),
+                callback=self.__refresh_rate_combo_changed),
+            1, 1)
 
     def __refresh_rate_combo_changed(self):
         if self.task is not None:
