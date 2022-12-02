@@ -89,16 +89,17 @@ class OWMDSGraph(OWScatterPlotBase):
 
     def set_effective_matrix(self, effective_matrix):
         self.effective_matrix = effective_matrix
+        self._similar_pairs = None
 
     def update_coordinates(self):
         super().update_coordinates()
-        self.update_pairs(reconnect=False)
+        self.update_pairs()
 
     def update_jittering(self):
         super().update_jittering()
-        self.update_pairs(reconnect=False)
+        self.update_pairs()
 
-    def update_pairs(self, reconnect):
+    def update_pairs(self):
         if self.pairs_curve:
             self.plot_widget.removeItem(self.pairs_curve)
         if self.connected_pairs == 0 \
@@ -106,7 +107,7 @@ class OWMDSGraph(OWScatterPlotBase):
                 or self.scatterplot_item is None:
             return
         emb_x, emb_y = self.scatterplot_item.getData()
-        if self._similar_pairs is None or reconnect:
+        if self._similar_pairs is None:
             # This code requires storing lower triangle of X (n x n / 2
             # doubles), n x n / 2 * 2 indices to X, n x n / 2 indices for
             # argsort result. If this becomes an issue, it can be reduced to
@@ -402,7 +403,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def do_initialization(self, init_type: int):
         self.run_button.setText("Start")
         self.__invalidate_embedding(init_type)
-        self.setup_plot()
+        self.graph.update_coordinates()
         self.commit.deferred()
 
     def __invalidate_embedding(self, initialization=PCA):
@@ -442,12 +443,12 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def _on_connected_changed(self):
         self.graph.set_effective_matrix(self.effective_matrix)
-        self.graph.update_pairs(reconnect=True)
+        self.graph.update_pairs()
 
     def setup_plot(self):
         super().setup_plot()
         if self.embedding is not None:
-            self.graph.update_pairs(reconnect=True)
+            self.graph.update_pairs()
 
     def get_size_data(self):
         if self.attr_size == "Stress":
