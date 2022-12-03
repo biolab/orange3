@@ -16,22 +16,13 @@ from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.projection.manifold import torgerson, MDS
 
-from Orange.widgets import gui, settings
-from Orange.widgets.settings import SettingProvider
+from Orange.widgets import gui
+from Orange.widgets.settings import SettingProvider, Setting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Msg, Input
-
-
-def stress(X, distD):
-    assert X.shape[0] == distD.shape[0] == distD.shape[1]
-    D1_c = scipy.spatial.distance.pdist(X, metric="euclidean")
-    D1 = scipy.spatial.distance.squareform(D1_c, checks=False)
-    delta = D1 - distD
-    delta_sq = np.square(delta, out=delta)
-    return delta_sq.sum(axis=0) / 2
 
 
 class Result(namespace):
@@ -93,7 +84,7 @@ MAX_N_PAIRS = 10000
 
 class OWMDSGraph(OWScatterPlotBase):
     #: Percentage of all pairs displayed (ranges from 0 to 20)
-    connected_pairs = settings.Setting(5)
+    connected_pairs = Setting(5)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
@@ -138,10 +129,10 @@ class OWMDSGraph(OWScatterPlotBase):
             p = min(n * (n - 1) // 2 * self.connected_pairs // 100,
                     MAX_N_PAIRS * self.connected_pairs // 20)
             indcs = np.triu_indices(n, 1)
-            sorted = np.argsort(m[indcs])[:p]
+            sorted_ind = np.argsort(m[indcs])[:p]
             self._similar_pairs = fpairs = np.empty(2 * p, dtype=int)
-            fpairs[::2] = indcs[0][sorted]
-            fpairs[1::2] = indcs[1][sorted]
+            fpairs[::2] = indcs[0][sorted_ind]
+            fpairs[1::2] = indcs[1][sorted_ind]
         emb_x_pairs = emb_x[self._similar_pairs].reshape((-1, 2))
         emb_y_pairs = emb_y[self._similar_pairs].reshape((-1, 2))
 
@@ -186,9 +177,9 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         ("None", -1)
     ]
 
-    max_iter = settings.Setting(300)
-    initialization = settings.Setting(PCA)
-    refresh_rate = settings.Setting(3)
+    max_iter = Setting(300)
+    initialization = Setting(PCA)
+    refresh_rate: int = Setting(3)
 
     GRAPH_CLASS = OWMDSGraph
     graph = SettingProvider(OWMDSGraph)
@@ -233,6 +224,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         )
 
     def _add_controls_optimization(self):
+        # This is a part of init
+        # pylint: disable=attribute-defined-outside-init
         box = gui.vBox(self.controlArea, box="Optimize", spacing=0)
         hbox = gui.hBox(box, margin=0)
         gui.button(hbox, self, "PCA", callback=self.do_PCA, autoDefault=False)
@@ -384,6 +377,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             return
         self.run_button.setText("Stop")
         self.step_button.setEnabled(False)
+        # false positive, pylint: disable=invalid-sequence-index
         _, step_size = OWMDS.RefreshRate[self.refresh_rate]
         if step_size == -1:
             step_size = self.max_iter
@@ -486,9 +480,18 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def get_size_data(self):
         if self.attr_size == "Stress":
-            return stress(self.embedding, self.effective_matrix)
+            return self.stress(self.embedding, self.effective_matrix)
         else:
             return super().get_size_data()
+
+    @staticmethod
+    def stress(X, distD):
+        assert X.shape[0] == distD.shape[0] == distD.shape[1]
+        D1_c = scipy.spatial.distance.pdist(X, metric="euclidean")
+        D1 = scipy.spatial.distance.squareform(D1_c, checks=False)
+        delta = D1 - distD
+        delta_sq = np.square(delta, out=delta)
+        return delta_sq.sum(axis=0) / 2
 
     def get_embedding(self):
         self.valid_data = np.ones(len(self.embedding), dtype=bool) \
@@ -510,21 +513,21 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         super().onDeleteWidget()
 
     @classmethod
-    def migrate_settings(cls, settings_, version):
+    def migrate_settings(cls, settings, version):
         if version < 2:
             settings_graph = {}
             for old, new in (("label_only_selected", "label_only_selected"),
                              ("symbol_opacity", "alpha_value"),
                              ("symbol_size", "point_width"),
                              ("jitter", "jitter_size")):
-                settings_graph[new] = settings_[old]
-            settings_["graph"] = settings_graph
-            settings_["auto_commit"] = settings_["autocommit"]
+                settings_graph[new] = settings[old]
+            settings["graph"] = settings_graph
+            settings["auto_commit"] = settings["autocommit"]
 
         if version < 3:
-            if "connected_pairs" in settings_:
-                connected_pairs = settings_["connected_pairs"]
-                settings_["graph"]["connected_pairs"] = connected_pairs
+            if "connected_pairs" in settings:
+                connected_pairs = settings["connected_pairs"]
+                settings["graph"]["connected_pairs"] = connected_pairs
 
     @classmethod
     def migrate_context(cls, context, version):
