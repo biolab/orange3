@@ -28,7 +28,7 @@ requirements:
   host:
     - python
     - setuptools
-    - numpy         1.14.*
+    - numpy
     - cython
     - pip
     - wheel
