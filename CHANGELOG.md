@@ -4,6 +4,26 @@ Change Log
 [next] - TBA
 ------------
 
+[3.34.0] - 2022-12-05
+--------------------
+##### Enhancements
+* Faster normalization ([#6202](../../pull/6202))
+* io.UrlReader: Add support for google drive share urls ([#6201](../../pull/6201))
+* Table: Add methods get_column and set_column ([#6058](../../pull/6058))
+* owfeatureconstructor: raise settings version
+* owfeaturecontructor: move meta to the end of namedtuple
+* Aggregate Columns: Add additional options for selection ([#6056](../../pull/6056))
+
+##### Bugfixes
+* conda-recipe: Remove explicit host numpy pinning ([#6235](../../pull/6235))
+* Data Sampler: Fix crash when requesting an empty sample ([#6208](../../pull/6208))
+* Remove pyqt5 install magic ([#6153](../../pull/6153))
+* stats: Handle empty array ([#6221](../../pull/6221))
+* Preprocess: Fix reporting for remove sparse and impute ([#6212](../../pull/6212))
+* Weighted mean computation in Orange.statistics.util.stats ([#6204](../../pull/6204))
+* owfeatureconstructor: raise settings version
+* owfeaturecontructor: move meta to the end of namedtuple
+
 
 [3.33.0] - 2022-09-30
 --------------------
@@ -1708,8 +1728,9 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.33.0...HEAD
-[3.32.0]: https://github.com/biolab/orange3/compare/3.32.0...3.33.0
+[next]: https://github.com/biolab/orange3/compare/3.34.0...HEAD
+[3.34.0]: https://github.com/biolab/orange3/compare/3.33.0...3.34.0
+[3.33.0]: https://github.com/biolab/orange3/compare/3.32.0...3.33.0
 [3.32.0]: https://github.com/biolab/orange3/compare/3.31.1...3.32.0
 [3.31.1]: https://github.com/biolab/orange3/compare/3.31.0...3.31.1
 [3.31.0]: https://github.com/biolab/orange3/compare/3.30.2...3.31.0
