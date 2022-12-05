@@ -19,6 +19,7 @@ from AnyQt.QtCore import Slot
 from orangewidget.gui import OrangeUserRole
 
 import Orange.data
+from Orange.data.dask import DaskTable
 from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
 
@@ -281,7 +282,7 @@ class OWTable(OWWidget):
     @Inputs.data
     def set_dataset(self, data: Optional[Table]):
         """Set the input dataset."""
-        if data.is_dask_table():
+        if isinstance(data, DaskTable):
             self.show_distributions = False
         # reset the (header) view state.
         self.view.setModel(None)
