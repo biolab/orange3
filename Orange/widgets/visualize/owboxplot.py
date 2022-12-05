@@ -83,6 +83,7 @@ class SortProxyModel(QSortFilterProxyModel):
         r_score = right.data(role)
         return r_score is not None and (l_score is None or l_score < r_score)
 
+
 class OWBoxPlot(widget.OWWidget):
     name = "Box Plot"
     description = "Visualize the distribution of feature values in a box plot."
@@ -351,7 +352,7 @@ class OWBoxPlot(widget.OWWidget):
                 return 3
             if attr.is_continuous:
                 # One-way ANOVA
-                col = data.get_column_view(attr)[0].astype(float)
+                col = data.get_column(attr)
                 groups = (col[group_col == i] for i in range(n_groups))
                 groups = (col[~np.isnan(col)] for col in groups)
                 groups = [group for group in groups if len(group) > 1]
@@ -369,8 +370,8 @@ class OWBoxPlot(widget.OWWidget):
         group_var = self.group_var
         if self.order_by_importance and group_var is not None:
             n_groups = len(group_var.values)
-            group_col = data.get_column_view(group_var)[0] if \
-                domain.has_continuous_attributes(
+            group_col = data.get_column(group_var) \
+                if domain.has_continuous_attributes(
                     include_class=True, include_metas=True) else None
             self._sort_list(self.attrs, self.attr_list, compute_score)
         else:
@@ -402,7 +403,7 @@ class OWBoxPlot(widget.OWWidget):
         attr = self.attribute
         if self.order_grouping_by_importance:
             if attr.is_continuous:
-                attr_col = data.get_column_view(attr)[0].astype(float)
+                attr_col = data.get_column(attr)
             self._sort_list(self.group_vars, self.group_list, compute_stat)
         else:
             self._sort_list(self.group_vars, self.group_list, None)
@@ -492,8 +493,8 @@ class OWBoxPlot(widget.OWWidget):
         if isinstance(attr, np.ndarray):
             attr_col = attr
         else:
-            attr_col = data.get_column_view(group)[0].astype(float)
-        group_col = data.get_column_view(group)[0].astype(float)
+            attr_col = data.get_column(group)
+        group_col = data.get_column(group)
         groups = [attr_col[group_col == i] for i in range(len(group.values))]
         groups = [col[~np.isnan(col)] for col in groups]
         return groups
@@ -515,7 +516,7 @@ class OWBoxPlot(widget.OWWidget):
             group_var_labels = self.group_var.values + ("",)
             if self.attribute.is_continuous:
                 stats, label_texts = [], []
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = dataset.get_column(attr)
                 for group, value in \
                         zip(self._group_cols(dataset, self.group_var, attr_col),
                             group_var_labels):
@@ -534,7 +535,7 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.conts = None
             if self.attribute.is_continuous:
-                attr_col = dataset.get_column_view(attr)[0].astype(float)
+                attr_col = dataset.get_column(attr)
                 self.stats = [BoxData(attr_col)]
             else:
                 self.dist = distribution.get_distribution(dataset, attr)
@@ -636,7 +637,7 @@ class OWBoxPlot(widget.OWWidget):
         if not self.show_stretched:
             if self.group_var:
                 self.labels = [
-                    QGraphicsTextItem("{}".format(int(sum(cont))))
+                    QGraphicsTextItem(f"{int(sum(cont))}")
                     for cont in self.conts.array_with_unknowns
                     if np.sum(cont) > 0]
             else:
@@ -852,7 +853,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def draw_axis(self):
         """Draw the horizontal axis and sets self.scale_x"""
-        misssing_stats = not self.stats
+        missing_stats = not self.stats
         stats = self.stats or [BoxData(np.array([0.]), self.attribute)]
         mean_labels = self.mean_labels or [self.mean_label(stats[0], self.attribute, "")]
         bottom = min(stat.a_min for stat in stats)
@@ -872,7 +873,7 @@ class OWBoxPlot(widget.OWWidget):
         viewrect = bv.viewport().rect().adjusted(15, 15, -15, -30)
         self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
 
-        # In principle we should repeat this until convergence since the new
+        # In principle, we should repeat this until convergence since the new
         # scaling is too conservative. (No chance am I doing this.)
         mlb = min(stat.mean + mean_lab.min_x / scale_x
                   for stat, mean_lab in zip(stats, mean_labels))
@@ -891,7 +892,7 @@ class OWBoxPlot(widget.OWWidget):
                                        self._pen_axis_tick)
             l.setZValue(100)
             t = QGraphicsSimpleTextItem(
-                self.attribute.str_val(val) if not misssing_stats else "?")
+                self.attribute.str_val(val) if not missing_stats else "?")
             t.setFont(self._axis_font)
             t.setFlag(QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
@@ -1213,9 +1214,9 @@ class OWBoxPlot(widget.OWWidget):
         self.report_plot()
         text = ""
         if self.attribute:
-            text += "Box plot for attribute '{}' ".format(self.attribute.name)
+            text += f"Box plot for attribute '{self.attribute.name}' "
         if self.group_var:
-            text += "grouped by '{}'".format(self.group_var.name)
+            text += f"grouped by '{self.group_var.name}'"
         if text:
             self.report_caption(text)
 

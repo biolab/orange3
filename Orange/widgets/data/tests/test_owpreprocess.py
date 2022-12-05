@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
+import unittest
+
 import numpy as np
 
 from Orange.data import Table
@@ -231,6 +233,13 @@ class TestRandomFeatureSelectEditor(WidgetTest):
         self.assertIsInstance(p, fss.SelectRandomFeatures)
         self.assertEqual(p.k, 0.25)
 
+    def test_repr(self):
+        widget = owpreprocess.RandomFeatureSelectEditor()
+        for strategy in (owpreprocess.RandomFeatureSelectEditor.Fixed,
+                         owpreprocess.RandomFeatureSelectEditor.Percentage):
+            widget.setStrategy(strategy)
+            repr(widget)
+
 
 class TestRandomizeEditor(WidgetTest):
     def test_editor(self):
@@ -281,8 +290,8 @@ class TestCUREditor(WidgetTest):
         self.assertEqual(p.rank, 5)
         self.assertEqual(p.max_error, 0.5)
 
-class TestRemoveSparseEditor(WidgetTest):
 
+class TestRemoveSparseEditor(WidgetTest):
     def test_editor(self):
         widget = owpreprocess.RemoveSparseEditor()
         self.assertEqual(
@@ -304,3 +313,12 @@ class TestRemoveSparseEditor(WidgetTest):
         self.assertIsInstance(p, RemoveSparse)
         self.assertEqual(p.threshold, 30)
         self.assertFalse(p.filter0)
+
+    def test_repr(self):
+        widget = owpreprocess.RemoveSparseEditor()
+        for widget.useFixedThreshold in (False, True):
+            repr(widget)
+
+
+if __name__ == "__main__":
+    unittest.main()

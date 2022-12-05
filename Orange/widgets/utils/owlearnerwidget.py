@@ -1,5 +1,4 @@
 from copy import deepcopy
-import warnings
 
 from AnyQt.QtCore import QTimer, Qt
 
@@ -13,7 +12,6 @@ from Orange.widgets.utils import getmembers
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
-from Orange.util import OrangeDeprecationWarning
 
 
 class OWBaseLearnerMeta(WidgetMetaClass):
@@ -249,25 +247,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         if self.data is not None and self.learner is not None:
             self.Error.data_error.clear()
 
-            incompatibility_reason = None
-            for cls in type(self.learner).mro():
-                if 'incompatibility_reason' in cls.__dict__:
-                    # pylint: disable=assignment-from-none
-                    incompatibility_reason = \
-                        self.learner.incompatibility_reason(self.data.domain)
-                    break
-                if 'check_learner_adequacy' in cls.__dict__:
-                    warnings.warn(
-                        "check_learner_adequacy is deprecated and will be removed "
-                        "in upcoming releases. Learners should instead implement "
-                        "the incompatibility_reason method.",
-                        OrangeDeprecationWarning)
-                    if not self.learner.check_learner_adequacy(self.data.domain):
-                        incompatibility_reason = self.learner.learner_adequacy_err_msg
-                    break
-
-            if incompatibility_reason is not None:
-                self.Error.data_error(incompatibility_reason)
+            reason = self.learner.incompatibility_reason(self.data.domain)
+            if reason is not None:
+                self.Error.data_error(reason)
             elif not len(self.data):
                 self.Error.data_error("Dataset is empty.")
             elif len(ut.unique(self.data.Y)) < 2:

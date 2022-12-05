@@ -906,7 +906,7 @@ class OWLinePlot(OWWidget):
         if self.group_var is None:
             self._plot_group(data, np.arange(len(data)))
         else:
-            class_col_data, _ = self.data.get_column_view(self.group_var)
+            class_col_data = self.data.get_column(self.group_var)
             for index in range(len(self.group_var.values)):
                 indices = np.flatnonzero(class_col_data == index)
                 if len(indices) == 0:

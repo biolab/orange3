@@ -17,7 +17,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange import data
-from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
+from Orange.data import (filter, Unknown, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
 from Orange.data.util import SharedComputeValue
 from Orange.tests import test_dirname
@@ -1165,7 +1165,8 @@ class TableTestCase(unittest.TestCase):
         table2 = table[:4]
         self.assertEqual(table2.attributes[1], "test")
         table2.attributes[1] = "modified"
-        self.assertEqual(table.attributes[1], "modified")
+        self.assertEqual(table.attributes[1], "test")
+        self.assertEqual(table2.attributes[1], "modified")
 
     # TODO Test conjunctions and disjunctions of conditions
 
@@ -1892,6 +1893,28 @@ class CreateTableWithDomainAndTable(TableTests):
         np.testing.assert_almost_equal(new_table.Y, Y)
         np.testing.assert_almost_equal(new_table.metas, magic[rows, mcols])
         np.testing.assert_almost_equal(new_table.W, old_table.W[rows])
+
+    def test_attributes_copied(self):
+        """Table created from table attributes dict copied"""
+        self.table.attributes = {"A": "Test", "B": []}
+
+        # from_table
+        new_table = self.table.from_table(self.table.domain, self.table)
+        self.assertDictEqual(new_table.attributes, {"A": "Test", "B": []})
+        new_table.attributes["A"] = "Changed"
+        new_table.attributes["B"].append(1)
+        self.assertDictEqual(new_table.attributes, {"A": "Changed", "B": [1]})
+        # attributes dict of old table not be changed since new dist is a copy
+        self.assertDictEqual(self.table.attributes, {"A": "Test", "B": []})
+
+        # from_table_rows
+        new_table = self.table.from_table_rows(self.table, [1, 2])
+        self.assertDictEqual(new_table.attributes, {"A": "Test", "B": []})
+        new_table.attributes["A"] = "Changed"
+        new_table.attributes["B"].append(1)
+        self.assertDictEqual(new_table.attributes, {"A": "Changed", "B": [1]})
+        # attributes dict of old table not be changed since new dist is a copy
+        self.assertDictEqual(self.table.attributes, {"A": "Test", "B": []})
 
 
 def isspecial(s):

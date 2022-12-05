@@ -5,3 +5,4 @@ cython
 -r requirements-pyqt.txt
 # for orange data mining library catboost and xgboost required
 -r requirements-opt.txt
+-e .

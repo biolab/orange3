@@ -600,7 +600,7 @@ class OWDistanceMap(widget.OWWidget):
             labels = [v.name for v in self.items]
         elif isinstance(self.items, Orange.data.Table):
             var = self.annot_combo.model()[self.annotation_idx]
-            column, _ = self.items.get_column_view(var)
+            column = self.items.get_column(var)
             labels = [var.str_val(value) for value in column]
 
         self._set_labels(labels)

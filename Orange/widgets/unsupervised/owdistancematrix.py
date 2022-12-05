@@ -252,8 +252,7 @@ class OWDistanceMatrix(widget.OWWidget):
         elif isinstance(items, Table):
             annotations.extend(
                 itertools.chain(items.domain.variables, items.domain.metas))
-            if items.domain.class_var:
-                pending_idx = 2 + len(items.domain.attributes)
+            pending_idx = annotations.index(self._choose_label(items))
         self.annot_combo.model()[:] = annotations
         self.annotation_idx = pending_idx
 
@@ -262,6 +261,14 @@ class OWDistanceMatrix(widget.OWWidget):
             self._update_labels()
             self.tableview.resizeColumnsToContents()
         self.commit.now()
+
+    @staticmethod
+    def _choose_label(data: Table):
+        attr = max((attr for attr in data.domain.metas
+                    if isinstance(attr, StringVariable)),
+                   key=lambda x: len(set(data.get_column(x))),
+                   default=None)
+        return attr or data.domain.class_var or "Enumerate"
 
     def _invalidate_annotations(self):
         if self.distances is not None:
@@ -281,7 +288,7 @@ class OWDistanceMatrix(widget.OWWidget):
             labels = [v.name for v in self.items]
         elif isinstance(self.items, Table):
             var = self.annot_combo.model()[self.annotation_idx]
-            column, _ = self.items.get_column_view(var)
+            column = self.items.get_column(var)
             labels = [var.str_val(value) for value in column]
         if labels:
             self.tableview.horizontalHeader().show()

@@ -28,6 +28,10 @@ class TestDomainBasicStats(TestCase):
         self.assertStatsEqual(domain_stats.stats,
                               attr_stats + class_var_stats + meta_stats)
 
+    def test_empty_table(self):
+        domain_stats = DomainBasicStats(self.zoo[:0])
+        self.assertEqual(len(domain_stats.stats), 17)
+
     def test_speed(self):
         n, m = 10, 10000
         data = Table.from_numpy(None, np.random.rand(n, m))

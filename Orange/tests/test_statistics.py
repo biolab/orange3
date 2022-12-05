@@ -9,11 +9,13 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
     SparseEfficiencyWarning
 
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.util import assure_array_dense
+from Orange.statistics.distribution import get_distributions_for_columns
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
     unique, var, nanstd, nanvar, nanmode, nan_to_num, FDR, isnan, any_nan, \
-    all_nan
+    all_nan, nan_mean_var
 from sklearn.utils import check_random_state
 
 
@@ -119,6 +121,13 @@ class TestUtil(unittest.TestCase):
                                            [0, 0, 0, 0, 3, 0],
                                            [0, 0, 0, 0, 3, 0]])
 
+        r = stats(X, compute_variance=True)
+        np.testing.assert_almost_equal(r, [[0, 1, 1/3, 2/9, 2, 1],
+                                           [0, 1, 1/3, 2/9, 2, 1],
+                                           [0, 1, 1/3, 2/9, 2, 1],
+                                           [0, 0, 0, 0, 3, 0],
+                                           [0, 0, 0, 0, 3, 0]])
+
     def test_stats_weights(self):
         X = np.arange(4).reshape(2, 2).astype(float)
         weights = np.array([1, 3])
@@ -128,12 +137,27 @@ class TestUtil(unittest.TestCase):
         X = np.arange(4).reshape(2, 2).astype(object)
         np.testing.assert_equal(stats(X, weights), stats(X))
 
+    def test_stats_nans_neutral_weights(self):
+        X = np.arange(4).reshape(2, 2).astype(float)
+        X[0, 0] = np.nan
+        np.testing.assert_equal(stats(X, weights=np.array([1, 1])), stats(X))
+
+    def test_stats_nans_neutral_weights_sparse(self):
+        X = np.arange(4).reshape(2, 2).astype(float)
+        X = csr_matrix(X)
+        X[0, 0] = np.nan
+        np.testing.assert_equal(stats(X, weights=np.array([1, 1])), stats(X))
+
     def test_stats_weights_sparse(self):
         X = np.arange(4).reshape(2, 2).astype(float)
         X = csr_matrix(X)
         weights = np.array([1, 3])
         np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 1, 1],
                                                     [1, 3, 2.5, 0, 0, 2]])
+
+        np.testing.assert_equal(stats(X, weights, compute_variance=True),
+                                [[0, 2, 1.5, 0.75, 1, 1],
+                                 [1, 3, 2.5, 0.75, 0, 2]])
 
     def test_stats_non_numeric(self):
         X = np.array([
@@ -145,6 +169,18 @@ class TestUtil(unittest.TestCase):
                                            [np.inf, -np.inf, 0, 0, 1, 2],
                                            [np.inf, -np.inf, 0, 0, 2, 1],
                                            [np.inf, -np.inf, 0, 0, 0, 3]])
+
+    def test_stats_empty(self):
+        X = np.array([])
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 0, 0]])
+
+        X = np.zeros((0,))
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 0, 0]])
+
+        X = np.zeros((0, 4))
+        np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 0, 0]] * 4)
+
+
 
     def test_stats_long_string_mem_use(self):
         X = np.full((1000, 1000), "a", dtype=object)
@@ -342,6 +378,16 @@ class TestNanmean(unittest.TestCase):
         self.random_state = check_random_state(42)
         self.x = self.random_state.uniform(size=(10, 5))
         np.fill_diagonal(self.x, np.nan)
+        self.y = np.array([[0, 1, 5],
+                           [3, 4, np.nan],
+                           [2, np.nan, np.nan],
+                           [np.nan, np.nan, np.nan]])
+        self.r0 = [5/3, 5/2, 5/1]
+        self.r1 = [6/3, 7/2, 2/1, np.nan]
+        self.w0 = np.array([4, 3, 2, 1])
+        self.w1 = np.array([1, 2, 3])
+        self.r0w = [13/9, 16/7, 20/4]
+        self.r1w = [17/6, 11/3, 2/1, np.nan]
 
     @dense_sparse
     def test_axis_none(self, array):
@@ -360,6 +406,125 @@ class TestNanmean(unittest.TestCase):
         np.testing.assert_almost_equal(
             np.nanmean(self.x, axis=1), nanmean(array(self.x), axis=1)
         )
+
+    @dense_sparse
+    def test_weights_axis_none(self, array):
+        with self.assertRaises(NotImplementedError):
+            nanmean(array(self.x), weights=1)
+
+    @dense_sparse
+    def test_weights_axis_0(self, array):
+        np.testing.assert_almost_equal(
+            self.r0, nanmean(array(self.y), axis=0)
+        )
+        np.testing.assert_almost_equal(
+            self.r1, nanmean(array(self.y.T), axis=0)
+        )
+        np.testing.assert_almost_equal(
+            self.r0w, nanmean(array(self.y), axis=0, weights=self.w0)
+        )
+        np.testing.assert_almost_equal(
+            self.r1w, nanmean(array(self.y.T), axis=0, weights=self.w1)
+        )
+
+    @dense_sparse
+    def test_weights_axis_1(self, array):
+        np.testing.assert_almost_equal(
+            self.r1, nanmean(array(self.y), axis=1)
+        )
+        np.testing.assert_almost_equal(
+            self.r0, nanmean(array(self.y.T), axis=1)
+        )
+        np.testing.assert_almost_equal(
+            self.r1w, nanmean(array(self.y), axis=1, weights=self.w1)
+        )
+        np.testing.assert_almost_equal(
+            self.r0w, nanmean(array(self.y.T), axis=1, weights=self.w0)
+        )
+
+
+class TestNanMeanVar(unittest.TestCase):
+    def setUp(self):
+        self.x = np.array([[0, 1, 5],
+                           [3, 4, np.nan],
+                           [2, np.nan, np.nan],
+                           [np.nan, np.nan, np.nan]])
+        self.means0 = [5/3, 5/2, 5/1]
+        self.means1 = [6/3, 7/2, 2/1, np.nan]
+        self.vars0 = [14/9, 9/4, 0]
+        self.vars1 = [14/3, 1/4, 0, np.nan]
+        self.w0 = np.array([4, 3, 2, 1])
+        self.w1 = np.array([1, 2, 3])
+        self.means0w = [13/9, 16/7, 20/4]
+        self.means1w = [17/6, 11/3, 2/1, np.nan]
+        self.vars0w = [1.8024691358024691, 2.2040816326530615, 0]
+        self.vars1w = [4.805555555555556, 0.22222222222222224, 0, np.nan]
+
+    @dense_sparse
+    def test_axis_none(self, array):
+        with self.assertRaises(NotImplementedError):
+            nan_mean_var(array(self.x))
+
+    @staticmethod
+    def compare_correct(x, weights, means_correct, vars_correct, axis=None):
+        means, variances = nan_mean_var(x, axis=axis, weights=weights)
+        np.testing.assert_almost_equal(means_correct, means)
+        np.testing.assert_almost_equal(vars_correct, variances)
+
+    @staticmethod
+    def compare_unweighted(x, axis=None):
+        means, variances = nan_mean_var(x, axis=axis)
+        np.testing.assert_almost_equal(nanmean(x, axis=axis), means)
+        np.testing.assert_almost_equal(nanvar(x, axis=axis), variances)
+
+    @staticmethod
+    def compare_distributions(x, dense, weights=None, axis=None):
+        def from_distributions(x, weights):
+            if axis == 1:
+                x = x.T
+            domain = Domain(ContinuousVariable(str(i)) for i in range(x.shape[1]))
+            table = Table.from_numpy(domain, x, W=weights)
+            dists = get_distributions_for_columns(table, list(range(x.shape[1])))
+            means = [d.mean() for d in dists]
+            variances = [d.variance() for d in dists]
+            return means, variances
+
+        means, variances = nan_mean_var(x, axis=axis, weights=weights)
+        md, vd = from_distributions(dense, weights)
+        np.testing.assert_almost_equal(md, means)
+        np.testing.assert_almost_equal(vd, variances)
+
+    @dense_sparse
+    def test_axis_0(self, array):
+        self.compare_correct(array(self.x), None, self.means0, self.vars0, axis=0)
+        self.compare_unweighted(array(self.x), axis=0)
+        self.compare_distributions(array(self.x), self.x, axis=0)
+
+        self.compare_correct(array(self.x.T), None, self.means1, self.vars1, axis=0)
+        self.compare_unweighted(array(self.x.T), axis=0)
+        self.compare_distributions(array(self.x.T), self.x.T, axis=0)
+
+        self.compare_correct(array(self.x), self.w0, self.means0w, self.vars0w, axis=0)
+        self.compare_distributions(array(self.x), self.x, weights=self.w0, axis=0)
+
+        self.compare_correct(array(self.x.T), self.w1, self.means1w, self.vars1w, axis=0)
+        self.compare_distributions(array(self.x.T), self.x.T, weights=self.w1, axis=0)
+
+    @dense_sparse
+    def test_axis_1(self, array):
+        self.compare_correct(array(self.x), None, self.means1, self.vars1, axis=1)
+        self.compare_unweighted(array(self.x), axis=1)
+        self.compare_distributions(array(self.x), self.x, axis=1)
+
+        self.compare_correct(array(self.x.T), None, self.means0, self.vars0, axis=1)
+        self.compare_unweighted(array(self.x.T), axis=1)
+        self.compare_distributions(array(self.x.T), self.x.T, axis=1)
+
+        self.compare_correct(array(self.x), self.w1, self.means1w, self.vars1w, axis=1)
+        self.compare_distributions(array(self.x), self.x, weights=self.w1, axis=1)
+
+        self.compare_correct(array(self.x.T), self.w0, self.means0w, self.vars0w, axis=1)
+        self.compare_distributions(array(self.x.T), self.x.T, weights=self.w0, axis=1)
 
 
 class TestDigitize(unittest.TestCase):

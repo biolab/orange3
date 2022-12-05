@@ -373,9 +373,11 @@ class Variable(Reprable, metaclass=VariableMeta):
         if compute_value is not None \
                 and not isinstance(compute_value, (types.BuiltinFunctionType,
                                                    types.FunctionType)) \
-                and not redefines_eq_and_hash(compute_value):
+                and not redefines_eq_and_hash(compute_value) \
+                and not type(compute_value).__dict__.get("InheritEq", False):
             warnings.warn(f"{type(compute_value).__name__} should define "
-                          f"__eq__ and __hash__ to be used for compute_value")
+                          "__eq__ and __hash__ to be used for compute_value\n"
+                          "or set InheritEq = True if inherited methods suffice")
 
         self._compute_value = compute_value
         self.unknown_str = MISSING_VALUES

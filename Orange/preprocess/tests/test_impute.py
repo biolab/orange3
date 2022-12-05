@@ -6,7 +6,8 @@ from Orange.data import \
     Domain, Table, \
     DiscreteVariable, ContinuousVariable, TimeVariable, StringVariable
 from Orange.preprocess.impute import ReplaceUnknownsRandom, ReplaceUnknowns, \
-    FixedValueByType
+    FixedValueByType, ReplaceUnknownsModel
+from Orange.regression import LinearRegressionLearner
 from Orange.statistics.distribution import Discrete
 
 
@@ -109,6 +110,37 @@ class TestFixedValuesByType(unittest.TestCase):
         self.assertEqual(
             imputer(self.data, s, default="bar").compute_value.value,
             "bar")
+
+
+class TestReplaceUnknownsModel(unittest.TestCase):
+    def test_eq(self):
+        iris = Table("iris")
+
+        v1 = iris.domain[0]
+        v2 = iris.domain[0]
+        v3 = iris.domain[1]
+
+        l = LinearRegressionLearner()
+        def new_target(t):
+            dom = Domain(iris.domain[2:], class_vars=[t])
+            return iris.transform(dom)
+
+        mod1 = l(new_target(v1))
+        t1 = ReplaceUnknownsModel(v1, mod1)
+        t1a = ReplaceUnknownsModel(v2, mod1)
+        t2 = ReplaceUnknownsModel(v3, l(new_target(v3)))
+
+        self.assertEqual(t1, t1)
+        self.assertEqual(t1, t1a)
+        self.assertNotEqual(t1, t2)
+
+        # the following should be equal, but will not be unless __eq__ for that
+        # particular model is defined
+        t1b = ReplaceUnknownsModel(v1, l(new_target(v1)))
+        self.assertNotEqual(t1, t1b)  # this is WRONG
+
+        self.assertEqual(hash(t1), hash(t1a))
+        self.assertNotEqual(hash(t1), hash(t2))
 
 
 if __name__ == "__main__":

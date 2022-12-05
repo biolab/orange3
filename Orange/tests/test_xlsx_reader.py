@@ -215,7 +215,7 @@ class TestMissingValues(unittest.TestCase):
     @test_xlsx_xls
     def test_read_errors(self, reader: Callable[[str], io.FileFormat]):
         table = read_file(reader, "missing")
-        values = table.get_column_view("C")[0]
+        values = table.get_column("C")
         self.assertTrue(np.isnan(values).all())
 
 

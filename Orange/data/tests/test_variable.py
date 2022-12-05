@@ -252,10 +252,24 @@ class TestVariable(unittest.TestCase):
             ContinuousVariable("x", compute_value=Valid())
             self.assertEqual(warns, [])
 
+            class AlsoValid:
+                InheritEq = True
+
+            ContinuousVariable("x", compute_value=AlsoValid())
+            self.assertEqual(warns, [])
+
             class Invalid:
                 pass
 
             ContinuousVariable("x", compute_value=Invalid())
+            self.assertNotEqual(warns, [])
+
+        with warnings.catch_warnings(record=True) as warns:
+
+            class InheritEqInherited(AlsoValid):
+                pass
+
+            ContinuousVariable("x", compute_value=InheritEqInherited())
             self.assertNotEqual(warns, [])
 
         with warnings.catch_warnings(record=True) as warns:

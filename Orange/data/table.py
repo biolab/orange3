@@ -7,11 +7,12 @@ import weakref
 import zlib
 from collections.abc import Iterable, Sequence, Sized
 from contextlib import contextmanager
+from copy import deepcopy
 from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
 from threading import Lock
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Union
 
 import bottleneck as bn
 import numpy as np
@@ -208,8 +209,19 @@ class Columns:
             setattr(self, v.name.replace(" ", "_"), v)
 
 
-class _ArrayConversion:
+def _compute_column(func, *args, **kwargs):
+    col = func(*args, **kwargs)
+    if isinstance(col, np.ndarray) and col.ndim != 1:
+        err = f"{type(col)} must return a column, not {col.ndim}d array"
+        if col.ndim == 2:
+            warnings.warn(err)
+            col = col.reshape(-1)
+        else:
+            raise ValueError(err)
+    return col
 
+
+class _ArrayConversion:
     def __init__(self, target, src_cols, variables, is_sparse, source_domain):
         self.target = target
         self.src_cols = src_cols
@@ -300,9 +312,9 @@ class _ArrayConversion:
                         shared = col.compute_shared(sourceri)
                         _idcache_save(shared_cache, (col.compute_shared, source), shared)
                     col_array = match_density(
-                        col(sourceri, shared_data=shared))
+                        _compute_column(col, sourceri, shared_data=shared))
                 else:
-                    col_array = match_density(col(sourceri))
+                    col_array = match_density(_compute_column(col, sourceri))
             elif col < 0:
                 col_array = match_density(
                     source.metas[row_indices, -1 - col]
@@ -810,7 +822,7 @@ class Table(Sequence, Storage):
                     self.ids = source.ids[row_indices]
                 else:
                     cls._init_ids(self)
-                self.attributes = getattr(source, 'attributes', {})
+                self.attributes = deepcopy(getattr(source, 'attributes', {}))
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
             return self
         finally:
@@ -868,7 +880,7 @@ class Table(Sequence, Storage):
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
             self.ids = np.array(source.ids[row_indices])
-            self.attributes = getattr(source, 'attributes', {})
+            self.attributes = deepcopy(getattr(source, 'attributes', {}))
         return self
 
     @classmethod
@@ -1425,28 +1437,8 @@ class Table(Sequence, Storage):
         domain = Domain(attrs, classes, metavars)
         new_table = self.transform(domain)
         with new_table.unlocked(new_table.metas if to_metas else new_table.X):
-            new_table.get_column_view(variable)[0][:] = data
+            new_table.set_column(variable, data)
         return new_table
-
-    @deprecated("array.base is not None for each subarray of Orange.data.Table (i.e. X, Y, W, metas)")
-    def is_view(self):
-        """
-        Return `True` if all arrays represent a view referring to another table
-        """
-        return ((not self._X.shape[-1] or self._X.base is not None) and
-                (not self._Y.shape[-1] or self._Y.base is not None) and
-                (not self._metas.shape[-1] or self._metas.base is not None) and
-                (not self._W.shape[-1] or self._W.base is not None))
-
-    @deprecated("array.base is None for each subarray of Orange.data.Table (i.e. X, Y, W, metas)")
-    def is_copy(self):
-        """
-        Return `True` if the table owns its data
-        """
-        return ((not self._X.shape[-1] or self._X.base is None) and
-                (self._Y.base is None) and
-                (self._metas.base is None) and
-                (self._W.base is None))
 
     def is_sparse(self):
         """
@@ -1540,15 +1532,18 @@ class Table(Sequence, Storage):
         """Return `True` if there are any missing class values."""
         return bn.anynan(self._Y)
 
-    def get_nan_frequency_attribute(self):
-        if self.X.size == 0:
+    @staticmethod
+    def __get_nan_frequency(data):
+        if data.size == 0:
             return 0
-        return np.isnan(self.X).sum() / self.X.size
+        dense = data if not sp.issparse(data) else data.data
+        return np.isnan(dense).sum() / np.prod(data.shape)
+
+    def get_nan_frequency_attribute(self):
+        return self.__get_nan_frequency(self.X)
 
     def get_nan_frequency_class(self):
-        if self.Y.size == 0:
-            return 0
-        return np.isnan(self._Y).sum() / self._Y.size
+        return self.__get_nan_frequency(self.Y)
 
     def checksum(self, include_metas=True):
         # TODO: zlib.adler32 does not work for numpy arrays with dtype object
@@ -1574,42 +1569,113 @@ class Table(Sequence, Storage):
         self.W = self.W[ind]
         self.ids = self.ids[ind]
 
-    def get_column_view(self, index):
+    @deprecated("Table.get_column (or Table.set_column if you must)")
+    def get_column_view(self, index: Union[Integral, Variable]) -> np.ndarray:
         """
-        Return a vector - as a view, not a copy - with a column of the table,
-        and a bool flag telling whether this column is sparse. Note that
-        vertical slicing of sparse matrices is inefficient.
+        An obsolete function that was supposed to return a view with a column
+        of the table, and a bool flag telling whether this column is sparse.
+
+        The function *sometimes* returns a copy. This happens if the variable
+        is computed or if values of discrete attribute need to be remapped due
+        to different encoding.
+
+        Note that vertical slicing of sparse matrices is inefficient.
 
         :param index: the index of the column
         :type index: int, str or Orange.data.Variable
         :return: (one-dimensional numpy array, sparse)
         """
-
-        def rx(M):
-            if sp.issparse(M):
-                return np.asarray(M.todense())[:, 0], True
-            else:
-                return M, False
-
         if isinstance(index, Integral):
             col_index = index
         else:
             col_index = self.domain.index(index)
-        if col_index >= 0:
-            if col_index < self.X.shape[1]:
-                col = rx(self.X[:, col_index])
-            elif self._Y.ndim == 1 and col_index == self._X.shape[1]:
-                col = rx(self._Y)
-            else:
-                col = rx(self._Y[:, col_index - self.X.shape[1]])
-        else:
-            col = rx(self.metas[:, -1 - col_index])
+        col = self._get_column_view(col_index)
+
+        sparse = sp.issparse(col)
+        if sparse:
+            # `index` below can be integer or a Variable
+            warnings.warn("get_column_view is returning a dense copy column "
+                          f"{index}")
+            col = np.asarray(col.todense())[:, 0]
 
         if isinstance(index, DiscreteVariable) \
                 and index.values != self.domain[col_index].values:
-            col = index.get_mapper_from(self.domain[col_index])(col[0]), col[1]
-            col[0].flags.writeable = False
+            col = index.get_mapper_from(self.domain[col_index])(col)
+            col.flags.writeable = False
+            warnings.warn("get_column_view is returning a mapped copy of "
+                          f"column {index.name}")
+        return col, sparse
+
+    def _get_column_view(self, index: Integral) -> np.ndarray:
+        if index >= 0:
+            if index < self.X.shape[1]:
+                return self.X[:, index]
+            elif self._Y.ndim == 1 and index == self._X.shape[1]:
+                return self._Y
+            else:
+                return self._Y[:, index - self.X.shape[1]]
+        else:
+            return self.metas[:, -1 - index]
+
+    def get_column(self, index, copy=False):
+        """
+        Return a column with values of `index`.
+
+        If `index` is an instance of variable that does not exist in the domain
+        but has `compute_value`, `get_column` calls `compute_value`. Otherwise,
+        it returns a view into the table unless `copy` is set to `True`.
+
+        Args:
+            index (int or str or Variable): attribute
+            copy (bool): if set to True, ensure the result is a copy, not a view
+
+        Returns:
+            column (np.array): data column
+        """
+        if isinstance(index, Variable) and index not in self.domain:
+            if index.compute_value is None:
+                raise ValueError(f"variable {index.name} is not in domain")
+            return _compute_column(index.compute_value, self)
+
+        mapper = None
+        if not isinstance(index, Integral):
+            if isinstance(index, DiscreteVariable) \
+                    and index.values != self.domain[index].values:
+                mapper = index.get_mapper_from(self.domain[index])
+            index = self.domain.index(index)
+
+        col = self._get_column_view(index)
+        if sp.issparse(col):
+            col = col.toarray().reshape(-1)
+        if col.dtype == object and self.domain[index].is_primitive():
+            col = col.astype(np.float64)
+        if mapper is not None:
+            col = mapper(col)
+        if copy and col.base is not None:
+            col = col.copy()
         return col
+
+    def set_column(self, index: Union[int, str, Variable], data):
+        """
+        Set the values in the given column do `data`.
+
+        This function may be useful, but try avoiding it.
+
+        Table (or the corresponding
+        part must be unlocked). If variable is discrete, its encoding must
+        match the variable in the domain.
+
+        Args:
+            index (int, str, Variable): index of a column
+            data (object): a single value or 1d array of length len(self)
+        """
+        if not isinstance(index, Integral):
+            if isinstance(index, DiscreteVariable) \
+                    and self.domain[index].values != index.values:
+                raise ValueError(f"cannot set data for variable {index.name} "
+                                 "with different encoding")
+            index = self.domain.index(index)
+        self._get_column_view(index)[:] = data
 
     def _filter_is_defined(self, columns=None, negate=False):
         # structure of function is obvious; pylint: disable=too-many-branches
@@ -1640,10 +1706,8 @@ class Table(Sequence, Storage):
         else:
             remove = np.zeros(len(self), dtype=bool)
             for column in columns:
-                col, sparse = self.get_column_view(column)
-                if sparse:
-                    remove += col == 0
-                elif self.domain[column].is_primitive():
+                col = self.get_column(column)
+                if self.domain[column].is_primitive():
                     remove += bn.anynan([col.astype(float)], axis=0)
                 else:
                     remove += col.astype(bool)
@@ -1670,7 +1734,7 @@ class Table(Sequence, Storage):
     def _filter_same_value(self, column, value, negate=False):
         if not isinstance(value, Real):
             value = self.domain[column].to_val(value)
-        sel = self.get_column_view(column)[0] == value
+        sel = self.get_column(column) == value
         if negate:
             sel = np.logical_not(sel)
         return self.from_table_rows(self, sel)
@@ -1756,7 +1820,7 @@ class Table(Sequence, Storage):
             raise TypeError("Invalid filter")
 
         def col_filter(col_idx):
-            col = self.get_column_view(col_idx)[0]
+            col = self.get_column(col_idx)
             if isinstance(filter, IsDefined):
                 if self.domain[col_idx].is_primitive():
                     return ~np.isnan(col.astype(float))
@@ -1893,19 +1957,19 @@ class Table(Sequence, Storage):
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):
-        if compute_variance:
-            raise NotImplementedError("computation of variance is "
-                                      "not implemented yet")
         W = self._W if self.has_weights() else None
         rr = []
         stats = []
         if not columns:
             if self.domain.attributes:
-                rr.append(fast_stats(self._X, W))
+                rr.append(fast_stats(self._X, W,
+                                     compute_variance=compute_variance))
             if self.domain.class_vars:
-                rr.append(fast_stats(self._Y, W))
+                rr.append(fast_stats(self._Y, W,
+                                     compute_variance=compute_variance))
             if include_metas and self.domain.metas:
-                rr.append(fast_stats(self.metas, W))
+                rr.append(fast_stats(self.metas, W,
+                                     compute_variance=compute_variance))
             if len(rr):
                 stats = np.vstack(tuple(rr))
         else:
@@ -1913,14 +1977,18 @@ class Table(Sequence, Storage):
             for column in columns:
                 c = self.domain.index(column)
                 if 0 <= c < nattrs:
-                    S = fast_stats(self._X[:, [c]], W and W[:, [c]])
+                    S = fast_stats(self._X[:, [c]], W and W[:, [c]],
+                                   compute_variance=compute_variance)
                 elif c >= nattrs:
                     if self._Y.ndim == 1 and c == nattrs:
-                        S = fast_stats(self._Y[:, None], W and W[:, None])
+                        S = fast_stats(self._Y[:, None], W and W[:, None],
+                                       compute_variance=compute_variance)
                     else:
-                        S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]])
+                        S = fast_stats(self._Y[:, [c - nattrs]], W and W[:, [c - nattrs]],
+                                       compute_variance=compute_variance)
                 else:
-                    S = fast_stats(self._metas[:, [-1 - c]], W and W[:, [-1 - c]])
+                    S = fast_stats(self._metas[:, [-1 - c]], W and W[:, [-1 - c]],
+                                   compute_variance=compute_variance)
                 stats.append(S[0])
         return stats
 
@@ -2224,7 +2292,7 @@ class Table(Sequence, Storage):
             self.domain = Domain(attributes, class_vars, metas)
             progress_callback(0.9)
             cls._init_ids(self)
-            self.attributes = table.attributes.copy()
+            self.attributes = deepcopy(table.attributes)
             self.attributes["old_domain"] = table.domain
             progress_callback(1)
             return self

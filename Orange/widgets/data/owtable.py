@@ -40,6 +40,7 @@ from Orange.widgets.utils.tableview import TableView, \
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, MultiInput, Output, Msg
 from Orange.widgets.utils import datacaching
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
@@ -524,45 +525,46 @@ class OWDataTable(OWWidget):
             dens = 100 * part.non_nans / (part.nans + part.non_nans)
             return f" ({tag}, density {dens:.2f} %)"
 
-        def desc(n, part):
-            if n == 0:
-                return f"No {part}s"
-            elif n == 1:
-                return f"1 {part}"
-            else:
-                return f"{n} {part}s"
-
         if slot is None:
             return ["No data."]
         summary = slot.summary
         text = []
         if isinstance(summary, ApproxSummary):
             if summary.len.done():
-                text.append(f"{summary.len.result()} instances")
+                ninst = summary.len.result()
+                text.append(f"{ninst} {pl(ninst, 'instance')}")
             else:
-                text.append(f"~{summary.approx_len} instances")
+                ninst = summary.approx_len
+                text.append(f"~{ninst} {pl(ninst, 'instance')}")
         elif isinstance(summary, Summary):
-            text.append(f"{summary.len} instances")
+            ninst = summary.len
+            text.append(f"{ninst} {pl(ninst, 'instance')}")
             if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
                 text[-1] += " (no missing data)"
 
-        text.append(desc(len(summary.domain.attributes), "feature")
+        nattrs = len(summary.domain.attributes)
+        text.append(f"{nattrs}  {pl(nattrs, 'feature')}"
                     + format_part(summary.X))
 
         if not summary.domain.class_vars:
             text.append("No target variable.")
         else:
-            if len(summary.domain.class_vars) > 1:
-                c_text = desc(len(summary.domain.class_vars), "outcome")
+            nclasses = len(summary.domain.class_vars)
+            if nclasses > 1:
+                c_text = f"{nclasses} {pl(nclasses, 'outcome')}"
             elif summary.domain.has_continuous_class:
                 c_text = "Numeric outcome"
             else:
-                c_text = "Target with " \
-                    + desc(len(summary.domain.class_var.values), "value")
+                nvalues = len(summary.domain.class_var.values)
+                c_text = f"Target with {nvalues} {pl(nvalues, 'value')}"
             text.append(c_text + format_part(summary.Y))
 
-        text.append(desc(len(summary.domain.metas), "meta attribute")
-                    + format_part(summary.M))
+        nmetas = len(summary.domain.metas)
+        if nmetas:
+            text.append(f"{nmetas} {pl(nmetas, 'meta attribute')}"
+                        + format_part(summary.M))
+        else:
+            text.append("No meta attributes.")
         return text
 
     def _on_select_all(self, _):

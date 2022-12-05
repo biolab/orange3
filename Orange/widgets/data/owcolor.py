@@ -18,6 +18,7 @@ from Orange.util import color_to_hex, hex_to_color
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils import itemmodels, colorpalettes
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.report import colored_square as square
 from Orange.widgets.widget import Input, Output
@@ -802,7 +803,7 @@ class OWColor(widget.OWWidget):
             (name, _report_variables(variables))
             for name, variables in (
                 ("Features", dom.attributes),
-                ("Outcome" + "s" * (len(dom.class_vars) > 1), dom.class_vars),
+                (f'{pl(len(dom.class_vars), "Outcome")}', dom.class_vars),
                 ("Meta attributes", dom.metas)))
         table = "".join(f"<tr><th>{name}</th></tr>{rows}"
                         for name, rows in sections if rows)

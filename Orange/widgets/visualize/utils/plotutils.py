@@ -267,7 +267,10 @@ class InteractiveViewBox(pg.ViewBox):
             lastview = self.axHistory[self.axHistoryPointer]
             inters = currentview & lastview
             united = currentview.united(lastview)
-            if inters.width()*inters.height()/(united.width()*united.height()) > 0.95:
+            # multiplication instead of division to avoid occasional
+            # division by zero in tests on github
+            if inters.width() * inters.height() \
+                    > 0.95 * united.width() * united.height():
                 return
         self.axHistoryPointer += 1
         self.axHistory = self.axHistory[:self.axHistoryPointer] + \

@@ -2,6 +2,8 @@ from Orange.data import filter
 
 
 class IsDefinedSql(filter.IsDefined):
+    InheritEq = True
+
     def to_sql(self):
         sql = " AND ".join([
             '%s IS NOT NULL' % column

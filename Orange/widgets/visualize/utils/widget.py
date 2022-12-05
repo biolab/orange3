@@ -143,9 +143,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
             assert attr.is_discrete
             return attr.values
 
-        all_data = self.data.get_column_view(attr)[0]
-        if all_data.dtype == object and attr.is_primitive():
-            all_data = all_data.astype(float)
+        all_data = self.data.get_column(attr)
         if filter_valid and self.valid_data is not None:
             all_data = all_data[self.valid_data]
         if not needs_merging:

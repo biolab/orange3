@@ -55,6 +55,7 @@ import Orange.data
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
     textimport, concurrent as qconcurrent, unique_everseen, enum_get, qname
@@ -1223,18 +1224,11 @@ class OWCSVFileImport(widget.OWWidget):
         if data is None:
             return
 
-        def pluralize(seq):
-            return "s" if len(seq) != 1 else ""
-
-        summary = ("{n_instances} row{plural_1}, "
-                   "{n_features} feature{plural_2}, "
-                   "{n_meta} meta{plural_3}").format(
-                       n_instances=len(data), plural_1=pluralize(data),
-                       n_features=len(data.domain.attributes),
-                       plural_2=pluralize(data.domain.attributes),
-                       n_meta=len(data.domain.metas),
-                       plural_3=pluralize(data.domain.metas))
-        self.summary_text.setText(summary)
+        n_instances = len(data)
+        n_features, n_meta = len(data.domain.attributes), len(data.domain.metas)
+        self.summary_text.setText(f"{n_instances} {pl(n_instances, 'row')}, "
+                                  f"{n_features} {pl(n_features, 'feature')}, "
+                                  f"{n_meta} {pl(n_meta, 'meta')}")
 
     def itemsFromSettings(self):
         # type: () -> List[Tuple[str, Options]]
@@ -1560,10 +1554,13 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
             file, sep=opts.dialect.delimiter, dialect=opts.dialect,
             skipinitialspace=opts.dialect.skipinitialspace,
             header=header, skiprows=skiprows,
-            dtype=dtypes, parse_dates=parse_dates, prefix=prefix,
+            dtype=dtypes, parse_dates=parse_dates,
             na_values=na_values, keep_default_na=False,
             **numbers_format_kwds
         )
+
+        if prefix:
+            df.columns = [f"{prefix}{column}" for column in df.columns]
 
         # for older workflows avoid guessing type guessing
         if not compatibility_mode:

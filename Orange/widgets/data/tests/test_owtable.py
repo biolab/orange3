@@ -46,6 +46,12 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         self.send_signal(self.widget.Inputs.data, None, 1)
         self.assertEqual(self.widget.tabs.count(), 1)
 
+    def test_input_data_empty(self):
+        self.send_signal(self.widget.Inputs.data, self.data[:0])
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertIsInstance(output, Table)
+        self.assertEqual(len(output), 0)
+
     def test_data_model(self):
         self.send_signal(self.widget.Inputs.data, self.data, 1)
         self.assertEqual(self.widget.tabs.widget(0).model().rowCount(),
@@ -101,13 +107,13 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         self.widget.set_selection()
 
         output = self.get_output(self.widget.Outputs.selected_data)
-        output, _ = output.get_column_view(0)
+        output = output.get_column(0)
         output_original = output.tolist()
 
         self.widget.tabs.currentWidget().sortByColumn(1, Qt.AscendingOrder)
 
         output = self.get_output(self.widget.Outputs.selected_data)
-        output, _ = output.get_column_view(0)
+        output = output.get_column(0)
         output_sorted = output.tolist()
 
         # the two outputs should not be the same.

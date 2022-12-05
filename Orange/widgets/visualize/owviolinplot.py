@@ -996,7 +996,7 @@ class OWViolinPlot(OWWidget):
         def compute_score(attr):
             if attr is group_var:
                 return 3
-            col = self.data.get_column_view(attr)[0].astype(float)
+            col = self.data.get_column(attr)
             groups = (col[group_col == i] for i in range(n_groups))
             groups = (col[~np.isnan(col)] for col in groups)
             groups = [group for group in groups if len(group)]
@@ -1010,7 +1010,7 @@ class OWViolinPlot(OWWidget):
         group_var = self.group_var
         if self.order_by_importance and group_var is not None:
             n_groups = len(group_var.values)
-            group_col = self.data.get_column_view(group_var)[0].astype(float)
+            group_col = self.data.get_column(group_var)
             self._sort_list(self._value_var_model, self._value_var_view,
                             compute_score)
         else:
@@ -1022,7 +1022,7 @@ class OWViolinPlot(OWWidget):
                 return 3
             if group is None:
                 return -1
-            col = self.data.get_column_view(group)[0].astype(float)
+            col = self.data.get_column(group)
             groups = (value_col[col == i] for i in range(len(group.values)))
             groups = (col[~np.isnan(col)] for col in groups)
             groups = [group for group in groups if len(group)]
@@ -1035,7 +1035,7 @@ class OWViolinPlot(OWWidget):
             return
         value_var = self.value_var
         if self.order_grouping_by_importance:
-            value_col = self.data.get_column_view(value_var)[0].astype(float)
+            value_col = self.data.get_column(value_var)
             self._sort_list(self._group_var_model, self._group_var_view,
                             compute_stat)
         else:
@@ -1068,10 +1068,10 @@ class OWViolinPlot(OWWidget):
         if not self.data:
             return
 
-        y = self.data.get_column_view(self.value_var)[0].astype(float)
+        y = self.data.get_column(self.value_var)
         x = None
         if self.group_var:
-            x = self.data.get_column_view(self.group_var)[0].astype(float)
+            x = self.data.get_column(self.group_var)
         self.graph.set_data(y, self.value_var, x, self.group_var)
 
     def apply_selection(self):

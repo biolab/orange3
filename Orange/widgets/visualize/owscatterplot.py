@@ -438,8 +438,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             err_msg = "Not enough features for ranking"
         elif self.attr_color is None:
             err_msg = "Color variable is not selected"
-        elif np.isnan(self.data.get_column_view(
-                self.attr_color)[0].astype(float)).all():
+        elif np.isnan(self.data.get_column(self.attr_color)).all():
             err_msg = "Color variable has no values"
         self.vizrank_button.setEnabled(not err_msg)
         self.vizrank_button.setToolTip(err_msg)

@@ -325,7 +325,7 @@ class TestContinuousVariableEditor(GuiTest):
     def setUp(self):
         self.callback = Mock()
         data = Table("iris")
-        values = data.get_column_view(data.domain[0])[0]
+        values = data.get_column(data.domain[0])
         self.min_value = np.min(values)
         self.max_value = np.max(values)
         self.editor = ContinuousVariableEditor(

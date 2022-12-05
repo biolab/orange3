@@ -3,3 +3,4 @@
 docutils<0.17
 Sphinx>=4.2.0
 recommonmark
+sphinx-multiproject

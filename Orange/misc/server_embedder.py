@@ -3,9 +3,7 @@ import json
 import logging
 import random
 import uuid
-import warnings
 from collections import namedtuple
-from functools import partial
 from json import JSONDecodeError
 from os import getenv
 from typing import Any, Callable, List, Optional, Dict, Union
@@ -16,7 +14,6 @@ from numpy import linspace
 
 from Orange.misc.utils.embedder_utils import (
     EmbedderCache,
-    EmbeddingCancelledException,
     EmbeddingConnectionError,
     get_proxies,
 )
@@ -63,9 +60,6 @@ class ServerEmbedderCommunicator:
         self._model = model_name
         self.embedder_type = embedder_type
 
-        # remove in 3.34
-        self._cancelled = False
-
         self.machine_id = None
         try:
             self.machine_id = QSettings().value(
@@ -86,7 +80,6 @@ class ServerEmbedderCommunicator:
     def embedd_data(
         self,
         data: List[Any],
-        processed_callback: Optional[Callable] = None,
         *,
         callback: Callable = dummy_callback,
     ) -> List[Optional[List[float]]]:
@@ -99,11 +92,6 @@ class ServerEmbedderCommunicator:
         ----------
         data
             List with data that needs to be embedded.
-        processed_callback
-            Deprecated: remove in 3.34
-            A function that is called after each item is embedded
-            by either getting a successful response from the server,
-            getting the result from cache or skipping the item.
         callback
             Callback for reporting the progress in share of embedded items
 
@@ -124,13 +112,12 @@ class ServerEmbedderCommunicator:
         self.max_errors = min(len(data) * self.MAX_REPEATS, 10)
 
         return asyncio.run(
-            self.embedd_batch(data, processed_callback, callback=callback)
+            self.embedd_batch(data, callback=callback)
         )
 
     async def embedd_batch(
         self,
         data: List[Any],
-        proc_callback: Optional[Callable] = None,
         *,
         callback: Callable = dummy_callback,
     ) -> List[Optional[List[float]]]:
@@ -154,20 +141,11 @@ class ServerEmbedderCommunicator:
         EmbeddingCancelledException:
             If cancelled attribute is set to True (default=False).
         """
-        # in Orange 3.34 keep content of the if - remove if clause and complete else
-        if proc_callback is None:
-            progress_items = iter(linspace(0, 1, len(data)))
+        progress_items = iter(linspace(0, 1, len(data)))
 
-            def success_callback():
-                """Callback called on every successful embedding"""
-                callback(next(progress_items))
-        else:
-            warnings.warn(
-                "proc_callback is deprecated and will be removed in version 3.34, "
-                "use callback instead",
-                FutureWarning,
-            )
-            success_callback = partial(proc_callback, True)
+        def success_callback():
+            """Callback called on every successful embedding"""
+            callback(next(progress_items))
 
         results = [None] * len(data)
         queue = asyncio.Queue()
@@ -212,11 +190,6 @@ class ServerEmbedderCommunicator:
         # Wait until all worker tasks are cancelled.
         await asyncio.gather(*tasks, return_exceptions=True)
         log.debug("All workers canceled")
-
-    # remove in 3.34
-    def __check_cancelled(self):
-        if self._cancelled:
-            raise EmbeddingCancelledException()
 
     async def _encode_data_instance(self, data_instance: Any) -> Optional[bytes]:
         """
@@ -263,9 +236,6 @@ class ServerEmbedderCommunicator:
             getting the result from cache or skipping the item.
         """
         while not queue.empty():
-            # remove in 3.34
-            self.__check_cancelled()
-
             # get item from the queue
             i, data_instance, num_repeats = await queue.get()
 
@@ -390,12 +360,3 @@ class ServerEmbedderCommunicator:
 
     def clear_cache(self):
         self._cache.clear_cache()
-
-    # remove in 3.34
-    def set_cancelled(self):
-        warnings.warn(
-            "set_cancelled is deprecated and will be removed in version 3.34, "
-            "the process can be canceled by raising Error in callback",
-            FutureWarning,
-        )
-        self._cancelled = True

@@ -579,9 +579,7 @@ class OWSOM(OWWidget):
         # this function
         assert self.colors is not None
 
-        color_column = \
-            self.data.get_column_view(self.attr_color)[0].astype(float,
-                                                                 copy=False)
+        color_column = self.data.get_column(self.attr_color)
         if self.attr_color.is_discrete:
             with np.errstate(invalid="ignore"):
                 int_col = color_column.astype(int)
@@ -851,7 +849,7 @@ class OWSOM(OWWidget):
             self.colors = self.attr_color.palette
             return
 
-        col = self.data.get_column_view(self.attr_color)[0].astype(float)
+        col = self.data.get_column(self.attr_color)
         col = col[np.isfinite(col)]
         if not col.size:
             self.Warning.no_defined_colors(self.attr_color)

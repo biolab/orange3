@@ -341,39 +341,37 @@ def stats(X, weights=None, compute_variance=False):
     """
     is_numeric = np.issubdtype(X.dtype, np.number)
     is_sparse = sp.issparse(X)
-    weighted = weights is not None and X.dtype != object
 
-    def weighted_mean():
+    if X.size and is_numeric:
         if is_sparse:
-            w_X = X.multiply(sp.csr_matrix(np.c_[weights] / sum(weights)))
-            return np.asarray(w_X.sum(axis=0)).ravel()
+            X = X.tocsc()
+        if compute_variance:
+            means, vars = nan_mean_var(X, axis=0, weights=weights)
         else:
-            return bn.nansum(X * np.c_[weights] / sum(weights), axis=0)
+            means = nanmean(X, axis=0, weights=weights)
+            vars = np.zeros(X.shape[1] if X.ndim == 2 else 1)
 
     if X.size and is_numeric and not is_sparse:
         nans = np.isnan(X).sum(axis=0)
         return np.column_stack((
             np.nanmin(X, axis=0),
             np.nanmax(X, axis=0),
-            nanmean(X, axis=0) if not weighted else weighted_mean(),
-            nanvar(X, axis=0) if compute_variance else \
-                np.zeros(X.shape[1] if X.ndim == 2 else 1),
+            means,
+            vars,
             nans,
             X.shape[0] - nans))
     elif is_sparse and X.size:
-        if compute_variance:
-            raise NotImplementedError
-
         non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
-        X = X.tocsc()
         return np.column_stack((
             nanmin(X, axis=0),
             nanmax(X, axis=0),
-            nanmean(X, axis=0) if not weighted else weighted_mean(),
-            np.zeros(X.shape[1]),      # variance not supported
+            means,
+            vars,
             X.shape[0] - non_zero,
             non_zero))
     else:
+        if X.ndim == 1:
+            X = X[:, None]
         nans = (pandas.isnull(X).sum(axis=0) + (X == "").sum(axis=0)) \
             if X.size else np.zeros(X.shape[1])
         return np.column_stack((
@@ -453,17 +451,72 @@ def nansum(x, axis=None):
     return _apply_func(x, np.nansum, nansum_sparse, axis=axis)
 
 
-def nanmean(x, axis=None):
+def nanmean(x, axis=None, weights=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
+    if axis is None and weights is not None:
+        raise NotImplementedError("weights are only supported if axis is defined")
+
     if not sp.issparse(x):
-        means = bn.nanmean(x, axis=axis)
+        if weights is None:
+            means = bn.nanmean(x, axis=axis)
+        else:
+            if axis == 0:
+                weights = weights.reshape(-1, 1)
+            elif axis == 1:
+                weights = weights.reshape(1, -1)
+            else:
+                raise NotImplementedError
+            nanw = ~np.isnan(x) * weights  # do not divide by non-used weights
+            means = bn.nansum(x * weights, axis=axis) / np.sum(nanw, axis=axis)
     elif axis is None:
         means, _ = mean_variance_axis(x, axis=0)
         means = np.nanmean(means)
     else:
-        means, _ = mean_variance_axis(x, axis=axis)
+        # mean_variance_axis is picky regarding the input type
+        if weights is not None:
+            weights = weights.astype(float)
+        means, _ = mean_variance_axis(x, axis=axis, weights=weights)
 
     return means
+
+
+def nan_mean_var(x, axis=None, weights=None):
+    """
+    Computes means and variance of dense and sparse matrices.
+    Supports weights. Based on mean_variance_axis.
+    """
+    if axis is None:
+        raise NotImplementedError("axis=None is not supported")
+
+    if not sp.issparse(x):
+        if weights is None:
+            means = bn.nanmean(x, axis=axis)
+            variances = bn.nanvar(x, axis=axis)
+        else:
+            if axis == 0:
+                weights = weights.reshape(-1, 1)
+            elif axis == 1:
+                weights = weights.reshape(1, -1)
+            else:
+                raise NotImplementedError
+
+            nanw = ~np.isnan(x) * weights  # do not divide by non-used weights
+            wsum = np.sum(nanw, axis=axis)
+            means = bn.nansum(x * weights, axis=axis) / wsum
+
+            if axis == 0:
+                mr = means.reshape(1, -1)
+            elif axis == 1:
+                mr = means.reshape(-1, 1)
+
+            variances = bn.nansum(((x - mr) ** 2) * weights, axis=axis) / wsum
+    else:
+        # mean_variance_axis is picky regarding the input type
+        if weights is not None:
+            weights = weights.astype(float)
+        means, variances = mean_variance_axis(x, axis=axis, weights=weights)
+
+    return means, variances
 
 
 def nanvar(x, axis=None, ddof=0):
@@ -507,9 +560,12 @@ def nanmode(x, axis=0):
     returns zero). Also, this function returns count NaN if all values are NaN
     (scipy=1.3.0 returns some number)."""
     nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
-    res = scipy.stats.stats.mode(x, axis)
-    return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),
-                                        np.where(nans, np.nan, res.count))
+    res = scipy.stats.mode(x, axis, keepdims=True)
+    # type(res) is ModeResult. ModeResult is defined in scipy.stats.stats; this
+    # namespace is deprecated, but ModeResult is not exported to scipy.stats
+    # Hence we use type(res) to avoid a warning.
+    return type(res)(np.where(nans, np.nan, res.mode),
+                     np.where(nans, np.nan, res.count))
 
 
 def unique(x, return_counts=False):

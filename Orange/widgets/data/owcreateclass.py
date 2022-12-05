@@ -499,7 +499,7 @@ class OWCreateClass(widget.OWWidget):
             return
         counters = {StringVariable: _string_counts,
                     DiscreteVariable: _discrete_counts}
-        data = self.data.get_column_view(attr)[0]
+        data = self.data.get_column(attr)
         self.match_counts = [[int(np.sum(x)) for x in matches]
                              for matches in counters[type(attr)]()]
         _set_labels()

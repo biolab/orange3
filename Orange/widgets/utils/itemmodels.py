@@ -929,12 +929,7 @@ class TableModel(AbstractSortTableModel):
         coldesc = self.columns[column]
         if isinstance(coldesc, TableModel.Column) \
                 and role == TableModel.ValueRole:
-            col_data = numpy.asarray(self.source.get_column_view(coldesc.var)[0])
-
-            if coldesc.var.is_continuous:
-                # continuous from metas have dtype object; cast it to float
-                col_data = col_data.astype(float)
-            return col_data
+            return self.source.get_column(coldesc.var)
         else:
             return numpy.asarray([self.index(i, column).data(role)
                                   for i in range(self.rowCount())])

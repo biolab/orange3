@@ -134,7 +134,7 @@ class Histogram(QGraphicsWidget):
         self.data = data
         self.attribute = data.domain[variable]
 
-        self.x = data.get_column_view(self.attribute)[0].astype(np.float64)
+        self.x = data.get_column(self.attribute)
         self.x_nans = np.isnan(self.x)
         self.x = self.x[~self.x_nans]
 
@@ -156,7 +156,7 @@ class Histogram(QGraphicsWidget):
         self.color_attribute = color_attribute
         if self.color_attribute is not None:
             self.target_var = data.domain[color_attribute]
-            self.y = data.get_column_view(color_attribute)[0]
+            self.y = data.get_column(color_attribute)
             self.y = self.y[~self.x_nans]
             if not np.issubdtype(self.y.dtype, np.number):
                 self.y = self.y.astype(np.float64)

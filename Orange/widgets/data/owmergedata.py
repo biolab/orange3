@@ -468,10 +468,8 @@ class OWMergeData(widget.OWWidget):
             if var not in domain:
                 return True
             both_defined = (lefti != -1) * (righti != -1)
-            left_col = \
-                self.data.get_column_view(var)[0][lefti[both_defined]]
-            right_col = \
-                self.extra_data.get_column_view(var)[0][righti[both_defined]]
+            left_col = self.data.get_column(var)[lefti[both_defined]]
+            right_col = self.extra_data.get_column(var)[righti[both_defined]]
             if var.is_primitive():
                 left_col = left_col.astype(float)
                 right_col = right_col.astype(float)
@@ -496,9 +494,8 @@ class OWMergeData(widget.OWWidget):
         if var == INSTANCEID:
             return np.fromiter(
                 (inst.id for inst in data), count=len(data), dtype=int)
-        col = data.get_column_view(var)[0]
+        col = data.get_column(var)
         if var.is_primitive():
-            col = col.astype(float, copy=False)
             nans = np.isnan(col)
             mask *= ~nans
             if var.is_discrete:

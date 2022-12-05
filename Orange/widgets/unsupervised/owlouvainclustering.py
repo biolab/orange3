@@ -387,7 +387,7 @@ class OWLouvainClustering(widget.OWWidget):
         new_domain = add_columns(domain, metas=[cluster_var])
         new_table = self.data.transform(new_domain)
         with new_table.unlocked(new_table.metas):
-            new_table.get_column_view(cluster_var)[0][:] = new_partition
+            new_table.set_column(cluster_var, new_partition)
 
         self.Outputs.annotated_data.send(new_table)
 

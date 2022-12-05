@@ -254,7 +254,7 @@ class TestOWNeighbors(WidgetTest):
         self.assertEqual(len(neighbours.domain.metas), 3)
         self.assertEqual(neighbours.metas.shape, (4, 3))
         np.testing.assert_almost_equal(
-            neighbours.get_column_view("distance")[0], indices + 1000)
+            neighbours.get_column("distance"), indices + 1000)
         np.testing.assert_almost_equal(neighbours.X, data2.X[indices])
 
     def test_apply(self):

@@ -538,13 +538,13 @@ class OWDistributions(OWWidget):
         if self.var is None:
             return
 
-        column = self.data.get_column_view(self.var)[0].astype(float)
+        column = self.data.get_column(self.var)
         valid_mask = np.isfinite(column)
         if not np.any(valid_mask):
             self.Error.no_defined_values_var(self.var.name)
             return
         if self.cvar:
-            ccolumn = self.data.get_column_view(self.cvar)[0].astype(float)
+            ccolumn = self.data.get_column(self.cvar)
             valid_mask *= np.isfinite(ccolumn)
             if not np.any(valid_mask):
                 self.Error.no_defined_values_pair(self.var.name, self.cvar.name)
@@ -881,7 +881,7 @@ class OWDistributions(OWWidget):
     def recompute_binnings(self):
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
-            column = self.data.get_column_view(self.var)[0].astype(float)
+            column = self.data.get_column(self.var)
             if np.any(np.isfinite(column)):
                 if self.var.is_time:
                     self.binnings = time_binnings(column, min_unique=5)
@@ -1142,7 +1142,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_disc(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column_view(self.var)[0].astype(float)
+        col = self.data.get_column(self.var)
         for group_idx, val_idx in enumerate(self.selection, start=1):
             group_indices[col == val_idx] = group_idx
         values = [self.var.values[i] for i in self.selection]
@@ -1150,7 +1150,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_cont(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column_view(self.var)[0].astype(float)
+        col = self.data.get_column(self.var)
         values = []
         for group_idx, group in enumerate(self.grouped_selection(), start=1):
             x0 = x1 = None
@@ -1182,7 +1182,7 @@ class OWDistributions(OWWidget):
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column_view(self.var)[0].astype(float)
+        col = self.data.get_column(self.var)
         values = []
         for bar_idx in range(len(self.bar_items)):
             x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
