@@ -16,7 +16,6 @@ from typing import List, TYPE_CHECKING, Union
 
 import bottleneck as bn
 import numpy as np
-import dask.array as da
 
 import dask.array
 
