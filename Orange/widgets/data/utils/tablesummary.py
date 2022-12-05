@@ -4,6 +4,7 @@ from typing import NamedTuple, Union, Optional, List
 import numpy as np
 
 from Orange.data import Domain, Table, Storage
+from Orange.data.dask import DaskTable
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 from Orange.widgets.utils import datacaching
@@ -69,7 +70,7 @@ def table_summary(table: Table) -> Union[Summary, ApproxSummary]:
         return ApproxSummary(approx_len, len_future, table.domain,
                              None, None, None)
                              # NotAvailable(), NotAvailable(), NotAvailable())
-    elif table.is_dask_table():
+    elif isinstance(table, DaskTable):
         return DaskSummary(len(table), table.domain, None, None, None)
     else:
         domain = table.domain
