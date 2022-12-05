@@ -24,6 +24,7 @@ from AnyQt.QtCore import (
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
+from Orange.data.dask import DaskTable
 from Orange.data.storage import Storage
 from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
@@ -288,7 +289,7 @@ class OWDataTable(OWWidget):
     @Inputs.data
     def set_dataset(self, index: int, data: Table):
         """Set the input dataset."""
-        if data.is_dask_table():
+        if isinstance(data, DaskTable):
             self.show_distributions = False
         datasetname = getattr(data, "name", "Data")
         slot = self._inputs[index]
@@ -829,7 +830,7 @@ def table_summary(table):
 
         return ApproxSummary(approx_len, len_future, table.domain,
                              NotAvailable(), NotAvailable(), NotAvailable())
-    elif table.is_dask_table():
+    elif isinstance(table, DaskTable):
         return DaskSummary(len(table), table.domain, None, None, None)
     else:
         domain = table.domain
