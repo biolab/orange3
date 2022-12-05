@@ -16,7 +16,6 @@ from typing import List, TYPE_CHECKING, Union
 
 import bottleneck as bn
 import numpy as np
-import dask.array as da
 
 import dask.array
 
@@ -486,6 +485,8 @@ class Table(Sequence, Storage):
     _Unlocked_X_val, _Unlocked_Y_val, _Unlocked_metas_val, _Unlocked_W_val = 1, 2, 4, 8
     _Unlocked_X_ref, _Unlocked_Y_ref, _Unlocked_metas_ref, _Unlocked_W_ref = 16, 32, 64, 128
     _unlocked = 0xff  # pylint: disable=invalid-name
+
+    _array_interface = np
 
     @property
     def columns(self):
@@ -1483,10 +1484,6 @@ class Table(Sequence, Storage):
         """
         return any(sp.issparse(i) for i in [self._X, self._Y, self._metas])
 
-    def is_dask_table(self):
-        # TODO: check metas when we decide on what we will do with them
-        return isinstance(self.X, da.Array) and isinstance(self.Y, da.Array)
-
     def ensure_copy(self):
         """
         Ensure that the table owns its data; copy arrays when necessary.
@@ -1808,11 +1805,10 @@ class Table(Sequence, Storage):
             conditions = [filter]
             conjunction = True
 
-        _array_interface = da if self.is_dask_table() else np
         if conjunction:
-            sel = _array_interface.ones(len(self), dtype=bool)
+            sel = self._array_interface.ones(len(self), dtype=bool)
         else:
-            sel = _array_interface.zeros(len(self), dtype=bool)
+            sel = self._array_interface.zeros(len(self), dtype=bool)
 
         for f in conditions:
             selection = self._filter_to_indicator(f)
@@ -1892,8 +1888,7 @@ class Table(Sequence, Storage):
         if len(col_indices) == 1:
             sel = col_filter(col_indices[0])
         else:
-            _array_interface = da if self.is_dask_table() else np
-            sel = _array_interface.ones(len(self), dtype=bool)
+            sel = self._array_interface.ones(len(self), dtype=bool)
             for col_idx in col_indices:
                 sel *= col_filter(col_idx)
 
@@ -1917,8 +1912,7 @@ class Table(Sequence, Storage):
             col = col.astype(float)
             return ~np.isnan(col)
 
-        _array_interface = da if self.is_dask_table() else np
-        sel = _array_interface.zeros(len(self), dtype=bool)
+        sel = self._array_interface.zeros(len(self), dtype=bool)
         for val in filter.values:
             if not isinstance(val, Real):
                 val = self.domain[filter.column].to_val(val)
