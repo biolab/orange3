@@ -9,6 +9,8 @@ from Orange.data import Table
 
 class DaskTable(Table):
 
+    _array_interface = da
+
     @classmethod
     def from_file(cls, filename, sheet=None):
         """
