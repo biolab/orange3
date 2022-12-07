@@ -51,7 +51,7 @@ requirements:
     - joblib >=1.0.0
     - keyring
     - keyrings.alt
-    - pip >=18.0
+    - pip >=20.3
     - python.app  # [osx]
     - serverfiles
     - python-louvain >=0.13
