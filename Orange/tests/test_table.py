@@ -3128,6 +3128,11 @@ class TestTableTranspose(unittest.TestCase):
         self.assertDictEqual(table.domain.attributes[0].attributes,
                              {"attr1": "a1", "attr2": "aa1"})
 
+    def test_transpose_name(self):
+        table = Table("iris")
+        transposed = Table.transpose(table)
+        self.assertEqual(table.name, transposed.name)
+
     def _compare_tables(self, table1, table2):
         self.assertEqual(table1.n_rows, table2.n_rows)
         np.testing.assert_array_equal(table1.X, table2.X)
