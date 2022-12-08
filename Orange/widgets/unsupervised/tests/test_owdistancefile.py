@@ -7,6 +7,7 @@ class TestOWDistanceFileDropHandler(unittest.TestCase):
     def test_canDropFile(self):
         handler = OWDistanceFileDropHandler()
         self.assertTrue(handler.canDropFile("test.dst"))
+        self.assertTrue(handler.canDropFile("test.xlsx"))
         self.assertFalse(handler.canDropFile("test.bin"))
 
     def test_parametersFromFile(self):

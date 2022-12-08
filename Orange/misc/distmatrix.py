@@ -1,5 +1,8 @@
+import os.path
+
 import numpy as np
 
+from Orange.misc import _distmatrix_xlsx
 from Orange.util import deprecated
 
 
@@ -104,7 +107,7 @@ class DistMatrix(np.ndarray):
         return obj
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, sheet=None):
         """
         Load distance matrix from a file
 
@@ -138,8 +141,32 @@ class DistMatrix(np.ndarray):
         Args:
             filename: file name
         """
-        # prevent circular imports
+        _, ext = os.path.splitext(filename)
+        if ext == ".xlsx":
+            matrix, row_labels, col_labels, axis \
+                = _distmatrix_xlsx.read_matrix(filename, sheet)
+        else:
+            assert sheet is None
+            matrix, row_labels, col_labels, axis = cls._from_dst(filename)
+        return cls(matrix,
+                   cls._labels_to_tables(row_labels),
+                   cls._labels_to_tables(col_labels),
+                   axis)
+
+    @staticmethod
+    def _labels_to_tables(labels):
+        # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data import Table, StringVariable, Domain
+
+        if labels is None or isinstance(labels, Table):
+            return labels
+        return Table.from_numpy(
+            Domain([], metas=[StringVariable("label")]),
+            np.empty((len(labels), 0)), None, np.array(labels)[:, None])
+
+    @classmethod
+    def _from_dst(cls, filename):
+        # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data.io import detect_encoding
 
         with open(filename, encoding=detect_encoding(filename)) as fle:
@@ -202,15 +229,51 @@ class DistMatrix(np.ndarray):
                                 if col_labels else j + 1)) from exc
                     if symmetric:
                         matrix[j, i] = matrix[i, j]
-        if col_labels:
-            col_labels = Table.from_list(
-                Domain([], metas=[StringVariable("label")]),
-                [[item] for item in col_labels])
-        if row_labels:
-            row_labels = Table.from_list(
-                Domain([], metas=[StringVariable("label")]),
-                [[item] for item in row_labels])
-        return cls(matrix, row_labels, col_labels, axis)
+            return matrix, row_labels, col_labels, axis
+
+    def auto_symmetricized(self, copy=False):
+        def self_or_copy():
+            return self.copy() if copy else self
+
+        def get_labels(labels):
+            return np.array(labels) if isinstance(labels, list) \
+                else labels.metas[:, 0] if self._trivial_labels(labels) \
+                else object()
+
+        h, w = self.shape
+        m = max(w, h)
+        if (abs(h - w) > 1
+                or self.row_items and self.col_items
+                   and np.any(get_labels(self.row_items)
+                              != get_labels(self.col_items))
+                or self.row_items and len(self.row_items) != m
+                or self.col_items and len(self.col_items) != m):
+            return self_or_copy()
+
+        nans = np.isnan(self)
+        low_indices = np.tril_indices(h, -1)
+        low_empty = np.all(nans[low_indices])
+        high_indices = np.triu_indices(w, 1)
+        high_empty = np.all(nans[high_indices])
+        if low_empty is high_empty:  # both non-empty, or both empty (only diagonal)
+            return self_or_copy()
+
+        indices = low_indices if low_empty else high_indices
+        if w == h:
+            matrix = np.array(self)
+        else:
+            if low_empty:
+                row = np.vstack((self[:, -1, None], [[0]])).T
+                matrix = np.vstack((self, row))
+            else:
+                col = np.hstack((self[-1, None], [[0]])).T
+                matrix = np.hstack((self, col))
+            diag_indices = np.diag_indices(len(matrix))
+            matrix[diag_indices] = np.nan_to_num(matrix[diag_indices])
+        matrix[indices] = self.T[indices]
+        return type(self)(matrix,
+                          self.row_items or self.col_items,
+                          self.col_items or self.row_items)
 
     @staticmethod
     def _trivial_labels(items):
