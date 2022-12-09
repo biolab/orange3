@@ -91,18 +91,8 @@ def usable_scorers(domain_or_var: Union[Variable, Domain]):
     scorer_candidates = [cls for cls in scoring.Score.registry.values()
                          if cls.is_scalar and not cls.__dict__.get("abstract")]
 
-    if isinstance(domain_or_var, Variable):
-        warnings.warn(
-            "Passing Variable to usable_scorers is deprecated, and using Domain "
-            "is preferred. In light of this change, all Scorers should implement "
-            "the is_compatible method.",
-            OrangeDeprecationWarning)
-
-        usable = [scorer for scorer in scorer_candidates if
-                  isinstance(domain_or_var, scorer.class_types)]
-    else:
-        usable = [scorer for scorer in scorer_candidates if
-                  scorer.is_compatible(domain_or_var) and scorer.class_types]
+    usable = [scorer for scorer in scorer_candidates if
+              scorer.is_compatible(domain_or_var) and scorer.class_types]
 
     return sorted(usable, key=lambda cls: order.get(cls.name, 99))
 

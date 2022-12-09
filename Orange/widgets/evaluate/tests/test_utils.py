@@ -14,7 +14,6 @@ import Orange
 from Orange.widgets.evaluate.utils import ScoreTable, usable_scorers, BUILTIN_SCORERS_ORDER
 from Orange.widgets.tests.base import GuiTest
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
-from Orange.util import OrangeDeprecationWarning
 from Orange.evaluation import scoring
 
 
@@ -39,30 +38,6 @@ class TestUsableScorers(unittest.TestCase):
 
         self.validate_scorer_candidates(classification_scorers, class_type=DiscreteVariable)
         self.validate_scorer_candidates(regression_scorers, class_type=ContinuousVariable)
-
-    def test_if_deprecation_warning_is_raised(self):
-        with self.assertWarns(OrangeDeprecationWarning):
-            classification_scorers = {scorer.name for scorer in
-                                      usable_scorers(self.iris.domain.class_var)}
-
-        with self.assertWarns(OrangeDeprecationWarning):
-            regression_scorers = {scorer.name for scorer in
-                                  usable_scorers(self.housing.domain.class_var)}
-
-        # check if we get valid scorers using deprecated approach
-        self.validate_scorer_candidates(classification_scorers, class_type=DiscreteVariable)
-        self.validate_scorer_candidates(regression_scorers, class_type=ContinuousVariable)
-
-    def test_time_bomb(self):
-        """This test is to be included in the 3.32.1 release and will fail in
-        version 3.35. This serves as a reminder to remove the deprecated method
-        and this test."""
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.35"):
-            self.fail(
-                "Passing Variable to usable_scorers was deprecated in "
-                "version 3.32.1, and there have been three minor versions in "
-                "between. Please remove the deprecated method."
-            )
 
 
 class TestScoreTable(GuiTest):
@@ -168,7 +143,7 @@ class TestScoreTable(GuiTest):
         self.assertEqual(order(3), "DEC")
 
     def test_column_settings_reminder(self):
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.35"):
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.37"):
             self.fail(
                 "Orange 3.32 added a workaround to show C-Index into ScoreTable.__init__. "
                 "This should have been properly fixed long ago."
