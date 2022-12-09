@@ -1182,7 +1182,10 @@ class TableTestCase(unittest.TestCase):
         table = data.Table("iris")[:1]
         with table.unlocked_reference():
             table.X = sp.csr_matrix(table.X)
-        repr(table)     # make sure repr does not crash
+        r = repr(table)     # make sure repr does not crash
+        self.assertEqual(r.replace("\n", ""),
+                         "[[sepal length=5.1, sepal width=3.5, "
+                         "petal length=1.4, petal width=0.2 | Iris-setosa]]")
 
     def test_inf(self):
         a = np.array([[2, 0, 0, 0],
@@ -1191,6 +1194,34 @@ class TableTestCase(unittest.TestCase):
         with self.assertWarns(Warning):
             tab = data.Table.from_numpy(None, a)
         self.assertEqual(tab.get_nan_frequency_attribute(), 3/12)
+
+    def test_str(self):
+        iris = Table("iris")
+        # instance
+        self.assertEqual("[5.1, 3.5, 1.4, 0.2 | Iris-setosa]", str(iris[0]))
+        # table
+        table_str = str(iris)
+        lines = table_str.split('\n')
+        self.assertEqual(150, len(lines))
+        self.assertEqual("[[5.1, 3.5, 1.4, 0.2 | Iris-setosa],", lines[0])
+        self.assertEqual(" [5.9, 3.0, 5.1, 1.8 | Iris-virginica]]", lines[-1])
+
+    def test_str_sparse(self):
+        iris = Table("iris")
+        with iris.unlocked_reference():
+            iris.X = sp.csr_matrix(iris.X)
+        # instance
+        s0 = "[sepal length=5.1, sepal width=3.5, " \
+             "petal length=1.4, petal width=0.2 | Iris-setosa]"
+        self.assertEqual(s0, str(iris[0]))
+        # table
+        table_str = str(iris)
+        lines = table_str.split('\n')
+        self.assertEqual(150, len(lines))
+        self.assertEqual("[" + s0 + ",", lines[0])
+        slast = "[sepal length=5.9, sepal width=3.0, " \
+                "petal length=5.1, petal width=1.8 | Iris-virginica]"
+        self.assertEqual(" " + slast + "]", lines[-1])
 
 
 def column_sizes(table):
