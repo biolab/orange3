@@ -3,7 +3,7 @@ numpy>=1.19.5
 scipy>=1.9
 # scikit-learn version 1.0.0 includes problematic libomp 12 which breaks xgboost
 # https://github.com/scikit-learn/scikit-learn/pull/21227
-scikit-learn>=1.0.1
+scikit-learn>=1.0.1,<1.2.0
 bottleneck>=1.3.4
 # Reading Excel files
 xlrd>=1.2.0
