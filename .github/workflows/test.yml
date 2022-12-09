@@ -12,19 +12,19 @@ jobs:
   lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: '2'
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
 
       - name: Install Tox
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade tox tox-pip-version
+          python -m pip install --upgrade tox
 
       - name: Run Pylint
         run:  tox -e pylint-ci
@@ -75,9 +75,9 @@ jobs:
           - 1433:1433
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -89,7 +89,7 @@ jobs:
       - name: Install Tox
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade tox tox-pip-version
+          python -m pip install --upgrade tox
 
       - name: Run Tox
         run: catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
@@ -112,7 +112,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-11, windows-2019]
+        os: [macos-latest, windows-latest]
         python-version: [3.8, 3.9, '3.10']
         tox_env: [orange-released]
         name: [Released]
@@ -121,7 +121,7 @@ jobs:
             python-version: '3.10'
             tox_env: orange-latest
             name: Latest
-          - os: macos-11
+          - os: macos-latest
             python-version: '3.10'
             tox_env: orange-latest
             name: Latest
@@ -129,26 +129,26 @@ jobs:
             python-version: '3.10'
             tox_env: pyqt6
             name: PyQt6
-          - os: macos-11
+          - os: macos-latest
             python-version: 3.9
             tox_env: pyqt6
             name: PyQt6
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install system dependencies on MacOS
         run: brew install libomp
-        if: matrix.os == 'macos-10.15' || matrix.os == 'macos-11'
+        if: matrix.os == 'macos-10.15' || matrix.os == 'macos-11' || matrix.os == 'macos-12'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade tox tox-pip-version
+          python -m pip install --upgrade tox
 
       - name: Test with Tox
         run: |
