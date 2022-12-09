@@ -1,14 +1,16 @@
 # pylint: disable=too-many-ancestors
+import time
 from types import SimpleNamespace as namespace
 
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtCore import QTimer
-from AnyQt.QtTest import QSignalSpy
-from AnyQt.QtWidgets import QSizePolicy, QGridLayout, QLabel
+from AnyQt.QtGui import QIcon
+from AnyQt.QtWidgets import QSizePolicy, QGridLayout, QLabel, QPushButton
 
 import pyqtgraph as pg
+
+from orangecanvas.gui.svgiconengine import SvgIconEngine
 
 from Orange.data import ContinuousVariable, Domain, Table, StringVariable
 from Orange.data.util import array_equal
@@ -38,16 +40,8 @@ def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
     state.set_status("Running...")
     oldstress = np.finfo(float).max
 
-    ticked = False
-
-    def timedout():
-        nonlocal ticked
-        ticked = True
-
-    timer = QTimer(interval=100)
-    timer.timeout.connect(timedout)
-    timer.start()
     while True:
+        loop_start = time.time()
         step_iter = min(max_iter - iterations_done, step_size)
         mds = MDS(
             dissimilarity="precomputed", n_components=2,
@@ -73,9 +67,8 @@ def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
         oldstress = stress
         if state.is_interruption_requested():
             return res
-        if not ticked:
-            QSignalSpy(timer.timeout).wait(100)
-        ticked = False
+        if (wait := 0.1 - (time.time() - loop_start)) > 0:
+            time.sleep(wait)
 
 
 #: Maximum number of displayed closest pairs.
@@ -145,7 +138,7 @@ class OWMDSGraph(OWScatterPlotBase):
         emb_y_pairs = emb_y_pairs[pairs_mask, :]
         self.pairs_curve = pg.PlotCurveItem(
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
-            pen=pg.mkPen(0.8, width=4, cosmetic=True),
+            pen=pg.mkPen(0.8, width=1, cosmetic=True),
             connect="pairs", antialias=True)
         self.pairs_curve.setSegmentedLineMode("on")
         self.pairs_curve.setZValue(-1)
@@ -235,9 +228,9 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         grid = QGridLayout()
         gui.widgetBox(box, orientation=grid)
         self.run_button = gui.button(None, self, "Start", self._toggle_run)
-        self.step_button = gui.button(
-            None, self, "⏵⏸", self._step,
-            sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Fixed))
+        self.step_button = QPushButton(QIcon(SvgIconEngine(_playpause_icon)), "")
+        self.step_button.pressed.connect(self._step)
+        self.step_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
         grid.addWidget(self.run_button, 0, 0, 1, 2)
         grid.addWidget(self.step_button, 0, 2)
         grid.addWidget(QLabel("Refresh:"), 1, 0)
@@ -556,6 +549,26 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             values["attr_shape"] = values["graph"]["attr_shape"]
             values["attr_label"] = values["graph"]["attr_label"]
 
+
+_playpause_icon = b"""<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1"
+	 id="svg3025" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:svg="http://www.w3.org/2000/svg"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1347.7 1178.5"
+	 style="enable-background:new 0 0 1347.7 1178.5;" xml:space="preserve">
+<sodipodi:namedview  bordercolor="#666666" borderopacity="1" gridtolerance="10" guidetolerance="10" id="namedview3031" inkscape:current-layer="svg3025" inkscape:cx="896" inkscape:cy="896" inkscape:pageopacity="0" inkscape:pageshadow="2" inkscape:window-height="480" inkscape:window-maximized="0" inkscape:window-width="640" inkscape:window-x="0" inkscape:window-y="25" inkscape:zoom="0.13169643" objecttolerance="10" pagecolor="#ffffff" showgrid="false">
+	</sodipodi:namedview>
+<g id="g3027" transform="matrix(1,0,0,-1,37.966102,1320.6441)">
+	<path inkscape:connector-curvature="0" d="M1003,628.1c-1-4.2-4.5-7.6-7.6-11.1L581,202.5c-7.4-7.4-13.6-9.9-18.7-7.6
+		c-5.1,2.3-7.6,8.6-7.6,18.7v414.5c-1.9-3.9-4.5-7.6-7.6-11.1L132.6,202.5c-7.4-7.4-13.6-9.9-18.7-7.6c-5.1,2.3-7.6,8.6-7.6,18.7
+		v859.3c0,10.1,2.5,16.3,7.6,18.7c5.1,2.3,11.3-0.2,18.7-7.6l414.5-414.5c3.1-3.1,5.6-6.8,7.6-11.1v414.5c0,10.1,2.5,16.3,7.6,18.7
+		c5.1,2.3,11.3-0.2,18.7-7.6l414.5-414.5c3.1-3.1,6.4-6.5,7.6-11.1C1004.9,651.1,1004.8,635.4,1003,628.1z"/>
+	<path inkscape:connector-curvature="0" d="M1038,650v404.2c0,10.1,3.7,18.9,11.1,26.3c7.4,7.4,16.2,11.1,26.3,11.1h74.7
+		c10.1,0,18.9-3.7,26.3-11.1c7.4-7.4,11.1-16.2,11.1-26.3v-822c0-10.1-3.7-18.9-11.1-26.3c-7.4-7.4-16.2-11.1-26.3-11.1h-74.7
+		c-10.1,0-18.9,3.7-26.3,11.1c-7.4,7.4-11.1,16.2-11.1,26.3V650"/>
+	<path d="M918.9,404.1"/>
+</g>
+</svg>
+"""
 
 if __name__ == "__main__":  # pragma: no cover
     table = Table("iris")
