@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
-    QSizePolicy
+    QSizePolicy, QFormLayout
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush, QFontMetrics
 from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
@@ -40,7 +40,7 @@ class SortBy(IntEnum):
 
     @staticmethod
     def items():
-        return ["No sorting", "Name", "Absolute importance",
+        return ["Original order", "Alphabetically", "Absolute importance",
                 "Positive influence", "Negative influence"]
 
 
@@ -301,7 +301,6 @@ class GraphicsColorAnimator(QObject):
         for item in self.__items:
             item.unhookOnMousePress()
         self.__items = []
-
 
 
 class ContinuousItemMixin:
@@ -704,45 +703,70 @@ class OWNomogram(OWWidget):
         self.repaint = False
 
         # GUI
-        box = gui.vBox(self.controlArea, "Target class")
+        lab_align = QFormLayout().labelAlignment()
+
+        grid = QGridLayout()
+        grid.setColumnStretch(1, 1)
+        gui.widgetBox(self.controlArea, True, orientation=grid)
         self.class_combo = gui.comboBox(
-            box, self, "target_class_index", callback=self._class_combo_changed,
-            contentsLength=12, searchable=True)
+            None, self, "target_class_index",
+            callback=self._class_combo_changed,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed),
+            searchable=True)
+        grid.addWidget(QLabel("Target class: "), 0, 0, lab_align)
+        grid.addWidget(self.class_combo, 0, 1)
+
         self.norm_check = gui.checkBox(
-            box, self, "normalize_probabilities", "Normalize probabilities",
+            None, self, "normalize_probabilities", "Normalize probabilities",
             hidden=True, callback=self.update_scene,
             tooltip="For multiclass data 1 vs. all probabilities do not"
                     " sum to 1 and therefore could be normalized.")
+        self.norm_check.setStyleSheet("margin-bottom: 12px")
+        grid.addWidget(self.norm_check, 1, 1)
 
-        self.scale_radio = gui.radioButtons(
-            self.controlArea, self, "scale", ["Point scale", "Log odds ratios"],
-            box="Scale", callback=self.update_scene)
+        group = gui.radioButtons(
+            None, self, "scale", callback=self.update_scene)
+        grid.addWidget(QLabel("Scale: "), 2, 0, lab_align)
+        grid.addWidget(gui.appendRadioButton(
+            group, "Point scale", addToLayout=False), 2, 1)
+        grid.addWidget(gui.appendRadioButton(
+            group, "Log odds ratios", addToLayout=False), 3, 1)
 
-        box = gui.vBox(self.controlArea, "Display features")
         grid = QGridLayout()
-        radio_group = gui.radioButtonsInBox(
-            box, self, "display_index", [], orientation=grid,
-            callback=self.update_scene)
-        radio_all = gui.appendRadioButton(
-            radio_group, "All", addToLayout=False)
-        radio_best = gui.appendRadioButton(
-            radio_group, "Best ranked:", addToLayout=False)
-        spin_box = gui.hBox(None, margin=0)
-        self.n_spin = gui.spin(
-            spin_box, self, "n_attributes", 1, self.MAX_N_ATTRS, label=" ",
-            controlWidth=60, callback=self._n_spin_changed)
-        grid.addWidget(radio_all, 1, 1)
-        grid.addWidget(radio_best, 2, 1)
-        grid.addWidget(spin_box, 2, 2)
+        gui.widgetBox(self.controlArea, "Displayed features", orientation=grid)
 
         self.sort_combo = gui.comboBox(
-            box, self, "sort_index", label="Rank by:", items=SortBy.items(),
-            orientation=Qt.Horizontal, callback=self.update_scene)
+            None, self, "sort_index", items=SortBy.items(),
+            callback=self.update_scene,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        )
+        grid.addWidget(QLabel("Order: "), 0, 0, lab_align)
+        grid.addWidget(self.sort_combo, 0, 1, 1, 2)
+
+        radio_group = gui.radioButtons(
+            None, self, "display_index", callback=self.update_scene)
+        radio_all = gui.appendRadioButton(
+            radio_group, "All features", addToLayout=False)
+        radio_best = gui.appendRadioButton(
+            radio_group, "Best ranked:", addToLayout=False)
+        self.n_spin = gui.spin(
+            None, self, "n_attributes", 1, self.MAX_N_ATTRS,
+            callback=self._n_spin_changed, alignment=Qt.AlignRight,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        )
+        grid.addWidget(QLabel("Show: "), 1, 0, lab_align)
+        grid.addWidget(radio_all, 1, 1, 1, 2)
+        grid.addWidget(radio_best, 2, 1)
+        grid.addWidget(self.n_spin, 2, 2, Qt.AlignLeft)
 
         self.cont_feature_dim_combo = gui.comboBox(
-            box, self, "cont_feature_dim_index", label="Numeric features: ",
+            None, self, "cont_feature_dim_index", label="Numeric features:",
             items=["1D projection", "2D curve"], orientation=Qt.Horizontal,
-            callback=self.update_scene)
+            callback=self.update_scene,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        grid.setRowMinimumHeight(3, 12)
+        grid.addWidget(self.cont_feature_dim_combo.box, 4, 0, 1, 3)
+
 
         gui.rubber(self.controlArea)
 
