@@ -23,7 +23,7 @@ from AnyQt.QtWidgets import (
     QLineEdit, QAction, QActionGroup, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
-    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
+    QDialog, QRadioButton, QLabel, QSpinBox, QDoubleSpinBox,
     QAbstractItemView, QMenu, QToolTip
 )
 from AnyQt.QtGui import (
@@ -703,7 +703,7 @@ class GroupItemsDialog(QDialog):
         label3 = QLabel("occurrences")
         label4 = QLabel("most frequent values")
 
-        self.frequent_abs_spin = spin2 = QSpinBox()
+        self.frequent_abs_spin = spin2 = QSpinBox(alignment=Qt.AlignRight)
         max_val = len(data)
         spin2.setMinimum(1)
         spin2.setMaximum(max_val)
@@ -713,7 +713,7 @@ class GroupItemsDialog(QDialog):
         )
         spin2.valueChanged.connect(self._frequent_abs_spin_changed)
 
-        self.frequent_rel_spin = spin3 = QDoubleSpinBox()
+        self.frequent_rel_spin = spin3 = QDoubleSpinBox(alignment=Qt.AlignRight)
         spin3.setMinimum(0)
         spin3.setDecimals(1)
         spin3.setSingleStep(0.1)
@@ -723,7 +723,7 @@ class GroupItemsDialog(QDialog):
         spin3.setSuffix(" %")
         spin3.valueChanged.connect(self._frequent_rel_spin_changed)
 
-        self.n_values_spin = spin4 = QSpinBox()
+        self.n_values_spin = spin4 = QSpinBox(alignment=Qt.AlignRight)
         spin4.setMinimum(0)
         spin4.setMaximum(len(variable.categories))
         spin4.setValue(
@@ -736,21 +736,29 @@ class GroupItemsDialog(QDialog):
         )
         spin4.valueChanged.connect(self._n_values_spin_spin_changed)
 
-        grid_layout = QGridLayout()
+        grid_layout = QVBoxLayout()
         # first row
-        grid_layout.addWidget(radio1, 0, 0, 1, 2)
+        row = QHBoxLayout()
+        row.addWidget(radio1)
+        grid_layout.addLayout(row)
         # second row
-        grid_layout.addWidget(radio2, 1, 0, 1, 2)
-        grid_layout.addWidget(spin2, 1, 2)
-        grid_layout.addWidget(label2, 1, 3)
+        row = QHBoxLayout()
+        row.addWidget(radio2)
+        row.addWidget(spin2)
+        row.addWidget(label2)
+        grid_layout.addLayout(row)
         # third row
-        grid_layout.addWidget(radio3, 2, 0, 1, 2)
-        grid_layout.addWidget(spin3, 2, 2)
-        grid_layout.addWidget(label3, 2, 3)
+        row = QHBoxLayout()
+        row.addWidget(radio3)
+        row.addWidget(spin3)
+        row.addWidget(label3)
+        grid_layout.addLayout(row)
         # fourth row
-        grid_layout.addWidget(radio4, 3, 0)
-        grid_layout.addWidget(spin4, 3, 1)
-        grid_layout.addWidget(label4, 3, 2, 1, 2)
+        row = QHBoxLayout()
+        row.addWidget(radio4)
+        row.addWidget(spin4)
+        row.addWidget(label4)
+        grid_layout.addLayout(row)
 
         group_box = QGroupBox()
         group_box.setLayout(grid_layout)

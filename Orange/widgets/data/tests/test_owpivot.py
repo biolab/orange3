@@ -1,19 +1,18 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
 import unittest
-from unittest.mock import patch
-from pickle import loads, dumps
+from unittest.mock import patch, Mock
 
 import numpy as np
 
 from AnyQt.QtCore import Qt, QPoint
 from AnyQt.QtTest import QTest
 
+import Orange.widgets.data.owpivot
 from Orange.data import (Table, Domain, ContinuousVariable as Cv,
                          StringVariable as sv, DiscreteVariable as Dv,
                          TimeVariable as Tv)
-from Orange.widgets.data.owpivot import (OWPivot, Pivot,
-                                         AggregationFunctionsEnum)
+from Orange.widgets.data.owpivot import OWPivot, Pivot, Function
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 
@@ -72,13 +71,13 @@ class TestOWPivot(WidgetTest):
         X = np.array([[0, 1e9], [0, 1e8], [1, 2e8], [1, np.nan]])
         data = Table(domain, X)
         self.send_signal(self.widget.Inputs.data, data)
-        self.agg_checkboxes[Pivot.Functions.Mean.value].click()
+        self.agg_checkboxes[Pivot.Mean.value].click()
         grouped = self.get_output(self.widget.Outputs.grouped_data)
         str_grouped = "[[a, 2, 1987-06-06],\n [b, 2, 1976-05-03]]"
         self.assertEqual(str(grouped), str_grouped)
 
     def test_output_filtered_data(self):
-        self.agg_checkboxes[Pivot.Functions.Sum.value].click()
+        self.agg_checkboxes[Pivot.Sum.value].click()
         self.send_signal(self.widget.Inputs.data, self.iris)
         simulate.combobox_activate_item(self.widget.controls.row_feature,
                                         self.iris.domain.attributes[0].name)
@@ -187,7 +186,7 @@ class TestOWPivot(WidgetTest):
         initialize.assert_not_called()
 
     def test_saved_workflow(self):
-        self.agg_checkboxes[Pivot.Functions.Sum.value].click()
+        self.agg_checkboxes[Pivot.Sum.value].click()
         self.send_signal(self.widget.Inputs.data, self.iris)
         simulate.combobox_activate_item(self.widget.controls.row_feature,
                                         self.iris.domain.attributes[0].name)
@@ -212,7 +211,7 @@ class TestOWPivot(WidgetTest):
     def test_select_by_click(self):
         view = self.widget.table_view
         self.send_signal(self.widget.Inputs.data, self.heart_disease)
-        self.agg_checkboxes[Pivot.Functions.Sum.value].click()
+        self.agg_checkboxes[Pivot.Sum.value].click()
         simulate.combobox_activate_item(self.widget.controls.val_feature,
                                         self.heart_disease.domain[0].name)
 
@@ -269,7 +268,7 @@ class TestOWPivot(WidgetTest):
     def test_table_values(self):
         self.send_signal(self.widget.Inputs.data, self.heart_disease)
         domain = self.heart_disease.domain
-        self.agg_checkboxes[Pivot.Functions.Majority.value].click()
+        self.agg_checkboxes[Pivot.Majority.value].click()
         simulate.combobox_activate_item(self.widget.controls.col_feature,
                                         domain["gender"].name)
         simulate.combobox_activate_item(self.widget.controls.val_feature,
@@ -311,15 +310,20 @@ class TestOWPivot(WidgetTest):
         data = self.zoo.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
 
+    def test_migrate_settings_1_to_2(self):
+        afe = Orange.widgets.data.owpivot.AggregationFunctionsEnum
+        settings = {'sel_agg_functions':
+                    {afe.Count, afe.Sum, afe.Min, afe.Majority}}
+        OWPivot.migrate_settings(settings, 1)
+        self.assertEqual(settings["sel_agg_functions"],
+                         {Pivot.Count.value, Pivot.Sum.value,
+                          Pivot.Min.value, Pivot.Majority.value})
 
-class TestAggregationFunctionsEnum(unittest.TestCase):
-    def test_pickle(self):
-        self.assertIs(AggregationFunctionsEnum.Sum,
-                      loads(dumps(AggregationFunctionsEnum.Sum)))
 
-    def test_sort(self):
-        af = AggregationFunctionsEnum
-        self.assertEqual(sorted([af.Sum, af.Min]), sorted([af.Min, af.Sum]))
+_MockCount = Function(Pivot.Count.value, "Count",
+                      Mock(side_effect=Pivot.Count.func))
+_MockSum = Function(Pivot.Sum.value, "Sum",
+                    Mock(side_effect=Pivot.Sum.func))
 
 
 class TestPivot(unittest.TestCase):
@@ -398,14 +402,24 @@ class TestPivot(unittest.TestCase):
                        np.nan, np.nan, np.nan, np.nan, np.nan]], dtype=float)
         self.assert_table_equal(group_tab, Table(Domain(atts), X))
 
-    @patch("Orange.widgets.data.owpivot.Pivot.Count.func",
-           side_effect=Pivot.Count.func)
-    @patch("Orange.widgets.data.owpivot.Pivot.Sum.func",
-           side_effect=Pivot.Sum.func)
-    def test_group_table_use_cached(self, count_func, sum_func):
+    @patch("Orange.widgets.data.owpivot.Pivot.Functions", new=[
+        _MockCount if f.name == "Count" else _MockSum if f.name == "Sum" else f
+        for f in Orange.widgets.data.owpivot.Pivot.Functions])
+    @patch("Orange.widgets.data.owpivot.Pivot.Sum", new=_MockSum)
+    @patch("Orange.widgets.data.owpivot.Pivot.Count", new=_MockCount)
+    @patch("Orange.widgets.data.owpivot.Pivot.AutonomousFunctions",
+           new=(_MockCount,))
+    @patch("Orange.widgets.data.owpivot.Pivot.ContVarFunctions",
+           new=(_MockSum, ) + Pivot.ContVarFunctions[1:])
+    @patch("Orange.widgets.data.owpivot.Pivot.FloatFunctions",
+           new=(_MockCount, ) + Pivot.FloatFunctions[1:])
+    def test_group_table_use_cached(self):
+
         domain = self.table.domain
         pivot = Pivot(self.table, [Pivot.Count, Pivot.Sum], domain[0], domain[1])
         group_tab = pivot.group_table
+        count_func = _MockCount.func
+        sum_func = _MockSum.func
         count_func.reset_mock()
         sum_func.reset_mock()
 
@@ -500,7 +514,7 @@ class TestPivot(unittest.TestCase):
              [1, 2, 1, 1, 1, 1, 2, 1, 7, 7, 7, 7, 7, 7, 0]])
         table = Table(Domain(domain[:2] + atts), X)
 
-        agg = [Pivot.Functions.Count, Pivot.Functions.Sum]
+        agg = [Pivot.Count, Pivot.Sum]
         pivot = Pivot(self.table, agg, domain[0], domain[1])
         group_tab = pivot.group_table
         pivot.update_group_table(Pivot.Functions)
@@ -570,7 +584,7 @@ class TestPivot(unittest.TestCase):
 
     def test_pivot_total(self):
         domain = self.table.domain
-        pivot = Pivot(self.table, [Pivot.Functions.Count, Pivot.Functions.Sum],
+        pivot = Pivot(self.table, [Pivot.Count, Pivot.Sum],
                       domain[0], domain[1], domain[2])
 
         atts = (Dv(domain[0].name, ["Total"]),
@@ -717,7 +731,7 @@ class TestPivot(unittest.TestCase):
 
     def test_pivot_update(self):
         domain = self.table.domain
-        pivot = Pivot(self.table, [Pivot.Functions.Count], domain[0],
+        pivot = Pivot(self.table, [Pivot.Count], domain[0],
                       domain[1], domain[2])
         pivot_tab1 = pivot.pivot_table
         pivot.update_pivot_table(domain[1])
@@ -738,7 +752,7 @@ class TestPivot(unittest.TestCase):
         data = Table("iris")
         cls_var = data.domain.class_var.copy(name='Aggregate')
         data.domain = Domain(data.domain.attributes, (cls_var,))
-        pivot = Pivot(data, [Pivot.Functions.Sum], cls_var, None, None)
+        pivot = Pivot(data, [Pivot.Sum], cls_var, None, None)
 
         renamed_var = data.domain.class_var.copy(name='Aggregate (1)')
         self.assertTrue(renamed_var in pivot.pivot_table.domain)
