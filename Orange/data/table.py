@@ -2294,6 +2294,7 @@ class Table(Sequence, Storage):
             cls._init_ids(self)
             self.attributes = deepcopy(table.attributes)
             self.attributes["old_domain"] = table.domain
+            self.name = table.name
             progress_callback(1)
             return self
 
