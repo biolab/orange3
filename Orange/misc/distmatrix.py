@@ -55,9 +55,7 @@ class DistMatrix(np.ndarray):
             return out_arr[()]
         return np.ndarray.__array_wrap__(self, out_arr, context)
 
-    """
-    __reduce__() and __setstate__() ensure DistMatrix is picklable.
-    """
+    # __reduce__() and __setstate__() ensure DistMatrix is picklable.
     def __reduce__(self):
         state = super().__reduce__()
         newstate = state[2] + (self.row_items, self.col_items, self.axis)
@@ -198,35 +196,36 @@ class DistMatrix(np.ndarray):
                     if name == "axis" and value.isdigit():
                         axis = int(value)
                     else:
-                        raise ValueError("invalid flag '{}'".format(
-                            flag, filename))
+                        raise ValueError(f"invalid flag '{flag}'")
             if col_labels is not None:
                 col_labels = [x.strip()
                               for x in fle.readline().strip().split("\t")]
                 if len(col_labels) != n:
-                    raise ValueError("mismatching number of column labels")
+                    raise ValueError("mismatching number of column labels, "
+                                     f"{len(col_labels)} != {n}")
+
+            def num_or_lab(n, labels):
+                return f"'{labels[n]}'" if labels else str(n + 1)
 
             matrix = np.zeros((n, n))
             for i, line in enumerate(fle):
                 if i >= n:
-                    raise ValueError("too many rows".format(filename))
+                    raise ValueError("too many rows")
                 line = line.strip().split("\t")
                 if row_labels is not None:
                     row_labels.append(line.pop(0).strip())
                 if len(line) > n:
-                    raise ValueError("too many columns in matrix row {}".
-                                     format("'{}'".format(row_labels[i])
-                                            if row_labels else i + 1))
+                    raise ValueError(
+                        f"too many columns in matrix row "
+                        f"{num_or_lab(i, row_labels)}")
                 for j, e in enumerate(line[:i + 1 if symmetric else n]):
                     try:
                         matrix[i, j] = float(e)
                     except ValueError as exc:
                         raise ValueError(
-                            "invalid element at row {}, column {}".format(
-                                "'{}'".format(row_labels[i])
-                                if row_labels else i + 1,
-                                "'{}'".format(col_labels[j])
-                                if col_labels else j + 1)) from exc
+                            "invalid element at "
+                            f"row {num_or_lab(i, row_labels)}, "
+                            f"column {num_or_lab(j, col_labels)}") from exc
                     if symmetric:
                         matrix[j, i] = matrix[i, j]
             return matrix, row_labels, col_labels, axis
@@ -277,7 +276,7 @@ class DistMatrix(np.ndarray):
 
     @staticmethod
     def _trivial_labels(items):
-        # prevent circular imports
+        # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data import Table, StringVariable
 
         return items and \

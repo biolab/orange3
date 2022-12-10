@@ -50,6 +50,7 @@ def _non_empty_cells(sheet):
     if np.can_cast(cells.dtype, float):
         return cells.astype(float), 0, 0
 
+    # compares by array cells, pylint: disable=singleton-comparison
     nonempty = cells != None
     offsets = []
     for _ in range(2):
@@ -69,6 +70,7 @@ def _non_empty_cells(sheet):
 def _get_labels(labels):
     try:
         for label in labels[1:]:
+            # pylint: disable=expression-not-assigned
             label is None or float(label)
     except ValueError:
         return ["?" if label is None else str(label)
@@ -96,5 +98,5 @@ def _matrix_from_cells(cells, row_offset, col_offset):
                 raise ValueError(
                     "invalid data in cell "
                     f"{openpyxl.utils.get_column_letter(x + col_offset + 1)}"
-                    f"{y + row_offset + 1}")
+                    f"{y + row_offset + 1}") from None
     return matrix
