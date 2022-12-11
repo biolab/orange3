@@ -1,6 +1,31 @@
+import os
 import unittest
 
-from Orange.widgets.unsupervised.owdistancefile import OWDistanceFileDropHandler
+import numpy as np
+
+from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.unsupervised.owdistancefile \
+    import OWDistanceFile, OWDistanceFileDropHandler
+
+import Orange.tests
+
+
+class TestOWDistanceFile(WidgetTest):
+    def setUp(self):
+        self.widget = self.create_widget(OWDistanceFile)
+
+    def open_file(self, filename):
+        filename = os.path.join(os.path.split(Orange.tests.__file__)[0],
+                                filename)
+        self.widget.add_path(filename)
+        self.widget.open_file()
+
+    def test_nan_to_num(self):
+        self.open_file("xlsx_files/distances_with_nans.xlsx")
+        dist = self.get_output(self.widget.Outputs.distances)
+        np.testing.assert_equal(
+            dist,
+            [[1, 2, 3], [4, 5, 0], [7, 0, 9], [10, 11, 12]])
 
 
 class TestOWDistanceFileDropHandler(unittest.TestCase):
